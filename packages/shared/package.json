@@ -1,0 +1,27 @@
+{
+    "name": "shared",
+    "version": "1.0.0",
+    "description": "Shared types and utilities for both client and server",
+    "type": "module",
+    "main": "index.ts",
+    "module": "index.ts",
+    "scripts": {
+        "studio": "drizzle-kit studio"
+    },
+    "files": [
+        "src"
+    ],
+    "peerDependencies": {
+        "drizzle-orm": "^0.36.3"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.2",
+        "@types/node": "^20.0.0",
+        "bun-types": "latest"
+    },
+    "dependencies": {
+        "@bnk/router": "^1.0.3",
+        "drizzle-zod": "^0.5.1",
+        "zod": "^3.23.8"
+    }
+}

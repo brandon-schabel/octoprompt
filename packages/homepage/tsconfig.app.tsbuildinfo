@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/routetree.gen.ts","./src/vite-env.d.ts","./src/components/feature-list.tsx","./src/components/home-navbar.tsx","./src/components/ui/button.tsx","./src/lib/utils.ts","./src/routes/__root.tsx","./src/routes/index.tsx"],"version":"5.7.2"}

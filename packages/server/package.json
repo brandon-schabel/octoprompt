@@ -1,0 +1,34 @@
+{
+  "name": "octoprompt",
+  "module": "server.ts",
+  "type": "module",
+  "version": "1.0.6",
+  "scripts": {
+    "test": "bun test src/",
+    "test:watch": "bun test --watch src/",
+    "migrate": "drizzle-kit generate",
+    "push": "drizzle-kit push",
+    "start": "bun server.ts",
+    "dev": "DEV=true bun --watch server.ts",
+    "build": "bun run build.ts",
+    "start:prod": "cd dist && ./start.sh"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "drizzle-kit": "^0.28.1",
+    "drizzle-orm": "^0.36.3",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.36.3"
+  },
+  "dependencies": {
+    "@bnk/router": "1.0.3",
+    "@types/archiver": "^6.0.3",
+    "archiver": "^7.0.1",
+    "better-sqlite3": "^11.7.0",
+    "openai": "^4.73.1",
+    "shared": "workspace:*",
+    "zod": "^3.23.8"
+  }
+}

@@ -1,0 +1,36 @@
+name: Client CI
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - 'client/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/client/**'
+
+jobs:
+  test-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install client dependencies
+        run: |
+          cd packages/client
+          bun install
+
+      - name: Run client tests
+        run: |
+          cd packages/client
+          bun test
+
+      - name: Build client
+        run: |
+          cd packages/client
+          bun run build
