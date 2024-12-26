@@ -55,6 +55,9 @@ bun run dev
 
 The server will now be running on http://localhost:3000
 
+## Help, Support, Questions, Join Discord:
+### [OctoPrompt Discord][https://discord.gg/dTSy42g8bV]
+
 
 ## Screenshots
 ![Xnapper-2024-12-26-13 52 57](https://github.com/user-attachments/assets/482f09c0-3398-4a14-bdbb-2b36d2a874fb)
