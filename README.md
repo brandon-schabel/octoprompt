@@ -56,7 +56,7 @@ bun run dev
 The server will now be running on http://localhost:3000
 
 ## Help, Support, Questions, Join Discord:
-### [OctoPrompt Discord][https://discord.gg/dTSy42g8bV]
+### [OctoPrompt Discord](https://discord.gg/dTSy42g8bV)
 
 
 ## Screenshots
