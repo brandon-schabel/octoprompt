@@ -29,7 +29,6 @@ function ProjectsPage() {
         state,
         activeTabState,
         createNewTab,
-        setActiveTab,
         wsReady,                      // track readiness
         updateActiveTabStateKey,
     } = useGlobalStateContext()

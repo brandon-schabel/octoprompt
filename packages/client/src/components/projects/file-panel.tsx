@@ -327,7 +327,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                 fileTree ? (
                                     <div className="flex-1 lg:flex min-h-0 overflow-hidden">
                                         <div className="flex flex-col flex-1 min-h-0">
-                                            <ScrollArea className="flex-1 min-h-0 border rounded-md max-h-[69vh]" type="auto">
+                                            <ScrollArea className="flex-1 min-h-0 border rounded-md max-h-[62vh]" type="auto">
                                                 <FileTree
                                                     ref={fileTreeRef}
                                                     root={fileTree}
@@ -381,7 +381,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
 
                                             {/* Make this scroll area similar to file-tree */}
                                             <ScrollArea
-                                                className="flex-1 min-h-0 border rounded-md max-h-[61vh] items-center flex w-60 "
+                                                className="flex-1 min-h-0 border rounded-md max-h-[50vh] items-center flex w-60 "
                                                 type="auto"
 
                                             >
