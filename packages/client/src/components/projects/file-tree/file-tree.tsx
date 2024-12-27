@@ -351,7 +351,16 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
         const result: VisibleItem[] = []
 
         function traverse(obj: Record<string, FileNode>, parentPath: string | undefined, depth: number) {
-            Object.entries(obj).forEach(([name, node]) => {
+            // Sort entries to put folders first and sort alphabetically within each group
+            const entries = Object.entries(obj).sort(([nameA, a], [nameB, b]) => {
+                // First, separate folders and files
+                if (a._folder && !b._folder) return -1;
+                if (!a._folder && b._folder) return 1;
+                // Then sort alphabetically within each group
+                return nameA.toLowerCase().localeCompare(nameB.toLowerCase());
+            });
+
+            entries.forEach(([name, node]) => {
                 const currentPath = parentPath ? `${parentPath}/${name}` : name
                 result.push({
                     path: currentPath,
