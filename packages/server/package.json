@@ -23,7 +23,7 @@
     "drizzle-orm": "^0.36.3"
   },
   "dependencies": {
-    "@bnk/router": "1.0.3",
+    "@bnk/router": "^1.0.4",
     "@types/archiver": "^6.0.3",
     "archiver": "^7.0.1",
     "better-sqlite3": "^11.7.0",
