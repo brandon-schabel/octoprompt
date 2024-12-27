@@ -183,9 +183,6 @@ type GeminiAPIModel = {
     topK: number;
 };
 
-type ListModelsResponse = {
-    models: GeminiAPIModel[];
-};
 
 export class ProviderService {
     private openRouter: OpenAI | null = null;
@@ -263,16 +260,6 @@ export class ProviderService {
         return googleKey;
     }
 
-    /** List all Gemini models */
-    async listGeminiModels(): Promise<GeminiAPIModel[]> {
-        const apiKey = await this.getGeminiApiKey();
-        const response = await fetch(`${this.geminiBaseUrl}/models?key=${apiKey}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch Gemini models: ${response.statusText}`);
-        }
-        const data: ListModelsResponse = await response.json();
-        return data.models;
-    }
 
     /** Upload a file to Gemini for multimodal input */
     async uploadFileForGemini(file: File, mime_type: string): Promise<string> {
@@ -480,73 +467,5 @@ export class ProviderService {
             prompt: prompt ?? undefined,
             response_format: "text",
         });
-    }
-
-    /**
- * A unified method to list models for a given provider
- */
-    async listModels(provider: APIProviders): Promise<UnifiedModel[]> {
-        switch (provider) {
-            case "openrouter": {
-                const raw = await this.getOpenRouterModels();
-                return raw.data.map((m) => ({
-                    id: m.id,
-                    name: m.name,
-                    description: m.description,
-                }));
-            }
-
-            case "lmstudio": {
-                // Example: { data: LMStudioModel[] }
-                const res = await fetch(`${LMSTUDIO_BASE_URL}/models`);
-                if (!res.ok) throw new Error(`LM Studio error: ${res.statusText}`);
-                const json = await res.json();
-                // Adjust as needed based on LM Studio’s actual response shape
-                return json.data.map((m: any) => ({
-                    id: m.id,
-                    name: m.id,
-                    description: `LM Studio model: ${m.id}`, // or any relevant field
-                }));
-            }
-
-            case "ollama": {
-                // Suppose the existing /api/tags returns ["llama2", "llama2-7b", ...]
-                // or an array of objects. Adjust accordingly.
-                const res = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
-                if (!res.ok) throw new Error(`Ollama error: ${res.statusText}`);
-                const data = await res.json();
-                return data.map((modelName: string) => ({
-                    id: modelName,
-                    name: modelName,
-                    description: `Ollama model: ${modelName}`,
-                }));
-            }
-
-            case "xai": {
-                // existing getXAIModels() => { data: XAIModel[] }
-                const raw = await this.getXAIModels();
-                return raw.data.map((m: XAIModel) => ({
-                    id: m.id,
-                    name: m.id,
-                    description: `XAI model: ${m.id}`, // adjust as needed
-                }));
-            }
-
-            case "gemini": {
-                // existing listGeminiModels() => GeminiAPIModel[]
-                const raw = await this.listGeminiModels();
-                return raw.map((m) => ({
-                    id: m.name,
-                    name: m.displayName,
-                    description: m.description,
-                }));
-            }
-
-            case "openai":
-            default: {
-
-                return openAIModels;
-            }
-        }
     }
 }

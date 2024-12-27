@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
@@ -17,6 +17,7 @@ import { useSelectedFiles } from '@/hooks/use-selected-files'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { formatModShortcut } from '@/lib/platform'
 import { useGlobalStateContext } from '../global-state-context'
+import { useDebounce } from '@/hooks/use-debounce'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void;
@@ -37,8 +38,31 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 }, ref) => {
     const { updateActiveTab, activeTabState } = useGlobalStateContext()
     const selectedPrompts = activeTabState?.selectedPrompts || []
-    const userPrompt = activeTabState?.userPrompt || ''
+    const globalUserPrompt = activeTabState?.userPrompt || ''
     const contextLimit = activeTabState?.contextLimit || 128000
+
+    const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
+
+    // Sync local state with global state on initial load and when global state changes from other sources
+    useEffect(() => {
+        if (globalUserPrompt !== localUserPrompt) {
+            setLocalUserPrompt(globalUserPrompt)
+        }
+    }, [globalUserPrompt])
+
+    const updateGlobalPrompt = useCallback((value: string) => {
+        updateActiveTab(prev => ({
+            ...prev,
+            userPrompt: value
+        }))
+    }, [updateActiveTab])
+
+    const debouncedUpdateGlobal = useDebounce(updateGlobalPrompt, 1000)
+
+    const handleUserPromptChange = (value: string) => {
+        setLocalUserPrompt(value)
+        debouncedUpdateGlobal(value)
+    }
 
     const { selectedFiles } = useSelectedFiles()
     const [promptDialogOpen, setPromptDialogOpen] = useState(false)
@@ -60,22 +84,15 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const updatePromptMutation = useUpdatePrompt()
     const deletePromptMutation = useDeletePrompt()
 
-    const totalTokens = useMemo(() => calculateTotalTokens(promptData, selectedPrompts, userPrompt, selectedFiles, fileMap), [promptData, selectedPrompts, userPrompt, selectedFiles, fileMap])
+    const totalTokens = useMemo(() => calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap), [promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap])
     const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
 
     function promptBuilder() {
-        return buildPromptContent(promptData, selectedPrompts, userPrompt, selectedFiles, fileMap)
-    }
-
-    const setUserPrompt = (value: string) => {
-        updateActiveTab(prev => ({
-            ...prev,
-            userPrompt: value
-        }))
+        return buildPromptContent(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap)
     }
 
     const handleCopyToClipboard = async () => {
-        if (!fileMap.size && !userPrompt.trim() && selectedPrompts.length === 0) return
+        if (!fileMap.size && !localUserPrompt.trim() && selectedPrompts.length === 0) return
         const finalPrompt = promptBuilder()
         try {
             await navigator.clipboard.writeText(finalPrompt)
@@ -202,8 +219,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                 <ExpandableTextarea
                                     ref={promptInputRef}
                                     placeholder="Type your user prompt here..."
-                                    value={userPrompt}
-                                    onChange={(value) => setUserPrompt(value)}
+                                    value={localUserPrompt}
+                                    onChange={handleUserPromptChange}
                                     className="flex-1 bg-background"
                                 />
                                 <div className="flex gap-2 mt-2">

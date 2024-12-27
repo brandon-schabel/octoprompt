@@ -8,6 +8,7 @@ import { streamXai } from "./streamers/xai";
 import { streamGeminiMessage } from "./streamers/gemini";
 import { streamOpenAiLike } from "./streamers/open-ai-like";
 import { UnifiedModel } from "shared";
+import { streamAnthropic } from "../streamers/anthropic";
 
 type XAIModel = {
     id: string
@@ -16,108 +17,6 @@ type XAIModel = {
     object: string,
     owned_by: string
 }
-
-export type OpenAIModel = {
-    id: string
-    name: string
-    description: string
-    contextWindow: number
-    category: 'GPT-4o' | 'GPT-4o mini' | 'o1' | 'GPT-4' | 'GPT-3.5' | 'Base'
-}
-
-export const openAIModels: OpenAIModel[] = [
-    // GPT-4o Models
-    {
-        id: 'gpt-4o',
-        name: 'GPT-4o',
-        description: 'Our high-intelligence flagship model for complex, multi-step tasks',
-        contextWindow: 128000,
-        category: 'GPT-4o'
-    },
-    {
-        id: 'gpt-4o-2024-11-20',
-        name: 'GPT-4o (Nov 20, 2024)',
-        description: 'Latest gpt-4o snapshot from November 20th, 2024',
-        contextWindow: 128000,
-        category: 'GPT-4o'
-    },
-    {
-        id: 'chatgpt-4o-latest',
-        name: 'ChatGPT-4o Latest',
-        description: 'The version of GPT-4o used in ChatGPT, updated frequently',
-        contextWindow: 128000,
-        category: 'GPT-4o'
-    },
-    // GPT-4o mini Models
-    {
-        id: 'gpt-4o-mini',
-        name: 'GPT-4o Mini',
-        description: 'Our affordable and intelligent small model for fast, lightweight tasks',
-        contextWindow: 128000,
-        category: 'GPT-4o mini'
-    },
-    // o1 Models
-    {
-        id: 'o1-preview',
-        name: 'o1 Preview',
-        description: 'Reasoning model designed to solve hard problems across domains',
-        contextWindow: 128000,
-        category: 'o1'
-    },
-    {
-        id: 'o1-mini',
-        name: 'o1 Mini',
-        description: 'Faster and cheaper reasoning model for coding, math, and science',
-        contextWindow: 128000,
-        category: 'o1'
-    },
-    // GPT-4 Models
-    {
-        id: 'gpt-4-turbo',
-        name: 'GPT-4 Turbo',
-        description: 'Latest GPT-4 Turbo model with vision capabilities',
-        contextWindow: 128000,
-        category: 'GPT-4'
-    },
-    {
-        id: 'gpt-4-0125-preview',
-        name: 'GPT-4 Turbo Preview',
-        description: 'Preview model intended to reduce cases of laziness',
-        contextWindow: 128000,
-        category: 'GPT-4'
-    },
-    // GPT-3.5 Models
-    {
-        id: 'gpt-3.5-turbo',
-        name: 'GPT-3.5 Turbo',
-        description: 'Fast and cost-effective model for simpler tasks',
-        contextWindow: 16385,
-        category: 'GPT-3.5'
-    },
-    {
-        id: 'gpt-3.5-turbo-0125',
-        name: 'GPT-3.5 Turbo (Jan 25)',
-        description: 'Latest GPT-3.5 Turbo model with improved formatting',
-        contextWindow: 16385,
-        category: 'GPT-3.5'
-    },
-    // Base Models
-    {
-        id: 'babbage-002',
-        name: 'Babbage-002',
-        description: 'Replacement for GPT-3 ada and babbage base models',
-        contextWindow: 16384,
-        category: 'Base'
-    },
-    {
-        id: 'davinci-002',
-        name: 'Davinci-002',
-        description: 'Replacement for GPT-3 curie and davinci base models',
-        contextWindow: 16384,
-        category: 'Base'
-    }
-]
-
 
 // ollama and lmstudio should be adjustable eventually
 export const OLLAMA_BASE_URL = "http://localhost:11434";
@@ -187,6 +86,31 @@ type ListModelsResponse = {
     models: GeminiAPIModel[];
 };
 
+type AnthropicModel = {
+    type: string;
+    id: string;
+    display_name: string;
+    created_at: string;
+};
+
+type AnthropicModelsResponse = {
+    data: AnthropicModel[];
+    has_more: boolean;
+    first_id: string | null;
+    last_id: string | null;
+};
+
+type OpenAIModelObject = {
+    id: string;          
+    object: string;      
+    created: number;     
+    owned_by: string;    
+};
+
+type OpenAIModelsListResponse = {
+    object: string;      
+    data: OpenAIModelObject[];
+};
 
 export class UnifiedProviderService {
     private openRouter: OpenAI | null = null;
@@ -359,6 +283,26 @@ export class UnifiedProviderService {
                     provider: "lmstudio",
                     client: this.lmStudio,
                 });
+            case "anthropic": {
+                // 1. Retrieve Anthropic API key from your db or environment
+                const keys = await this.providerKeyService.listKeys();
+                const anthropicKey = keys.find((k) => k.provider === "anthropic")?.key;
+                if (!anthropicKey) {
+                    throw new Error("Anthropic API key not found");
+                }
+
+                // 2. Optionally check if you want any specific version or beta
+                const anthropicVersion = "2023-10-01"; // or "2023-06-01"
+                const anthropicBeta = "claude-3.5,another-beta"; // optionally set
+
+                // 3. Return your stream from the new function
+                return streamAnthropic({
+                    ...streamConfig,
+                    anthropicApiKey: anthropicKey,
+                    anthropicVersion,
+                    anthropicBeta, // optional
+                });
+            }
 
             case "openai":
             default:
@@ -442,6 +386,11 @@ export class UnifiedProviderService {
  * A unified method to list models for a given provider
  */
     async listModels(provider: APIProviders): Promise<UnifiedModel[]> {
+
+        console.log({
+            api: "listModels",
+            provider,
+        })
         switch (provider) {
             case "openrouter": {
                 // existing getOpenRouterModels() => { data: OpenRouterModel[] }
@@ -499,11 +448,111 @@ export class UnifiedProviderService {
                 }));
             }
 
+            case "anthropic": {
+                const models = await this.listAnthropicModels();
+                return models.map(m => ({
+                    id: m.id,
+                    name: m.display_name,
+                    description: `Anthropic model: ${m.id}`,
+                }));
+            }
+
             case "openai":
             default: {
-
-                return openAIModels;
+                try {
+                    const models = await this.listOpenAiModels();
+                    return models.map(m => ({
+                        id: m.id,
+                        name: m.id,
+                        description: `OpenAI model owned by ${m.owned_by}`,
+                    }));
+                } catch (error) {
+                    console.warn("Failed to fetch OpenAI models", error);
+                    return [];
+                }
             }
         }
+    }
+
+    private async listAnthropicModels(): Promise<AnthropicModel[]> {
+        const keys = await this.providerKeyService.listKeys();
+        const anthropicKey = keys.find((k) => k.provider === "anthropic")?.key;
+        if (!anthropicKey) {
+            throw new Error("Anthropic API key not found");
+        }
+
+        const response = await fetch("https://api.anthropic.com/v1/models", {
+            method: "GET",
+            headers: {
+                "x-api-key": anthropicKey,
+                "anthropic-version": "2023-06-01",
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Anthropic Models API error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json() as AnthropicModelsResponse;
+        return data.data;
+    }
+
+    private async listOpenAiModels(): Promise<OpenAIModelObject[]> {
+        const openai = await this.initializeOpenAI();
+        
+        const response = await fetch("https://api.openai.com/v1/models", {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${openai.apiKey}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenAI list models error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json() as OpenAIModelsListResponse;
+        return data.data;
+    }
+
+    async retrieveOpenAiModel(modelId: string): Promise<OpenAIModelObject> {
+        const openai = await this.initializeOpenAI();
+
+        const response = await fetch(`https://api.openai.com/v1/models/${modelId}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${openai.apiKey}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenAI retrieve model error: ${response.status} - ${errorText}`);
+        }
+
+        return response.json() as Promise<OpenAIModelObject>;
+    }
+
+    async deleteOpenAiModel(modelId: string): Promise<{ id: string; object: string; deleted: boolean }> {
+        const openai = await this.initializeOpenAI();
+
+        const response = await fetch(`https://api.openai.com/v1/models/${modelId}`, {
+            method: "DELETE",
+            headers: {
+                Authorization: `Bearer ${openai.apiKey}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenAI delete model error: ${response.status} - ${errorText}`);
+        }
+
+        return response.json();
     }
 }

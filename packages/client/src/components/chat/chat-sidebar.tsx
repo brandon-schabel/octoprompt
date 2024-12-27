@@ -148,6 +148,7 @@ export function ChatSidebar({
                         <SelectItem value="ollama">Ollama</SelectItem>
                         <SelectItem value="xai">XAI</SelectItem>
                         <SelectItem value="gemini">Gemini</SelectItem>
+                        <SelectItem value="anthropic">Anthropic</SelectItem>
                     </SelectContent>
                 </Select>
             </div>

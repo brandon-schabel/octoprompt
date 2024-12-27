@@ -3,7 +3,7 @@ import { UnifiedProviderService } from "./unified-provider-service";
 import type { ReadableStream } from "stream/web";
 
 /** Which API provider to use */
-export type APIProviders = "openai" | "openrouter" | "lmstudio" | "ollama" | "xai" | "gemini";
+export type APIProviders = "openai" | "openrouter" | "lmstudio" | "ollama" | "xai" | "gemini" | "anthropic";
 
 /** Options used by certain completion endpoints */
 export type ChatCompletionOptions = Partial<{

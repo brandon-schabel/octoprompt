@@ -49,6 +49,12 @@ const PROVIDERS = [
         apiKeyUrl: 'https://aistudio.google.com/app/apikey',
         description: 'API keys for Google Gemini models (including Gemini Pro and Ultra)'
     },
+    {
+        id: 'anthropic',
+        name: 'Anthropic',
+        apiKeyUrl: 'https://console.anthropic.com/settings/keys',
+        description: 'API keys for Anthropic models'
+    }
 ] satisfies Provider[]
 
 function KeysPage() {
