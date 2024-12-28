@@ -36,7 +36,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     promptData,
     className,
 }, ref) => {
-    const { updateActiveTab, activeTabState } = useGlobalStateContext()
+    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
     const selectedPrompts = activeTabState?.selectedPrompts || []
     const globalUserPrompt = activeTabState?.userPrompt || ''
     const contextLimit = activeTabState?.contextLimit || 128000

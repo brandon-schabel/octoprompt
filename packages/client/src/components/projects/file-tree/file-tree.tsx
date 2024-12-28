@@ -84,7 +84,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
     onViewFile,
     projectRoot,
 }, ref) => {
-    const { activeTabState } = useGlobalStateContext()
+    const { activeProjectTabState: activeTabState } = useGlobalStateContext()
     const selectedFiles = activeTabState?.selectedFiles || []
     const resolveImports = activeTabState?.resolveImports || false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'

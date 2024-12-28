@@ -12,7 +12,7 @@ export const EDITOR_OPTIONS = [
 export type EditorType = typeof EDITOR_OPTIONS[number]['value']
 
 
-export const tabStateSchema = z.object({
+export const projectTabStateSchema = z.object({
     selectedProjectId: z.string().nullable(),
     editProjectId: z.string().nullable(),
     promptDialogOpen: z.boolean(),
@@ -30,7 +30,25 @@ export const tabStateSchema = z.object({
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
 });
 
-export type TabState = z.infer<typeof tabStateSchema>;
+
+export const chatTabStateSchema = z.object({
+    provider: z.string().default('openai'),
+    model: z.string().default('gpt-3.5-turbo'),
+    input: z.string().default(''),
+    messages: z.array(
+        z.object({
+            id: z.string(),
+            role: z.enum(['system', 'user', 'assistant']),
+            content: z.string(),
+        })
+    ).default([]),
+    displayName: z.string().optional(),
+});
+
+
+// export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
+export type ChatTabState = z.infer<typeof chatTabStateSchema>;
+export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
 
 export const globalStateSchema = z.object({
     users: z.array(z.object({ id: z.string(), name: z.string() })),
@@ -39,8 +57,12 @@ export const globalStateSchema = z.object({
         language: z.string(),
     }),
     counter: z.number(),
-    tabs: z.record(z.string(), tabStateSchema),
-    activeTabId: z.string().nullable(),
+    projectTabs: z.record(z.string(), projectTabStateSchema),
+    projectActiveTabId: z.string().nullable(),
+    // activeTabId: z.string().nullable(),
+    chatTabs: z.record(z.string(), chatTabStateSchema),
+    chatActiveTabId: z.string().nullable(),
+
 });
 
 export type GlobalState = z.infer<typeof globalStateSchema>;
@@ -51,7 +73,7 @@ export const createInitialGlobalState = (): GlobalState => ({
     counter: 0,
 
     // We’ll create one default tab on first load
-    tabs: {
+    projectTabs: {
         defaultTab: {
             selectedProjectId: null,
             editProjectId: null,
@@ -70,5 +92,16 @@ export const createInitialGlobalState = (): GlobalState => ({
             preferredEditor: 'cursor',
         },
     },
-    activeTabId: 'defaultTab',
+    chatTabs: {
+        defaultTab: {
+            provider: 'openai',
+            model: 'gpt-4o',
+            input: '',
+            messages: [],
+            displayName: 'Default Tab',
+        },
+    },
+    // activeTabId: 'defaultTab',
+    chatActiveTabId: 'defaultTab',
+    projectActiveTabId: 'defaultTab',
 });

@@ -23,7 +23,7 @@ type ProjectDialogProps = {
 
 export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogProps) {
     const navigate = useNavigate()
-    const { updateActiveTab } = useGlobalStateContext()
+    const { updateActiveProjectTab: updateActiveTab } = useGlobalStateContext()
     const [formData, setFormData] = useState<CreateProjectBody>({
         name: "",
         description: "",

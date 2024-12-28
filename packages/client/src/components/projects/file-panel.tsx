@@ -7,7 +7,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileTree, FileTreeRef } from '@/components/projects/file-tree/file-tree'
 import { SelectedFilesList, SelectedFilesListRef } from '@/components/projects/selected-files-list'
 import { useGetProjectFiles, useSyncProjectInterval } from '@/hooks/api/use-projects-api'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { buildFileTree } from '@/components/projects/utils/projects-utils'
 import { FileViewerDialog } from '@/components/file-viewer-dialog'
@@ -55,7 +54,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const fileTreeRef = useRef<FileTreeRef>(null)
     const selectedFilesListRef = useRef<SelectedFilesListRef>(null)
     const promptsRef = useRef<HTMLDivElement>(null)
-    const { updateActiveTab, activeTabState } = useGlobalStateContext()
+    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
     const contextLimit = activeTabState?.contextLimit || 128000
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'

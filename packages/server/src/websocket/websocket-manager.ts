@@ -1,73 +1,122 @@
 import { ServerWebSocket } from "bun";
-import { GlobalState, globalStateSchema, createInitialGlobalState, type TabState } from "shared";
+import { GlobalState, globalStateSchema, createInitialGlobalState } from "shared";
 import { globalStateTable, eq } from "shared";
-import { db } from "shared/database"
+import { db } from "shared/database";
 import { ZodError } from "zod";
+import { logger } from "../utils/logger";
 
 export type WebSocketData = {
     clientId: string;
 };
 
 export type StateUpdateMessage = {
-    type: 'state_update';
+    type: "state_update";
     data: GlobalState;
 };
 
-type CreateTabMessage = {
-    type: 'create_tab';
+// ─────────────────────────────────────────────────────────────────────────────
+// Project tab messages
+// ─────────────────────────────────────────────────────────────────────────────
+type CreateProjectTabMessage = {
+    type: "create_project_tab";
     tabId: string;
-    data: TabState;
+    data: GlobalState["projectTabs"][string];
 };
 
-type UpdateTabStateMessage = {
-    type: 'update_tab_state';
+type UpdateProjectTabMessage = {
+    type: "update_project_tab";
     tabId: string;
-    key: keyof TabState;
-    value: TabState[keyof TabState];
+    data: GlobalState["projectTabs"][string]
 };
 
-type SetActiveTabMessage = {
-    type: 'set_active_tab';
+type UpdateProjectTabPartialMessage = {
+    type: "update_project_tab_partial";  // you may or may not need this variant
     tabId: string;
+    partial: Partial<GlobalState["projectTabs"][string]>;
 };
 
-type UpdateTabPartialMessage = {
-    type: 'update_tab_partial';
-    tabId: string;
-    data: Partial<TabState>;
-};
-
-type DeleteTabMessage = {
-    type: 'delete_tab';
+type DeleteProjectTabMessage = {
+    type: "delete_project_tab";
     tabId: string;
 };
 
+type SetActiveProjectTabMessage = {
+    type: "set_active_project_tab";
+    tabId: string;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat tab messages
+// ─────────────────────────────────────────────────────────────────────────────
+type CreateChatTabMessage = {
+    type: "create_chat_tab";
+    tabId: string;
+    data: GlobalState["chatTabs"][string];
+};
+
+type UpdateChatTabMessage = {
+    type: "update_chat_tab";
+    tabId: string;
+    data: Partial<GlobalState["chatTabs"][string]>;
+};
+
+type UpdateChatTabPartialMessage = {
+    type: "update_chat_tab_partial"; // you may or may not need this variant
+    tabId: string;
+    partial: Partial<GlobalState["chatTabs"][string]>;
+};
+
+type DeleteChatTabMessage = {
+    type: "delete_chat_tab";
+    tabId: string;
+};
+
+type SetActiveChatTabMessage = {
+    type: "set_active_chat_tab";
+    tabId: string;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Union of all possible inbound messages
+// ─────────────────────────────────────────────────────────────────────────────
 export type WebSocketMessage =
-    | StateUpdateMessage
-    | CreateTabMessage
-    | UpdateTabStateMessage
-    | SetActiveTabMessage
-    | UpdateTabPartialMessage
-    | DeleteTabMessage;
+    | StateUpdateMessage // typically only outbound
+    // Project:
+    | CreateProjectTabMessage
+    | UpdateProjectTabMessage
+    | UpdateProjectTabPartialMessage
+    | DeleteProjectTabMessage
+    | SetActiveProjectTabMessage
+    // Chat:
+    | CreateChatTabMessage
+    | UpdateChatTabMessage
+    | UpdateChatTabPartialMessage
+    | DeleteChatTabMessage
+    | SetActiveChatTabMessage;
 
 export class WebSocketManager {
     private connections: Set<ServerWebSocket<WebSocketData>>;
+    private debugMode: boolean;
 
-    constructor() {
+    constructor(debug = false) {
         this.connections = new Set();
+        this.debugMode = debug;
+        logger.info("WebSocketManager initialized", { debugMode: debug });
     }
 
     async getStateFromDB(): Promise<GlobalState> {
         try {
-            const row = await db.select().from(globalStateTable)
+            const row = await db.select()
+                .from(globalStateTable)
                 .where(eq(globalStateTable.id, "main"))
                 .get();
 
             if (!row) {
+                // Insert initial if missing
                 const initialState = createInitialGlobalState();
                 await db.insert(globalStateTable).values({
                     id: "main",
-                    state_json: JSON.stringify(initialState)
+                    state_json: JSON.stringify(initialState),
                 }).run();
                 return initialState;
             }
@@ -86,7 +135,6 @@ export class WebSocketManager {
         }
     }
 
-
     async updateStateInDB(newState: GlobalState): Promise<void> {
         const exists = await db.select()
             .from(globalStateTable)
@@ -96,7 +144,7 @@ export class WebSocketManager {
         if (!exists) {
             await db.insert(globalStateTable).values({
                 id: "main",
-                state_json: JSON.stringify(newState)
+                state_json: JSON.stringify(newState),
             }).run();
         } else {
             await db.update(globalStateTable)
@@ -106,184 +154,283 @@ export class WebSocketManager {
         }
     }
 
-
     broadcastState(state: GlobalState): void {
         const message: StateUpdateMessage = {
-            type: 'state_update',
-            data: state
+            type: "state_update",
+            data: state,
         };
+        const messageStr = JSON.stringify(message);
+        let successCount = 0;
+        let failCount = 0;
 
         for (const ws of this.connections) {
             try {
-                ws.send(JSON.stringify(message));
-            } catch {
+                ws.send(messageStr);
+                successCount++;
+            } catch (error) {
+                failCount++;
+                logger.error("Failed to broadcast state", {
+                    clientId: ws.data.clientId,
+                    error
+                });
             }
         }
-    }
 
+        logger.debug("State broadcast complete", {
+            successCount,
+            failCount,
+            totalConnections: this.connections.size
+        });
+    }
 
     handleOpen(ws: ServerWebSocket<WebSocketData>): void {
         this.connections.add(ws);
+        logger.debug("New WebSocket connection", {
+            clientId: ws.data.clientId,
+            totalConnections: this.connections.size
+        });
 
         // Send current state as soon as they connect
         this.getStateFromDB()
-            .then(state => {
+            .then((state) => {
                 const message: StateUpdateMessage = {
-                    type: 'state_update',
-                    data: state
+                    type: "state_update",
+                    data: state,
                 };
                 ws.send(JSON.stringify(message));
+                logger.debug("Initial state sent", { clientId: ws.data.clientId });
             })
-            .catch(err => {
+            .catch((err) => {
+                logger.error("Failed to send initial state", { clientId: ws.data.clientId, error: err });
                 ws.close();
             });
     }
-
 
     handleClose(ws: ServerWebSocket<WebSocketData>): void {
         this.connections.delete(ws);
     }
 
-    async handleMessage(ws: ServerWebSocket<WebSocketData>, message: string): Promise<void> {
+    async handleMessage(ws: ServerWebSocket<WebSocketData>, rawMessage: string): Promise<void> {
         try {
-
-            const parsed = JSON.parse(message) as WebSocketMessage;
-
+            const parsed = JSON.parse(rawMessage) as WebSocketMessage;
+            logger.debug("Received WebSocket message", {
+                messageType: parsed.type,
+                clientId: ws.data.clientId,
+                payload: this.debugMode ? parsed : undefined
+            });
 
             switch (parsed.type) {
-                case 'create_tab': {
-                    const { tabId, data: tabData } = parsed;
-                    const currentState = await this.getStateFromDB();
-
-
-                    currentState.tabs[tabId] = tabData;
-                    currentState.activeTabId = tabId;
-
-                    const validated = globalStateSchema.parse(currentState);
-                    await this.updateStateInDB(validated);
-
-                    this.broadcastState(validated);
-                    break;
-                }
-
-                case 'update_tab_state': {
-                    const { tabId, key, value } = parsed;
-                    const currentState = await this.getStateFromDB();
-
-
-                    if (!currentState.tabs[tabId]) {
-                        console.warn('[WebSocketManager] Tab not found:', tabId);
-                        break;
-                    }
-
-                    const tab = currentState.tabs[tabId];
-                    // Type-safe update
-                    if (key in tab) {
-                        (tab as any)[key] = value;
-                    } else {
-                        console.warn('[WebSocketManager] Invalid key for tab state:', key);
-                        break;
-                    }
-
-                    try {
-                        const validated = globalStateSchema.parse(currentState);
-                        await this.updateStateInDB(validated);
-
-                        this.broadcastState(validated);
-                    } catch (error) {
-                        console.error('[WebSocketManager] Validation error:', error);
-                    }
-                    break;
-                }
-
-                case 'set_active_tab': {
-
-                    const { tabId } = parsed;
-                    const currentState = await this.getStateFromDB();
-
-                    if (!currentState.tabs[tabId]) {
-                        console.warn('[WebSocketManager] Tab not found for activation:', tabId);
-                        break;
-                    }
-
-                    currentState.activeTabId = tabId;
-
-                    const validated = globalStateSchema.parse(currentState);
-                    await this.updateStateInDB(validated);
-
-                    this.broadcastState(validated);
-                    break;
-                }
-
-                case 'update_tab_partial': {
-
-
+                // ───────────────────────────────────────────────────────────
+                // PROJECT TABS
+                // ───────────────────────────────────────────────────────────
+                case "create_project_tab": {
                     const { tabId, data } = parsed;
-                    const currentState = await this.getStateFromDB();
+                    const state = await this.getStateFromDB();
 
+                    // Insert new project tab
+                    state.projectTabs[tabId] = data;
+                    // Optionally, set it active:
+                    state.projectActiveTabId = tabId;
 
-                    if (!currentState.tabs[tabId]) {
-                        console.warn('[WebSocketManager] Tab not found:', tabId);
-                        break;
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                case "update_project_tab": {
+                    const { tabId, data } = parsed;
+                    const state = await this.getStateFromDB();
+
+                    if (!state.projectTabs[tabId]) {
+                        console.warn("Project tab not found:", tabId);
+                        return;
                     }
-
-                    // Merge the partial update with existing tab state
-                    currentState.tabs[tabId] = {
-                        ...currentState.tabs[tabId],
-                        ...data
+                    state.projectTabs[tabId] = {
+                        ...state.projectTabs[tabId],
+                        ...data,
                     };
 
-                    try {
-                        const validated = globalStateSchema.parse(currentState);
-                        await this.updateStateInDB(validated);
-
-                        this.broadcastState(validated);
-                    } catch (error) {
-                        console.error('[WebSocketManager] Validation error:', error);
-                    }
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
                     break;
                 }
 
-                case 'delete_tab': {
+                case "update_project_tab_partial": {
+                    // In practice, this may be redundant with "update_project_tab"
+                    const { tabId, partial: data } = parsed;
+                    const state = await this.getStateFromDB();
 
+
+                    if (!state.projectTabs[tabId]) {
+                        console.warn("Project tab not found:", tabId);
+                        return;
+                    }
+                    state.projectTabs[tabId] = {
+                        ...state.projectTabs[tabId],
+                        ...data,
+                    };
+
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                case "delete_project_tab": {
                     const { tabId } = parsed;
-                    const currentState = await this.getStateFromDB();
+                    const state = await this.getStateFromDB();
 
                     // Don't delete if it's the last tab
-                    if (Object.keys(currentState.tabs).length <= 1) {
-                        console.warn('[WebSocketManager] Cannot delete the last remaining tab');
-                        break;
+                    if (Object.keys(state.projectTabs).length <= 1) {
+                        console.warn("Cannot delete the last remaining project tab");
+                        return;
                     }
 
-                    // Delete the tab
-                    delete currentState.tabs[tabId];
-
-                    // If we're deleting the active tab, switch to another one
-                    if (currentState.activeTabId === tabId) {
-                        const remainingTabs = Object.keys(currentState.tabs);
-                        if (remainingTabs.length > 0) {
-                            currentState.activeTabId = remainingTabs[0];
+                    delete state.projectTabs[tabId];
+                    if (state.projectActiveTabId === tabId) {
+                        // Switch to any remaining tab
+                        const remaining = Object.keys(state.projectTabs);
+                        if (remaining.length > 0) {
+                            state.projectActiveTabId = remaining[0];
+                        } else {
+                            state.projectActiveTabId = null;
                         }
                     }
 
-                    try {
-                        const validated = globalStateSchema.parse(currentState);
-                        await this.updateStateInDB(validated);
-
-                        this.broadcastState(validated);
-                    } catch (error) {
-                        console.error('[WebSocketManager] Validation error:', error);
-                    }
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
                     break;
                 }
 
-                default:
-                    console.warn('[WebSocketManager] Unrecognized message type:', parsed.type);
-                    break;
-            }
+                case "set_active_project_tab": {
+                    const { tabId } = parsed;
+                    const state = await this.getStateFromDB();
+                    if (!state.projectTabs[tabId]) {
+                        console.warn("Cannot set active project tab; not found:", tabId);
+                        return;
+                    }
 
+                    state.projectActiveTabId = tabId;
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                // ───────────────────────────────────────────────────────────
+                // CHAT TABS
+                // ───────────────────────────────────────────────────────────
+                case "create_chat_tab": {
+                    const { tabId, data } = parsed;
+                    const state = await this.getStateFromDB();
+
+                    // Insert new chat tab
+                    state.chatTabs[tabId] = data;
+                    // Optionally, set it active
+                    state.chatActiveTabId = tabId;
+
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                case "update_chat_tab": {
+                    const { tabId, data } = parsed;
+                    const state = await this.getStateFromDB();
+
+                    if (!state.chatTabs[tabId]) {
+                        console.warn("Chat tab not found:", tabId);
+                        return;
+                    }
+                    state.chatTabs[tabId] = {
+                        ...state.chatTabs[tabId],
+                        ...data,
+                    };
+
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                case "update_chat_tab_partial": {
+                    // Could be redundant with "update_chat_tab" 
+                    const { tabId, partial: data } = parsed;
+                    const state = await this.getStateFromDB();
+
+                    if (!state.chatTabs[tabId]) {
+                        console.warn("Chat tab not found:", tabId);
+                        return;
+                    }
+
+                    state.chatTabs[tabId] = {
+                        ...state.chatTabs[tabId],
+                        ...data,
+                    };
+
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                case "delete_chat_tab": {
+                    const { tabId } = parsed;
+                    const state = await this.getStateFromDB();
+
+                    // Don't delete if it's the last chat tab
+                    if (Object.keys(state.chatTabs).length <= 1) {
+                        console.warn("Cannot delete the last remaining chat tab");
+                        return;
+                    }
+
+                    delete state.chatTabs[tabId];
+                    if (state.chatActiveTabId === tabId) {
+                        // Switch to any remaining tab
+                        const remaining = Object.keys(state.chatTabs);
+                        if (remaining.length > 0) {
+                            state.chatActiveTabId = remaining[0];
+                        } else {
+                            state.chatActiveTabId = null;
+                        }
+                    }
+
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                case "set_active_chat_tab": {
+                    const { tabId } = parsed;
+                    const state = await this.getStateFromDB();
+                    if (!state.chatTabs[tabId]) {
+                        console.warn("Cannot set active chat tab; not found:", tabId);
+                        return;
+                    }
+
+                    state.chatActiveTabId = tabId;
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                default: {
+                    console.warn("Unrecognized message type:", parsed);
+                    break;
+                }
+            }
         } catch (error) {
-            console.error('[WebSocketManager] Error handling message:', error);
+            logger.error("Error handling WebSocket message", {
+                clientId: ws.data.clientId,
+                error,
+                rawMessage: this.debugMode ? rawMessage : undefined
+            });
         }
     }
 }

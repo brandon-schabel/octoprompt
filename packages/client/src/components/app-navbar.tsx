@@ -10,7 +10,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
-import { Switch } from "@/components/ui/switch" 
+import { Switch } from "@/components/ui/switch"
 import { HelpDialog } from "@/components/help-dialog"
 import { useGlobalStateContext } from "./global-state-context"
 
@@ -20,7 +20,7 @@ export function AppNavbar() {
     const [editProjectId, setEditProjectId] = useState<string | null>(null)
     const [helpOpen, setHelpOpen] = useState(false)
 
-    const { activeTabState, updateActiveTab } = useGlobalStateContext()
+    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab } = useGlobalStateContext()
     const selectedProjectId = activeTabState?.selectedProjectId
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
@@ -76,6 +76,7 @@ export function AppNavbar() {
     })
 
     const handleSelectProject = (id: string) => {
+        console.log("handleSelectProject", id)
         updateActiveTab(prev => ({
             ...prev,
             selectedProjectId: id,

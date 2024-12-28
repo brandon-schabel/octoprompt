@@ -17,9 +17,9 @@ export const Route = createFileRoute('/chat')({
 })
 
 function ChatPage() {
-  const { state, activeTabState } = useGlobalStateContext()
+  const { activeProjectTabState } = useGlobalStateContext()
   const navigate = useNavigate()
-  const selectedProjectId = activeTabState?.selectedProjectId
+  const selectedProjectId = activeProjectTabState?.selectedProjectId
   const modelControl = useChatModelControl()
   // Custom hook that wraps all logic
   const chatControl = useChatControl()

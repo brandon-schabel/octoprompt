@@ -5,7 +5,7 @@ import { ProjectFile } from 'shared'
 const MAX_HISTORY_SIZE = 50
 
 export function useSelectedFiles() {
-  const { activeTabState, updateActiveTab } = useGlobalStateContext()
+  const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab } = useGlobalStateContext()
   const selectedFiles = activeTabState?.selectedFiles || []
   const history = activeTabState?.selectedFilesHistory ?? [[]]
   const historyIndex = activeTabState?.selectedFilesHistoryIndex ?? 0

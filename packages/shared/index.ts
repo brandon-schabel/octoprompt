@@ -28,5 +28,5 @@ export { projectsApiValidation } from './src/validation/projects-api-validation'
 export { promptApiValidation } from './src/validation/prompt-api-validation';
 export { providerKeyApiValidation } from './src/validation/provider-key-api-validation';
 export { codeEditorApiValidation, type EditFileBody, type EditFileParams } from './src/validation/code-editor-api-validation';
-export { globalStateSchema, createInitialGlobalState, type GlobalState, type TabState, tabStateSchema } from './src/global-state/global-state-schema';
+export { globalStateSchema, createInitialGlobalState, type GlobalState, type ProjectTabState as TabState, projectTabStateSchema as tabStateSchema } from './src/global-state/global-state-schema';
 // export type { ApiValidationSchemaRecord } from './src/types/api-validation-schema-record';

@@ -93,7 +93,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   }
 
   if (selectedFiles.length === 0) {
-    return <p className="text-sm text-muted-foreground">No files selected</p>
+    return <p className="text-sm text-muted-foreground p-2">No files selected</p>
   }
 
   return (

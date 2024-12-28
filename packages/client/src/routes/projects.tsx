@@ -17,8 +17,6 @@ import { useGlobalStateContext } from '@/components/global-state-context'
 import { useEditFile } from '@/hooks/api/use-code-editor-api'
 import { toast } from 'sonner'
 import { useSelectedFiles } from '@/hooks/use-selected-files'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
@@ -32,10 +30,10 @@ function ProjectsPage() {
     // Access global tab state + helpers
     const {
         state,
-        activeTabState,
-        createNewTab,
+        activeProjectTabState: activeTabState,
+        createProjectTab: createNewTab,
         wsReady,                      // track readiness
-        updateActiveTabStateKey,
+        updateActiveProjectTabStateKey: updateActiveTabStateKey,
     } = useGlobalStateContext()
     const [aiPrompt, setAiPrompt] = useState('')
     const aiCodeEditMutation = useEditFile()
@@ -50,8 +48,10 @@ function ProjectsPage() {
     // Query all projects
     const { data: projects } = useGetProjects()
 
+    
+
     // Check for “no tabs” scenario
-    const noTabsYet = Object.keys(state?.tabs ?? {}).length === 0
+    const noTabsYet = Object.keys(state?.projectTabs ?? {}).length === 0
 
 
     const handleApplyFixes = async () => {
@@ -168,9 +168,7 @@ function ProjectsPage() {
                                 We see you have at least one project, but no tabs created yet.
                                 Create a new tab to start exploring your project!
                             </p>
-                            <Button onClick={() => createNewTab({
-                                "displayName": "Tab 1"
-                            })}>
+                            <Button onClick={() => createNewTab()}>
                                 + Create a Tab
                             </Button>
                         </>
@@ -202,6 +200,13 @@ function ProjectsPage() {
             </div>
         )
     }
+
+    console.log({
+        projectData,
+        selectedProjectId,
+        promptData,
+        state
+    })
 
 
 

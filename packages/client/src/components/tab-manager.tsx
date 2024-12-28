@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useGlobalStateContext } from './global-state-context'
 import { Plus } from 'lucide-react'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -20,18 +19,17 @@ import { useState } from 'react'
 export function TabManager() {
   const {
     state,
-    activeTabState,
-    createNewTab,
-    setActiveTab,
+    createProjectTab: createNewTab,
+    setActiveProjectTab: setActiveTab,
     wsReady,
-    updateTab,
-    deleteTab,
+    updateProjectTab: updateTab,
+    deleteProjectTab: deleteTab,
   } = useGlobalStateContext()
 
   const [editingTabName, setEditingTabName] = useState<{ id: string, name: string } | null>(null)
 
-  const activeTabId = state?.activeTabId
-  const tabs = state?.tabs
+  const activeTabId = state?.projectActiveTabId
+  const tabs = state?.projectTabs
 
   // Add hotkeys for selecting tabs with t + number
   useHotkeys('t+1', () => tabIds[0] && setActiveTab(tabIds[0]))
@@ -47,7 +45,7 @@ export function TabManager() {
   // Create a default tab if none exists and WebSocket is ready
   useEffect(() => {
     if (wsReady && tabs && Object.keys(tabs).length === 0) {
-      createNewTab({ displayName: "Default Tab" })
+      createNewTab()
     }
   }, [wsReady, tabs, createNewTab])
 
@@ -60,7 +58,7 @@ export function TabManager() {
   if (!tabs || Object.keys(tabs).length === 0) {
     return (
       <div className="flex flex-col gap-2">
-        <Button onClick={() => createNewTab({ displayName: getNextNewTabName() })}>
+        <Button onClick={() => createNewTab()}>
           + New Tab
         </Button>
       </div>
@@ -73,18 +71,6 @@ export function TabManager() {
   const handleRenameTab = (tabId: string, newName: string) => {
     updateTab(tabId, { displayName: newName })
     setEditingTabName(null)
-  }
-
-  const totalTabs = Object.keys(tabs).length
-  const nextTabName = `Tab ${totalTabs + 1}`
-
-  const getNextNewTabName = () => {
-    // ensure the name is unique
-    let newName = nextTabName
-    while (Object.values(tabs).some(tab => tab.displayName === newName)) {
-      newName = `Tab ${totalTabs + 1}`
-    }
-    return newName
   }
 
   return (
@@ -150,9 +136,7 @@ export function TabManager() {
           )
         })}
         <div>
-          <Button onClick={() => createNewTab({
-            displayName: getNextNewTabName()
-          })} size="icon" className="w-6 h-6 ml-2">
+          <Button onClick={() => createNewTab()} size="icon" className="w-6 h-6 ml-2">
             <Plus />
           </Button>
         </div>
