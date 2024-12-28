@@ -142,7 +142,6 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
             tabId: activeProjectTabId,
             partial: finalPartial
         };
-        console.log(message)
 
 
         wsRef.current?.send(JSON.stringify(message));

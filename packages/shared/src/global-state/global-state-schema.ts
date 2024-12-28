@@ -1,16 +1,12 @@
 import { z } from 'zod';
 
-
-
 export const EDITOR_OPTIONS = [
     { value: 'vscode', label: 'VS Code' },
     { value: 'cursor', label: 'Cursor' },
     { value: 'webstorm', label: 'WebStorm' },
-] as const
+] as const;
 
-
-export type EditorType = typeof EDITOR_OPTIONS[number]['value']
-
+export type EditorType = typeof EDITOR_OPTIONS[number]['value'];
 
 export const projectTabStateSchema = z.object({
     selectedProjectId: z.string().nullable(),
@@ -30,10 +26,17 @@ export const projectTabStateSchema = z.object({
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
 });
 
-
 export const chatTabStateSchema = z.object({
-    provider: z.string().default('openai'),
-    model: z.string().default('gpt-3.5-turbo'),
+    provider: z.enum([
+        'openai',
+        'openrouter',
+        'lmstudio',
+        'ollama',
+        'xai',
+        'gemini',
+        'anthropic',
+    ]).default('openai'),
+    model: z.string().default('gpt-4o'),
     input: z.string().default(''),
     messages: z.array(
         z.object({
@@ -42,11 +45,12 @@ export const chatTabStateSchema = z.object({
             content: z.string(),
         })
     ).default([]),
+    /** Track hidden (excluded) messages from the final prompt. */
+    excludedMessageIds: z.array(z.string()).default([]),
     displayName: z.string().optional(),
+    activeChatId: z.string().optional(),
 });
 
-
-// export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
 export type ChatTabState = z.infer<typeof chatTabStateSchema>;
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
 
@@ -59,10 +63,8 @@ export const globalStateSchema = z.object({
     counter: z.number(),
     projectTabs: z.record(z.string(), projectTabStateSchema),
     projectActiveTabId: z.string().nullable(),
-    // activeTabId: z.string().nullable(),
     chatTabs: z.record(z.string(), chatTabStateSchema),
     chatActiveTabId: z.string().nullable(),
-
 });
 
 export type GlobalState = z.infer<typeof globalStateSchema>;
@@ -71,8 +73,6 @@ export const createInitialGlobalState = (): GlobalState => ({
     users: [],
     settings: { darkMode: false, language: 'en' },
     counter: 0,
-
-    // We’ll create one default tab on first load
     projectTabs: {
         defaultTab: {
             selectedProjectId: null,
@@ -98,10 +98,11 @@ export const createInitialGlobalState = (): GlobalState => ({
             model: 'gpt-4o',
             input: '',
             messages: [],
+            excludedMessageIds: [],
             displayName: 'Default Tab',
+            activeChatId: undefined,
         },
     },
-    // activeTabId: 'defaultTab',
     chatActiveTabId: 'defaultTab',
     projectActiveTabId: 'defaultTab',
 });

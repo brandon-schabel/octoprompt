@@ -1,203 +1,191 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react';
 import {
-    useCreateChat, useGetMessages, useSendMessage, useForkChat
-} from '@/hooks/api/use-chat-ai-api'
-import { useLocalStorage } from '@/hooks/use-local-storage'
-import { useChatModelControl } from './use-chat-model-control'
-import { Chat, ChatMessage } from 'shared/schema'
+    useCreateChat,
+    useGetMessages,
+    useSendMessage,
+    useForkChat,
+} from '@/hooks/api/use-chat-ai-api';
+import { useGlobalStateContext } from '@/components/global-state-context';
+import { useChatModelControl } from './use-chat-model-control';
+import { ChatMessage } from 'shared/schema';
+import { APIProviders } from 'shared/src/validation/chat-api-validation';
 
-
-type TempChatMessage = ChatMessage & { tempId?: string }
+type TempChatMessage = ChatMessage & { tempId?: string };
 
 export function useChatControl() {
-    const [currentChat, setCurrentChat] = useLocalStorage<Chat | null>('current-chat', null)
-    const [newMessage, setNewMessage] = useState('')
-    const [pendingMessages, setPendingMessages] = useState<ChatMessage[]>([])
-    const [excludedMessagesMap, setExcludedMessagesMap] = useLocalStorage<Record<string, string[]>>(
-        'excluded-messages',
-        {}
-    )
+    const {
+        activeChatTabState,
+        updateActiveChatTab,
+        wsReady,
+        state
+    } = useGlobalStateContext();
+
+    // If you'd like to keep a local "pending" queue that hasn't yet been
+    // committed to the global state, you can do so here:
+    const [pendingMessages, setPendingMessages] = useState<TempChatMessage[]>([]);
 
     // API hooks
-    const createChatMutation = useCreateChat()
-    const sendMessageMutation = useSendMessage()
-    const forkChatMutation = useForkChat()
+    const createChatMutation = useCreateChat();
+    const sendMessageMutation = useSendMessage();
+    const forkChatMutation = useForkChat();
 
-    // Model control logic (OpenAI vs LLMStudio vs Ollama, etc.)
-    const modelControl = useChatModelControl()
+    // Model control logic
+    const modelControl = useChatModelControl();
 
-    // If we do have a currentChat, fetch its messages
-    const { data: messagesData, refetch: refetchMessages } = useGetMessages(currentChat?.id ?? '')
+    // If there's an actual DB-based chat ID in the active tab, you can fetch messages from the server:
+    const chatId = activeChatTabState?.activeChatId ?? '';
+    const { data: messagesData, refetch: refetchMessages } = useGetMessages(chatId);
 
-    // Derived states
-    const excludedMessageIds = new Set(
-        currentChat ? excludedMessagesMap[currentChat.id] || [] : []
-    )
-    const messages = mergeServerAndPendingMessages(messagesData?.data || [], pendingMessages)
+    // Merged final messages = from DB + pending
+    const messages = mergeServerAndPendingMessages(
+        messagesData?.data || [],
+        pendingMessages
+    );
 
-    // Example utility function for merging server messages w/ pending ones
+    // Helper to combine server messages with pending local messages
     function mergeServerAndPendingMessages(
         serverMsgs: TempChatMessage[],
         pending: TempChatMessage[]
     ) {
-        // 1) Filter out any messages from the server that have temp- IDs
-        const filteredServerMsgs = serverMsgs.filter(
-            (msg) => !msg.id.startsWith('temp-')
+        const filteredServerMsgs = serverMsgs.filter(msg => !msg.id.startsWith('temp-'));
+        const pendingWithoutDuplicates = pending.filter(pend =>
+            !filteredServerMsgs.some(serverMsg => serverMsg.tempId === pend.tempId)
         );
-
-        // 2) Remove pending messages that have matching tempIds in server messages
-        const pendingWithoutDuplicates = pending.filter(pend => {
-            return !filteredServerMsgs.some(serverMsg =>
-                serverMsg.tempId && serverMsg.tempId === pend.tempId
-            );
-        });
-
-        // 3) Combine them
         return [...filteredServerMsgs, ...pendingWithoutDuplicates];
     }
 
-    // Create new chat with a default or user-specified title
+    /** ========== CREATE CHAT ========== */
     async function handleCreateChat(chatTitle: string) {
         try {
-            const newChat = await createChatMutation.mutateAsync({ title: chatTitle })
-            setCurrentChat(newChat)
-            return newChat
+            const newChat = await createChatMutation.mutateAsync({ title: chatTitle });
+            // You might store the new chat ID somewhere in the global state here
+            return newChat;
         } catch (error) {
-            console.error('Error creating chat:', error)
-            return null
+            console.error('[handleCreateChat] Error:', error);
+            return null;
         }
     }
 
-    // Send message logic
+    /** ========== SEND MESSAGE ========== */
     async function handleSendMessage() {
-        if (!newMessage.trim()) return
+        if (!activeChatTabState) return;
+        const userInput = activeChatTabState.input.trim();
+        if (!userInput) return;
 
-        // If there is no current chat, create one automatically
-        let chat = currentChat
-        if (!chat) {
-            chat = await handleCreateChat(`New Chat ${Date.now()}`)
-            if (!chat) return
-        }
+        // Clear the input field in global state
+        updateActiveChatTab({ input: '' });
 
-        const message = newMessage
-        setNewMessage('')
-
-        const userTempId = `temp-user-${Date.now()}`
-        const assistantTempId = `temp-assistant-${Date.now()}`
+        // Generate IDs
+        const userTempId = `temp-user-${Date.now()}`;
+        const assistantTempId = `temp-assistant-${Date.now()}`;
 
         const userMessage: TempChatMessage = {
             id: userTempId,
-            chatId: chat.id,
+            chatId,
             role: 'user',
-            content: message,
+            content: userInput,
             createdAt: new Date(),
-            tempId: userTempId
-        }
+            tempId: userTempId,
+        };
 
         const assistantMessage: TempChatMessage = {
             id: assistantTempId,
-            chatId: chat.id,
+            chatId,
             role: 'assistant',
             content: '',
             createdAt: new Date(),
-            tempId: assistantTempId
-        }
+            tempId: assistantTempId,
+        };
 
-        setPendingMessages([userMessage, assistantMessage])
+        setPendingMessages(prev => [...prev, userMessage, assistantMessage]);
 
-        const selectedModel = modelControl.currentModel ?? 'gpt-4' // fallback model
+        const selectedProvider = activeChatTabState.provider;
+        const selectedModel = activeChatTabState.model || 'gpt-4o'; // fallback
+        const excludedIds = activeChatTabState.excludedMessageIds ?? [];
 
         try {
             const stream = await sendMessageMutation.mutateAsync({
-                message,
-                chatId: chat.id,
-                provider: modelControl.provider,
+                message: userInput,
+                chatId,                 // If you have a real chat ID
+                provider: selectedProvider as APIProviders,
                 tempId: assistantTempId,
-                options: {
+                options: { model: selectedModel },
+                excludedMessageIds: excludedIds,
+            });
 
-                    model: selectedModel,
-                },
-                excludedMessageIds: Array.from(excludedMessageIds)
-            })
-
-            const reader = stream.getReader()
-            let assistantContent = ''
+            const reader = stream.getReader();
+            let assistantContent = '';
 
             while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
+                const { done, value } = await reader.read();
+                if (done) break;
 
-                const text = new TextDecoder().decode(value)
-
+                const text = new TextDecoder().decode(value);
                 if (text) {
-                    assistantContent += text
+                    assistantContent += text;
                     setPendingMessages(prev =>
                         prev.map(m => m.id === assistantTempId
                             ? { ...m, content: assistantContent }
                             : m
                         )
-                    )
+                    );
                 }
             }
 
-            await refetchMessages()
-            setPendingMessages([])
+            // Once the response is done, refetch the server messages
+            await refetchMessages();
+            setPendingMessages([]);
         } catch (error) {
-            console.error('Streaming error:', error)
+            console.error('[handleSendMessage] Streaming error:', error);
             setPendingMessages(prev =>
-                prev.map(m => m.id === assistantTempId
-                    ? { ...m, content: `Error: ${error instanceof Error ? error.message : 'Failed to get response from AI service.'}` }
-                    : m
+                prev.map(m =>
+                    m.id === assistantTempId
+                        ? {
+                            ...m,
+                            content: `Error: ${error instanceof Error ? error.message : 'Failed to get response.'
+                                }`
+                        }
+                        : m
                 )
-            )
+            );
         }
     }
 
-
-    // Fork chat logic
+    /** ========== FORK CHAT ========== */
     async function handleForkChat() {
-        if (!currentChat) return
+        if (!chatId) return;
         try {
+            const excludedIds = activeChatTabState?.excludedMessageIds ?? [];
             const newChat = await forkChatMutation.mutateAsync({
-                chatId: currentChat.id,
-                excludedMessageIds: Array.from(excludedMessageIds),
-            })
-            setCurrentChat(newChat)
-            setPendingMessages([])
-            setExcludedMessagesMap(prev => ({
-                ...prev,
-                [newChat.id]: []
-            }))
+                chatId,
+                excludedMessageIds: excludedIds
+            });
+            // Possibly store newChat in global state
+            setPendingMessages([]);
         } catch (error) {
-            console.error('Error forking chat:', error)
+            console.error('[handleForkChat] Error:', error);
         }
     }
 
-    // Clear excluded messages
+    /** ========== CLEAR EXCLUDED ========== */
     function clearExcludedMessages() {
-        if (!currentChat) return
-        setExcludedMessagesMap(prev => ({ ...prev, [currentChat.id]: [] }))
+        updateActiveChatTab({ excludedMessageIds: [] });
     }
 
     return {
-        currentChat,
-        setCurrentChat,
-        newMessage,
-        setNewMessage,
+        wsReady,
+        chatId,
+        modelControl,
         messages,
         pendingMessages,
-        setPendingMessages,
-        excludedMessageIds,
-        createChatMutation,
-        sendMessageMutation,
-        forkChatMutation,
         handleCreateChat,
         handleSendMessage,
         handleForkChat,
         clearExcludedMessages,
-        modelControl,
         refetchMessages,
-        excludedMessagesMap,
-        setExcludedMessagesMap,
-    }
+
+        // If you want direct access to active chat tab:
+        activeChatTabState,
+        updateActiveChatTab,
+    };
 }

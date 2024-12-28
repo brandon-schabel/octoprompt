@@ -1,51 +1,34 @@
-import { useLocalStorage } from "@/hooks/use-local-storage"
-import { APIProviders } from "shared"
-
-
-type ProviderModels = {
-    openai: string    
-    openrouter: string | null
-    lmstudio: string | null
-    ollama: string | null
-    xai: string | null
-    gemini: string | null
-}
-
-const DEFAULT_PROVIDER_MODELS: ProviderModels = {
-    openai: 'gpt-4o',
-    openrouter: null,
-    lmstudio: null,
-    ollama: 'llama3',
-    xai: 'grok-beta',
-    gemini: 'gemini-1.5-pro',
-}
+import { APIProviders } from "shared";
+import { useGlobalStateContext } from "@/components/global-state-context";
 
 export const useChatModelControl = () => {
-    const [provider, setProvider] = useLocalStorage<APIProviders>(
-        'provider',
-        'openai'
-    )
+    const {
+        activeChatTabState,
+        updateActiveChatTab,
+    } = useGlobalStateContext();
 
-    const [providerModels, setProviderModels] = useLocalStorage<ProviderModels>(
-        'provider-models',
-        DEFAULT_PROVIDER_MODELS
-    )
+    // Fall back to defaults if no tab is active
+    const provider: APIProviders = activeChatTabState?.provider ?? 'openai';
+    const currentModel: string = activeChatTabState?.model ?? 'gpt-4o';
 
-    const currentModel = providerModels[provider]
+    // Whenever you set a new provider, update the active chat tab in global state
+    function setProvider(newProvider: APIProviders) {
+        updateActiveChatTab({
+            provider: newProvider,
+        });
+    }
 
+    // Similarly for model changes
     function setCurrentModel(modelId: string) {
-        setProviderModels(prev => ({
-            ...prev,
-            [provider]: modelId,
-        }))
+        updateActiveChatTab({
+            model: modelId,
+        });
     }
 
     return {
         provider,
         setProvider,
-        providerModels,
-        setProviderModels,
         currentModel,
         setCurrentModel,
-    }
-}
+    };
+};

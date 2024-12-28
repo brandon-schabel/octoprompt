@@ -8,6 +8,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useChatControl } from '@/components/chat/hooks/use-chat-state'
 import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
 import { useGlobalStateContext } from '@/components/global-state-context'
+import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -20,37 +21,42 @@ function ChatPage() {
   const { activeProjectTabState } = useGlobalStateContext()
   const navigate = useNavigate()
   const selectedProjectId = activeProjectTabState?.selectedProjectId
+
   const modelControl = useChatModelControl()
-  // Custom hook that wraps all logic
   const chatControl = useChatControl()
   const {
-    currentChat,
-    newMessage,
-    setNewMessage,
+    activeChatTabState,
     handleSendMessage,
     handleForkChat,
+    updateActiveChatTab
   } = chatControl
 
-  // If you have logic for the “Back to Projects” button:
+  const currentChat = activeChatTabState
+  const newMessage = activeChatTabState?.input ?? ''
+
   const handleBackToProject = () => {
     navigate({ to: '/projects' })
   }
 
   return (
-    <div className="h-full">
-      <div className="flex h-full">
+    <div className="flex flex-col h-full overflow-hidden">
+      <ChatTabManager />
+
+      <div className="flex flex-1 overflow-hidden">
         <ChatSidebar
           modelControl={modelControl}
           chatControl={chatControl}
         />
 
         <div className="flex-1 flex flex-col p-2 overflow-hidden bg-secondary">
-          {!selectedProjectId && <ChatHeader
-            selectedProjectId={selectedProjectId ?? ''}
-            onForkChat={handleForkChat}
-            onBackToProject={selectedProjectId ? handleBackToProject : undefined}
-            chatControl={chatControl}
-          />}
+          {!selectedProjectId && (
+            <ChatHeader
+              selectedProjectId={selectedProjectId ?? ''}
+              onForkChat={handleForkChat}
+              onBackToProject={selectedProjectId ? handleBackToProject : undefined}
+              chatControl={chatControl}
+            />
+          )}
 
           {currentChat && (
             <ChatMessages chatControl={chatControl} />
@@ -59,7 +65,7 @@ function ChatPage() {
           <div className="flex gap-2 bg-background p-2 rounded-md">
             <AdaptiveChatInput
               value={newMessage}
-              onChange={setNewMessage}
+              onChange={(val) => updateActiveChatTab({ input: val })}
               onSubmit={handleSendMessage}
               placeholder="Type your message..."
               disabled={!currentChat}
@@ -78,4 +84,3 @@ function ChatPage() {
     </div>
   )
 }
-

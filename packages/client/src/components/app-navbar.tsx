@@ -76,7 +76,6 @@ export function AppNavbar() {
     })
 
     const handleSelectProject = (id: string) => {
-        console.log("handleSelectProject", id)
         updateActiveTab(prev => ({
             ...prev,
             selectedProjectId: id,

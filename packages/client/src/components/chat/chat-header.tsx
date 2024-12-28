@@ -1,13 +1,13 @@
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useChatControl } from "./hooks/use-chat-state"
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useChatControl } from "./hooks/use-chat-state";
 
 interface ChatHeaderProps {
-    selectedProjectId?: string
-    onForkChat: () => void
-    onBackToProject?: () => void
-    chatControl: ReturnType<typeof useChatControl>
+    selectedProjectId?: string;
+    onForkChat: () => void;
+    onBackToProject?: () => void;
+    chatControl: ReturnType<typeof useChatControl>;
 }
 
 export function ChatHeader({
@@ -17,12 +17,11 @@ export function ChatHeader({
     chatControl
 }: ChatHeaderProps) {
     const {
-        currentChat,
-        excludedMessageIds,
+        activeChatTabState,
         clearExcludedMessages
-    } = chatControl
+    } = chatControl;
 
-    const excludedMessageCount = excludedMessageIds.size
+    const excludedMessageCount = activeChatTabState?.excludedMessageIds?.length || 0;
 
     return (
         <div className="flex justify-between items-center mb-2 bg-background p-2 rounded-md">
@@ -39,17 +38,16 @@ export function ChatHeader({
                     </Button>
                 )}
                 <div className="font-bold text-xl">
-                    {currentChat?.title || 'No Chat Selected'}
+                    {activeChatTabState?.displayName || 'No Chat Selected'}
                 </div>
             </div>
 
-            {currentChat && (
+            {activeChatTabState && (
                 <div className="flex items-center gap-2">
                     {excludedMessageCount > 0 && (
                         <>
                             <Badge variant="secondary">
-                                {excludedMessageCount} message
-                                {excludedMessageCount !== 1 ? 's' : ''} excluded
+                                {excludedMessageCount} message{excludedMessageCount !== 1 ? 's' : ''} excluded
                             </Badge>
                             <Button variant="outline" size="sm" onClick={clearExcludedMessages}>
                                 Clear Excluded
@@ -62,5 +60,5 @@ export function ChatHeader({
                 </div>
             )}
         </div>
-    )
+    );
 }

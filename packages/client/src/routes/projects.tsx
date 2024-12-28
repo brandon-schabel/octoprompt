@@ -11,7 +11,7 @@ import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel'
 import { projectSchema } from '@/components/projects/utils/projects-utils'
 import { ProjectFile } from 'shared/schema'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { TabManager } from '@/components/tab-manager'
+import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { Button } from '@/components/ui/button'
 import { useGlobalStateContext } from '@/components/global-state-context'
 import { useEditFile } from '@/hooks/api/use-code-editor-api'
@@ -48,7 +48,7 @@ function ProjectsPage() {
     // Query all projects
     const { data: projects } = useGetProjects()
 
-    
+
 
     // Check for “no tabs” scenario
     const noTabsYet = Object.keys(state?.projectTabs ?? {}).length === 0
@@ -82,7 +82,6 @@ function ProjectsPage() {
             // After success, show a success message or handle updated files
             // toast.success(`AI Edits Applied: ${result.explanation}`)
             toast.success(`AI Edits Applied`)
-            console.log({ result })
             // e.g. re-fetch project files or show them in the UI
         } catch (err: any) {
             toast.error(`Failed to apply AI fixes: ${err.message}`)
@@ -160,7 +159,7 @@ function ProjectsPage() {
     if (noTabsYet) {
         return (
             <div className="p-4">
-                <TabManager />
+                <ProjectsTabManager />
                 <div className="mt-4 flex flex-col items-start gap-3">
                     {projects?.projects && projects.projects.length > 0 ? (
                         <>
@@ -193,7 +192,7 @@ function ProjectsPage() {
     if (!activeTabState) {
         return (
             <div className="p-4">
-                <TabManager />
+                <ProjectsTabManager />
                 <p className="text-sm text-muted-foreground">
                     No active tab selected. Create or select a tab above.
                 </p>
@@ -201,18 +200,10 @@ function ProjectsPage() {
         )
     }
 
-    console.log({
-        projectData,
-        selectedProjectId,
-        promptData,
-        state
-    })
-
-
 
     return (
         <div className="flex-col h-full w-full overflow-hidden flex bg-secondary">
-            <TabManager />
+            <ProjectsTabManager />
 
             <div className='flex-1 flex flex-row overflow-hidden'>
                 {projectData && selectedProjectId && (
