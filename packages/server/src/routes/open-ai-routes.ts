@@ -1,8 +1,9 @@
-import { UnifiedChatProviderService } from '@/services/ai-providers/unified-chat-provider-service';
+import { UnifiedProviderService } from '@/services/model-providers/providers/unified-provider-service';
 import { json } from '@bnk/router';
 import { router } from "server-router";
 
-const chatAIService = new UnifiedChatProviderService();
+// const chatAIService = new UnifiedChatProviderService();
+const unifiedProviderService = new UnifiedProviderService();
 
 
 router.post('/api/ai/whisper-translate-stream', {}, async (req) => {
@@ -16,7 +17,7 @@ router.post('/api/ai/whisper-translate-stream', {}, async (req) => {
             return json.error('audio file is required', 400);
         }
         const prompt = formData.get('prompt') ? String(formData.get('prompt')) : undefined;
-        const translation = await chatAIService.provider.translateAudioFile(file, prompt);
+        const translation = await unifiedProviderService.translateAudioFile(file, prompt);
 
         return new Response(JSON.stringify({ text: translation }), {
             headers: { 'Content-Type': 'application/json' }
@@ -47,7 +48,7 @@ router.post('/api/ai/whisper-stream', {}, async (req) => {
         /**
          * Transcription is done via chatAIService -> providerService -> OpenAI Whisper
          */
-        const transcription = await chatAIService.provider.transcribeAudioFile(file, prompt);
+        const transcription = await unifiedProviderService.transcribeAudioFile(file, prompt);
 
         return new Response(JSON.stringify({ text: transcription }), {
             headers: { 'Content-Type': 'application/json' }

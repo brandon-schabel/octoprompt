@@ -1,50 +1,22 @@
+import { UnifiedProviderService } from "../providers/unified-provider-service";
+import { ProcessMessageParams } from "../providers/provider-types";
 import { ChatService } from "./chat-service";
-import { UnifiedProviderService } from "./unified-provider-service";
-import type { ReadableStream } from "stream/web";
 
-/** Which API provider to use */
-export type APIProviders = "openai" | "openrouter" | "lmstudio" | "ollama" | "xai" | "gemini" | "anthropic";
-
-/** Options used by certain completion endpoints */
-export type ChatCompletionOptions = Partial<{
-    model: string;
-    temperature: number;
-    max_tokens: number;
-    top_p: number;
-    frequency_penalty: number;
-    presence_penalty: number;
-    top_k: number; // used by Gemini / local LLM
-}>;
-
-
-export type StreamParams = {
-    chatId: string;
-    assistantMessageId: string;
-    userMessage: string;
-    chatService: ChatService;
-    options: ChatCompletionOptions;
-    tempId?: string;
-};
-
-export type ProcessMessageParams = Omit<StreamParams, "chatService" | "assistantMessageId"> & {
-    provider?: APIProviders;
-};
-
-export class UnifiedChatProviderService {
+export class ProviderChatService {
     private chatService: ChatService;
-    private providerService: UnifiedProviderService;
+    private universalProviderService: UnifiedProviderService;
 
     constructor() {
         this.chatService = new ChatService();
-        this.providerService = new UnifiedProviderService();
+        this.universalProviderService = new UnifiedProviderService();
     }
 
     /**
-     * Process a message:
-     * 1. Save user message (via ChatService)
-     * 2. Create placeholder assistant message (via ChatService)
-     * 3. Use the relevant provider streaming method (via ProviderService)
-     */
+ * Process a message:
+ * 1. Save user message (via ChatService)
+ * 2. Create placeholder assistant message (via ChatService)
+ * 3. Use the relevant provider streaming method (via ProviderService)
+ */
     async processMessage({
         chatId,
         userMessage,
@@ -53,6 +25,8 @@ export class UnifiedChatProviderService {
         tempId,
     }: ProcessMessageParams): Promise<ReadableStream<Uint8Array>> {
         let assistantMessageId: string | undefined;
+
+
         try {
             // Save user message
             await this.chatService.saveMessage({
@@ -71,8 +45,10 @@ export class UnifiedChatProviderService {
             });
             assistantMessageId = initialAssistantMessage.id;
 
+
+
             // Use the unified streamMessage method
-            return this.providerService.streamMessage({
+            return this.universalProviderService.streamMessage({
                 chatId,
                 assistantMessageId,
                 userMessage,
@@ -98,7 +74,7 @@ export class UnifiedChatProviderService {
     }
 
     /** Expose providerService methods if needed */
-    get provider() {
-        return this.providerService;
+    get universalProvider() {
+        return this.universalProviderService;
     }
 }

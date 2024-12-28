@@ -1,7 +1,7 @@
 import { ReadableStream } from "stream/web";
-import { TextDecoder, TextEncoder } from "util";
-import { ChatService } from "../chat-service";
-import type { ChatCompletionOptions } from "../chat-ai-service";
+import { TextEncoder } from "util";
+import type { StreamParams } from "../provider-types";
+
 
 type OpenRouterStreamResponse = {
     choices: {
@@ -10,14 +10,15 @@ type OpenRouterStreamResponse = {
     }[];
 };
 
-export async function streamOpenRouter(
-    chatId: string,
-    assistantMessageId: string,
-    userMessage: string,
-    chatService: ChatService,
-    options: ChatCompletionOptions,
+export async function streamOpenRouter({
+    userMessage,
+    chatService,
+    assistantMessageId,
+    options,
+    openRouterApiKey
+}: StreamParams & {
     openRouterApiKey: string
-): Promise<ReadableStream<Uint8Array>> {
+}): Promise<ReadableStream<Uint8Array>> {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -33,6 +34,7 @@ export async function streamOpenRouter(
             ...options,
         }),
     });
+
 
     if (!response.ok) {
         const errorText = await response.text();

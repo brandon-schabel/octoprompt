@@ -1,11 +1,11 @@
+import { UnifiedProviderService } from '@/services/model-providers/providers/unified-provider-service';
 import { json } from '@bnk/router';
 import { router } from "server-router";
 
 import { files, projects, eq } from "shared";
 import { db } from "shared/database";
-import { UnifiedChatProviderService } from '@/services/ai-providers/unified-chat-provider-service';
 
-const chatAIService = new UnifiedChatProviderService();
+const unifiedProviderService = new UnifiedProviderService();
 
 const AI_BASE_PATH = '/api/ai';
 
@@ -31,7 +31,7 @@ router.post("/api/ai/gemini/file_search", {}, async (req) => {
                  * We can call chatAIService.provider.transcribeAudioFile 
                  * to get text from an audio file.
                  */
-                query = await chatAIService.provider.transcribeAudioFile(audioFile);
+                query = await unifiedProviderService.transcribeAudioFile(audioFile);
             }
         } else {
             const body = await req.json();
@@ -87,7 +87,7 @@ router.post("/api/ai/gemini/file_search", {}, async (req) => {
         // We'll do a direct fetch to Gemini’s SSE endpoint
         // using the internal method to retrieve the Gemini API key:
         // e.g. chatAIService.provider.getGeminiApiKey (you might expose it publicly or keep it private)
-        const apiKey = await (chatAIService.provider as any).getGeminiApiKey();
+        const apiKey = await (unifiedProviderService as any).getGeminiApiKey();
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
         const payload = {
@@ -200,7 +200,7 @@ router.post(`${AI_BASE_PATH}/gemini/upload`, {}, async (req) => {
          * The uploadFileForGemini call is now in provider service, 
          * either accessed directly or via a pass-through in chatAIService.
          */
-        const fileUri = await chatAIService.provider.uploadFileForGemini(file, mime_type);
+        const fileUri = await unifiedProviderService.uploadFileForGemini(file, mime_type);
         return json({ file_uri: fileUri });
     } catch (error) {
         console.error('Gemini file upload error:', error);

@@ -4,11 +4,8 @@ import {
     type Chat,
     type ChatMessage,
     type ExtendedChatMessage,
-    type NewChat,
     type NewChatMessage,
     eq,
-    sql,
-    type SQL,
 } from "shared";
 import { db } from "shared/database";
 

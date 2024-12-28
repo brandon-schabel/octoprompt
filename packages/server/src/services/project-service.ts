@@ -75,4 +75,20 @@ export class ProjectService {
             .where(eq(files.projectId, projectId));
     }
 
+    async updateFileContent(fileId: string, content: string): Promise<ProjectFile> {
+        const [updatedFile] = await db.update(files)
+            .set({
+                content,
+                updatedAt: new Date(),
+            })
+            .where(eq(files.id, fileId))
+            .returning();
+
+        if (!updatedFile) {
+            throw new Error('File not found');
+        }
+
+        return updatedFile;
+    }
+
 }

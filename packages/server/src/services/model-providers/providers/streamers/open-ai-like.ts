@@ -1,21 +1,24 @@
 import { ReadableStream } from "stream/web";
 import { TextEncoder } from "util";
-import { ChatService } from "../chat-service";
-import type { ChatCompletionOptions } from "../chat-ai-service";
+import type { StreamParams } from "../provider-types";
 import OpenAI from "openai/index.mjs";
+
+type OpenAILikeParams = StreamParams & {
+    provider: "openai" | "lmstudio";
+    client: OpenAI;
+};
 
 /**
  * This covers OpenAI or LM Studio—any service that uses the
  * standard chat.completions.create({ stream: true }) interface.
  */
-export async function streamOpenAiLike(
-    chatId: string,
-    assistantMessageId: string,
-    userMessage: string,
-    chatService: ChatService,
-    client: OpenAI,
-    options: ChatCompletionOptions
-): Promise<ReadableStream<Uint8Array>> {
+export async function streamOpenAiLike({
+    userMessage,
+    chatService,
+    assistantMessageId,
+    options,
+    client,
+}: OpenAILikeParams): Promise<ReadableStream<Uint8Array>> {
     const model = options.model || "gpt-4";
     const temperature = typeof options.temperature === "number" ? options.temperature : 0.7;
 

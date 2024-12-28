@@ -1,14 +1,14 @@
 import OpenAI from "openai/index.mjs";
 import { ReadableStream } from "stream/web";
-import type { APIProviders, StreamParams } from "./unified-chat-provider-service";
 import { ProviderKeyService } from "./provider-key-service";
 import { streamOllama } from "./streamers/ollama";
 import { streamOpenRouter } from "./streamers/open-router";
 import { streamXai } from "./streamers/xai";
 import { streamGeminiMessage } from "./streamers/gemini";
 import { streamOpenAiLike } from "./streamers/open-ai-like";
-import { UnifiedModel } from "shared";
-import { streamAnthropic } from "../streamers/anthropic";
+import { APIProviders, UnifiedModel } from "shared";
+import { streamAnthropic } from "./streamers/anthropic";
+import { StreamParams } from "./provider-types";
 
 type XAIModel = {
     id: string
@@ -101,14 +101,14 @@ type AnthropicModelsResponse = {
 };
 
 type OpenAIModelObject = {
-    id: string;          
-    object: string;      
-    created: number;     
-    owned_by: string;    
+    id: string;
+    object: string;
+    created: number;
+    owned_by: string;
 };
 
 type OpenAIModelsListResponse = {
-    object: string;      
+    object: string;
     data: OpenAIModelObject[];
 };
 
@@ -386,11 +386,6 @@ export class UnifiedProviderService {
  * A unified method to list models for a given provider
  */
     async listModels(provider: APIProviders): Promise<UnifiedModel[]> {
-
-        console.log({
-            api: "listModels",
-            provider,
-        })
         switch (provider) {
             case "openrouter": {
                 // existing getOpenRouterModels() => { data: OpenRouterModel[] }
@@ -500,7 +495,7 @@ export class UnifiedProviderService {
 
     private async listOpenAiModels(): Promise<OpenAIModelObject[]> {
         const openai = await this.initializeOpenAI();
-        
+
         const response = await fetch("https://api.openai.com/v1/models", {
             method: "GET",
             headers: {

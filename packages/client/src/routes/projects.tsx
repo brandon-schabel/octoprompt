@@ -14,6 +14,11 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { TabManager } from '@/components/tab-manager'
 import { Button } from '@/components/ui/button'
 import { useGlobalStateContext } from '@/components/global-state-context'
+import { useEditFile } from '@/hooks/api/use-code-editor-api'
+import { toast } from 'sonner'
+import { useSelectedFiles } from '@/hooks/use-selected-files'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
@@ -32,12 +37,16 @@ function ProjectsPage() {
         wsReady,                      // track readiness
         updateActiveTabStateKey,
     } = useGlobalStateContext()
+    const [aiPrompt, setAiPrompt] = useState('')
+    const aiCodeEditMutation = useEditFile()
 
     // Otherwise, proceed with your normal code below
 
     const selectedProjectId = activeTabState?.selectedProjectId ?? null
     const fileSearch = activeTabState?.fileSearch ?? ''
     const searchByContent = activeTabState?.searchByContent ?? false
+    const selectedProvider = 'openai'
+    const { selectedFiles } = useSelectedFiles()
     // Query all projects
     const { data: projects } = useGetProjects()
 
@@ -45,6 +54,40 @@ function ProjectsPage() {
     const noTabsYet = Object.keys(state?.tabs ?? {}).length === 0
 
 
+    const handleApplyFixes = async () => {
+        if (!selectedProjectId) {
+            toast.error('No project selected!')
+            return
+        }
+        if (selectedFiles.length === 0) {
+            toast.error('No files selected!')
+            return
+        }
+        if (!aiPrompt.trim()) {
+            toast.error('Enter an AI prompt describing your desired code changes.')
+            return
+        }
+
+        try {
+            const result = await aiCodeEditMutation.mutateAsync({
+                projectId: selectedProjectId,
+                // fileIds: selectedFiles,
+                // userPrompt: aiPrompt,
+                provider: selectedProvider,
+                // options: { model: 'gpt-4o', temperature: 0.7 },
+                instructions: aiPrompt,
+                fileId: selectedFiles[0],
+            })
+
+            // After success, show a success message or handle updated files
+            // toast.success(`AI Edits Applied: ${result.explanation}`)
+            toast.success(`AI Edits Applied`)
+            console.log({result})
+            // e.g. re-fetch project files or show them in the UI
+        } catch (err: any) {
+            toast.error(`Failed to apply AI fixes: ${err.message}`)
+        }
+    }
 
     const setFileSearch = (value: string) => {
         updateActiveTabStateKey('fileSearch', value)
@@ -197,6 +240,23 @@ function ProjectsPage() {
                 viewedFile={viewedFile}
                 onClose={closeFileViewer}
             />
+            <div className="space-y-2">
+                <Label className="text-sm font-medium">Describe your fix/feature:</Label>
+                <Textarea
+                    className="block w-full border rounded p-2"
+                    rows={4}
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="Explain your desired code changes..."
+                />
+
+                <Button
+                    disabled={aiCodeEditMutation.isPending}
+                    onClick={handleApplyFixes}
+                >
+                    {aiCodeEditMutation.isPending ? 'Applying Fixes...' : 'Apply AI Fixes'}
+                </Button>
+            </div>
         </div>
     )
 }

@@ -1,21 +1,25 @@
+
 import { ReadableStream } from "stream/web";
 import { TextDecoder, TextEncoder } from "util";
-import { ChatService } from "../chat-service";
-import type { ChatCompletionOptions } from "../chat-ai-service";
+import type { StreamParams } from "../provider-types";
 
-/**
- * Provide your Gemini base URL and API key from outside, or do it inside here.
- */
-export async function streamGeminiMessage(
-    chatId: string,
-    userMessage: string,
-    chatService: ChatService,
-    geminiApiKey: string,
-    geminiBaseUrl: string,
-    modelId: string,
-    options: ChatCompletionOptions,
-    tempId?: string
-): Promise<ReadableStream<Uint8Array>> {
+type GeminiStreamParams = Omit<StreamParams, 'assistantMessageId'> & {
+    tempId?: string;
+    geminiApiKey: string;
+    geminiBaseUrl: string;
+    modelId: string;
+};
+
+export async function streamGeminiMessage({
+    chatId,
+    userMessage,
+    chatService,
+    options,
+    assistantMessageId,
+    geminiApiKey,
+    geminiBaseUrl,
+    modelId,
+}: GeminiStreamParams & { assistantMessageId: string }): Promise<ReadableStream<Uint8Array>> {
     // Save user message
     await chatService.saveMessage({
         chatId,
@@ -23,15 +27,6 @@ export async function streamGeminiMessage(
         content: userMessage,
     });
     await chatService.updateChatTimestamp(chatId);
-
-    // Create placeholder assistant message with non-empty content
-    const assistantMessage = await chatService.saveMessage({
-        chatId,
-        role: "assistant",
-        content: "...",
-        tempId,
-    });
-    const assistantMessageId = (await assistantMessage).id;
 
     // Reconstruct chat history
     const msgs = await chatService.getChatMessages(chatId);

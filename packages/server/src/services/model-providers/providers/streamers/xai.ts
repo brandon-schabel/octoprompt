@@ -1,6 +1,6 @@
 import { ReadableStream } from "stream/web";
 import { TextEncoder } from "util";
-import type { StreamParams } from "../unified-chat-provider-service";
+import type { StreamParams } from "../provider-types";
 import OpenAI from "openai";
 
 export async function streamXai({

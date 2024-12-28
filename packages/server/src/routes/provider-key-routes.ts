@@ -1,7 +1,7 @@
 import { router } from "server-router";
 import { json } from '@bnk/router';
-import { ProviderKeyService } from "@/services/provider-key-service";
 import { providerKeyApiValidation } from "shared";
+import { ProviderKeyService } from "@/services/model-providers/providers/provider-key-service";
 
 const keyService = new ProviderKeyService();
 

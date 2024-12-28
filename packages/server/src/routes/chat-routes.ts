@@ -1,15 +1,16 @@
+import { ProviderChatService } from '@/services/model-providers/chat/provider-chat-service';
+import { UnifiedProviderService } from '@/services/model-providers/providers/unified-provider-service';
 import { json } from '@bnk/router';
 import { router } from "server-router";
 
-import { ChatAIService } from '@/services/chat-ai-service';
 import { chatApiValidation } from 'shared/src/validation/chat-api-validation';
-import { UnifiedProviderService } from '@/services/ai-providers/unified-provider-service';
+
 
 /** 
  * Create a single ChatAIService instance that orchestrates 
  * both ChatService (for chats/messages) and ProviderService (for LLM calls). 
  */
-const chatAIService = new ChatAIService();
+const chatAIService = new ProviderChatService();
 const unifiedProviderService = new UnifiedProviderService();
 
 const AI_BASE_PATH = '/api/ai';

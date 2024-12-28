@@ -76,7 +76,7 @@ export type DeleteChatParams = z.infer<typeof chatApiValidation.deleteChat.param
 export type DeleteMessageParams = z.infer<typeof chatApiValidation.deleteMessage.params>;
 export type FileSearchValidationBody = z.infer<typeof chatApiValidation.fileSearchValidation.body>;
 
-export type APIProviders = "openai" | "openrouter" | "lmstudio" | "ollama" | "xai" | "gemini";
+export type APIProviders = "openai" | "openrouter" | "lmstudio" | "ollama" | "xai" | "gemini" | "anthropic";
 
 export type CreateMessageBodyGeneric<TProvider extends APIProviders> = {
     message: string;
