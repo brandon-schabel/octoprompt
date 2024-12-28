@@ -82,7 +82,7 @@ function ProjectsPage() {
             // After success, show a success message or handle updated files
             // toast.success(`AI Edits Applied: ${result.explanation}`)
             toast.success(`AI Edits Applied`)
-            console.log({result})
+            console.log({ result })
             // e.g. re-fetch project files or show them in the UI
         } catch (err: any) {
             toast.error(`Failed to apply AI fixes: ${err.message}`)
@@ -240,7 +240,7 @@ function ProjectsPage() {
                 viewedFile={viewedFile}
                 onClose={closeFileViewer}
             />
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
                 <Label className="text-sm font-medium">Describe your fix/feature:</Label>
                 <Textarea
                     className="block w-full border rounded p-2"
@@ -256,7 +256,7 @@ function ProjectsPage() {
                 >
                     {aiCodeEditMutation.isPending ? 'Applying Fixes...' : 'Apply AI Fixes'}
                 </Button>
-            </div>
+            </div> */}
         </div>
     )
 }

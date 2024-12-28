@@ -19,6 +19,7 @@ export type ChatCompletionOptions = Partial<{
     frequency_penalty: number;
     presence_penalty: number;
     top_k: number; // used by Gemini / local LLM
+    debug: boolean; 
 }>;
 
 

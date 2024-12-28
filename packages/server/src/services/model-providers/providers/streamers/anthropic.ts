@@ -33,20 +33,19 @@ export async function streamAnthropic({
     assistantMessageId,
     options,
     anthropicApiKey,
-    anthropicVersion = "2023-06-01", // or whichever version you require
+    anthropicVersion = "2023-06-01",
     anthropicBeta,
 }: StreamParams & {
     anthropicApiKey: string;
     anthropicVersion?: string;
-    anthropicBeta?: string; // optional
-}): Promise<ReadableStream<Uint8Array>> {
+    anthropicBeta?: string;
+} & { debug?: boolean } // ADDED - optional debug
+): Promise<ReadableStream<Uint8Array>> {
 
-    /**
-     * Construct the request body per Anthropic’s Messages API.
-     * You can adapt this structure if you want multiple messages.
-     */
+    if (options.debug) console.debug("[anthropic] Sending request:", { userMessage, options });
+
     const body = JSON.stringify({
-        model: options.model || "claude-2", // or your desired default
+        model: options.model || "claude-3", // or your desired default
         messages: [
             {
                 role: "user",
@@ -96,6 +95,8 @@ export async function streamAnthropic({
                     if (done) break;
 
                     const chunk = decoder.decode(value, { stream: true });
+                    if (options.debug) console.debug("[anthropic] Raw chunk:", chunk); // ADDED
+
                     buffer += chunk;
 
                     // We split by newlines, parse lines that start with "data:"
@@ -118,6 +119,7 @@ export async function streamAnthropic({
 
                             try {
                                 const parsed = JSON.parse(jsonString) as AnthropicStreamResponse;
+                                if (options.debug) console.debug("[anthropic] Parsed chunk:", parsed); // ADDED
 
                                 // If there's an error event
                                 if (parsed.error) {

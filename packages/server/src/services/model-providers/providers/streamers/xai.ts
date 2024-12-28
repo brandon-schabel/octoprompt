@@ -10,10 +10,13 @@ export async function streamXai({
     options,
     xaiClient
 }: StreamParams & {
-    xaiClient: OpenAI
-}): Promise<ReadableStream<Uint8Array>> {
+    xaiClient: OpenAI;
+} & { debug?: boolean } // ADDED - optional debug
+): Promise<ReadableStream<Uint8Array>> {
     const model = options.model || "xai-chat";
     const temperature = typeof options.temperature === "number" ? options.temperature : 0.7;
+
+    if (options.debug) console.debug("[xai] Sending request:", { model, userMessage, options });
 
     const stream = await xaiClient.chat.completions.create({
         model,
@@ -32,12 +35,13 @@ export async function streamXai({
         presence_penalty: options.presence_penalty,
     });
 
-
     let fullResponse = "";
     return new ReadableStream<Uint8Array>({
         async start(controller) {
             try {
                 for await (const chunk of stream) {
+                    if (options.debug) console.debug("[xai] SSE chunk:", chunk); // ADDED
+
                     const content = chunk.choices?.[0]?.delta?.content || "";
                     if (content) {
                         fullResponse += content;

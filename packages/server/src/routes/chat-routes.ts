@@ -35,7 +35,7 @@ router.post(`${AI_BASE_PATH}/chat`, {
                 userMessage: body.message,
                 provider: body.provider,
                 // TODO: validation options before passing to make sure it's a valid object for the provider
-                options: body.options as any,
+                options: { ...body.options, debug: true } as any,
                 tempId: body.tempId,
             }
             // {

@@ -1,5 +1,5 @@
 import { ReadableStream } from "stream/web";
-import { TextEncoder } from "util";
+import { TextEncoder, TextDecoder } from "util"; // ADDED - import TextDecoder
 import type { StreamParams } from "../provider-types";
 
 export async function streamOllama({
@@ -10,7 +10,10 @@ export async function streamOllama({
     ollamaBaseUrl
 }: StreamParams & {
     ollamaBaseUrl: string
-}): Promise<ReadableStream<Uint8Array>> {
+} & { debug?: boolean } // ADDED - optional debug
+): Promise<ReadableStream<Uint8Array>> {
+
+    if (options.debug) console.debug("[ollama] Sending request:", { userMessage, options });
 
     const response = await fetch(`${ollamaBaseUrl}/api/chat`, {
         method: "POST",
@@ -44,6 +47,8 @@ export async function streamOllama({
                     if (done) break;
 
                     const chunk = decoder.decode(value, { stream: true });
+                    if (options.debug) console.debug("[ollama] Raw chunk:", chunk); // ADDED
+
                     buffer += chunk;
                     const lines = buffer.split("\n").filter((line) => line.trim());
                     buffer = lines.pop() || "";
@@ -51,6 +56,8 @@ export async function streamOllama({
                     for (const line of lines) {
                         try {
                             const data = JSON.parse(line);
+                            if (options.debug) console.debug("[ollama] Parsed line:", data); // ADDED
+
                             if (data.message?.content) {
                                 fullResponse += data.message.content;
                             }

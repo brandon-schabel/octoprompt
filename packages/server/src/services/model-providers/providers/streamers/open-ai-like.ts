@@ -2,9 +2,10 @@ import { ReadableStream } from "stream/web";
 import { TextEncoder } from "util";
 import type { StreamParams } from "../provider-types";
 import OpenAI from "openai/index.mjs";
+import { APIProviders } from "shared/index";
 
 type OpenAILikeParams = StreamParams & {
-    provider: "openai" | "lmstudio";
+    provider: APIProviders
     client: OpenAI;
 };
 
@@ -18,9 +19,12 @@ export async function streamOpenAiLike({
     assistantMessageId,
     options,
     client,
-}: OpenAILikeParams): Promise<ReadableStream<Uint8Array>> {
+}: OpenAILikeParams
+): Promise<ReadableStream<Uint8Array>> {
     const model = options.model || "gpt-4";
     const temperature = typeof options.temperature === "number" ? options.temperature : 0.7;
+
+    if (options.debug) console.debug(`[${options.provider}] Sending request:`, { userMessage, options });
 
     const stream = await client.chat.completions.create({
         model,
@@ -38,6 +42,8 @@ export async function streamOpenAiLike({
         async start(controller) {
             try {
                 for await (const chunk of stream) {
+                    if (options.debug) console.debug(`[${options.provider}] SSE chunk:`, chunk); // ADDED
+
                     const content = chunk.choices[0]?.delta?.content || "";
                     if (content) {
                         fullResponse += content;

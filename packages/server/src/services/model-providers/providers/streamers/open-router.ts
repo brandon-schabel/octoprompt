@@ -1,7 +1,6 @@
 import { ReadableStream } from "stream/web";
-import { TextEncoder } from "util";
+import { TextEncoder, TextDecoder } from "util"; // ADDED TextDecoder
 import type { StreamParams } from "../provider-types";
-
 
 type OpenRouterStreamResponse = {
     choices: {
@@ -17,8 +16,11 @@ export async function streamOpenRouter({
     options,
     openRouterApiKey
 }: StreamParams & {
-    openRouterApiKey: string
-}): Promise<ReadableStream<Uint8Array>> {
+    openRouterApiKey: string;
+} & { debug?: boolean } // ADDED - optional debug
+): Promise<ReadableStream<Uint8Array>> {
+    if (options.debug) console.debug("[openrouter] Sending request:", { userMessage, options });
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -28,13 +30,12 @@ export async function streamOpenRouter({
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            model: options.model || "openai/gpt-4",
+            model: options.model || "openai/gpt-4o",
             messages: [{ role: "user", content: userMessage }],
             stream: true,
             ...options,
         }),
     });
-
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -57,7 +58,10 @@ export async function streamOpenRouter({
                     const { done, value } = await reader.read();
                     if (done) break;
 
-                    buffer += decoder.decode(value, { stream: true });
+                    const chunk = decoder.decode(value, { stream: true });
+                    if (options.debug) console.debug("[openrouter] Raw chunk:", chunk); // ADDED
+
+                    buffer += chunk;
                     const lines = buffer.split("\n");
                     buffer = lines.pop() || "";
 
@@ -71,6 +75,8 @@ export async function streamOpenRouter({
 
                             try {
                                 const parsed = JSON.parse(jsonString) as OpenRouterStreamResponse;
+                                if (options.debug) console.debug("[openrouter] Parsed chunk:", parsed); // ADDED
+
                                 const content = parsed.choices?.[0]?.delta?.content || "";
                                 if (content.length > 0) {
                                     fullResponse += content;

@@ -1,9 +1,8 @@
-
 import { ReadableStream } from "stream/web";
 import { TextDecoder, TextEncoder } from "util";
 import type { StreamParams } from "../provider-types";
 
-type GeminiStreamParams = Omit<StreamParams, 'assistantMessageId'> & {
+type GeminiStreamParams = Omit<StreamParams, "assistantMessageId"> & {
     tempId?: string;
     geminiApiKey: string;
     geminiBaseUrl: string;
@@ -19,7 +18,11 @@ export async function streamGeminiMessage({
     geminiApiKey,
     geminiBaseUrl,
     modelId,
-}: GeminiStreamParams & { assistantMessageId: string }): Promise<ReadableStream<Uint8Array>> {
+}: GeminiStreamParams & { assistantMessageId: string } & { debug?: boolean } // ADDED
+): Promise<ReadableStream<Uint8Array>> {
+
+    if (options.debug) console.debug("[gemini] Sending request:", { userMessage, options, modelId });
+
     // Save user message
     await chatService.saveMessage({
         chatId,
@@ -73,8 +76,9 @@ export async function streamGeminiMessage({
                     if (done) break;
 
                     const text = decoder.decode(value, { stream: true });
-                    buffer += text;
+                    if (options.debug) console.debug("[gemini] Raw chunk:", text); // ADDED
 
+                    buffer += text;
                     const lines = buffer.split("\n");
                     buffer = lines.pop() || "";
 
