@@ -10,7 +10,7 @@ export const Route = createFileRoute('/file-search-interface')({
 function FileSearchInterface() {
     const [query, setQuery] = useState('');
     const { status, result, error, search, reset } = useGeminiFileSearch();
-    const { activeTabState } = useGlobalStateContext()
+    const { activeProjectTabState: activeTabState } = useGlobalStateContext()
     const selectedProjectId = activeTabState?.selectedProjectId
 
     const handleSearch = () => {
