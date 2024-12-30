@@ -10,5 +10,8 @@
   },
   "peerDependencies": {
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@bnk/router": "1.0.5"
   }
 }

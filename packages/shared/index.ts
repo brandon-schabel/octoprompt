@@ -30,3 +30,4 @@ export { providerKeyApiValidation } from './src/validation/provider-key-api-vali
 export { codeEditorApiValidation, type EditFileBody, type EditFileParams } from './src/validation/code-editor-api-validation';
 export { globalStateSchema, createInitialGlobalState, type GlobalState, type ProjectTabState as TabState, projectTabStateSchema as tabStateSchema } from './src/global-state/global-state-schema';
 // export type { ApiValidationSchemaRecord } from './src/types/api-validation-schema-record';
+export { ApiError } from './src/error/api-error';

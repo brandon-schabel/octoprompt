@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
 import { Prompt } from 'shared';
+import { commonErrorHandler } from './common-mutation-error-handler';
 
 export type PromptResponse = {
     success: boolean;
@@ -91,6 +92,7 @@ export const useCreatePrompt = () => {
         onSuccess: (_, { projectId }) => {
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -109,10 +111,7 @@ export const useUpdatePrompt = () => {
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.detail(id) });
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.lists() });
         },
-        onError: (error) => {
-            console.error('Failed to update prompt:', error);
-            throw error;
-        }
+        onError: commonErrorHandler
     });
 };
 
@@ -125,5 +124,6 @@ export const useDeletePrompt = () => {
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.lists(), exact: false });
             queryClient.removeQueries({ queryKey: PROMPT_KEYS.detail(id) });
         },
+        onError: commonErrorHandler
     });
 };

@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useApi } from '../use-api';
 import { APIProviders, ProjectFile } from 'shared';
+import { commonErrorHandler } from './common-mutation-error-handler';
 
 const CODE_EDITOR_KEYS = {
     all: ['code-editor'] as const,
@@ -46,5 +47,6 @@ export const useEditFile = () => {
 
     return useMutation<EditFileResponse, Error, EditFileInput>({
         mutationFn: (input) => editFile(api, input),
+        onError: commonErrorHandler
     });
 }; 

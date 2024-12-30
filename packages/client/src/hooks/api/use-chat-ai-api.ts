@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
 import { CreateChatBody,Chat, ChatMessage } from 'shared'
 import { APIProviders, CreateMessageBodyGeneric, UnifiedModel } from 'shared/src/validation/chat-api-validation';
+import { commonErrorHandler } from './common-mutation-error-handler';
 
 
 export type UpdateChatInput = {
@@ -161,6 +162,7 @@ export const useCreateChat = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -183,6 +185,7 @@ export const useSendMessage = <Provider extends APIProviders>() => {
         SendMessageInput<Provider>
     >({
         mutationFn: (input) => sendMessage(api, input),
+        onError: commonErrorHandler
     });
 };
 
@@ -205,6 +208,7 @@ export const useForkChat = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -226,6 +230,7 @@ export const useForkChatFromMessage = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -238,6 +243,7 @@ export const useDeleteChat = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -251,6 +257,7 @@ export const useUpdateChat = () => {
             queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
             queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chat(chatId) });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -287,6 +294,7 @@ export const useWhisperTranscribe = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: CHAT_KEYS.whisperTranscription() });
         },
+        onError: commonErrorHandler
     });
 };
 

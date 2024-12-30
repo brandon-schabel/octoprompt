@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
-import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from 'shared';
+import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, ApiError } from 'shared';
+import { commonErrorHandler } from './common-mutation-error-handler';
 
 export type ProjectResponse = {
     success: boolean;
@@ -54,7 +55,9 @@ async function getProjectById(api: ReturnType<typeof useApi>['api'], id: string)
 async function createProject(api: ReturnType<typeof useApi>['api'], data: CreateProjectBody): Promise<ProjectResponse> {
     const response = await api.request('/api/projects', {
         method: 'POST',
-        body: data,
+        body: {
+            message: "garbage nonsense"
+        },
     });
     return response.json();
 }
@@ -101,8 +104,18 @@ export const useGetProject = (id: string) => {
         queryKey: PROJECT_KEYS.detail(id),
         queryFn: () => getProjectById(api, id),
         enabled: !!id,
+
+        // throwOnError: (error) => {
+        //     console.log("error", error)
+        //     if (error instanceof ApiError) {
+        //         toast("Error Getting Project")
+        //         return false;
+        //     }
+        //     return false;
+        // },
     });
 };
+
 
 export const useCreateProject = () => {
     const { api } = useApi();
@@ -112,6 +125,7 @@ export const useCreateProject = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.lists() });
         },
+        onError: commonErrorHandler,
     });
 };
 
@@ -125,6 +139,7 @@ export const useUpdateProject = () => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(id) });
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.lists() });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -137,6 +152,7 @@ export const useDeleteProject = () => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.lists() });
             queryClient.removeQueries({ queryKey: PROJECT_KEYS.detail(id) });
         },
+        onError: commonErrorHandler
     });
 };
 
@@ -158,6 +174,7 @@ export const useSyncProject = (projectId: string) => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(projectId) });
             queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
         },
+        onError: commonErrorHandler
     });
 };
 export const useSyncProjectInterval = (projectId: string) => {

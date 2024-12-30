@@ -19,12 +19,13 @@ export async function streamOpenAiLike({
     assistantMessageId,
     options,
     client,
+    provider,
 }: OpenAILikeParams
 ): Promise<ReadableStream<Uint8Array>> {
     const model = options.model || "gpt-4";
     const temperature = typeof options.temperature === "number" ? options.temperature : 0.7;
 
-    if (options.debug) console.debug(`[${options.provider}] Sending request:`, { userMessage, options });
+    if (options.debug) console.debug(`[${provider}] Sending request:`, { userMessage, options });
 
     const stream = await client.chat.completions.create({
         model,
@@ -42,7 +43,7 @@ export async function streamOpenAiLike({
         async start(controller) {
             try {
                 for await (const chunk of stream) {
-                    if (options.debug) console.debug(`[${options.provider}] SSE chunk:`, chunk); // ADDED
+                    if (options.debug) console.debug(`[${provider}] SSE chunk:`, chunk); // ADDED
 
                     const content = chunk.choices[0]?.delta?.content || "";
                     if (content) {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
 import { ProviderKey } from 'shared';
+import { commonErrorHandler } from './common-mutation-error-handler';
 
 type KeyListResponse = {
     success: boolean;
@@ -49,7 +50,8 @@ export function useCreateKey() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: KEYS_KEY });
-        }
+        },
+        onError: commonErrorHandler
     });
 }
 
