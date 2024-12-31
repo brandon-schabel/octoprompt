@@ -93,7 +93,7 @@ export function ChatMessages({
     };
 
     return (
-        <ScrollArea className="flex-1 h-full p-2">
+        <ScrollArea className="flex-1 h-full p-2" id="chat-messages">
             {messages.map((message, i) => (
                 <div
                     key={`${message.id}-${i}`}

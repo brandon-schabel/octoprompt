@@ -26,6 +26,14 @@ export const projectTabStateSchema = z.object({
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
 });
 
+export const linkSettingsSchema = z.object({
+    includeSelectedFiles: z.boolean().default(true),
+    includePrompts: z.boolean().default(true),
+    includeUserPrompt: z.boolean().default(true),
+});
+
+export type LinkSettings = z.infer<typeof linkSettingsSchema>;
+
 export const chatTabStateSchema = z.object({
     provider: z.enum([
         'openai',
@@ -45,14 +53,23 @@ export const chatTabStateSchema = z.object({
             content: z.string(),
         })
     ).default([]),
-    /** Track hidden (excluded) messages from the final prompt. */
     excludedMessageIds: z.array(z.string()).default([]),
     displayName: z.string().optional(),
     activeChatId: z.string().optional(),
+
+    // NEW FIELDS for linking a chat to a project tab
+    linkedProjectTabId: z.string().nullable().default(null),
+    linkSettings: linkSettingsSchema.optional(),
 });
+
 
 export type ChatTabState = z.infer<typeof chatTabStateSchema>;
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
+export const chatTabsStateRecordSchema = z.record(z.string(), chatTabStateSchema);
+export type ChatTabsStateRecord = z.infer<typeof chatTabsStateRecordSchema>;
+
+export const projectTabsStateRecordSchema = z.record(z.string(), projectTabStateSchema);
+export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
 
 export const globalStateSchema = z.object({
     users: z.array(z.object({ id: z.string(), name: z.string() })),
@@ -63,7 +80,7 @@ export const globalStateSchema = z.object({
     counter: z.number(),
     projectTabs: z.record(z.string(), projectTabStateSchema),
     projectActiveTabId: z.string().nullable(),
-    chatTabs: z.record(z.string(), chatTabStateSchema),
+    chatTabs: chatTabsStateRecordSchema,
     chatActiveTabId: z.string().nullable(),
 });
 
@@ -101,6 +118,12 @@ export const createInitialGlobalState = (): GlobalState => ({
             excludedMessageIds: [],
             displayName: 'Default Tab',
             activeChatId: undefined,
+            linkedProjectTabId: null,
+            linkSettings: {
+                includeSelectedFiles: true,
+                includePrompts: true,
+                includeUserPrompt: true,
+            },
         },
     },
     chatActiveTabId: 'defaultTab',

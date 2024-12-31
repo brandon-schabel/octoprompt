@@ -16,11 +16,13 @@ export const promptSchema = z.object({
 })
 
 export function buildPromptContent(
-    promptData: PromptListResponse | null | undefined,
-    selectedPrompts: string[],
-    userPrompt: string,
-    selectedFiles: string[],
-    fileMap: Map<string, ProjectFile>
+    { fileMap, promptData, selectedFiles, selectedPrompts, userPrompt }: {
+        promptData: PromptListResponse | null | undefined,
+        selectedPrompts: string[],
+        userPrompt: string,
+        selectedFiles: string[],
+        fileMap: Map<string, ProjectFile>
+    }
 ): string {
     let contentToCopy = ''
     let promptCount = 1
@@ -31,18 +33,23 @@ export function buildPromptContent(
         }
     }
 
-    if (userPrompt.trim()) {
-        contentToCopy += `<user_instructions>\n${userPrompt.trim()}\n</user_instructions>\n\n`
+    const trimmedUserPrompt = userPrompt.trim()
+    if (trimmedUserPrompt) {
+        contentToCopy += `<user_instructions>\n${trimmedUserPrompt}\n</user_instructions>\n\n`
     }
 
-    contentToCopy += `<file_contents>\n`
-    for (const fileId of selectedFiles) {
-        const file = fileMap.get(fileId)
-        if (file?.content) {
+    // Only add file_contents section if there are files to include
+    const filesWithContent = selectedFiles
+        .map(fileId => fileMap.get(fileId))
+        .filter((file): file is ProjectFile => !!file?.content)
+
+    if (filesWithContent.length > 0) {
+        contentToCopy += `<file_contents>\n`
+        for (const file of filesWithContent) {
             contentToCopy += `File: ${file.path}\n\`\`\`tsx\n${file.content}\n\`\`\`\n\n`
         }
+        contentToCopy += `</file_contents>\n`
     }
-    contentToCopy += `</file_contents>\n`
 
     return contentToCopy
 }

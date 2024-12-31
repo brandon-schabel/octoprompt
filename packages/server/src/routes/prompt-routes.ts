@@ -28,7 +28,7 @@ router.get("/api/prompts/:promptId", {
 }, async (_, { params }) => {
     const prompt = await promptService.getPromptById(params.promptId);
     if (!prompt) {
-        throw new ApiError("Prompt not found", 404, "NOT_FOUND");
+    throw new ApiError("Prompt not found", 404, "NOT_FOUND");
     }
     return json({ success: true, prompt });
 });

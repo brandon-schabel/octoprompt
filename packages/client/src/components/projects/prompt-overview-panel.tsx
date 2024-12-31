@@ -88,7 +88,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
 
     function promptBuilder() {
-        return buildPromptContent(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap)
+        return buildPromptContent({
+            promptData, selectedPrompts, userPrompt: localUserPrompt, selectedFiles, fileMap
+        })
     }
 
     const handleCopyToClipboard = async () => {

@@ -13,52 +13,122 @@ const mockPrompts = {
 const mockProjectFiles = [
     {
         id: 'f1',
+        name: 'App.tsx',
         path: 'src/components/App.tsx',
-        content: 'console.log("App");'
+        projectId: 'project1',
+        extension: 'tsx',
+        size: 100,
+        content: 'console.log("App");',
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     {
         id: 'f2',
+        name: 'helper.ts',
         path: 'src/utils/helper.ts',
-        content: 'export function helper() { return "helped"; }'
+        projectId: 'project1',
+        extension: 'ts',
+        size: 200,
+        content: 'export function helper() { return "helped"; }',
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     {
         id: 'f3',
+        name: 'index.ts',
         path: 'src/index.ts',
-        content: 'import "./components/App";'
+        projectId: 'project1',
+        extension: 'ts',
+        size: 50,
+        content: 'import "./components/App";',
+        createdAt: new Date(),
+        updatedAt: new Date()
     }
 ] satisfies ProjectFile[]
 
 const fileMap = new Map<string, ProjectFile>(mockProjectFiles.map(f => [f.id, f]))
 
-
 describe('buildPromptContent', () => {
-    it('should return content without prompts, user instructions, or files if none selected', () => {
-        const result = buildPromptContent(null, [], '', [], fileMap)
-        expect(result).toContain('<file_contents>')
-        expect(result).not.toContain('<meta prompt')
+    it('should return empty string if no content is provided', () => {
+        const result = buildPromptContent({
+            promptData: null,
+            selectedPrompts: [],
+            userPrompt: '',
+            selectedFiles: [],
+            fileMap
+        })
+        expect(result).toBe('')
+    })
+
+    it('should not include file_contents tags when no files are selected', () => {
+        const result = buildPromptContent({
+            promptData: null,
+            selectedPrompts: [],
+            userPrompt: 'test',
+            selectedFiles: [],
+            fileMap
+        })
+        expect(result).not.toContain('<file_contents>')
+        expect(result).toContain('<user_instructions>')
+    })
+
+    it('should not include user_instructions when user prompt is empty or whitespace', () => {
+        const result = buildPromptContent({
+            promptData: mockPrompts,
+            selectedPrompts: ['p1'],
+            userPrompt: '   ',
+            selectedFiles: [],
+            fileMap
+        })
         expect(result).not.toContain('<user_instructions>')
+        expect(result).toContain('<meta prompt')
     })
 
     it('should include selected prompts', () => {
-        const result = buildPromptContent(mockPrompts, ['p1'], '', [], fileMap)
+        const result = buildPromptContent({
+            promptData: mockPrompts,
+            selectedPrompts: ['p1'],
+            userPrompt: '',
+            selectedFiles: [],
+            fileMap
+        })
         expect(result).toContain('<meta prompt 1 = "Prompt One">')
         expect(result).toContain('This is prompt one content.')
     })
 
     it('should include multiple selected prompts in order', () => {
-        const result = buildPromptContent(mockPrompts, ['p1', 'p2'], '', [], fileMap)
+        const result = buildPromptContent({
+            promptData: mockPrompts,
+            selectedPrompts: ['p1', 'p2'],
+            userPrompt: '',
+            selectedFiles: [],
+            fileMap
+        })
         expect(result).toContain('<meta prompt 1 = "Prompt One">')
         expect(result).toContain('<meta prompt 2 = "Prompt Two">')
     })
 
     it('should include user instructions if provided', () => {
-        const result = buildPromptContent(mockPrompts, [], 'User wants something', [], fileMap)
+        const result = buildPromptContent({
+            promptData: mockPrompts,
+            selectedPrompts: [],
+            userPrompt: 'User wants something',
+            selectedFiles: [],
+            fileMap
+        })
         expect(result).toContain('<user_instructions>')
         expect(result).toContain('User wants something')
     })
 
-    it('should include selected files', () => {
-        const result = buildPromptContent(mockPrompts, [], '', ['f1', 'f2'], fileMap)
+    it('should include selected files with file_contents tags', () => {
+        const result = buildPromptContent({
+            promptData: mockPrompts,
+            selectedPrompts: [],
+            userPrompt: '',
+            selectedFiles: ['f1', 'f2'],
+            fileMap
+        })
+        expect(result).toContain('<file_contents>')
         expect(result).toContain('File: src/components/App.tsx')
         expect(result).toContain('console.log("App");')
         expect(result).toContain('File: src/utils/helper.ts')
@@ -66,7 +136,13 @@ describe('buildPromptContent', () => {
     })
 
     it('should combine prompts, user instructions, and files correctly', () => {
-        const result = buildPromptContent(mockPrompts, ['p1'], 'Do something special', ['f2'], fileMap)
+        const result = buildPromptContent({
+            promptData: mockPrompts,
+            selectedPrompts: ['p1'],
+            userPrompt: 'Do something special',
+            selectedFiles: ['f2'],
+            fileMap
+        })
         expect(result).toContain('<meta prompt 1 = "Prompt One">')
         expect(result).toContain('Do something special')
         expect(result).toContain('File: src/utils/helper.ts')
@@ -159,8 +235,14 @@ describe('buildFileTree', () => {
     it('should handle files without nested directories', () => {
         const singleFile: ProjectFile[] = [{
             id: 'single',
+            name: 'file.ts',
             path: 'file.ts',
-            content: 'test'
+            projectId: 'project1',
+            extension: 'ts',
+            size: 100,
+            content: 'test',
+            createdAt: new Date(),
+            updatedAt: new Date()
         }]
         const result = buildFileTree(singleFile)
         expect(result["file.ts"].file?.id).toBe("single")

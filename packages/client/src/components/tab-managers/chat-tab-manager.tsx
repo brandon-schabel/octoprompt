@@ -16,6 +16,7 @@ export function ChatTabManager() {
 
     return (
         <GenericTabManager
+            // @ts-ignore - TODO: fix types, need to make sure the link icon is not specific to projects
             tabs={tabs}
             activeTabId={activeTabId}
             isReady={wsReady}
@@ -26,6 +27,7 @@ export function ChatTabManager() {
             hotkeyPrefix="c"
             newTabLabel="New Chat Tab"
             emptyMessage="No chat tabs yet."
+        // hasLink={hasLink}
         />
     )
 }

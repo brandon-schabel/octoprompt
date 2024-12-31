@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { globalStateSchema, GlobalState, createInitialGlobalState, TabState } from 'shared';
+import { globalStateSchema, GlobalState, createInitialGlobalState, ProjectTabState, LinkSettings, linkSettingsSchema } from 'shared';
 import { SERVER_HTTP_ENDPOINT, SERVER_WS_ENDPOINT } from '@/constants/server-constants';
 
 
@@ -17,6 +17,7 @@ export type UseGlobalStateReturn = {
     updateProjectTab: (tabId: string, partial: Partial<GlobalState['projectTabs'][string]>) => void;
     deleteProjectTab: (tabId: string) => void;
     updateActiveProjectTab: (partialOrFn: Partial<GlobalState['projectTabs'][string]> | ((prev: GlobalState['projectTabs'][string]) => Partial<GlobalState['projectTabs'][string]>)) => void;
+    updateProjectTabState: (tabId: string, partialOrFn: Partial<GlobalState['projectTabs'][string]> | ((prev: GlobalState['projectTabs'][string]) => Partial<GlobalState['projectTabs'][string]>)) => void;
 
     /** Chat tabs */
     createChatTab: () => void;
@@ -24,12 +25,19 @@ export type UseGlobalStateReturn = {
     updateChatTab: (tabId: string, partial: Partial<GlobalState['chatTabs'][string]>) => void;
     deleteChatTab: (tabId: string) => void;
     updateActiveChatTab: (partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)) => void;
+    updateChatTabState: (tabId: string, partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)) => void;
 
     /** Current tab states */
     activeProjectTabState: GlobalState['projectTabs'][string] | undefined;
     activeChatTabState: GlobalState['chatTabs'][string] | undefined;
 
-    updateActiveProjectTabStateKey: <K extends keyof TabState>(key: K, valueOrFn: TabState[K] | ((prev: TabState[K]) => TabState[K])) => void;
+    /** Linking Helpers */
+    linkChatTabToProjectTab: (chatTabId: string, projectTabId: string, settings?: Partial<LinkSettings>) => void;
+    unlinkChatTab: (chatTabId: string) => void;
+    updateChatLinkSettings: (chatTabId: string, partialSettings: Partial<LinkSettings>) => void;
+
+    /** Project Tab State Helpers */
+    updateActiveProjectTabStateKey: <K extends keyof ProjectTabState>(key: K, valueOrFn: ProjectTabState[K] | ((prev: ProjectTabState[K]) => ProjectTabState[K])) => void;
 };
 
 export function useInitializeGlobalState(): UseGlobalStateReturn {
@@ -60,24 +68,18 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         wsRef.current = ws;
 
         ws.onopen = () => {
-
             setWsReady(true);
         };
 
         ws.onmessage = (event) => {
-
             const message = JSON.parse(event.data);
-
-
             if (message.type === 'state_update') {
-
                 const newState = globalStateSchema.parse(message.data);
                 queryClient.setQueryData(['globalState'], newState);
             }
         };
 
         ws.onclose = () => {
-
             wsRef.current = null;
             setWsReady(false);
         };
@@ -87,46 +89,27 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         };
 
         return () => {
-
             ws.close();
         };
     }, [queryClient]);
 
-
-    function updateActiveProjectTabStateKey<K extends keyof TabState>(
-        key: K,
-        valueOrFn: TabState[K] | ((prev: TabState[K]) => TabState[K])
-    ) {
-
-        updateActiveProjectTab((prevTab) => {
-            const newValue =
-                typeof valueOrFn === 'function'
-                    ? valueOrFn(prevTab[key])
-                    : valueOrFn;
-
-
-            return { [key]: newValue } as Partial<TabState>;
-        });
+    function isWebSocketOpen(): boolean {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+            console.warn("WebSocket not open, cannot send message");
+            return false;
+        }
+        return true;
     }
 
+    /** ---------------------
+     *   Update Project Tab
+     *  --------------------- */
     function updateActiveProjectTab(
-        partialOrFn: Partial<TabState> | ((prev: TabState) => Partial<TabState>)
+        partialOrFn: Partial<ProjectTabState> | ((prev: ProjectTabState) => Partial<ProjectTabState>)
     ) {
-
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            console.warn("[updateActiveProjectTab] WebSocket not open, cannot send message");
-            return;
-        }
-        if (!state) {
-            console.warn("[updateActiveProjectTab] No global state available");
-            return;
-        }
-
+        if (!isWebSocketOpen() || !state) return;
         const activeProjectTabId = state.projectActiveTabId;
-        if (!activeProjectTabId) {
-            console.warn("[updateActiveProjectTab] No active tab selected");
-            return;
-        }
+        if (!activeProjectTabId) return;
 
         const currentProjectTabState = state.projectTabs[activeProjectTabId];
         const finalPartial =
@@ -134,32 +117,34 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
                 ? partialOrFn(currentProjectTabState)
                 : partialOrFn;
 
-
-
-
         const message = {
             type: 'update_project_tab_partial',
             tabId: activeProjectTabId,
             partial: finalPartial
         };
-
-
         wsRef.current?.send(JSON.stringify(message));
+    }
+
+
+    function updateActiveProjectTabStateKey<K extends keyof ProjectTabState>(
+        key: K,
+        valueOrFn: ProjectTabState[K] | ((prev: ProjectTabState[K]) => ProjectTabState[K])
+    ) {
+        updateActiveProjectTab((prevTab) => {
+            const newValue =
+                typeof valueOrFn === 'function'
+                    ? valueOrFn(prevTab[key])
+                    : valueOrFn;
+            return { [key]: newValue } as Partial<ProjectTabState>;
+        });
     }
 
     function updateActiveChatTab(
         partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)
     ) {
-        if (!isWebSocketOpen() || !state) {
-            console.warn("[updateActiveChatTab] WebSocket not open or no state available");
-            return;
-        }
-
+        if (!isWebSocketOpen() || !state) return;
         const activeChatTabId = state.chatActiveTabId;
-        if (!activeChatTabId) {
-            console.warn("[updateActiveChatTab] No active chat tab selected");
-            return;
-        }
+        if (!activeChatTabId) return;
 
         const currentChatTabState = state.chatTabs[activeChatTabId];
         const finalPartial =
@@ -171,6 +156,58 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
             type: 'update_chat_tab',
             tabId: activeChatTabId,
             data: finalPartial
+        };
+        wsRef.current?.send(JSON.stringify(message));
+    }
+
+    function linkChatTabToProjectTab(chatTabId: string, projectTabId: string, settings?: Partial<LinkSettings>) {
+        if (!isWebSocketOpen()) return;
+        const partial = {
+            linkedProjectTabId: projectTabId,
+            linkSettings: {
+                includeSelectedFiles: settings?.includeSelectedFiles ?? true,
+                includePrompts: settings?.includePrompts ?? true,
+                includeUserPrompt: settings?.includeUserPrompt ?? true,
+            }
+        };
+        const message = {
+            type: 'update_chat_tab',
+            tabId: chatTabId,
+            data: partial,
+        };
+        wsRef.current?.send(JSON.stringify(message));
+    }
+
+    function unlinkChatTab(chatTabId: string) {
+        if (!isWebSocketOpen()) return;
+        const message = {
+            type: 'update_chat_tab',
+            tabId: chatTabId,
+            data: {
+                linkedProjectTabId: null,
+                linkSettings: undefined
+            }
+        };
+        wsRef.current?.send(JSON.stringify(message));
+    }
+
+    function updateChatLinkSettings(chatTabId: string, partialSettings: Partial<LinkSettings>) {
+        if (!isWebSocketOpen() || !state) return;
+        const existing = state.chatTabs[chatTabId]?.linkSettings ?? {};
+        const merged = {
+            ...existing,
+            ...partialSettings,
+        };
+
+        // Validate with linkSettingsSchema if you want
+        linkSettingsSchema.parse(merged);
+
+        const message = {
+            type: 'update_chat_tab',
+            tabId: chatTabId,
+            data: {
+                linkSettings: merged
+            }
         };
         wsRef.current?.send(JSON.stringify(message));
     }
@@ -240,7 +277,10 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         }
     }
 
-    // Chat tab management functions
+
+    /** ---------------------
+     *   Chat Management Features
+     *  --------------------- */
     function createChatTab() {
         if (!isWebSocketOpen() || !state) return;
 
@@ -307,13 +347,46 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         }
     }
 
-    // Helper function for WebSocket checks
-    function isWebSocketOpen(): boolean {
-        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            console.warn("WebSocket not open, cannot send message");
-            return false;
-        }
-        return true;
+    function updateProjectTabState(
+        tabId: string,
+        partialOrFn: Partial<GlobalState['projectTabs'][string]> | ((prev: GlobalState['projectTabs'][string]) => Partial<GlobalState['projectTabs'][string]>)
+    ) {
+        if (!isWebSocketOpen() || !state) return;
+        const currentProjectTabState = state.projectTabs[tabId];
+        if (!currentProjectTabState) return;
+
+        const finalPartial =
+            typeof partialOrFn === 'function'
+                ? partialOrFn(currentProjectTabState)
+                : partialOrFn;
+
+        const message = {
+            type: 'update_project_tab_partial',
+            tabId,
+            partial: finalPartial
+        };
+        wsRef.current?.send(JSON.stringify(message));
+    }
+
+    function updateChatTabState(
+        tabId: string,
+        partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)
+    ) {
+        if (!isWebSocketOpen() || !state) return;
+        const currentChatTabState = state.chatTabs[tabId];
+        if (!currentChatTabState) return;
+
+        const finalPartial =
+            typeof partialOrFn === 'function'
+                ? partialOrFn(currentChatTabState)
+                : partialOrFn;
+
+        const message = {
+            type: 'update_chat_tab',
+            tabId,
+            data: finalPartial
+        };
+        wsRef.current?.send(JSON.stringify(message));
     }
 
     return {
@@ -323,15 +396,20 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         setActiveProjectTab,
         updateProjectTab,
         deleteProjectTab,
+        updateActiveProjectTab,
+        updateProjectTabState,
         createChatTab,
         setActiveChatTab,
         updateChatTab,
         deleteChatTab,
-        updateActiveProjectTab,
         updateActiveChatTab,
+        updateChatTabState,
         activeProjectTabState,
         activeChatTabState,
-        updateActiveProjectTabStateKey
+        updateActiveProjectTabStateKey,
+        linkChatTabToProjectTab,
+        unlinkChatTab,
+        updateChatLinkSettings
     };
 }
 

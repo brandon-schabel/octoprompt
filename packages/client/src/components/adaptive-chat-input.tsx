@@ -114,36 +114,51 @@ export function AdaptiveChatInput({
         const shouldBeMultiline = value.length > 100 || value.includes('\n')
         setIsMultiline(shouldBeMultiline)
     }, [value])
+    const handlePaste = useCallback(
+        (e: ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+            if (!preserveFormatting) {
+                return
+            }
 
-    const handlePaste = useCallback((e: ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-        if (preserveFormatting) {
-            // Allow the browser to handle the paste first
-            setTimeout(() => {
-                const target = e.target as HTMLTextAreaElement | HTMLInputElement
-                let newValue = target.value
+            // Prevent the default paste so we can handle the text ourselves:
+            e.preventDefault()
 
-                // Get HTML data if needed
-                const html = e?.clipboardData?.getData('text/html')
+            const pasteText = e.clipboardData?.getData("text/plain") ?? ""
+            const target = e.target as HTMLTextAreaElement | HTMLInputElement
+            let newValue = target.value
 
-                if (html && html.includes('```')) {
-                    // Contains code blocks, leave text as is
-                } else {
-                    // Reformat to remove excessive whitespace
-                    newValue = newValue
-                        .split('\n')
-                        .map(line => line.trim())
-                        .join('\n')
-                        .replace(/\n{3,}/g, '\n\n')
-                }
+            // Calculate the selection range manually:
+            const start = target.selectionStart ?? newValue.length
+            const end = target.selectionEnd ?? newValue.length
 
-                onChange(newValue)
+            // Insert the pasted text at the current cursor/selection range:
+            newValue = newValue.slice(0, start) + pasteText + newValue.slice(end)
 
-                if (newValue.includes('\n')) {
-                    setIsMultiline(true)
-                }
-            }, 0)
-        }
-    }, [onChange, preserveFormatting])
+            // If you want to do light reformatting (and it doesn't contain code blocks):
+            const html = e.clipboardData?.getData("text/html") ?? ""
+            if (!html.includes("```")) {
+                newValue = newValue
+                    .split("\n")
+                    .map((line) => line.trim())
+                    .join("\n")
+                    .replace(/\n{3,}/g, "\n\n")
+            }
+
+            onChange(newValue)
+
+            // If newValue introduces multi-line content, switch to multiline
+            if (newValue.includes("\n")) {
+                setIsMultiline(true)
+            }
+
+            // Restore the cursor/selection position if needed
+            requestAnimationFrame(() => {
+                target.setSelectionRange(start + pasteText.length, start + pasteText.length)
+                target.focus()
+            })
+        },
+        [onChange, preserveFormatting]
+    )
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         if (e.key === 'Enter' && !e.shiftKey && !isMultiline) {
@@ -238,7 +253,7 @@ export function AdaptiveChatInput({
     }
 
     return (
-        <div className="relative w-full">
+        <div className="relative w-full" id="adaptive-chat-input">
             {isMultiline ? (
                 <div className="relative">
                     <div className="absolute left-2 top-2 z-10">

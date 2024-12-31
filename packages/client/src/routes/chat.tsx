@@ -9,6 +9,7 @@ import { useChatControl } from '@/components/chat/hooks/use-chat-state'
 import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
 import { useGlobalStateContext } from '@/components/global-state-context'
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
+import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar' // <-- NEW IMPORT
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -20,7 +21,6 @@ export const Route = createFileRoute('/chat')({
 function ChatPage() {
   const { activeProjectTabState } = useGlobalStateContext()
   const navigate = useNavigate()
-  const selectedProjectId = activeProjectTabState?.selectedProjectId
 
   const modelControl = useChatModelControl()
   const chatControl = useChatControl()
@@ -34,35 +34,32 @@ function ChatPage() {
   const currentChat = activeChatTabState
   const newMessage = activeChatTabState?.input ?? ''
 
-  const handleBackToProject = () => {
-    navigate({ to: '/projects' })
-  }
+  // The id of the linked project tab
+  const linkedProjectTabId = currentChat?.linkedProjectTabId || ''
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <ChatTabManager />
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
         <ChatSidebar
           modelControl={modelControl}
           chatControl={chatControl}
         />
 
+        {/* Main Chat Area */}
         <div className="flex-1 flex flex-col p-2 overflow-hidden bg-secondary">
-          {!selectedProjectId && (
-            <ChatHeader
-              selectedProjectId={selectedProjectId ?? ''}
-              onForkChat={handleForkChat}
-              onBackToProject={selectedProjectId ? handleBackToProject : undefined}
-              chatControl={chatControl}
-            />
-          )}
+          <ChatHeader
+            onForkChat={handleForkChat}
+            chatControl={chatControl}
+          />
 
           {currentChat && (
             <ChatMessages chatControl={chatControl} />
           )}
 
-          <div className="flex gap-2 bg-background p-2 rounded-md">
+          <div className="flex gap-2 bg-background p-2 rounded-md mt-2">
             <AdaptiveChatInput
               value={newMessage}
               onChange={(val) => updateActiveChatTab({ input: val })}
@@ -80,6 +77,11 @@ function ChatPage() {
             </Button>
           </div>
         </div>
+
+        {/* Right Sidebar - only if there's a linked project */}
+        {/* {linkedProjectTabId && (
+          <ChatProjectSidebar linkedProjectTabId={linkedProjectTabId} />
+        )} */}
       </div>
     </div>
   )

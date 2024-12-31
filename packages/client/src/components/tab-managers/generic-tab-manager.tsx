@@ -7,15 +7,17 @@ import {
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { Input } from '@/components/ui/input'
-import { Plus } from 'lucide-react'
+import { LinkIcon, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { ChatTabsStateRecord, ChatTabState, ProjectTabsStateRecord } from 'shared'
+import { useGlobalStateContext } from '../global-state-context'
 
 type GenericTabManagerProps = {
     /**
      * A record keyed by tabId with a displayName (or however your data is shaped)
      */
-    tabs: Record<string, { displayName?: string }>;
+    tabs: Record<string, { displayName?: string, linkedProjectTabId?: string }>;
 
     /** The currently active tab ID */
     activeTabId: string | null;
@@ -46,6 +48,9 @@ type GenericTabManagerProps = {
 
     /** Optional heading or placeholder for empty state */
     emptyMessage?: string;
+
+    /** Whether the tab has a link to a project tab */
+    hasLink?: boolean;
 };
 
 export function GenericTabManager({
@@ -59,6 +64,7 @@ export function GenericTabManager({
     hotkeyPrefix,
     newTabLabel = 'New Tab',
     emptyMessage = 'No tabs yet.',
+    // hasLink = false,
 }: GenericTabManagerProps) {
     const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null)
 
@@ -92,6 +98,8 @@ export function GenericTabManager({
         setEditingTabName(null)
     }
 
+
+
     return (
         <Tabs
             value={activeTabId ?? ''}
@@ -103,7 +111,9 @@ export function GenericTabManager({
                     const shortcutNumber = index + 1
                     const showShortcut = shortcutNumber <= 9
                     const displayName = tabs[tabId]?.displayName || tabId
-
+                    const currentTabData = tabs[tabId]
+                    const hasLink = !!currentTabData?.linkedProjectTabId
+                    // const linkedProject = currentTabData?.linkedProjectTabId ? state?.projectTabs[currentTabData?.linkedProjectTabId] : null
                     return (
                         <ContextMenu key={tabId}>
                             <ContextMenuTrigger>
@@ -125,14 +135,15 @@ export function GenericTabManager({
                                             autoFocus
                                         />
                                     ) : (
-                                        <>
+                                        <div className="flex items-center gap-2">
                                             <span>{displayName}</span>
+                                            <span>{hasLink ? <LinkIcon className="h-4 w-4" /> : ''}</span>
                                             {showShortcut && (
                                                 <span className="text-xs text-muted-foreground">
                                                     {shortcutNumber}
                                                 </span>
                                             )}
-                                        </>
+                                        </div>
                                     )}
                                 </TabsTrigger>
                             </ContextMenuTrigger>
