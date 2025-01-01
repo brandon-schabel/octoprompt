@@ -1,77 +1,146 @@
-import { useState, useRef, useEffect, KeyboardEvent, forwardRef, useImperativeHandle } from 'react'
+import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { Eye, Pencil, Trash } from 'lucide-react'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ProjectFile } from 'shared'
 import { FileViewerDialog } from '@/components/file-viewer-dialog'
-import { PromptListResponse } from '@/hooks/api/use-prompts-api'
 import { ScrollArea } from '../ui/scroll-area'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
 import { formatModShortcut } from '@/lib/platform'
+import { ProjectFile } from 'shared'
+import { useGlobalStateContext } from '@/components/global-state-context'
+import { useGetProjectPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
+import { PromptDialog } from '@/components/projects/prompt-dialog'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { toast } from 'sonner'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { promptSchema } from '@/components/projects/utils/projects-utils'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
 }
 
 interface PromptsListProps {
-    promptData?: PromptListResponse | null
-    selectedPrompts: string[]
-    onSelectPrompt: (id: string, checked: boolean) => void
-    onEditPrompt: (id: string) => void
-    onDeletePrompt: (id: string) => void
-    onCreatePrompt: () => void
-    onUpdatePrompt: (promptId: string, updates: { name: string; content: string }) => void
-    onNavigateToInput?: () => void
-    onNavigateLeft?: () => void
+    projectTabId: string
     className?: string
 }
 
 export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
-    promptData,
-    selectedPrompts,
-    onSelectPrompt,
-    onEditPrompt,
-    onDeletePrompt,
-    onCreatePrompt,
-    onUpdatePrompt,
-    onNavigateToInput,
-    onNavigateLeft,
+    projectTabId,
     className = '',
 }, ref) => {
-    const [focusedIndex, setFocusedIndex] = useState<number>(-1);
-    const promptRefs = useRef<(HTMLDivElement | null)[]>([]);
+    // Access global state
+    const { state, updateProjectTabState } = useGlobalStateContext()
+    const projectTab = state?.projectTabs[projectTabId]
+    const selectedPrompts = projectTab?.selectedPrompts || []
+    const selectedProjectId = projectTab?.selectedProjectId || ''
+
+    // Fetch the actual prompt data from the server
+    const { data: promptData } = useGetProjectPrompts(selectedProjectId)
+    const prompts = promptData?.prompts || []
+
+    // Mutations
+    const createPromptMutation = useCreatePrompt()
+    const updatePromptMutation = useUpdatePrompt()
+    const deletePromptMutation = useDeletePrompt()
+
+    // local UI state
+    const [focusedIndex, setFocusedIndex] = useState<number>(-1)
+    const promptRefs = useRef<(HTMLDivElement | null)[]>([])
     const [viewedPrompt, setViewedPrompt] = useState<ProjectFile | null>(null)
 
+    // For prompt dialog (create/edit)
+    const [promptDialogOpen, setPromptDialogOpen] = useState(false)
+    const [editPromptId, setEditPromptId] = useState<string | null>(null)
+
+    // Our form for creating/updating
+    const promptForm = useForm<z.infer<typeof promptSchema>>({
+        resolver: zodResolver(promptSchema),
+        defaultValues: {
+            name: '',
+            content: '',
+        },
+    })
+
+    // ---------------
+    // Create prompt
+    // ---------------
+    const handleCreatePrompt = async (values: z.infer<typeof promptSchema>) => {
+        if (!selectedProjectId) return
+        const result = await createPromptMutation.mutateAsync({
+            ...values,
+            projectId: selectedProjectId,
+        })
+        if (result.success && result.prompt) {
+            toast.success('Prompt created successfully')
+            promptForm.reset()
+            setPromptDialogOpen(false)
+        }
+    }
+
+    // ---------------
+    // Update prompt
+    // ---------------
+    const handleUpdatePrompt = async (updates: { name: string; content: string }) => {
+        if (!editPromptId) return
+        await updatePromptMutation.mutateAsync({
+            id: editPromptId,
+            updates,
+        })
+        toast.success('Prompt updated successfully')
+        setPromptDialogOpen(false)
+    }
+
+    // ---------------
+    // Delete prompt
+    // ---------------
+    const handleDeletePrompt = async (promptId: string) => {
+        await deletePromptMutation.mutateAsync(promptId)
+        toast.success('Prompt deleted successfully')
+    }
+
+    // When user clicks Pencil icon, load the existing name/content
+    useEffect(() => {
+        if (!editPromptId) {
+            promptForm.reset()
+            return
+        }
+        const found = prompts.find((p) => p.id === editPromptId)
+        if (found) {
+            promptForm.setValue('name', found.name || '')
+            promptForm.setValue('content', found.content || '')
+        } else {
+            promptForm.reset()
+        }
+    }, [editPromptId, prompts, promptForm])
+
+    // Keyboard navigation
     const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, index: number, promptId: string) => {
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault();
-                if (promptData?.prompts && index < promptData.prompts.length - 1) {
-                    setFocusedIndex(index + 1);
-                } else if (onNavigateToInput) {
-                    // If we're at the last item, navigate to input
-                    onNavigateToInput();
-                }
+                if (index < prompts.length - 1) setFocusedIndex(index + 1);
                 break;
             case 'ArrowUp':
                 e.preventDefault();
-                if (index > 0) {
-                    setFocusedIndex(index - 1);
-                }
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                onNavigateLeft?.();
+                if (index > 0) setFocusedIndex(index - 1);
                 break;
             case ' ':
                 e.preventDefault();
-                onSelectPrompt(promptId, !selectedPrompts.includes(promptId));
+                // Toggle selection
+                updateProjectTabState(projectTabId, (prev) => {
+                    const isSelected = prev.selectedPrompts.includes(promptId)
+                    const newSelected = isSelected
+                        ? prev.selectedPrompts.filter(p => p !== promptId)
+                        : [...prev.selectedPrompts, promptId]
+                    return { selectedPrompts: newSelected }
+                })
                 break;
             case 'Enter':
                 e.preventDefault();
-                handleOpenPromptViewer(promptData!.prompts[index] as ProjectFile);
+                handleOpenPromptViewer(prompts[index] as ProjectFile);
                 break;
             case 'Escape':
                 e.preventDefault();
@@ -91,51 +160,55 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
         setViewedPrompt({
             ...prompt,
             path: prompt.name,
-            extension: '.txt' // Prompts are treated as text files
+            extension: '.txt'
         })
     }
 
-    const handleClosePromptViewer = () => {
-        setViewedPrompt(null)
-    }
+    const handleClosePromptViewer = () => setViewedPrompt(null)
 
     const handleSavePrompt = (newContent: string) => {
-        if (viewedPrompt) {
-            onUpdatePrompt(viewedPrompt.id, {
-                name: viewedPrompt.name,
-                content: newContent
-            })
-        }
+        if (!viewedPrompt) return
+        // In a real app, you'd call the update API here or update local state
+        console.log('handleSavePrompt, new content = ', newContent)
     }
 
+    // Expose a focus method
     useImperativeHandle(ref, () => ({
         focusPrompts: () => {
-            if (promptData?.prompts && promptData.prompts.length > 0) {
-                setFocusedIndex(0);
-            }
+            if (prompts.length > 0) setFocusedIndex(0);
         }
-    }), [promptData?.prompts]);
+    }), [prompts]);
 
     return (
         <>
             <div className={`border rounded-lg h-full flex flex-col ${className}`}>
                 <div className="flex-shrink-0 flex flex-row items-center justify-between p-4 border-b">
                     <div>
-                        <div className="text-md font-medium">Project Prompts <span className="hidden lg:inline text-muted-foreground">({formatModShortcut('p')})</span></div>
+                        <div className="text-md font-medium">
+                            Project Prompts <span className="hidden lg:inline text-muted-foreground">({formatModShortcut('p')})</span>
+                        </div>
                         <div className="hidden lg:text-xs text-muted-foreground">
                             Press Space to select, Enter to view
                         </div>
                     </div>
-                    <Button onClick={onCreatePrompt} size='sm'>
+                    <Button
+                        size='sm'
+                        onClick={() => {
+                            setEditPromptId(null)
+                            promptForm.reset()
+                            setPromptDialogOpen(true)
+                        }}
+                    >
                         <span className="mr-2">+</span>
                         New
                     </Button>
                 </div>
-                <div className='flex-1 relative min-h-0'>
-                    {promptData?.prompts && promptData.prompts.length > 0 ? (
+
+                <div className='flex-1 relative min-h-0 '>
+                    {prompts.length > 0 ? (
                         <ScrollArea className="h-full">
-                            <div className="space-y-2 p-4">
-                                {promptData.prompts.map((prompt, index) => (
+                            <div className="space-y-2 p-4 w-96">
+                                {prompts.map((prompt, index) => (
                                     <div
                                         key={prompt.id}
                                         ref={el => promptRefs.current[index] = el}
@@ -150,7 +223,15 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                         <div className="flex items-center space-x-3 min-w-0">
                                             <Checkbox
                                                 checked={selectedPrompts.includes(prompt.id)}
-                                                onCheckedChange={(checked) => onSelectPrompt(prompt.id, !!checked)}
+                                                onCheckedChange={(checked) => {
+                                                    updateProjectTabState(projectTabId, (prev) => {
+                                                        const isSelected = prev.selectedPrompts.includes(prompt.id)
+                                                        const newSelected = isSelected
+                                                            ? prev.selectedPrompts.filter(p => p !== prompt.id)
+                                                            : [...prev.selectedPrompts, prompt.id]
+                                                        return { selectedPrompts: newSelected }
+                                                    })
+                                                }}
                                             />
                                             <div className="flex items-center space-x-2 min-w-0">
                                                 <span className="font-medium truncate">{prompt.name}</span>
@@ -168,7 +249,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                             <Button
                                                 size="icon"
                                                 variant="ghost"
-                                                onClick={() => onEditPrompt(prompt.id)}
+                                                onClick={() => {
+                                                    setEditPromptId(prompt.id)
+                                                    setPromptDialogOpen(true)
+                                                }}
                                             >
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
@@ -187,7 +271,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                                     </p>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => onDeletePrompt(prompt.id)}>
+                                                        <AlertDialogAction
+                                                            onClick={() => handleDeletePrompt(prompt.id)}
+                                                        >
                                                             Delete
                                                         </AlertDialogAction>
                                                     </AlertDialogFooter>
@@ -199,16 +285,29 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                             </div>
                         </ScrollArea>
                     ) : (
-                        <p className="text-sm text-muted-foreground">No prompts yet. Create one above.</p>
+                        <p className="text-sm text-muted-foreground p-4">No prompts yet. Create one above.</p>
                     )}
                 </div>
             </div>
 
+            {/* A "viewer" dialog for prompts, if needed */}
             <FileViewerDialog
                 open={!!viewedPrompt}
                 viewedFile={viewedPrompt}
                 onClose={handleClosePromptViewer}
-                onSave={(newContent) => handleSavePrompt(newContent)}
+                onSave={handleSavePrompt}
+            />
+
+            {/* Prompt dialog for create/update */}
+            <PromptDialog
+                open={promptDialogOpen}
+                editPromptId={editPromptId}
+                promptForm={promptForm}
+                handleCreatePrompt={handleCreatePrompt}
+                handleUpdatePrompt={handleUpdatePrompt}
+                createPromptPending={createPromptMutation.isPending}
+                updatePromptPending={updatePromptMutation.isPending}
+                onClose={() => setPromptDialogOpen(false)}
             />
         </>
     )

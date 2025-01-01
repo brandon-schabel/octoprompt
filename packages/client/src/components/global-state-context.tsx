@@ -20,7 +20,12 @@ export type UseGlobalStateReturn = {
     updateProjectTabState: (tabId: string, partialOrFn: Partial<GlobalState['projectTabs'][string]> | ((prev: GlobalState['projectTabs'][string]) => Partial<GlobalState['projectTabs'][string]>)) => void;
 
     /** Chat tabs */
-    createChatTab: () => void;
+    createChatTab: (options?: { 
+        cleanTab?: boolean;
+        model?: string;
+        provider?: string;
+        title?: string;
+    }) => void;
     setActiveChatTab: (tabId: string) => void;
     updateChatTab: (tabId: string, partial: Partial<GlobalState['chatTabs'][string]>) => void;
     deleteChatTab: (tabId: string) => void;
@@ -281,7 +286,12 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
     /** ---------------------
      *   Chat Management Features
      *  --------------------- */
-    function createChatTab() {
+    function createChatTab(options?: { 
+        cleanTab?: boolean;
+        model?: string;
+        provider?: string;
+        title?: string;
+    }) {
         if (!isWebSocketOpen() || !state) return;
 
         const sourceTabId = state.chatActiveTabId;
@@ -290,15 +300,38 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         const newTabId = `chat-tab-${Date.now()}`;
         const sourceTabState = state.chatTabs[sourceTabId];
 
-        const message = {
+        let message = {
             type: 'create_chat_tab',
             tabId: newTabId,
             data: {
                 ...sourceTabState,
-                messages: [], // Start with empty messages
-                displayName: `Chat ${Object.keys(state.chatTabs).length + 1}`
+                displayName: options?.title || `Chat ${Object.keys(state.chatTabs).length + 1}`,
+                model: options?.model,
+                provider: options?.provider
             }
-        };
+        }
+
+        if (options?.cleanTab) {
+            message.data = {
+                ...message.data,
+                messages: [],
+                activeChatId: undefined,
+                excludedMessageIds: [],
+                linkSettings: {
+                    includePrompts: false,
+                    includeSelectedFiles: false,
+                    includeUserPrompt: false
+                },
+                linkedProjectTabId: null
+            }
+        } else {
+            message.data = {
+                ...message.data,
+                messages: [], // Start with empty messages
+                displayName: options?.title || `Chat ${Object.keys(state.chatTabs).length + 1}`
+            }
+        }
+
         wsRef.current?.send(JSON.stringify(message));
         setActiveChatTab(newTabId);
     }

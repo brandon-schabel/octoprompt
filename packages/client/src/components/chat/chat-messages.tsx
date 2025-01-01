@@ -11,6 +11,12 @@ import {
 } from "@/hooks/api/use-chat-ai-api";
 import { useChatControl } from "./hooks/use-chat-state";
 
+import {
+    Popover,
+    PopoverTrigger,
+    PopoverContent,
+} from "@/components/ui/popover";
+
 export function ChatMessages({
     chatControl,
 }: {
@@ -26,11 +32,8 @@ export function ChatMessages({
 
     const deleteMessageMutation = useDeleteMessage();
     const forkChatFromMessageMutation = useForkChatFromMessage();
-
-    // Convert excludedMessageIds to a Set for quick .has() checks
     const excludedIds = new Set(activeChatTabState?.excludedMessageIds ?? []);
 
-    // Toggle local exclusion state in global activeChatTab
     const toggleMessageExclusion = (messageId: string) => {
         if (!activeChatTabState) return;
         const newExcluded = new Set(activeChatTabState.excludedMessageIds ?? []);
@@ -97,60 +100,59 @@ export function ChatMessages({
             {messages.map((message, i) => (
                 <div
                     key={`${message.id}-${i}`}
-                    className={`group relative mb-6 ${excludedIds.has(message.id) ? "opacity-50" : ""
+                    className={`relative mb-6 ${excludedIds.has(message.id) ? "opacity-50" : ""
+                        } flex flex-col ${message.role === "user" ? "items-end" : "items-start"
                         }`}
                 >
-                    <div
-                        className={`flex flex-col gap-1 ${message.role === "user" ? "items-end" : "items-start"
-                            }`}
-                    >
-                        <Card className="inline-block p-2 max-w-[80%] relative">
-                            <ReactMarkdown>{message.content}</ReactMarkdown>
-                        </Card>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Card className="inline-block p-2 max-w-[80%] relative cursor-pointer">
+                                <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </Card>
+                        </PopoverTrigger>
 
-                        {/* Message Actions */}
-                        <div className={`absolute -bottom-12 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 items-center bg-background p-2 rounded-md ${
-                            message.role === "user" ? "right-0" : "left-0"
-                        }`}>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(message.content)}
-                                title="Copy message"
-                            >
-                                <Copy className="h-3 w-3" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => handleForkFromMessage(message.id)}
-                                title="Fork chat from here"
-                            >
-                                <GitFork className="h-3 w-3" />
-                            </Button>
-
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => handleDeleteMessage(message.id)}
-                                title="Delete message"
-                            >
-                                <Trash className="h-3 w-3" />
-                            </Button>
-
-                            {/* Exclude switch */}
-                            <div className="flex items-center gap-2">
-                                <Switch
-                                    checked={excludedIds.has(message.id)}
-                                    onCheckedChange={() => toggleMessageExclusion(message.id)}
-                                />
-                                <span className="text-xs text-muted-foreground">Exclude</span>
+                        <PopoverContent
+                            align={message.role === "user" ? "end" : "start"}
+                            side="bottom"
+                        >
+                            <div className="flex gap-1 items-center">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => copyToClipboard(message.content)}
+                                    title="Copy message"
+                                >
+                                    <Copy className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => handleForkFromMessage(message.id)}
+                                    title="Fork chat from here"
+                                >
+                                    <GitFork className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => handleDeleteMessage(message.id)}
+                                    title="Delete message"
+                                >
+                                    <Trash className="h-3 w-3" />
+                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={excludedIds.has(message.id)}
+                                        onCheckedChange={() => toggleMessageExclusion(message.id)}
+                                    />
+                                    <span className="text-xs text-muted-foreground">Exclude</span>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             ))}
         </ScrollArea>

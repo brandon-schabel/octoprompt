@@ -10,8 +10,7 @@ import { Input } from '@/components/ui/input'
 import { LinkIcon, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { ChatTabsStateRecord, ChatTabState, ProjectTabsStateRecord } from 'shared'
-import { useGlobalStateContext } from '../global-state-context'
+import { cn } from '@/lib/utils'
 
 type GenericTabManagerProps = {
     /**
@@ -39,7 +38,7 @@ type GenericTabManagerProps = {
 
     /**
      * Unique prefix for hotkeys so that project tabs
-     * and chat tabs don’t clash, e.g. "t" or "c"
+     * and chat tabs don't clash, e.g. "t" or "c"
      */
     hotkeyPrefix: string;
 
@@ -51,6 +50,9 @@ type GenericTabManagerProps = {
 
     /** Whether the tab has a link to a project tab */
     hasLink?: boolean;
+
+    /** Optional className for custom styling */
+    className?: string;
 };
 
 export function GenericTabManager({
@@ -64,7 +66,7 @@ export function GenericTabManager({
     hotkeyPrefix,
     newTabLabel = 'New Tab',
     emptyMessage = 'No tabs yet.',
-    // hasLink = false,
+    className,
 }: GenericTabManagerProps) {
     const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null)
 
@@ -104,7 +106,7 @@ export function GenericTabManager({
         <Tabs
             value={activeTabId ?? ''}
             onValueChange={(val) => onSetActiveTab(val)}
-            className="flex flex-col justify-start rounded-none"
+            className={cn("flex flex-col justify-start rounded-none", className)}
         >
             <TabsList className="bg-background justify-start rounded-none">
                 {tabIds.map((tabId, index) => {
@@ -117,7 +119,11 @@ export function GenericTabManager({
                     return (
                         <ContextMenu key={tabId}>
                             <ContextMenuTrigger>
-                                <TabsTrigger value={tabId} className="flex items-center gap-2">
+                                <TabsTrigger value={tabId} className={cn(
+                                    "flex items-center gap-2",
+                                    "data-[state=active]:bg-indigo-100 dark:data-[state=active]:bg-indigo-950/50",
+                                    "data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400"
+                                )}>
                                     {editingTabName?.id === tabId ? (
                                         <Input
                                             value={editingTabName.name}

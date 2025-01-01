@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
+import { Link } from '@tanstack/react-router'
 import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { buildPromptContent } from '@/components/projects/utils/projects-utils'
@@ -12,9 +12,10 @@ import { toast } from 'sonner'
 import { useGlobalStateContext } from '@/components/global-state-context'
 import { useSelectedFiles } from '@/hooks/use-selected-files'
 import { linkSettingsSchema, LinkSettings } from 'shared'
-import { Copy } from 'lucide-react'
+import { Copy, Folder, FolderOpen } from 'lucide-react'
 import { SelectedFilesList } from '@/components/projects/selected-files-list'
-import { FormatTokenCount } from '@/components/format-token-count'
+import { SlidingSidebar } from '@/components/sliding-sidebar'
+import { PromptsList } from '../projects/prompts-list'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string
@@ -51,16 +52,18 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
     }
 
     // ------------------------------------------------------------------
-    // Link Settings 
+    // Link Settings
     // ------------------------------------------------------------------
     function handleLinkSettingChange(key: keyof LinkSettings, value: boolean) {
-        if (!linkedProjectTabId || !linkSettings) return
-        const merged = { ...linkSettings, [key]: value }
-        // Validate just to be safe
-        linkSettingsSchema.parse(merged)
-        updateChatLinkSettings(linkedProjectTabId, merged)
-    }
+        // 1) We need the chat tab ID here instead of the project tab ID
+        const chatTabId = state?.chatActiveTabId
+        const linkSettings = activeChatTabState?.linkSettings
+        if (!chatTabId || !linkSettings) return
 
+        const merged = { ...linkSettings, [key]: value }
+        linkSettingsSchema.parse(merged)
+        updateChatLinkSettings(chatTabId, merged) // <-- pass chatTabId
+    }
     // ------------------------------------------------------------------
     // Copy All Linked Content
     // ------------------------------------------------------------------
@@ -73,7 +76,6 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
             toast.error('Linked project tab not found.')
             return
         }
-        // build the combined content
         const content = buildPromptContent({
             fileMap,
             promptData: promptsData,
@@ -99,118 +101,129 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
     // Render
     // ------------------------------------------------------------------
     return (
-        <div className="border-l bg-background min-w-[300px] max-w-sm flex flex-col">
-            <div className="p-2 border-b flex items-center justify-between">
-                <span className="font-semibold">
-                    {linkedProjectState.displayName || 'Linked Project'}
-                </span>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyAll}
-                    className="gap-2"
-                >
-                    <Copy className="h-4 w-4" />
-                    Copy All
-                </Button>
-            </div>
+        <SlidingSidebar
+            width={435}
+            side="right"
+            localStorageKey="chatProjectSidebarCollapsed"
+        >
+            <div className="bg-background w-full h-full flex flex-col">
+                <div className="p-2 border-b mb-2 flex items-start flex-col justify-start">
+                    <div>Project Manager</div>
 
-            <Tabs
-                value={tabValue}
-                onValueChange={setTabValue}
-                className="flex flex-col flex-1 overflow-hidden"
-            >
-                <TabsList className="p-1 justify-between">
-                    <TabsTrigger value="files">Files</TabsTrigger>
-                    <TabsTrigger value="prompts">Prompts</TabsTrigger>
-                    <TabsTrigger value="settings">Settings</TabsTrigger>
-                </TabsList>
-
-                {/* -------------------------
-            Tab: Selected Files
-        ------------------------- */}
-                <TabsContent value="files" className="flex-1 overflow-hidden">
-                    <ScrollArea className="h-full p-2">
-                        <SelectedFilesList
-                            selectedFiles={selectedFiles}
-                            fileMap={fileMap}
-                            onRemoveFile={(fileId) => removeSelectedFile(fileId)}
-                        />
-                    </ScrollArea>
-                </TabsContent>
-
-                {/* -------------------------
-            Tab: Project Prompts
-        ------------------------- */}
-                <TabsContent value="prompts" className="flex-1 overflow-hidden">
-                    <ScrollArea className="h-full p-2 space-y-2">
-                        {!promptsData?.prompts?.length ? (
-                            <p className="text-sm text-muted-foreground">No prompts found.</p>
-                        ) : (
-                            promptsData.prompts.map(prompt => (
-                                <div
-                                    key={prompt.id}
-                                    className="border rounded-md p-2 hover:bg-accent hover:cursor-pointer"
-                                >
-                                    <div className="font-medium">{prompt.name}</div>
-                                    <div className="text-xs text-muted-foreground line-clamp-2">
-                                        {prompt.content}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </ScrollArea>
-                </TabsContent>
-
-                {/* -------------------------
-            Tab: Link Settings
-        ------------------------- */}
-                <TabsContent value="settings" className="flex-1 p-2 space-y-4">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox
-                            checked={linkSettings?.includeSelectedFiles ?? false}
-                            onCheckedChange={(checked) =>
-                                handleLinkSettingChange('includeSelectedFiles', !!checked)
-                            }
-                        />
-                        <label className="text-sm">Include Selected Files</label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                        <Checkbox
-                            checked={linkSettings?.includePrompts ?? false}
-                            onCheckedChange={(checked) =>
-                                handleLinkSettingChange('includePrompts', !!checked)
-                            }
-                        />
-                        <label className="text-sm">Include Prompts</label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                        <Checkbox
-                            checked={linkSettings?.includeUserPrompt ?? false}
-                            onCheckedChange={(checked) =>
-                                handleLinkSettingChange('includeUserPrompt', !!checked)
-                            }
-                        />
-                        <label className="text-sm">Include User Prompt</label>
-                    </div>
-
-                    <div className="border-t pt-4">
+                    <div className='w-full flex items-center justify-between'>
+                        <Link>
+                            <div className='flex items-center gap-2'>
+                                <span className="font-semibold">
+                                    {linkedProjectState.displayName || 'Linked Project'}
+                                </span>
+                                <FolderOpen className="h-4 w-4" />
+                            </div>
+                        </Link>
                         <Button
-                            variant="destructive"
-                            onClick={() => unlinkChatTab(linkedProjectTabId)}
-                            className="w-full"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCopyAll}
+                            className="gap-2"
                         >
-                            Unlink Project
+                            <Copy className="h-4 w-4" />
+                            Copy All
                         </Button>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            This removes the link for this chat from project tab "
-                            {linkedProjectState.displayName || linkedProjectTabId}".
-                        </p>
                     </div>
-                </TabsContent>
-            </Tabs>
-        </div>
+
+                </div>
+
+                <Tabs
+                    value={tabValue}
+                    onValueChange={setTabValue}
+                    className="flex flex-col flex-1 overflow-hidden"
+                >
+                    <TabsList className="p-1 justify-between">
+                        <TabsTrigger value="files">Files</TabsTrigger>
+                        <TabsTrigger value="prompts">Prompts</TabsTrigger>
+                        <TabsTrigger value="settings">Settings</TabsTrigger>
+                    </TabsList>
+
+                    {/* -------------------------
+              Tab: Selected Files
+          ------------------------- */}
+                    <TabsContent value="files" className="flex-1 overflow-hidden">
+                        <ScrollArea className="h-full p-2">
+                            <SelectedFilesList
+                                selectedFiles={selectedFiles}
+                                fileMap={fileMap}
+                                onRemoveFile={(fileId) => removeSelectedFile(fileId)}
+                            />
+                        </ScrollArea>
+                    </TabsContent>
+
+                    {/* -------------------------
+              Tab: Project Prompts
+          ------------------------- */}
+                    <TabsContent value="prompts" className="flex-1 overflow-hidden">
+                        <ScrollArea className="h-full p-2 space-y-2">
+                            <PromptsList
+                                className='w-96'
+                                projectTabId={linkedProjectTabId}
+                            />
+                        </ScrollArea>
+                    </TabsContent>
+
+                    {/* -------------------------
+              Tab: Link Settings
+          ------------------------- */}
+                    <TabsContent value="settings" className="flex-1 p-2 space-y-4">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                checked={linkSettings?.includeSelectedFiles ?? false}
+                                onCheckedChange={(checked) =>
+                                    handleLinkSettingChange('includeSelectedFiles', !!checked)
+                                }
+                            />
+                            <label className="text-sm">Include Selected Files</label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                checked={linkSettings?.includePrompts ?? false}
+                                onCheckedChange={(checked) =>
+                                    handleLinkSettingChange('includePrompts', !!checked)
+                                }
+                            />
+                            <label className="text-sm">Include Prompts</label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                checked={linkSettings?.includeUserPrompt ?? false}
+                                onCheckedChange={(checked) =>
+                                    handleLinkSettingChange('includeUserPrompt', !!checked)
+                                }
+                            />
+                            <label className="text-sm">Include User Prompt</label>
+                        </div>
+
+                        <div className="border-t pt-4">
+
+                            <Button
+                                variant="destructive"
+                                onClick={() => {
+                                    // 2) Also unlink via the chat tab ID
+                                    const chatTabId = state?.chatActiveTabId
+                                    if (!chatTabId) return
+                                    unlinkChatTab(chatTabId)
+                                }}
+                                className="w-full"
+                            >
+                                Unlink Project
+                            </Button>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                This removes the link for this chat from project tab "
+                                {linkedProjectState.displayName || linkedProjectTabId}".
+                            </p>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </div>
+        </SlidingSidebar>
     )
 }

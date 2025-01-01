@@ -13,13 +13,13 @@ function RootComponent() {
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
-      {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools position="bottom-left" toggleButtonProps={{
+      {/* {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools position="bottom-left" toggleButtonProps={{
         style: {
 
           marginLeft: '60px',
           marginBottom: "15px"
         }
-      }} />}
+      }} />} */}
     </div>
   )
 }

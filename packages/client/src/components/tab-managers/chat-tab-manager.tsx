@@ -27,7 +27,6 @@ export function ChatTabManager() {
             hotkeyPrefix="c"
             newTabLabel="New Chat Tab"
             emptyMessage="No chat tabs yet."
-        // hasLink={hasLink}
         />
     )
 }

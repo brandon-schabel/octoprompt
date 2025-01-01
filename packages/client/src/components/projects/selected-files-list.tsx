@@ -13,6 +13,7 @@ type SelectedFilesListProps = {
   onRemoveFile: (fileId: string) => void
   onNavigateLeft?: () => void
   onNavigateRight?: () => void
+  className?: string
 }
 
 export type SelectedFilesListRef = {
@@ -24,7 +25,8 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   fileMap,
   onRemoveFile,
   onNavigateLeft,
-  onNavigateRight
+  onNavigateRight,
+  className = ''
 }, ref) => {
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -97,7 +99,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   }
 
   return (
-    <div className="space-y-2 w-60 p-2 items-center flex flex-col">
+    <div className={`space-y-2 p-2 items-center flex flex-col ${className}`}>
       {selectedFiles.map((fileId, index) => {
         const file = fileMap.get(fileId)
         if (!file) return null

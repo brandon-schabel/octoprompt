@@ -46,11 +46,11 @@ if (!rootElement.innerHTML) {
     <QueryClientProvider client={queryClient}>
       <GlobalStateProvider>
         <RouterProvider router={router} />
-        {process.env.NODE_ENV === 'development' && <ReactQueryDevtools
+        {/* {process.env.NODE_ENV === 'development' && <ReactQueryDevtools
           initialIsOpen={false}
           position='bottom'
           buttonPosition='bottom-left'
-        />}
+        />} */}
         <Toaster />
       </GlobalStateProvider>
     </QueryClientProvider>

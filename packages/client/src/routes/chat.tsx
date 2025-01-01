@@ -4,12 +4,10 @@ import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { ChatMessages } from '@/components/chat/chat-messages'
 import { ChatHeader } from '@/components/chat/chat-header'
 import { AdaptiveChatInput } from '@/components/adaptive-chat-input'
-import { useNavigate } from "@tanstack/react-router"
 import { useChatControl } from '@/components/chat/hooks/use-chat-state'
 import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
-import { useGlobalStateContext } from '@/components/global-state-context'
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
-import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar' // <-- NEW IMPORT
+import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -19,9 +17,6 @@ export const Route = createFileRoute('/chat')({
 })
 
 function ChatPage() {
-  const { activeProjectTabState } = useGlobalStateContext()
-  const navigate = useNavigate()
-
   const modelControl = useChatModelControl()
   const chatControl = useChatControl()
   const {
@@ -43,16 +38,14 @@ function ChatPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
-        <ChatSidebar
-          modelControl={modelControl}
-          chatControl={chatControl}
-        />
+        <ChatSidebar />
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col p-2 overflow-hidden bg-secondary">
           <ChatHeader
             onForkChat={handleForkChat}
             chatControl={chatControl}
+            modelControl={modelControl}
           />
 
           {currentChat && (
@@ -79,9 +72,9 @@ function ChatPage() {
         </div>
 
         {/* Right Sidebar - only if there's a linked project */}
-        {/* {linkedProjectTabId && (
+        {linkedProjectTabId && (
           <ChatProjectSidebar linkedProjectTabId={linkedProjectTabId} />
-        )} */}
+        )}
       </div>
     </div>
   )

@@ -36,10 +36,11 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     promptData,
     className,
 }, ref) => {
-    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
+    const { state, updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
     const selectedPrompts = activeTabState?.selectedPrompts || []
     const globalUserPrompt = activeTabState?.userPrompt || ''
     const contextLimit = activeTabState?.contextLimit || 128000
+    const activeProjectTabId = state?.projectActiveTabId
 
     const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
 
@@ -188,29 +189,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                         <div className="flex-1 min-h-0" >
                             <PromptsList
                                 ref={promptsListRef}
-                                promptData={promptData}
-                                selectedPrompts={selectedPrompts}
-                                onSelectPrompt={(id, checked) => {
-                                    updateActiveTab(prev => ({
-                                        ...prev,
-                                        selectedPrompts: checked
-                                            ? [...prev.selectedPrompts, id]
-                                            : prev.selectedPrompts.filter(p => p !== id)
-                                    }))
-                                }}
-                                onEditPrompt={(id) => {
-                                    setEditPromptId(id)
-                                    setPromptDialogOpen(true)
-                                }}
-                                onDeletePrompt={async (id) => {
-                                    await deletePromptMutation.mutateAsync(id)
-                                    toast.success('Prompt deleted successfully')
-                                }}
-                                onCreatePrompt={() => {
-                                    setEditPromptId(null)
-                                    setPromptDialogOpen(true)
-                                }}
-                                onUpdatePrompt={handleUpdatePromptContent}
+                                projectTabId={activeProjectTabId || 'defaultTab'}
+                                className="h-full"
                             />
                         </div>
 

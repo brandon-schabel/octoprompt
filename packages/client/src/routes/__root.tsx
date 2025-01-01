@@ -63,20 +63,20 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   return (
-      <div className="h-screen w-screen flex flex-col">
-        <header className="flex-none">
-          <AppNavbar />
-        </header>
+    <div className="h-screen w-screen flex flex-col">
+      <header className="flex-none">
+        <AppNavbar />
+      </header>
 
-        {/* Main content area with proper overflow handling */}
-        <main className="flex-1 min-h-0 overflow-auto">
-          <Outlet />
-        </main>
+      {/* Main content area with proper overflow handling */}
+      <main className="flex-1 min-h-0 overflow-auto">
+        <Outlet />
+      </main>
 
-        {/* Global keyboard-driven UI components */}
-        <GlobalCommandPalette />
+      {/* Global keyboard-driven UI components */}
+      <GlobalCommandPalette />
 
-        {process.env.NODE_ENV === 'development' && (
+      {/* {process.env.NODE_ENV === 'development' && (
           <TanStackRouterDevtools
             position="bottom-left"
             toggleButtonProps={{
@@ -86,7 +86,7 @@ function RootComponent() {
               }
             }}
           />
-        )}
-      </div>
+        )} */}
+    </div>
   )
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
+import { useNavigate, useMatches } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectList } from "@/components/projects/project-list"
 import { ProjectDialog } from "@/components/projects/project-dialog"
+import { ChatDialog } from "@/components/chat/chat-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -17,8 +18,14 @@ import { useGlobalStateContext } from "./global-state-context"
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
     const [projectDialogOpen, setProjectDialogOpen] = useState(false)
+    const [chatDialogOpen, setChatDialogOpen] = useState(false)
     const [editProjectId, setEditProjectId] = useState<string | null>(null)
     const [helpOpen, setHelpOpen] = useState(false)
+
+    const matches = useMatches()
+    const isOnChatRoute = matches.some(match => match.routeId === "/chat")
+    const isOnProjectsRoute = matches.some(match => match.routeId === "/projects")
+    const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
     const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab } = useGlobalStateContext()
     const selectedProjectId = activeTabState?.selectedProjectId
@@ -104,7 +111,11 @@ export function AppNavbar() {
                     <div className="flex items-center gap-2">
                         <Link
                             to="/projects"
-                            className="inline-flex items-center gap-2 text-sm font-medium hover:text-indigo-600"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${
+                                isOnProjectsRoute 
+                                    ? "text-indigo-600 dark:text-indigo-400" 
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                            }`}
                         >
                             <FolderIcon className="w-4 h-4" />
                             Project
@@ -112,14 +123,22 @@ export function AppNavbar() {
                         <Link
                             to="/chat"
                             search={{ prefill: false }}
-                            className="inline-flex items-center gap-2 text-sm font-medium hover:text-indigo-600"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${
+                                isOnChatRoute 
+                                    ? "text-indigo-600 dark:text-indigo-400" 
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                            }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
                             Chat
                         </Link>
                         <Link
                             to="/keys"
-                            className="inline-flex items-center gap-2 text-sm font-medium hover:text-indigo-600"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${
+                                isOnKeysRoute 
+                                    ? "text-indigo-600 dark:text-indigo-400" 
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                            }`}
                         >
                             <KeyIcon className="w-4 h-4" />
                             Keys
@@ -128,13 +147,25 @@ export function AppNavbar() {
 
 
                     <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => setOpenDialog(true)}
-                            className="ml-auto"
-                        >
-                            <Settings /> Projects
-                        </Button>
+                        {!isOnChatRoute && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setOpenDialog(true)}
+                                className="ml-auto"
+                            >
+                                <Settings /> Projects
+                            </Button>
+                        )}
+
+                        {isOnChatRoute && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setChatDialogOpen(true)}
+                                className="ml-auto"
+                            >
+                                <MessageSquareIcon className="mr-2 h-4 w-4" /> New Chat
+                            </Button>
+                        )}
 
                         {/* Help button */}
                         <Button
@@ -185,6 +216,10 @@ export function AppNavbar() {
                 open={projectDialogOpen}
                 projectId={editProjectId}
                 onOpenChange={setProjectDialogOpen}
+            />
+            <ChatDialog
+                open={chatDialogOpen}
+                onOpenChange={setChatDialogOpen}
             />
             <HelpDialog
                 open={helpOpen}

@@ -391,6 +391,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                                     onRemoveFile={removeSelectedFile}
                                                     onNavigateLeft={handleNavigateToFileTree}
                                                     onNavigateRight={onNavigateToPrompts}
+                                                    className='w-60'
                                                 />
                                             </ScrollArea>
                                         </div>
