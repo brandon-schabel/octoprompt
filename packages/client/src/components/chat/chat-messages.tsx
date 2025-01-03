@@ -146,6 +146,7 @@ export function ChatMessages({
                                 >
                                     <ReactMarkdown
                                         components={{
+                                            /* @ts-ignore */
                                             code: ({ inline, className, children, ...rest }) => {
                                                 const match = /language-(\w+)/.exec(className || "");
                                                 const codeString = String(children).replace(/\n$/, "");
