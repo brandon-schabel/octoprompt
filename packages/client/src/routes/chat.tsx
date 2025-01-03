@@ -41,7 +41,7 @@ function ChatPage() {
         <ChatSidebar />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-secondary">
+        <div className="flex-1 flex flex-col overflow-hidden">
           <ChatHeader
             onForkChat={handleForkChat}
             chatControl={chatControl}

@@ -120,6 +120,7 @@ export function ChatMessages({
 
     return (
         <ScrollArea className="flex-1 h-full overflow-y-auto p-2 " id="chat-messages">
+            <div className="py-4">
             {messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center">
                     <Card className="p-6 max-w-md text-center">
@@ -142,7 +143,7 @@ export function ChatMessages({
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Card
-                                    className={`p-2 max-w-[80vw] w-fit break-words cursor-pointer`}
+                                    className={`p-2 max-w-[80vw] w-fit break-words cursor-pointer bg-secondary`}
                                 >
                                     <ReactMarkdown
                                         components={{
@@ -241,6 +242,7 @@ export function ChatMessages({
                     </div>
                 ))
             )}
+            </div>
         </ScrollArea>
     );
 }
