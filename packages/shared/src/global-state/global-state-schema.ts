@@ -62,6 +62,17 @@ export const chatTabStateSchema = z.object({
     linkSettings: linkSettingsSchema.optional(),
 });
 
+export const themeSchema = z.enum(['light', 'dark']).default('light');
+export type Theme = z.infer<typeof themeSchema>;
+
+export const appSettingsSchema = z.object({
+    language: z.string(),
+    theme: themeSchema.default('light'),
+    codeThemeLight: z.string().default('atomOneLight'),
+    codeThemeDark: z.string().default('atomOneDark'),
+});
+
+export type AppSettings = z.infer<typeof appSettingsSchema>;
 
 export type ChatTabState = z.infer<typeof chatTabStateSchema>;
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
@@ -72,23 +83,24 @@ export const projectTabsStateRecordSchema = z.record(z.string(), projectTabState
 export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
 
 export const globalStateSchema = z.object({
-    users: z.array(z.object({ id: z.string(), name: z.string() })),
-    settings: z.object({
-        darkMode: z.boolean(),
-        language: z.string(),
-    }),
+    settings: appSettingsSchema,
     counter: z.number(),
     projectTabs: z.record(z.string(), projectTabStateSchema),
     projectActiveTabId: z.string().nullable(),
     chatTabs: chatTabsStateRecordSchema,
     chatActiveTabId: z.string().nullable(),
+
 });
 
 export type GlobalState = z.infer<typeof globalStateSchema>;
 
 export const createInitialGlobalState = (): GlobalState => ({
-    users: [],
-    settings: { darkMode: false, language: 'en' },
+    settings: {
+        language: 'en',
+        theme: 'light',
+        codeThemeLight: 'atomOneLight',
+        codeThemeDark: 'atomOneDark',
+    },
     counter: 0,
     projectTabs: {
         defaultTab: {

@@ -136,7 +136,7 @@ export function ChatHeader({
     }
 
     return (
-        <div className="flex justify-between items-center mb-2 bg-background p-2 rounded-md">
+        <div className="flex justify-between items-center bg-background p-2 rounded-md">
             {/* Left side */}
             <div className="flex items-center gap-4">
                 <div className="flex items-center space-x-4 gap-2">

@@ -1,40 +1,56 @@
 import { createContext, useContext } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { globalStateSchema, GlobalState, createInitialGlobalState, ProjectTabState, LinkSettings, linkSettingsSchema } from 'shared';
+import {
+    globalStateSchema,
+    GlobalState,
+    createInitialGlobalState,
+    ProjectTabState,
+    ChatTabState,
+    LinkSettings,
+    linkSettingsSchema,
+} from 'shared';
 import { SERVER_HTTP_ENDPOINT, SERVER_WS_ENDPOINT } from '@/constants/server-constants';
+import { v4 as uuidv4 } from 'uuid';
 
-
+export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
 
 export type UseGlobalStateReturn = {
     // The entire state
     state: GlobalState | undefined;
     wsReady: boolean;
 
+    /** Generic Updaters */
+    updateGlobalStateKey: <K extends keyof GlobalState>(
+        key: K,
+        partialOrFn: PartialOrFn<GlobalState[K]>
+    ) => void;
+    updateSettings: (partialOrFn: PartialOrFn<GlobalState['settings']>) => void;
+
     /** Project tabs */
     createProjectTab: () => void;
     setActiveProjectTab: (tabId: string) => void;
-    updateProjectTab: (tabId: string, partial: Partial<GlobalState['projectTabs'][string]>) => void;
+    updateProjectTab: (tabId: string, partial: Partial<ProjectTabState>) => void;
     deleteProjectTab: (tabId: string) => void;
-    updateActiveProjectTab: (partialOrFn: Partial<GlobalState['projectTabs'][string]> | ((prev: GlobalState['projectTabs'][string]) => Partial<GlobalState['projectTabs'][string]>)) => void;
-    updateProjectTabState: (tabId: string, partialOrFn: Partial<GlobalState['projectTabs'][string]> | ((prev: GlobalState['projectTabs'][string]) => Partial<GlobalState['projectTabs'][string]>)) => void;
+    updateActiveProjectTab: (partialOrFn: PartialOrFn<ProjectTabState>) => void;
+    updateProjectTabState: (tabId: string, partialOrFn: PartialOrFn<ProjectTabState>) => void;
 
     /** Chat tabs */
-    createChatTab: (options?: { 
+    createChatTab: (options?: {
         cleanTab?: boolean;
         model?: string;
         provider?: string;
         title?: string;
     }) => void;
     setActiveChatTab: (tabId: string) => void;
-    updateChatTab: (tabId: string, partial: Partial<GlobalState['chatTabs'][string]>) => void;
+    updateChatTab: (tabId: string, partial: Partial<ChatTabState>) => void;
     deleteChatTab: (tabId: string) => void;
-    updateActiveChatTab: (partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)) => void;
-    updateChatTabState: (tabId: string, partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)) => void;
+    updateActiveChatTab: (partialOrFn: PartialOrFn<ChatTabState>) => void;
+    updateChatTabState: (tabId: string, partialOrFn: PartialOrFn<ChatTabState>) => void;
 
     /** Current tab states */
-    activeProjectTabState: GlobalState['projectTabs'][string] | undefined;
-    activeChatTabState: GlobalState['chatTabs'][string] | undefined;
+    activeProjectTabState: ProjectTabState | undefined;
+    activeChatTabState: ChatTabState | undefined;
 
     /** Linking Helpers */
     linkChatTabToProjectTab: (chatTabId: string, projectTabId: string, settings?: Partial<LinkSettings>) => void;
@@ -42,55 +58,56 @@ export type UseGlobalStateReturn = {
     updateChatLinkSettings: (chatTabId: string, partialSettings: Partial<LinkSettings>) => void;
 
     /** Project Tab State Helpers */
-    updateActiveProjectTabStateKey: <K extends keyof ProjectTabState>(key: K, valueOrFn: ProjectTabState[K] | ((prev: ProjectTabState[K]) => ProjectTabState[K])) => void;
+    updateActiveProjectTabStateKey: <K extends keyof ProjectTabState>(
+        key: K,
+        valueOrFn: ProjectTabState[K] | ((prev: ProjectTabState[K]) => ProjectTabState[K])
+    ) => void;
 };
 
 export function useInitializeGlobalState(): UseGlobalStateReturn {
-    const [wsReady, setWsReady] = useState(false); // <-- track readiness
+    const [wsReady, setWsReady] = useState(false);
     const queryClient = useQueryClient();
     const wsRef = useRef<WebSocket | null>(null);
 
     const { data: state } = useQuery({
         queryKey: ['globalState'],
         queryFn: async (): Promise<GlobalState> => {
-            const res = await fetch(SERVER_HTTP_ENDPOINT + '/api/state');
-            const data = await res.json();
-            return globalStateSchema.parse(data);
+            const res = await fetch(`${SERVER_HTTP_ENDPOINT}/api/state`);
+            const parsed = await res.json();
+            return globalStateSchema.parse(parsed);
         },
         staleTime: Infinity,
         gcTime: Infinity,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false,
-        initialData: createInitialGlobalState()
+        initialData: createInitialGlobalState(),
     });
 
-    const activeProjectTabState = state?.projectActiveTabId ? state?.projectTabs[state?.projectActiveTabId] : undefined;
-    const activeChatTabState = state?.chatActiveTabId ? state?.chatTabs[state?.chatActiveTabId] : undefined;
+    const activeProjectTabState = state?.projectActiveTabId
+        ? state.projectTabs[state.projectActiveTabId]
+        : undefined;
+    const activeChatTabState = state?.chatActiveTabId
+        ? state.chatTabs[state.chatActiveTabId]
+        : undefined;
 
     useEffect(() => {
         const ws = new WebSocket(`${SERVER_WS_ENDPOINT}/ws`);
         wsRef.current = ws;
 
-        ws.onopen = () => {
-            setWsReady(true);
-        };
-
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            if (message.type === 'state_update') {
-                const newState = globalStateSchema.parse(message.data);
-                queryClient.setQueryData(['globalState'], newState);
-            }
-        };
-
+        ws.onopen = () => setWsReady(true);
         ws.onclose = () => {
             wsRef.current = null;
             setWsReady(false);
         };
+        ws.onerror = (err) => console.error('[WebSocket] Error:', err);
 
-        ws.onerror = (error) => {
-            console.error('[WebSocket] Connection error:', error);
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'state_update') {
+                const newState = globalStateSchema.parse(msg.data);
+                queryClient.setQueryData(['globalState'], newState);
+            }
         };
 
         return () => {
@@ -98,357 +115,345 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         };
     }, [queryClient]);
 
-    function isWebSocketOpen(): boolean {
+    /** Helpers */
+    function canProceed(): boolean {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            console.warn("WebSocket not open, cannot send message");
+            console.warn('WebSocket not open, cannot send message');
+            return false;
+        }
+        if (!state) {
+            console.warn('No state loaded yet, cannot proceed');
             return false;
         }
         return true;
     }
 
-    /** ---------------------
-     *   Update Project Tab
-     *  --------------------- */
-    function updateActiveProjectTab(
-        partialOrFn: Partial<ProjectTabState> | ((prev: ProjectTabState) => Partial<ProjectTabState>)
-    ) {
-        if (!isWebSocketOpen() || !state) return;
-        const activeProjectTabId = state.projectActiveTabId;
-        if (!activeProjectTabId) return;
-
-        const currentProjectTabState = state.projectTabs[activeProjectTabId];
-        const finalPartial =
-            typeof partialOrFn === 'function'
-                ? partialOrFn(currentProjectTabState)
-                : partialOrFn;
-
-        const message = {
-            type: 'update_project_tab_partial',
-            tabId: activeProjectTabId,
-            partial: finalPartial
-        };
-        wsRef.current?.send(JSON.stringify(message));
+    function sendWSMessage(msg: object) {
+        if (canProceed()) {
+            wsRef.current!.send(JSON.stringify(msg));
+        }
     }
 
+    function getPartial<T>(prev: T, partialOrFn: PartialOrFn<T>): Partial<T> {
+        return typeof partialOrFn === 'function' ? partialOrFn(prev) : partialOrFn;
+    }
+
+    /** 1) Generic Updaters */
+    function updateGlobalStateKey<K extends keyof GlobalState>(
+        key: K,
+        partialOrFn: PartialOrFn<GlobalState[K]>
+    ) {
+        if (!canProceed() || !state) return;
+        const currentValue = state[key];
+        if (currentValue === undefined) return;
+
+        const finalPartial = getPartial(currentValue, partialOrFn);
+
+        sendWSMessage({
+            type: 'update_global_state_key', // Your backend must handle this
+            data: {
+                key,
+                partial: finalPartial,
+            },
+        });
+    }
+
+    function updateSettings(partialOrFn: PartialOrFn<GlobalState['settings']>) {
+        updateGlobalStateKey('settings', partialOrFn);
+    }
+
+    /** 2) Project Tabs */
+    function updateActiveProjectTab(partialOrFn: PartialOrFn<ProjectTabState>) {
+        if (!canProceed() || !state?.projectActiveTabId) return;
+        const { projectActiveTabId, projectTabs } = state;
+        const currentTab = projectTabs[projectActiveTabId];
+        const finalPartial = getPartial(currentTab, partialOrFn);
+
+        // Keep using the old "type" to avoid breaking your backend:
+        sendWSMessage({
+            type: 'update_project_tab_partial',
+            tabId: projectActiveTabId,
+            partial: finalPartial,
+        });
+    }
+
+    function updateProjectTab(tabId: string, partial: Partial<ProjectTabState>) {
+        if (!canProceed()) return;
+        sendWSMessage({
+            type: 'update_project_tab',
+            tabId,
+            data: partial,
+        });
+    }
+
+    function updateProjectTabState(tabId: string, partialOrFn: PartialOrFn<ProjectTabState>) {
+        if (!canProceed() || !state) return;
+        const currentState = state.projectTabs[tabId];
+        if (!currentState) return;
+
+        const finalPartial = getPartial(currentState, partialOrFn);
+        sendWSMessage({
+            type: 'update_project_tab_partial',
+            tabId,
+            partial: finalPartial,
+        });
+    }
 
     function updateActiveProjectTabStateKey<K extends keyof ProjectTabState>(
         key: K,
         valueOrFn: ProjectTabState[K] | ((prev: ProjectTabState[K]) => ProjectTabState[K])
     ) {
         updateActiveProjectTab((prevTab) => {
-            const newValue =
-                typeof valueOrFn === 'function'
-                    ? valueOrFn(prevTab[key])
-                    : valueOrFn;
-            return { [key]: newValue } as Partial<ProjectTabState>;
+            const newValue = typeof valueOrFn === 'function' ? valueOrFn(prevTab[key]) : valueOrFn;
+            return { [key]: newValue };
         });
     }
 
-    function updateActiveChatTab(
-        partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)
-    ) {
-        if (!isWebSocketOpen() || !state) return;
-        const activeChatTabId = state.chatActiveTabId;
-        if (!activeChatTabId) return;
-
-        const currentChatTabState = state.chatTabs[activeChatTabId];
-        const finalPartial =
-            typeof partialOrFn === 'function'
-                ? partialOrFn(currentChatTabState)
-                : partialOrFn;
-
-        const message = {
-            type: 'update_chat_tab',
-            tabId: activeChatTabId,
-            data: finalPartial
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
-    function linkChatTabToProjectTab(chatTabId: string, projectTabId: string, settings?: Partial<LinkSettings>) {
-        if (!isWebSocketOpen()) return;
-        const partial = {
-            linkedProjectTabId: projectTabId,
-            linkSettings: {
-                includeSelectedFiles: settings?.includeSelectedFiles ?? true,
-                includePrompts: settings?.includePrompts ?? true,
-                includeUserPrompt: settings?.includeUserPrompt ?? true,
-            }
-        };
-        const message = {
-            type: 'update_chat_tab',
-            tabId: chatTabId,
-            data: partial,
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
-    function unlinkChatTab(chatTabId: string) {
-        if (!isWebSocketOpen()) return;
-        const message = {
-            type: 'update_chat_tab',
-            tabId: chatTabId,
-            data: {
-                linkedProjectTabId: null,
-                linkSettings: undefined
-            }
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
-    function updateChatLinkSettings(chatTabId: string, partialSettings: Partial<LinkSettings>) {
-        if (!isWebSocketOpen() || !state) return;
-        const existing = state.chatTabs[chatTabId]?.linkSettings ?? {};
-        const merged = {
-            ...existing,
-            ...partialSettings,
-        };
-
-        // Validate with linkSettingsSchema if you want
-        linkSettingsSchema.parse(merged);
-
-        const message = {
-            type: 'update_chat_tab',
-            tabId: chatTabId,
-            data: {
-                linkSettings: merged
-            }
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
     function createProjectTab() {
-        if (!isWebSocketOpen() || !state) return;
-
+        if (!canProceed() || !state?.projectActiveTabId) return;
+        const newTabId = `project-tab-${uuidv4()}`;
         const sourceTabId = state.projectActiveTabId;
-        if (!sourceTabId) return;
-
-        const newTabId = `project-tab-${Date.now()}`;
         const sourceTabState = state.projectTabs[sourceTabId];
 
-        const message = {
+        sendWSMessage({
             type: 'create_project_tab',
             tabId: newTabId,
             data: {
                 ...sourceTabState,
-                displayName: `Project Tab ${Object.keys(state.projectTabs).length + 1}`
-            }
-        };
-        wsRef.current?.send(JSON.stringify(message));
+                displayName: `Project Tab ${Object.keys(state.projectTabs).length + 1}`,
+            },
+        });
+
         setActiveProjectTab(newTabId);
     }
 
-    function setActiveProjectTab(tabId: string) {
-        if (!isWebSocketOpen()) return;
-
-        const message = {
-            type: 'set_active_project_tab',
-            tabId
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
-    function updateProjectTab(tabId: string, partial: Partial<GlobalState['projectTabs'][string]>) {
-        if (!isWebSocketOpen()) return;
-
-        const message = {
-            type: 'update_project_tab',
-            tabId,
-            data: partial
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
     function deleteProjectTab(tabId: string) {
-        if (!isWebSocketOpen() || !state) return;
+        if (!canProceed() || !state) return;
 
         if (Object.keys(state.projectTabs).length <= 1) {
-            console.warn("Cannot delete the last remaining project tab");
+            console.warn('Cannot delete the last remaining project tab');
             return;
         }
 
-        const message = {
+        sendWSMessage({
             type: 'delete_project_tab',
-            tabId
-        };
-        wsRef.current?.send(JSON.stringify(message));
+            tabId,
+        });
 
-        // Switch to another tab if deleting the active one
         if (state.projectActiveTabId === tabId) {
-            const remainingTabs = Object.keys(state.projectTabs).filter(id => id !== tabId);
+            const remainingTabs = Object.keys(state.projectTabs).filter((id) => id !== tabId);
             if (remainingTabs.length > 0) {
                 setActiveProjectTab(remainingTabs[0]);
             }
         }
     }
 
+    function setActiveProjectTab(tabId: string) {
+        if (!canProceed()) return;
+        sendWSMessage({
+            type: 'set_active_project_tab',
+            tabId,
+        });
+    }
 
-    /** ---------------------
-     *   Chat Management Features
-     *  --------------------- */
-    function createChatTab(options?: { 
+    /** 3) Chat Tabs (same approach) */
+    function updateActiveChatTab(partialOrFn: PartialOrFn<ChatTabState>) {
+        if (!canProceed() || !state?.chatActiveTabId) return;
+        const { chatActiveTabId, chatTabs } = state;
+        const currentTab = chatTabs[chatActiveTabId];
+        const finalPartial = getPartial(currentTab, partialOrFn);
+
+        sendWSMessage({
+            type: 'update_chat_tab',
+            tabId: chatActiveTabId,
+            data: finalPartial,
+        });
+    }
+
+    function updateChatTab(tabId: string, partial: Partial<ChatTabState>) {
+        if (!canProceed()) return;
+        sendWSMessage({
+            type: 'update_chat_tab',
+            tabId,
+            data: partial,
+        });
+    }
+
+    function updateChatTabState(tabId: string, partialOrFn: PartialOrFn<ChatTabState>) {
+        if (!canProceed() || !state) return;
+        const currentTab = state.chatTabs[tabId];
+        if (!currentTab) return;
+
+        const finalPartial = getPartial(currentTab, partialOrFn);
+        sendWSMessage({
+            type: 'update_chat_tab',
+            tabId,
+            data: finalPartial,
+        });
+    }
+
+    function createChatTab(options?: {
         cleanTab?: boolean;
         model?: string;
         provider?: string;
         title?: string;
     }) {
-        if (!isWebSocketOpen() || !state) return;
-
+        if (!canProceed() || !state?.chatActiveTabId) return;
+        const newTabId = `chat-tab-${uuidv4()}`;
         const sourceTabId = state.chatActiveTabId;
-        if (!sourceTabId) return;
-
-        const newTabId = `chat-tab-${Date.now()}`;
         const sourceTabState = state.chatTabs[sourceTabId];
 
-        let message = {
-            type: 'create_chat_tab',
-            tabId: newTabId,
-            data: {
-                ...sourceTabState,
-                displayName: options?.title || `Chat ${Object.keys(state.chatTabs).length + 1}`,
-                model: options?.model,
-                provider: options?.provider
-            }
-        }
+        let messageData = {
+            ...sourceTabState,
+            displayName: options?.title || `Chat ${Object.keys(state.chatTabs).length + 1}`,
+            model: options?.model ?? sourceTabState.model,
+            provider: options?.provider ?? sourceTabState.provider,
+        };
 
         if (options?.cleanTab) {
-            message.data = {
-                ...message.data,
+            messageData = {
+                ...messageData,
                 messages: [],
                 activeChatId: undefined,
                 excludedMessageIds: [],
                 linkSettings: {
                     includePrompts: false,
                     includeSelectedFiles: false,
-                    includeUserPrompt: false
+                    includeUserPrompt: false,
                 },
-                linkedProjectTabId: null
-            }
+                linkedProjectTabId: null,
+            };
         } else {
-            message.data = {
-                ...message.data,
-                messages: [], // Start with empty messages
-                displayName: options?.title || `Chat ${Object.keys(state.chatTabs).length + 1}`
-            }
+            messageData = {
+                ...messageData,
+                messages: [],
+            };
         }
 
-        wsRef.current?.send(JSON.stringify(message));
+        sendWSMessage({
+            type: 'create_chat_tab',
+            tabId: newTabId,
+            data: messageData,
+        });
+
         setActiveChatTab(newTabId);
     }
 
-    function setActiveChatTab(tabId: string) {
-        if (!isWebSocketOpen()) return;
-
-        const message = {
-            type: 'set_active_chat_tab',
-            tabId
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
-    function updateChatTab(tabId: string, partial: Partial<GlobalState['chatTabs'][string]>) {
-        if (!isWebSocketOpen()) return;
-
-        const message = {
-            type: 'update_chat_tab',
-            tabId,
-            data: partial
-        };
-        wsRef.current?.send(JSON.stringify(message));
-    }
-
     function deleteChatTab(tabId: string) {
-        if (!isWebSocketOpen() || !state) return;
+        if (!canProceed() || !state) return;
 
         if (Object.keys(state.chatTabs).length <= 1) {
-            console.warn("Cannot delete the last remaining chat tab");
+            console.warn('Cannot delete the last remaining chat tab');
             return;
         }
 
-        const message = {
+        sendWSMessage({
             type: 'delete_chat_tab',
-            tabId
-        };
-        wsRef.current?.send(JSON.stringify(message));
+            tabId,
+        });
 
-        // Switch to another tab if deleting the active one
         if (state.chatActiveTabId === tabId) {
-            const remainingTabs = Object.keys(state.chatTabs).filter(id => id !== tabId);
+            const remainingTabs = Object.keys(state.chatTabs).filter((id) => id !== tabId);
             if (remainingTabs.length > 0) {
                 setActiveChatTab(remainingTabs[0]);
             }
         }
     }
 
-    function updateProjectTabState(
-        tabId: string,
-        partialOrFn: Partial<GlobalState['projectTabs'][string]> | ((prev: GlobalState['projectTabs'][string]) => Partial<GlobalState['projectTabs'][string]>)
-    ) {
-        if (!isWebSocketOpen() || !state) return;
-        const currentProjectTabState = state.projectTabs[tabId];
-        if (!currentProjectTabState) return;
-
-        const finalPartial =
-            typeof partialOrFn === 'function'
-                ? partialOrFn(currentProjectTabState)
-                : partialOrFn;
-
-        const message = {
-            type: 'update_project_tab_partial',
+    function setActiveChatTab(tabId: string) {
+        if (!canProceed()) return;
+        sendWSMessage({
+            type: 'set_active_chat_tab',
             tabId,
-            partial: finalPartial
-        };
-        wsRef.current?.send(JSON.stringify(message));
+        });
     }
 
-    function updateChatTabState(
-        tabId: string,
-        partialOrFn: Partial<GlobalState['chatTabs'][string]> | ((prev: GlobalState['chatTabs'][string]) => Partial<GlobalState['chatTabs'][string]>)
+    /** 4) Linking Helpers */
+    function linkChatTabToProjectTab(
+        chatTabId: string,
+        projectTabId: string,
+        settings?: Partial<LinkSettings>
     ) {
-        if (!isWebSocketOpen() || !state) return;
-        const currentChatTabState = state.chatTabs[tabId];
-        if (!currentChatTabState) return;
-
-        const finalPartial =
-            typeof partialOrFn === 'function'
-                ? partialOrFn(currentChatTabState)
-                : partialOrFn;
-
-        const message = {
-            type: 'update_chat_tab',
-            tabId,
-            data: finalPartial
+        if (!canProceed()) return;
+        const partial = {
+            linkedProjectTabId: projectTabId,
+            linkSettings: {
+                includeSelectedFiles: settings?.includeSelectedFiles ?? true,
+                includePrompts: settings?.includePrompts ?? true,
+                includeUserPrompt: settings?.includeUserPrompt ?? true,
+            },
         };
-        wsRef.current?.send(JSON.stringify(message));
+
+        sendWSMessage({
+            type: 'update_chat_tab',
+            tabId: chatTabId,
+            data: partial,
+        });
+    }
+
+    function unlinkChatTab(chatTabId: string) {
+        if (!canProceed()) return;
+        sendWSMessage({
+            type: 'update_chat_tab',
+            tabId: chatTabId,
+            data: {
+                linkedProjectTabId: null,
+                linkSettings: undefined,
+            },
+        });
+    }
+
+    function updateChatLinkSettings(chatTabId: string, partialSettings: Partial<LinkSettings>) {
+        if (!canProceed() || !state) return;
+        const existing = state.chatTabs[chatTabId]?.linkSettings ?? {};
+        const merged = { ...existing, ...partialSettings };
+        linkSettingsSchema.parse(merged); // optionally validate
+
+        sendWSMessage({
+            type: 'update_chat_tab',
+            tabId: chatTabId,
+            data: { linkSettings: merged },
+        });
     }
 
     return {
         state,
         wsReady,
+
+        // Generic Updaters
+        updateGlobalStateKey,
+        updateSettings,
+
+        // Projects
         createProjectTab,
         setActiveProjectTab,
         updateProjectTab,
         deleteProjectTab,
         updateActiveProjectTab,
         updateProjectTabState,
+
+        // Chats
         createChatTab,
         setActiveChatTab,
         updateChatTab,
         deleteChatTab,
         updateActiveChatTab,
         updateChatTabState,
+
+        // Current tab states
         activeProjectTabState,
         activeChatTabState,
-        updateActiveProjectTabStateKey,
+
+        // Linking
         linkChatTabToProjectTab,
         unlinkChatTab,
-        updateChatLinkSettings
+        updateChatLinkSettings,
+
+        // Specific project helper
+        updateActiveProjectTabStateKey,
     };
 }
 
-
-
-/** Context which consumes the above hooks */
 const GlobalStateContext = createContext<UseGlobalStateReturn | null>(null);
 
 export function GlobalStateProvider({ children }: { children: React.ReactNode }) {
@@ -463,7 +468,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 export function useGlobalStateContext(): UseGlobalStateReturn {
     const context = useContext(GlobalStateContext);
     if (!context) {
-        throw new Error("useGlobalStateContext must be used within a GlobalStateProvider");
+        throw new Error('useGlobalStateContext must be used within a GlobalStateProvider');
     }
     return context;
 }

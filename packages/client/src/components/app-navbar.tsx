@@ -14,6 +14,7 @@ import { useApi } from "@/hooks/use-api"
 import { Switch } from "@/components/ui/switch"
 import { HelpDialog } from "@/components/help-dialog"
 import { useGlobalStateContext } from "./global-state-context"
+import { SettingsDialog } from "@/components/settings/settings-dialog"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -21,41 +22,52 @@ export function AppNavbar() {
     const [chatDialogOpen, setChatDialogOpen] = useState(false)
     const [editProjectId, setEditProjectId] = useState<string | null>(null)
     const [helpOpen, setHelpOpen] = useState(false)
+    const [settingsOpen, setSettingsOpen] = useState(false)
 
     const matches = useMatches()
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
     const isOnProjectsRoute = matches.some(match => match.routeId === "/projects")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
-    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab } = useGlobalStateContext()
+    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey } = useGlobalStateContext()
     const selectedProjectId = activeTabState?.selectedProjectId
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
     const { api } = useApi()
+    const { state, } = useGlobalStateContext()
+
+    const globalTheme = state?.settings.theme
 
     // Dark mode state
     const [isDarkMode, setIsDarkMode] = useState<boolean>(false)
 
     useEffect(() => {
-        const storedTheme = localStorage.getItem('theme')
-        if (storedTheme === 'dark') {
+        if (globalTheme === 'dark') {
             setIsDarkMode(true)
             document.documentElement.classList.add('dark')
         } else {
             document.documentElement.classList.remove('dark')
         }
-    }, [])
+    }, [globalTheme])
 
     const handleThemeToggle = () => {
         const newMode = !isDarkMode
         setIsDarkMode(newMode)
         if (newMode) {
             document.documentElement.classList.add('dark')
-            localStorage.setItem('theme', 'dark')
+            // localStorage.setItem('theme', 'dark')
+            updateGlobalStateKey('settings', (prev) => ({
+                ...prev,
+                theme: 'dark' as 'light' | 'dark',
+            }))
         } else {
             document.documentElement.classList.remove('dark')
-            localStorage.setItem('theme', 'light')
+            // localStorage.setItem('theme', 'light')
+            updateGlobalStateKey('settings', (prev) => ({
+                ...prev,
+                theme: 'light' as 'light' | 'dark',
+            }))
         }
     }
 
@@ -111,11 +123,10 @@ export function AppNavbar() {
                     <div className="flex items-center gap-2">
                         <Link
                             to="/projects"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${
-                                isOnProjectsRoute 
-                                    ? "text-indigo-600 dark:text-indigo-400" 
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
-                            }`}
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnProjectsRoute
+                                ? "text-indigo-600 dark:text-indigo-400"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                }`}
                         >
                             <FolderIcon className="w-4 h-4" />
                             Project
@@ -123,22 +134,20 @@ export function AppNavbar() {
                         <Link
                             to="/chat"
                             search={{ prefill: false }}
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${
-                                isOnChatRoute 
-                                    ? "text-indigo-600 dark:text-indigo-400" 
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
-                            }`}
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnChatRoute
+                                ? "text-indigo-600 dark:text-indigo-400"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
                             Chat
                         </Link>
                         <Link
                             to="/keys"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${
-                                isOnKeysRoute 
-                                    ? "text-indigo-600 dark:text-indigo-400" 
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
-                            }`}
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnKeysRoute
+                                ? "text-indigo-600 dark:text-indigo-400"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                }`}
                         >
                             <KeyIcon className="w-4 h-4" />
                             Keys
@@ -153,7 +162,7 @@ export function AppNavbar() {
                                 onClick={() => setOpenDialog(true)}
                                 className="ml-auto"
                             >
-                                <Settings /> Projects
+                                <FolderIcon className="mr-2 h-4 w-4" /> Projects
                             </Button>
                         )}
 
@@ -167,6 +176,15 @@ export function AppNavbar() {
                             </Button>
                         )}
 
+                        {/* Settings button */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSettingsOpen(true)}
+                        >
+                            <Settings className="h-5 w-5" />
+                        </Button>
+
                         {/* Help button */}
                         <Button
                             variant="ghost"
@@ -176,12 +194,6 @@ export function AppNavbar() {
                         >
                             <HelpCircle className="h-5 w-5" />
                         </Button>
-
-                        {/* Dark mode toggle */}
-                        <div className="flex items-center gap-2 ml-4">
-                            <span className="text-sm">Dark Mode</span>
-                            <Switch checked={isDarkMode} onCheckedChange={handleThemeToggle} />
-                        </div>
                     </div>
                 </div>
             </nav>
@@ -224,6 +236,10 @@ export function AppNavbar() {
             <HelpDialog
                 open={helpOpen}
                 onOpenChange={setHelpOpen}
+            />
+            <SettingsDialog
+                open={settingsOpen}
+                onOpenChange={setSettingsOpen}
             />
         </>
     )

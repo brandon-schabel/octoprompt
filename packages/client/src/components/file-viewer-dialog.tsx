@@ -7,6 +7,8 @@ import { atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { Textarea } from './ui/textarea'
 import { ProjectFile } from 'shared/schema'
 
+
+
 type FileViewerDialogProps = {
     open: boolean
     viewedFile: ProjectFile | null

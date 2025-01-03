@@ -41,7 +41,7 @@ function ChatPage() {
         <ChatSidebar />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col p-2 overflow-hidden bg-secondary">
+        <div className="flex-1 flex flex-col overflow-hidden bg-secondary">
           <ChatHeader
             onForkChat={handleForkChat}
             chatControl={chatControl}
@@ -52,7 +52,7 @@ function ChatPage() {
             <ChatMessages chatControl={chatControl} />
           )}
 
-          <div className="flex gap-2 bg-background p-2 rounded-md mt-2">
+          <div className="flex gap-2 bg-background mx-2 mb-2 rounded-md">
             <AdaptiveChatInput
               value={newMessage}
               onChange={(val) => updateActiveChatTab({ input: val })}

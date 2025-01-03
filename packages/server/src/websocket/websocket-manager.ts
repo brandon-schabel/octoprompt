@@ -79,8 +79,17 @@ type SetActiveChatTabMessage = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Union of all possible inbound messages
 // ─────────────────────────────────────────────────────────────────────────────
+type UpdateGlobalStateKeyMessage = {
+    type: "update_global_state_key";
+    data: {
+        key: keyof GlobalState;
+        partial: Partial<GlobalState[keyof GlobalState]>;
+    };
+};
+
 export type WebSocketMessage =
     | StateUpdateMessage // typically only outbound
+    | UpdateGlobalStateKeyMessage
     // Project:
     | CreateProjectTabMessage
     | UpdateProjectTabMessage
@@ -414,6 +423,24 @@ export class WebSocketManager {
                     }
 
                     state.chatActiveTabId = tabId;
+                    const validated = globalStateSchema.parse(state);
+                    await this.updateStateInDB(validated);
+                    this.broadcastState(validated);
+                    break;
+                }
+
+                case "update_global_state_key": {
+                    const { key, partial } = parsed.data;
+                    const state = await this.getStateFromDB();
+
+                    // Type-safe update of the specific key with explicit typing
+                    const currentValue = state[key];
+                    const updatedValue = typeof currentValue === 'object' && currentValue !== null
+                        ? { ...currentValue as Record<string, unknown>, ...partial as Record<string, unknown> }
+                        : partial;
+                    
+                    (state[key] as any) = updatedValue;
+
                     const validated = globalStateSchema.parse(state);
                     await this.updateStateInDB(validated);
                     this.broadcastState(validated);
