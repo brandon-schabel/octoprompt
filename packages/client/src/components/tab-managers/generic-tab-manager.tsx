@@ -53,6 +53,9 @@ type GenericTabManagerProps = {
 
     /** Optional className for custom styling */
     className?: string;
+
+    /** Optional title to display before the tabs */
+    title?: string;
 };
 
 export function GenericTabManager({
@@ -67,6 +70,7 @@ export function GenericTabManager({
     newTabLabel = 'New Tab',
     emptyMessage = 'No tabs yet.',
     className,
+    title,
 }: GenericTabManagerProps) {
     const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null)
 
@@ -109,6 +113,7 @@ export function GenericTabManager({
             className={cn("flex flex-col justify-start rounded-none", className)}
         >
             <TabsList className="bg-background justify-start rounded-none">
+                {title && <div className="px-3 font-semibold flex items-center">{title}</div>}
                 {tabIds.map((tabId, index) => {
                     const shortcutNumber = index + 1
                     const showShortcut = shortcutNumber <= 9

@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import { useGlobalStateContext } from '@/components/global-state-context'
 import { useSelectedFiles } from '@/hooks/use-selected-files'
 import { linkSettingsSchema, LinkSettings } from 'shared'
-import { Copy, Folder, FolderOpen } from 'lucide-react'
+import { Copy, Folder, FolderOpen, FolderOpenIcon } from 'lucide-react'
 import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { SlidingSidebar } from '@/components/sliding-sidebar'
 import { PromptsList } from '../projects/prompts-list'
@@ -105,6 +105,9 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
             width={435}
             side="right"
             localStorageKey="chatProjectSidebarCollapsed"
+            icons={{
+                openIcon: FolderOpenIcon
+            }}
         >
             <div className="bg-background w-full h-full flex flex-col">
                 <div className="p-2 border-b mb-2 flex items-start flex-col justify-start">

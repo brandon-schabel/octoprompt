@@ -170,7 +170,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     return (
         <div className={`flex flex-col overflow-y-auto ${className}`}>
-            <div className='rounded-r-lg lg:rounded-lg my-4 mr-4 lg:m-4 lg:ml-2 bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4'>
+            <div className='bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4 border-l'>
                 <div className="flex flex-col h-full overflow-hidden">
                     <div className="space-y-2 mb-4 border-b">
                         <div className="space-y-1">

@@ -27,6 +27,8 @@ export function ChatTabManager() {
             hotkeyPrefix="c"
             newTabLabel="New Chat Tab"
             emptyMessage="No chat tabs yet."
+            className='border-b'
+            title='Chat Tabs'
         />
     )
 }

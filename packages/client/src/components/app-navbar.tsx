@@ -11,7 +11,6 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
-import { Switch } from "@/components/ui/switch"
 import { HelpDialog } from "@/components/help-dialog"
 import { useGlobalStateContext } from "./global-state-context"
 import { SettingsDialog } from "@/components/settings/settings-dialog"

@@ -26,6 +26,7 @@ export function ProjectsTabManager() {
       hotkeyPrefix="t"
       newTabLabel="New Project Tab"
       emptyMessage="No project tabs yet."
+      className='border-b'
     />
   )
 }

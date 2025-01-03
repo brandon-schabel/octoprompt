@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { ChatMessages } from '@/components/chat/chat-messages'
@@ -8,6 +9,9 @@ import { useChatControl } from '@/components/chat/hooks/use-chat-state'
 import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
+
+// Import your new component
+import { ChatShortcutsPalette } from '@/components/shortcuts-palette'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -19,6 +23,7 @@ export const Route = createFileRoute('/chat')({
 function ChatPage() {
   const modelControl = useChatModelControl()
   const chatControl = useChatControl()
+
   const {
     activeChatTabState,
     handleSendMessage,
@@ -52,22 +57,34 @@ function ChatPage() {
             <ChatMessages chatControl={chatControl} />
           )}
 
-          <div className="flex gap-2 bg-background mx-2 mb-2 rounded-md">
-            <AdaptiveChatInput
-              value={newMessage}
-              onChange={(val) => updateActiveChatTab({ input: val })}
-              onSubmit={handleSendMessage}
-              placeholder="Type your message..."
-              disabled={!currentChat}
-              className="w-full"
-              preserveFormatting={true}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!currentChat}
-            >
-              Send
-            </Button>
+          {/* 
+            Wrap your chat input area in a relative container 
+            and include your new ChatShortcutsPalette above it.
+          */}
+          <div className="relative mx-2 mb-2">
+            {/* <ChatShortcutsPalette>
+              <Button size="sm" >Shortcut 1</Button>
+              <Button size="sm" >Shortcut 2</Button>
+              <Button size="sm" >Shortcut 3</Button>
+            </ChatShortcutsPalette> */}
+
+            <div className="flex gap-2 bg-background rounded-md">
+              <AdaptiveChatInput
+                value={newMessage}
+                onChange={(val) => updateActiveChatTab({ input: val })}
+                onSubmit={handleSendMessage}
+                placeholder="Type your message..."
+                disabled={!currentChat}
+                className="w-full"
+                preserveFormatting={true}
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!currentChat}
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </div>
 
