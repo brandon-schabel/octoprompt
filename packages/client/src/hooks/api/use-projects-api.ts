@@ -243,3 +243,26 @@ export const useGetFileSummaries = (projectId: string, fileIds?: string[]) => {
         enabled: !!projectId,
     });
 };
+
+export type SuggestedFilesResponse = {
+    success: boolean
+    recommendedFileIds?: string[]
+    rawLLMOutput?: string
+    message?: string
+}
+
+export const useFindSuggestedFiles = (projectId: string) => {
+    const { api } = useApi()
+
+    return useMutation<SuggestedFilesResponse, Error, string>({
+        // The mutate function's argument will be the `userInput` (a string).
+        mutationFn: async (userInput: string) => {
+            const response = await api.request(`/api/projects/${projectId}/suggest-files`, {
+                method: 'POST',
+                body: { userInput },
+            })
+            return response.json() as Promise<SuggestedFilesResponse>
+        },
+        onError: commonErrorHandler,
+    })
+}

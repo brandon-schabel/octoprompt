@@ -150,8 +150,6 @@ export const providerKeys = sqliteTable("provider_keys", {
 
 export type ProviderKey = InferSelectModel<typeof providerKeys>;
 
-// packages/shared/schema.ts
-
 export const fileSummaries = sqliteTable("file_summaries", {
     id: text("id")
         .primaryKey()

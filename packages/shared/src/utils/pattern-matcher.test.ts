@@ -1,5 +1,3 @@
-// patternMatcher.test.ts
-
 import { describe, it, expect } from 'bun:test'
 // Adjust import path as needed:
 import {  matchesAnyPattern } from './pattern-matcher'

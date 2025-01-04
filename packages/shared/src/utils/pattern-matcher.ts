@@ -1,5 +1,3 @@
-// shared/utils/patternMatcher.ts
-
 import picomatch from 'picomatch'
 
 /**
