@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, Edit2, Trash2, X } from "lucide-react";
+import { Check, Edit2, MessageSquareIcon, Trash2, X } from "lucide-react";
 import {
     useGetChats,
     useCreateChat,
@@ -91,25 +91,18 @@ export function ChatSidebar({ }: ChatSidebarProps) {
     }
 
     return (
-        <SlidingSidebar width={300}>
-            {/* New Chat Input */}
-            <div className="flex gap-2">
-                <Input
-                    value={newChatTitle}
-                    onChange={(e) => setNewChatTitle(e.target.value)}
-                    placeholder="New chat..."
-                    disabled={createChatMutation.isPending}
-                />
-                <Button
-                    onClick={handleCreateChat}
-                    disabled={createChatMutation.isPending}
-                >
-                    +
-                </Button>
-            </div>
+        <SlidingSidebar width={300}
+            icons={{
+                openIcon: MessageSquareIcon
+            }}
+        >
+
 
             {/* Chat List */}
             <ScrollArea className="flex-1 mt-2">
+                <div className="text-xl font-bold">
+                    Chat History
+                </div>
                 {isLoadingChats ? (
                     <div>Loading chats...</div>
                 ) : (
@@ -119,12 +112,13 @@ export function ChatSidebar({ }: ChatSidebarProps) {
                             <div
                                 key={chat.id}
                                 className={cn(
-                                    'flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md group',
+                                    'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md group ',
                                     {
                                         'bg-gray-100 dark:bg-gray-800': isActive,
                                     }
                                 )}
                             >
+
                                 {editingChatId === chat.id ? (
                                     <div className="flex items-center gap-2 flex-1">
                                         <Input
@@ -155,7 +149,7 @@ export function ChatSidebar({ }: ChatSidebarProps) {
                                     <>
                                         <button
                                             className={cn(
-                                                'w-[120px] text-left truncate',
+                                                'max-w-[180px] w-full text-left truncate',
                                                 isActive ? 'font-bold' : ''
                                             )}
                                             onClick={() => {

@@ -202,7 +202,7 @@ function ProjectsPage() {
 
 
     return (
-        <div className="flex-col h-full w-full overflow-hidden flex bg-secondary">
+        <div className="flex-col h-full w-full overflow-hidden flex ">
             <ProjectsTabManager />
 
             <div className='flex-1 flex flex-row overflow-hidden'>

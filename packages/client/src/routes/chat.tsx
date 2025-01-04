@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { ChatMessages } from '@/components/chat/chat-messages'
@@ -8,6 +9,9 @@ import { useChatControl } from '@/components/chat/hooks/use-chat-state'
 import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
+import { ChatShortcutsPalette } from '@/components/shortcuts-palette'
+import { LinkIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -19,6 +23,8 @@ export const Route = createFileRoute('/chat')({
 function ChatPage() {
   const modelControl = useChatModelControl()
   const chatControl = useChatControl()
+  const [isLinkedContentOpen, setIsLinkedContentOpen] = useState(false)
+
   const {
     activeChatTabState,
     handleSendMessage,
@@ -41,7 +47,7 @@ function ChatPage() {
         <ChatSidebar />
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-secondary">
+        <div className="flex-1 flex flex-col overflow-hidden">
           <ChatHeader
             onForkChat={handleForkChat}
             chatControl={chatControl}
@@ -52,22 +58,35 @@ function ChatPage() {
             <ChatMessages chatControl={chatControl} />
           )}
 
-          <div className="flex gap-2 bg-background mx-2 mb-2 rounded-md">
-            <AdaptiveChatInput
-              value={newMessage}
-              onChange={(val) => updateActiveChatTab({ input: val })}
-              onSubmit={handleSendMessage}
-              placeholder="Type your message..."
-              disabled={!currentChat}
-              className="w-full"
-              preserveFormatting={true}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!currentChat}
-            >
-              Send
-            </Button>
+          {/* 
+            Wrap your chat input area in a relative container 
+            and include your new ChatShortcutsPalette above it.
+          */}
+          <div className="relative mx-2 mb-2">
+            {/* <ChatShortcutsPalette>
+              <Button size="sm" onClick={() => setIsLinkedContentOpen(!isLinkedContentOpen)}
+            variant={isLinkedContentOpen ? 'outline' : 'default'}
+              ><LinkIcon className="w-4 h-4" /> Use Linked Content</Button>
+
+            </ChatShortcutsPalette> */}
+
+            <div className="flex gap-2 bg-background rounded-md">
+              <AdaptiveChatInput
+                value={newMessage}
+                onChange={(val) => updateActiveChatTab({ input: val })}
+                onSubmit={handleSendMessage}
+                placeholder="Type your message..."
+                disabled={!currentChat}
+                className="w-full"
+                preserveFormatting={true}
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!currentChat}
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </div>
 

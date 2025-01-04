@@ -219,9 +219,9 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
 
     return (
         <div id="outer-area" className={`flex flex-col  ${className}`}>
-            <div className="flex-1 py-4 pl-4 lg:p-4 lg:pr-2 space-y-4 transition-all duration-300">
+            <div className="flex-1 space-y-4 transition-all duration-300 ">
                 {selectedProjectId ? (
-                    <div className=" h-full flex flex-col space-y-4 bg-background rounded-l-lg lg:rounded-lg transition-all duration-300">
+                    <div className=" h-full flex flex-col space-y-4 ">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 pt-4">
                             <div>
                                 <TooltipProvider>

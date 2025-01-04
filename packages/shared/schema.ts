@@ -149,3 +149,25 @@ export const providerKeys = sqliteTable("provider_keys", {
 });
 
 export type ProviderKey = InferSelectModel<typeof providerKeys>;
+
+export const fileSummaries = sqliteTable("file_summaries", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
+    fileId: text("file_id")
+        .notNull()
+        .references(() => files.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+        .notNull()
+        .references(() => projects.id, { onDelete: "cascade" }),
+    summary: text("summary").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+        .default(sql`CURRENT_TIMESTAMP`)
+        .notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp" })
+        .default(sql`CURRENT_TIMESTAMP`)
+        .notNull(),
+});
+
+export type FileSummary = InferSelectModel<typeof fileSummaries>;
+export type NewFileSummary = InferInsertModel<typeof fileSummaries>;

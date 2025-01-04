@@ -12,6 +12,7 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as ProjectsImport } from './routes/projects'
+import { Route as ProjectSummarizationImport } from './routes/project-summarization'
 import { Route as KeysImport } from './routes/keys'
 import { Route as FileSearchInterfaceImport } from './routes/file-search-interface'
 import { Route as ChatImport } from './routes/chat'
@@ -22,6 +23,12 @@ import { Route as IndexImport } from './routes/index'
 const ProjectsRoute = ProjectsImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const ProjectSummarizationRoute = ProjectSummarizationImport.update({
+  id: '/project-summarization',
+  path: '/project-summarization',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -81,6 +88,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KeysImport
       parentRoute: typeof rootRoute
     }
+    '/project-summarization': {
+      id: '/project-summarization'
+      path: '/project-summarization'
+      fullPath: '/project-summarization'
+      preLoaderRoute: typeof ProjectSummarizationImport
+      parentRoute: typeof rootRoute
+    }
     '/projects': {
       id: '/projects'
       path: '/projects'
@@ -98,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof ChatRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
+  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
 }
 
@@ -106,6 +121,7 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
+  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
 }
 
@@ -115,20 +131,34 @@ export interface FileRoutesById {
   '/chat': typeof ChatRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
+  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chat' | '/file-search-interface' | '/keys' | '/projects'
+  fullPaths:
+    | '/'
+    | '/chat'
+    | '/file-search-interface'
+    | '/keys'
+    | '/project-summarization'
+    | '/projects'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chat' | '/file-search-interface' | '/keys' | '/projects'
+  to:
+    | '/'
+    | '/chat'
+    | '/file-search-interface'
+    | '/keys'
+    | '/project-summarization'
+    | '/projects'
   id:
     | '__root__'
     | '/'
     | '/chat'
     | '/file-search-interface'
     | '/keys'
+    | '/project-summarization'
     | '/projects'
   fileRoutesById: FileRoutesById
 }
@@ -138,6 +168,7 @@ export interface RootRouteChildren {
   ChatRoute: typeof ChatRoute
   FileSearchInterfaceRoute: typeof FileSearchInterfaceRoute
   KeysRoute: typeof KeysRoute
+  ProjectSummarizationRoute: typeof ProjectSummarizationRoute
   ProjectsRoute: typeof ProjectsRoute
 }
 
@@ -146,6 +177,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatRoute: ChatRoute,
   FileSearchInterfaceRoute: FileSearchInterfaceRoute,
   KeysRoute: KeysRoute,
+  ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
 }
 
@@ -163,6 +195,7 @@ export const routeTree = rootRoute
         "/chat",
         "/file-search-interface",
         "/keys",
+        "/project-summarization",
         "/projects"
       ]
     },
@@ -177,6 +210,9 @@ export const routeTree = rootRoute
     },
     "/keys": {
       "filePath": "keys.tsx"
+    },
+    "/project-summarization": {
+      "filePath": "project-summarization.tsx"
     },
     "/projects": {
       "filePath": "projects.tsx"

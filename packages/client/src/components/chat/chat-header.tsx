@@ -16,6 +16,7 @@ import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { Input } from "../ui/input";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
+import { Separator } from "@/components/ui/separator";
 
 interface ChatHeaderProps {
     onForkChat: () => void;
@@ -136,7 +137,7 @@ export function ChatHeader({
     }
 
     return (
-        <div className="flex justify-between items-center bg-background p-2 rounded-md">
+        <div className="flex justify-between items-center bg-background px-4 pt-2">
             {/* Left side */}
             <div className="flex items-center gap-4">
                 <div className="flex items-center space-x-4 gap-2">

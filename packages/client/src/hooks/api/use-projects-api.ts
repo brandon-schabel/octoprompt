@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
-import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, ApiError } from 'shared';
+import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, ApiError, FileSummary } from 'shared';
 import { commonErrorHandler } from './common-mutation-error-handler';
 
 export type ProjectResponse = {
@@ -27,12 +27,27 @@ export type SyncResponse = {
     error?: string;
 };
 
+export type SummarizeFilesResponse = {
+    success: boolean;
+    summary?: string;
+    error?: string;
+};
+
+export type FileSummaryResponse = {
+    success: boolean;
+    summaries: FileSummary[];
+    error?: string;
+};
+
 const PROJECT_KEYS = {
     all: ['projects'] as const,
     lists: () => [...PROJECT_KEYS.all, 'list'] as const,
     list: (filters: string) => [...PROJECT_KEYS.lists(), { filters }] as const,
     details: () => [...PROJECT_KEYS.all, 'detail'] as const,
     detail: (id: string) => [...PROJECT_KEYS.details(), id] as const,
+    summarize: (id: string) => [...PROJECT_KEYS.all, 'summarize', id] as const,
+    fileSummaries: (projectId: string) =>
+        [...PROJECT_KEYS.all, 'file-summaries', projectId] as const,
 } as const;
 
 const PROJECT_FILES_KEYS = {
@@ -55,9 +70,7 @@ async function getProjectById(api: ReturnType<typeof useApi>['api'], id: string)
 async function createProject(api: ReturnType<typeof useApi>['api'], data: CreateProjectBody): Promise<ProjectResponse> {
     const response = await api.request('/api/projects', {
         method: 'POST',
-        body: {
-            message: "garbage nonsense"
-        },
+        body: data,
     });
     return response.json();
 }
@@ -86,6 +99,28 @@ async function syncProject(api: ReturnType<typeof useApi>['api'], projectId: str
     const response = await api.request(`/api/projects/${projectId}/sync`, {
         method: 'POST',
     });
+    return response.json();
+}
+
+async function summarizeProjectFiles(
+    api: ReturnType<typeof useApi>['api'],
+    projectId: string,
+    fileIds: string[]
+): Promise<SummarizeFilesResponse> {
+    const response = await api.request(`/api/projects/${projectId}/summarize`, {
+        method: 'POST',
+        body: { fileIds },
+    });
+    return response.json();
+}
+
+async function getFileSummaries(
+    api: ReturnType<typeof useApi>['api'],
+    projectId: string,
+    fileIds?: string[]
+): Promise<FileSummaryResponse> {
+    const queryParams = fileIds?.length ? `?fileIds=${fileIds.join(',')}` : '';
+    const response = await api.request(`/api/projects/${projectId}/file-summaries${queryParams}`);
     return response.json();
 }
 
@@ -185,3 +220,49 @@ export const useSyncProjectInterval = (projectId: string) => {
         refetchInterval: 30000,
     });
 };
+
+export const useSummarizeProjectFiles = (projectId: string) => {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (fileIds: string[]) => summarizeProjectFiles(api, projectId, fileIds),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summarize(projectId) });
+            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.fileSummaries(projectId) });
+        },
+        onError: commonErrorHandler
+    });
+};
+
+export const useGetFileSummaries = (projectId: string, fileIds?: string[]) => {
+    const { api } = useApi();
+    return useQuery({
+        queryKey: PROJECT_KEYS.fileSummaries(projectId),
+        queryFn: () => getFileSummaries(api, projectId, fileIds),
+        enabled: !!projectId,
+    });
+};
+
+export type SuggestedFilesResponse = {
+    success: boolean
+    recommendedFileIds?: string[]
+    rawLLMOutput?: string
+    message?: string
+}
+
+export const useFindSuggestedFiles = (projectId: string) => {
+    const { api } = useApi()
+
+    return useMutation<SuggestedFilesResponse, Error, string>({
+        // The mutate function's argument will be the `userInput` (a string).
+        mutationFn: async (userInput: string) => {
+            const response = await api.request(`/api/projects/${projectId}/suggest-files`, {
+                method: 'POST',
+                body: { userInput },
+            })
+            return response.json() as Promise<SuggestedFilesResponse>
+        },
+        onError: commonErrorHandler,
+    })
+}

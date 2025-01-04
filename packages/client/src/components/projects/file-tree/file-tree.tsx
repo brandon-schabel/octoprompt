@@ -500,7 +500,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
                 ))
             }
         },
-        { enabled: isFocused }, // <--- only active if FileTree is focused
+        { enabled: isFocused }, 
         [visibleItems, focusedIndex, setSelectedFiles, isFocused]
     )
 

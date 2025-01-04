@@ -7,14 +7,21 @@ import React, {
 } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { ChevronsLeft, ChevronsRight, X } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, X, LucideIcon } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/use-local-storage';
+
+type IconProps = {
+    openIcon?: LucideIcon;
+    closeIcon?: LucideIcon;
+    closeButtonIcon?: LucideIcon;
+}
 
 interface SlidingSidebarProps {
     children: React.ReactNode;
     width?: number;
     localStorageKey?: string;
     side?: 'left' | 'right';
+    icons?: IconProps;
 }
 
 export function SlidingSidebar({
@@ -22,7 +29,13 @@ export function SlidingSidebar({
     width = 300,
     localStorageKey = 'slidingSidebarCollapsed',
     side = 'left',
+    icons = {},
 }: SlidingSidebarProps) {
+    const {
+        openIcon: CloseIcon = side === 'left' ? ChevronsRight : ChevronsLeft,
+        closeIcon: OpenIcon = side === 'left' ? ChevronsLeft : ChevronsRight,
+        closeButtonIcon: CloseButtonIcon = X,
+    } = icons;
     const [isCollapsed, setIsCollapsed] = useLocalStorage(localStorageKey, false);
     const [isPreviewing, setIsPreviewing] = useState(false);
 
@@ -38,7 +51,7 @@ export function SlidingSidebar({
     const [buttonPosition, setButtonPosition] = useState(() => {
         if (typeof window !== 'undefined') {
             return {
-                x: 20, // start ~20px from the chosen edge
+                x: 40, // start ~20px from the chosen edge
                 y: window.innerHeight / 2,
             };
         }
@@ -193,17 +206,9 @@ export function SlidingSidebar({
                 )}
             >
                 {isCollapsed ? (
-                    side === 'left' ? (
-                        <ChevronsRight className="h-4 w-4" />
-                    ) : (
-                        <ChevronsLeft className="h-4 w-4" />
-                    )
+                    <CloseIcon className="h-4 w-4" />
                 ) : (
-                    side === 'left' ? (
-                        <ChevronsLeft className="h-4 w-4" />
-                    ) : (
-                        <ChevronsRight className="h-4 w-4" />
-                    )
+                    <OpenIcon className="h-4 w-4" />
                 )}
             </Button>
 
@@ -211,12 +216,12 @@ export function SlidingSidebar({
             <div
                 ref={sidebarRef}
                 className={cn(
-                    'fixed top-0 h-full bg-white dark:bg-gray-900 shadow-md transition-transform duration-300 flex flex-col gap-4',
+                    'fixed top-0 h-full shadow-md transition-transform duration-300 flex flex-col gap-4 bg-background',
                     side === 'left' ? 'border-r left-0' : 'border-l right-0'
                 )}
                 style={{
                     width,
-                    zIndex: 1000,
+                    zIndex: 11,
                     transform: computedTransform,
                 }}
             >
@@ -227,7 +232,7 @@ export function SlidingSidebar({
                         onClick={() => setIsCollapsed(true)}
                         className="absolute top-2 right-2"
                     >
-                        <X className="h-4 w-4" />
+                        <CloseButtonIcon className="h-4 w-4" />
                     </Button>
                 )}
 

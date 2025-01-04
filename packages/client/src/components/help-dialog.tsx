@@ -2,6 +2,8 @@ import { useHotkeys } from "react-hotkeys-hook"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { formatModShortcut, getModKeySymbol } from "@/lib/platform"
 import { Badge } from "./ui/badge"
+import { useCurrentChatTabState } from "./global-state-context"
+import { Button } from "./ui/button"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -9,6 +11,9 @@ export type HelpDialogProps = {
 }
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
+    const chatTabState = useCurrentChatTabState();
+    const { provider, model, } = chatTabState
+
     useHotkeys("mod+/", (e) => {
         e.preventDefault()
         onOpenChange?.(!open)
@@ -50,6 +55,9 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                     <h3 className="font-semibold mt-4 mb-2">General Controls</h3>
                     <p><Badge>{formatModShortcut('z')}</Badge>: Undo</p>
                     <p><Badge>{modKey} + ⇧ + Z</Badge>: Redo</p>
+
+                    <h3 className="font-semibold mt-4 mb-2">Selected LLM Provider and Model IDs</h3>
+                    {provider && <p><Badge>{provider}</Badge>: {model}</p>}
                 </div>
             </DialogContent>
         </Dialog>

@@ -60,6 +60,10 @@ export const chatTabStateSchema = z.object({
     // NEW FIELDS for linking a chat to a project tab
     linkedProjectTabId: z.string().nullable().default(null),
     linkSettings: linkSettingsSchema.optional(),
+    // optional ollama url, for example if a user wanted to have per tab ollama instances
+    // for example if a user had 5 ollama instances on their network 
+    ollamaUrl: z.string().optional(),
+    lmStudioUrl: z.string().optional(),
 });
 
 export const themeSchema = z.enum(['light', 'dark']).default('light');
@@ -70,6 +74,11 @@ export const appSettingsSchema = z.object({
     theme: themeSchema.default('light'),
     codeThemeLight: z.string().default('atomOneLight'),
     codeThemeDark: z.string().default('atomOneDark'),
+    // the global url for ollama
+    ollamaGlobalUrl: z.string().default('http://localhost:11434'),
+    lmStudioGlobalUrl: z.string().default('http://localhost:8000'),
+    summarizationIgnorePatterns: z.array(z.string()).default([]),
+    summarizationAllowPatterns: z.array(z.string()).default([]),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
@@ -100,6 +109,10 @@ export const createInitialGlobalState = (): GlobalState => ({
         theme: 'light',
         codeThemeLight: 'atomOneLight',
         codeThemeDark: 'atomOneDark',
+        ollamaGlobalUrl: 'http://localhost:11434',
+        lmStudioGlobalUrl: 'http://localhost:8000',
+        summarizationIgnorePatterns: [],
+        summarizationAllowPatterns: [],
     },
     counter: 0,
     projectTabs: {
@@ -136,8 +149,11 @@ export const createInitialGlobalState = (): GlobalState => ({
                 includePrompts: true,
                 includeUserPrompt: true,
             },
+            ollamaUrl: undefined,
+            lmStudioUrl: undefined,
         },
     },
     chatActiveTabId: 'defaultTab',
     projectActiveTabId: 'defaultTab',
+
 });
