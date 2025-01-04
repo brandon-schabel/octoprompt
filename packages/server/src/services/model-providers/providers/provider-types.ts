@@ -25,4 +25,5 @@ export type ChatCompletionOptions = Partial<{
 
 export type ProcessMessageParams = Omit<StreamParams, "chatService" | "assistantMessageId"> & {
     provider?: APIProviders;
+    systemMessage?: string;
 };

@@ -246,7 +246,8 @@ export class UnifiedProviderService {
 
     async streamMessage(
         streamConfig: StreamParams & {
-            provider: APIProviders
+            provider: APIProviders,
+            systemMessage?: string;
         }
     ): Promise<ReadableStream<Uint8Array>> {
         // Initialize the required client based on provider

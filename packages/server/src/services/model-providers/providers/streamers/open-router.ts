@@ -9,17 +9,39 @@ type OpenRouterStreamResponse = {
     }[];
 };
 
+
+const DEFAULT_MODEL = "deepseek/deepseek-chat";
+
 export async function streamOpenRouter({
     userMessage,
     chatService,
     assistantMessageId,
     options,
-    openRouterApiKey
+    openRouterApiKey,
+    systemMessage,
+    debug,
 }: StreamParams & {
     openRouterApiKey: string;
-} & { debug?: boolean } // ADDED - optional debug
-): Promise<ReadableStream<Uint8Array>> {
+    systemMessage?: string;
+    debug?: boolean;
+}): Promise<ReadableStream<Uint8Array>> {
     if (options.debug) console.debug("[openrouter] Sending request:", { userMessage, options });
+
+    // Build the messages array
+    // If `systemMessage` exists, push it first
+    const messages = [];
+    if (systemMessage) {
+        messages.push({ role: "system", content: systemMessage });
+    }
+    // Then user message
+    messages.push({ role: "user", content: userMessage });
+
+
+    const model = options.model || DEFAULT_MODEL;
+
+    if (!options.model) {
+        console.error(`No model provided for OpenRouter stream, using ${DEFAULT_MODEL}`);
+    }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -30,8 +52,8 @@ export async function streamOpenRouter({
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            model: options.model || "openai/gpt-4o",
-            messages: [{ role: "user", content: userMessage }],
+            model,
+            messages,
             stream: true,
             ...options,
         }),
@@ -59,7 +81,7 @@ export async function streamOpenRouter({
                     if (done) break;
 
                     const chunk = decoder.decode(value, { stream: true });
-                    if (options.debug) console.debug("[openrouter] Raw chunk:", chunk); // ADDED
+                    if (debug) console.debug("[openrouter] Raw chunk:", chunk);
 
                     buffer += chunk;
                     const lines = buffer.split("\n");
@@ -75,7 +97,7 @@ export async function streamOpenRouter({
 
                             try {
                                 const parsed = JSON.parse(jsonString) as OpenRouterStreamResponse;
-                                if (options.debug) console.debug("[openrouter] Parsed chunk:", parsed); // ADDED
+                                if (debug) console.debug("[openrouter] Parsed chunk:", parsed);
 
                                 const content = parsed.choices?.[0]?.delta?.content || "";
                                 if (content.length > 0) {
@@ -110,7 +132,7 @@ export async function streamOpenRouter({
                     }
                 }
 
-                // Final DB update
+                // Final DB update with complete message
                 await chatService.updateMessageContent(assistantMessageId, fullResponse);
                 controller.close();
             } catch (err) {

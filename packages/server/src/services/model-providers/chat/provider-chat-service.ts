@@ -23,6 +23,7 @@ export class ProviderChatService {
         provider = "openai",
         options = {},
         tempId,
+        systemMessage,
     }: ProcessMessageParams): Promise<ReadableStream<Uint8Array>> {
         let assistantMessageId: string | undefined;
 
@@ -55,6 +56,7 @@ export class ProviderChatService {
                 chatService: this.chatService,
                 options,
                 provider,
+                systemMessage,
             });
         } catch (error) {
             console.error("Error in processMessage:", error);

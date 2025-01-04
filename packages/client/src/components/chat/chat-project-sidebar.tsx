@@ -62,7 +62,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
 
         const merged = { ...linkSettings, [key]: value }
         linkSettingsSchema.parse(merged)
-        updateChatLinkSettings(chatTabId, merged) // <-- pass chatTabId
+        updateChatLinkSettings(chatTabId, merged) 
     }
     // ------------------------------------------------------------------
     // Copy All Linked Content

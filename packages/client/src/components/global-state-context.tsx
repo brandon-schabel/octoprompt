@@ -17,7 +17,8 @@ export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
 
 export type UseGlobalStateReturn = {
     // The entire state
-    state: GlobalState | undefined;
+    // state: GlobalState | undefined;
+    state: GlobalState;
     wsReady: boolean;
 
     /** Generic Updaters */
@@ -150,7 +151,7 @@ export function useInitializeGlobalState(): UseGlobalStateReturn {
         const finalPartial = getPartial(currentValue, partialOrFn);
 
         sendWSMessage({
-            type: 'update_global_state_key', // Your backend must handle this
+            type: 'update_global_state_key',
             data: {
                 key,
                 partial: finalPartial,
@@ -470,5 +471,29 @@ export function useGlobalStateContext(): UseGlobalStateReturn {
     if (!context) {
         throw new Error('useGlobalStateContext must be used within a GlobalStateProvider');
     }
-    return context;
+    return context as UseGlobalStateReturn;
+}
+
+
+export const useCurrentChatTabState = () => {
+    const { activeChatTabState } = useGlobalStateContext();
+    return activeChatTabState as ChatTabState;
+}
+
+export const useCurrentProjectTabState = () => {
+    const { activeProjectTabState } = useGlobalStateContext();
+    return activeProjectTabState as ProjectTabState;
+}
+
+export const useGlobalSettings = () => {
+    const { state, updateGlobalStateKey } = useGlobalStateContext();
+
+    const settings = state?.settings as GlobalState['settings'];
+
+
+    const updateSettings = (partialOrFn: PartialOrFn<GlobalState['settings']>) => {
+        updateGlobalStateKey('settings', partialOrFn);
+    }
+
+    return { settings, updateSettings };
 }

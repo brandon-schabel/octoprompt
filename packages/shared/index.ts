@@ -35,3 +35,4 @@ export {
 
 // export type { ApiValidationSchemaRecord } from './src/types/api-validation-schema-record';
 export { ApiError } from './src/error/api-error';
+export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher';

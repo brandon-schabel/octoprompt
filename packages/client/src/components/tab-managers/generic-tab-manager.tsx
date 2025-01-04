@@ -113,7 +113,7 @@ export function GenericTabManager({
             className={cn("flex flex-col justify-start rounded-none", className)}
         >
             <TabsList className="bg-background justify-start rounded-none">
-                {title && <div className="px-3 font-semibold flex items-center">{title}</div>}
+                {title && <div className="text-xs lg:text-sm px-3 font-semibold flex items-center">{title}</div>}
                 {tabIds.map((tabId, index) => {
                     const shortcutNumber = index + 1
                     const showShortcut = shortcutNumber <= 9

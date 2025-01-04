@@ -3,6 +3,8 @@ import { ProjectService } from "@/services/project-service";
 import { json } from '@bnk/router';
 
 import { projectsApiValidation, ApiError } from "shared";
+import { z } from "zod";
+import { FileSummaryService } from "@/services/file-summary-service";
 
 const projectService = new ProjectService();
 
@@ -67,3 +69,51 @@ router.get("/api/projects/:projectId/files", {
     }
     return json({ success: true, files });
 });
+
+router.get("/api/projects/:projectId/file-summaries", {
+    validation: {
+        params: projectsApiValidation.getFiles.params,
+        query: z.object({
+            fileIds: z.string().optional(),
+        }).optional(),
+    },
+}, async (_, { params, query }) => {
+    const { projectId } = params;
+    const fileIds = query?.fileIds?.split(',').filter(Boolean);
+
+    const fileSummaryService = new FileSummaryService();
+    const summaries = await fileSummaryService.getFileSummaries(projectId, fileIds);
+
+    return json({
+        success: true,
+        summaries,
+    });
+});
+
+router.post("/api/projects/:projectId/summarize", {
+    validation: {
+        // We expect an array of file IDs in the body
+        body: z.object({
+            fileIds: z.array(z.string()).nonempty(),
+        }),
+        // Reuse the projectId param checks
+        params: projectsApiValidation.sync.params,
+    },
+}, async (_, { params, body }) => {
+    const { projectId } = params
+    const { fileIds } = body
+
+    // 1. Check if project exists
+    const project = await projectService.getProjectById(projectId)
+    if (!project) {
+        throw new ApiError("Project not found", 404, "NOT_FOUND")
+    }
+
+    // 2. Summarize the selected files
+    const result = await projectService.summarizeSelectedFiles(projectId, fileIds)
+
+    return json({
+        success: true,
+        ...result,
+    })
+})

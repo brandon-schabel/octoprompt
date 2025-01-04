@@ -9,9 +9,9 @@ import { useChatControl } from '@/components/chat/hooks/use-chat-state'
 import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
-
-// Import your new component
 import { ChatShortcutsPalette } from '@/components/shortcuts-palette'
+import { LinkIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -23,6 +23,7 @@ export const Route = createFileRoute('/chat')({
 function ChatPage() {
   const modelControl = useChatModelControl()
   const chatControl = useChatControl()
+  const [isLinkedContentOpen, setIsLinkedContentOpen] = useState(false)
 
   const {
     activeChatTabState,
@@ -63,9 +64,10 @@ function ChatPage() {
           */}
           <div className="relative mx-2 mb-2">
             {/* <ChatShortcutsPalette>
-              <Button size="sm" >Shortcut 1</Button>
-              <Button size="sm" >Shortcut 2</Button>
-              <Button size="sm" >Shortcut 3</Button>
+              <Button size="sm" onClick={() => setIsLinkedContentOpen(!isLinkedContentOpen)}
+            variant={isLinkedContentOpen ? 'outline' : 'default'}
+              ><LinkIcon className="w-4 h-4" /> Use Linked Content</Button>
+
             </ChatShortcutsPalette> */}
 
             <div className="flex gap-2 bg-background rounded-md">

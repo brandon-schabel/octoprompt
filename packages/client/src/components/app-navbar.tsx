@@ -8,7 +8,7 @@ import { ChatDialog } from "@/components/chat/chat-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
-import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle } from "lucide-react"
+import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, ScanEye } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/help-dialog"
@@ -150,6 +150,18 @@ export function AppNavbar() {
                         >
                             <KeyIcon className="w-4 h-4" />
                             Keys
+                        </Link>
+                        <Link
+                            to="/project-summarization"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnKeysRoute
+                                ? "text-indigo-600 dark:text-indigo-400"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                }`}
+                        >
+                            {/* < className="w-4 h-4" /> */}
+                            <ScanEye className="w-4 h-4" />
+                            
+                            Summarization
                         </Link>
                     </div>
 
