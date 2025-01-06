@@ -8,6 +8,7 @@ import {
     type SQLiteTableWithColumns,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 
 // Re-export SQLite types
 export type { SQLiteTableWithColumns };
@@ -96,7 +97,24 @@ export const files = sqliteTable("files", {
         .notNull(),
 });
 
+
+
+export const projectFileSchema = z.object({
+    id: z.string(),
+    projectId: z.string(),
+    name: z.string(),
+    path: z.string(),
+    extension: z.string(),
+    size: z.number(),
+    content: z.string().nullable(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+})
+
+
+export type ProjectFileInferredSchema = z.infer<typeof projectFileSchema>
 export type ProjectFile = InferSelectModel<typeof files>;
+
 
 export const prompts = sqliteTable("prompts", {
     id: text("id")

@@ -24,6 +24,7 @@ export const projectTabStateSchema = z.object({
     contextLimit: z.number().default(128000),
     resolveImports: z.boolean().default(false),
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
+    suggestedFileIds: z.array(z.string()).default([]),
 });
 
 export const linkSettingsSchema = z.object({
@@ -132,6 +133,7 @@ export const createInitialGlobalState = (): GlobalState => ({
             contextLimit: 128000,
             resolveImports: true,
             preferredEditor: 'cursor',
+            suggestedFileIds: [],
         },
     },
     chatTabs: {
