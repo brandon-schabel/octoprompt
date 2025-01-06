@@ -34,22 +34,21 @@ interface PromptOverviewPanelProps {
 
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
     ({ selectedProjectId, fileMap, promptData, className }, ref) => {
-        const { state, updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
+        const { state, updateActiveProjectTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
         const selectedPrompts = activeTabState?.selectedPrompts || []
         const globalUserPrompt = activeTabState?.userPrompt || ''
         const contextLimit = activeTabState?.contextLimit || 128000
         const activeProjectTabId = state?.projectActiveTabId
-        const [suggestedFileIds, setSuggestedFileIds] = useState<string[]>([])
-
         const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
-        const { removeSelectedFile, selectFiles } = useSelectedFiles()
 
         // 1) Grab the project files
         const { data: fileData } = useGetProjectFiles(selectedProjectId)
         const allProjectFiles: ProjectFile[] = fileData?.files || []
 
         // 2) We'll store the suggested files and open the dialog
-        const [suggestedFiles, setSuggestedFiles] = useState<ProjectFile[]>([])
+        // const [suggestedFiles, setSuggestedFiles] = useState<ProjectFile[]>([])
+        const suggestedFileIds = activeTabState?.suggestedFileIds || []
+        const suggestedFiles = useMemo(() => allProjectFiles.filter(file => suggestedFileIds.includes(file.id)), [allProjectFiles, suggestedFileIds])
         const [dialogOpen, setDialogOpen] = useState(false)
 
         // 3) Mutation for LLM-based suggestions
@@ -63,11 +62,13 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             findSuggestedFilesMutation.mutate(userPrompt, {
                 onSuccess: (resp) => {
                     if (resp.success && resp.recommendedFileIds) {
-                        // 4) Map each recommended ID -> the actual ProjectFile object
-                        const recommendedFileObjs = allProjectFiles.filter(file =>
-                            resp.recommendedFileIds?.includes(file.id)
-                        )
-                        setSuggestedFiles(recommendedFileObjs)
+
+                        // TODO: set the suggestedFileIds in the global state, this can be done directly on the backend
+                        // directly setting the websocket state
+                        updateActiveProjectTab(prev => ({
+                            ...prev,
+                            suggestedFileIds: resp.recommendedFileIds
+                        }))
                         setDialogOpen(true)
                     } else {
                         alert(resp.message || "No suggestions returned")
@@ -84,11 +85,11 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }, [globalUserPrompt])
 
         const updateGlobalPrompt = useCallback((value: string) => {
-            updateActiveTab(prev => ({
+            updateActiveProjectTab(prev => ({
                 ...prev,
                 userPrompt: value
             }))
-        }, [updateActiveTab])
+        }, [updateActiveProjectTab])
 
         const debouncedUpdateGlobal = useDebounce(updateGlobalPrompt, 1000)
 
@@ -100,8 +101,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const { selectedFiles } = useSelectedFiles()
         const [promptDialogOpen, setPromptDialogOpen] = useState(false)
         const [editPromptId, setEditPromptId] = useState<string | null>(null)
-        const [, setTransferPrompt] = useLocalStorage<string>('transfer-prompt', '')
-        const navigate = useNavigate()
         const promptInputRef = useRef<HTMLTextAreaElement>(null)
         const promptsListRef = useRef<PromptsListRef>(null)
 
@@ -140,12 +139,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             } catch {
                 toast.error('Failed to copy')
             }
-        }
-
-        const handleTransferToChat = () => {
-            const finalPrompt = promptBuilder().trim()
-            setTransferPrompt(finalPrompt)
-            navigate({ to: '/chat', search: { prefill: true } })
         }
 
         const handleCreatePrompt = async (values: z.infer<typeof promptSchema>) => {
@@ -201,37 +194,13 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // ---- Finding Suggested Files with user prompt
         const findSuggestedFilesMutation = useFindSuggestedFiles(selectedProjectId)
-
-        // 3) Provide a method to handle toggling a single file from the recommended set
-        const toggleFileFromSuggestions = (fileId: string) => {
-            // If you want to do the actual selection here, you can call some 
-            // function or pass an event up. For example:
-            if (selectedFiles.includes(fileId)) {
-                // already selected => remove it
-                removeSelectedFile(fileId)
-            } else {
-                // not selected => add it
-                selectFiles([...selectedFiles, fileId])
-            }
-        }
-
-        const handleSelectAllSuggested = () => {
-            // Merge them in if they're not already selected
-            const merged = Array.from(new Set([...selectedFiles, ...suggestedFileIds]))
-            selectFiles(merged)
-        }
-
-
-
+    
         return (
             <div className={`flex flex-col overflow-y-auto ${className}`}>
                 {/* SUGGESTED FILES DIALOG */}
                 <SuggestedFilesDialog
                     open={dialogOpen}
                     onClose={() => setDialogOpen(false)}
-                    selectedFiles={selectedFiles}  // from your global or local state
-                    onSelectFile={toggleFileFromSuggestions}
-                    onSelectAll={handleSelectAllSuggested}
                     suggestedFiles={suggestedFiles}
                 />
                 <div className="bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4 border-l">
@@ -299,7 +268,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     {/* Prompt creation / editing dialog */}
                     <PromptDialog
                         open={promptDialogOpen}
-                        editPromptId={editPromptId}
+                        editPromptId={null}
                         promptForm={promptForm}
                         handleCreatePrompt={handleCreatePrompt}
                         handleUpdatePrompt={(values) => handleUpdatePromptContent(editPromptId!, values)}
