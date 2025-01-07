@@ -215,7 +215,7 @@ function ProjectsPage() {
                         setFileSearch={setFileSearch}
                         searchByContent={searchByContent}
                         setSearchByContent={setSearchByContent}
-                        className="w-2/3"
+                        className="w-3/5"
                         onNavigateToPrompts={() => promptPanelRef.current?.focusPrompt()}
                     />
                 )}
@@ -226,7 +226,7 @@ function ProjectsPage() {
                         selectedProjectId={selectedProjectId}
                         fileMap={fileMap}
                         promptData={promptData}
-                        className="w-1/3"
+                        className="w-2/5"
                     />
                 )}
             </div>

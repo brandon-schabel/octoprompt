@@ -10,6 +10,7 @@ import "@/routes/provider-key-routes"
 import "@/routes/gemini-routes"
 import "@/routes/open-ai-routes"
 import "@/routes/code-editor-routes"
+import "@/routes/promptimizer-routes"
 
 import { globalStateSchema } from "shared";
 import { wsManager, WebSocketData } from "@/websocket/websocket-manager";

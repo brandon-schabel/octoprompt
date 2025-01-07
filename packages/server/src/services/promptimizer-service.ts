@@ -1,5 +1,3 @@
-// packages/server/src/services/promptimizer-service.ts
-
 import { ProviderChatService } from './model-providers/chat/provider-chat-service';
 
 export class PromptimizerService {

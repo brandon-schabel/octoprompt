@@ -1,5 +1,3 @@
-// packages/server/src/routes/prompt-routes.ts
-
 import { router } from 'server-router';
 import { PromptimizerService } from '@/services/promptimizer-service';
 import { json } from '@bnk/router';

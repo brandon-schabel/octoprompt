@@ -1,4 +1,3 @@
-import React from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { LightAsync as SyntaxHighlighter } from "react-syntax-highlighter";
 import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs";
