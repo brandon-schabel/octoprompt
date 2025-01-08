@@ -1,9 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, Edit2, MessageSquareIcon, Trash2, X } from "lucide-react";
 import {
     useGetChats,
@@ -31,30 +29,12 @@ export function ChatSidebar({ }: ChatSidebarProps) {
     const [editingTitle, setEditingTitle] = useState('');
 
     const { data: chatsData, isLoading: isLoadingChats } = useGetChats();
-    const createChatMutation = useCreateChat();
     const deleteChat = useDeleteChat();
     const updateChat = useUpdateChat();
 
     const chats = chatsData?.data ?? [];
 
-    const truncateText = (text: string, maxLength = 24) => {
-        return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
-    };
 
-    const generateDefaultTitle = () => `Chat ${new Date().toLocaleTimeString()}`;
-
-    async function handleCreateChat() {
-        const chatTitle = newChatTitle.trim() || generateDefaultTitle();
-        try {
-            const newChat = await createChatMutation.mutateAsync({ title: chatTitle });
-            setNewChatTitle('');
-            updateActiveChatTab({ activeChatId: newChat.id });
-            return newChat;
-        } catch (error) {
-            console.error('Error creating chat:', error);
-            return null;
-        }
-    }
 
     async function handleDeleteChat(chatId: string) {
         if (!window.confirm('Are you sure you want to delete this chat?')) return;

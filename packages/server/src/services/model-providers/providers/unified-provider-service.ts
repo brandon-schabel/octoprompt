@@ -9,6 +9,8 @@ import { streamOpenAiLike } from "./streamers/open-ai-like";
 import { APIProviders, UnifiedModel } from "shared";
 import { streamAnthropic } from "./streamers/anthropic";
 import { StreamParams } from "./provider-types";
+import { streamGroqMessage } from "./streamers/groq";
+import { streamTogetherMessage } from "./streamers/together-ai";
 
 type XAIModel = {
     id: string
@@ -25,6 +27,8 @@ export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 export const OPENAI_BASE_URL = "https://api.openai.com/v1";
 export const XAI_BASE_URL = "https://api.x.ai/v1";
 export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+export const TOGETHER_BASE_URL = "https://api.together.xyz/v1";
 
 /** For your SSE event chunk shape */
 type OpenRouterStreamResponse = {
@@ -112,6 +116,36 @@ type OpenAIModelsListResponse = {
     data: OpenAIModelObject[];
 };
 
+type TogetherModelConfig = {
+    chat_template: string;
+    stop: string[];
+    bos_token: string;
+    eos_token: string;
+};
+
+type TogetherModelPricing = {
+    hourly: number;
+    input: number;
+    output: number;
+    base: number;
+    finetune: number;
+};
+
+type TogetherModel = {
+    id: string;
+    object: string;
+    created: number;
+    type: string;
+    running: boolean;
+    display_name: string;
+    organization: string;
+    link: string;
+    license: string;
+    context_length: number;
+    config: TogetherModelConfig;
+    pricing: TogetherModelPricing;
+};
+
 export class UnifiedProviderService {
     private openRouter: OpenAI | null = null;
     private openAI: OpenAI | null = null;
@@ -176,6 +210,20 @@ export class UnifiedProviderService {
         return this.xai;
     }
 
+    private async getGroqApiKey(): Promise<string> {
+        const keys = await this.providerKeyService.listKeys();
+        const groqKey = keys.find((k) => k.provider === "groq")?.key;
+        if (!groqKey) throw new Error("Groq API key not found");
+        return groqKey;
+    }
+
+    private async getTogetherApiKey(): Promise<string> {
+        const keys = await this.providerKeyService.listKeys();
+        const tKey = keys.find((k) => k.provider === "together")?.key;
+        if (!tKey) throw new Error("Together API key not found");
+        return tKey;
+    }
+
     /** ------------------ Gemini-specific methods ------------------ */
 
     /** Retrieve Gemini API key */
@@ -198,6 +246,7 @@ export class UnifiedProviderService {
         const data: ListModelsResponse = await response.json();
         return data.models;
     }
+
 
     /** Upload a file to Gemini for multimodal input */
     async uploadFileForGemini(file: File, mime_type: string): Promise<string> {
@@ -267,7 +316,7 @@ export class UnifiedProviderService {
                 // @ts-ignore
                 return streamXai({ ...streamConfig, xaiClient: this.xai });
 
-            case "gemini": {
+            case "google_gemini": {
                 const apiKey = await this.getGeminiApiKey();
                 const modelId = streamConfig.options?.model || "models/gemini-1.5-pro";
                 return streamGeminiMessage({
@@ -304,6 +353,27 @@ export class UnifiedProviderService {
                     anthropicBeta, // optional
                 });
             }
+
+            case "groq": {
+                const apiKey = await this.getGroqApiKey();
+                return streamGroqMessage({
+                    ...streamConfig,
+                    groqApiKey: apiKey,
+                    groqBaseUrl: GROQ_BASE_URL,
+                    debug: streamConfig.options.debug ?? false,
+                });
+            }
+
+            case "together": {
+                const apiKey = await this.getTogetherApiKey();
+                return streamTogetherMessage({
+                    ...streamConfig,
+                    togetherApiKey: apiKey,
+                    togetherBaseUrl: TOGETHER_BASE_URL,
+                    debug: streamConfig.options.debug ?? false,
+                });
+            }
+
 
             case "openai":
             default:
@@ -384,6 +454,107 @@ export class UnifiedProviderService {
     }
 
     /**
+ * Fetch Groq models from https://api.groq.com/openai/v1/models
+ */
+    private async listGroqModels(): Promise<UnifiedModel[]> {
+        // 1. Get your Groq API key
+        const groqApiKey = await this.getGroqApiKey();
+
+        // 2. Call GET /models
+        const response = await fetch(`${GROQ_BASE_URL}/models`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${groqApiKey}`,
+                "Content-Type": "application/json",
+            },
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Groq models API error: ${response.status} - ${errorText}`);
+        }
+
+        /**
+         * Typical Groq response shape:
+         * {
+         *   "object": "list",
+         *   "data": [
+         *     {
+         *       "id": "llama3-groq-70b-8192-tool-use-preview",
+         *       "object": "model",
+         *       "created": 1693721698,
+         *       "owned_by": "Groq",
+         *       "active": true,
+         *       "context_window": 8192,
+         *       ...
+         *     },
+         *     ...
+         *   ]
+         * }
+         */
+        const data = await response.json() as {
+            object: string;
+            data: Array<{
+                id: string;
+                object: string;
+                created: number;
+                owned_by: string;
+                active: boolean;
+                context_window: number;
+            }>;
+        };
+
+        // 3. Map to your “UnifiedModel” structure
+        return data.data.map((m) => ({
+            id: m.id,
+            name: m.id,
+            description: `Groq model owned by ${m.owned_by}`,
+        }));
+    }
+
+    /**
+     * Fetch Together models from https://api.together.xyz/v1/models
+     */
+    private async listTogetherModels(): Promise<UnifiedModel[]> {
+        // 1. Get your Together API key
+        const togetherApiKey = await this.getTogetherApiKey();
+
+        // 2. Call GET /models
+        const response = await fetch(`${TOGETHER_BASE_URL}/models`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${togetherApiKey}`,
+                "Content-Type": "application/json",
+            },
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Together models API error: ${response.status} - ${errorText}`);
+        }
+
+        /**
+         * Typical Together response shape:
+         * {
+         *   "data": [
+         *     {
+         *       "id": "Qwen/Qwen2.5-72B-Instruct-Turbo",
+         *       ...
+         *     },
+         *     ...
+         *   ]
+         * }
+         */
+        const data = await response.json() as TogetherModel[];
+        
+
+        // 3. Map to your “UnifiedModel” structure
+        return data.map((m) => ({
+            id: m.id,
+            name: m.display_name || m.id,
+            description: `${m.organization} model - ${m.display_name || m.id} | Context: ${m.context_length} tokens | License: ${m.license}`,
+        }));
+    }
+
+    /**
  * A unified method to list models for a given provider
  */
     async listModels(provider: APIProviders): Promise<UnifiedModel[]> {
@@ -434,7 +605,7 @@ export class UnifiedProviderService {
                 }));
             }
 
-            case "gemini": {
+            case "google_gemini": {
                 // existing listGeminiModels() => GeminiAPIModel[]
                 const raw = await this.listGeminiModels();
                 return raw.map((m) => ({
@@ -453,6 +624,25 @@ export class UnifiedProviderService {
                 }));
             }
 
+            case "groq": {
+                const models = await this.listGroqModels();
+                return models.map(m => ({
+                    id: m.id,
+                    name: m.name,
+                    description: `Groq model: ${m.id}`,
+                }));
+            }
+
+            case "together": {
+                const models = await this.listTogetherModels();
+                return models.map(m => ({
+                    id: m.id,
+                    name: m.id,
+                    description: `Together model: ${m.id}`,
+                }));
+            }
+
+
             case "openai":
             default: {
                 try {
@@ -467,6 +657,8 @@ export class UnifiedProviderService {
                     return [];
                 }
             }
+
+
         }
     }
 

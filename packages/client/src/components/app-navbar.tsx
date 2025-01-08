@@ -50,26 +50,6 @@ export function AppNavbar() {
         }
     }, [globalTheme])
 
-    const handleThemeToggle = () => {
-        const newMode = !isDarkMode
-        setIsDarkMode(newMode)
-        if (newMode) {
-            document.documentElement.classList.add('dark')
-            // localStorage.setItem('theme', 'dark')
-            updateGlobalStateKey('settings', (prev) => ({
-                ...prev,
-                theme: 'dark' as 'light' | 'dark',
-            }))
-        } else {
-            document.documentElement.classList.remove('dark')
-            // localStorage.setItem('theme', 'light')
-            updateGlobalStateKey('settings', (prev) => ({
-                ...prev,
-                theme: 'light' as 'light' | 'dark',
-            }))
-        }
-    }
-
     useQuery<{ success: boolean }>({
         queryKey: ['health'],
         refetchInterval: 30000,
@@ -160,7 +140,7 @@ export function AppNavbar() {
                         >
                             {/* < className="w-4 h-4" /> */}
                             <ScanEye className="w-4 h-4" />
-                            
+
                             Summarization
                         </Link>
                     </div>

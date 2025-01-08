@@ -1,10 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
 import { APIProviders } from "shared"
 import { useGetModels } from "@/hooks/api/use-chat-ai-api"
+import { PROVIDER_SELECT_OPTIONS } from "@/constants/providers-constants"
 
 type ModelSelectorProps = {
     provider: APIProviders
@@ -30,6 +31,17 @@ export function ModelSelector({
         description: m.description || '',
     })) ?? []
 
+    // Auto-select first model when options become available and no model is selected
+    // or when current model is not available in the selected provider
+    useEffect(() => {
+        // Check if the current model is valid for the selected provider
+        const isCurrentModelValid = modelOptions.some(model => model.id === currentModel)
+        
+        if ((!currentModel || !isCurrentModelValid) && modelOptions.length > 0) {
+            onModelChange(modelOptions[0].id)
+        }
+    }, [modelOptions, currentModel, onModelChange])
+
     // Helper function to truncate text
     const truncateText = (text: string, maxLength = 24) => {
         return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text
@@ -48,13 +60,12 @@ export function ModelSelector({
                         <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="openai">OpenAI</SelectItem>
-                        <SelectItem value="openrouter">OpenRouter</SelectItem>
-                        <SelectItem value="lmstudio">LM Studio</SelectItem>
-                        <SelectItem value="ollama">Ollama</SelectItem>
-                        <SelectItem value="xai">XAI</SelectItem>
-                        <SelectItem value="gemini">Gemini</SelectItem>
-                        <SelectItem value="anthropic">Anthropic</SelectItem>
+                        {PROVIDER_SELECT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                 
                     </SelectContent>
                 </Select>
             </div>

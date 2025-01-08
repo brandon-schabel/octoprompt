@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useGlobalStateContext } from "../global-state-context"
 import { ModelSelector } from "./components/model-selector"
 import { APIProviders } from "shared"
+import { useCreateChat } from "@/hooks/api/use-chat-ai-api"
 
 type ChatDialogProps = {
     open: boolean
@@ -18,18 +19,45 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
     const [provider, setProvider] = useState<APIProviders>("openai")
     const [currentModel, setCurrentModel] = useState<string>("")
     const { createChatTab } = useGlobalStateContext()
+    const createChatMutation = useCreateChat();
+    const {
+        activeChatTabState,
+        updateActiveChatTab,
+    } = useGlobalStateContext();
 
-    const handleCreateChat = () => {
-        createChatTab({ 
-            cleanTab: !copyExisting,
-            model: currentModel,
-            provider,
-            title: title.trim() || undefined
-        })
-        setTitle("")
-        setCopyExisting(false)
-        onOpenChange(false)
+    const truncateText = (text: string, maxLength = 24) => {
+        return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
+    };
+
+    const generateDefaultTitle = () => `Chat ${new Date().toLocaleTimeString()}`;
+    async function handleCreateChat(e: React.FormEvent<HTMLButtonElement>) {
+        e.preventDefault();
+        const chatTitle = title.trim() || generateDefaultTitle();
+        try {
+            const newChat = await createChatMutation.mutateAsync({ title: chatTitle });
+            setTitle('');
+            updateActiveChatTab({ activeChatId: newChat.id });
+            onOpenChange(false);
+            return newChat;
+        } catch (error) {
+            console.error('Error creating chat:', error);
+            return null;
+        }
     }
+
+    // const handleCreateChat = () => {
+
+
+    //     createChatTab({
+    //         cleanTab: !copyExisting,
+    //         model: currentModel,
+    //         provider,
+    //         title: title.trim() || undefined
+    //     })
+    //     setTitle("")
+    //     setCopyExisting(false)
+    //     onOpenChange(false)
+    // }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -46,7 +74,7 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
                             className="flex-1"
                         />
                     </div>
-                    
+
                     <ModelSelector
                         provider={provider}
                         currentModel={currentModel}

@@ -35,16 +35,23 @@ export const linkSettingsSchema = z.object({
 
 export type LinkSettings = z.infer<typeof linkSettingsSchema>;
 
+export const providerSchema = z.enum([
+    'openai',
+    'openrouter',
+    'lmstudio',
+    'ollama',
+    'xai',
+    'google_gemini',
+    'anthropic',
+    'groq',
+    'together',
+]);
+
+export type APIProviders = z.infer<typeof providerSchema>;
+export const apiProviders = providerSchema.options;
+
 export const chatTabStateSchema = z.object({
-    provider: z.enum([
-        'openai',
-        'openrouter',
-        'lmstudio',
-        'ollama',
-        'xai',
-        'gemini',
-        'anthropic',
-    ]).default('openai'),
+    provider: providerSchema.default('openrouter'),
     model: z.string().default('gpt-4o'),
     input: z.string().default(''),
     messages: z.array(

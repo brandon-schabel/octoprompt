@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createBodySchema, type ModelOptions } from "./model-options-schema";
+import type { APIProviders } from "../global-state/global-state-schema";
 // import type { ValidationSchema } from "@bnk/router";
 // import type { ApiValidationSchemaRecord } from "../types/api-validation-schema-record";
 
@@ -76,7 +77,6 @@ export type DeleteChatParams = z.infer<typeof chatApiValidation.deleteChat.param
 export type DeleteMessageParams = z.infer<typeof chatApiValidation.deleteMessage.params>;
 export type FileSearchValidationBody = z.infer<typeof chatApiValidation.fileSearchValidation.body>;
 
-export type APIProviders = "openai" | "openrouter" | "lmstudio" | "ollama" | "xai" | "gemini" | "anthropic";
 
 export type CreateMessageBodyGeneric<TProvider extends APIProviders> = {
     message: string;
