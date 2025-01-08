@@ -8,7 +8,7 @@ import {
 import { useGlobalStateContext } from '@/components/global-state-context';
 import { useChatModelControl } from './use-chat-model-control';
 import { ChatMessage } from 'shared/schema';
-import { APIProviders } from 'shared/src/validation/chat-api-validation';
+import { APIProviders } from 'shared/index';
 
 type TempChatMessage = ChatMessage & { tempId?: string };
 
