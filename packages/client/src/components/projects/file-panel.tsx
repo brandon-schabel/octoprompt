@@ -10,7 +10,7 @@ import { useGetProjectFiles, useSyncProjectInterval } from '@/hooks/api/use-proj
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { buildFileTree } from '@/components/projects/utils/projects-utils'
 import { FileViewerDialog } from '@/components/file-viewer-dialog'
-import { useSelectedFiles } from '@/hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { Project } from 'shared/index'
 import { ProjectFile } from 'shared/schema'
 import { formatModShortcut, modSymbol, shiftSymbol } from '@/lib/platform'

@@ -8,8 +8,8 @@ import { FileSummaryService } from "@/services/file-summary-service";
 import { ProviderChatService } from "@/services/model-providers/chat/provider-chat-service";
 
 const projectService = new ProjectService();
-const fileSummaryService = new FileSummaryService()
-const providerChatService = new ProviderChatService()
+const fileSummaryService = new FileSummaryService();
+const providerChatService = new ProviderChatService();
 
 router.post("/api/projects", {
     validation: projectsApiValidation.create,
@@ -73,6 +73,9 @@ router.get("/api/projects/:projectId/files", {
     return json({ success: true, files });
 });
 
+/**
+ * Updated: no longer referencing fileSummaries table. Now uses combined fields in `files`.
+ */
 router.get("/api/projects/:projectId/file-summaries", {
     validation: {
         params: projectsApiValidation.getFiles.params,
@@ -84,9 +87,7 @@ router.get("/api/projects/:projectId/file-summaries", {
     const { projectId } = params;
     const fileIds = query?.fileIds?.split(',').filter(Boolean);
 
-    const fileSummaryService = new FileSummaryService();
     const summaries = await fileSummaryService.getFileSummaries(projectId, fileIds);
-
     return json({
         success: true,
         summaries,
@@ -95,33 +96,27 @@ router.get("/api/projects/:projectId/file-summaries", {
 
 router.post("/api/projects/:projectId/summarize", {
     validation: {
-        // We expect an array of file IDs in the body
         body: z.object({
             fileIds: z.array(z.string()).nonempty(),
         }),
-        // Reuse the projectId param checks
         params: projectsApiValidation.sync.params,
     },
 }, async (_, { params, body }) => {
-    const { projectId } = params
-    const { fileIds } = body
+    const { projectId } = params;
+    const { fileIds } = body;
 
-    // 1. Check if project exists
-    const project = await projectService.getProjectById(projectId)
+    const project = await projectService.getProjectById(projectId);
     if (!project) {
-        throw new ApiError("Project not found", 404, "NOT_FOUND")
+        throw new ApiError("Project not found", 404, "NOT_FOUND");
     }
 
-    // 2. Summarize the selected files
-    const result = await projectService.summarizeSelectedFiles(projectId, fileIds)
-
+    const result = await projectService.summarizeSelectedFiles(projectId, fileIds);
     return json({
         success: true,
         ...result,
-    })
-})
+    });
+});
 
-// We create a new endpoint to handle "find suggested files"
 router.post("/api/projects/:projectId/suggest-files", {
     validation: {
         body: z.object({
@@ -132,56 +127,52 @@ router.post("/api/projects/:projectId/suggest-files", {
         }),
     },
 }, async (_, { params, body }) => {
-    const { projectId } = params
-    const { userInput } = body
+    const { projectId } = params;
+    const { userInput } = body;
 
-    // 1) Ensure the project exists
-    const project = await projectService.getProjectById(projectId)
+    const project = await projectService.getProjectById(projectId);
     if (!project) {
-        throw new ApiError("Project not found", 404, "NOT_FOUND")
+        throw new ApiError("Project not found", 404, "NOT_FOUND");
     }
 
-    // 2) Retrieve all file summaries for the project
-    const allSummaries = await fileSummaryService.getFileSummaries(projectId)
-
-    // If no summaries exist, you might want to run summarize first or just bail out
+    const allSummaries = await fileSummaryService.getFileSummaries(projectId);
     if (!allSummaries.length) {
         return json({
             success: false,
             message: "No summaries available. Please summarize files first."
-        })
+        });
     }
 
-    // 3) Build a single combined template with all summary content + file paths
-    //    Format it however you want. For example:
-    let combinedSummaries = "<all_summaries>\n"
-    for (const summary of allSummaries) {
-        combinedSummaries += `File: ${summary.fileId}\n${summary.summary}\n\n`
+    let combinedSummaries = "<all_summaries>\n";
+    for (const f of allSummaries) {
+        combinedSummaries += `File: ${f.id}\n${f.summary}\n\n`;
     }
-    combinedSummaries += "</all_summaries>\n"
+    combinedSummaries += "</all_summaries>\n";
 
-    // 4) Now we call OpenRouter (or other LLM) to figure out recommended files
-    //    We'll pass the user’s input + the combinedSummaries to the model
-    //    In the best scenario, your prompt or systemMessage instructs the model to return an array of recommended fileIds.
     const systemPrompt = `
     You are a code assistant that recommends relevant files based on user input.
     You have a list of file summaries and a user request.
-     
+    
     **IMPORTANT**: Return only valid JSON containing an array of file IDs in the shape:
     { "fileIds": ["abc123", "def456", ...] }
     
     No markdown, no code fences, no additional text.
     If you are unsure, return an empty array.
-    `
+
+    Additionally, consider whether the user’s request indicates creating or modifying a particular type of file (e.g., services, components). In such cases, also include related or similar files that may provide helpful patterns or contextual information.
+    `;
+
     const userMessage = `
     User Query: ${userInput}
-    
     List of files with summaries:
     ${combinedSummaries}
-    `
+    `;
+
+    console.log("finding suggestions for user input:", userInput);
+    console.log("systemPrompt", systemPrompt);
+    console.log("userMessage", userMessage);
 
     try {
-        // 4a) Use your existing ProviderChatService or whichever is appropriate:
         const stream = await providerChatService.processMessage({
             chatId: "fileSuggester",
             userMessage,
@@ -190,45 +181,61 @@ router.post("/api/projects/:projectId/suggest-files", {
                 model: 'deepseek/deepseek-chat',
                 max_tokens: 1024,
                 temperature: 0.2,
-                // debug: true
             },
             systemMessage: systemPrompt,
-        })
+        });
 
-        // 4b) Accumulate the streamed text
-        const reader = stream.getReader()
-        let rawLLMOutput = ""
-        const decoder = new TextDecoder()
+        const reader = stream.getReader();
+        let rawLLMOutput = "";
+        const decoder = new TextDecoder();
         while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            rawLLMOutput += decoder.decode(value)
+            const { done, value } = await reader.read();
+            if (done) break;
+            rawLLMOutput += decoder.decode(value);
         }
 
-        // 4c) Try to parse the LLM result as JSON. 
-        // The LLM might not always return valid JSON, so handle errors gracefully.
-        let recommendedFileIds: string[] = []
+        // Strip out code fences if present
+        let cleanedOutput = rawLLMOutput.trim();
+        const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
+        const matched = cleanedOutput.match(tripleBacktickRegex);
+        if (matched) {
+            cleanedOutput = matched[1].trim();
+        }
+
+        let recommendedFileIds: string[] = [];
         try {
-            // parse rawLLMOutput as JSON
-            const parsed = JSON.parse(rawLLMOutput.trim())
+            const parsed = JSON.parse(cleanedOutput);
             if (
                 typeof parsed === 'object' &&
                 Array.isArray(parsed.fileIds) &&
-                parsed.fileIds.every((id: any) => typeof id === 'string')
+                parsed.fileIds.every((id: unknown) => typeof id === 'string')
             ) {
-                recommendedFileIds = parsed.fileIds
+                recommendedFileIds = parsed.fileIds;
             }
         } catch (error) {
-            console.error('Failed to parse JSON from LLM:', error)
+            console.error('Failed to parse JSON from LLM:', error);
         }
 
         return json({
             success: true,
             recommendedFileIds,
             rawLLMOutput,
-        })
+        });
     } catch (error) {
-        console.error("Suggest-files error:", error)
-        throw new ApiError("Failed to suggest files", 500, "INTERNAL_ERROR")
+        console.error("Suggest-files error:", error);
+        throw new ApiError("Failed to suggest files", 500, "INTERNAL_ERROR");
     }
-})
+});
+
+router.post("/api/projects/:projectId/resummarize-all", {}, async (_, { params }) => {
+    const project = await projectService.getProjectById(params.projectId);
+    if (!project) {
+        throw new ApiError("Project not found", 404, "NOT_FOUND");
+    }
+    await projectService.resummarizeAllFiles(params.projectId);
+
+    return json({
+        success: true,
+        message: "All files have been force-resummarized."
+    });
+});

@@ -1,9 +1,10 @@
 import { db } from 'shared/database'
-import { fileSummaries, FileSummary, files } from 'shared/schema'
+import { files, type ProjectFile } from 'shared/schema'
 import { eq, and, inArray } from 'drizzle-orm'
-import { ProjectFile, GlobalState } from 'shared'
+import { ProjectFile as ProjectFileType, GlobalState } from 'shared'
 import { ProviderChatService } from '@/services/model-providers/chat/provider-chat-service'
 import { matchesAnyPattern } from 'shared/src/utils/pattern-matcher'
+import { promptsMap } from '@/prompts/prompts-map'
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
     const chunks: T[][] = []
@@ -13,6 +14,9 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
     return chunks
 }
 
+/**
+ * This service now reads/writes file summaries directly in the `files` table.
+ */
 export class FileSummaryService {
     private providerChatService: ProviderChatService
     private concurrency = 5
@@ -22,87 +26,79 @@ export class FileSummaryService {
     }
 
     /**
-     * Core method to retrieve file summaries from DB, filtered by project and optionally fileIds.
+     * Fetch files (with their summary) for a project. Optionally filter by fileIds.
      */
     public async getFileSummaries(
         projectId: string,
         fileIds?: string[],
-    ): Promise<FileSummary[]> {
-        const conditions = [eq(fileSummaries.projectId, projectId)]
-
+    ): Promise<ProjectFileType[]> {
+        const conditions = [eq(files.projectId, projectId)]
         if (fileIds && fileIds.length > 0) {
-            conditions.push(inArray(fileSummaries.fileId, fileIds))
+            conditions.push(inArray(files.id, fileIds))
         }
-
         return db
             .select()
-            .from(fileSummaries)
+            .from(files)
             .where(and(...conditions))
             .all()
     }
 
     /**
-     * Example of a “handler” function that wraps getFileSummaries but also enriches 
-     * the result with file paths (if that’s something you need). 
-     * Useful if your route or UI wants both summary + file path in one step.
+     * Return an array of objects: { summary: ProjectFile, filePath: string }.
+     * The `summary` field is really the entire file record with .summary.
      */
     public async getFileSummariesHandler(
         projectId: string,
         fileIds?: string[],
-    ): Promise<Array<{ summary: FileSummary; filePath: string }>> {
-        // 1) Get the raw summaries from DB
+    ): Promise<Array<{ summary: ProjectFileType; filePath: string }>> {
         const summaries = await this.getFileSummaries(projectId, fileIds)
-
-        // 2) Optionally look up the actual ProjectFile record for each summary.fileId
-        //    so we can return the file path or other metadata. 
-        //    For example:
-        const fileIdsToFetch = summaries.map(s => s.fileId)
-        const projectFiles = await db.select().from(files)
-            .where(inArray(files.id, fileIdsToFetch))
-            .all()
-
-        // 3) Build a small lookup table: fileId -> path
-        const pathLookup: Record<string, string> = {}
-        for (const pf of projectFiles) {
-            pathLookup[pf.id] = pf.path
-        }
-
-        // 4) Return the summaries along with each file’s path
-        return summaries.map(s => {
-            const filePath = pathLookup[s.fileId] || ''
-            return { summary: s, filePath }
-        })
+        return summaries.map(s => ({
+            summary: s,
+            filePath: s.path,
+        }))
     }
 
     /**
      * Summarize the given files, applying user-configured allow/ignore patterns.
+     * If the file has changed or if the summary is blank, it is re-summarized.
      */
     public async summarizeFiles(
         projectId: string,
-        files: ProjectFile[],
+        filesToSummarize: ProjectFileType[],
         globalState: GlobalState
     ): Promise<{ included: number; skipped: number }> {
         const allowPatterns = globalState.settings.summarizationAllowPatterns || []
         const ignorePatterns = globalState.settings.summarizationIgnorePatterns || []
 
         console.log(`[FileSummaryService] Starting file summarization for project: ${projectId}`)
-        console.log(`[FileSummaryService] Received ${files.length} file(s).`)
+        console.log(`[FileSummaryService] Received ${filesToSummarize.length} file(s).`)
         console.log(`[FileSummaryService] allowPatterns: ${JSON.stringify(allowPatterns)}`)
         console.log(`[FileSummaryService] ignorePatterns: ${JSON.stringify(ignorePatterns)}`)
 
-        const chunks = chunkArray(files, this.concurrency)
+        const chunks = chunkArray(filesToSummarize, this.concurrency)
         const results: { included: boolean }[] = []
 
         for (const chunk of chunks) {
             const chunkPromises = chunk.map(async (file) => {
                 const isAllowed = matchesAnyPattern(file.path, allowPatterns)
                 const isIgnored = matchesAnyPattern(file.path, ignorePatterns)
+
                 if (isIgnored && !isAllowed) {
                     console.log(`[FileSummaryService] Skipped file: ${file.path} (ignored, no allow override)`)
                     return { included: false }
                 }
-                console.log(`[FileSummaryService] Summarizing file: ${file.path}`)
-                await this.maybeSummarizeFile(projectId, file)
+
+                // Check if re-summarization is needed
+                const fileUpdatedAt = new Date(file.updatedAt).getTime()
+                const summaryUpdatedAt = file.summaryLastUpdatedAt ? file.summaryLastUpdatedAt.getTime() : 0
+                const summaryIsStale = fileUpdatedAt > summaryUpdatedAt
+
+                if (!file.summary || summaryIsStale) {
+                    console.log(`[FileSummaryService] Summarizing file: ${file.path}`)
+                    await this.summarizeFile(file)
+                } else {
+                    console.log(`[FileSummaryService] Using existing summary for: ${file.path}`)
+                }
                 return { included: true }
             })
             const chunkResults = await Promise.all(chunkPromises)
@@ -110,7 +106,7 @@ export class FileSummaryService {
         }
 
         const includedCount = results.filter((res) => res.included).length
-        const skippedCount = files.length - includedCount
+        const skippedCount = filesToSummarize.length - includedCount
 
         console.log(`[FileSummaryService] Finished summarization for project: ${projectId}`)
         console.log(`[FileSummaryService] Included: ${includedCount}, Skipped: ${skippedCount}`)
@@ -118,65 +114,47 @@ export class FileSummaryService {
         return { included: includedCount, skipped: skippedCount }
     }
 
-    private async maybeSummarizeFile(projectId: string, file: ProjectFile) {
-        const existingSummary = await db
-            .select()
-            .from(fileSummaries)
-            .where(eq(fileSummaries.fileId, file.id))
-            .get()
+    /**
+     * Force re-summarize the given files, ignoring last update checks.
+     */
+    public async forceSummarizeFiles(
+        projectId: string,
+        filesToSummarize: ProjectFileType[],
+        globalState: GlobalState
+    ): Promise<void> {
+        console.log(`[FileSummaryService] Force re-summarizing ${filesToSummarize.length} file(s) for project: ${projectId}`)
 
-        const fileUpdatedAt = new Date(file.updatedAt).getTime()
-        const summaryUpdatedAt = existingSummary ? new Date(existingSummary.updatedAt).getTime() : 0
-        const summaryExpired = existingSummary
-            ? Date.now() > new Date(existingSummary.expiresAt).getTime()
-            : false
+        const chunks = chunkArray(filesToSummarize, this.concurrency)
 
-        const fileModified = fileUpdatedAt > summaryUpdatedAt
-
-        if (!existingSummary) {
-            console.log(`[FileSummaryService] No existing summary, will create new one.`)
-        } else if (fileModified) {
-            console.log(`[FileSummaryService] File changed since last summary, re-summarizing.`)
-        } else if (summaryExpired) {
-            console.log(`[FileSummaryService] Summary expired, re-summarizing.`)
-        } else {
-            console.log(`[FileSummaryService] Using existing summary, no update needed.`)
-        }
-
-        if (!existingSummary || fileModified || summaryExpired) {
-            const summaryText = await this.generateFileSummary(file)
-            if (!summaryText) {
-                console.warn(`[FileSummaryService] Summarization returned empty for file: ${file.name}`)
-                return
-            }
-
-            const newData = {
-                fileId: file.id,
-                projectId,
-                summary: summaryText,
-                updatedAt: new Date(),
-                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day
-            }
-
-            if (!existingSummary) {
-                await db.insert(fileSummaries).values(newData).run()
-                console.log(`[FileSummaryService] Created summary for file: ${file.name}`)
-            } else {
-                await db.update(fileSummaries)
-                    .set(newData)
-                    .where(eq(fileSummaries.id, existingSummary.id))
-                    .run()
-                console.log(`[FileSummaryService] Updated summary for file: ${file.name}`)
-            }
+        for (const chunk of chunks) {
+            const chunkPromises = chunk.map(async (file) => {
+                await this.summarizeFile(file)
+            })
+            await Promise.all(chunkPromises)
         }
     }
 
-    private async generateFileSummary(file: ProjectFile): Promise<string | null> {
+    /**
+     * Summarize a single file by calling the model provider with the file's content.
+     * Then update the file record with the new summary and summaryLastUpdatedAt.
+     */
+    private async summarizeFile(file: ProjectFileType) {
         try {
             const fileContent = file.content || ''
+            if (!fileContent.trim()) {
+                console.warn(`[FileSummaryService] File content is empty for file: ${file.name}`)
+                return
+            }
+
             const systemPrompt = `
+<SystemPrompt>
 You are a coding assistant that summarizes code. Summarize the content below in a concise bullet-list,
 highlight any exported or important functions, and mention how they might be used.
+</SystemPrompt>
+
+<SummarizationSteps>
+${promptsMap.summarizationSteps}
+</SummarizationSteps>
 `
             const userMessage = fileContent.slice(0, 10000)
 
@@ -203,10 +181,25 @@ highlight any exported or important functions, and mention how they might be use
                 text += decoder.decode(value)
             }
 
-            return text.trim()
+            const summaryText = text.trim()
+
+            if (!summaryText) {
+                console.warn(`[FileSummaryService] Summarization returned empty for file: ${file.name}`)
+                return
+            }
+
+            // Update the `files` row
+            await db.update(files)
+                .set({
+                    summary: summaryText,
+                    summaryLastUpdatedAt: new Date(),
+                })
+                .where(eq(files.id, file.id))
+                .run()
+
+            console.log(`[FileSummaryService] Updated summary for file: ${file.name}`)
         } catch (error) {
             console.error('[FileSummaryService] Error summarizing file:', file.name, error)
-            return null
         }
     }
 }

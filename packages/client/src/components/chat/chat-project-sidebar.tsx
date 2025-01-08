@@ -10,12 +10,13 @@ import { buildPromptContent } from '@/components/projects/utils/projects-utils'
 import { ProjectFile } from 'shared/schema'
 import { toast } from 'sonner'
 import { useGlobalStateContext } from '@/components/global-state-context'
-import { useSelectedFiles } from '@/hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { linkSettingsSchema, LinkSettings } from 'shared'
 import { Copy, Folder, FolderOpen, FolderOpenIcon } from 'lucide-react'
 import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { SlidingSidebar } from '@/components/sliding-sidebar'
 import { PromptsList } from '../projects/prompts-list'
+import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string
@@ -25,6 +26,8 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
     const { state, updateChatLinkSettings, unlinkChatTab, activeChatTabState } = useGlobalStateContext()
     const linkedProjectState = state?.projectTabs[linkedProjectTabId]
     const [tabValue, setTabValue] = useState('files')
+
+    const { copyToClipboard } = useCopyClipboard()
 
     // If there's no linked project tab, nothing to show
     if (!linkedProjectState) {
@@ -62,7 +65,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
 
         const merged = { ...linkSettings, [key]: value }
         linkSettingsSchema.parse(merged)
-        updateChatLinkSettings(chatTabId, merged) 
+        updateChatLinkSettings(chatTabId, merged)
     }
     // ------------------------------------------------------------------
     // Copy All Linked Content
@@ -88,13 +91,11 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
             toast('No content to copy!')
             return
         }
-        try {
-            await navigator.clipboard.writeText(content)
-            toast.success('Linked content copied to clipboard!')
-        } catch (err) {
-            console.error(err)
-            toast.error('Failed to copy linked content.')
-        }
+
+        copyToClipboard(content, {
+            successMessage: 'Linked content copied to clipboard!',
+            errorMessage: 'Failed to copy linked content.',
+        })
     }
 
     // ------------------------------------------------------------------

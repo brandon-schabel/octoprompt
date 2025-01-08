@@ -1,5 +1,9 @@
 import { ProviderChatService } from './model-providers/chat/provider-chat-service';
 
+import { promptsMap } from '../prompts/prompts-map';
+
+
+
 export class PromptimizerService {
     private providerChatService: ProviderChatService;
 
@@ -16,9 +20,17 @@ export class PromptimizerService {
         // You might want to craft a special system prompt to instruct
         // the model on how to rework or improve the user prompt.
         const systemPrompt = `
+<SystemPrompt>
 You are the Promptimizer, a specialized assistant that refines or rewrites user queries into 
 more effective prompts. Given the user's context or goal, output a single optimized prompt. 
 No additional commentary, no extraneous text. 
+</SystemPrompt>
+
+
+<Reasoning>
+Follow the style guidelines and key requirements below:
+${promptsMap.contemplativePrompt}
+</Reasoning>
 `;
 
         // The userMessage in this case is just the user's raw context or instructions:

@@ -1,4 +1,14 @@
-import { projects, type Project, files, type ProjectFile, eq, and, CreateProjectBody, UpdateProjectBody, inArray } from "shared";
+import {
+    projects,
+    type Project,
+    files,
+    type ProjectFile,
+    eq,
+    and,
+    CreateProjectBody,
+    UpdateProjectBody,
+    inArray,
+} from "shared";
 import { FileSyncService } from './file-sync-service';
 import { FileSummaryService } from './file-summary-service';
 import { db } from "shared/database";
@@ -58,10 +68,8 @@ export class ProjectService {
         const project = await this.getProjectById(projectId);
         if (!project) return null;
 
-        // 1. Sync the files to ensure the DB has the latest project structure
         await fileSyncService.syncProject(project);
 
-        // 2. Retrieve all project files
         const allFiles = await this.getProjectFiles(projectId);
         if (!allFiles) {
             return {
@@ -70,13 +78,30 @@ export class ProjectService {
             };
         }
 
-        // 3. Summarize files if needed, up to MAX_SUMMARIES_PER_SYNC
-        // await fileSummaryService.summarizeFiles(projectId, allFiles);
-
+        // Optionally auto-summarize here if desired.
         return {
             success: true,
-            message: 'Project synchronized and file summaries updated successfully',
+            message: 'Project synchronized successfully',
         };
+    }
+
+    /**
+     * Force re-summarize every file in the project.
+     */
+    async resummarizeAllFiles(projectId: string) {
+        const project = await this.getProjectById(projectId);
+        if (!project) {
+            throw new Error('Project not found');
+        }
+        await fileSyncService.syncProject(project);
+
+        const allFiles = await this.getProjectFiles(projectId);
+        if (!allFiles) {
+            throw new Error('No files found for project');
+        }
+
+        const globalState = await wsManager.getStateFromDB();
+        await fileSummaryService.forceSummarizeFiles(projectId, allFiles, globalState);
     }
 
     async getProjectFiles(projectId: string): Promise<ProjectFile[] | null> {
@@ -85,9 +110,10 @@ export class ProjectService {
             return null;
         }
 
-        return await db.select()
+        return db.select()
             .from(files)
-            .where(eq(files.projectId, projectId));
+            .where(eq(files.projectId, projectId))
+            .all();
     }
 
     async updateFileContent(fileId: string, content: string): Promise<ProjectFile> {
@@ -106,8 +132,10 @@ export class ProjectService {
         return updatedFile;
     }
 
+    /**
+     * Summarize a selected set of files by ID.
+     */
     async summarizeSelectedFiles(projectId: string, fileIds: string[]) {
-        // 1. Fetch the matching files
         const selectedFiles = await db.select()
             .from(files)
             .where(
@@ -115,27 +143,21 @@ export class ProjectService {
                     eq(files.projectId, projectId),
                     inArray(files.id, fileIds),
                 )
-            )
+            );
 
         if (!selectedFiles.length) {
-            return { included: 0, skipped: 0, message: "No matching files found" }
+            return { included: 0, skipped: 0, message: "No matching files found" };
         }
 
-        // 2. Grab the global state to pass in any allow/ignore patterns (if needed)
-        //   If you already have a method for retrieving the global state from DB, use it.
-        //   Otherwise, pass an empty or default globalState for now:
-        const globalState = await wsManager.getStateFromDB()
-
-        // 3. Summarize the files
+        const globalState = await wsManager.getStateFromDB();
         const result = await fileSummaryService.summarizeFiles(
             projectId,
             selectedFiles,
             globalState
-        )
+        );
         return {
             ...result,
             message: "Requested files have been summarized",
-        }
+        };
     }
-
 }

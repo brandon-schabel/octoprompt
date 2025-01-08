@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { useGlobalStateContext } from "../global-state-context";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 
 export function ChatMessages({
     chatControl,
@@ -41,6 +42,8 @@ export function ChatMessages({
         activeChatTabState,
         updateActiveChatTab,
     } = chatControl;
+
+    const { copyToClipboard } = useCopyClipboard()
 
     const deleteMessageMutation = useDeleteMessage();
     const forkChatFromMessageMutation = useForkChatFromMessage();
@@ -78,16 +81,6 @@ export function ChatMessages({
         } catch (error) {
             console.error("Error forking chat from message:", error);
             toast.error("Failed to fork chat");
-        }
-    };
-
-    const copyToClipboard = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            toast.success("Message copied to clipboard");
-        } catch (error) {
-            console.error("Failed to copy text:", error);
-            toast.error("Failed to copy message");
         }
     };
 

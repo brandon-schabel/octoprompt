@@ -15,6 +15,10 @@ import "@/routes/promptimizer-routes"
 import { globalStateSchema } from "shared";
 import { wsManager, WebSocketData } from "@/websocket/websocket-manager";
 import { json } from "@bnk/router";
+import { WatchersManager } from "@/services/watchers-manager";
+import { FileSyncService } from "@/services/file-sync-service";
+import { FileSummaryService } from "@/services/file-summary-service";
+import { ProjectService } from "@/services/project-service";
 
 // built client files
 const CLIENT_PATH = join(__dirname, "client-dist");
@@ -31,6 +35,13 @@ const PROD_PORT = 3579;
 
 const isDevEnv = process.env.DEV === 'true';
 const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
+
+
+const watchersManager = new WatchersManager(
+  new FileSummaryService(),
+  new FileSyncService(),
+  new ProjectService()
+);
 
 export const instantiateServer = ({
   port = PORT
@@ -132,6 +143,24 @@ export const instantiateServer = ({
       message: (ws, message) => wsManager.handleMessage(ws, message.toString()),
     }
   });
+
+
+  // 2) Once the server is up, start watchers for all existing projects
+  (async () => {
+    const projectService = new ProjectService();
+    const allProjects = await projectService.listProjects();
+    for (const project of allProjects) {
+      // You can add custom ignore patterns if desired
+      watchersManager.startWatchingProject(project, [
+        "node_modules",
+        "dist",
+        ".git",
+        "*.tmp",
+        "*.db-journal"
+      ]);
+    }
+  })();
+
 
   console.log(`Server running at http://localhost:${server.port}`);
   return server;

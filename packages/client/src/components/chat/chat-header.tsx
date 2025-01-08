@@ -17,6 +17,7 @@ import { Input } from "../ui/input";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { Separator } from "@/components/ui/separator";
+import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 
 interface ChatHeaderProps {
     onForkChat: () => void;
@@ -74,6 +75,7 @@ export function ChatHeader({
 
     const { data: promptData } = useGetProjectPrompts(linkedProjectId ?? '');
     const { data: fileData } = useGetProjectFiles(linkedProjectId ?? '');
+    const { copyToClipboard } = useCopyClipboard()
 
     const fileMap = useMemo(() => {
         const map = new Map<string, ProjectFile>();
@@ -107,8 +109,10 @@ export function ChatHeader({
                 userPrompt: linkSettings.includeUserPrompt ? linkedProjectState.userPrompt : '',
             });
 
-            await navigator.clipboard.writeText(content);
-            toast.success("Linked content copied to clipboard!");
+            copyToClipboard(content, {
+                successMessage: "Linked content copied to clipboard!",
+                errorMessage: "Failed to copy linked content.",
+            });
         } catch (err) {
             console.error(err);
             toast.error("Failed to copy linked content.");

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { useGlobalStateContext } from '@/components/global-state-context'
 import { useEditFile } from '@/hooks/api/use-code-editor-api'
 import { toast } from 'sonner'
-import { useSelectedFiles } from '@/hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,

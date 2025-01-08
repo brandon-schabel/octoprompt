@@ -11,15 +11,16 @@ import { toast } from 'sonner'
 import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
 import { ProjectFile } from 'shared'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useSelectedFiles } from '@/hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { formatModShortcut } from '@/lib/platform'
 import { useGlobalStateContext } from '../global-state-context'
-import { useDebounce } from '@/hooks/use-debounce'
+import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from '../promptimizer-dialog'
+import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -134,6 +135,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const updatePromptMutation = useUpdatePrompt()
         const deletePromptMutation = useDeletePrompt()
 
+        const { copyToClipboard } = useCopyClipboard()
+
         // Calculate total tokens used
         const totalTokens = useMemo(
             () => calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap),
@@ -154,12 +157,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const handleCopyToClipboard = async () => {
             if (!fileMap.size && !localUserPrompt.trim() && selectedPrompts.length === 0) return
             const finalPrompt = promptBuilder()
-            try {
-                await navigator.clipboard.writeText(finalPrompt)
-                toast.success('All Content Copied to clipboard')
-            } catch {
-                toast.error('Failed to copy')
-            }
+            copyToClipboard(finalPrompt, {
+                successMessage: 'All Content Copied to clipboard',
+                errorMessage: 'Failed to copy',
+            })
         }
 
         const handleCreatePrompt = async (values: z.infer<typeof promptSchema>) => {

@@ -124,6 +124,16 @@ async function getFileSummaries(
     return response.json();
 }
 
+async function resummarizeAllFiles(
+    api: ReturnType<typeof useApi>['api'], 
+    projectId: string
+): Promise<{ success: boolean; message?: string }> {
+    const response = await api.request(`/api/projects/${projectId}/resummarize-all`, {
+        method: 'POST',
+    });
+    return response.json();
+}
+
 // Hooks
 export const useGetProjects = () => {
     const { api } = useApi();
@@ -266,3 +276,17 @@ export const useFindSuggestedFiles = (projectId: string) => {
         onError: commonErrorHandler,
     })
 }
+
+export const useResummarizeAllFiles = (projectId: string) => {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => resummarizeAllFiles(api, projectId),
+        onSuccess: () => {
+            // Invalidate file summaries to trigger a refresh
+            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.fileSummaries(projectId) });
+        },
+        onError: commonErrorHandler
+    });
+};

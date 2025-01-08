@@ -8,7 +8,7 @@ import React, {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChevronsLeft, ChevronsRight, X, LucideIcon } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage';
 
 type IconProps = {
     openIcon?: LucideIcon;

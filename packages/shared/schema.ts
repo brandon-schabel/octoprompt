@@ -87,6 +87,14 @@ export const files = sqliteTable("files", {
     extension: text("extension").notNull(),
     size: integer("size").notNull(),
     content: text("content"),
+
+    // NEW FIELDS:
+    summary: text("summary").default(""),
+    summaryLastUpdatedAt: integer("summary_last_updated_at", { mode: "timestamp" })
+        .default(sql`CURRENT_TIMESTAMP`)
+        .notNull(),
+    meta: text("meta").default(""), // optional metadata field
+
     createdAt: integer("created_at", { mode: "timestamp" })
         .default(sql`CURRENT_TIMESTAMP`)
         .notNull(),
@@ -94,8 +102,6 @@ export const files = sqliteTable("files", {
         .default(sql`CURRENT_TIMESTAMP`)
         .notNull(),
 });
-
-
 
 export const projectFileSchema = z.object({
     id: z.string(),
@@ -105,9 +111,12 @@ export const projectFileSchema = z.object({
     extension: z.string(),
     size: z.number(),
     content: z.string().nullable(),
+    summary: z.string().default(""),
+    summaryLastUpdatedAt: z.date().optional(), // Could store as a date for convenience in TypeScript
+    meta: z.string().default(""),
     createdAt: z.date(),
     updatedAt: z.date(),
-})
+});
 
 
 export type ProjectFileInferredSchema = z.infer<typeof projectFileSchema>
@@ -165,25 +174,3 @@ export const providerKeys = sqliteTable("provider_keys", {
 });
 
 export type ProviderKey = InferSelectModel<typeof providerKeys>;
-
-export const fileSummaries = sqliteTable("file_summaries", {
-    id: text("id")
-        .primaryKey()
-        .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
-    fileId: text("file_id")
-        .notNull()
-        .references(() => files.id, { onDelete: "cascade" }),
-    projectId: text("project_id")
-        .notNull()
-        .references(() => projects.id, { onDelete: "cascade" }),
-    summary: text("summary").notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
-        .default(sql`CURRENT_TIMESTAMP`)
-        .notNull(),
-    expiresAt: integer("expires_at", { mode: "timestamp" })
-        .default(sql`CURRENT_TIMESTAMP`)
-        .notNull(),
-});
-
-export type FileSummary = InferSelectModel<typeof fileSummaries>;
-export type NewFileSummary = InferInsertModel<typeof fileSummaries>;

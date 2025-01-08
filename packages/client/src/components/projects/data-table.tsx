@@ -20,7 +20,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Checkbox } from '@/components/ui/checkbox'
-import { useSelectedFiles } from '@/hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 
 export type FileRow = {
     id: string

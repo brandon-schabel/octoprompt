@@ -11,7 +11,9 @@
     "start": "bun server.ts",
     "dev": "DEV=true bun --watch server.ts",
     "build": "bun run build.ts",
-    "start:prod": "cd dist && ./start.sh"
+    "start:prod": "cd dist && ./start.sh",
+    "check-process-id": "sudo lsof -i :3000",
+    "kill-process-id": "sudo kill -9 $(sudo lsof -i :3000 | awk 'NR==2{print $2}')"
   },
   "devDependencies": {
     "bun-types": "latest",

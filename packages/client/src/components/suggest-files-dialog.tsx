@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ProjectFile } from "shared"
-import { useSelectedFiles } from "@/hooks/use-selected-files"
+import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
 
 type SuggestedFilesDialogProps = {
     open: boolean

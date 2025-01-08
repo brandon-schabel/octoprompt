@@ -21,6 +21,8 @@ interface RouterContext {
   api: APIInterface
 }
 
+const test = 'test'
+
 // Create router instance with context
 const router = createRouter<typeof routeTree, "never", true>({
   routeTree,
