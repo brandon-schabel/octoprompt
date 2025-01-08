@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
-import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, ApiError, FileSummary } from 'shared';
+import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, ApiError, } from 'shared';
 import { commonErrorHandler } from './common-mutation-error-handler';
 
 export type ProjectResponse = {
@@ -35,7 +35,7 @@ export type SummarizeFilesResponse = {
 
 export type FileSummaryResponse = {
     success: boolean;
-    summaries: FileSummary[];
+    summaries: ProjectFile[];
     error?: string;
 };
 
@@ -125,7 +125,7 @@ async function getFileSummaries(
 }
 
 async function resummarizeAllFiles(
-    api: ReturnType<typeof useApi>['api'], 
+    api: ReturnType<typeof useApi>['api'],
     projectId: string
 ): Promise<{ success: boolean; message?: string }> {
     const response = await api.request(`/api/projects/${projectId}/resummarize-all`, {
