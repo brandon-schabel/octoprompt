@@ -1,10 +1,11 @@
 import { ReadableStream } from "stream/web";
 import { ProviderPlugin } from "../provider-plugin";
 import { StreamParams } from "./streaming-types";
+import { ChatService } from "../../chat/chat-service";
 
 export async function createSSEStream(
     plugin: ProviderPlugin,
-    streamParams: StreamParams
+    streamParams: StreamParams & { chatService: ChatService }
 ): Promise<ReadableStream<Uint8Array>> {
     const { chatService, assistantMessageId } = streamParams;
     const streamOrReader = await plugin.prepareRequest(streamParams);
