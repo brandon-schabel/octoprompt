@@ -1,5 +1,5 @@
-import { ProviderPlugin } from "../provider-plugin";
-import { StreamParams } from "../provider-types";
+import { ProviderPlugin } from "../../provider-plugin";
+import { StreamParams } from "../streaming-types";
 
 export class OllamaPlugin implements ProviderPlugin {
     private baseUrl: string;

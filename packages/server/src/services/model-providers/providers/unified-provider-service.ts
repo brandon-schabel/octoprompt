@@ -3,14 +3,14 @@ import { ReadableStream } from "stream/web";
 import { ProviderKeyService } from "./provider-key-service";
 import { APIProviders, UnifiedModel } from "shared";
 import { StreamParams } from "./provider-types";
-import { GeminiPlugin } from "./plugins/gemini-plugin";
-import { createSSEStream } from "./streaming-engine";
-import { AnthropicPlugin } from "./plugins/anthropic-plugin";
-import { OpenAiLikePlugin } from "./plugins/open-ai-like-plugin";
-import { TogetherPlugin } from "./plugins/together-plugin";
-import { GroqPlugin } from "./plugins/groq-plugin";
-import { OpenRouterPlugin } from "./plugins/open-router-plugin";
-import { OllamaPlugin } from "./plugins/ollama-plugin";
+import { GeminiPlugin } from "./streaming-engine/plugins/gemini-plugin";
+import { createSSEStream } from "./streaming-engine/streaming-engine";
+import { AnthropicPlugin } from "./streaming-engine/plugins/anthropic-plugin";
+import { OpenAiLikePlugin } from "./streaming-engine/plugins/open-ai-like-plugin";
+import { TogetherPlugin } from "./streaming-engine/plugins/together-plugin";
+import { GroqPlugin } from "./streaming-engine/plugins/groq-plugin";
+import { OpenRouterPlugin } from "./streaming-engine/plugins/open-router-plugin";
+import { OllamaPlugin } from "./streaming-engine/plugins/ollama-plugin";
 
 type XAIModel = {
     id: string

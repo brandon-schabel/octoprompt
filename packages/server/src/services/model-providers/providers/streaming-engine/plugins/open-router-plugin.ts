@@ -1,5 +1,5 @@
-import { ProviderPlugin } from "../provider-plugin";
-import { StreamParams } from "../provider-types";
+import { ProviderPlugin } from "../../provider-plugin";
+import { StreamParams } from "../streaming-types";
 
 type OpenRouterStreamResponse = {
     choices: {

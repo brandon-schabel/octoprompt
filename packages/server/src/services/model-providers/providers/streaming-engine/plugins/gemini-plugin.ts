@@ -1,5 +1,5 @@
-import { ProviderPlugin } from "../provider-plugin";
-import { StreamParams } from "../provider-types";
+import { ProviderPlugin } from "../../provider-plugin";
+import { StreamParams } from "../streaming-types";
 import { TextEncoder, TextDecoder } from "util";
 
 export class GeminiPlugin implements ProviderPlugin {
