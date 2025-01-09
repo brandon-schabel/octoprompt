@@ -22,28 +22,26 @@ export class GeminiPlugin implements ProviderPlugin {
      * "data: <chunk>\n\n" ... "data: [DONE]\n\n"
      */
     async prepareRequest(params: StreamParams) {
-        const { chatId, userMessage, chatService, options } = params;
+        const { userMessage, options } = params;
 
-        // 1) Save user message and update chat timestamp
-        await chatService.saveMessage({
-            chatId,
-            role: "user",
-            content: userMessage,
-        });
-        await chatService.updateChatTimestamp(chatId);
+
 
         // 2) Rebuild chat history in Gemini’s expected format
-        const msgs = await chatService.getChatMessages(chatId);
-        const messages = msgs
-            .filter((m: any) => m.content.trim().length > 0)
-            .map((m: any) => ({
-                role: m.role === "assistant" ? "model" : m.role,
-                parts: [{ text: m.content }],
-            }));
+        // const msgs = await chatService.getChatMessages(chatId);
+        // const messages = msgs
+        //     .filter((m: any) => m.content.trim().length > 0)
+        //     .map((m: any) => ({
+        //         role: m.role === "assistant" ? "model" : m.role,
+        //         parts: [{ text: m.content }],
+        //     }));
 
         // 3) Build the Gemini request payload
         const payload = {
-            contents: messages,
+            contents: [
+                {
+                    parts: [{ text: userMessage, role: "user" }],
+                }
+            ],
             generationConfig: {
                 temperature: typeof options.temperature === "number" ? options.temperature : 0.7,
                 maxOutputTokens: options.max_tokens ?? 1024,

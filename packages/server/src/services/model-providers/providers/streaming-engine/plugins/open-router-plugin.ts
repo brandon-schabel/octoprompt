@@ -18,13 +18,7 @@ export class OpenRouterPlugin implements ProviderPlugin {
     }
 
     async prepareRequest(params: StreamParams) {
-        const { userMessage, chatService, chatId, options } = params;
-        await chatService.saveMessage({
-            chatId,
-            role: "user",
-            content: userMessage,
-        });
-        await chatService.updateChatTimestamp(chatId);
+        const { userMessage, options } = params;
 
         // Build messages array
         const messages = [];

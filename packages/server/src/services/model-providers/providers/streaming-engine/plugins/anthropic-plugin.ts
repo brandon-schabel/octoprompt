@@ -28,15 +28,7 @@ export class AnthropicPlugin implements ProviderPlugin {
     }
 
     async prepareRequest(params: StreamParams) {
-        const { userMessage, chatService, chatId, assistantMessageId, options } = params;
-
-        // Optionally save user message or reconstruct chat messages here
-        await chatService.saveMessage({
-            chatId,
-            role: "user",
-            content: userMessage,
-        });
-        await chatService.updateChatTimestamp(chatId);
+        const { userMessage, options } = params;
 
         const body = JSON.stringify({
             model: options.model || "claude-2",

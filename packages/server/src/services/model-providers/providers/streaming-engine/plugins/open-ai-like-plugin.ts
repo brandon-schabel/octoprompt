@@ -13,16 +13,9 @@ export class OpenAiLikePlugin implements ProviderPlugin {
     }
 
     async prepareRequest(params: StreamParams) {
-        const { userMessage, chatService, chatId, options } = params;
+        const { userMessage, options } = params;
 
-        // Save user message, etc. (no partial updates here; SSE engine does that)
-        await chatService.saveMessage({
-            chatId,
-            role: "user",
-            content: userMessage,
-        });
-        await chatService.updateChatTimestamp(chatId);
-
+     
         const model = options.model || this.defaultModel;
         const temperature = typeof options.temperature === "number" ? options.temperature : 0.7;
 

@@ -9,15 +9,7 @@ export class OllamaPlugin implements ProviderPlugin {
     }
 
     async prepareRequest(params: StreamParams) {
-        const { userMessage, chatService, chatId, assistantMessageId, options } = params;
-
-        // Save user message, reconstruct chat if you like, etc.
-        await chatService.saveMessage({
-            chatId,
-            role: "user",
-            content: userMessage,
-        });
-        await chatService.updateChatTimestamp(chatId);
+        const { userMessage, options } = params;
 
         const response = await fetch(`${this.baseUrl}/api/chat`, {
             method: "POST",

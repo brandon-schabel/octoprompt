@@ -11,14 +11,7 @@ export class TogetherPlugin implements ProviderPlugin {
     }
 
     async prepareRequest(params: StreamParams) {
-        const { chatId, userMessage, chatService, options } = params;
-
-        await chatService.saveMessage({
-            chatId,
-            role: "user",
-            content: userMessage,
-        });
-        await chatService.updateChatTimestamp(chatId);
+        const { userMessage, options } = params;
 
         const payload = {
             model: options.model || "Qwen/Qwen2.5-72B-Instruct-Turbo",

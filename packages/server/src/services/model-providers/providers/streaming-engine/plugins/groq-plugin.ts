@@ -11,14 +11,7 @@ export class GroqPlugin implements ProviderPlugin {
     }
 
     async prepareRequest(params: StreamParams) {
-        const { chatId, userMessage, chatService, options } = params;
-
-        await chatService.saveMessage({
-            chatId,
-            role: "user",
-            content: userMessage,
-        });
-        await chatService.updateChatTimestamp(chatId);
+        const { userMessage, options } = params;
 
         const payload = {
             model: options.model || "llama-3.1-70b-versatile",
