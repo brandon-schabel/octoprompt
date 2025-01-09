@@ -1,16 +1,16 @@
 import OpenAI from "openai/index.mjs";
 import { ReadableStream } from "stream/web";
 import { ProviderKeyService } from "./provider-key-service";
-import { streamOllama } from "./streamers/ollama";
-import { streamOpenRouter } from "./streamers/open-router";
-import { streamXai } from "./streamers/xai";
-import { streamGeminiMessage } from "./streamers/gemini";
-import { streamOpenAiLike } from "./streamers/open-ai-like";
 import { APIProviders, UnifiedModel } from "shared";
-import { streamAnthropic } from "./streamers/anthropic";
 import { StreamParams } from "./provider-types";
-import { streamGroqMessage } from "./streamers/groq";
-import { streamTogetherMessage } from "./streamers/together-ai";
+import { GeminiPlugin } from "./plugins/gemini-plugin";
+import { createSSEStream } from "./streaming-engine";
+import { AnthropicPlugin } from "./plugins/anthropic-plugin";
+import { OpenAiLikePlugin } from "./plugins/open-ai-like-plugin";
+import { TogetherPlugin } from "./plugins/together-plugin";
+import { GroqPlugin } from "./plugins/groq-plugin";
+import { OpenRouterPlugin } from "./plugins/open-router-plugin";
+import { OllamaPlugin } from "./plugins/ollama-plugin";
 
 type XAIModel = {
     id: string
@@ -198,6 +198,15 @@ export class UnifiedProviderService {
         return this.openAI;
     }
 
+    private async initializeLMStudio(): Promise<OpenAI> {
+        if (this.lmStudio) return this.lmStudio;
+
+        this.lmStudio = new OpenAI({
+            baseURL: LMSTUDIO_BASE_URL,
+        });
+        return this.lmStudio;
+    }
+
     private async initializeXAI(): Promise<OpenAI> {
         if (this.xai) return this.xai;
         const keys = await this.providerKeyService.listKeys();
@@ -301,88 +310,69 @@ export class UnifiedProviderService {
     ): Promise<ReadableStream<Uint8Array>> {
         // Initialize the required client based on provider
         switch (streamConfig.provider) {
-            case "ollama":
-                return streamOllama({ ...streamConfig, ollamaBaseUrl: OLLAMA_BASE_URL });
-
-            case "openrouter":
-                await this.initializeOpenRouter();
-                return streamOpenRouter({ ...streamConfig, openRouterApiKey: this.openRouter?.apiKey ?? '' });
-
-            case "xai":
-                await this.initializeXAI();
-
-                if (!this.xai) throw new Error("XAI client not initialized");
-
-                // @ts-ignore
-                return streamXai({ ...streamConfig, xaiClient: this.xai });
-
-            case "google_gemini": {
-                const apiKey = await this.getGeminiApiKey();
-                const modelId = streamConfig.options?.model || "models/gemini-1.5-pro";
-                return streamGeminiMessage({
-                    ...streamConfig,
-                    geminiApiKey: apiKey,
-                    geminiBaseUrl: this.geminiBaseUrl,
-                    modelId,
-                });
+            case "ollama": {
+                // return streamOllama({ ...streamConfig, ollamaBaseUrl: OLLAMA_BASE_URL });
+                const plugin = new OllamaPlugin(OLLAMA_BASE_URL);
+                return createSSEStream(plugin, streamConfig);
             }
 
-            case "lmstudio":
-                return streamOpenAiLike({
-                    ...streamConfig,
-                    provider: "lmstudio",
-                    client: this.lmStudio,
-                });
+            case "xai": {
+                const xaiClient = await this.initializeXAI();
+                // @ts-ignore
+                const plugin = new OpenAiLikePlugin(xaiClient, streamConfig.options?.model || "grok-beta");
+                return createSSEStream(plugin, streamConfig);
+            }
+
+            case "openrouter": {
+                await this.initializeOpenRouter();
+                const plugin = new OpenRouterPlugin(this.openRouter?.apiKey ?? '', this.geminiBaseUrl);
+                return createSSEStream(plugin, streamConfig);
+            }
+
+            case "google_gemini": {                
+                const apiKey = await this.getGeminiApiKey();
+                const plugin = new GeminiPlugin(apiKey, this.geminiBaseUrl, streamConfig.options?.model || "models/gemini-1.5-pro");
+                return createSSEStream(plugin, streamConfig);
+            }
+
+            case "lmstudio": {
+                const lmStudioClient = await this.initializeLMStudio();
+                // @ts-ignore
+                const plugin = new OpenAiLikePlugin(lmStudioClient, streamConfig.options?.model || "llama3");
+                return createSSEStream(plugin, streamConfig);
+            }
+
             case "anthropic": {
-                // 1. Retrieve Anthropic API key from your db or environment
                 const keys = await this.providerKeyService.listKeys();
                 const anthropicKey = keys.find((k) => k.provider === "anthropic")?.key;
                 if (!anthropicKey) {
                     throw new Error("Anthropic API key not found");
                 }
-
-                // 2. Optionally check if you want any specific version or beta
-                const anthropicVersion = "2023-10-01"; // or "2023-06-01"
-                const anthropicBeta = "claude-3.5,another-beta"; // optionally set
-
-                // 3. Return your stream from the new function
-                return streamAnthropic({
-                    ...streamConfig,
-                    anthropicApiKey: anthropicKey,
-                    anthropicVersion,
-                    anthropicBeta, // optional
-                });
+                const plugin = new AnthropicPlugin(anthropicKey, "2023-06-01");
+                return createSSEStream(plugin, streamConfig);
             }
 
             case "groq": {
                 const apiKey = await this.getGroqApiKey();
-                return streamGroqMessage({
-                    ...streamConfig,
-                    groqApiKey: apiKey,
-                    groqBaseUrl: GROQ_BASE_URL,
-                    debug: streamConfig.options.debug ?? false,
-                });
+                const plugin = new GroqPlugin(apiKey, GROQ_BASE_URL);
+                return createSSEStream(plugin, streamConfig);
             }
 
             case "together": {
                 const apiKey = await this.getTogetherApiKey();
-                return streamTogetherMessage({
-                    ...streamConfig,
-                    togetherApiKey: apiKey,
-                    togetherBaseUrl: TOGETHER_BASE_URL,
-                    debug: streamConfig.options.debug ?? false,
-                });
+                const plugin = new TogetherPlugin(apiKey, TOGETHER_BASE_URL);
+                return createSSEStream(plugin, streamConfig);
             }
 
 
             case "openai":
-            default:
+            default: {
+                // If you want to handle openai-likes:
                 const client = await this.initializeOpenAI();
-                return streamOpenAiLike({
-                    ...streamConfig,
-                    provider: "openai",
-                    client,
-                });
+                // @ts-ignore
+                const plugin = new OpenAiLikePlugin(client, "gpt-4o");
+                return createSSEStream(plugin, streamConfig);
+            }
         }
     }
 
@@ -544,7 +534,7 @@ export class UnifiedProviderService {
          * }
          */
         const data = await response.json() as TogetherModel[];
-        
+
 
         // 3. Map to your “UnifiedModel” structure
         return data.map((m) => ({
