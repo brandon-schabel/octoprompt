@@ -1,5 +1,5 @@
-import { ProviderPlugin } from "../../provider-plugin";
-import { StreamParams } from "../streaming-types";
+import type { ProviderPlugin } from "../provider-plugin";
+import type { SSEEngineParams } from "../streaming-types";
 
 interface AnthropicStreamResponse {
     type: string;
@@ -27,21 +27,21 @@ export class AnthropicPlugin implements ProviderPlugin {
         this.beta = beta;
     }
 
-    async prepareRequest(params: StreamParams) {
+    async prepareRequest(params: SSEEngineParams) {
         const { userMessage, options } = params;
 
         const body = JSON.stringify({
-            model: options.model || "claude-2",
+            model: options?.model || "claude-2",
             messages: [
                 {
                     role: "user",
                     content: userMessage,
                 },
             ],
-            max_tokens: options.max_tokens ?? 1024,
-            temperature: typeof options.temperature === "number" ? options.temperature : 1.0,
-            top_p: options.top_p ?? 1,
-            top_k: options.top_k ?? 0,
+            max_tokens: options?.max_tokens ?? 1024,
+            temperature: typeof options?.temperature === "number" ? options?.temperature : 1.0,
+            top_p: options?.top_p ?? 1,
+            top_k: options?.top_k ?? 0,
             stream: true,
         });
 
@@ -65,7 +65,7 @@ export class AnthropicPlugin implements ProviderPlugin {
             throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
         }
 
-        return response.body.getReader();
+        return response.body.getReader() as ReadableStreamDefaultReader<Uint8Array>
     }
 
     parseServerSentEvent(line: string): string | null {

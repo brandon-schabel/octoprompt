@@ -1,5 +1,6 @@
-import { ProviderPlugin } from "../../provider-plugin";
-import { StreamParams } from "../streaming-types";
+import type { ProviderPlugin } from "../provider-plugin";
+import type { SSEEngineParams } from "../streaming-types";
+
 
 export class OllamaPlugin implements ProviderPlugin {
     private baseUrl: string;
@@ -8,14 +9,14 @@ export class OllamaPlugin implements ProviderPlugin {
         this.baseUrl = baseUrl;
     }
 
-    async prepareRequest(params: StreamParams) {
+    async prepareRequest(params: SSEEngineParams) {
         const { userMessage, options } = params;
 
         const response = await fetch(`${this.baseUrl}/api/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                model: options.model || "llama3:latest",
+                model: options?.model || "llama3:latest",
                 messages: [{ role: "user", content: userMessage }],
                 stream: true,
                 ...options, // pass along other config
@@ -26,7 +27,7 @@ export class OllamaPlugin implements ProviderPlugin {
             throw new Error(`Ollama API error: ${response.statusText}`);
         }
 
-        return response.body.getReader();
+        return response.body.getReader() as ReadableStreamDefaultReader<Uint8Array>
     }
 
     parseServerSentEvent(line: string): string | null {

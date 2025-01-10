@@ -5,11 +5,11 @@ import { json } from '@bnk/router';
 import { projectsApiValidation, ApiError } from "shared";
 import { z } from "zod";
 import { FileSummaryService } from "@/services/file-summary-service";
-import { ProviderChatService } from "@/services/model-providers/chat/provider-chat-service";
+import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
 
 const projectService = new ProjectService();
 const fileSummaryService = new FileSummaryService();
-const providerChatService = new ProviderChatService();
+const unifiedProviderService = new UnifiedProviderService();
 
 router.post("/api/projects", {
     validation: projectsApiValidation.create,
@@ -173,7 +173,7 @@ router.post("/api/projects/:projectId/suggest-files", {
     console.log("userMessage", userMessage);
 
     try {
-        const stream = await providerChatService.processMessage({
+        const stream = await unifiedProviderService.processMessage({
             chatId: "fileSuggester",
             userMessage,
             provider: 'openrouter',

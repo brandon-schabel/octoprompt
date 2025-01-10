@@ -2,9 +2,9 @@ import { db } from 'shared/database'
 import { files, type ProjectFile } from 'shared/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { ProjectFile as ProjectFileType, GlobalState } from 'shared'
-import { ProviderChatService } from '@/services/model-providers/chat/provider-chat-service'
 import { matchesAnyPattern } from 'shared/src/utils/pattern-matcher'
 import { promptsMap } from '@/prompts/prompts-map'
+import { UnifiedProviderService } from './model-providers/providers/unified-provider-service'
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
     const chunks: T[][] = []
@@ -18,11 +18,12 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
  * This service now reads/writes file summaries directly in the `files` table.
  */
 export class FileSummaryService {
-    private providerChatService: ProviderChatService
+    // private providerChatService: ProviderChatService
     private concurrency = 5
+    private unifiedProviderService: UnifiedProviderService
 
     constructor() {
-        this.providerChatService = new ProviderChatService()
+        this.unifiedProviderService = new UnifiedProviderService()
     }
 
     /**
@@ -158,7 +159,7 @@ ${promptsMap.summarizationSteps}
 `
             const userMessage = fileContent.slice(0, 10000)
 
-            const stream = await this.providerChatService.processMessage({
+            const stream = await this.unifiedProviderService.processMessage({
                 chatId: 'fileSummaryChat',
                 userMessage,
                 provider: 'openrouter',

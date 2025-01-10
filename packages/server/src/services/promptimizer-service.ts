@@ -1,14 +1,11 @@
-import { ProviderChatService } from './model-providers/chat/provider-chat-service';
-
 import { promptsMap } from '../prompts/prompts-map';
-
-
+import { UnifiedProviderService } from './model-providers/providers/unified-provider-service';
 
 export class PromptimizerService {
-    private providerChatService: ProviderChatService;
+    private unifiedProviderService: UnifiedProviderService;
 
     constructor() {
-        this.providerChatService = new ProviderChatService();
+        this.unifiedProviderService = new UnifiedProviderService();
     }
 
     /**
@@ -43,7 +40,7 @@ ${promptsMap.contemplativePrompt}
 
         try {
             // Call the providerChatService to process the message
-            const stream = await this.providerChatService.processMessage({
+            const stream = await this.unifiedProviderService.processMessage({
                 chatId: 'promptimizer-chat',
                 userMessage,
                 provider: 'openrouter', // or whichever default you prefer

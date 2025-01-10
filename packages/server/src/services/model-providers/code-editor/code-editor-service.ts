@@ -2,7 +2,7 @@
 import { ProjectService } from "@/services/project-service";
 import { APIProviders, ProjectFile } from "shared";
 import { ChatService } from "../chat/chat-service";
-import { ProviderChatService } from "../chat/provider-chat-service";
+import { UnifiedProviderService } from "../providers/unified-provider-service";
 
 // Define your structure for diff-based responses:
 interface FileToEdit {
@@ -18,13 +18,11 @@ interface CodeEditResponse {
 
 export class CodeEditorService {
     private projectService: ProjectService;
-    private chatService: ChatService;
-    private providerChatService: ProviderChatService;
+    private unifiedProviderService: UnifiedProviderService;
 
     constructor() {
         this.projectService = new ProjectService();
-        this.chatService = new ChatService();
-        this.providerChatService = new ProviderChatService();
+        this.unifiedProviderService = new UnifiedProviderService();
     }
 
     /**
@@ -95,7 +93,7 @@ export class CodeEditorService {
         // 4) Use your existing "processMessage" flow
         //    We'll store the user request in the chat, then parse the resulting JSON.
         const userMessage = prompt;
-        const stream = await this.providerChatService.processMessage({
+        const stream = await this.unifiedProviderService.processMessage({
             chatId: "internal-code-edit-chat", // or dynamically create a chat
             userMessage,
             provider,

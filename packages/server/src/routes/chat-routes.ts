@@ -1,19 +1,19 @@
-import { ProviderChatService } from '@/services/model-providers/chat/provider-chat-service';
 import { UnifiedProviderService } from '@/services/model-providers/providers/unified-provider-service';
 import { json } from '@bnk/router';
 import { ApiError } from 'shared';
 import { router } from "server-router";
 import { chatApiValidation } from 'shared/src/validation/chat-api-validation';
+import { ChatService } from '@/services/model-providers/chat/chat-service';
 
-const chatAIService = new ProviderChatService();
 const unifiedProviderService = new UnifiedProviderService();
+const chatService = new ChatService();
 
 const AI_BASE_PATH = '/api/ai';
 
 router.post(`${AI_BASE_PATH}/chat`, {
     validation: chatApiValidation.create,
 }, async (_, { body }) => {
-    const stream = await chatAIService.processMessage({
+    const stream = await unifiedProviderService.processMessage({
         chatId: body.chatId,
         userMessage: body.message,
         provider: body.provider,
@@ -34,33 +34,33 @@ router.post(`${AI_BASE_PATH}/chat`, {
 router.post(`${AI_BASE_PATH}/chats`, {
     validation: chatApiValidation.createChat,
 }, async (_, { body }) => {
-    const chat = await chatAIService.chat.createChat(body.title);
+    const chat = await chatService.createChat(body.title);
     return json({ data: chat });
 });
 
 router.get(`${AI_BASE_PATH}/chats`, {}, async () => {
-    const userChats = await chatAIService.chat.getAllChats();
+    const userChats = await chatService.getAllChats();
     return json({ data: userChats });
 });
 
 router.get(`${AI_BASE_PATH}/chats/:chatId/messages`, {
     validation: chatApiValidation.getMessages,
 }, async (_, { params }) => {
-    const messages = await chatAIService.chat.getChatMessages(params.chatId);
+    const messages = await chatService.getChatMessages(params.chatId);
     return json({ data: messages });
 });
 
 router.post(`${AI_BASE_PATH}/chats/:chatId/fork`, {
     validation: chatApiValidation.forkChat,
 }, async (_, { params, body }) => {
-    const newChat = await chatAIService.chat.forkChat(params.chatId, body.excludedMessageIds);
+    const newChat = await chatService.forkChat(params.chatId, body.excludedMessageIds);
     return json({ data: newChat });
 });
 
 router.post(`${AI_BASE_PATH}/chats/:chatId/fork/:messageId`, {
     validation: chatApiValidation.forkChatFromMessage,
 }, async (_, { params, body }) => {
-    const newChat = await chatAIService.chat.forkChatFromMessage(
+    const newChat = await chatService.forkChatFromMessage(
         params.chatId,
         params.messageId,
         body.excludedMessageIds
@@ -71,21 +71,21 @@ router.post(`${AI_BASE_PATH}/chats/:chatId/fork/:messageId`, {
 router.patch(`${AI_BASE_PATH}/chats/:chatId`, {
     validation: chatApiValidation.updateChat,
 }, async (_, { params, body }) => {
-    const updatedChat = await chatAIService.chat.updateChat(params.chatId, body.title);
+    const updatedChat = await chatService.updateChat(params.chatId, body.title);
     return json({ data: updatedChat });
 });
 
 router.delete(`${AI_BASE_PATH}/chats/:chatId`, {
     validation: chatApiValidation.deleteChat,
 }, async (_, { params }) => {
-    await chatAIService.chat.deleteChat(params.chatId);
+    await chatService.deleteChat(params.chatId);
     return json({ success: true });
 });
 
 router.delete(`${AI_BASE_PATH}/messages/:messageId`, {
     validation: chatApiValidation.deleteMessage,
 }, async (_, { params }) => {
-    await chatAIService.chat.deleteMessage(params.messageId);
+    await chatService.deleteMessage(params.messageId);
     return json({ success: true });
 });
 

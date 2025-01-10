@@ -85,9 +85,3 @@ export type CreateMessageBodyGeneric<TProvider extends APIProviders> = {
     tempId?: string;
 } & ModelOptions<TProvider>;
 
-export type UnifiedModel = {
-    id: string;
-    name: string;
-    description?: string;
-};
-

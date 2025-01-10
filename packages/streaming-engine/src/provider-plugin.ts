@@ -1,12 +1,11 @@
-// packages/server/src/services/model-providers/plugins/ProviderPlugin.ts
-import { StreamParams } from "../providers/provider-types";
+import type { SSEEngineParams } from ".//streaming-types";
 
 export interface ProviderPlugin {
     /**
      * Prepare the SSE request to the provider (fetch or client call).
      * Return a raw ReadableStream or the underlying reader for SSE.
      */
-    prepareRequest(params: StreamParams): Promise<ReadableStream<Uint8Array> | ReadableStreamDefaultReader<Uint8Array>>;
+    prepareRequest(params: SSEEngineParams): Promise<ReadableStream<Uint8Array> | ReadableStreamDefaultReader<Uint8Array>>;
 
     /**
      * Given a line or chunk from the SSE, parse out the relevant text

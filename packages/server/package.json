@@ -31,6 +31,7 @@
     "better-sqlite3": "^11.7.0",
     "openai": "^4.73.1",
     "shared": "workspace:*",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@bnk/ai": "workspace:*"
   }
 }

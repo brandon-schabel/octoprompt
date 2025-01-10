@@ -1,5 +1,5 @@
-import { ProviderPlugin } from "../../provider-plugin";
-import { StreamParams } from "../streaming-types";
+import type { ProviderPlugin } from "../provider-plugin";
+import type { SSEEngineParams } from "../streaming-types";
 
 type OpenRouterStreamResponse = {
     choices: {
@@ -17,7 +17,7 @@ export class OpenRouterPlugin implements ProviderPlugin {
         this.systemMessage = systemMessage;
     }
 
-    async prepareRequest(params: StreamParams) {
+    async prepareRequest(params: SSEEngineParams) {
         const { userMessage, options } = params;
 
         // Build messages array
@@ -27,7 +27,7 @@ export class OpenRouterPlugin implements ProviderPlugin {
         }
         messages.push({ role: "user", content: userMessage });
 
-        const model = options.model || "deepseek/deepseek-chat";
+        const model = options?.model || "deepseek/deepseek-chat";
 
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -50,7 +50,7 @@ export class OpenRouterPlugin implements ProviderPlugin {
             throw new Error(`OpenRouter API error: ${response.statusText} - ${errorText}`);
         }
 
-        return response.body.getReader();
+        return response.body.getReader() as ReadableStreamDefaultReader<Uint8Array>
     }
 
     parseServerSentEvent(line: string): string | null {
