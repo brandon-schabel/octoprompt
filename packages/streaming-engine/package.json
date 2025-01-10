@@ -6,7 +6,9 @@
   "version": "1.0.0",
   "scripts": {
     "test": "bun test src/",
-    "test:watch": "bun test --watch src/"
+    "test:watch": "bun test --watch src/",
+    "prepublishOnly": "bun test",
+    "publish:streaming-engine": "bun publish --access public"
   },
   "devDependencies": {
     "bun-types": "latest",
