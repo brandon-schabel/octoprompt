@@ -8,7 +8,7 @@ import {
 import { useChatModelControl } from './use-chat-model-control';
 import { ChatMessage } from 'shared/schema';
 import { APIProviders } from 'shared/index';
-import { useGlobalStateHelpers } from '@/components/use-global-state-helpers';
+import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers';
 
 type TempChatMessage = ChatMessage & { tempId?: string };
 

@@ -11,10 +11,10 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, ScanEye } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
-import { HelpDialog } from "@/components/help-dialog"
+import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useGlobalState, } from '../components/websocket-config-context'
-import { useGlobalStateHelpers } from "./use-global-state-helpers"
+import { useGlobalState } from "@/components/global-state/websocket-config-context"
+import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)

@@ -9,7 +9,7 @@ import { SelectedFilesList, SelectedFilesListRef } from '@/components/projects/s
 import { useGetProjectFiles, useSyncProjectInterval } from '@/hooks/api/use-projects-api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { buildFileTree } from '@/components/projects/utils/projects-utils'
-import { FileViewerDialog } from '@/components/file-viewer-dialog'
+import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { Project } from 'shared/index'
 import { ProjectFile } from 'shared/schema'
@@ -21,7 +21,7 @@ import { SelectedFilesDrawer } from './selected-files-drawer'
 import { Badge } from '../ui/badge'
 import { ProjectSettingsDialog } from './project-settings-dialog'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateHelpers } from '../use-global-state-helpers'
+import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 
 export type FilePanelRef = {
     focusSearch: () => void

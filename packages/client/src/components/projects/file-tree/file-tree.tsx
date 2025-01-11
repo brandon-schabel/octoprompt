@@ -28,7 +28,7 @@ import { buildNodeContent } from '@/components/projects/utils/projects-utils'
 import clsx from 'clsx'
 import { formatModShortcut } from '@/lib/platform'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateHelpers } from '@/components/use-global-state-helpers'
+import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 

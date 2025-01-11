@@ -15,7 +15,7 @@ import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useGlobalStateHelpers } from "../use-global-state-helpers";
+import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
 
 interface ChatHeaderProps {
     onForkChat: () => void;

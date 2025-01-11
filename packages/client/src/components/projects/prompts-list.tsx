@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Eye, Pencil, Trash } from 'lucide-react'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { FileViewerDialog } from '@/components/file-viewer-dialog'
+import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { ScrollArea } from '../ui/scroll-area'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
@@ -16,7 +16,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
-import { useGlobalStateHelpers } from '../use-global-state-helpers'
+import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 
 export type PromptsListRef = {
     focusPrompts: () => void;

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useGetProjects, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
-import { FileViewerDialog } from '@/components/file-viewer-dialog'
+import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel'
 import { projectSchema } from '@/components/projects/utils/projects-utils'
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { useEditFile } from '@/hooks/api/use-code-editor-api'
 import { toast } from 'sonner'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useGlobalStateHelpers } from '@/components/use-global-state-helpers'
+import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,

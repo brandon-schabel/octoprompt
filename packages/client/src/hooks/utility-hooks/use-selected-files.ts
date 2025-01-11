@@ -1,4 +1,4 @@
-import { useGlobalStateHelpers } from '@/components/use-global-state-helpers'
+import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
 import { useCallback } from 'react'
 import { ProjectFile } from 'shared'
 

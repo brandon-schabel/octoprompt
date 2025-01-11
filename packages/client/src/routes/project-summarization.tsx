@@ -16,8 +16,8 @@ import { useGetProjectFiles, useSummarizeProjectFiles, useGetFileSummaries, useR
 import { ProjectFile } from "shared/schema"
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher"
 
-import { FileViewerDialog } from "@/components/file-viewer-dialog"
-import { useGlobalStateHelpers } from "@/components/use-global-state-helpers"
+import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
+import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
 
 /**
  * We no longer import FileSummary. The combined schema means we use ProjectFile and read the .summary field.

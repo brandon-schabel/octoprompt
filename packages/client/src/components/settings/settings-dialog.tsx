@@ -9,7 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select"
-import { useGlobalStateHelpers } from "../use-global-state-helpers"
+import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
 
 type ThemeOption = {
     label: string;

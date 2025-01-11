@@ -1,4 +1,4 @@
-import { useGlobalStateHelpers } from '@/components/use-global-state-helpers';
+import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers';
 import { useGeminiFileSearch } from '@/hooks/api/use-gemini-file-search';
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react';

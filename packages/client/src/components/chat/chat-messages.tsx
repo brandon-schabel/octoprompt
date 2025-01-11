@@ -18,7 +18,7 @@ import {
 
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useGlobalStateHelpers } from "../use-global-state-helpers";
+import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
 
 export function ChatMessages({
     chatControl,

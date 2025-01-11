@@ -1,4 +1,4 @@
-import { useGlobalStateHelpers } from '../use-global-state-helpers'
+import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 import { GenericTabManager } from './generic-tab-manager'
 
 export function ChatTabManager() {

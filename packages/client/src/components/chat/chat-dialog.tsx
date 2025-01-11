@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ModelSelector } from "./components/model-selector"
 import { APIProviders } from "shared"
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api"
-import { useGlobalStateHelpers } from "../use-global-state-helpers"
+import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
 
 type ChatDialogProps = {
     open: boolean

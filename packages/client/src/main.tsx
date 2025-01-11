@@ -5,7 +5,7 @@ import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { APIInterface } from './utils/api/api-interface'
 import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
-import { GlobalStateConfigWebSocketProvider } from './components/websocket-config-context'
+import { GlobalStateWebsocketProvider } from './components/global-state/websocket-config-context'
 
 // Initialize core services
 const queryClient = new QueryClient()
@@ -40,10 +40,10 @@ const rootElement = document.getElementById('root') as HTMLElement
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
-    <GlobalStateConfigWebSocketProvider>
+    <GlobalStateWebsocketProvider>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
-    </GlobalStateConfigWebSocketProvider>
+    </GlobalStateWebsocketProvider>
   )
 }

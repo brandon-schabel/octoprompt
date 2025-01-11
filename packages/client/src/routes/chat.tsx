@@ -9,9 +9,6 @@ import { useChatControl } from '@/components/chat/hooks/use-chat-state'
 import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
-import { ChatShortcutsPalette } from '@/components/shortcuts-palette'
-import { LinkIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,

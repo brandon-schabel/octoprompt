@@ -16,7 +16,7 @@ import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { SlidingSidebar } from '@/components/sliding-sidebar'
 import { PromptsList } from '../projects/prompts-list'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useGlobalStateHelpers } from '../use-global-state-helpers'
+import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from "@/hooks/api/use-projects-api"
 import { useEffect, useState } from "react"
 import { CreateProjectBody } from "shared/index"
-import { useGlobalStateHelpers } from "../use-global-state-helpers"
+import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
 
 type ProjectDialogProps = {
     open: boolean

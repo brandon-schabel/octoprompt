@@ -1,8 +1,8 @@
 import { useHotkeys } from "react-hotkeys-hook"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { formatModShortcut, getModKeySymbol } from "@/lib/platform"
-import { Badge } from "./ui/badge"
-import { useGlobalStateHelpers } from "./use-global-state-helpers"
+import { Badge } from "@/components/ui/badge"
+import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
 
 export type HelpDialogProps = {
     open?: boolean

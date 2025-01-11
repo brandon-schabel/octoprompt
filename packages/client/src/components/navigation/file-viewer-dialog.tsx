@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button'
 import { Edit, Save, XCircle } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs'
-import { Textarea } from './ui/textarea'
+import { Textarea } from '@/components/ui/textarea'
 import { ProjectFile } from 'shared/schema'
-import { MarkdownRenderer } from './markdown-renderer'
+import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
-import { useGlobalStateHelpers } from './use-global-state-helpers'
+import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
 
 type FileViewerDialogProps = {
     open: boolean

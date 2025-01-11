@@ -1,7 +1,7 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { APIInterface } from '@/utils/api/api-interface'
-import { AppNavbar } from "@/components/app-navbar"
+import { AppNavbar } from "@/components/navigation/app-navbar"
 import { useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {

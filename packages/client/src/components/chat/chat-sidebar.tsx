@@ -12,7 +12,7 @@ import {
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
-import { useGlobalStateHelpers } from '../use-global-state-helpers';
+import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers';
 
 type ChatSidebarProps = {
     // We no longer pass the modelControl here

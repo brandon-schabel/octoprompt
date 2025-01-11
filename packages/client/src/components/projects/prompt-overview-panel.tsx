@@ -17,11 +17,11 @@ import { formatModShortcut } from '@/lib/platform'
 
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
-import { SuggestedFilesDialog } from '../suggest-files-dialog'
+import { SuggestedFilesDialog } from '../global-state/suggest-files-dialog'
 import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from '../promptimizer-dialog'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useGlobalStateHelpers } from '../use-global-state-helpers'
+import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void

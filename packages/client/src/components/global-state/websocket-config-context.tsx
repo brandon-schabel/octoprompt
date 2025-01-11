@@ -275,7 +275,7 @@ interface BaseContextValue {
  */
 const BaseGlobalStateContext = createContext<BaseContextValue | null>(null);
 
-export interface GlobalStateConfigWebSocketProviderProps {
+export interface GlobalStateWebsocketProviderProps {
     children: ReactNode;
 }
 
@@ -285,9 +285,9 @@ export interface GlobalStateConfigWebSocketProviderProps {
  *  2. Sets up the BNK `WebSocketClientProvider` with the derived `wsConfig`.
  *  3. Provides a context value containing the globalState, plus `wsReady` flags.
  */
-export function GlobalStateConfigWebSocketProvider({
+export function GlobalStateWebsocketProvider({
     children
-}: GlobalStateConfigWebSocketProviderProps) {
+}: GlobalStateWebsocketProviderProps) {
     // 1) Inbound state + WS readiness
     const [globalState, setGlobalState] = useState<GlobalState>(
         createInitialGlobalState()
