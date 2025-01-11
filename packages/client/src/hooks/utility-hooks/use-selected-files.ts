@@ -1,11 +1,11 @@
-import { useGlobalStateContext } from '@/components/global-state-context'
+import { useGlobalStateHelpers } from '@/components/use-global-state-helpers'
 import { useCallback } from 'react'
 import { ProjectFile } from 'shared'
 
 const MAX_HISTORY_SIZE = 50
 
 export function useSelectedFiles() {
-  const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab } = useGlobalStateContext()
+  const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab } = useGlobalStateHelpers()
   const selectedFiles = activeTabState?.selectedFiles || []
   const history = activeTabState?.selectedFilesHistory ?? [[]]
   const historyIndex = activeTabState?.selectedFilesHistoryIndex ?? 0

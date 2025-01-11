@@ -1,11 +1,11 @@
+import { useGlobalStateHelpers } from "@/components/use-global-state-helpers";
 import { APIProviders } from "shared";
-import { useGlobalStateContext } from "@/components/global-state-context";
 
 export const useChatModelControl = () => {
     const {
         activeChatTabState,
         updateActiveChatTab,
-    } = useGlobalStateContext();
+    } = useGlobalStateHelpers();
 
     // Fall back to defaults if no tab is active
     const provider: APIProviders = activeChatTabState?.provider ?? 'openai';

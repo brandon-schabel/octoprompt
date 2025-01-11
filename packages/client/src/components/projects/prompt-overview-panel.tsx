@@ -14,13 +14,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { formatModShortcut } from '@/lib/platform'
-import { useGlobalStateContext } from '../global-state-context'
+
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from '../promptimizer-dialog'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
+import { useGlobalStateHelpers } from '../use-global-state-helpers'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -35,7 +36,7 @@ interface PromptOverviewPanelProps {
 
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
     ({ selectedProjectId, fileMap, promptData, className }, ref) => {
-        const { state, updateActiveProjectTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
+        const { state, updateActiveProjectTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
         const selectedPrompts = activeTabState?.selectedPrompts || []
         const globalUserPrompt = activeTabState?.userPrompt || ''
         const contextLimit = activeTabState?.contextLimit || 128000

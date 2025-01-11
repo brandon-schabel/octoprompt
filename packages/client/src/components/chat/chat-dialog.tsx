@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useGlobalStateContext } from "../global-state-context"
+
 import { ModelSelector } from "./components/model-selector"
 import { APIProviders } from "shared"
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api"
+import { useGlobalStateHelpers } from "../use-global-state-helpers"
 
 type ChatDialogProps = {
     open: boolean
@@ -18,12 +19,11 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
     const [copyExisting, setCopyExisting] = useState(false)
     const [provider, setProvider] = useState<APIProviders>("openai")
     const [currentModel, setCurrentModel] = useState<string>("")
-    const { createChatTab } = useGlobalStateContext()
     const createChatMutation = useCreateChat();
     const {
         activeChatTabState,
         updateActiveChatTab,
-    } = useGlobalStateContext();
+    } = useGlobalStateHelpers();
 
     const truncateText = (text: string, maxLength = 24) => {
         return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;

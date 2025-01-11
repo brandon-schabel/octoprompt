@@ -18,10 +18,10 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { SelectedFilesDrawer } from './selected-files-drawer'
-import { useGlobalStateContext } from '../global-state-context'
 import { Badge } from '../ui/badge'
 import { ProjectSettingsDialog } from './project-settings-dialog'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
+import { useGlobalStateHelpers } from '../use-global-state-helpers'
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -54,7 +54,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const fileTreeRef = useRef<FileTreeRef>(null)
     const selectedFilesListRef = useRef<SelectedFilesListRef>(null)
     const promptsRef = useRef<HTMLDivElement>(null)
-    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateContext()
+    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
     const contextLimit = activeTabState?.contextLimit || 128000
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'

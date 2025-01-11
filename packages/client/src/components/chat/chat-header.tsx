@@ -6,18 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useChatControl } from "./hooks/use-chat-state";
-import { useGlobalStateContext } from "@/components/global-state-context";
 import { useNavigate } from "@tanstack/react-router"
 import { buildPromptContent } from "@/components/projects/utils/projects-utils";
 import { useGetProjectPrompts } from "@/hooks/api/use-prompts-api";
 import { ProjectFile } from "shared/schema";
 import { useGetProjectFiles } from "@/hooks/api/use-projects-api";
 import { useGetChats } from "@/hooks/api/use-chat-ai-api";
-import { Input } from "../ui/input";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
-import { Separator } from "@/components/ui/separator";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
+import { useGlobalStateHelpers } from "../use-global-state-helpers";
 
 interface ChatHeaderProps {
     onForkChat: () => void;
@@ -51,7 +49,7 @@ export function ChatHeader({
         linkChatTabToProjectTab,
         setActiveProjectTab,
         unlinkChatTab,
-    } = useGlobalStateContext();
+    } = useGlobalStateHelpers();
 
     const {
         provider,

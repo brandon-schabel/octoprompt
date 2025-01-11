@@ -9,7 +9,6 @@ import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { buildPromptContent } from '@/components/projects/utils/projects-utils'
 import { ProjectFile } from 'shared/schema'
 import { toast } from 'sonner'
-import { useGlobalStateContext } from '@/components/global-state-context'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { linkSettingsSchema, LinkSettings } from 'shared'
 import { Copy, Folder, FolderOpen, FolderOpenIcon } from 'lucide-react'
@@ -17,13 +16,14 @@ import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { SlidingSidebar } from '@/components/sliding-sidebar'
 import { PromptsList } from '../projects/prompts-list'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
+import { useGlobalStateHelpers } from '../use-global-state-helpers'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string
 }
 
 export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarProps) {
-    const { state, updateChatLinkSettings, unlinkChatTab, activeChatTabState } = useGlobalStateContext()
+    const { state, updateChatLinkSettings, unlinkChatTab, activeChatTabState } = useGlobalStateHelpers()
     const linkedProjectState = state?.projectTabs[linkedProjectTabId]
     const [tabValue, setTabValue] = useState('files')
 

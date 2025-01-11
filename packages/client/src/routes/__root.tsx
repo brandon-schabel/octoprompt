@@ -62,7 +62,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootComponent() {
+
+
+
   return (
+
     <div className="h-screen w-screen flex flex-col">
       <header className="flex-none">
         <AppNavbar />

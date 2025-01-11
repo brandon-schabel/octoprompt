@@ -12,8 +12,9 @@ import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, ScanEye }
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/help-dialog"
-import { useGlobalStateContext } from "./global-state-context"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
+import { useGlobalState, } from '../components/websocket-config-context'
+import { useGlobalStateHelpers } from "./use-global-state-helpers"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -28,13 +29,13 @@ export function AppNavbar() {
     const isOnProjectsRoute = matches.some(match => match.routeId === "/projects")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
-    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey } = useGlobalStateContext()
+    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, } = useGlobalStateHelpers()
     const selectedProjectId = activeTabState?.selectedProjectId
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
     const { api } = useApi()
-    const { state, } = useGlobalStateContext()
+    const state = useGlobalState()
 
     const globalTheme = state?.settings.theme
 

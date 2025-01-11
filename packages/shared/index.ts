@@ -1,4 +1,3 @@
-export * from './schema';
 export type {
     InferSelectModel,
     InferInsertModel,
@@ -36,4 +35,7 @@ export {
 // export type { ApiValidationSchemaRecord } from './src/types/api-validation-schema-record';
 export { ApiError } from './src/error/api-error';
 export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher';
-export type { ChatAppState, ChatClientMessage, IncomingServerMessage, InitialStateServerMessage, OutgoingClientMessage, StateUpdateServerMessage } from './src/types/chat-types'
+// export type { ChatAppState, ChatClientMessage, IncomingServerMessage, InitialStateServerMessage, OutgoingClientMessage, StateUpdateServerMessage } from './src/types/chat-types'
+
+export * from './schema'
+export * from './src/types/global-websocket-types';

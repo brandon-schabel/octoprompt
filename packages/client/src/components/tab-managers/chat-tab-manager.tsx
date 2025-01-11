@@ -1,15 +1,15 @@
-import { useGlobalStateContext } from '../global-state-context'
+import { useGlobalStateHelpers } from '../use-global-state-helpers'
 import { GenericTabManager } from './generic-tab-manager'
 
 export function ChatTabManager() {
     const {
         state,
-        wsReady,
+        isOpen,
         createChatTab,
         setActiveChatTab,
         updateChatTab,
         deleteChatTab,
-    } = useGlobalStateContext()
+    } = useGlobalStateHelpers()
 
     const tabs = state?.chatTabs ?? {}
     const activeTabId = state?.chatActiveTabId ?? null
@@ -19,7 +19,7 @@ export function ChatTabManager() {
             // @ts-ignore - TODO: fix types, need to make sure the link icon is not specific to projects
             tabs={tabs}
             activeTabId={activeTabId}
-            isReady={wsReady}
+            isReady={isOpen}
             onCreateTab={createChatTab}
             onSetActiveTab={setActiveChatTab}
             onRenameTab={(tabId, newName) => updateChatTab(tabId, { displayName: newName })}

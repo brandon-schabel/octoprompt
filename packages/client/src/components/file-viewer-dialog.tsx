@@ -7,9 +7,9 @@ import { atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { Textarea } from './ui/textarea'
 import { ProjectFile } from 'shared/schema'
 import { MarkdownRenderer } from './markdown-renderer'
-import { useGlobalSettings } from '@/components/global-state-context'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
+import { useGlobalStateHelpers } from './use-global-state-helpers'
 
 type FileViewerDialogProps = {
     open: boolean
@@ -46,7 +46,9 @@ export function FileViewerDialog({
     const [isEditingFile, setIsEditingFile] = useState(false)
     const [editedContent, setEditedContent] = useState<string>('')
     const [showRawMarkdown, setShowRawMarkdown] = useState(false)
-    const { settings } = useGlobalSettings()
+    const { state } = useGlobalStateHelpers()
+    const settings = state.settings
+
     const isDarkMode = settings.theme === "dark"
     const selectedTheme = isDarkMode ? settings.codeThemeDark : settings.codeThemeLight
     const { copyToClipboard } = useCopyClipboard()

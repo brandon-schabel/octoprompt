@@ -13,12 +13,15 @@ import "@/routes/code-editor-routes"
 import "@/routes/promptimizer-routes"
 
 import { globalStateSchema } from "shared";
-import { wsManager, WebSocketData } from "@/websocket/websocket-manager";
 import { json } from "@bnk/router";
 import { WatchersManager } from "@/services/watchers-manager";
 import { FileSyncService } from "@/services/file-sync-service";
 import { FileSummaryService } from "@/services/file-summary-service";
 import { ProjectService } from "@/services/project-service";
+import { getState, setState } from "./src/websocket/websocket-config";
+import { bnkWsManager } from "./src/websocket/websocket-manager";
+import { logger } from "src/utils/logger";
+
 
 // built client files
 const CLIENT_PATH = join(__dirname, "client-dist");
@@ -46,7 +49,7 @@ const watchersManager = new WatchersManager(
 export const instantiateServer = ({
   port = PORT
 }: ServerConfig = {}): Server => {
-  const server: Server = serve<WebSocketData>({
+  const server: Server = serve<{ clientId: string }>({
     port,
     async fetch(req: Request): Promise<Response | undefined> {
       const url = new URL(req.url);
@@ -76,7 +79,7 @@ export const instantiateServer = ({
       if (url.pathname === '/api/state') {
         if (req.method === 'GET') {
           try {
-            const state = await wsManager.getStateFromDB();
+            const state = await getState();
             return Response.json(state);
           } catch (error) {
             console.error('Error fetching state:', error);
@@ -90,14 +93,14 @@ export const instantiateServer = ({
         if (req.method === 'POST') {
           try {
             const body = await req.json();
-            const currentState = await wsManager.getStateFromDB();
+            const currentState = await getState();
             const { key, value } = body as { key: string; value: unknown };
 
             const newState = { ...currentState, [key]: value };
             const validated = globalStateSchema.parse(newState);
 
-            await wsManager.updateStateInDB(validated);
-            wsManager.broadcastState(validated);
+            await setState(validated);
+            bnkWsManager.broadcastState();
 
             return Response.json(validated);
           } catch (error) {
@@ -138,10 +141,26 @@ export const instantiateServer = ({
     },
 
     websocket: {
-      open: (ws) => wsManager.handleOpen(ws),
-      close: (ws) => wsManager.handleClose(ws),
-      message: (ws, message) => wsManager.handleMessage(ws, message.toString()),
-    }
+      // BNK usage
+      open(ws) {
+        logger.debug("New WS connection", { clientId: ws.data.clientId });
+        bnkWsManager.handleOpen(ws);
+      },
+      close(ws) {
+        logger.debug("WS closed", { clientId: ws.data.clientId });
+        bnkWsManager.handleClose(ws);
+      },
+      async message(ws, rawMessage) {
+        try {
+          await bnkWsManager.handleMessage(ws, rawMessage.toString())
+        } catch (err) {
+          logger.error("Error handling WS message:", err);
+        }
+
+        // Broadcast the state to all connected clients
+        await bnkWsManager.broadcastState()
+      },
+    },
   });
 
 

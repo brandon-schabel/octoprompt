@@ -15,16 +15,17 @@ import {
     PopoverTrigger,
     PopoverContent,
 } from "@/components/ui/popover";
-import { useGlobalStateContext } from "../global-state-context";
+
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
+import { useGlobalStateHelpers } from "../use-global-state-helpers";
 
 export function ChatMessages({
     chatControl,
 }: {
     chatControl: ReturnType<typeof useChatControl>;
 }) {
-    const { state } = useGlobalStateContext();
+    const { state } = useGlobalStateHelpers();
     const settings = state?.settings;
     const isDarkMode = settings?.theme === "dark";
     const selectedTheme = isDarkMode

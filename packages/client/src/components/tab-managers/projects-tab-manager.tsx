@@ -1,15 +1,16 @@
-import { useGlobalStateContext } from '../global-state-context'
+
+import { useGlobalStateHelpers } from '../use-global-state-helpers'
 import { GenericTabManager } from './generic-tab-manager'
 
 export function ProjectsTabManager() {
   const {
     state,
-    wsReady,
+    isOpen,
     createProjectTab,
     setActiveProjectTab,
     updateProjectTab,
     deleteProjectTab,
-  } = useGlobalStateContext()
+  } = useGlobalStateHelpers()
 
   const tabs = state?.projectTabs ?? {}
   const activeTabId = state?.projectActiveTabId ?? null
@@ -18,7 +19,7 @@ export function ProjectsTabManager() {
     <GenericTabManager
       tabs={tabs}
       activeTabId={activeTabId}
-      isReady={wsReady}
+      isReady={isOpen}
       onCreateTab={createProjectTab}
       onSetActiveTab={setActiveProjectTab}
       onRenameTab={(tabId, newName) => updateProjectTab(tabId, { displayName: newName })}

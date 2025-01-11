@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from "@/hooks/api/use-projects-api"
 import { useEffect, useState } from "react"
 import { CreateProjectBody } from "shared/index"
-import { useGlobalStateContext } from "../global-state-context"
+import { useGlobalStateHelpers } from "../use-global-state-helpers"
 
 type ProjectDialogProps = {
     open: boolean
@@ -23,7 +23,7 @@ type ProjectDialogProps = {
 
 export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogProps) {
     const navigate = useNavigate()
-    const { updateActiveProjectTab: updateActiveTab } = useGlobalStateContext()
+    const { updateActiveProjectTab: updateActiveTab } = useGlobalStateHelpers()
     const [formData, setFormData] = useState<CreateProjectBody>({
         name: "",
         description: "",

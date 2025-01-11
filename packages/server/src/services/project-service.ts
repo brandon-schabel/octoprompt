@@ -12,7 +12,10 @@ import {
 import { FileSyncService } from './file-sync-service';
 import { FileSummaryService } from './file-summary-service';
 import { db } from "shared/database";
-import { wsManager } from "@/websocket/websocket-manager";
+// import { wsManager } from "@/websocket/websocket-manager";
+import { bnkWsManager } from "../websocket/websocket-manager";
+import { getState } from "@/websocket/websocket-config";
+
 
 const fileSyncService = new FileSyncService();
 const fileSummaryService = new FileSummaryService();
@@ -100,7 +103,7 @@ export class ProjectService {
             throw new Error('No files found for project');
         }
 
-        const globalState = await wsManager.getStateFromDB();
+        const globalState = await getState()
         await fileSummaryService.forceSummarizeFiles(projectId, allFiles, globalState);
     }
 
@@ -149,7 +152,7 @@ export class ProjectService {
             return { included: 0, skipped: 0, message: "No matching files found" };
         }
 
-        const globalState = await wsManager.getStateFromDB();
+        const globalState = await getState();
         const result = await fileSummaryService.summarizeFiles(
             projectId,
             selectedFiles,

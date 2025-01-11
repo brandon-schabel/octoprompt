@@ -13,10 +13,10 @@ import { ProjectFile } from 'shared/schema'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { Button } from '@/components/ui/button'
-import { useGlobalStateContext } from '@/components/global-state-context'
 import { useEditFile } from '@/hooks/api/use-code-editor-api'
 import { toast } from 'sonner'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
+import { useGlobalStateHelpers } from '@/components/use-global-state-helpers'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
@@ -32,9 +32,10 @@ function ProjectsPage() {
         state,
         activeProjectTabState: activeTabState,
         createProjectTab: createNewTab,
-        wsReady,                      // track readiness
+        // wsReady,                      // track readiness
+        isOpen,
         updateActiveProjectTabStateKey: updateActiveTabStateKey,
-    } = useGlobalStateContext()
+    } = useGlobalStateHelpers()
     const [aiPrompt, setAiPrompt] = useState('')
     const aiCodeEditMutation = useEditFile()
 
@@ -109,12 +110,12 @@ function ProjectsPage() {
         },
     })
     useEffect(() => {
-        if (!wsReady) return // skip if WebSocket not ready
+        if (!isOpen) return // skip if WebSocket not ready
         if (!activeTabState) return
         if (!activeTabState.selectedProjectId && projects?.projects?.length) {
             updateActiveTabStateKey('selectedProjectId', projects.projects[0].id)
         }
-    }, [wsReady, activeTabState, projects, updateActiveTabStateKey])
+    }, [isOpen, activeTabState, projects, updateActiveTabStateKey])
 
     // Load the project form whenever selectedProjectId changes
     useEffect(() => {

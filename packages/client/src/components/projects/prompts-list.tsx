@@ -9,7 +9,6 @@ import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
 import { formatModShortcut } from '@/lib/platform'
 import { ProjectFile } from 'shared'
-import { useGlobalStateContext } from '@/components/global-state-context'
 import { useGetProjectPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
@@ -17,6 +16,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
+import { useGlobalStateHelpers } from '../use-global-state-helpers'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
@@ -32,7 +32,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     className = '',
 }, ref) => {
     // Access global state
-    const { state, updateProjectTabState } = useGlobalStateContext()
+    const { state, updateProjectTabState } = useGlobalStateHelpers()
     const projectTab = state?.projectTabs[projectTabId]
     const selectedPrompts = projectTab?.selectedPrompts || []
     const selectedProjectId = projectTab?.selectedProjectId || ''

@@ -3,11 +3,9 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { APIInterface } from './utils/api/api-interface'
-import { Toaster } from 'sonner'
 import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
-import { GlobalStateProvider } from './components/global-state-context'
+import { GlobalStateConfigWebSocketProvider } from './components/websocket-config-context'
 
 // Initialize core services
 const queryClient = new QueryClient()
@@ -15,13 +13,10 @@ const apiInterface = new APIInterface(
   SERVER_HTTP_ENDPOINT
 )
 
-
 // Define the router context interface
 interface RouterContext {
   api: APIInterface
 }
-
-const test = 'test'
 
 // Create router instance with context
 const router = createRouter<typeof routeTree, "never", true>({
@@ -45,16 +40,10 @@ const rootElement = document.getElementById('root') as HTMLElement
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
-    <QueryClientProvider client={queryClient}>
-      <GlobalStateProvider>
+    <GlobalStateConfigWebSocketProvider>
+      <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-        {/* {process.env.NODE_ENV === 'development' && <ReactQueryDevtools
-          initialIsOpen={false}
-          position='bottom'
-          buttonPosition='bottom-left'
-        />} */}
-        <Toaster />
-      </GlobalStateProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </GlobalStateConfigWebSocketProvider>
   )
 }

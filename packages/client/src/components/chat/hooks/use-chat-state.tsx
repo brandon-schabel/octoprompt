@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     useCreateChat,
     useGetMessages,
     useSendMessage,
     useForkChat,
 } from '@/hooks/api/use-chat-ai-api';
-import { useGlobalStateContext } from '@/components/global-state-context';
 import { useChatModelControl } from './use-chat-model-control';
 import { ChatMessage } from 'shared/schema';
 import { APIProviders } from 'shared/index';
+import { useGlobalStateHelpers } from '@/components/use-global-state-helpers';
 
 type TempChatMessage = ChatMessage & { tempId?: string };
 
@@ -18,7 +18,7 @@ export function useChatControl() {
         updateActiveChatTab,
         wsReady,
         state
-    } = useGlobalStateContext();
+    } = useGlobalStateHelpers();
 
     // If you'd like to keep a local "pending" queue that hasn't yet been
     // committed to the global state, you can do so here:

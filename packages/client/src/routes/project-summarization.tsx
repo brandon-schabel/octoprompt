@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useCurrentProjectTabState, useGlobalSettings } from "@/components/global-state-context"
 import {
     Card,
     CardHeader,
@@ -18,6 +17,7 @@ import { ProjectFile } from "shared/schema"
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher"
 
 import { FileViewerDialog } from "@/components/file-viewer-dialog"
+import { useGlobalStateHelpers } from "@/components/use-global-state-helpers"
 
 /**
  * We no longer import FileSummary. The combined schema means we use ProjectFile and read the .summary field.
@@ -125,8 +125,11 @@ function PatternList({
 }
 
 function ProjectSummarizationSettingsPage() {
-    const { settings, updateSettings } = useGlobalSettings()
-    const { selectedProjectId } = useCurrentProjectTabState()
+    const { updateSettings, state } = useGlobalStateHelpers()
+    const settings = state.settings
+    const projectActiveTabId = state.projectActiveTabId
+    const selectedProjectId = projectActiveTabId && state.projectTabs[projectActiveTabId]?.selectedProjectId
+
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
     const [expandedSummaryFileId, setExpandedSummaryFileId] = useState<string | null>(null)
 

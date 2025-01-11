@@ -28,7 +28,7 @@ import { buildNodeContent } from '@/components/projects/utils/projects-utils'
 import clsx from 'clsx'
 import { formatModShortcut } from '@/lib/platform'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateContext } from '@/components/global-state-context'
+import { useGlobalStateHelpers } from '@/components/use-global-state-helpers'
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 
@@ -84,7 +84,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
     onViewFile,
     projectRoot,
 }, ref) => {
-    const { activeProjectTabState: activeTabState } = useGlobalStateContext()
+    const { activeProjectTabState: activeTabState } = useGlobalStateHelpers()
     const selectedFiles = activeTabState?.selectedFiles || []
     const resolveImports = activeTabState?.resolveImports || false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
@@ -500,7 +500,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
                 ))
             }
         },
-        { enabled: isFocused }, 
+        { enabled: isFocused },
         [visibleItems, focusedIndex, setSelectedFiles, isFocused]
     )
 

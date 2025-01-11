@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
-import { useGlobalStateContext } from "../global-state-context"
 import { Theme } from "shared/src/global-state/global-state-schema"
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import {
@@ -10,6 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select"
+import { useGlobalStateHelpers } from "../use-global-state-helpers"
 
 type ThemeOption = {
     label: string;
@@ -32,7 +32,7 @@ type SettingsDialogProps = {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const { state, updateGlobalStateKey } = useGlobalStateContext()
+    const { state, updateGlobalStateKey } = useGlobalStateHelpers()
     const isDarkMode = state?.settings.theme === 'dark'
     const settings = state?.settings
     const codeLightTheme = settings?.codeThemeLight ?? 'atomOneLight'

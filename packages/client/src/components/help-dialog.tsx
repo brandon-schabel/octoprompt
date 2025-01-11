@@ -2,8 +2,7 @@ import { useHotkeys } from "react-hotkeys-hook"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
 import { formatModShortcut, getModKeySymbol } from "@/lib/platform"
 import { Badge } from "./ui/badge"
-import { useCurrentChatTabState } from "./global-state-context"
-import { Button } from "./ui/button"
+import { useGlobalStateHelpers } from "./use-global-state-helpers"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -11,13 +10,25 @@ export type HelpDialogProps = {
 }
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
-    const chatTabState = useCurrentChatTabState();
-    const { provider, model, } = chatTabState
-
+    // const chatTabState = useCurrentChatTabState();
+    const { state } = useGlobalStateHelpers()
     useHotkeys("mod+/", (e) => {
         e.preventDefault()
         onOpenChange?.(!open)
     })
+
+    const chatTabStateTabId = state.chatActiveTabId
+
+    if (!chatTabStateTabId) return null
+    const chatTabState = chatTabStateTabId && state.chatTabs[chatTabStateTabId]
+
+
+    if (!chatTabState) return null
+
+
+    const { provider, model, } = chatTabState
+
+
 
     const modKey = getModKeySymbol()
 
