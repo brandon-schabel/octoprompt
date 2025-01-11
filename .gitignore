@@ -184,3 +184,5 @@ dist.zip
 */client-dist
 client-dist
 sqlite.db
+
+*.db

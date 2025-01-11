@@ -1,0 +1,13 @@
+{
+    "name": "websocket-example-server",
+    "version": "1.0.0",
+    "main": "src/index.ts",
+    "type": "module",
+    "scripts": {
+        "dev": "bun run src/index.ts"
+    },
+    "dependencies": {
+        "@bnk/websocket-manager-react": "^1.0.5",
+        "shared": "workspace:*"
+    }
+}

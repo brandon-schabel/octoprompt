@@ -25,5 +25,5 @@
       "shared/*": ["../shared/*"]
     }
   },
-  "include": ["src", "server-router.ts", "server.ts", "build.ts", "drizzle.config.ts", "../shared/database.ts"]
+  "include": ["src", "server-router.ts", "server.ts", "build.ts", "drizzle.config.ts", "../shared/database.ts", "../websocket-manager/generic-websocket-manager.ts", "../websocket-manager/project-tab-handlers.ts", "../websocket-manager/usage-example.ts", "../websocket-manager/websocket-types.ts"]
 }

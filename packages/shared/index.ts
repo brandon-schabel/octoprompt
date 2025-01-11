@@ -36,3 +36,4 @@ export {
 // export type { ApiValidationSchemaRecord } from './src/types/api-validation-schema-record';
 export { ApiError } from './src/error/api-error';
 export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher';
+export type { ChatAppState, ChatClientMessage, IncomingServerMessage, InitialStateServerMessage, OutgoingClientMessage, StateUpdateServerMessage } from './src/types/chat-types'

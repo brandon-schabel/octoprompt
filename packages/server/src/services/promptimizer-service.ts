@@ -46,7 +46,7 @@ ${promptsMap.contemplativePrompt}
                 provider: 'openrouter', // or whichever default you prefer
                 options: {
                     model: 'deepseek/deepseek-chat',
-                    max_tokens: 512,
+                    max_tokens: 2048,
                     temperature: 0.2,
                 },
                 systemMessage: systemPrompt,
