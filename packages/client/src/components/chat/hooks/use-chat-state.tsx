@@ -16,8 +16,7 @@ export function useChatControl() {
     const {
         activeChatTabState,
         updateActiveChatTab,
-        wsReady,
-        state
+        isOpen,
     } = useGlobalStateHelpers();
 
     // If you'd like to keep a local "pending" queue that hasn't yet been
@@ -173,7 +172,7 @@ export function useChatControl() {
     }
 
     return {
-        wsReady,
+        isOpen,
         chatId,
         modelControl,
         messages,
