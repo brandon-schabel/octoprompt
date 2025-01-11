@@ -1,10 +1,9 @@
 {
-  "name": "octo-prompt",
+  "name": "octoprompt",
   "module": "index.ts",
   "type": "module",
   "workspaces": [
-    "packages/*",
-    "packages/websocket-react-example/*"
+    "packages/*"
   ],
   "devDependencies": {
     "@types/bun": "latest"
@@ -13,7 +12,6 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@bnk/router": "1.0.5",
-    "@bnk/websocket-manager-react": "workspace:*"
+    "@bnk/router": "1.0.5"
   }
 }
