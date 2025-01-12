@@ -92,7 +92,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
             return
         }
 
-        copyToClipboard(content, {
+        await copyToClipboard(content, {
             successMessage: 'Linked content copied to clipboard!',
             errorMessage: 'Failed to copy linked content.',
         })

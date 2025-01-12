@@ -18,8 +18,8 @@
   "devDependencies": {
     "bun-types": "latest",
     "drizzle-kit": "^0.28.1",
-    "drizzle-orm": "^0.36.3",
-    "typescript": "^5.7.2"
+    "drizzle-orm": "^0.36.4",
+    "typescript": "^5.7.3"
   },
   "peerDependencies": {
     "drizzle-orm": "^0.36.3"
@@ -30,9 +30,9 @@
     "@bnk/websocket-manager": "1.0.0",
     "@types/archiver": "^6.0.3",
     "archiver": "^7.0.1",
-    "better-sqlite3": "^11.7.0",
-    "openai": "^4.73.1",
+    "better-sqlite3": "^11.7.2",
+    "openai": "^4.78.1",
     "shared": "workspace:*",
-    "zod": "^3.23.8"
+    "zod": "^3.24.1"
   }
 }

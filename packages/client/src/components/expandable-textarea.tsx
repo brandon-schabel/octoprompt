@@ -23,15 +23,17 @@ type ExpandableTextareaProps = {
   placeholder?: string
   className?: string
   title?: string
+  ref?: React.Ref<HTMLTextAreaElement>
 }
 
-export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableTextareaProps>(({
+export const ExpandableTextarea = ({
   value,
   onChange,
   placeholder,
   className,
   title = "Edit Text",
-}, ref) => {
+  ref
+}: ExpandableTextareaProps) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [expandedValue, setExpandedValue] = useState(value)
   const internalRef = useRef<HTMLTextAreaElement | null>(null)
@@ -196,4 +198,4 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
       </Dialog>
     </div>
   )
-})
+}

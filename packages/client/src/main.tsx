@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { APIInterface } from './utils/api/api-interface'
 import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
 import { GlobalStateWebsocketProvider } from './components/global-state/websocket-config-context'
+import { Toaster } from './components/ui/sonner'
 
 // Initialize core services
 const queryClient = new QueryClient()
@@ -43,6 +44,7 @@ if (!rootElement.innerHTML) {
     <GlobalStateWebsocketProvider>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
+        <Toaster />
       </QueryClientProvider>
     </GlobalStateWebsocketProvider>
   )
