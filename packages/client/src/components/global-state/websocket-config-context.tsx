@@ -1,17 +1,11 @@
 import React, {
     createContext,
     useMemo,
-    useContext,
-    type ReactNode,
     useState,
-    SetStateAction,
-    Dispatch,
+    useRef,
+    useContext,
 } from "react";
-import {
-    useWebSocketClient,
-    WebSocketClientProvider,
-    type ClientWebSocketManagerConfig,
-} from "@bnk/websocket-manager-react";
+import { ClientWebSocketManager, ClientWebSocketManagerConfig } from "@bnk/client-websocket-manager"
 import {
     globalStateSchema,
     createInitialGlobalState
@@ -21,13 +15,15 @@ import type {
     GlobalState,
 } from "shared";
 import { SERVER_WS_ENDPOINT } from "@/constants/server-constants";
-
+import { useClientWebSocket } from "@bnk/react-websocket-manager";
+export type GlobalWebSocketConfig = ClientWebSocketManagerConfig<InboundMessage, InboundMessage>
+export type GlobalMessageHandlers = GlobalWebSocketConfig["messageHandlers"]
 
 const createReactMessageHandlers = ({
     setGlobalState,
 }: {
     setGlobalState: React.Dispatch<React.SetStateAction<GlobalState>>
-}): ClientWebSocketManagerConfig<InboundMessage, InboundMessage>["messageHandlers"] => {
+}): GlobalMessageHandlers => {
     return ({
         /**
          * Outbound from server -> client, updates entire GlobalState
@@ -123,6 +119,7 @@ const createReactMessageHandlers = ({
          * Project tab: set which tab is active
          */
         set_active_project_tab: (msg) => {
+            console.log("[Client] set_active_project_tab", msg);
             setGlobalState((prev) => {
                 if (!prev.projectTabs[msg.tabId]) {
                     console.warn(
@@ -255,112 +252,69 @@ const createReactMessageHandlers = ({
 }
 
 
-/**
- * We store these items in context so children can access them.
- */
 interface BaseContextValue {
     globalState: GlobalState;
-    wsReady: boolean;
-    setWsReady: Dispatch<SetStateAction<boolean>>;
-    /**
-     * The entire BNK manager config for the WebSocket, so children (optional)
-     * can see the URL, debug mode, or override messageHandlers if desired.
-     */
-    wsConfig: ClientWebSocketManagerConfig<InboundMessage, InboundMessage>;
+    isOpen: boolean;
+    wsClient: ClientWebSocketManager<InboundMessage, InboundMessage>;
 }
 
-/**
- * We’ll store the base global state in here so any child can call
- * `useContext(BaseGlobalStateContext)`.
- */
 const BaseGlobalStateContext = createContext<BaseContextValue | null>(null);
 
-export interface GlobalStateWebsocketProviderProps {
-    children: ReactNode;
-}
+export function GlobalStateWebsocketProvider({ children }: { children: React.ReactNode }) {
+    const [globalState, setGlobalState] = useState<GlobalState>(createInitialGlobalState());
+    const [isOpen, setIsOpen] = useState(false);
 
-/**
- * This is the top-level provider that:
- *  1. Maintains `globalState` in a React `useState`.
- *  2. Sets up the BNK `WebSocketClientProvider` with the derived `wsConfig`.
- *  3. Provides a context value containing the globalState, plus `wsReady` flags.
- */
-export function GlobalStateWebsocketProvider({
-    children
-}: GlobalStateWebsocketProviderProps) {
-    // 1) Inbound state + WS readiness
-    const [globalState, setGlobalState] = useState<GlobalState>(
-        createInitialGlobalState()
-    );
-    const [wsReady, setWsReady] = useState(false);
+    // Only create the manager once. The ref ensures it never re-instantiates.
+    const managerRef = useRef<ClientWebSocketManager<InboundMessage, InboundMessage> | null>(null);
 
-    // 2) Generate handlers once, using React’s memo
-    const messageHandlers = useMemo<
-        ClientWebSocketManagerConfig<InboundMessage, InboundMessage>["messageHandlers"]
-    >(() => createReactMessageHandlers({ setGlobalState }), [setGlobalState]);
+    const messageHandlers = createReactMessageHandlers({ setGlobalState });
 
-    // 3) Create a BNK config object to pass to the WebSocketClientProvider
-    const wsConfig = useMemo<ClientWebSocketManagerConfig<InboundMessage, InboundMessage>>(
-        () => ({
+    // Create it once
+    if (!managerRef.current) {
+        managerRef.current = new ClientWebSocketManager<InboundMessage, InboundMessage>({
             url: SERVER_WS_ENDPOINT,
-            debug: false,
-            messageHandlers,
             onOpen: () => {
-                setWsReady(true);
-                console.log("[Client] WebSocket opened!");
-            },
-            onClose: () => {
-                setWsReady(false);
-                console.log("[Client] WebSocket closed!");
-            },
-            onError: (err) => {
-                console.error("[Client] WebSocket error:", err);
-            }
-        }),
-        [messageHandlers]
-    );
+                console.log("[Client] WebSocket opened!")
 
-    // 4) We provide BNK’s WebSocket context, plus our own base context
-    //    so that any descendant can call `useGlobalState()`.
-    const baseValue: BaseContextValue = {
-        globalState,
-        wsReady,
-        setWsReady,
-        wsConfig
-    };
+                setIsOpen(!isOpen)
+
+            },
+            onClose: () => console.log("[Client] WebSocket closed!"),
+            onError: (err) => console.error("[Client] WebSocket error:", err),
+            messageHandlers: messageHandlers
+        });
+    }
+
+    const { isOpen: isBanana, manager: wsClient } = useClientWebSocket<InboundMessage, InboundMessage>({
+        manager: managerRef.current,
+        url: SERVER_WS_ENDPOINT,
+    });
+
+    console.log({ isBanana, isOpen })
+
+    const baseValue: BaseContextValue = useMemo(() => {
+        if (!managerRef.current) {
+            throw new Error("Manager not initialized");
+        }
+
+        return {
+            globalState,
+            isOpen,
+            wsClient: managerRef.current,
+        };
+    }, [globalState, isOpen, managerRef.current]);
 
     return (
-        <WebSocketClientProvider<InboundMessage, InboundMessage> url={wsConfig.url} debug={wsConfig.debug} messageHandlers={wsConfig.messageHandlers} onOpen={wsConfig.onOpen} onClose={wsConfig.onClose} onError={wsConfig.onError}>
-            <BaseGlobalStateContext.Provider value={baseValue}>
-                {children}
-            </BaseGlobalStateContext.Provider>
-        </WebSocketClientProvider>
+        <BaseGlobalStateContext.Provider value={baseValue}>
+            {children}
+        </BaseGlobalStateContext.Provider>
     );
 }
 
-/**
- * Convenience hook to access the global state, `wsReady`, etc.
- */
 export function useGlobalStateContext() {
-    const ctx = useContext(BaseGlobalStateContext);
-    if (!ctx) {
-        throw new Error(
-            "useGlobalStateContext must be used within <GlobalStateConfigWebSocketProvider>."
-        );
+    const context = useContext(BaseGlobalStateContext);
+    if (!context) {
+        throw new Error("useGlobalStateContext must be used within a GlobalStateWebsocketProvider");
     }
-    return ctx;
-}
-
-/**
- * If you only need to read `globalState` in a child component:
- */
-export function useGlobalState() {
-    return useGlobalStateContext().globalState;
-}
-
-/**
- * If you want to get at BNK’s WebSocket instance or call `sendMessage`, for example:
- */
-export function useGlobalWebSocketClient() {
-    return useWebSocketClient<InboundMessage, InboundMessage>();
+    return context;
 }

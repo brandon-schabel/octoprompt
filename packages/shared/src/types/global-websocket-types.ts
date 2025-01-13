@@ -1,4 +1,4 @@
-import type { BaseMessage } from "@bnk/websocket-manager";
+import type { BaseMessage } from "@bnk/backend-websocket-manager";
 import type { GlobalState } from "../global-state/global-state-schema";
 
 /** Outbound message to broadcast the entire GlobalState */

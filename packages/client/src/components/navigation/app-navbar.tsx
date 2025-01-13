@@ -13,7 +13,6 @@ import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useGlobalState } from "@/components/global-state/websocket-config-context"
 import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
 
 export function AppNavbar() {
@@ -29,13 +28,12 @@ export function AppNavbar() {
     const isOnProjectsRoute = matches.some(match => match.routeId === "/projects")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
-    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, } = useGlobalStateHelpers()
+    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, state } = useGlobalStateHelpers()
     const selectedProjectId = activeTabState?.selectedProjectId
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
     const { api } = useApi()
-    const state = useGlobalState()
 
     const globalTheme = state?.settings.theme
 

@@ -1,18 +1,18 @@
 // websocket-manager.ts
-import { WebSocketManager } from "@bnk/websocket-manager";
+import { BackendWebSocketManager } from "@bnk/backend-websocket-manager";
 import type { GlobalState } from "shared";
 import type { InboundMessage } from "shared";
 import { allWebsocketHandlers } from "./websocket-handlers";
 import { getState, setState } from "./websocket-config";
 
 /**
- * BNK's WebSocketManager needs:
+ * BNK's BackendWebSocketManager needs:
  *  1) getState: returns the current GlobalState (in-memory)
  *  2) setState: updates the in-memory state (and optionally syncs DB)
  *  3) messageHandlers: an array of typed message handlers
  *  4) debug?: enable/disable logging
  */
-export const bnkWsManager = new WebSocketManager<GlobalState, InboundMessage>({
+export const bnkWsManager = new BackendWebSocketManager<GlobalState, InboundMessage>({
     getState,
     setState,
     messageHandlers: allWebsocketHandlers,

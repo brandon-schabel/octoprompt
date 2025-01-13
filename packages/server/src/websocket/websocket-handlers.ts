@@ -1,5 +1,5 @@
 // websocket-handlers.ts
-import { MessageHandler } from "@bnk/websocket-manager";
+import { MessageHandler } from "@bnk/backend-websocket-manager";
 import { globalStateSchema } from "shared";
 import type { InboundMessage, GlobalState } from "shared";
 import { logger } from "../utils/logger";

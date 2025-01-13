@@ -26,20 +26,15 @@ function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
-
-    // Access global tab state + helpers
     const {
         state,
         activeProjectTabState: activeTabState,
         createProjectTab: createNewTab,
-        // wsReady,                      // track readiness
         isOpen,
         updateActiveProjectTabStateKey: updateActiveTabStateKey,
     } = useGlobalStateHelpers()
     const [aiPrompt, setAiPrompt] = useState('')
     const aiCodeEditMutation = useEditFile()
-
-    // Otherwise, proceed with your normal code below
 
     const selectedProjectId = activeTabState?.selectedProjectId ?? null
     const fileSearch = activeTabState?.fileSearch ?? ''

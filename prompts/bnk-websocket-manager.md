@@ -1,6 +1,6 @@
 # BNK WebSocket Monorepo
 
-A **highly-focused**, **pluggable**, and **well-tested** monorepo for building real-time apps with Bun and TypeScript. This workspace contains two core packages—**@bnk/websocket-manager** (server-side) and **@bnk/websocket-manager-react** (client-side for React)—as well as example projects demonstrating basic and full-stack integrations.
+A **highly-focused**, **pluggable**, and **well-tested** monorepo for building real-time apps with Bun and TypeScript. This workspace contains two core packages—**@bnk/backend-websocket-manager** (server-side) and **@bnk/backend-websocket-manager-react** (client-side for React)—as well as example projects demonstrating basic and full-stack integrations.
 
 ---
 
@@ -8,8 +8,8 @@ A **highly-focused**, **pluggable**, and **well-tested** monorepo for building r
 
 1. [Introduction](#introduction)  
 2. [Packages](#packages)  
-   - [@bnk/websocket-manager](#bnkwebsocket-manager)  
-   - [@bnk/websocket-manager-react](#bnkwebsocket-manager-react)  
+   - [@bnk/backend-websocket-manager](#bnkwebsocket-manager)  
+   - [@bnk/backend-websocket-manager-react](#bnkwebsocket-manager-react)  
 3. [Installation](#installation)  
 4. [Examples](#examples)  
    - [Example: Vanilla](#example-vanilla)  
@@ -24,8 +24,8 @@ A **highly-focused**, **pluggable**, and **well-tested** monorepo for building r
 
 This monorepo offers a **type-safe**, **performant**, and **modular** solution for **WebSocket** applications built on [Bun](https://bun.sh/). It’s split into two main packages:
 
-- **`@bnk/websocket-manager`**: A server-side manager for maintaining shared application state, broadcasting updates, and handling incoming messages in a strongly-typed manner.
-- **`@bnk/websocket-manager-react`**: A lightweight React wrapper for the client, providing hooks and context to handle real-time updates with minimal overhead.
+- **`@bnk/backend-websocket-manager`**: A server-side manager for maintaining shared application state, broadcasting updates, and handling incoming messages in a strongly-typed manner.
+- **`@bnk/backend-websocket-manager-react`**: A lightweight React wrapper for the client, providing hooks and context to handle real-time updates with minimal overhead.
 
 **Why BNK WebSocket Manager?**
 
@@ -39,7 +39,7 @@ This monorepo offers a **type-safe**, **performant**, and **modular** solution f
 
 ## Packages
 
-### @bnk/websocket-manager
+### @bnk/backend-websocket-manager
 
 **Server-side** library for managing application state and broadcasting real-time updates. Features include:
 
@@ -50,7 +50,7 @@ This monorepo offers a **type-safe**, **performant**, and **modular** solution f
 
 See [packages/websocket-manager/README.md](./packages/websocket-manager/README.md) for details.
 
-### @bnk/websocket-manager-react
+### @bnk/backend-websocket-manager-react
 
 **Client-side** React utilities for strongly-typed WebSocket connections:
 
@@ -67,13 +67,13 @@ See [packages/websocket-manager-react/README.md](./packages/websocket-manager-re
 Install these packages individually in your Bun projects. For server-side logic:
 
 ```bash
-bun add @bnk/websocket-manager
+bun add @bnk/backend-websocket-manager
 ```
 
 For React client integration:
 
 ```bash
-bun add @bnk/websocket-manager-react
+bun add @bnk/backend-websocket-manager-react
 ```
 
 *(You can also use npm or yarn if you prefer, though Bun is recommended.)*
@@ -88,7 +88,7 @@ This monorepo comes with two example workspaces to demonstrate usage:
 
 Located at [packages/example-vanilla](./packages/example-vanilla). It sets up a **basic WebSocket server** that also serves the client files:
 
-- **Server**: Uses `@bnk/websocket-manager` to track and broadcast state.  
+- **Server**: Uses `@bnk/backend-websocket-manager` to track and broadcast state.  
 - **Client**: A minimal HTML/JS example, connecting via a WebSocket.
 
 To run:
@@ -104,8 +104,8 @@ Open `http://localhost:3005` in your browser to see it in action.
 
 Located at [packages/example-fullstack-react](./packages/example-fullstack-react). A **complete** React + Bun setup with:
 
-- **Server**: A Bun server using `@bnk/websocket-manager`.  
-- **Client**: A React app using `@bnk/websocket-manager-react`.  
+- **Server**: A Bun server using `@bnk/backend-websocket-manager`.  
+- **Client**: A React app using `@bnk/backend-websocket-manager-react`.  
 - **Shared Types**: A `shared-types` package so that both server and client share the same message interfaces.
 
 To run:
@@ -135,11 +135,11 @@ To run:
 Below is a **simplified** example of how the two libraries work together.
 
 <details>
-<summary>Server (using <code>@bnk/websocket-manager</code>)</summary>
+<summary>Server (using <code>@bnk/backend-websocket-manager</code>)</summary>
 
 ```ts
 import { serve } from "bun";
-import { WebSocketManager } from "@bnk/websocket-manager";
+import { WebSocketManager } from "@bnk/backend-websocket-manager";
 
 interface MyAppState {
   counter: number;
@@ -200,14 +200,14 @@ serve({
 </details>
 
 <details>
-<summary>Client (React using <code>@bnk/websocket-manager-react</code>)</summary>
+<summary>Client (React using <code>@bnk/backend-websocket-manager-react</code>)</summary>
 
 ```tsx
 import React from "react";
 import {
   WebSocketClientProvider,
   useWebSocketClient,
-} from "@bnk/websocket-manager-react";
+} from "@bnk/backend-websocket-manager-react";
 
 interface IncrementMessage {
   type: "increment";
