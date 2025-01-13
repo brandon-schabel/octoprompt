@@ -265,8 +265,10 @@ export function GlobalStateWebsocketProvider({ children }: { children: React.Rea
     const [globalState, setGlobalState] = useState<GlobalState>(createInitialGlobalState());
     const messageHandlers = useMemo(() => createReactMessageHandlers({ setGlobalState }), [setGlobalState]);
     const { isOpen, manager } = useClientWebSocket<InboundMessage, InboundMessage>({
-        url: SERVER_WS_ENDPOINT,
-        messageHandlers
+        config: {
+            url: SERVER_WS_ENDPOINT,
+            messageHandlers,
+        },
     })
 
     const baseValue: BaseContextValue = useMemo(() => {
