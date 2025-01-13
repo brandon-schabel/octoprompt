@@ -211,6 +211,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                 {prompts.map((prompt, index) => (
                                     <div
                                         key={prompt.id}
+                                        // @ts-ignore
                                         ref={el => promptRefs.current[index] = el}
                                         className={cn(
                                             "flex items-center justify-between rounded-md p-1 hover:bg-muted/50 group",

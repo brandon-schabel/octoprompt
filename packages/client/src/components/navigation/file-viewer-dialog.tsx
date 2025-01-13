@@ -112,6 +112,7 @@ export function FileViewerDialog({
                                     >
                                         Copy
                                     </button>
+                                    {/* @ts-ignore */}
                                     <SyntaxHighlighter
                                         language="markdown"
                                         // @ts-ignore
@@ -131,6 +132,7 @@ export function FileViewerDialog({
                                 />
                             )
                         ) : (
+                            // @ts-ignore
                             <SyntaxHighlighter
                                 language={getLanguageByExtension(viewedFile?.extension)}
                                 style={atomOneLight}

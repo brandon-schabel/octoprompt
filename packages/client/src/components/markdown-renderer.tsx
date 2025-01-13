@@ -52,6 +52,7 @@ export function MarkdownRenderer({
                                 Copy
                             </button>
                         )}
+                        {/* @ts-ignore */}
                         <SyntaxHighlighter
                             language={match[1]}
                             style={themeStyle}

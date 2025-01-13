@@ -15,6 +15,7 @@ import type {
     GlobalState,
 } from "shared";
 import { SERVER_WS_ENDPOINT } from "@/constants/server-constants";
+import { useClientWebSocket } from "@bnk/react-websocket-manager";
 
 export type GlobalWebSocketConfig = ClientWebSocketManagerConfig<InboundMessage, InboundMessage>
 export type GlobalMessageHandlers = GlobalWebSocketConfig["messageHandlers"]
@@ -262,40 +263,23 @@ const BaseGlobalStateContext = createContext<BaseContextValue | null>(null);
 
 export function GlobalStateWebsocketProvider({ children }: { children: React.ReactNode }) {
     const [globalState, setGlobalState] = useState<GlobalState>(createInitialGlobalState());
-    const [isOpen, setIsOpen] = useState(false);
-
-    // Only create the manager once. The ref ensures it never re-instantiates.
-    const managerRef = useRef<ClientWebSocketManager<InboundMessage, InboundMessage> | null>(null);
-
-    const messageHandlers = createReactMessageHandlers({ setGlobalState });
-
-    // Create it once
-    if (!managerRef.current) {
-        managerRef.current = new ClientWebSocketManager<InboundMessage, InboundMessage>({
-            url: SERVER_WS_ENDPOINT,
-            onOpen: () => {
-                console.log("[Client] WebSocket opened!")
-
-                setIsOpen(!isOpen)
-
-            },
-            onClose: () => console.log("[Client] WebSocket closed!"),
-            onError: (err) => console.error("[Client] WebSocket error:", err),
-            messageHandlers: messageHandlers
-        });
-    }
+    const messageHandlers = useMemo(() => createReactMessageHandlers({ setGlobalState }), [setGlobalState]);
+    const { isOpen, manager } = useClientWebSocket<InboundMessage, InboundMessage>({
+        url: SERVER_WS_ENDPOINT,
+        messageHandlers
+    })
 
     const baseValue: BaseContextValue = useMemo(() => {
-        if (!managerRef.current) {
+        if (!manager) {
             throw new Error("Manager not initialized");
         }
 
         return {
             globalState,
             isOpen,
-            wsClient: managerRef.current,
+            wsClient: manager,
         };
-    }, [globalState, isOpen, managerRef.current]);
+    }, [globalState, isOpen, manager]);
 
     return (
         <BaseGlobalStateContext.Provider value={baseValue}>

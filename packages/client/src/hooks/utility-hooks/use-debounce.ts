@@ -4,7 +4,7 @@ export function useDebounce<T extends (...args: any[]) => void>(
     callback: T,
     delay: number
 ): T {
-    const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
+    const timeoutRef = useRef<ReturnType<typeof setTimeout>>(setTimeout(() => {}))
 
     const debouncedCallback = useCallback(
         (...args: Parameters<T>) => {

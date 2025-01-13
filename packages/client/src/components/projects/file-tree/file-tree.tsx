@@ -531,6 +531,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
                     return (
                         <FileTreeNodeRow
                             key={item.path}
+                            // @ts-ignore
                             ref={el => rowRefs.current[idx] = el}
                             item={item}
                             isOpen={isOpen}

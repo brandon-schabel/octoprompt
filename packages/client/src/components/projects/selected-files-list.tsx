@@ -109,6 +109,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         return (
           <div
             key={fileId}
+            // @ts-ignore
             ref={el => itemRefs.current[index] = el}
             className={cn(
               "w-full group relative",
