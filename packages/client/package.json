@@ -38,6 +38,7 @@
     "@tanstack/react-query": "^5.64.0",
     "@tanstack/react-table": "^8.20.6",
     "@tanstack/router-plugin": "^1.95.4",
+    "babel-plugin-react-compiler": "^19.0.0-beta-63e3235-20250105",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",

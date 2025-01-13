@@ -15,7 +15,7 @@ import type {
     GlobalState,
 } from "shared";
 import { SERVER_WS_ENDPOINT } from "@/constants/server-constants";
-import { useClientWebSocket } from "@bnk/react-websocket-manager";
+
 export type GlobalWebSocketConfig = ClientWebSocketManagerConfig<InboundMessage, InboundMessage>
 export type GlobalMessageHandlers = GlobalWebSocketConfig["messageHandlers"]
 
@@ -284,13 +284,6 @@ export function GlobalStateWebsocketProvider({ children }: { children: React.Rea
             messageHandlers: messageHandlers
         });
     }
-
-    const { isOpen: isBanana, manager: wsClient } = useClientWebSocket<InboundMessage, InboundMessage>({
-        manager: managerRef.current,
-        url: SERVER_WS_ENDPOINT,
-    });
-
-    console.log({ isBanana, isOpen })
 
     const baseValue: BaseContextValue = useMemo(() => {
         if (!managerRef.current) {
