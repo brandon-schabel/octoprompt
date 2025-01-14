@@ -19,24 +19,46 @@ import {
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
+import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 
-type ProjectSettingsDialogProps = {
-    resolveImports: boolean
-    setResolveImports: (value: boolean) => void
-    preferredEditor: EditorType
-    setPreferredEditor: (value: EditorType) => void
-    contextLimit: number
-    setContextLimit: (value: number) => void
-}
 
-export function ProjectSettingsDialog({
-    resolveImports,
-    setResolveImports,
-    preferredEditor,
-    setPreferredEditor,
-    contextLimit,
-    setContextLimit,
-}: ProjectSettingsDialogProps) {
+export function ProjectSettingsDialog() {
+    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
+    const contextLimit = activeTabState?.contextLimit || 128000
+    const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
+    const preferredEditor = activeTabState?.preferredEditor || 'vscode'
+    const disableSummarization = typeof activeTabState?.disableSummarization === 'boolean' ? activeTabState?.disableSummarization : true
+
+    const setContextLimit = (value: number) => {
+        updateActiveTab(prev => ({
+            ...prev,
+            contextLimit: value
+        }))
+    }
+
+    const setPreferredEditor = (value: EditorType) => {
+        // @ts-ignore
+        updateActiveTab(prev => ({
+            ...prev,
+            preferredEditor: value as EditorType
+        }))
+    }
+
+
+    const setResolveImports = (value: boolean) => {
+        updateActiveTab(prev => ({
+            ...prev,
+            resolveImports: value
+        }))
+    }
+
+    const setDisableSummarization = (value: boolean) => {
+        updateActiveTab(prev => ({
+            ...prev,
+            disableSummarization: value
+        }))
+    }
+
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -52,6 +74,22 @@ export function ProjectSettingsDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-6 py-4">
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="text-sm font-medium">Disable Summarization</span>
+                                <p className="text-sm text-muted-foreground">
+                                    When enabled, files will not be automatically summarized when added to the context.
+                                </p>
+                            </div>
+                            <Switch
+                                checked={disableSummarization}
+                                onCheckedChange={(check) => {
+                                    setDisableSummarization(check)
+                                }}
+                            />
+                        </div>
+                    </div>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <div>

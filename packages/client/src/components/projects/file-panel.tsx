@@ -20,7 +20,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { SelectedFilesDrawer } from './selected-files-drawer'
 import { Badge } from '../ui/badge'
 import { ProjectSettingsDialog } from './project-settings-dialog'
-import { EditorType } from 'shared/src/global-state/global-state-schema'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 
 export type FilePanelRef = {
@@ -55,31 +54,8 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const selectedFilesListRef = useRef<SelectedFilesListRef>(null)
     const promptsRef = useRef<HTMLDivElement>(null)
     const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
-    const contextLimit = activeTabState?.contextLimit || 128000
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
-
-    const setContextLimit = (value: number) => {
-        updateActiveTab(prev => ({
-            ...prev,
-            contextLimit: value
-        }))
-    }
-
-    const setResolveImports = (value: boolean) => {
-        updateActiveTab(prev => ({
-            ...prev,
-            resolveImports: value
-        }))
-    }
-
-    const setPreferredEditor = (value: EditorType) => {
-        // @ts-ignore
-        updateActiveTab(prev => ({
-            ...prev,
-            preferredEditor: value as EditorType
-        }))
-    }
 
     // Now we can do everything from our updated useSelectedFiles:
     const {
@@ -263,14 +239,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         Sync
                                     </Button>
                                 )}
-                                <ProjectSettingsDialog
-                                    resolveImports={resolveImports}
-                                    setResolveImports={setResolveImports}
-                                    preferredEditor={preferredEditor}
-                                    setPreferredEditor={setPreferredEditor}
-                                    contextLimit={contextLimit}
-                                    setContextLimit={setContextLimit}
-                                />
+                                <ProjectSettingsDialog />
                             </div>
                         </div>
 

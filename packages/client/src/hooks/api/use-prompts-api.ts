@@ -65,6 +65,22 @@ async function deletePrompt(api: ReturnType<typeof useApi>['api'], promptId: str
     return response.json();
 }
 
+async function addPromptToProject(api: ReturnType<typeof useApi>['api'], promptId: string, projectId: string): Promise<{ success: boolean; error?: string }> {
+    const response = await api.request(`/api/projects/${projectId}/prompts/${promptId}`, {
+        method: 'POST',
+    });
+    return response.json();
+}
+
+async function removePromptFromProject(api: ReturnType<typeof useApi>['api'], promptId: string, projectId: string): Promise<{ success: boolean; error?: string }> {
+    const response = await api.request(`/api/projects/${projectId}/prompts/${promptId}`, {
+        method: 'DELETE',
+    });
+    return response.json();
+}
+
+
+
 // Hooks
 export const useGetProjectPrompts = (projectId: string) => {
     const { api } = useApi();
@@ -127,3 +143,40 @@ export const useDeletePrompt = () => {
         onError: commonErrorHandler
     });
 };
+
+export const useAddPromptToProject = () => {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ promptId, projectId }: { promptId: string, projectId: string }) => addPromptToProject(api, promptId, projectId),
+        onSuccess: (_, { promptId, projectId }) => {
+            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
+        },
+        onError: commonErrorHandler
+    });
+};
+
+export const useRemovePromptFromProject = () => {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ promptId, projectId }: { promptId: string, projectId: string }) => removePromptFromProject(api, promptId, projectId),
+        onSuccess: (_, { promptId, projectId }) => {
+            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
+        },
+        onError: commonErrorHandler
+    });
+};
+
+
+export function useGetAllPrompts() {
+    const { api } = useApi();
+    return useQuery<PromptResponse>({
+        queryKey: ['prompts', 'all'],
+        queryFn: async () => {
+            const res = await api.request('/api/prompts'); 
+            return res.json();
+        },
+    });
+}

@@ -122,14 +122,11 @@ export const projectFileSchema = z.object({
 export type ProjectFileInferredSchema = z.infer<typeof projectFileSchema>
 export type ProjectFile = InferSelectModel<typeof files>;
 
-
 export const prompts = sqliteTable("prompts", {
+    // NEW/UPDATED: Removed projectId; each prompt is no longer tied to a single project
     id: text("id")
         .primaryKey()
         .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
-    projectId: text("project_id")
-        .notNull()
-        .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     content: text("content").notNull(),
     createdAt: integer("created_at", { mode: "timestamp" })
@@ -141,6 +138,40 @@ export const prompts = sqliteTable("prompts", {
 });
 
 export type Prompt = InferSelectModel<typeof prompts>;
+
+export const promptProjects = sqliteTable("prompt_projects", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
+    promptId: text("prompt_id")
+        .notNull()
+        .references(() => prompts.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+        .notNull()
+        .references(() => projects.id, { onDelete: "cascade" }),
+});
+
+
+
+// TODO: store book marks in a more structured way in the DB
+// export const bookmarks = sqliteTable("bookmarks", {
+//     id: text("id")
+//         .primaryKey()
+//         .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
+//     // e.g. a JSON string of file ids
+//     fileIds: text("file_ids").notNull().default("[]"),
+//     // e.g. name for the bookmark group
+//     name: text("name").default(""),
+//     createdAt: integer("created_at", { mode: "timestamp" })
+//         .default(sql`CURRENT_TIMESTAMP`)
+//         .notNull(),
+//     updatedAt: integer("updated_at", { mode: "timestamp" })
+//         .default(sql`CURRENT_TIMESTAMP`)
+//         .notNull(),
+// });
+
+// export type Bookmark = InferSelectModel<typeof bookmarks>;
+
 
 export const globalStateTable = sqliteTable('global_state', {
     id: text('id').primaryKey(),

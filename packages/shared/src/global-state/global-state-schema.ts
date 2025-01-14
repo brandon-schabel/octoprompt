@@ -25,6 +25,11 @@ export const projectTabStateSchema = z.object({
     resolveImports: z.boolean().default(false),
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
     suggestedFileIds: z.array(z.string()).default([]),
+    disableSummarization: z.boolean().default(false),
+    // e.g. { "my-group1": ["fileId1", "fileId2"], "my-group2": ["fileId3"] }
+    bookmarkedFileGroups: z.record(z.string(), z.array(z.string())).default({}),
+
+
 });
 
 export const linkSettingsSchema = z.object({
@@ -138,9 +143,11 @@ export const createInitialGlobalState = (): GlobalState => ({
             selectedFilesHistory: [[]],
             selectedFilesHistoryIndex: 0,
             contextLimit: 128000,
-            resolveImports: true,
+            resolveImports: false,
             preferredEditor: 'cursor',
             suggestedFileIds: [],
+            bookmarkedFileGroups: {},
+            disableSummarization: true,
         },
     },
     chatTabs: {
