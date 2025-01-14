@@ -5,6 +5,7 @@ import { ProjectFile as ProjectFileType, GlobalState } from 'shared'
 import { matchesAnyPattern } from 'shared/src/utils/pattern-matcher'
 import { promptsMap } from '@/prompts/prompts-map'
 import { UnifiedProviderService } from './model-providers/providers/unified-provider-service'
+import { getState } from '@/websocket/websocket-config'
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
     const chunks: T[][] = []
@@ -15,22 +16,24 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 const shouldSummarizeFile = async (projectId: string, filePath: string): Promise<boolean> => {
-    const settings = await getSettings()
-    
+    const state = await getState()
+    const settings = state.settings
+
+
     if (settings.disableSummarizationProjectIds.includes(projectId)) {
         return false
     }
 
-    const matchesIgnorePattern = settings.summarizationIgnorePatterns.some(pattern => 
+    const matchesIgnorePattern = settings.summarizationIgnorePatterns.some(pattern =>
         new RegExp(pattern).test(filePath)
     )
-    
+
     if (matchesIgnorePattern) {
         return false
     }
 
     const hasAllowPatterns = settings.summarizationAllowPatterns.length > 0
-    const matchesAllowPattern = settings.summarizationAllowPatterns.some(pattern => 
+    const matchesAllowPattern = settings.summarizationAllowPatterns.some(pattern =>
         new RegExp(pattern).test(filePath)
     )
 
@@ -168,9 +171,10 @@ export class FileSummaryService {
      */
     private async summarizeFile(file: ProjectFileType) {
         if (!await shouldSummarizeFile(file.projectId, file.path)) {
+            console.log(`[FileSummaryService] Skipping summarization for file: ${file.name}`)
             return
         }
-        
+
         try {
             const fileContent = file.content || ''
             if (!fileContent.trim()) {
