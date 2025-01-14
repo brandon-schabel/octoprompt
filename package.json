@@ -2,6 +2,13 @@
   "name": "octoprompt",
   "module": "index.ts",
   "type": "module",
+  "scripts": {  
+    "setup": "bun run scripts/setup.ts",
+    "dev": "bun run scripts/start-dev.ts",
+    "client:dev": "bun run scripts/start-client-dev.ts",
+    "server:dev": "bun run scripts/start-server-dev.ts",
+    "stop": "bun run scripts/stop.ts"
+  },
   "workspaces": [
     "packages/*"
   ],

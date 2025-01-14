@@ -21,6 +21,7 @@ export class WatchersManager {
             console.warn(`[WatchersManager] Already watching project: ${project.id}`);
             return;
         }
+
         const plugin = new FileChangePlugin(this.summaryService, this.fileSyncService, this.projectService);
         plugin.start(project, ignorePatterns);
         this.watchers.set(project.id, plugin);
@@ -36,6 +37,7 @@ export class WatchersManager {
             console.warn(`[WatchersManager] No watcher found for project: ${projectId}`);
             return;
         }
+
         plugin.stop();
         this.watchers.delete(projectId);
         console.log(`[WatchersManager] Stopped watcher for project: ${projectId}`);

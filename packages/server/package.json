@@ -6,8 +6,6 @@
   "scripts": {
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
-    "migrate": "drizzle-kit generate",
-    "push": "drizzle-kit push",
     "start": "bun server.ts",
     "dev": "DEV=true bun --watch server.ts",
     "build": "bun run build.ts",

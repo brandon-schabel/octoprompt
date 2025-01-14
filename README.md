@@ -30,7 +30,7 @@ Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code
 
 ## Project Setup
 
-Below are the instructions for getting started with **OctoPrompt**. We use **Bun** for both installation and serving, but you can adapt these steps for other package managers if you prefer.
+Below are the instructions for getting started with **OctoPrompt**. We use **Bun** for both installation and serving.
 
 ### Prerequisite
 
@@ -48,55 +48,92 @@ curl -fsSL https://bun.sh/install | bash
 powershell -c "irm bun.sh/install.ps1 | iex"
 ```
 
----
+### Installation & Setup
 
-### Client Setup
-
-1. **Navigate to client directory**:
+1. **Install dependencies and setup the project**:
 
    ```bash
-   cd packages/client
-   ```
-
-2. **Install dependencies**:
-
-   ```bash
+   # Install all workspace dependencies
    bun install
+
+   # Run the setup script (sets up database and other requirements)
+   bun run setup
    ```
 
-3. **Start the client**:
+2. **Start the development servers**:
+   From the root of the repo, you can start both the client and server together:
 
    ```bash
    bun run dev
    ```
 
-   The client will now be running on [http://localhost:5173](http://localhost:5173).
+   Or start them separately:
+
+   ```bash
+   # Start just the client (runs on port 5173)
+   bun run client:dev
+   ```
+
+   ## Start just the server (runs on port 3000)
+
+   ```bash
+   bun run server:dev
+
+   ```
+
+   The client will be available at [http://localhost:5173](http://localhost:5173)  
+
+   The server will be available at [http://localhost:3000](http://localhost:3000)
 
 ---
 
-### Server Setup
+## Production Build
 
-In a separate terminal:
+OctoPrompt is designed with a streamlined production build process where the client is bundled and served directly from the server.
 
-1. **Navigate to server directory**:
+### Build Process
 
-   ```bash
-   cd packages/server
-   ```
+1. **Client Build**
+   - The client's Vite configuration (`vite.config.ts`) is set up to output the production build to `../server/client-dist`
+   - This means the built client files will be directly available to the server for serving static content
+   - All test files are automatically excluded from the production build
 
-2. **Install dependencies**:
+2. **Server Build**
+   The server's build process (`build.ts`) handles several key steps:
+   - Builds the client first and includes it in the server distribution
+   - Bundles the server as a minimized JS bundle
+   - Creates and migrates a fresh SQLite database for production
+   - Generates platform-specific standalone executables for:
+     - Linux (x64)
+     - macOS (x64, arm64)
+     - Windows (x64)
+   - Creates distributable zip archives for each platform
 
-   ```bash
-   bun install
-   ```
+### Running Production Build
 
-3. **Start the server**:
+To create a production build:
 
-   ```bash
-   bun run dev
-   ```
+```bash
+# From the root directory
+cd packages/server
+bun run build
+```
 
-   The server will now be running on [http://localhost:3000](http://localhost:3000).
+The build process will:
+
+1. Clear the previous dist directory
+2. Build the client and copy it to the server's static files directory
+3. Bundle the server with the client files
+4. Create platform-specific executables
+5. Package everything into distributable zip files
+
+The final builds will be available in `packages/server/dist/`, with separate zip files for each supported platform.
+
+Each distribution includes:
+
+- The standalone server executable
+- Pre-migrated SQLite database
+- Built client files (served automatically by the server)
 
 ---
 

@@ -1,16 +1,17 @@
+
 import { serve } from "bun";
 import { join } from "node:path";
 import { statSync } from "node:fs";
 import { router } from "server-router";
 import "@/routes/chat-routes";
-import "@/routes/project-routes"
-import "@/routes/prompt-routes"
-import "@/routes/flags-routes"
-import "@/routes/provider-key-routes"
-import "@/routes/gemini-routes"
-import "@/routes/open-ai-routes"
-import "@/routes/code-editor-routes"
-import "@/routes/promptimizer-routes"
+import "@/routes/project-routes";
+import "@/routes/prompt-routes";
+import "@/routes/flags-routes";
+import "@/routes/provider-key-routes";
+import "@/routes/gemini-routes";
+import "@/routes/open-ai-routes";
+import "@/routes/code-editor-routes";
+import "@/routes/promptimizer-routes";
 
 import { globalStateSchema } from "shared";
 import { json } from "@bnk/router";
@@ -22,7 +23,6 @@ import { getState, setState } from "./src/websocket/websocket-config";
 import { bnkWsManager } from "./src/websocket/websocket-manager";
 import { logger } from "src/utils/logger";
 
-
 // built client files
 const CLIENT_PATH = join(__dirname, "client-dist");
 
@@ -32,14 +32,12 @@ type ServerConfig = {
 
 type Server = ReturnType<typeof serve>;
 
-
 const DEV_PORT = 3000;
 const PROD_PORT = 3579;
-
 const isDevEnv = process.env.DEV === 'true';
 const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
 
-
+// Instantiate watchers manager
 const watchersManager = new WatchersManager(
   new FileSummaryService(),
   new FileSyncService(),
@@ -125,14 +123,11 @@ export const instantiateServer = ({
       }
 
       const routerResponse = await router.handle(req);
-
       if (routerResponse && routerResponse?.status !== 404) {
-        return routerResponse
+        return routerResponse;
       }
 
-
-      const frontendEnpoints = ['/projects', '/chat']
-
+      const frontendEnpoints = ['/projects', '/chat'];
       if (routerResponse && routerResponse?.status === 404 && frontendEnpoints.includes(url.pathname)) {
         return serveStatic('index.html');
       }
@@ -141,7 +136,6 @@ export const instantiateServer = ({
     },
 
     websocket: {
-      // BNK usage
       open(ws) {
         logger.debug("New WS connection", { clientId: ws.data.clientId });
         bnkWsManager.handleOpen(ws);
@@ -152,24 +146,20 @@ export const instantiateServer = ({
       },
       async message(ws, rawMessage) {
         try {
-          await bnkWsManager.handleMessage(ws, rawMessage.toString())
+          await bnkWsManager.handleMessage(ws, rawMessage.toString());
         } catch (err) {
           logger.error("Error handling WS message:", err);
         }
-
-        // Broadcast the state to all connected clients
-        await bnkWsManager.broadcastState()
+        await bnkWsManager.broadcastState();
       },
     },
   });
 
-
-  // 2) Once the server is up, start watchers for all existing projects
+  // Once the server is up, start watchers for all existing projects
   (async () => {
     const projectService = new ProjectService();
     const allProjects = await projectService.listProjects();
     for (const project of allProjects) {
-      // You can add custom ignore patterns if desired
       watchersManager.startWatchingProject(project, [
         "node_modules",
         "dist",
@@ -180,10 +170,9 @@ export const instantiateServer = ({
     }
   })();
 
-
   console.log(`Server running at http://localhost:${server.port}`);
   return server;
-}
+};
 
 // Modify the serveStatic function to handle 404s properly
 function serveStatic(path: string): Response {
@@ -194,10 +183,8 @@ function serveStatic(path: string): Response {
     if (stat.isFile()) {
       return new Response(Bun.file(filePath));
     }
-    // Try serving index.html for directory requests
     return new Response(Bun.file(join(CLIENT_PATH, "index.html")));
   } catch {
-    // If file not found, serve index.html for client-side routing
     return new Response(Bun.file(join(CLIENT_PATH, "index.html")));
   }
 }
@@ -205,5 +192,15 @@ function serveStatic(path: string): Response {
 // Only start the server if this file is being run directly
 if (import.meta.main) {
   console.log('Starting server...');
-  instantiateServer();
+  const server = instantiateServer();
+
+  function handleShutdown() {
+    console.log('Received kill signal. Shutting down gracefully...');
+    watchersManager.stopAll?.();
+    server.stop();
+    process.exit(0);
+  }
+
+  process.on('SIGINT', handleShutdown);
+  process.on('SIGTERM', handleShutdown);
 }

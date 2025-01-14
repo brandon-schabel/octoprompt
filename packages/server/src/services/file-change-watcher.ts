@@ -58,10 +58,6 @@ export class FileChangeWatcher {
 
     this.watchers.push(watcher);
     console.log(`[FileChangeWatcher] Now watching: ${directory}`);
-
-    // Setup cleanup on process exit
-    process.on('SIGINT', () => this.stopAll());
-    process.on('SIGTERM', () => this.stopAll());
   }
 
   public stopAll(): void {

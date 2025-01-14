@@ -20,6 +20,7 @@ import { useClientWebSocket } from "@bnk/react-websocket-manager";
 export type GlobalWebSocketConfig = ClientWebSocketManagerConfig<InboundMessage, InboundMessage>
 export type GlobalMessageHandlers = GlobalWebSocketConfig["messageHandlers"]
 
+
 const createReactMessageHandlers = ({
     setGlobalState,
 }: {
