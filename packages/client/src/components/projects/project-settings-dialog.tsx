@@ -24,10 +24,13 @@ import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 
 export function ProjectSettingsDialog() {
     const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
+    const { state, updateSettings } = useGlobalStateHelpers()
+    const settings = state?.settings
     const contextLimit = activeTabState?.contextLimit || 128000
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
-    const disableSummarization = typeof activeTabState?.disableSummarization === 'boolean' ? activeTabState?.disableSummarization : true
+    const projectId = activeTabState?.selectedProjectId
+    const isProjectSummarizationDisabled = projectId ? settings.disableSummarizationProjectIds.includes(projectId) : false
 
     const setContextLimit = (value: number) => {
         updateActiveTab(prev => ({
@@ -53,9 +56,13 @@ export function ProjectSettingsDialog() {
     }
 
     const setDisableSummarization = (value: boolean) => {
-        updateActiveTab(prev => ({
+        if (!projectId) return
+
+        updateSettings(prev => ({
             ...prev,
-            disableSummarization: value
+            disableSummarizationProjectIds: value
+                ? [...prev.disableSummarizationProjectIds, projectId]
+                : prev.disableSummarizationProjectIds.filter(id => id !== projectId)
         }))
     }
 
@@ -83,7 +90,7 @@ export function ProjectSettingsDialog() {
                                 </p>
                             </div>
                             <Switch
-                                checked={disableSummarization}
+                                checked={isProjectSummarizationDisabled}
                                 onCheckedChange={(check) => {
                                     setDisableSummarization(check)
                                 }}

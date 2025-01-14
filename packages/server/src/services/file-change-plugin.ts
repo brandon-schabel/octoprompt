@@ -1,3 +1,4 @@
+import { getState } from '@/websocket/websocket-config';
 import { FileChangeWatcher, FileChangeEvent } from './file-change-watcher';
 import { FileSummaryService } from './file-summary-service';
 import { FileSyncService } from './file-sync-service';
@@ -47,28 +48,37 @@ export class FileChangePlugin {
 
                     console.log(`[FileChangePlugin] Rerunning summary for file ID: ${updatedFile.id} (${event})`);
 
-                    // 5) Re-run summarization for this single file
-                    await this.summaryService.summarizeFiles(
-                        project.id,
-                        [updatedFile],
-                        {
-                            settings: {
-                                language: 'en',
-                                theme: 'light',
-                                codeThemeLight: 'atomOneLight',
-                                codeThemeDark: 'atomOneDark',
-                                ollamaGlobalUrl: 'http://localhost:11434',
-                                lmStudioGlobalUrl: 'http://localhost:8000',
-                                summarizationIgnorePatterns: [],
-                                summarizationAllowPatterns: [],
-                            },
-                            counter: 0,
-                            projectTabs: {},
-                            projectActiveTabId: null,
-                            chatTabs: {},
-                            chatActiveTabId: null,
-                        }
-                    );
+                    const globalState = await getState();
+
+
+                    const summarizeFiles = globalState.settings.disableSummarizationProjectIds.includes(project.id);
+
+                    if (summarizeFiles) {
+
+                        // 5) Re-run summarization for this single file
+                        await this.summaryService.summarizeFiles(
+                            project.id,
+                            [updatedFile],
+                            {
+                                settings: {
+                                    language: 'en',
+                                    theme: 'light',
+                                    codeThemeLight: 'atomOneLight',
+                                    codeThemeDark: 'atomOneDark',
+                                    ollamaGlobalUrl: 'http://localhost:11434',
+                                    lmStudioGlobalUrl: 'http://localhost:8000',
+                                    summarizationIgnorePatterns: [],
+                                    summarizationAllowPatterns: [],
+                                    disableSummarizationProjectIds: [],
+                                },
+                                counter: 0,
+                                projectTabs: {},
+                                projectActiveTabId: null,
+                                chatTabs: {},
+                                chatActiveTabId: null,
+                            }
+                        );
+                    }
                 } catch (err) {
                     console.error('[FileChangePlugin] Error handling file change:', err);
                 }

@@ -14,6 +14,33 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
     return chunks
 }
 
+const shouldSummarizeFile = async (projectId: string, filePath: string): Promise<boolean> => {
+    const settings = await getSettings()
+    
+    if (settings.disableSummarizationProjectIds.includes(projectId)) {
+        return false
+    }
+
+    const matchesIgnorePattern = settings.summarizationIgnorePatterns.some(pattern => 
+        new RegExp(pattern).test(filePath)
+    )
+    
+    if (matchesIgnorePattern) {
+        return false
+    }
+
+    const hasAllowPatterns = settings.summarizationAllowPatterns.length > 0
+    const matchesAllowPattern = settings.summarizationAllowPatterns.some(pattern => 
+        new RegExp(pattern).test(filePath)
+    )
+
+    if (hasAllowPatterns && !matchesAllowPattern) {
+        return false
+    }
+
+    return true
+}
+
 /**
  * This service now reads/writes file summaries directly in the `files` table.
  */
@@ -140,6 +167,10 @@ export class FileSummaryService {
      * Then update the file record with the new summary and summaryLastUpdatedAt.
      */
     private async summarizeFile(file: ProjectFileType) {
+        if (!await shouldSummarizeFile(file.projectId, file.path)) {
+            return
+        }
+        
         try {
             const fileContent = file.content || ''
             if (!fileContent.trim()) {

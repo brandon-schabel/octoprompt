@@ -25,7 +25,6 @@ export const projectTabStateSchema = z.object({
     resolveImports: z.boolean().default(false),
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
     suggestedFileIds: z.array(z.string()).default([]),
-    disableSummarization: z.boolean().default(false),
     // e.g. { "my-group1": ["fileId1", "fileId2"], "my-group2": ["fileId3"] }
     bookmarkedFileGroups: z.record(z.string(), z.array(z.string())).default({}),
 
@@ -92,6 +91,7 @@ export const appSettingsSchema = z.object({
     lmStudioGlobalUrl: z.string().default('http://localhost:8000'),
     summarizationIgnorePatterns: z.array(z.string()).default([]),
     summarizationAllowPatterns: z.array(z.string()).default([]),
+    disableSummarizationProjectIds: z.array(z.string()).default([]),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
@@ -126,6 +126,7 @@ export const createInitialGlobalState = (): GlobalState => ({
         lmStudioGlobalUrl: 'http://localhost:8000',
         summarizationIgnorePatterns: [],
         summarizationAllowPatterns: [],
+        disableSummarizationProjectIds: [],
     },
     counter: 0,
     projectTabs: {
@@ -147,7 +148,6 @@ export const createInitialGlobalState = (): GlobalState => ({
             preferredEditor: 'cursor',
             suggestedFileIds: [],
             bookmarkedFileGroups: {},
-            disableSummarization: true,
         },
     },
     chatTabs: {
