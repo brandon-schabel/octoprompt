@@ -70,11 +70,11 @@ powershell -c "irm bun.sh/install.ps1 | iex"
    Or start them separately:
 
    ```bash
-   # Start just the client (runs on port 5173)
+   #### Start just the client (runs on port 5173)
    bun run client:dev
    ```
 
-   ## Start just the server (runs on port 3000)
+   #### Start just the server (runs on port 3000)
 
    ```bash
    bun run server:dev
