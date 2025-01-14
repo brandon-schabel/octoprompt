@@ -67,10 +67,12 @@ powershell -c "irm bun.sh/install.ps1 | iex"
    bun run dev
    ```
 
-   Or start them separately:
-
-   ```bash
+   ### Start Client/Server Seperately
+   
    #### Start just the client (runs on port 5173)
+   
+   ```bash
+   
    bun run client:dev
    ```
 
@@ -78,7 +80,6 @@ powershell -c "irm bun.sh/install.ps1 | iex"
 
    ```bash
    bun run server:dev
-
    ```
 
    The client will be available at [http://localhost:5173](http://localhost:5173)  
