@@ -172,7 +172,7 @@ export const useRemovePromptFromProject = () => {
 
 export function useGetAllPrompts() {
     const { api } = useApi();
-    return useQuery<PromptResponse>({
+    return useQuery<PromptListResponse>({
         queryKey: ['prompts', 'all'],
         queryFn: async () => {
             const res = await api.request('/api/prompts'); 

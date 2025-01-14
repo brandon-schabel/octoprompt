@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { useGetAllPrompts } from "@/hooks/api/use-prompts-api" // a new custom hook or simply re-use the same if you have it
 import { AlertCircle } from "lucide-react"
 import { Prompt } from "shared"
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
 import { toast } from "sonner"
 
 interface PromptsDialogAllProps {
@@ -20,7 +19,6 @@ export function PromptsDialogAll({
     selectedProjectId,
 }: PromptsDialogAllProps) {
     const { data, isLoading, error } = useGetAllPrompts();
-    const { sendMessage } = useGlobalStateHelpers();
     const [searchTerm, setSearchTerm] = useState("");
 
     const prompts: Prompt[] = data?.prompts || [];
