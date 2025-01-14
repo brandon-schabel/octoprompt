@@ -67,23 +67,30 @@ powershell -c "irm bun.sh/install.ps1 | iex"
    bun run dev
    ```
 
-   Or start them separately:
-
+   ### Start Client/Server Seperately
+   
+   #### Start just the client (runs on port 5173)
+   
    ```bash
-   # Start just the client (runs on port 5173)
+   
    bun run client:dev
    ```
 
-   ## Start just the server (runs on port 3000)
+   #### Start just the server (runs on port 3000)
 
    ```bash
    bun run server:dev
-
    ```
 
    The client will be available at [http://localhost:5173](http://localhost:5173)  
 
    The server will be available at [http://localhost:3000](http://localhost:3000)
+
+
+## IMPORTANT - Configure Your Provider Keys
+For the Providers you'll want to use you'll need to click the "Keys" button in the navbar and configure each of your provider keys. 
+For example:
+![Xnapper-2025-01-13-20 25 41](https://github.com/user-attachments/assets/3b87ca3e-3182-4271-8235-b98477f182ac)
 
 ---
 
@@ -143,8 +150,9 @@ Below are some ways you might interact with OctoPrompt once it’s up and runnin
 
 ### 1. Simple Local Chat
 
-- **Open** your web client at [localhost:5173](http://localhost:5173).  
-- Click **New Chat** in the interface.  
+- **Open** your web client at [localhost:5173](http://localhost:5173).
+- Click "Chat" in the Navbar
+- Click **New Chat** in the top right of the Navbar to top right.  
 - **Type** a question—OctoPrompt will respond in real-time, referencing your local files if you have them synced.
 
 ### 2. File Summaries & Suggestions
