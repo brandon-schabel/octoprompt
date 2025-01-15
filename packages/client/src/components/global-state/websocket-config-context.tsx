@@ -269,7 +269,11 @@ export function GlobalStateWebsocketProvider({ children }: { children: React.Rea
         config: {
             url: SERVER_WS_ENDPOINT,
             messageHandlers,
+            autoReconnect: true,
+            reconnectIntervalMs: 500,
+            maxReconnectAttempts: 500,
         },
+
     })
 
     const baseValue: BaseContextValue = useMemo(() => {

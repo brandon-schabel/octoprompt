@@ -74,6 +74,7 @@ export const chatTabStateSchema = z.object({
     linkSettings: linkSettingsSchema.optional(),
     // optional ollama url, for example if a user wanted to have per tab ollama instances
     // for example if a user had 5 ollama instances on their network 
+    // TODO: this still needs to be implemented 
     ollamaUrl: z.string().optional(),
     lmStudioUrl: z.string().optional(),
 });
