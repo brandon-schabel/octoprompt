@@ -23,6 +23,7 @@ export const defaultFlags = {
     data: string;
 }>;
 
+
 const initiateFlags = async (): Promise<void> => {
     if (flagsInitialized) return;
     const initFlag = await db

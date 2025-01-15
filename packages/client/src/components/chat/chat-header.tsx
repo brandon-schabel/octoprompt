@@ -116,18 +116,7 @@ export function ChatHeader({
             toast.error("Failed to copy linked content.");
         }
     }
-
-    // Helpers
-    const truncateText = (text: string, maxLength = 24) => {
-        return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
-    };
-
-    function handleBackToProject() {
-        if (!activeChatTabState?.linkedProjectTabId) return;
-        setActiveProjectTab(activeChatTabState.linkedProjectTabId);
-        navigate({ to: '/projects' });
-    }
-
+    
     function handleLinkProjectTab(projectTabId: string) {
         if (!activeChatTabId) return;
         linkChatTabToProjectTab(activeChatTabId, projectTabId, {

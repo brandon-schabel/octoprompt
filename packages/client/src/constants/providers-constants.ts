@@ -1,7 +1,7 @@
 import { APIProviders } from "shared/index"
 
 
-export type Provider = {
+export type ModelProvider = {
     id: APIProviders
     name: string
     apiKeyUrl: string
@@ -51,8 +51,19 @@ export const PROVIDERS = [
         name: 'Together',
         apiKeyUrl: 'https://api.together.ai/settings/api-keys',
         description: 'API keys for Together models'
+    },
+    {
+        id: 'lmstudio',
+        name: 'LMStudio',
+        apiKeyUrl: 'https://lmstudio.ai/settings/api-keys',
+        description: 'API keys for LMStudio models'
+    }, {
+        id: 'ollama',
+        name: 'Ollama',
+        apiKeyUrl: 'https://ollama.ai/settings/api-keys',
+        description: 'API keys for Ollama models'
     }
-] satisfies Provider[]
+] satisfies ModelProvider[]
 
 
 

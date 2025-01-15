@@ -10,10 +10,16 @@ const promptService = new PromptService();
 router.post("/api/prompts", {
     validation: promptApiValidation.create,
 }, async (_, { body }) => {
-    const created = await promptService.createPrompt(body);
-    return json({ success: true, prompt: created }, { status: 201 });
-});
+    // 1) Create the prompt
+    const createdPrompt = await promptService.createPrompt(body);
 
+    // 2) If projectId was given, link it to the project:
+    if (body.projectId) {
+        await promptService.addPromptToProject(createdPrompt.id, body.projectId);
+    }
+
+    return json({ success: true, prompt: createdPrompt }, { status: 201 });
+});
 
 router.get("/api/prompts", {}, async (_, __) => {
     const all = await promptService.listAllPrompts();

@@ -20,13 +20,14 @@ import {
     LMSTUDIO_BASE_URL,
     OLLAMA_BASE_URL,
 } from "@bnk/ai";
-import { ModelFetcherService, type ProviderConfig } from "@bnk/ai";
+import { ModelFetcherService, type ProviderKeysConfig } from "@bnk/ai";
 import type { UnifiedModel } from "@bnk/ai";
+import { getState } from "@/websocket/websocket-config";
 
 export class UnifiedProviderService {
     private providerKeyService: ProviderKeyService;
     private chatService: ChatService;
-    private providerConfig: ProviderConfig = {
+    private providerConfig: ProviderKeysConfig = {
         openaiKey: undefined,
         anthropicKey: undefined,
         googleGeminiKey: undefined,
@@ -64,7 +65,7 @@ export class UnifiedProviderService {
     /**
      * Helper to get a provider key or throw if missing
      */
-    private getKey(provider: keyof ProviderConfig): string {
+    private getKey(provider: keyof ProviderKeysConfig): string {
         const key = this.providerConfig[provider];
         if (!key) throw new Error(`${provider} API key not found`);
         return key;
@@ -105,8 +106,10 @@ export class UnifiedProviderService {
                 return new GeminiPlugin(apiKey, GEMINI_BASE_URL, options?.model || "models/gemini-1.5-pro");
             },
             lmstudio: async () => {
+                const state = await getState()
+                const lmStudioUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL
                 const lmStudioClient = new OpenAI({
-                    baseURL: LMSTUDIO_BASE_URL,
+                    baseURL: lmStudioUrl,
                     apiKey: "lm-studio",
                 });
                 // @ts-ignore
@@ -125,7 +128,9 @@ export class UnifiedProviderService {
                 return new TogetherPlugin(tKey, TOGETHER_BASE_URL);
             },
             ollama: async () => {
-                return new OllamaPlugin(OLLAMA_BASE_URL);
+                const state = await getState()
+                const ollamaUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL
+                return new OllamaPlugin(ollamaUrl);
             },
         };
 
@@ -266,6 +271,17 @@ export class UnifiedProviderService {
      */
     async listModels(provider: APIProviders): Promise<UnifiedModel[]> {
         await this.initModelFetcherService();
-        return this.modelFetcherService!.listModels(provider);
+        const state = await getState()
+
+        const ollamaBaseUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL
+        const lmstudioBaseUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL
+
+        console.log("[ProviderService] ollamaBaseUrl:", ollamaBaseUrl);
+        console.log("[ProviderService] lmstudioBaseUrl:", lmstudioBaseUrl);
+
+        return this.modelFetcherService!.listModels(provider, {
+            ollamaBaseUrl,
+            lmstudioBaseUrl,
+        });
     }
 }

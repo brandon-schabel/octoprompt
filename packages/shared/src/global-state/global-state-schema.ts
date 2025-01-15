@@ -88,7 +88,7 @@ export const appSettingsSchema = z.object({
     codeThemeDark: z.string().default('atomOneDark'),
     // the global url for ollama
     ollamaGlobalUrl: z.string().default('http://localhost:11434'),
-    lmStudioGlobalUrl: z.string().default('http://localhost:8000'),
+    lmStudioGlobalUrl: z.string().default('http://localhost:1234'),
     summarizationIgnorePatterns: z.array(z.string()).default([]),
     summarizationAllowPatterns: z.array(z.string()).default([]),
     disableSummarizationProjectIds: z.array(z.string()).default([]),

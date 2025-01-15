@@ -15,30 +15,25 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
     return chunks
 }
 
+
 const shouldSummarizeFile = async (projectId: string, filePath: string): Promise<boolean> => {
     const state = await getState()
     const settings = state.settings
-
 
     if (settings.disableSummarizationProjectIds.includes(projectId)) {
         return false
     }
 
-    const matchesIgnorePattern = settings.summarizationIgnorePatterns.some(pattern =>
-        new RegExp(pattern).test(filePath)
-    )
-
-    if (matchesIgnorePattern) {
+    // If any pattern in summarizationIgnorePatterns matches, skip.
+    if (matchesAnyPattern(filePath, settings.summarizationIgnorePatterns)) {
         return false
     }
 
-    const hasAllowPatterns = settings.summarizationAllowPatterns.length > 0
-    const matchesAllowPattern = settings.summarizationAllowPatterns.some(pattern =>
-        new RegExp(pattern).test(filePath)
-    )
-
-    if (hasAllowPatterns && !matchesAllowPattern) {
-        return false
+    // If we have allow patterns, at least one must match.
+    if (settings.summarizationAllowPatterns.length > 0) {
+        if (!matchesAnyPattern(filePath, settings.summarizationAllowPatterns)) {
+            return false
+        }
     }
 
     return true

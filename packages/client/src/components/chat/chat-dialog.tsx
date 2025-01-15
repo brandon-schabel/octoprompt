@@ -75,12 +75,12 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
                         />
                     </div>
 
-                    <ModelSelector
+                    {/* <ModelSelector
                         provider={provider}
                         currentModel={currentModel}
                         onProviderChange={setProvider}
                         onModelChange={setCurrentModel}
-                    />
+                    /> */}
 
                     <div className="flex items-center space-x-2">
                         <Checkbox

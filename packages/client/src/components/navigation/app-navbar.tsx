@@ -27,6 +27,7 @@ export function AppNavbar() {
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
     const isOnProjectsRoute = matches.some(match => match.routeId === "/projects")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
+    const isOnSummarizationRoute = matches.some(match => match.routeId === "/project-summarization")
 
     const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, state } = useGlobalStateHelpers()
     const selectedProjectId = activeTabState?.selectedProjectId
@@ -132,7 +133,7 @@ export function AppNavbar() {
                         </Link>
                         <Link
                             to="/project-summarization"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnKeysRoute
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnSummarizationRoute
                                 ? "text-indigo-600 dark:text-indigo-400"
                                 : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
