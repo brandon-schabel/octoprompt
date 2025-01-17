@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileTree, FileTreeRef } from '@/components/projects/file-tree/file-tree'
 import { SelectedFilesList, SelectedFilesListRef } from '@/components/projects/selected-files-list'
-import { useGetProjectFiles, useSyncProjectInterval } from '@/hooks/api/use-projects-api'
+import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { buildFileTree } from '@/components/projects/utils/projects-utils'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
@@ -58,7 +58,6 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const { state } = useGlobalStateHelpers()
     const activeProjectTabId = state?.projectActiveTabId
 
-    // Now we can do everything from our updated useSelectedFiles:
     const {
         selectedFiles,
         removeSelectedFile,
@@ -70,10 +69,13 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
         canRedo,
     } = useSelectedFiles()
 
-    // For file viewer
     const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
 
-    // Query: get files, poll for sync
+    // NEW: local states for autocomplete behavior
+    const [autocompleteIndex, setAutocompleteIndex] = useState<number>(-1)
+    const [showAutocomplete, setShowAutocomplete] = useState<boolean>(false)
+
+    // Query: get files
     const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId ?? '')
 
     // Filter the files
@@ -99,6 +101,14 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
         return buildFileTree(filteredFiles)
     }, [filteredFiles])
 
+    // Create a map of all files, not just filtered ones
+    const allFilesMap = useMemo(() => {
+        const map = new Map<string, ProjectFile>()
+        fileData?.files?.forEach(f => map.set(f.id, f))
+        return map
+    }, [fileData?.files])
+
+    // Keep the filtered files map for the file tree
     const fileMap = useMemo(() => {
         const map = new Map<string, ProjectFile>()
         filteredFiles.forEach(f => map.set(f.id, f))
@@ -110,7 +120,6 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     }
 
     const handleSetSelectedFiles = (updater: (prev: string[]) => string[]) => {
-        // This method is used by <FileTree /> internally
         selectFiles(updater(selectedFiles))
     }
 
@@ -173,27 +182,47 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const selectedFilesButton = (
         <Button variant="outline" className="relative" size="sm">
             Files
-            <Badge
-                variant="secondary"
-                className="ml-2"
-            >
+            <Badge variant="secondary" className="ml-2">
                 {selectedFiles.length}
             </Badge>
         </Button>
     )
 
+    // We’ll limit how many suggestions are shown to keep things tidy
+    const suggestions = useMemo(() => filteredFiles.slice(0, 10), [filteredFiles])
+
+    // In your file-panel.tsx (within FilePanel component):
+    const selectFileFromAutocomplete = (file: ProjectFile) => {
+        handleSetSelectedFiles((prev) => {
+            if (prev.includes(file.id)) return prev
+            return [...prev, file.id]
+        })
+        // If you want to open the viewer automatically:
+        // openFileViewer(file)
+
+        // Reset the highlighted index but don't close autocomplete
+        setAutocompleteIndex(-1)
+
+        // Keep it open
+        // setShowAutocomplete(false) // REMOVE this line
+
+        // Keep the input focused
+        searchInputRef.current?.focus()
+    }
 
     return (
-        <div id="outer-area" className={`flex flex-col  ${className}`}>
-            <div className="flex-1 space-y-4 transition-all duration-300 ">
+        <div id="outer-area" className={`flex flex-col ${className}`}>
+            <div className="flex-1 space-y-4 transition-all duration-300">
                 {selectedProjectId ? (
-                    <div className=" h-full flex flex-col space-y-4 ">
+                    <div className="h-full flex flex-col space-y-4">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 pt-4">
                             <div>
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <h2 className="text-lg font-semibold hover:cursor-help">{projectData.name}</h2>
+                                            <h2 className="text-lg font-semibold hover:cursor-help">
+                                                {projectData.name}
+                                            </h2>
                                         </TooltipTrigger>
                                         <TooltipContent side="bottom" className="flex items-center gap-2 max-w-md">
                                             <span className="break-all">{projectData.path}</span>
@@ -212,7 +241,9 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
-                                <span className="hidden md:block text-sm text-muted-foreground">{projectData.path.slice(0, 100)}</span>
+                                <span className="hidden md:block text-sm text-muted-foreground">
+                                    {projectData.path.slice(0, 100)}
+                                </span>
                             </div>
                             <div className="flex items-center space-x-4">
                                 <ProjectSettingsDialog />
@@ -221,19 +252,44 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
 
                         <div className="flex-1 overflow-hidden space-y-4 p-4">
 
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start">
+                            {/* Container must be relative so we can position the autocomplete dropdown */}
+                            <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start">
                                 <Input
                                     ref={searchInputRef}
-                                    placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatModShortcut('s')})`}
+                                    placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatModShortcut('f')})`}
                                     value={fileSearch}
-                                    onChange={(e) => setFileSearch(e.target.value)}
+                                    onChange={(e) => {
+                                        setFileSearch(e.target.value)
+                                        setShowAutocomplete(!!e.target.value.trim())
+                                        setAutocompleteIndex(-1)
+                                    }}
                                     className="max-w-64"
+                                    onFocus={() => setShowAutocomplete(!!fileSearch.trim())}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Escape') {
                                             searchInputRef.current?.blur()
+                                            setShowAutocomplete(false)
                                         } else if (e.key === 'ArrowDown') {
-                                            e.preventDefault() // Prevent scrolling
-                                            fileTreeRef.current?.focusTree()
+                                            e.preventDefault()
+                                            if (showAutocomplete && fileSearch.trim()) {
+                                                setAutocompleteIndex((prev) =>
+                                                    Math.min(suggestions.length - 1, prev + 1)
+                                                )
+                                            } else {
+                                                handleNavigateToFileTree()
+                                            }
+                                        } else if (e.key === 'ArrowUp') {
+                                            e.preventDefault()
+                                            if (showAutocomplete && fileSearch.trim()) {
+                                                setAutocompleteIndex((prev) =>
+                                                    Math.max(0, prev - 1)
+                                                )
+                                            }
+                                        } else if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
+                                                selectFileFromAutocomplete(suggestions[autocompleteIndex])
+                                            }
                                         }
                                     }}
                                 />
@@ -249,7 +305,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                     <div className="block">
                                         <SelectedFilesDrawer
                                             selectedFiles={selectedFiles}
-                                            fileMap={fileMap}
+                                            fileMap={allFilesMap}
                                             onRemoveFile={(fileId) => {
                                                 updateActiveTab(prev => ({
                                                     ...prev,
@@ -262,6 +318,34 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                     </div>
                                 </div>
 
+                                {/* Autocomplete suggestions dropdown */}
+                                {showAutocomplete && fileSearch.trim() && suggestions.length > 0 && (
+                                    <ul
+                                        className="absolute top-11 left-0 z-10 w-full bg-white border border-gray-300 rounded-md shadow-md max-h-56 overflow-auto"
+                                    >
+                                        <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted/50 border-b">
+                                            Press Enter to add highlighted file to selection
+                                        </li>
+                                        {suggestions.map((file, index) => {
+                                            const isHighlighted = index === autocompleteIndex
+                                            return (
+                                                <li
+                                                    key={file.id}
+                                                    className={`px-2 py-1 cursor-pointer ${isHighlighted ? 'bg-gray-200' : ''
+                                                        }`}
+                                                    onMouseDown={(e) => {
+                                                        // onMouseDown instead of onClick so we don't blur the input
+                                                        e.preventDefault()
+                                                        selectFileFromAutocomplete(file)
+                                                    }}
+                                                    onMouseEnter={() => setAutocompleteIndex(index)}
+                                                >
+                                                    {file.path}
+                                                </li>
+                                            )
+                                        })}
+                                    </ul>
+                                )}
                             </div>
 
                             {filesLoading ? (
@@ -291,21 +375,23 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         </div>
                                         <div className="hidden lg:flex lg:flex-col w-64 pl-4 min-h-0">
                                             <div className="flex justify-between items-center mb-2">
-                                                <div className="text-sm font-medium"><Badge variant="secondary">{selectedFiles.length}</Badge>Selected Files </div>
+                                                <div className="text-sm font-medium">
+                                                    <Badge variant="secondary">{selectedFiles.length}</Badge>
+                                                    Selected Files
+                                                </div>
                                             </div>
-
                                             <ScrollArea
-                                                className="flex-1 min-h-0 border rounded-md max-h-[50vh] items-center flex w-60 "
+                                                className="flex-1 min-h-0 border rounded-md max-h-[50vh] items-center flex w-60"
                                                 type="auto"
                                             >
                                                 <SelectedFilesList
                                                     ref={selectedFilesListRef}
                                                     selectedFiles={selectedFiles}
-                                                    fileMap={fileMap}
+                                                    fileMap={allFilesMap}
                                                     onRemoveFile={removeSelectedFile}
                                                     onNavigateLeft={handleNavigateToFileTree}
                                                     onNavigateRight={onNavigateToPrompts}
-                                                    className='w-60'
+                                                    className="w-60"
                                                     projectTabId={activeProjectTabId || 'defaultTab'}
                                                 />
                                             </ScrollArea>
@@ -329,8 +415,6 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                 viewedFile={viewedFile}
                 onClose={() => setViewedFile(null)}
             />
-
-
         </div>
     )
 })
