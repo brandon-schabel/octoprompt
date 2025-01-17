@@ -88,6 +88,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         />
                     </div>
 
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="spacebar-select" className="text-sm font-medium">
+                            Use Spacebar to Select Autocomplete
+                        </Label>
+                        <Switch
+                            id="spacebar-select"
+                            checked={settings?.useSpacebarToSelectAutocomplete ?? true}
+                            onCheckedChange={(checked) => {
+                                updateGlobalStateKey('settings', (prev) => ({
+                                    ...prev,
+                                    useSpacebarToSelectAutocomplete: checked,
+                                }))
+                            }}
+                        />
+                    </div>
+
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="ollama-url">Ollama URL</Label>

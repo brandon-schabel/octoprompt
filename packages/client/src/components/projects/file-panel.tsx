@@ -56,6 +56,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
     const { state } = useGlobalStateHelpers()
+    const allowSpacebaseToSelect = state?.settings?.useSpacebarToSelectAutocomplete ?? true
     const activeProjectTabId = state?.projectActiveTabId
 
     const {
@@ -281,8 +282,12 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                                     Math.max(0, prev - 1)
                                                 )
                                             }
-                                        } else if (e.key === 'Enter') {
-                                            e.preventDefault()
+                                        } else if (e.key === 'Enter' || (allowSpacebaseToSelect && e.key === ' ')) {
+                                            // If we're navigating autocomplete (index >= 0), always prevent default
+                                            if (autocompleteIndex >= 0) {
+                                                e.preventDefault()
+                                            }
+                                            // Only proceed with selection if we have a valid index
                                             if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
                                                 selectFileFromAutocomplete(suggestions[autocompleteIndex])
                                                 // Move cursor down if there are more items
@@ -324,7 +329,8 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         className="absolute top-11 left-0 z-10 w-full bg-white border border-gray-300 rounded-md shadow-md max-h-56 overflow-auto"
                                     >
                                         <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted/50 border-b">
-                                            Press Enter to add highlighted file to selection
+                                            Press Enter{allowSpacebaseToSelect && <span > or Spacebar</span>} to add highlighted file to selection
+                                            
                                         </li>
                                         {suggestions.map((file, index) => {
                                             const isHighlighted = index === autocompleteIndex
