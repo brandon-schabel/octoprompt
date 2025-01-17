@@ -11,6 +11,7 @@ import { LinkIcon, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
+import { Badge } from '../ui/badge'
 
 type GenericTabManagerProps = {
     /**
@@ -76,13 +77,32 @@ export function GenericTabManager({
 
     const tabIds = Object.keys(tabs ?? {})
 
-    // Setup hotkeys
+    // Setup number hotkeys
     for (let i = 1; i <= 9; i++) {
         useHotkeys(`${hotkeyPrefix}+${i}`, () => {
             const targetTabId = tabIds[i - 1]
             if (targetTabId) onSetActiveTab(targetTabId)
         })
     }
+
+    // Setup tab navigation hotkeys
+    useHotkeys(`${hotkeyPrefix}+tab`, (e) => {
+        e.preventDefault()
+        if (!activeTabId || tabIds.length === 0) return
+        
+        const currentIndex = tabIds.indexOf(activeTabId)
+        const nextIndex = (currentIndex + 1) % tabIds.length
+        onSetActiveTab(tabIds[nextIndex])
+    })
+
+    useHotkeys(`${hotkeyPrefix}+shift+tab`, (e) => {
+        e.preventDefault()
+        if (!activeTabId || tabIds.length === 0) return
+        
+        const currentIndex = tabIds.indexOf(activeTabId)
+        const prevIndex = (currentIndex - 1 + tabIds.length) % tabIds.length
+        onSetActiveTab(tabIds[prevIndex])
+    })
 
     // If not ready
     if (!isReady) {
@@ -147,13 +167,14 @@ export function GenericTabManager({
                                         />
                                     ) : (
                                         <div className="flex items-center gap-2">
+                                                       {showShortcut && (
+                                                <Badge className="text-xs text-muted-foreground">
+                                                    {shortcutNumber}
+                                                </Badge>
+                                            )}
                                             <span>{displayName}</span>
                                             <span>{hasLink ? <LinkIcon className="h-4 w-4" /> : ''}</span>
-                                            {showShortcut && (
-                                                <span className="text-xs text-muted-foreground">
-                                                    {shortcutNumber}
-                                                </span>
-                                            )}
+                                 
                                         </div>
                                     )}
                                 </TabsTrigger>

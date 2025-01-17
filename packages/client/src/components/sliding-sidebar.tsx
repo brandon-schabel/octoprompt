@@ -46,13 +46,22 @@ export function SlidingSidebar({
     const [mouseDownPos, setMouseDownPos] = useState({ x: 0, y: 0 });
     const [offset, setOffset] = useState({ x: 0, y: 0 });
 
+
+    const buttonPositionKey = `${localStorageKey}-buttonPosition`
+
     // x is always “distance from the edge” – left edge if side=left, right edge if side=right
     // y is the vertical position from the top
     const [buttonPosition, setButtonPosition] = useState(() => {
         if (typeof window !== 'undefined') {
+            const storedButtonPosition = localStorage.getItem(buttonPositionKey)
+            if (storedButtonPosition) {
+                return JSON.parse(storedButtonPosition)
+            }
+
             return {
                 x: 40, // start ~20px from the chosen edge
-                y: window.innerHeight / 2,
+                // y: window.innerHeight / 2,
+                y: window.innerHeight / 6
             };
         }
         return { x: 20, y: 300 };
@@ -202,7 +211,11 @@ export function SlidingSidebar({
                     'hover:bg-gray-100 dark:hover:bg-gray-800',
                     'active:scale-95 backdrop-blur-sm bg-opacity-80',
                     'hover:scale-105',
-                    isCollapsed ? 'bg-white dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-800'
+                    'shadow-lg border-2',
+                    'transition-all duration-200',
+                    isCollapsed
+                        ? 'bg-white dark:bg-gray-900 border-primary/20'
+                        : 'bg-gray-100 dark:bg-gray-800 border-primary/40'
                 )}
             >
                 {isCollapsed ? (

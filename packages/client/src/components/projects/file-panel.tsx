@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Copy } from 'lucide-react'
+import { Copy, X } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileTree, FileTreeRef } from '@/components/projects/file-tree/file-tree'
@@ -251,53 +251,77 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
 
                             {/* Container must be relative so we can position the autocomplete dropdown */}
                             <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start">
-                                <Input
-                                    ref={searchInputRef}
-                                    placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatModShortcut('f')})`}
-                                    value={fileSearch}
-                                    onChange={(e) => {
-                                        setFileSearch(e.target.value)
-                                        setShowAutocomplete(!!e.target.value.trim())
-                                        setAutocompleteIndex(-1)
-                                    }}
-                                    className="max-w-64"
-                                    onFocus={() => setShowAutocomplete(!!fileSearch.trim())}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Escape') {
-                                            searchInputRef.current?.blur()
-                                            setShowAutocomplete(false)
-                                        } else if (e.key === 'ArrowDown') {
-                                            e.preventDefault()
-                                            if (showAutocomplete && fileSearch.trim()) {
-                                                setAutocompleteIndex((prev) =>
-                                                    Math.min(suggestions.length - 1, prev + 1)
-                                                )
-                                            } else {
-                                                handleNavigateToFileTree()
-                                            }
-                                        } else if (e.key === 'ArrowUp') {
-                                            e.preventDefault()
-                                            if (showAutocomplete && fileSearch.trim()) {
-                                                setAutocompleteIndex((prev) =>
-                                                    Math.max(0, prev - 1)
-                                                )
-                                            }
-                                        } else if (e.key === 'Enter' || (allowSpacebaseToSelect && e.key === ' ')) {
-                                            // If we're navigating autocomplete (index >= 0), always prevent default
-                                            if (autocompleteIndex >= 0) {
+                                <div className="relative max-w-64 w-full">
+                                    <Input
+                                        ref={searchInputRef}
+                                        placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatModShortcut('f')})`}
+                                        value={fileSearch}
+                                        onChange={(e) => {
+                                            setFileSearch(e.target.value)
+                                            setShowAutocomplete(!!e.target.value.trim())
+                                            setAutocompleteIndex(-1)
+                                        }}
+                                        className="pr-8 w-full"
+                                        onFocus={() => setShowAutocomplete(!!fileSearch.trim())}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') {
+                                                searchInputRef.current?.blur()
+                                                setShowAutocomplete(false)
+                                            } else if (e.key === 'ArrowDown') {
                                                 e.preventDefault()
-                                            }
-                                            // Only proceed with selection if we have a valid index
-                                            if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                                                selectFileFromAutocomplete(suggestions[autocompleteIndex])
-                                                // Move cursor down if there are more items
-                                                if (autocompleteIndex < suggestions.length - 1) {
-                                                    setAutocompleteIndex(prev => prev + 1)
+                                                if (showAutocomplete && fileSearch.trim()) {
+                                                    setAutocompleteIndex((prev) =>
+                                                        Math.min(suggestions.length - 1, prev + 1)
+                                                    )
+                                                } else {
+                                                    handleNavigateToFileTree()
+                                                }
+                                            } else if (e.key === 'ArrowUp') {
+                                                e.preventDefault()
+                                                if (showAutocomplete && fileSearch.trim()) {
+                                                    setAutocompleteIndex((prev) =>
+                                                        Math.max(0, prev - 1)
+                                                    )
+                                                }
+                                            } else if (e.key === 'ArrowRight') {
+                                                e.preventDefault()
+                                                if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
+                                                    openFileViewer(suggestions[autocompleteIndex])
+                                                }
+                                            } else if (e.key === 'Enter' || (allowSpacebaseToSelect && e.key === ' ')) {
+                                                // If we're navigating autocomplete (index >= 0), always prevent default
+                                                if (autocompleteIndex >= 0) {
+                                                    e.preventDefault()
+                                                }
+                                                // Only proceed with selection if we have a valid index
+                                                if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
+                                                    selectFileFromAutocomplete(suggestions[autocompleteIndex])
+                                                    // Move cursor down if there are more items
+                                                    if (autocompleteIndex < suggestions.length - 1) {
+                                                        setAutocompleteIndex(prev => prev + 1)
+                                                    }
                                                 }
                                             }
-                                        }
-                                    }}
-                                />
+                                        }}
+                                    />
+                                    {fileSearch && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-accent hover:text-accent-foreground"
+                                            onClick={() => {
+                                                setFileSearch('')
+                                                setShowAutocomplete(false)
+                                                setAutocompleteIndex(-1)
+                                                searchInputRef.current?.focus()
+                                            }}
+                                            aria-label="Clear search"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    )}
+                                </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -329,7 +353,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         className="absolute top-11 left-0 z-10 w-full bg-white border border-gray-300 rounded-md shadow-md max-h-56 overflow-auto"
                                     >
                                         <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted/50 border-b">
-                                            Press Enter{allowSpacebaseToSelect && <span > or Spacebar</span>} to add highlighted file to selection
+                                            Press Enter{allowSpacebaseToSelect && <span > or Spacebar</span>} to add highlighted file to selection, right arrow to preview file
                                             
                                         </li>
                                         {suggestions.map((file, index) => {
@@ -423,7 +447,15 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
             <FileViewerDialog
                 open={!!viewedFile}
                 viewedFile={viewedFile}
-                onClose={() => setViewedFile(null)}
+                onClose={() => {
+                    setViewedFile(null)
+                    // Refocus the search input after a small delay to ensure the dialog is fully closed
+                    setTimeout(() => {
+                        searchInputRef.current?.focus()
+                        // Restore autocomplete state
+                        setShowAutocomplete(!!fileSearch.trim())
+                    }, 0)
+                }}
             />
         </div>
     )
