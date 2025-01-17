@@ -194,19 +194,15 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     // In your file-panel.tsx (within FilePanel component):
     const selectFileFromAutocomplete = (file: ProjectFile) => {
         handleSetSelectedFiles((prev) => {
-            if (prev.includes(file.id)) return prev
+            // Toggle selection - remove if already selected, add if not
+            if (prev.includes(file.id)) {
+                return prev.filter(id => id !== file.id)
+            }
             return [...prev, file.id]
         })
-        // If you want to open the viewer automatically:
-        // openFileViewer(file)
 
-        // Reset the highlighted index but don't close autocomplete
-        setAutocompleteIndex(-1)
-
-        // Keep it open
-        // setShowAutocomplete(false) // REMOVE this line
-
-        // Keep the input focused
+        // Keep the current index and autocomplete state
+        setShowAutocomplete(true)
         searchInputRef.current?.focus()
     }
 
@@ -328,19 +324,23 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         </li>
                                         {suggestions.map((file, index) => {
                                             const isHighlighted = index === autocompleteIndex
+                                            const isSelected = selectedFiles.includes(file.id)
                                             return (
                                                 <li
                                                     key={file.id}
-                                                    className={`px-2 py-1 cursor-pointer ${isHighlighted ? 'bg-gray-200' : ''
-                                                        }`}
+                                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
+                                                        isHighlighted ? 'bg-gray-200' : ''
+                                                    }`}
                                                     onMouseDown={(e) => {
-                                                        // onMouseDown instead of onClick so we don't blur the input
                                                         e.preventDefault()
                                                         selectFileFromAutocomplete(file)
                                                     }}
                                                     onMouseEnter={() => setAutocompleteIndex(index)}
                                                 >
-                                                    {file.path}
+                                                    <span>{file.path}</span>
+                                                    {isSelected && (
+                                                        <Badge variant="secondary" className="ml-2">Selected</Badge>
+                                                    )}
                                                 </li>
                                             )
                                         })}
