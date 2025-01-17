@@ -41,6 +41,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     const codeDarkTheme = settings?.codeThemeDark ?? 'atomOneDark'
     const ollamaUrl = settings?.ollamaGlobalUrl;
     const lmStudioUrl = settings?.lmStudioGlobalUrl;
+    const hideInformationalTooltips = settings?.hideInformationalTooltips ?? false
 
     const handleThemeToggle = () => {
         const newTheme: Theme = isDarkMode ? 'light' : 'dark'
@@ -99,6 +100,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                                 updateGlobalStateKey('settings', (prev) => ({
                                     ...prev,
                                     useSpacebarToSelectAutocomplete: checked,
+                                }))
+                            }}
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="hide-informational-tooltips" className="text-sm font-medium">
+                            Hide Informational Tooltips
+                        </Label>
+                        <Switch
+                            id="hide-informational-tooltips"
+                            checked={hideInformationalTooltips}
+                            onCheckedChange={(checked) => {
+                                updateGlobalStateKey('settings', (prev) => ({
+                                    ...prev,
+                                    hideInformationalTooltips: checked,
                                 }))
                             }}
                         />

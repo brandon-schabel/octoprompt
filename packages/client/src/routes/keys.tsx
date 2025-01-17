@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select"
 import { ExternalLinkIcon } from '@radix-ui/react-icons'
 import { PROVIDERS } from '@/constants/providers-constants'
+import { InfoTooltip } from '@/components/info-tooltip'
 
 export const Route = createFileRoute('/keys')({
     component: KeysPage
@@ -38,7 +39,12 @@ function KeysPage() {
         <div className="p-4 space-y-4 bg-secondary h-full">
             <Card>
                 <CardHeader>
-                    <CardTitle>Provider Keys</CardTitle>
+                    <div className="flex items-center gap-2">
+                        <CardTitle>Provider Keys</CardTitle>
+                        <InfoTooltip  >
+                            {`Provider keys are API keys required to use different AI services. \n Each provider (like OpenAI, Anthropic) needs its own key which you can get from their website. Links will be shown for each selected provider. Once added, you can use their AI models in the app.`}
+                        </InfoTooltip>
+                    </div>
                     <CardDescription>Add API keys for different AI providers</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -72,12 +78,12 @@ function KeysPage() {
                                 <div className="text-sm text-muted-foreground">
                                     <p>{selectedProviderDetails.description}</p>
                                     <a
-                                        href={selectedProviderDetails.apiKeyUrl}
+                                        href={selectedProviderDetails.link}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-primary inline-flex items-center hover:underline mt-1"
                                     >
-                                        Get API key
+                                        {selectedProviderDetails.linkTitle}
                                         <ExternalLinkIcon className="ml-1 h-4 w-4" />
                                     </a>
                                 </div>

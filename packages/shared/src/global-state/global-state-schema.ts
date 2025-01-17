@@ -94,6 +94,7 @@ export const appSettingsSchema = z.object({
     summarizationAllowPatterns: z.array(z.string()).default([]),
     summarizationEnabledProjectIds: z.array(z.string()).default([]),
     useSpacebarToSelectAutocomplete: z.boolean().default(true),
+    hideInformationalTooltips: z.boolean().default(false),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
@@ -130,6 +131,7 @@ export const createInitialGlobalState = (): GlobalState => ({
         summarizationAllowPatterns: [],
         summarizationEnabledProjectIds: [],
         useSpacebarToSelectAutocomplete: true,
+        hideInformationalTooltips: false,
     },
     counter: 0,
     projectTabs: {

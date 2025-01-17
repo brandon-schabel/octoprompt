@@ -16,15 +16,9 @@ function getPartial<T>(prev: T, partialOrFn: PartialOrFn<T>): Partial<T> {
 }
 
 export function useGlobalStateHelpers() {
-    // 1) Access current state + WebSocket
     const { globalState, isOpen, wsClient } = useGlobalStateContext();
-
-    // For convenience, alias your main state:
     const state = globalState;
 
-    /**
-     * Utility to check if we *can* send a message
-     */
     const canProceed = useCallback((): boolean => {
         if (!isOpen) {
             console.warn("WebSocket not open, cannot send message");
@@ -37,18 +31,12 @@ export function useGlobalStateHelpers() {
         return true;
     }, [isOpen, state]);
 
-    /**
-     * Helper to send typed messages over the BNK socket
-     */
     const sendWSMessage = useCallback((msg: Parameters<typeof wsClient.sendMessage>[0]) => {
         if (canProceed()) {
             wsClient.sendMessage(msg);
         }
     }, [canProceed, wsClient.sendMessage]);
 
-    // --------------------------------------------------
-    // 1) Generic Updaters
-    // --------------------------------------------------
 
     function updateGlobalStateKey<K extends keyof GlobalState>(
         key: K,
@@ -71,9 +59,6 @@ export function useGlobalStateHelpers() {
         updateGlobalStateKey("settings", partialOrFn);
     }
 
-    // --------------------------------------------------
-    // 2) Project Tabs
-    // --------------------------------------------------
 
     function createProjectTab() {
         if (!canProceed() || !state?.projectActiveTabId) return;
@@ -158,9 +143,7 @@ export function useGlobalStateHelpers() {
         });
     }
 
-    /**
-     * Update a single key in the *active* project tab
-     */
+
     function updateActiveProjectTabStateKey<K extends keyof ProjectTabState>(
         key: K,
         valueOrFn: ProjectTabState[K] | ((prevValue: ProjectTabState[K]) => ProjectTabState[K])
@@ -170,10 +153,6 @@ export function useGlobalStateHelpers() {
             return { [key]: newValue };
         });
     }
-
-    // --------------------------------------------------
-    // 3) Chat Tabs
-    // --------------------------------------------------
 
     function createChatTab(options?: {
         cleanTab?: boolean;
@@ -282,9 +261,7 @@ export function useGlobalStateHelpers() {
         });
     }
 
-    // --------------------------------------------------
-    // 4) Linking Helpers
-    // --------------------------------------------------
+
 
     function linkChatTabToProjectTab(
         chatTabId: string,
@@ -362,9 +339,6 @@ export function useGlobalStateHelpers() {
     }
 
 
-    // --------------------------------------------------
-    // 5) Expose any “active tab” references
-    // --------------------------------------------------
     const activeProjectTabState = state.projectActiveTabId
         ? state.projectTabs[state.projectActiveTabId]
         : undefined;
@@ -374,10 +348,6 @@ export function useGlobalStateHelpers() {
         : undefined;
 
 
-
-    // --------------------------------------------------
-    // Return an object that mimics your old “UseGlobalStateReturn”
-    // --------------------------------------------------
     return {
         // The entire state
         state,

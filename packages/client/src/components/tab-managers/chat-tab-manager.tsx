@@ -29,6 +29,10 @@ export function ChatTabManager() {
             emptyMessage="No chat tabs yet."
             className='border-b'
             title='Chat Tabs'
+            titleTooltip="Chat Tabs allow you to use different settings between different chat sessions. 
+            Provider and Model settings are saved on the tab, and not the individual chats. 
+            You can access your different chats by clicking the floating chat icon.
+            "
         />
     )
 }

@@ -1,4 +1,3 @@
-
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 import { GenericTabManager } from './generic-tab-manager'
 
@@ -28,6 +27,8 @@ export function ProjectsTabManager() {
       newTabLabel="New Project Tab"
       emptyMessage="No project tabs yet."
       className='border-b'
+      title="Project Tabs"
+      titleTooltip="Project Tabs keep state and settings within the tabs. So you can either switch between projects, or have multiple tabs of one project open for example with different selections."
     />
   )
 }

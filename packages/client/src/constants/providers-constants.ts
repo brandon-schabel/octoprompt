@@ -4,7 +4,8 @@ import { APIProviders } from "shared/index"
 export type ModelProvider = {
     id: APIProviders
     name: string
-    apiKeyUrl: string
+    link: string
+    linkTitle: string
     description: string
 }
 
@@ -13,55 +14,64 @@ export const PROVIDERS = [
     {
         id: 'openai',
         name: 'OpenAI',
-        apiKeyUrl: 'https://platform.openai.com/api-keys',
+        link: 'https://platform.openai.com/api-keys',
+        linkTitle: 'Get OpenAI API key',
         description: 'API keys for GPT-4, GPT-3.5, and other OpenAI models'
     },
     {
         id: 'openrouter',
         name: 'OpenRouter',
-        apiKeyUrl: 'https://openrouter.ai/settings/keys',
+        link: 'https://openrouter.ai/settings/keys',
+        linkTitle: 'Get OpenRouter API key',
         description: 'Access to multiple LLM providers through a single API'
     },
     {
         id: 'xai',
         name: "XAI",
-        apiKeyUrl: "https://console.x.ai",
+        link: "https://console.x.ai",
+        linkTitle: 'Get XAI API key',
         description: "XAI API keys for Grok models"
     },
     {
         id: 'google_gemini',
         name: 'Google Gemini',
-        apiKeyUrl: 'https://aistudio.google.com/app/apikey',
+        link: 'https://aistudio.google.com/app/apikey',
+        linkTitle: 'Get Google Gemini API key',
         description: 'API keys for Google Gemini models (including Gemini Pro and Ultra)'
     },
     {
         id: 'anthropic',
         name: 'Anthropic',
-        apiKeyUrl: 'https://console.anthropic.com/settings/keys',
+        link: 'https://console.anthropic.com/settings/keys',
+        linkTitle: 'Get Anthropic API key',
         description: 'API keys for Anthropic models'
     },
     {
         id: 'groq',
         name: 'Groq',
-        apiKeyUrl: 'https://console.groq.com/keys',
+        link: 'https://console.groq.com/keys',
+        linkTitle: 'Get Groq API key',
         description: 'API keys for Groq models'
     },
     {
         id: 'together',
         name: 'Together',
-        apiKeyUrl: 'https://api.together.ai/settings/api-keys',
+        link: 'https://api.together.ai/settings/api-keys',
+        linkTitle: 'Get Together API key',
         description: 'API keys for Together models'
     },
     {
         id: 'lmstudio',
         name: 'LMStudio',
-        apiKeyUrl: 'https://lmstudio.ai/settings/api-keys',
-        description: 'API keys for LMStudio models'
+        link: 'https://lmstudio.ai/',
+        linkTitle: 'Download LM Studio',
+        description: 'LM Studio is a UI based tool for running LLMs on your local machine. Click the link to download the app. Once you have LM Studio installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them.'
     }, {
         id: 'ollama',
         name: 'Ollama',
-        apiKeyUrl: 'https://ollama.ai/settings/api-keys',
-        description: 'API keys for Ollama models'
+        link: 'https://ollama.com/download',
+        linkTitle: 'Download Ollama',
+        description: 'Ollama is a lightweight terminal based tool for running LLMs on your local machine. Click the link to download the app. Once you have Ollama installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them.'
     }
 ] satisfies ModelProvider[]
 

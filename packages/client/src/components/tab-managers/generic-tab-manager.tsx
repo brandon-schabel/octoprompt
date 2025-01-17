@@ -7,11 +7,13 @@ import {
     ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { Input } from '@/components/ui/input'
-import { LinkIcon, Plus } from 'lucide-react'
+import { LinkIcon, Plus, HelpCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
 import { Badge } from '../ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { InfoTooltip } from '../info-tooltip'
 
 type GenericTabManagerProps = {
     /**
@@ -57,6 +59,9 @@ type GenericTabManagerProps = {
 
     /** Optional title to display before the tabs */
     title?: string;
+
+    /** Optional tooltip message to display next to the title */
+    titleTooltip?: string;
 };
 
 export function GenericTabManager({
@@ -72,6 +77,7 @@ export function GenericTabManager({
     emptyMessage = 'No tabs yet.',
     className,
     title,
+    titleTooltip,
 }: GenericTabManagerProps) {
     const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null)
 
@@ -89,7 +95,7 @@ export function GenericTabManager({
     useHotkeys(`${hotkeyPrefix}+tab`, (e) => {
         e.preventDefault()
         if (!activeTabId || tabIds.length === 0) return
-        
+
         const currentIndex = tabIds.indexOf(activeTabId)
         const nextIndex = (currentIndex + 1) % tabIds.length
         onSetActiveTab(tabIds[nextIndex])
@@ -98,7 +104,7 @@ export function GenericTabManager({
     useHotkeys(`${hotkeyPrefix}+shift+tab`, (e) => {
         e.preventDefault()
         if (!activeTabId || tabIds.length === 0) return
-        
+
         const currentIndex = tabIds.indexOf(activeTabId)
         const prevIndex = (currentIndex - 1 + tabIds.length) % tabIds.length
         onSetActiveTab(tabIds[prevIndex])
@@ -133,7 +139,14 @@ export function GenericTabManager({
             className={cn("flex flex-col justify-start rounded-none", className)}
         >
             <TabsList className="bg-background justify-start rounded-none">
-                {title && <div className="text-xs lg:text-sm px-3 font-semibold flex items-center">{title}</div>}
+                {title && (
+                    <div className="text-xs lg:text-sm px-3 font-semibold flex items-center gap-2">
+                        {title}
+                        {titleTooltip && (
+                            <InfoTooltip >{titleTooltip}</InfoTooltip>
+                        )}
+                    </div>
+                )}
                 {tabIds.map((tabId, index) => {
                     const shortcutNumber = index + 1
                     const showShortcut = shortcutNumber <= 9
@@ -167,14 +180,14 @@ export function GenericTabManager({
                                         />
                                     ) : (
                                         <div className="flex items-center gap-2">
-                                                       {showShortcut && (
+                                            {showShortcut && (
                                                 <Badge className="text-xs text-muted-foreground">
                                                     {shortcutNumber}
                                                 </Badge>
                                             )}
                                             <span>{displayName}</span>
                                             <span>{hasLink ? <LinkIcon className="h-4 w-4" /> : ''}</span>
-                                 
+
                                         </div>
                                     )}
                                 </TabsTrigger>
