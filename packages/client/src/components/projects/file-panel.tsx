@@ -285,6 +285,10 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                             e.preventDefault()
                                             if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
                                                 selectFileFromAutocomplete(suggestions[autocompleteIndex])
+                                                // Move cursor down if there are more items
+                                                if (autocompleteIndex < suggestions.length - 1) {
+                                                    setAutocompleteIndex(prev => prev + 1)
+                                                }
                                             }
                                         }
                                     }}
