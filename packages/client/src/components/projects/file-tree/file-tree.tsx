@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Folder, File as FileIcon, ChevronRight, Eye, Code } from 'lucide-react'
+import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getRecursiveImports, buildTsconfigAliasMap } from './utils/import-resolver'
 import { getEditorUrl } from '@/lib/editor-urls'
@@ -62,6 +62,21 @@ async function copyFilePath(path: string) {
         toast.error("Failed to copy file path")
     }
 }
+
+
+export function buildTreeStructure(node: FileNode, indent = ""): string {
+    let lines: string[] = []
+    if (node._folder && node.children) {
+        for (const [name, child] of Object.entries(node.children)) {
+            lines.push(`${indent}${name}`)
+            if (child._folder) {
+                lines.push(buildTreeStructure(child, indent + "  "))
+            }
+        }
+    }
+    return lines.join("\n")
+}
+
 
 const FileTreeNodeRow = forwardRef<HTMLDivElement, {
     item: VisibleItem;
@@ -256,6 +271,24 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                                         <Code className="h-4 w-4" />
                                     </a>
                                 </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={async (e) => {
+                                        e.stopPropagation()
+                                        const content = buildNodeContent(item.node, fileMap, false)
+                                        try {
+                                            await navigator.clipboard.writeText(content)
+                                            toast.success('File contents copied to clipboard')
+                                        } catch (err) {
+                                            toast.error('Failed to copy file contents')
+                                            console.error(err)
+                                        }
+                                    }}
+                                >
+                                    <Copy className="h-4 w-4" />
+                                </Button>
                             </>
                         )}
                     </div>
@@ -294,6 +327,15 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                     }}
                 >
                     Copy {isFolder ? 'Folder' : 'File'} Contents
+                </ContextMenuItem>
+                <ContextMenuItem
+                    onClick={async () => {
+                        const tree = buildTreeStructure(item.node)
+                        await navigator.clipboard.writeText(tree)
+                        toast.success("Folder tree copied to clipboard")
+                    }}
+                >
+                    Copy Folder Tree
                 </ContextMenuItem>
             </ContextMenuContent>
         </ContextMenu>
@@ -504,6 +546,18 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
         [visibleItems, focusedIndex, setSelectedFiles, isFocused]
     )
 
+    function copyEntireTree() {
+        const lines: string[] = []
+        for (const [name, node] of Object.entries(root)) {
+            lines.push(name)
+            if (node._folder) {
+                lines.push(buildTreeStructure(node, "  "))
+            }
+        }
+        navigator.clipboard.writeText(lines.join("\n"))
+        toast.success("Full file tree copied to clipboard")
+    }
+
     return (
         <div
             className='h-full overflow-y-auto'
@@ -521,6 +575,9 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
             <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground">
                 <span>Files</span>
                 <span>{formatModShortcut('g')} to focus</span>
+                <Button variant="ghost" size="sm" onClick={copyEntireTree}>
+                    Copy Full Tree
+                </Button>
             </div>
             <div className="p-1">
                 {visibleItems.map((item, idx) => {

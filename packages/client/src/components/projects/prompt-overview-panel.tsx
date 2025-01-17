@@ -14,14 +14,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { formatModShortcut } from '@/lib/platform'
-
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
-import { SuggestedFilesDialog } from '../suggest-files-dialog'
-import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
-import { PromptimizerDialog } from '../promptimizer-dialog'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { SuggestedFilesDialog } from '../suggest-files-dialog'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -76,29 +73,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 },
             })
         }
-
-        // -- 4) Add Promptimizer (Optimize Prompt) logic --
-        const promptimizeMutation = useOptimizePrompt()
-        const [promptimizeDialogOpen, setPromptimizeDialogOpen] = useState(false)
-        const [optimizedPrompt, setOptimizedPrompt] = useState("")
-
-        function handlePromptimize(userPrompt: string) {
-            if (!userPrompt.trim()) {
-                alert("Please enter a prompt!")
-                return
-            }
-            promptimizeMutation.mutate(userPrompt, {
-                onSuccess: (resp) => {
-                    if (resp.success && resp.optimizedPrompt) {
-                        setOptimizedPrompt(resp.optimizedPrompt)
-                        setPromptimizeDialogOpen(true)
-                    } else {
-                        alert(resp.error || "No optimized prompt returned")
-                    }
-                },
-            })
-        }
-        // -----------------------------------------------
 
         // Keep localUserPrompt in sync with globalUserPrompt
         useEffect(() => {
@@ -217,9 +191,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // A small callback to set the local & global userPrompt
         const handleUpdatedPrompt = useCallback((newPrompt: string) => {
-            // Update local user prompt
             setLocalUserPrompt(newPrompt)
-            // Also update the global userPrompt
             updateActiveProjectTab(prev => ({
                 ...prev,
                 userPrompt: newPrompt,
@@ -227,6 +199,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }, [updateActiveProjectTab])
 
 
+
+     
         return (
             <div className={`flex flex-col overflow-y-auto ${className}`}>
                 {/* SUGGESTED FILES DIALOG */}
@@ -236,17 +210,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     suggestedFiles={suggestedFiles}
                 />
 
-                {/* PROMPTIMIZER DIALOG */}
-                <PromptimizerDialog
-                    open={promptimizeDialogOpen}
-                    onClose={() => setPromptimizeDialogOpen(false)}
-                    optimizedPrompt={optimizedPrompt}
-                    // NEW: Provide the callback
-                    onUpdatePrompt={handleUpdatedPrompt}
-                />
-
                 <div className="bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4 border-l">
                     <div className="flex flex-col h-full overflow-hidden">
+
+
                         {/* Token usage info */}
                         <div className="space-y-2 mb-4 border-b">
                             <div className="space-y-1">
@@ -293,14 +260,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                             disabled={findSuggestedFilesMutation.isPending}
                                         >
                                             {findSuggestedFilesMutation.isPending ? "Finding..." : "Find Suggested Files"}
-                                        </Button>
-
-                                        {/* NEW: Promptimize button */}
-                                        <Button
-                                            onClick={() => handlePromptimize(localUserPrompt)}
-                                            disabled={promptimizeMutation.isPending}
-                                        >
-                                            {promptimizeMutation.isPending ? "Promptimizing..." : "Promptimize"}
                                         </Button>
                                     </div>
                                 </div>

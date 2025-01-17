@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { Settings } from 'lucide-react'
+import { Loader2, RefreshCw, Settings } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
 
 
 export function ProjectSettingsDialog() {
@@ -30,7 +31,9 @@ export function ProjectSettingsDialog() {
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
     const projectId = activeTabState?.selectedProjectId
-    const isProjectSummarizationDisabled = projectId ? settings.disableSummarizationProjectIds.includes(projectId) : false
+    const isProjectSummarizationDisabled = projectId ? settings.summarizationEnabledProjectIds.includes(projectId) : false
+    const { isFetching: isSyncing, refetch: syncProject } = useSyncProjectInterval(projectId ?? '')
+
 
     const setContextLimit = (value: number) => {
         updateActiveTab(prev => ({
@@ -60,17 +63,18 @@ export function ProjectSettingsDialog() {
 
         updateSettings(prev => ({
             ...prev,
-            disableSummarizationProjectIds: value
-                ? [...prev.disableSummarizationProjectIds, projectId]
-                : prev.disableSummarizationProjectIds.filter(id => id !== projectId)
+            summarizationEnabledProjectIds: value
+                ? [...prev.summarizationEnabledProjectIds, projectId]
+                : prev.summarizationEnabledProjectIds.filter(id => id !== projectId)
         }))
     }
 
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline">
                     <Settings className="h-4 w-4" />
+                    Project
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
@@ -167,6 +171,26 @@ export function ProjectSettingsDialog() {
                             </div>
                         </div>
                     </div>
+                </div>
+                <div className="space-y-2">
+                    <div>
+                        <span className="text-sm font-medium">Sync Project</span>
+                        <p className="text-sm text-muted-foreground">
+                            Manually refresh the project files to ensure your local view matches the current state of your codebase.
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        disabled={isSyncing}
+                        onClick={() => syncProject()}
+                    >
+                        {isSyncing ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                        )}
+                        Sync
+                    </Button>
                 </div>
             </DialogContent>
         </Dialog>

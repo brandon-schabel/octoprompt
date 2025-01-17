@@ -92,7 +92,7 @@ export const appSettingsSchema = z.object({
     lmStudioGlobalUrl: z.string().default('http://localhost:1234'),
     summarizationIgnorePatterns: z.array(z.string()).default([]),
     summarizationAllowPatterns: z.array(z.string()).default([]),
-    disableSummarizationProjectIds: z.array(z.string()).default([]),
+    summarizationEnabledProjectIds: z.array(z.string()).default([]),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
@@ -127,7 +127,7 @@ export const createInitialGlobalState = (): GlobalState => ({
         lmStudioGlobalUrl: 'http://localhost:8000',
         summarizationIgnorePatterns: [],
         summarizationAllowPatterns: [],
-        disableSummarizationProjectIds: [],
+        summarizationEnabledProjectIds: [],
     },
     counter: 0,
     projectTabs: {

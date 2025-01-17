@@ -9,8 +9,8 @@ import {
     UpdateProjectBody,
     inArray,
 } from "shared";
-import { FileSyncService } from './file-sync-service';
-import { FileSummaryService } from './file-summary-service';
+import { FileSyncService } from './file-services/file-sync-service';
+import { FileSummaryService } from './file-services/file-summary-service';
 import { db } from "shared/database";
 import { getState } from "@/websocket/websocket-config";
 

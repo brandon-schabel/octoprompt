@@ -4,7 +4,7 @@ import { json } from '@bnk/router';
 
 import { projectsApiValidation, ApiError } from "shared";
 import { z } from "zod";
-import { FileSummaryService } from "@/services/file-summary-service";
+import { FileSummaryService } from "@/services/file-services/file-summary-service";
 import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
 
 const projectService = new ProjectService();

@@ -1,16 +1,24 @@
 import React, { useEffect, useState, useMemo } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { useGetAllPrompts } from "@/hooks/api/use-prompts-api" // a new custom hook or simply re-use the same if you have it
 import { AlertCircle } from "lucide-react"
-import { Prompt } from "shared"
 import { toast } from "sonner"
+import { Prompt } from "shared"
+
+import { useGetAllPrompts, useGetProjectPrompts, useAddPromptToProject, useRemovePromptFromProject } from "@/hooks/api/use-prompts-api"
 
 interface PromptsDialogAllProps {
-    open: boolean;
-    onClose: () => void;
-    selectedProjectId: string | null;
+    open: boolean
+    onClose: () => void
+    selectedProjectId: string | null
 }
 
 export function PromptsDialogAll({
@@ -18,44 +26,54 @@ export function PromptsDialogAll({
     onClose,
     selectedProjectId,
 }: PromptsDialogAllProps) {
-    const { data, isLoading, error } = useGetAllPrompts();
-    const [searchTerm, setSearchTerm] = useState("");
+    const { data, isLoading, error } = useGetAllPrompts()
+    const { data: projectPromptData } = useGetProjectPrompts(selectedProjectId ?? "")
+    const addPromptToProject = useAddPromptToProject()
+    const removePromptFromProject = useRemovePromptFromProject()
 
-    const prompts: Prompt[] = data?.prompts || [];
+    const [searchTerm, setSearchTerm] = useState("")
 
-    // Filter and sort
+    const allPrompts: Prompt[] = data?.prompts || []
+    const projectPrompts = projectPromptData?.prompts || []
+
+    // Filter & sort
     const filteredPrompts = useMemo(() => {
-        const lower = searchTerm.toLowerCase();
-        return prompts
+        const lower = searchTerm.toLowerCase()
+        return allPrompts
             .filter((p) =>
                 p.name.toLowerCase().includes(lower) || p.content.toLowerCase().includes(lower)
             )
-            .sort((a, b) => a.name.localeCompare(b.name)); // alphabetical
-    }, [prompts, searchTerm]);
+            .sort((a, b) => a.name.localeCompare(b.name))
+    }, [allPrompts, searchTerm])
 
-    /**
-     * Example: 
-     * A function to add a prompt to the project (server route: /api/projects/:projectId/prompts/:promptId)
-     * We'll do an optimistic approach or just call fetch.
-     */
+    // Check if a prompt is in the project
+    function isPromptInProject(promptId: string): boolean {
+        return projectPrompts.some((pp) => pp.id === promptId)
+    }
+
     async function handleAddPromptToProject(promptId: string) {
         if (!selectedProjectId) {
-            toast.error("No project selected!");
-            return;
+            toast.error("No project selected!")
+            return
         }
         try {
-            const res = await fetch(`/api/projects/${selectedProjectId}/prompts/${promptId}`, {
-                method: "POST",
-            });
-            if (!res.ok) {
-                toast.error("Failed to add prompt to project");
-                return;
-            }
-            toast.success("Prompt added to project!");
-            // optionally call `sendMessage` or any other approach to update globalState
-        } catch (err) {
-            console.error(err);
-            toast.error("Error adding prompt to project");
+            await addPromptToProject.mutateAsync({ promptId, projectId: selectedProjectId })
+            toast.success("Prompt added to project!")
+        } catch (err: any) {
+            toast.error(err.message || "Failed to add prompt to project")
+        }
+    }
+
+    async function handleRemovePromptFromProject(promptId: string) {
+        if (!selectedProjectId) {
+            toast.error("No project selected!")
+            return
+        }
+        try {
+            await removePromptFromProject.mutateAsync({ promptId, projectId: selectedProjectId })
+            toast.success("Prompt removed from project!")
+        } catch (err: any) {
+            toast.error(err.message || "Failed to remove prompt from project")
         }
     }
 
@@ -65,7 +83,7 @@ export function PromptsDialogAll({
                 <DialogHeader>
                     <DialogTitle>All Prompts</DialogTitle>
                     <DialogDescription>
-                        Search any existing prompt and add them to the project
+                        Search or browse existing prompts, and add or remove them from the current project.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -84,29 +102,49 @@ export function PromptsDialogAll({
                     )}
 
                     <div className="max-h-64 overflow-y-auto border rounded p-2">
-                        {filteredPrompts.map((prompt) => (
-                            <div key={prompt.id} className="flex items-center justify-between gap-2 p-1 hover:bg-muted/50 rounded">
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-sm">{prompt.name}</span>
-                                    <span className="text-xs text-muted-foreground line-clamp-2">
-                                        {prompt.content.slice(0, 100)}...
-                                    </span>
-                                </div>
-                                <Button
-                                    size="sm"
-                                    onClick={() => void handleAddPromptToProject(prompt.id)}
+                        {filteredPrompts.map((prompt) => {
+                            const inProject = isPromptInProject(prompt.id)
+                            return (
+                                <div
+                                    key={prompt.id}
+                                    className="flex items-center justify-between gap-2 p-1 hover:bg-muted/50 rounded"
                                 >
-                                    Add
-                                </Button>
-                            </div>
-                        ))}
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-sm">{prompt.name}</span>
+                                        <span className="text-xs text-muted-foreground line-clamp-2">
+                                            {prompt.content.slice(0, 100)}...
+                                        </span>
+                                    </div>
+                                    {inProject ? (
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => void handleRemovePromptFromProject(prompt.id)}
+                                            disabled={removePromptFromProject.isPending}
+                                        >
+                                            Remove
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            onClick={() => void handleAddPromptToProject(prompt.id)}
+                                            disabled={addPromptToProject.isPending}
+                                        >
+                                            Add
+                                        </Button>
+                                    )}
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Close</Button>
+                    <Button variant="outline" onClick={onClose}>
+                        Close
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    );
+    )
 }

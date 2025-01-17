@@ -1,10 +1,10 @@
 import { db } from 'shared/database'
-import { files, type ProjectFile } from 'shared/schema'
+import { files } from 'shared/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { ProjectFile as ProjectFileType, GlobalState } from 'shared'
 import { matchesAnyPattern } from 'shared/src/utils/pattern-matcher'
 import { promptsMap } from '@/prompts/prompts-map'
-import { UnifiedProviderService } from './model-providers/providers/unified-provider-service'
+import { UnifiedProviderService } from '../model-providers/providers/unified-provider-service'
 import { getState } from '@/websocket/websocket-config'
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -20,20 +20,21 @@ const shouldSummarizeFile = async (projectId: string, filePath: string): Promise
     const state = await getState()
     const settings = state.settings
 
-    if (settings.disableSummarizationProjectIds.includes(projectId)) {
-        return false
-    }
 
     // If any pattern in summarizationIgnorePatterns matches, skip.
     if (matchesAnyPattern(filePath, settings.summarizationIgnorePatterns)) {
         return false
     }
-
+    
     // If we have allow patterns, at least one must match.
     if (settings.summarizationAllowPatterns.length > 0) {
         if (!matchesAnyPattern(filePath, settings.summarizationAllowPatterns)) {
             return false
         }
+    }
+
+    if (settings.summarizationEnabledProjectIds.includes(projectId)) {
+        return true
     }
 
     return true

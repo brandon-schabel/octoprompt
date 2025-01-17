@@ -1,6 +1,6 @@
 import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
-import { Eye, Pencil, Trash } from 'lucide-react'
+import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ } from 'lucide-react'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
@@ -17,6 +17,11 @@ import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '../ui/dropdown-menu'
+import { DotsHorizontalIcon } from '@radix-ui/react-icons'
+import { Badge } from '../ui/badge'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
@@ -54,6 +59,27 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     // For prompt dialog (create/edit)
     const [promptDialogOpen, setPromptDialogOpen] = useState(false)
     const [editPromptId, setEditPromptId] = useState<string | null>(null)
+
+    // Sorting
+    const [sortOrder, setSortOrder] = useState<"alphabetical" | "default">("alphabetical")
+
+    let sortedPrompts = [...prompts]
+    if (sortOrder === "alphabetical") {
+        sortedPrompts.sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    const copySelectedPrompts = () => {
+        if (!selectedPrompts.length) return
+        const allPrompts = selectedPrompts.map(id => {
+            const p = promptData?.prompts.find(x => x.id === id)
+            return p ? `# ${p.name}\n${p.content}\n` : ""
+        }).join("\n")
+        navigator.clipboard.writeText(allPrompts)
+        toast.success("Copied all selected prompts.")
+    }
+
+    /** NEW: state for opening the all-prompts dialog */
+    const [allPromptsDialogOpen, setAllPromptsDialogOpen] = useState(false)
 
     // Our form for creating/updating
     const promptForm = useForm<z.infer<typeof promptSchema>>({
@@ -181,33 +207,82 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
 
     return (
         <>
+            {/* NEW: All Prompts Import Dialog */}
+            <PromptsDialogAll
+                open={allPromptsDialogOpen}
+                onClose={() => setAllPromptsDialogOpen(false)}
+                selectedProjectId={selectedProjectId}
+            />
             <div className={`border rounded-lg h-full flex flex-col ${className}`}>
                 <div className="flex-shrink-0 flex flex-row items-center justify-between p-4 border-b">
                     <div>
                         <div className="text-md font-medium">
-                            Project Prompts <span className="hidden lg:inline text-muted-foreground">({formatModShortcut('p')})</span>
+                            <Badge>{selectedPrompts.length}</Badge> Project Prompts <span className="hidden lg:inline text-muted-foreground">({formatModShortcut('p')})</span>
                         </div>
                         <div className="hidden lg:text-xs text-muted-foreground">
                             Press Space to select, Enter to view
                         </div>
                     </div>
-                    <Button
-                        size='sm'
-                        onClick={() => {
-                            setEditPromptId(null)
-                            promptForm.reset()
-                            setPromptDialogOpen(true)
-                        }}
-                    >
-                        <span className="mr-2">+</span>
-                        New
-                    </Button>
+                    <div className='flex space-x-2'>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                >
+                                    <DotsHorizontalIcon className="h-4 w-4" />
+                                    <span className="sr-only">Actions</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => {
+                                    setEditPromptId(null)
+                                    promptForm.reset()
+                                    setPromptDialogOpen(true)
+                                }}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    <span>New Prompt</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setAllPromptsDialogOpen(true)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    <span>Import Prompts</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={copySelectedPrompts}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    <span>Copy Selected Prompts</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>
+                                        <ArrowUpDown className="mr-2 h-4 w-4" />
+                                        <span>Sort By</span>
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => {
+                                            setSortOrder(value as "alphabetical" | "default")
+                                        }}>
+                                            <DropdownMenuRadioItem value="default">
+                                                <ArrowUpDown className="mr-2 h-4 w-4" />
+                                                <span>Default</span>
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="alphabetical">
+                                                <ArrowDownAZ className="mr-2 h-4 w-4" />
+                                                <span>Alphabetical</span>
+                                            </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                    </div>
                 </div>
 
                 <div className='flex-1 relative min-h-0 '>
                     {prompts.length > 0 ? (
                         <ScrollArea className="h-full">
-                            <div className="space-y-2 p-4 w-96">
+                            <div className="space-y-2 p-4 w-72 md:w-80 lg:w-full">
                                 {prompts.map((prompt, index) => (
                                     <div
                                         key={prompt.id}
@@ -240,46 +315,61 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleOpenPromptViewer(prompt as ProjectFile)}
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                onClick={() => {
-                                                    setEditPromptId(prompt.id)
-                                                    setPromptDialogOpen(true)
-                                                }}
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button size="icon" variant="ghost">
-                                                        <Trash className="h-4 w-4 text-destructive" />
+                                    
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <DotsHorizontalIcon className="h-4 w-4" />
                                                     </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Delete Prompt</AlertDialogTitle>
-                                                    </AlertDialogHeader>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Are you sure you want to delete the prompt "{prompt.name}"?
-                                                    </p>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction
-                                                            onClick={() => handleDeletePrompt(prompt.id)}
-                                                        >
-                                                            Delete
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem onClick={() => handleOpenPromptViewer(prompt as ProjectFile)}>
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        <span>View Prompt</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setEditPromptId(prompt.id)
+                                                            setPromptDialogOpen(true)
+                                                        }}
+                                                    >
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        <span>Edit Prompt</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem
+                                                                onSelect={(e) => e.preventDefault()}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash className="mr-2 h-4 w-4" />
+                                                                <span>Delete Prompt</span>
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Delete Prompt</AlertDialogTitle>
+                                                            </AlertDialogHeader>
+                                                            <p className="text-sm text-muted-foreground">
+                                                                Are you sure you want to delete the prompt "{prompt.name}"?
+                                                            </p>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    onClick={() => handleDeletePrompt(prompt.id)}
+                                                                >
+                                                                    Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </div>
                                 ))}

@@ -13,19 +13,22 @@ import { ProjectFile } from "shared"
 import { SelectedFilesList } from "./selected-files-list"
 import { useState } from "react"
 import { FormatTokenCount } from "../format-token-count"
+import { Badge } from "../ui/badge"
 
 type SelectedFilesDrawerProps = {
   selectedFiles: string[]
   fileMap: Map<string, ProjectFile>
   onRemoveFile: (fileId: string) => void
   trigger?: React.ReactNode
+  projectTabId: string
 }
 
 export function SelectedFilesDrawer({
   selectedFiles,
   fileMap,
   onRemoveFile,
-  trigger
+  trigger,
+  projectTabId
 }: SelectedFilesDrawerProps) {
   const [open, setOpen] = useState(false)
 
@@ -55,18 +58,21 @@ export function SelectedFilesDrawer({
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader>
           <DrawerTitle className="flex justify-between items-center">
-            <span>Selected Files ({selectedFiles.length}) </span>
+            <span><Badge variant="secondary">{selectedFiles.length}</Badge> Selected Files </span>
+
             <FormatTokenCount tokenContent={totalTokens} />
             {/* <span className="text-sm text-muted-foreground">
               ~{totalTokens} tokens
             </span> */}
           </DrawerTitle>
         </DrawerHeader>
+
         <ScrollArea className="p-4 h-[50vh]">
           <SelectedFilesList
             selectedFiles={selectedFiles}
             fileMap={fileMap}
             onRemoveFile={onRemoveFile}
+            projectTabId={projectTabId}
           />
         </ScrollArea>
       </DrawerContent>

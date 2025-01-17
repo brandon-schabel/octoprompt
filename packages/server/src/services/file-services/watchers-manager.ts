@@ -2,7 +2,7 @@ import { FileChangePlugin } from './file-change-plugin';
 import { FileSummaryService } from './file-summary-service';
 import { FileSyncService } from './file-sync-service';
 import { Project } from 'shared';
-import { ProjectService } from './project-service';
+import { ProjectService } from '../project-service';
 
 export class WatchersManager {
     private watchers: Map<string, FileChangePlugin> = new Map();

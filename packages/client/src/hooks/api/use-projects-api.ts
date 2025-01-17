@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
 import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, ApiError, } from 'shared';
 import { commonErrorHandler } from './common-mutation-error-handler';
+import { useGlobalStateContext } from '@/components/global-state/websocket-config-context';
 
 export type ProjectResponse = {
     success: boolean;
@@ -230,21 +231,26 @@ export const useSyncProjectInterval = (projectId: string) => {
         refetchInterval: 30000,
     });
 };
-
 export const useSummarizeProjectFiles = (projectId: string) => {
     const { api } = useApi();
     const queryClient = useQueryClient();
+    const { globalState } = useGlobalStateContext();
 
     return useMutation({
-        mutationFn: (fileIds: string[]) => summarizeProjectFiles(api, projectId, fileIds),
+        mutationFn: (fileIds: string[]) => {
+            const enabled = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
+            if (!enabled) {
+                return Promise.reject(new Error("Summarization is disabled for this project."));
+            }
+            return summarizeProjectFiles(api, projectId, fileIds);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summarize(projectId) });
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.fileSummaries(projectId) });
         },
-        onError: commonErrorHandler
+        onError: commonErrorHandler,
     });
 };
-
 export const useGetFileSummaries = (projectId: string, fileIds?: string[]) => {
     const { api } = useApi();
     return useQuery({

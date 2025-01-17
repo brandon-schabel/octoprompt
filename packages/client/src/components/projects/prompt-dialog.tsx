@@ -25,7 +25,8 @@ export function PromptDialog({
     handleUpdatePrompt,
     createPromptPending,
     updatePromptPending,
-    onClose
+    onClose,
+    
 }: PromptDialogProps) {
     const handleFormKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && e.target instanceof HTMLTextAreaElement) {

@@ -333,6 +333,35 @@ export function useGlobalStateHelpers() {
         });
     }
 
+    function setProjectSummarizationEnabled(projectId: string, enabled: boolean) {
+        updateSettings((prev) => {
+            let list = prev.summarizationEnabledProjectIds ?? [];
+            if (!enabled) {
+                // disable summarization => add projectId
+                if (!list.includes(projectId)) {
+                    list = [...list, projectId];
+                }
+            } else {
+                // enable summarization => remove projectId
+                list = list.filter((id) => id !== projectId);
+            }
+            return { summarizationEnabledProjectIds: list };
+        });
+    }
+
+    function addFileGroup(groupName: string, fileIds: string[]) {
+        updateActiveProjectTab((prevTab) => {
+            return {
+                ...prevTab,
+                bookmarkedFileGroups: {
+                    ...prevTab.bookmarkedFileGroups,
+                    [groupName]: fileIds,
+                },
+            };
+        });
+    }
+
+
     // --------------------------------------------------
     // 5) Expose any “active tab” references
     // --------------------------------------------------
@@ -343,6 +372,8 @@ export function useGlobalStateHelpers() {
     const activeChatTabState = state.chatActiveTabId
         ? state.chatTabs[state.chatActiveTabId]
         : undefined;
+
+
 
     // --------------------------------------------------
     // Return an object that mimics your old “UseGlobalStateReturn”
@@ -381,5 +412,7 @@ export function useGlobalStateHelpers() {
         linkChatTabToProjectTab,
         unlinkChatTab,
         updateChatLinkSettings,
+        setProjectSummarizationEnabled,
+        addFileGroup
     };
 }

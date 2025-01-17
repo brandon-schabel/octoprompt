@@ -156,6 +156,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
                                 selectedFiles={selectedFiles}
                                 fileMap={fileMap}
                                 onRemoveFile={(fileId) => removeSelectedFile(fileId)}
+                                projectTabId={linkedProjectTabId}
                             />
                         </ScrollArea>
                     </TabsContent>

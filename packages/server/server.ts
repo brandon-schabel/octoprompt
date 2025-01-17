@@ -15,9 +15,9 @@ import "@/routes/promptimizer-routes";
 
 import { globalStateSchema } from "shared";
 import { json } from "@bnk/router";
-import { WatchersManager } from "@/services/watchers-manager";
-import { FileSyncService } from "@/services/file-sync-service";
-import { FileSummaryService } from "@/services/file-summary-service";
+import { WatchersManager } from "@/services/file-services/watchers-manager";
+import { FileSyncService } from "@/services/file-services/file-sync-service";
+import { FileSummaryService } from "@/services/file-services/file-summary-service";
 import { ProjectService } from "@/services/project-service";
 import { getState, setState } from "./src/websocket/websocket-config";
 import { bnkWsManager } from "./src/websocket/websocket-manager";
