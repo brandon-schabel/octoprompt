@@ -13,9 +13,6 @@ export class WatchersManager {
         private projectService: ProjectService,
     ) { }
 
-    /**
-     * Starts watching a project’s directory if not already watching.
-     */
     public startWatchingProject(project: Project, ignorePatterns: string[] = []): void {
         if (this.watchers.has(project.id)) {
             console.warn(`[WatchersManager] Already watching project: ${project.id}`);
@@ -28,9 +25,6 @@ export class WatchersManager {
         console.log(`[WatchersManager] Started watcher for project: ${project.id}`);
     }
 
-    /**
-     * Stops watching a project’s directory if currently watching.
-     */
     public stopWatchingProject(projectId: string): void {
         const plugin = this.watchers.get(projectId);
         if (!plugin) {
@@ -43,9 +37,6 @@ export class WatchersManager {
         console.log(`[WatchersManager] Stopped watcher for project: ${projectId}`);
     }
 
-    /**
-     * Stops all watchers and clears them from memory.
-     */
     public stopAll(): void {
         for (const [projectId, plugin] of this.watchers.entries()) {
             plugin.stop();

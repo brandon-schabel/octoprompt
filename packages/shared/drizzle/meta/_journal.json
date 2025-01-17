@@ -29,6 +29,13 @@
       "when": 1736871009501,
       "tag": "0003_low_chronomancer",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1737092182367,
+      "tag": "0004_wandering_silver_sable",
+      "breakpoints": true
     }
   ]
 }

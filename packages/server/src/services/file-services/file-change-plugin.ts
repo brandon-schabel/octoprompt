@@ -53,7 +53,7 @@ export class FileChangePlugin {
 
 
 
-                    
+
 
 
 
@@ -62,7 +62,7 @@ export class FileChangePlugin {
                         project.id,
                         [updatedFile],
                         globalState
-        
+
                     );
                 } catch (err) {
                     console.error('[FileChangePlugin] Error handling file change:', err);

@@ -5,5 +5,5 @@ export default defineConfig({
   schema: 'schema.ts',
   dbCredentials: {
     url: "sqlite.db"
-  }
+  },
 })

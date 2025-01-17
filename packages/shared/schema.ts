@@ -93,7 +93,8 @@ export const files = sqliteTable("files", {
     summaryLastUpdatedAt: integer("summary_last_updated_at", { mode: "timestamp" })
         .default(sql`CURRENT_TIMESTAMP`)
         .notNull(),
-    meta: text("meta").default(""), // optional metadata field
+    meta: text("meta").default(""),
+    checksum: text("checksum").default(""),
 
     createdAt: integer("created_at", { mode: "timestamp" })
         .default(sql`CURRENT_TIMESTAMP`)
@@ -112,8 +113,9 @@ export const projectFileSchema = z.object({
     size: z.number(),
     content: z.string().nullable(),
     summary: z.string().default(""),
-    summaryLastUpdatedAt: z.date().optional(), // Could store as a date for convenience in TypeScript
+    summaryLastUpdatedAt: z.date().optional(), 
     meta: z.string().default(""),
+    checksum: z.string().default(""),
     createdAt: z.date(),
     updatedAt: z.date(),
 });

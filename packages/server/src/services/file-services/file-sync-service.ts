@@ -45,6 +45,14 @@ const customExclusions = process.env.EXCLUDE_PATTERNS
 
 const EXCLUSIONS = [...DEFAULT_EXCLUSIONS, ...customExclusions];
 
+function computeChecksum(content: string): string {
+  return Bun.hash(content).toString(16);
+}
+
+function isValidChecksum(checksum: string | null): boolean {
+  return typeof checksum === 'string' && /^[a-f0-9]+$/.test(checksum);
+}
+
 export class FileSyncService {
   constructor(
     private exclusions: string[] = EXCLUSIONS
@@ -61,6 +69,7 @@ export class FileSyncService {
       const extension = extname(fileName) || '';
       const stats = statSync(filePath);
       const size = stats.size;
+      const checksum = computeChecksum(content);
 
       const [existingFile] = await db.select()
         .from(files)
@@ -71,15 +80,18 @@ export class FileSyncService {
         .limit(1);
 
       if (existingFile) {
-        // Update existing file if content or metadata changed
-        await db.update(files)
-          .set({
-            content,
-            extension,
-            size,
-            updatedAt: new Date()
-          })
-          .where(eq(files.id, existingFile.id));
+        // Update if checksum is invalid or different
+        if (!isValidChecksum(existingFile.checksum) || existingFile.checksum !== checksum) {
+          await db.update(files)
+            .set({
+              content,
+              extension,
+              size,
+              checksum,
+              updatedAt: new Date()
+            })
+            .where(eq(files.id, existingFile.id));
+        }
       } else {
         // Insert new file
         await db.insert(files)
@@ -89,15 +101,18 @@ export class FileSyncService {
             path: relativePath,
             extension,
             size,
-            content
+            content,
+            checksum
           });
       }
     }));
 
     // Clean up deleted files
-    const existingPaths = new Set(projectFiles.map(
-      filePath => filePath.replace(projectPath, '').replace(/^\//, '')
-    ));
+    const existingPaths = new Set(
+      projectFiles.map(filePath =>
+        filePath.replace(projectPath, '').replace(/^\//, '')
+      )
+    );
 
     const dbFiles = await db.select()
       .from(files)
