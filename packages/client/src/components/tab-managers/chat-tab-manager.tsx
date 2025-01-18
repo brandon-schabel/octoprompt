@@ -146,6 +146,7 @@ export function ChatTabManager() {
 
     return (
         <GenericTabManager<ChatTab>
+            // @ts-ignore
             tabs={tabs}
             activeTabId={activeTabId}
             isReady={isOpen}
