@@ -198,43 +198,43 @@ export function GenericTabManager<T = any>({
 
     return (
         <>
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
+            <Tabs
+                value={activeTabId ?? ""}
+                onValueChange={onSetActiveTab}
+                className={cn("flex flex-col justify-start rounded-none", className)}
             >
-                <SortableContext items={finalTabOrder} strategy={horizontalListSortingStrategy}>
-                    <Tabs
-                        value={activeTabId ?? ''}
-                        onValueChange={(val) => onSetActiveTab(val)}
-                        className={cn('flex flex-col justify-start rounded-none', className)}
-                    >
-                        <TabsList className="bg-background justify-start rounded-none">
-                            {title && (
-                                <div className="text-xs lg:text-sm px-3 font-semibold flex items-center gap-2">
-                                    {title}
-                                    {titleTooltip && (
-                                        <InfoTooltip>
-                                            <div className="space-y-2">
-                                                <p>{titleTooltip}</p>
-                                            </div>
-                                        </InfoTooltip>
-                                    )}
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6"
-                                        onClick={() => setShowSettingsDialog(true)}
-                                    >
-                                        <Settings className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                <TabsList className="bg-background justify-start rounded-none">
+                    {title && (
+                        <div className="text-xs lg:text-sm px-3 font-semibold flex items-center gap-2">
+                            {title}
+                            {titleTooltip && (
+                                <InfoTooltip>
+                                    <div className="space-y-2">
+                                        <p>{titleTooltip}</p>
+                                    </div>
+                                </InfoTooltip>
                             )}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setShowSettingsDialog(true)}
+                            >
+                                <Settings className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
 
+                    {/* Only wrap the *sortable tabs* in your SortableContext */}
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext items={finalTabOrder} strategy={horizontalListSortingStrategy}>
                             {finalTabOrder.map((tabId, index) => {
                                 const displayName = tabs[tabId]?.displayName || tabId
                                 const hasLink = !!tabs[tabId]?.linkedProjectTabId
-
                                 return (
                                     <SortableTab
                                         key={tabId}
@@ -250,18 +250,17 @@ export function GenericTabManager<T = any>({
                                     />
                                 )
                             })}
+                        </SortableContext>
+                    </DndContext>
 
-                            {/* Button for creating new tabs */}
-                            <div>
-                                <Button onClick={onCreateTab} size="icon" className="w-6 h-6 ml-2">
-                                    <Plus />
-                                </Button>
-                            </div>
-                        </TabsList>
-                    </Tabs>
-                </SortableContext>
-            </DndContext>
-
+                    {/* Place the + button *outside* the SortableContext. */}
+                    <div>
+                        <Button onClick={onCreateTab} size="icon" className="w-6 h-6 ml-2">
+                            <Plus />
+                        </Button>
+                    </div>
+                </TabsList>
+            </Tabs>
             {/* ---------------------------------------------
                  DIALOG FOR MANAGING/RENAMING/DELETING TABS
             --------------------------------------------- */}

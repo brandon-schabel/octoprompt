@@ -34,18 +34,23 @@ export const initialStateHandler: MessageHandler<GlobalState, InboundMessage> = 
 export const createProjectTabHandler: MessageHandler<GlobalState, InboundMessage> = {
     type: "create_project_tab",
     async handle(ws, message, getStateFn, setStateFn) {
-        const { tabId, data } = message;
-        const state = await getStateFn();
+        const { tabId, data } = message
+        const state = await getStateFn()
 
         // Insert new project tab
-        state.projectTabs[tabId] = data;
-        // Optionally, set it active
-        state.projectActiveTabId = tabId;
+        state.projectTabs[tabId] = data
 
-        const validated = globalStateSchema.parse(state);
-        await setStateFn(validated);
+        // 1) Add to settings.projectTabIdOrder
+        state.settings.projectTabIdOrder.push(tabId)
+
+        // Optionally, set it active
+        state.projectActiveTabId = tabId
+
+        const validated = globalStateSchema.parse(state)
+        await setStateFn(validated)
     },
-};
+}
+
 
 export const updateProjectTabHandler: MessageHandler<GlobalState, InboundMessage> = {
     type: "update_project_tab",
@@ -136,19 +141,26 @@ export const setActiveProjectTabHandler: MessageHandler<GlobalState, InboundMess
 // --------------------------------------------------
 // CHAT TAB HANDLERS
 // --------------------------------------------------
+
 export const createChatTabHandler: MessageHandler<GlobalState, InboundMessage> = {
     type: "create_chat_tab",
     async handle(ws, message, getStateFn, setStateFn) {
-        const { tabId, data } = message;
-        const state = await getStateFn();
+        const { tabId, data } = message
+        const state = await getStateFn()
 
-        state.chatTabs[tabId] = data;
-        state.chatActiveTabId = tabId;
+        // Insert new chat tab
+        state.chatTabs[tabId] = data
 
-        const validated = globalStateSchema.parse(state);
-        await setStateFn(validated);
+        // 1) Add to settings.chatTabIdOrder
+        state.settings.chatTabIdOrder.push(tabId)
+
+        // Optionally, set it active
+        state.chatActiveTabId = tabId
+
+        const validated = globalStateSchema.parse(state)
+        await setStateFn(validated)
     },
-};
+}
 
 export const updateChatTabHandler: MessageHandler<GlobalState, InboundMessage> = {
     type: "update_chat_tab",
