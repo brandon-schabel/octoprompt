@@ -67,7 +67,10 @@ export class UnifiedProviderService {
      */
     private getKey(provider: keyof ProviderKeysConfig): string {
         const key = this.providerConfig[provider];
-        if (!key) throw new Error(`${provider} API key not found`);
+        if (!key) {
+            console.error(`${provider} API key not found`);
+            return "";
+        }
         return key;
     }
 

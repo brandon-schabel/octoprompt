@@ -2,8 +2,10 @@ import { UnifiedProviderService } from '@/services/model-providers/providers/uni
 import { ApiError } from 'shared';
 
 import { router } from "server-router";
+import { WhisperService } from '@/services/model-providers/providers/whisper-service';
 
 const unifiedProviderService = new UnifiedProviderService();
+const whisperService = new WhisperService();
 
 router.post('/api/ai/whisper-translate-stream', {}, async (req) => {
     if (!req.headers.get('content-type')?.includes('multipart/form-data')) {
@@ -16,7 +18,7 @@ router.post('/api/ai/whisper-translate-stream', {}, async (req) => {
         throw new ApiError("audio file is required", 400, "BAD_REQUEST");
     }
     const prompt = formData.get('prompt') ? String(formData.get('prompt')) : undefined;
-    const translation = await unifiedProviderService.translateAudioFile(file, prompt);
+    const translation = await whisperService.translateAudioFile(file, prompt);
 
     return new Response(JSON.stringify({ text: translation }), {
         headers: { 'Content-Type': 'application/json' }
@@ -34,7 +36,7 @@ router.post('/api/ai/whisper-stream', {}, async (req) => {
         throw new ApiError("audio file is required", 400, "BAD_REQUEST");
     }
     const prompt = formData.get('prompt') ? String(formData.get('prompt')) : undefined;
-    const transcription = await unifiedProviderService.transcribeAudioFile(file, prompt);
+    const transcription = await whisperService.transcribeAudioFile(file, prompt);
 
     return new Response(JSON.stringify({ text: transcription }), {
         headers: { 'Content-Type': 'application/json' }

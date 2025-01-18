@@ -21,9 +21,9 @@ router.post("/api/ai/gemini/file_search", {}, async (req) => {
         query = providedQuery ? String(providedQuery) : undefined;
 
         const audioFile = formData.get('audio');
-        if (!query && audioFile instanceof File) {
-            query = await unifiedProviderService.transcribeAudioFile(audioFile);
-        }
+        // if (!query && audioFile instanceof File) {
+        //     query = await unifiedProviderService.transcribeAudioFile(audioFile);
+        // }
     } else {
         const body = await req.json();
         projectId = body.projectId;
@@ -157,19 +157,19 @@ router.post("/api/ai/gemini/file_search", {}, async (req) => {
     return new Response(stream, { headers: sseHeaders });
 });
 
-router.post(`${AI_BASE_PATH}/gemini/upload`, {}, async (req) => {
-    if (!req.headers.get('content-type')?.includes('multipart/form-data')) {
-        throw new ApiError("Content-Type must be multipart/form-data", 400, "BAD_REQUEST");
-    }
+// router.post(`${AI_BASE_PATH}/gemini/upload`, {}, async (req) => {
+//     if (!req.headers.get('content-type')?.includes('multipart/form-data')) {
+//         throw new ApiError("Content-Type must be multipart/form-data", 400, "BAD_REQUEST");
+//     }
 
-    const formData = await req.formData();
-    const file = formData.get('file');
-    const mime_type = formData.get('mime_type')?.toString() || 'application/octet-stream';
+//     const formData = await req.formData();
+//     const file = formData.get('file');
+//     const mime_type = formData.get('mime_type')?.toString() || 'application/octet-stream';
 
-    if (!(file instanceof File)) {
-        throw new ApiError("file is required", 400, "BAD_REQUEST");
-    }
+//     if (!(file instanceof File)) {
+//         throw new ApiError("file is required", 400, "BAD_REQUEST");
+//     }
 
-    const fileUri = await unifiedProviderService.uploadFileForGemini(file, mime_type);
-    return json({ file_uri: fileUri });
-});
+//     // const fileUri = await unifiedProviderService.uploadFileForGemini(file, mime_type);
+//     // return json({ file_uri: fileUri });
+// });
