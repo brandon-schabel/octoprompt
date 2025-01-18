@@ -39,11 +39,9 @@ export function AppNavbar() {
     const globalTheme = state?.settings.theme
 
     // Dark mode state
-    const [isDarkMode, setIsDarkMode] = useState<boolean>(false)
 
     useEffect(() => {
         if (globalTheme === 'dark') {
-            setIsDarkMode(true)
             document.documentElement.classList.add('dark')
         } else {
             document.documentElement.classList.remove('dark')
@@ -99,48 +97,49 @@ export function AppNavbar() {
         <>
             <nav className="flex items-center w-full px-4 py-2 border-b ">
                 <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
                         <Link
                             to="/projects"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnProjectsRoute
-                                ? "text-indigo-600 dark:text-indigo-400"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnProjectsRoute
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
                                 : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <FolderIcon className="w-4 h-4" />
                             Project
                         </Link>
+                        <div className="h-4 w-[1px] bg-border" />
                         <Link
                             to="/chat"
                             search={{ prefill: false }}
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnChatRoute
-                                ? "text-indigo-600 dark:text-indigo-400"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnChatRoute
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
                                 : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
                             Chat
                         </Link>
+                        <div className="h-4 w-[1px] bg-border" />
                         <Link
                             to="/keys"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnKeysRoute
-                                ? "text-indigo-600 dark:text-indigo-400"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnKeysRoute
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
                                 : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <KeyIcon className="w-4 h-4" />
                             Keys
                         </Link>
+                        <div className="h-4 w-[1px] bg-border" />
                         <Link
                             to="/project-summarization"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors ${isOnSummarizationRoute
-                                ? "text-indigo-600 dark:text-indigo-400"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnSummarizationRoute
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
                                 : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
-                            {/* < className="w-4 h-4" /> */}
                             <ScanEye className="w-4 h-4" />
-
                             Summarization
                         </Link>
                     </div>

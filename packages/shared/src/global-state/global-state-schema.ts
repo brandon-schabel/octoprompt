@@ -27,8 +27,6 @@ export const projectTabStateSchema = z.object({
     suggestedFileIds: z.array(z.string()).default([]),
     // e.g. { "my-group1": ["fileId1", "fileId2"], "my-group2": ["fileId3"] }
     bookmarkedFileGroups: z.record(z.string(), z.array(z.string())).default({}),
-
-
 });
 
 export const linkSettingsSchema = z.object({
@@ -95,6 +93,8 @@ export const appSettingsSchema = z.object({
     summarizationEnabledProjectIds: z.array(z.string()).default([]),
     useSpacebarToSelectAutocomplete: z.boolean().default(true),
     hideInformationalTooltips: z.boolean().default(false),
+    chatTabIdOrder: z.array(z.string()).default([]),
+    projectTabIdOrder: z.array(z.string()).default([]),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
@@ -132,6 +132,8 @@ export const createInitialGlobalState = (): GlobalState => ({
         summarizationEnabledProjectIds: [],
         useSpacebarToSelectAutocomplete: true,
         hideInformationalTooltips: false,
+        chatTabIdOrder: [],
+        projectTabIdOrder: [],
     },
     counter: 0,
     projectTabs: {

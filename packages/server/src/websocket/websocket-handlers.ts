@@ -93,19 +93,22 @@ export const deleteProjectTabHandler: MessageHandler<GlobalState, InboundMessage
         const { tabId } = message;
         const state = await getStateFn();
 
-        // e.g. Don’t delete if it’s the last tab
+        // Optional: disallow deleting if there's only 1 project tab
         if (Object.keys(state.projectTabs).length <= 1) {
             logger.warn("Cannot delete the last remaining project tab");
             return;
         }
+
+        // 1) Remove from projectTabIdOrder
+        state.settings.projectTabIdOrder = state.settings.projectTabIdOrder.filter(id => id !== tabId);
+
+        // 2) Delete actual tab
         delete state.projectTabs[tabId];
+
+        // 3) If that was the active tab, pick a new one or null
         if (state.projectActiveTabId === tabId) {
             const remaining = Object.keys(state.projectTabs);
-            if (remaining.length > 0) {
-                state.projectActiveTabId = remaining[0];
-            } else {
-                state.projectActiveTabId = null;
-            }
+            state.projectActiveTabId = remaining.length > 0 ? remaining[0] : null;
         }
 
         const validated = globalStateSchema.parse(state);
@@ -193,13 +196,19 @@ export const deleteChatTabHandler: MessageHandler<GlobalState, InboundMessage> =
         const { tabId } = message;
         const state = await getStateFn();
 
-        // e.g. Don’t delete if it’s the last chat tab
+        // Optional: disallow deleting if there's only 1 chat tab
         if (Object.keys(state.chatTabs).length <= 1) {
             logger.warn("Cannot delete the last remaining chat tab");
             return;
         }
+
+        // 1) Remove from chatTabIdOrder
+        state.settings.chatTabIdOrder = state.settings.chatTabIdOrder.filter(id => id !== tabId);
+
+        // 2) Delete actual tab
         delete state.chatTabs[tabId];
 
+        // 3) If that was the active tab, pick a new one or null
         if (state.chatActiveTabId === tabId) {
             const remaining = Object.keys(state.chatTabs);
             if (remaining.length > 0) {

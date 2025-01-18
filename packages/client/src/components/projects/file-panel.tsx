@@ -12,7 +12,6 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { Project } from 'shared/index'
 import { ProjectFile } from 'shared/schema'
-import { formatModShortcut } from '@/lib/platform'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -20,6 +19,10 @@ import { SelectedFilesDrawer } from './selected-files-drawer'
 import { Badge } from '../ui/badge'
 import { ProjectSettingsDialog } from './project-settings-dialog'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { InfoTooltip } from '../info-tooltip'
+import { formatShortcut } from '@/lib/shortcuts'
+import { ShortcutDisplay } from '../app-shortcut-display'
+import useClickAway from '@/hooks/use-click-away'
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -207,6 +210,13 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
         searchInputRef.current?.focus()
     }
 
+    const searchContainerRef = useRef<HTMLDivElement>(null)
+
+    useClickAway(searchContainerRef, () => {
+        setShowAutocomplete(false)
+        setAutocompleteIndex(-1)
+    })
+
     return (
         <div id="outer-area" className={`flex flex-col ${className}`}>
             <div className="flex-1 space-y-4 transition-all duration-300">
@@ -251,59 +261,62 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
 
                             {/* Container must be relative so we can position the autocomplete dropdown */}
                             <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start">
-                                <div className="relative max-w-64 w-full">
-                                    <Input
-                                        ref={searchInputRef}
-                                        placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatModShortcut('f')})`}
-                                        value={fileSearch}
-                                        onChange={(e) => {
-                                            setFileSearch(e.target.value)
-                                            setShowAutocomplete(!!e.target.value.trim())
-                                            setAutocompleteIndex(-1)
-                                        }}
-                                        className="pr-8 w-full"
-                                        onFocus={() => setShowAutocomplete(!!fileSearch.trim())}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Escape') {
-                                                searchInputRef.current?.blur()
-                                                setShowAutocomplete(false)
-                                            } else if (e.key === 'ArrowDown') {
-                                                e.preventDefault()
-                                                if (showAutocomplete && fileSearch.trim()) {
-                                                    setAutocompleteIndex((prev) =>
-                                                        Math.min(suggestions.length - 1, prev + 1)
-                                                    )
-                                                } else {
-                                                    handleNavigateToFileTree()
-                                                }
-                                            } else if (e.key === 'ArrowUp') {
-                                                e.preventDefault()
-                                                if (showAutocomplete && fileSearch.trim()) {
-                                                    setAutocompleteIndex((prev) =>
-                                                        Math.max(0, prev - 1)
-                                                    )
-                                                }
-                                            } else if (e.key === 'ArrowRight') {
-                                                e.preventDefault()
-                                                if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                                                    openFileViewer(suggestions[autocompleteIndex])
-                                                }
-                                            } else if (e.key === 'Enter' || (allowSpacebaseToSelect && e.key === ' ')) {
-                                                // If we're navigating autocomplete (index >= 0), always prevent default
-                                                if (autocompleteIndex >= 0) {
+                                <div ref={searchContainerRef} className="relative max-w-64 w-full">
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            ref={searchInputRef}
+                                            placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatShortcut('mod+f')})`}
+                                            value={fileSearch}
+                                            onChange={(e) => {
+                                                setFileSearch(e.target.value)
+                                                setShowAutocomplete(!!e.target.value.trim())
+                                                setAutocompleteIndex(-1)
+                                            }}
+                                            className="pr-8 w-full"
+                                            onFocus={() => setShowAutocomplete(!!fileSearch.trim())}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Escape') {
+                                                    searchInputRef.current?.blur()
+                                                    setShowAutocomplete(false)
+                                                } else if (e.key === 'ArrowDown') {
                                                     e.preventDefault()
-                                                }
-                                                // Only proceed with selection if we have a valid index
-                                                if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                                                    selectFileFromAutocomplete(suggestions[autocompleteIndex])
-                                                    // Move cursor down if there are more items
-                                                    if (autocompleteIndex < suggestions.length - 1) {
-                                                        setAutocompleteIndex(prev => prev + 1)
+                                                    if (showAutocomplete && fileSearch.trim()) {
+                                                        setAutocompleteIndex((prev) =>
+                                                            Math.min(suggestions.length - 1, prev + 1)
+                                                        )
+                                                    } else {
+                                                        handleNavigateToFileTree()
+                                                    }
+                                                } else if (e.key === 'ArrowUp') {
+                                                    e.preventDefault()
+                                                    if (showAutocomplete && fileSearch.trim()) {
+                                                        setAutocompleteIndex((prev) =>
+                                                            Math.max(0, prev - 1)
+                                                        )
+                                                    }
+                                                } else if (e.key === 'ArrowRight') {
+                                                    e.preventDefault()
+                                                    if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
+                                                        openFileViewer(suggestions[autocompleteIndex])
+                                                    }
+                                                } else if (e.key === 'Enter' || (allowSpacebaseToSelect && e.key === ' ')) {
+                                                    // If we're navigating autocomplete (index >= 0), always prevent default
+                                                    if (autocompleteIndex >= 0) {
+                                                        e.preventDefault()
+                                                    }
+                                                    // Only proceed with selection if we have a valid index
+                                                    if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
+                                                        selectFileFromAutocomplete(suggestions[autocompleteIndex])
+                                                        // Move cursor down if there are more items
+                                                        if (autocompleteIndex < suggestions.length - 1) {
+                                                            setAutocompleteIndex(prev => prev + 1)
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        }}
-                                    />
+                                            }}
+                                        />
+
+                                    </div>
                                     {fileSearch && (
                                         <Button
                                             type="button"
@@ -329,6 +342,19 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                 >
                                     {searchByContent ? 'Search Content' : 'Search Names'}
                                 </Button>
+                                <InfoTooltip>
+                                    <div className="space-y-2">
+                                        <p>File Search Keyboard Shortcuts:</p>
+                                        <ul>
+                                            <li><ShortcutDisplay shortcut={['up', 'down']} /> Navigate through suggestions</li>
+                                            <li><ShortcutDisplay shortcut={['enter']} /> or <ShortcutDisplay shortcut={['space']} /> Select highlighted file</li>
+                                            <li><ShortcutDisplay shortcut={['right']} /> Preview highlighted file</li>
+                                            <li><ShortcutDisplay shortcut={['escape']} /> Close suggestions</li>
+                                            <li><ShortcutDisplay shortcut={['mod','f']} /> Focus search</li>
+                                            <li><ShortcutDisplay shortcut={['mod','g']} /> Focus file tree</li>
+                                        </ul>
+                                    </div>
+                                </InfoTooltip>
 
                                 <div className="flex lg:hidden items-center justify-between">
                                     <div className="block">
@@ -354,7 +380,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                     >
                                         <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted/50 border-b">
                                             Press Enter{allowSpacebaseToSelect && <span > or Spacebar</span>} to add highlighted file to selection, right arrow to preview file
-                                            
+
                                         </li>
                                         {suggestions.map((file, index) => {
                                             const isHighlighted = index === autocompleteIndex
@@ -362,11 +388,11 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                             return (
                                                 <li
                                                     key={file.id}
-                                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
-                                                        isHighlighted ? 'bg-gray-200' : ''
-                                                    }`}
+                                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-gray-200' : ''
+                                                        }`}
                                                     onMouseDown={(e) => {
                                                         e.preventDefault()
+                                                        e.stopPropagation()
                                                         selectFileFromAutocomplete(file)
                                                     }}
                                                     onMouseEnter={() => setAutocompleteIndex(index)}
@@ -409,9 +435,17 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         </div>
                                         <div className="hidden lg:flex lg:flex-col w-64 pl-4 min-h-0">
                                             <div className="flex justify-between items-center mb-2">
-                                                <div className="text-sm font-medium">
+                                                <div className="flex text-sm font-medium items-center space-x-2">
                                                     <Badge variant="secondary">{selectedFiles.length}</Badge>
-                                                    Selected Files
+                                                    <span>Selected Files</span>
+                                                    <InfoTooltip  >
+                                                        Selected files will be included with your prompt.
+                                                        <ul>
+                                                            <li>- Use arrow keys <ShortcutDisplay shortcut={['up', 'down']} /> to navigate the selected files list.</li>
+                                                            <li>- Press <ShortcutDisplay shortcut={['r', '[1-9]']} /> or <ShortcutDisplay shortcut={['delete', 'backspace']} /> to remove a file from the selected list.</li>
+                                                        </ul>
+
+                                                    </InfoTooltip>
                                                 </div>
                                             </div>
                                             <ScrollArea

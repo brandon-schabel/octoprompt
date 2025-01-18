@@ -13,12 +13,14 @@ import { ProjectFile } from 'shared'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { formatModShortcut } from '@/lib/platform'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
+import { formatShortcut } from '@/lib/shortcuts'
+import { InfoTooltip } from '../info-tooltip'
+import { ShortcutDisplay } from '../app-shortcut-display'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -175,7 +177,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }, [handleCopyToClipboard])
 
         const copyButtonText = useMemo(() => {
-            return `Copy All (${formatModShortcut('shift+c')})`
+            return `Copy All ${formatShortcut('mod+shift+c')}`
         }, [])
 
         useHotkeys('mod+p', (e) => {
@@ -188,17 +190,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 promptInputRef.current?.focus()
             }
         }), [])
-
-        // A small callback to set the local & global userPrompt
-        const handleUpdatedPrompt = useCallback((newPrompt: string) => {
-            setLocalUserPrompt(newPrompt)
-            updateActiveProjectTab(prev => ({
-                ...prev,
-                userPrompt: newPrompt,
-            }))
-        }, [updateActiveProjectTab])
-
-
 
      
         return (
@@ -243,6 +234,29 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             {/* Main user prompt & actions */}
                             <div className="h-1/2">
                                 <div className="flex flex-col h-full">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-sm font-medium">User Input</span>
+                                        <InfoTooltip>
+                                            <div className="space-y-2">
+                                                <p>Input Features & Shortcuts:</p>
+                                                <ul>
+                                                    <li>- <span className="font-medium">Voice Input:</span> Click the microphone icon to record your prompt</li>
+                                                    <li>- <span className="font-medium">Expand:</span> Use the expand icon for a larger editing area</li>
+                                                    <li>- <span className="font-medium">Copy All:</span> <ShortcutDisplay shortcut={['mod', 'shift', 'c']} /> Copy entire prompt with context</li>
+                                                    <li>- <span className="font-medium">Focus Input:</span> <ShortcutDisplay shortcut={['mod', 'i']} /> Focus the input area</li>
+                                                </ul>
+                                                <p className="font-medium mt-2">Promptimizer:</p>
+                                                <p className="text-sm text-muted-foreground">Click the magic wand to optimize your prompt. The Promptimizer will:</p>
+                                                <ul className="text-sm text-muted-foreground">
+                                                    <li>- Make your prompt more specific and clear</li>
+                                                    <li>- Add necessary context</li>
+                                                    <li>- Improve structure for better AI understanding</li>
+                                                    <li>- Suggest better phrasing and terminology</li>
+                                                </ul>
+                                                <p className="text-xs text-muted-foreground mt-2">Your prompt will be combined with selected files and prompts when sent to the AI.</p>
+                                            </div>
+                                        </InfoTooltip>
+                                    </div>
                                     <ExpandableTextarea
                                         ref={promptInputRef}
                                         placeholder="Type your user prompt here..."

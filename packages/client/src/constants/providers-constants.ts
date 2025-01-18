@@ -7,6 +7,7 @@ export type ModelProvider = {
     link: string
     linkTitle: string
     description: string
+    isLocal?: boolean
 }
 
 
@@ -65,13 +66,15 @@ export const PROVIDERS = [
         name: 'LMStudio',
         link: 'https://lmstudio.ai/',
         linkTitle: 'Download LM Studio',
-        description: 'LM Studio is a UI based tool for running LLMs on your local machine. Click the link to download the app. Once you have LM Studio installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them.'
+        isLocal: true,
+        description: 'LM Studio is a UI based tool for running LLMs on your local machine. Click the link to download the app. Once you have LM Studio installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them. You can change LM Studio base URL in the settings.'
     }, {
         id: 'ollama',
         name: 'Ollama',
         link: 'https://ollama.com/download',
         linkTitle: 'Download Ollama',
-        description: 'Ollama is a lightweight terminal based tool for running LLMs on your local machine. Click the link to download the app. Once you have Ollama installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them.'
+        isLocal: true,
+        description: 'Ollama is a lightweight terminal based tool for running LLMs on your local machine. Click the link to download the app. Once you have Ollama installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them. You can change Ollama base URL in the settings.'
     }
 ] satisfies ModelProvider[]
 

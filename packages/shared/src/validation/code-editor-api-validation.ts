@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { providerSchema } from '../global-state/global-state-schema';
 
 export const codeEditorApiValidation = {
     edit: {
@@ -8,7 +9,7 @@ export const codeEditorApiValidation = {
         }),
         body: z.object({
             instructions: z.string().min(1),
-            provider: z.enum(['openai', 'anthropic', 'gemini', 'ollama', 'openrouter', 'xai']).optional()
+            provider: providerSchema.optional()
         })
     }
 } as const;

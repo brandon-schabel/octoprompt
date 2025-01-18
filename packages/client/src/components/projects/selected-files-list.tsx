@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "sonner"
 import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
-import { formatModShortcut, modSymbol, shiftSymbol } from "@/lib/platform"
+import { formatShortcut } from "@/lib/shortcuts"
 
 type SelectedFilesListProps = {
   selectedFiles: string[]
@@ -39,7 +39,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 }, ref) => {
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
-  const [sortOrder, setSortOrder] = useState<"default" | "alphabetical">("default")
+  const [sortOrder, setSortOrder] = useState<"default" | "alphabetical" | "size_asc" | "size_desc">("default")
   const [filterText, setFilterText] = useState("")
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
@@ -90,6 +90,18 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
       const fa = fileMap.get(a)?.name || ""
       const fb = fileMap.get(b)?.name || ""
       return fa.localeCompare(fb)
+    })
+  } else if (sortOrder === "size_desc") {
+    displayFiles.sort((a, b) => {
+      const fa = fileMap.get(a)?.content || ""
+      const fb = fileMap.get(b)?.content || ""
+      return fb.length - fa.length // Sort by size descending
+    })
+  } else if (sortOrder === "size_asc") {
+    displayFiles.sort((a, b) => {
+      const fa = fileMap.get(a)?.content || ""
+      const fb = fileMap.get(b)?.content || ""
+      return fa.length - fb.length // Sort by size ascending
     })
   }
 
@@ -228,12 +240,12 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
               <DropdownMenuItem onClick={undo} disabled={!canUndo}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 <span>Undo</span>
-                <DropdownMenuShortcut>{formatModShortcut('z')}</DropdownMenuShortcut>
+                <DropdownMenuShortcut>{formatShortcut('mod+z')}</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={redo} disabled={!canRedo}>
                 <RotateCw className="mr-2 h-4 w-4" />
                 <span>Redo</span>
-                <DropdownMenuShortcut>{`${modSymbol}${shiftSymbol}Z`}</DropdownMenuShortcut>
+                <DropdownMenuShortcut>{formatShortcut('mod+shift+z')}</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
@@ -242,7 +254,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   <span>Sort By</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as "default" | "alphabetical")}>
+                  <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as "default" | "alphabetical" | "size_asc" | "size_desc")}>
                     <DropdownMenuRadioItem value="default">
                       <ArrowUpDown className="mr-2 h-4 w-4" />
                       <span>Added Order</span>
@@ -250,6 +262,14 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                     <DropdownMenuRadioItem value="alphabetical">
                       <ArrowDownAZ className="mr-2 h-4 w-4" />
                       <span>Alphabetical</span>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="size_desc">
+                      <ArrowDownAZ className="mr-2 h-4 w-4" />
+                      <span>Size (Largest First)</span>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="size_asc">
+                      <ArrowDownAZ className="mr-2 h-4 w-4" />
+                      <span>Size (Smallest First)</span>
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>

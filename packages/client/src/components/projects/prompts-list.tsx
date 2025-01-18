@@ -7,7 +7,6 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { ScrollArea } from '../ui/scroll-area'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
-import { formatModShortcut } from '@/lib/platform'
 import { ProjectFile } from 'shared'
 import { useGetProjectPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
@@ -18,10 +17,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '../ui/dropdown-menu'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '../ui/badge'
+import { formatShortcut } from '@/lib/shortcuts'
+import { InfoTooltip } from '../info-tooltip'
+import { ShortcutDisplay } from '../app-shortcut-display'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
@@ -61,11 +62,15 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const [editPromptId, setEditPromptId] = useState<string | null>(null)
 
     // Sorting
-    const [sortOrder, setSortOrder] = useState<"alphabetical" | "default">("alphabetical")
+    const [sortOrder, setSortOrder] = useState<"alphabetical" | "default" | "size_asc" | "size_desc">("alphabetical")
 
     let sortedPrompts = [...prompts]
     if (sortOrder === "alphabetical") {
         sortedPrompts.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortOrder === "size_desc") {
+        sortedPrompts.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0)) // Sort by size descending
+    } else if (sortOrder === "size_asc") {
+        sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0)) // Sort by size ascending
     }
 
     const copySelectedPrompts = () => {
@@ -216,8 +221,26 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
             <div className={`border rounded-lg h-full flex flex-col ${className}`}>
                 <div className="flex-shrink-0 flex flex-row items-center justify-between p-4 border-b">
                     <div>
-                        <div className="text-md font-medium">
-                            <Badge>{selectedPrompts.length}</Badge> Project Prompts <span className="hidden lg:inline text-muted-foreground">({formatModShortcut('p')})</span>
+                        <div className="text-md font-medium flex items-center gap-2">
+                            <span><Badge>{selectedPrompts.length}</Badge> Project Prompts</span>
+                            <InfoTooltip>
+                                <div className="space-y-2">
+                                    <p>Prompts are reusable instructions that will be included with your chat. Each selected prompt will be added to the final prompt sent to the AI.</p>
+                                    <p>You can:</p>
+                                    <ul>
+                                        <li>- Create custom prompts for specific tasks</li>
+                                        <li>- Import prompts from other projects</li>
+                                        <li>- Select multiple prompts to combine instructions</li>
+                                    </ul>
+                                    <p className="font-medium mt-2">Keyboard Shortcuts:</p>
+                                    <ul>
+                                        <li>- <ShortcutDisplay shortcut={['up', 'down']} /> Navigate through prompts</li>
+                                        <li>- <ShortcutDisplay shortcut={['space']} /> Select/deselect prompt</li>
+                                        <li>- <ShortcutDisplay shortcut={['enter']} /> View prompt content</li>
+                                        <li>- <ShortcutDisplay shortcut={['mod', 'p']} /> Focus prompts list</li>
+                                    </ul>
+                                </div>
+                            </InfoTooltip>
                         </div>
                         <div className="hidden lg:text-xs text-muted-foreground">
                             Press Space to select, Enter to view
@@ -253,6 +276,19 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                     <Pencil className="mr-2 h-4 w-4" />
                                     <span>Copy Selected Prompts</span>
                                 </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    onClick={() => {
+                                        updateProjectTabState(projectTabId, (prev) => ({
+                                            ...prev,
+                                            selectedPrompts: []
+                                        }))
+                                        toast.success('Cleared all selected prompts')
+                                    }}
+                                    disabled={!selectedPrompts.length}
+                                >
+                                    <Trash className="mr-2 h-4 w-4" />
+                                    <span>Clear Selected</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuSub>
                                     <DropdownMenuSubTrigger>
                                         <ArrowUpDown className="mr-2 h-4 w-4" />
@@ -260,7 +296,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                     </DropdownMenuSubTrigger>
                                     <DropdownMenuSubContent>
                                         <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => {
-                                            setSortOrder(value as "alphabetical" | "default")
+                                            setSortOrder(value as "alphabetical" | "default" | "size_asc" | "size_desc")
                                         }}>
                                             <DropdownMenuRadioItem value="default">
                                                 <ArrowUpDown className="mr-2 h-4 w-4" />
@@ -269,6 +305,14 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                             <DropdownMenuRadioItem value="alphabetical">
                                                 <ArrowDownAZ className="mr-2 h-4 w-4" />
                                                 <span>Alphabetical</span>
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="size_desc">
+                                                <ArrowDownAZ className="mr-2 h-4 w-4" />
+                                                <span>Size (Largest First)</span>
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="size_asc">
+                                                <ArrowDownAZ className="mr-2 h-4 w-4" />
+                                                <span>Size (Smallest First)</span>
                                             </DropdownMenuRadioItem>
                                         </DropdownMenuRadioGroup>
                                     </DropdownMenuSubContent>
@@ -280,10 +324,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                 </div>
 
                 <div className='flex-1 relative min-h-0 '>
-                    {prompts.length > 0 ? (
+                    {sortedPrompts.length > 0 ? (
                         <ScrollArea className="h-full">
                             <div className="space-y-2 p-4 w-72 md:w-80 lg:w-full">
-                                {prompts.map((prompt, index) => (
+                                {sortedPrompts.map((prompt, index) => (
                                     <div
                                         key={prompt.id}
                                         // @ts-ignore
@@ -315,7 +359,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    
+
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button

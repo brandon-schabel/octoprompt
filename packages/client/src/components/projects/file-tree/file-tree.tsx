@@ -26,9 +26,9 @@ import { ProjectFile } from 'shared/schema'
 import { toast } from 'sonner'
 import { buildNodeContent } from '@/components/projects/utils/projects-utils'
 import clsx from 'clsx'
-import { formatModShortcut } from '@/lib/platform'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
 import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
+import { formatShortcut } from '@/lib/shortcuts'
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 
@@ -574,7 +574,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
         >
             <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground">
                 <span>Files</span>
-                <span>{formatModShortcut('g')} to focus</span>
                 <Button variant="ghost" size="sm" onClick={copyEntireTree}>
                     Copy Full Tree
                 </Button>

@@ -21,11 +21,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useWhisperTranscription } from "@/hooks/api/use-whisper-transcription"
 import { useEffect, useState, useRef, useCallback, forwardRef, useMemo } from "react"
-import { formatModShortcut } from '@/lib/platform'
 import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from "sonner"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
+import { formatShortcut } from "@/lib/shortcuts"
 
 type ExpandableTextareaProps = {
   value: string
@@ -125,7 +125,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
   }, [])
 
   const placeholderWithShortcut = useMemo(() => {
-    return `${placeholder} (${formatModShortcut('i')})`
+    return `${placeholder} (${formatShortcut('mod+i')})`
   }, [placeholder])
 
   const renderMicrophoneButton = () => (

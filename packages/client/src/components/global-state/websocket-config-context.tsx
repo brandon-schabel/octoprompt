@@ -49,11 +49,19 @@ const createReactMessageHandlers = ({
         create_project_tab: (msg) => {
             setGlobalState((prev) => {
                 const copy = { ...prev };
+                // 1) Insert the new tab
                 copy.projectTabs[msg.tabId] = msg.data;
+
+                // 2) Append the new tab ID to settings.projectTabIdOrder
+                copy.settings.projectTabIdOrder = [...copy.settings.projectTabIdOrder, msg.tabId];
+
+                // 3) Set newly created tab as active
                 copy.projectActiveTabId = msg.tabId;
+
                 return globalStateSchema.parse(copy);
             });
         },
+
 
         /**
          * Project tab: fully update (overwrite) a project tab
@@ -107,12 +115,22 @@ const createReactMessageHandlers = ({
                     return prev;
                 }
                 const copy = { ...prev };
+
+                // 1) Remove the tab from settings.projectTabIdOrder
+                copy.settings.projectTabIdOrder = copy.settings.projectTabIdOrder.filter(
+                    (id: string) => id !== msg.tabId
+                );
+
+                // 2) Delete the actual tab
                 delete copy.projectTabs[msg.tabId];
+
+                // 3) If that was the active tab, set a new one if possible
                 if (copy.projectActiveTabId === msg.tabId) {
                     const remainingTabs = Object.keys(copy.projectTabs);
                     copy.projectActiveTabId =
                         remainingTabs.length > 0 ? remainingTabs[0] : null;
                 }
+
                 return globalStateSchema.parse(copy);
             });
         },
@@ -141,8 +159,15 @@ const createReactMessageHandlers = ({
         create_chat_tab: (msg) => {
             setGlobalState((prev) => {
                 const copy = { ...prev };
+                // 1) Insert the new chat tab
                 copy.chatTabs[msg.tabId] = msg.data;
+
+                // 2) Append it to settings.chatTabIdOrder
+                copy.settings.chatTabIdOrder = [...copy.settings.chatTabIdOrder, msg.tabId];
+
+                // 3) Set as the active chat tab
                 copy.chatActiveTabId = msg.tabId;
+
                 return globalStateSchema.parse(copy);
             });
         },
@@ -190,6 +215,7 @@ const createReactMessageHandlers = ({
         /**
          * Chat tab: delete a chat tab
          */
+
         delete_chat_tab: (msg) => {
             setGlobalState((prev) => {
                 if (!prev.chatTabs[msg.tabId]) {
@@ -199,12 +225,22 @@ const createReactMessageHandlers = ({
                     return prev;
                 }
                 const copy = { ...prev };
+
+                // 1) Remove from settings.chatTabIdOrder
+                copy.settings.chatTabIdOrder = copy.settings.chatTabIdOrder.filter(
+                    (id: string) => id !== msg.tabId
+                );
+
+                // 2) Delete the actual tab
                 delete copy.chatTabs[msg.tabId];
+
+                // 3) If that was the active tab, pick a new one
                 if (copy.chatActiveTabId === msg.tabId) {
                     const remainingTabs = Object.keys(copy.chatTabs);
                     copy.chatActiveTabId =
                         remainingTabs.length > 0 ? remainingTabs[0] : null;
                 }
+
                 return globalStateSchema.parse(copy);
             });
         },

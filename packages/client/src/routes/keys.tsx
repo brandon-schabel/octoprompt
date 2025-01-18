@@ -35,6 +35,7 @@ function KeysPage() {
         setNewKeyVal('');
     }
 
+    const providerData = PROVIDERS.find(p => p.id === selectedProvider);
     return (
         <div className="p-4 space-y-4 bg-secondary h-full">
             <Card>
@@ -64,10 +65,11 @@ function KeysPage() {
                                     </SelectContent>
                                 </Select>
                                 <Input
-                                    placeholder="Enter API key"
+                                    placeholder={providerData?.isLocal ? "No API Key needed, However Download Is Needed" : "Enter API key"}
                                     value={newKeyVal}
                                     onChange={e => setNewKeyVal(e.target.value)}
                                     type="password"
+                                    disabled={providerData?.isLocal ?? false}
                                 />
                                 <Button onClick={handleCreate} disabled={!selectedProvider || !newKeyVal}>
                                     Add
