@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/drawer"
 import { estimateTokenCount } from "@/components/projects/file-tree/utils/file-node-tree-utils"
 import { ProjectFile } from "shared"
-import { SelectedFilesList } from "./selected-files-list"
+import { SelectedFilesList } from "@/components/projects/selected-files-list"
 import { useState } from "react"
 import { FormatTokenCount } from "../format-token-count"
 import { Badge } from "../ui/badge"
+import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 type SelectedFilesDrawerProps = {
   selectedFiles: string[]
@@ -21,6 +22,7 @@ type SelectedFilesDrawerProps = {
   onRemoveFile: (fileId: string) => void
   trigger?: React.ReactNode
   projectTabId: string
+  selectedFilesState: UseSelectedFileReturn
 }
 
 export function SelectedFilesDrawer({
@@ -28,7 +30,8 @@ export function SelectedFilesDrawer({
   fileMap,
   onRemoveFile,
   trigger,
-  projectTabId
+  projectTabId,
+  selectedFilesState
 }: SelectedFilesDrawerProps) {
   const [open, setOpen] = useState(false)
 
@@ -73,6 +76,7 @@ export function SelectedFilesDrawer({
             fileMap={fileMap}
             onRemoveFile={onRemoveFile}
             projectTabId={projectTabId}
+            selectedFilesState={selectedFilesState}
           />
         </ScrollArea>
       </DrawerContent>

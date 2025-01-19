@@ -19,12 +19,13 @@ import { ApiError } from "shared";
 import { getState } from "@/websocket/websocket-config";  // if you use that for global state
 import type { InferSelectModel } from "drizzle-orm";
 import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
+import { OpenRouterProviderService } from "./model-providers/providers/open-router-provider";
 
 export class TicketService {
-    private unifiedProviderService: UnifiedProviderService;
+    private openRouterProvider: OpenRouterProviderService;
 
     constructor() {
-        this.unifiedProviderService = new UnifiedProviderService();
+        this.openRouterProvider = new OpenRouterProviderService();
     }
 
     async createTicket(data: CreateTicketBody): Promise<Ticket> {
@@ -114,7 +115,7 @@ export class TicketService {
 
     async suggestTasksForTicket(ticketId: string, userContext?: string): Promise<string[]> {
         console.log("[TicketService] Starting task suggestion for ticket:", ticketId);
-        
+
         const ticket = await this.getTicketById(ticketId);
         if (!ticket) {
             console.error("[TicketService] Ticket not found:", ticketId);
@@ -175,8 +176,8 @@ ${userContext ? `Additional Context: ${userContext}` : ''}`;
         });
 
         try {
-            console.log("[TicketService] Calling UnifiedProviderService...");
-            const stream = await this.unifiedProviderService.processMessage({
+            console.log("[TicketService] Calling OpenRouterProviderService...");
+            const stream = await this.openRouterProvider.processMessage({
                 chatId: `ticket-tasks-${ticketId}`,
                 userMessage,
                 provider: "openrouter",
@@ -196,7 +197,7 @@ ${userContext ? `Additional Context: ${userContext}` : ''}`;
             });
 
             console.log("[TicketService] Got stream response, reading chunks...");
-            
+
             // Read the stream to get the structured response
             const reader = stream.getReader();
             let rawOutput = "";
@@ -212,9 +213,9 @@ ${userContext ? `Additional Context: ${userContext}` : ''}`;
                 const chunk = decoder.decode(value);
                 rawOutput += chunk;
                 chunkCount++;
-                
+
                 console.log("[TicketService] Received chunk", chunkCount, ":", chunk.substring(0, 100) + "...");
-                
+
                 // Try parsing incrementally to debug streaming JSON
                 try {
                     const partialParsed = JSON.parse(rawOutput);

@@ -9,7 +9,6 @@ import { SelectedFilesList, SelectedFilesListRef } from '@/components/projects/s
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { buildFileTree } from '@/components/projects/utils/projects-utils'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { Project } from 'shared/index'
 import { ProjectFile } from 'shared/schema'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -23,6 +22,7 @@ import { InfoTooltip } from '../info-tooltip'
 import { formatShortcut } from '@/lib/shortcuts'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import useClickAway from '@/hooks/use-click-away'
+import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -39,6 +39,7 @@ type FilePanelProps = {
     setSearchByContent: (byContent: boolean) => void
     className?: string
     onNavigateToPrompts?: () => void
+    selectedFilesState: UseSelectedFileReturn
 }
 
 export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
@@ -49,7 +50,8 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     searchByContent,
     setSearchByContent,
     className,
-    onNavigateToPrompts
+    onNavigateToPrompts,
+    selectedFilesState
 }, ref) => {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const fileTreeRef = useRef<FileTreeRef>(null)
@@ -62,16 +64,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const allowSpacebaseToSelect = state?.settings?.useSpacebarToSelectAutocomplete ?? true
     const activeProjectTabId = state?.projectActiveTabId
 
-    const {
-        selectedFiles,
-        removeSelectedFile,
-        selectFiles,
-        clearSelectedFiles,
-        undo,
-        redo,
-        canUndo,
-        canRedo,
-    } = useSelectedFiles()
+    const { selectedFiles, removeSelectedFile, selectFiles, clearSelectedFiles, undo, redo, canUndo, canRedo } = selectedFilesState
 
     const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
 
@@ -192,7 +185,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
         </Button>
     )
 
-    // We’ll limit how many suggestions are shown to keep things tidy
+    // We'll limit how many suggestions are shown to keep things tidy
     const suggestions = useMemo(() => filteredFiles.slice(0, 10), [filteredFiles])
 
     // In your file-panel.tsx (within FilePanel component):
@@ -364,11 +357,12 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                             onRemoveFile={(fileId) => {
                                                 updateActiveTab(prev => ({
                                                     ...prev,
-                                                    selectedFiles: prev.selectedFiles.filter(id => id !== fileId)
+                                                    selectedFiles: prev.selectedFiles?.filter(id => id !== fileId) || []    
                                                 }))
                                             }}
                                             trigger={selectedFilesButton}
                                             projectTabId={activeProjectTabId || 'defaultTab'}
+                                            selectedFilesState={selectedFilesState}
                                         />
                                     </div>
                                 </div>
@@ -463,6 +457,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                                     onNavigateRight={onNavigateToPrompts}
                                                     className="w-60"
                                                     projectTabId={activeProjectTabId || 'defaultTab'}
+                                                    selectedFilesState={selectedFilesState}
                                                 />
                                             </ScrollArea>
                                         </div>

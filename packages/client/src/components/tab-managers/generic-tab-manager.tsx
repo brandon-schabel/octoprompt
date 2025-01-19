@@ -425,6 +425,7 @@ function SortableTab(props: {
                     'flex items-center gap-2 px-2 data-[state=active]:bg-indigo-100 dark:data-[state=active]:bg-indigo-950/50',
                     'data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400'
                 )}
+                onDoubleClick={() => setEditingTabName({ id: tabId, name: displayName })}
             >
                 {editingTabName?.id === tabId ? (
                     <Input

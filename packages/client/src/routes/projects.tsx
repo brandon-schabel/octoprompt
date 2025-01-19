@@ -15,7 +15,7 @@ import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manag
 import { Button } from '@/components/ui/button'
 import { useEditFile } from '@/hooks/api/use-code-editor-api'
 import { toast } from 'sonner'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
+import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
 
 export const Route = createFileRoute('/projects')({
@@ -40,22 +40,22 @@ function ProjectsPage() {
     const fileSearch = activeTabState?.fileSearch ?? ''
     const searchByContent = activeTabState?.searchByContent ?? false
     const selectedProvider = 'openai'
-    const { selectedFiles } = useSelectedFiles()
+    
+    // Single source of truth for selected files state
+    const selectedFilesState = useSelectedFiles()
+
     // Query all projects
     const { data: projects } = useGetProjects()
 
-
-
-    // Check for “no tabs” scenario
+    // Check for "no tabs" scenario
     const noTabsYet = Object.keys(state?.projectTabs ?? {}).length === 0
-
 
     const handleApplyFixes = async () => {
         if (!selectedProjectId) {
             toast.error('No project selected!')
             return
         }
-        if (selectedFiles.length === 0) {
+        if (selectedFilesState.selectedFiles.length === 0) {
             toast.error('No files selected!')
             return
         }
@@ -67,18 +67,12 @@ function ProjectsPage() {
         try {
             const result = await aiCodeEditMutation.mutateAsync({
                 projectId: selectedProjectId,
-                // fileIds: selectedFiles,
-                // userPrompt: aiPrompt,
                 provider: selectedProvider,
-                // options: { model: 'gpt-4o', temperature: 0.7 },
                 instructions: aiPrompt,
-                fileId: selectedFiles[0],
+                fileId: selectedFilesState.selectedFiles[0],
             })
 
-            // After success, show a success message or handle updated files
-            // toast.success(`AI Edits Applied: ${result.explanation}`)
             toast.success(`AI Edits Applied`)
-            // e.g. re-fetch project files or show them in the UI
         } catch (err: any) {
             toast.error(`Failed to apply AI fixes: ${err.message}`)
         }
@@ -170,10 +164,10 @@ function ProjectsPage() {
                     ) : (
                         <>
                             <p className="text-sm text-muted-foreground">
-                                Looks like you haven’t created any projects yet.
+                                Looks like you haven't created any projects yet.
                                 Click below to create a new project or import one.
                             </p>
-                            {/* Replace with your “create project” logic as needed */}
+                            {/* Replace with your "create project" logic as needed */}
                             <Button onClick={() => /* handleCreateProject() */ console.log('create project')}>
                                 + Create a Project
                             </Button>
@@ -213,6 +207,7 @@ function ProjectsPage() {
                         setSearchByContent={setSearchByContent}
                         className="w-3/5"
                         onNavigateToPrompts={() => promptPanelRef.current?.focusPrompt()}
+                        selectedFilesState={selectedFilesState}
                     />
                 )}
 
@@ -223,6 +218,7 @@ function ProjectsPage() {
                         fileMap={fileMap}
                         promptData={promptData}
                         className="w-2/5"
+                        selectedFilesState={selectedFilesState}
                     />
                 )}
             </div>

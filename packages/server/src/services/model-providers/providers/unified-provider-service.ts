@@ -94,7 +94,7 @@ export class UnifiedProviderService {
             },
             openrouter: async () => {
                 const openRouterKey = this.getKey("openRouterKey");
-                return new OpenRouterPlugin(openRouterKey ?? "", GEMINI_BASE_URL);
+                return new OpenRouterPlugin(openRouterKey ?? "");
             },
             xai: async () => {
                 const xaiClient = new OpenAI({

@@ -149,6 +149,7 @@ export function ProjectsTabManager() {
 
   return (
     <GenericTabManager<ProjectTab>
+      // @ts-ignore
       tabs={tabs}
       activeTabId={activeTabId}
       isReady={isOpen}

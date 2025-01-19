@@ -13,7 +13,7 @@ import { toast } from "sonner"
 import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
-import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
+import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 type SelectedFilesListProps = {
   selectedFiles: string[]
@@ -23,6 +23,7 @@ type SelectedFilesListProps = {
   onNavigateRight?: () => void
   className?: string
   projectTabId: string
+  selectedFilesState: UseSelectedFileReturn
 }
 
 export type SelectedFilesListRef = {
@@ -37,6 +38,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   onNavigateRight,
   className = '',
   projectTabId,
+  selectedFilesState
 }, ref) => {
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -45,7 +47,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
   const { state, updateProjectTabState } = useGlobalStateHelpers()
-  const { undo, redo, canUndo, canRedo } = useSelectedFiles()
+  const { undo, redo, canUndo, canRedo } = selectedFilesState
 
   const projectTab = state?.projectTabs[projectTabId]
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}

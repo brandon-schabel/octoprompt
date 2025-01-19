@@ -1,23 +1,24 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ProjectFile } from "shared"
-import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
+import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 type SuggestedFilesDialogProps = {
     open: boolean
     onClose: () => void
     suggestedFiles: ProjectFile[]
+    selectedFilesState: UseSelectedFileReturn
 }
 
 export function SuggestedFilesDialog({
     open,
     onClose,
     suggestedFiles,
+    selectedFilesState
 }: SuggestedFilesDialogProps) {
-    // Pull in our history-aware selection methods and current selection
-    const { selectedFiles, toggleFile, toggleFiles } = useSelectedFiles()
+    const { selectedFiles, toggleFile, toggleFiles } = selectedFilesState
 
-    // (Optional) “Select All” just toggles all suggestions
+    // (Optional) "Select All" just toggles all suggestions
     function handleSelectAll() {
         toggleFiles(suggestedFiles.map((file) => file.id))
     }

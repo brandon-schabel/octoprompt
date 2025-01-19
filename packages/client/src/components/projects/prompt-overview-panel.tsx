@@ -11,7 +11,6 @@ import { toast } from 'sonner'
 import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
 import { ProjectFile } from 'shared'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
@@ -21,6 +20,7 @@ import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
+import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -31,10 +31,11 @@ interface PromptOverviewPanelProps {
     fileMap: Map<string, ProjectFile>
     promptData?: PromptListResponse
     className?: string
+    selectedFilesState: UseSelectedFileReturn
 }
 
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
-    ({ selectedProjectId, fileMap, promptData, className }, ref) => {
+    ({ selectedProjectId, fileMap, promptData, className, selectedFilesState }, ref) => {
         const { state, updateActiveProjectTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
         const selectedPrompts = activeTabState?.selectedPrompts || []
         const globalUserPrompt = activeTabState?.userPrompt || ''
@@ -97,7 +98,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             debouncedUpdateGlobal(value)
         }
 
-        const { selectedFiles } = useSelectedFiles()
+        const { selectedFiles } = selectedFilesState
         const [promptDialogOpen, setPromptDialogOpen] = useState(false)
         const [editPromptId, setEditPromptId] = useState<string | null>(null)
         const promptInputRef = useRef<HTMLTextAreaElement>(null)
@@ -199,6 +200,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     open={dialogOpen}
                     onClose={() => setDialogOpen(false)}
                     suggestedFiles={suggestedFiles}
+                    selectedFilesState={selectedFilesState}
                 />
 
                 <div className="bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4 border-l">

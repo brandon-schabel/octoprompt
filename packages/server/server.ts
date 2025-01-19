@@ -49,6 +49,7 @@ export const instantiateServer = ({
   port = PORT
 }: ServerConfig = {}): Server => {
   const server: Server = serve<{ clientId: string }>({
+    idleTimeout: 255, // 255 seconds, we're dealing with streaming and non streaming llm responses which can take a while.
     port,
     async fetch(req: Request): Promise<Response | undefined> {
       const url = new URL(req.url);
