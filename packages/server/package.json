@@ -23,7 +23,7 @@
     "drizzle-orm": "^0.36.3"
   },
   "dependencies": {
-    "@bnk/ai": "1.0.8",
+    "@bnk/ai": "1.0.9",
     "@bnk/backend-websocket-manager": "^1.0.0",
     "@bnk/router": "1.0.6",
     "@types/archiver": "^6.0.3",

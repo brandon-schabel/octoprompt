@@ -23,6 +23,9 @@ import { formatShortcut } from '@/lib/shortcuts'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import useClickAway from '@/hooks/use-click-away'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { Link, useMatches } from "@tanstack/react-router"
+import { TicketIcon, ScanEye } from "lucide-react"
+import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -63,6 +66,14 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const { state } = useGlobalStateHelpers()
     const allowSpacebaseToSelect = state?.settings?.useSpacebarToSelectAutocomplete ?? true
     const activeProjectTabId = state?.projectActiveTabId
+
+    const matches = useMatches()
+    const isOnTicketsRoute = matches.some(match => match.routeId === "/tickets")
+    const isOnSummarizationRoute = matches.some(match => match.routeId === "/project-summarization")
+
+    // Get open tickets count
+    const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? '')
+    const openTicketsCount = ticketsData?.ticketsWithTasks?.filter(t => t.status === 'open').length ?? 0
 
     const { selectedFiles, removeSelectedFile, selectFiles, clearSelectedFiles, undo, redo, canUndo, canRedo } = selectedFilesState
 
@@ -149,12 +160,10 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
         e.preventDefault()
         searchInputRef.current?.focus()
     })
-
     useHotkeys('mod+g', (e) => {
         e.preventDefault()
         fileTreeRef.current?.focusTree()
     })
-
     useHotkeys('mod+p', (e) => {
         e.preventDefault()
         promptsRef.current?.focus()
@@ -188,7 +197,6 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     // We'll limit how many suggestions are shown to keep things tidy
     const suggestions = useMemo(() => filteredFiles.slice(0, 10), [filteredFiles])
 
-    // In your file-panel.tsx (within FilePanel component):
     const selectFileFromAutocomplete = (file: ProjectFile) => {
         handleSetSelectedFiles((prev) => {
             // Toggle selection - remove if already selected, add if not
@@ -197,14 +205,11 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
             }
             return [...prev, file.id]
         })
-
-        // Keep the current index and autocomplete state
         setShowAutocomplete(true)
         searchInputRef.current?.focus()
     }
 
     const searchContainerRef = useRef<HTMLDivElement>(null)
-
     useClickAway(searchContainerRef, () => {
         setShowAutocomplete(false)
         setAutocompleteIndex(-1)
@@ -245,13 +250,43 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                     {projectData.path.slice(0, 100)}
                                 </span>
                             </div>
+
+                            {/* Added Tickets & Summarization links next to Project Settings */}
                             <div className="flex items-center space-x-4">
                                 <ProjectSettingsDialog />
+
+                                <Link
+                                    to="/tickets"
+                                    className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                                        hover:bg-accent/50 px-3 py-2 rounded-md ${isOnTicketsRoute
+                                            ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                            : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                        }`}
+                                >
+                                    <TicketIcon className="w-4 h-4" />
+                                    Tickets
+                                    {openTicketsCount > 0 && (
+                                        <Badge variant="count" className="ml-1">
+                                            {openTicketsCount}
+                                        </Badge>
+                                    )}
+                                </Link>
+
+                                <Link
+                                    to="/project-summarization"
+                                    className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                                        hover:bg-accent/50 px-3 py-2 rounded-md ${isOnSummarizationRoute
+                                            ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                            : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                        }`}
+                                >
+                                    <ScanEye className="w-4 h-4" />
+                                    Summarization
+                                </Link>
                             </div>
                         </div>
 
                         <div className="flex-1 overflow-hidden space-y-4 p-4">
-
                             {/* Container must be relative so we can position the autocomplete dropdown */}
                             <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start">
                                 <div ref={searchContainerRef} className="relative max-w-64 w-full">
@@ -293,14 +328,11 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                                         openFileViewer(suggestions[autocompleteIndex])
                                                     }
                                                 } else if (e.key === 'Enter' || (allowSpacebaseToSelect && e.key === ' ')) {
-                                                    // If we're navigating autocomplete (index >= 0), always prevent default
                                                     if (autocompleteIndex >= 0) {
                                                         e.preventDefault()
                                                     }
-                                                    // Only proceed with selection if we have a valid index
                                                     if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
                                                         selectFileFromAutocomplete(suggestions[autocompleteIndex])
-                                                        // Move cursor down if there are more items
                                                         if (autocompleteIndex < suggestions.length - 1) {
                                                             setAutocompleteIndex(prev => prev + 1)
                                                         }
@@ -308,7 +340,6 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                                 }
                                             }}
                                         />
-
                                     </div>
                                     {fileSearch && (
                                         <Button
@@ -339,12 +370,12 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                     <div className="space-y-2">
                                         <p>File Search Keyboard Shortcuts:</p>
                                         <ul>
-                                            <li><ShortcutDisplay shortcut={['up', 'down']} /> Navigate through suggestions</li>
+                                            <li><ShortcutDisplay shortcut={['up', 'down']} /> Navigate suggestions</li>
                                             <li><ShortcutDisplay shortcut={['enter']} /> or <ShortcutDisplay shortcut={['space']} /> Select highlighted file</li>
                                             <li><ShortcutDisplay shortcut={['right']} /> Preview highlighted file</li>
                                             <li><ShortcutDisplay shortcut={['escape']} /> Close suggestions</li>
-                                            <li><ShortcutDisplay shortcut={['mod','f']} /> Focus search</li>
-                                            <li><ShortcutDisplay shortcut={['mod','g']} /> Focus file tree</li>
+                                            <li><ShortcutDisplay shortcut={['mod', 'f']} /> Focus search</li>
+                                            <li><ShortcutDisplay shortcut={['mod', 'g']} /> Focus file tree</li>
                                         </ul>
                                     </div>
                                 </InfoTooltip>
@@ -357,7 +388,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                             onRemoveFile={(fileId) => {
                                                 updateActiveTab(prev => ({
                                                     ...prev,
-                                                    selectedFiles: prev.selectedFiles?.filter(id => id !== fileId) || []    
+                                                    selectedFiles: prev.selectedFiles?.filter(id => id !== fileId) || []
                                                 }))
                                             }}
                                             trigger={selectedFilesButton}
@@ -373,7 +404,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         className="absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto"
                                     >
                                         <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border">
-                                            Press Enter{allowSpacebaseToSelect && <span > or Spacebar</span>} to add highlighted file to selection, right arrow to preview file
+                                            Press Enter{allowSpacebaseToSelect && <span> or Spacebar</span>} to add highlighted file to selection, right arrow to preview file
                                         </li>
                                         {suggestions.map((file, index) => {
                                             const isHighlighted = index === autocompleteIndex
@@ -381,11 +412,10 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                             return (
                                                 <li
                                                     key={file.id}
-                                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
-                                                        isHighlighted 
-                                                            ? 'bg-accent text-accent-foreground' 
-                                                            : 'hover:bg-accent/50'
-                                                    }`}
+                                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted
+                                                        ? 'bg-accent text-accent-foreground'
+                                                        : 'hover:bg-accent/50'
+                                                        }`}
                                                     onMouseDown={(e) => {
                                                         e.preventDefault()
                                                         e.stopPropagation()
@@ -434,13 +464,12 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                                 <div className="flex text-sm font-medium items-center space-x-2">
                                                     <Badge variant="secondary">{selectedFiles.length}</Badge>
                                                     <span>Selected Files</span>
-                                                    <InfoTooltip  >
+                                                    <InfoTooltip>
                                                         Selected files will be included with your prompt.
                                                         <ul>
                                                             <li>- Use arrow keys <ShortcutDisplay shortcut={['up', 'down']} /> to navigate the selected files list.</li>
                                                             <li>- Press <ShortcutDisplay shortcut={['r', '[1-9]']} /> or <ShortcutDisplay shortcut={['delete', 'backspace']} /> to remove a file from the selected list.</li>
                                                         </ul>
-
                                                     </InfoTooltip>
                                                 </div>
                                             </div>

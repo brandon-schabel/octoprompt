@@ -18,8 +18,8 @@ export function buildTicketContent(
 
     // Metadata section
     content += `## Metadata\n`;
-    content += `- **Status:** ${ticket.status.replace('_', ' ').toUpperCase()}\n`;
-    content += `- **Priority:** ${ticket.priority.toUpperCase()}\n`;
+    content += `- **Status:** ${ticket.status?.replace('_', ' ').toUpperCase() || 'N/A'}\n`;
+    content += `- **Priority:** ${ticket.priority?.toUpperCase() || 'N/A'}\n`;
     content += `- **Created:** ${new Date(ticket.createdAt).toLocaleString()}\n`;
     if (ticket.updatedAt) {
         content += `- **Last Updated:** ${new Date(ticket.updatedAt).toLocaleString()}\n`;
@@ -32,8 +32,8 @@ export function buildTicketContent(
         content += `## Tasks\n`;
         taskList.sort((a, b) => a.orderIndex - b.orderIndex)
             .forEach(task => {
-                content += task.done ? 
-                    `- [x] ${task.content}\n` : 
+                content += task.done ?
+                    `- [x] ${task.content}\n` :
                     `- [ ] ${task.content}\n`;
             });
         content += '\n';

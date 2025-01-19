@@ -8,7 +8,7 @@ import { ChatDialog } from "@/components/chat/chat-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
-import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, ScanEye, TicketIcon } from "lucide-react"
+import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
@@ -24,11 +24,12 @@ export function AppNavbar() {
     const [settingsOpen, setSettingsOpen] = useState(false)
 
     const matches = useMatches()
+    // We treat /tickets and /project-summarization as part of "projects" route
+    const isOnProjectsRoute = matches.some(match =>
+        ["/projects", "/tickets", "/project-summarization"].includes(match.routeId)
+    )
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
-    const isOnProjectsRoute = matches.some(match => match.routeId === "/projects")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
-    const isOnSummarizationRoute = matches.some(match => match.routeId === "/project-summarization")
-    const isOnTicketsRoute = matches.some(match => match.routeId === "/tickets")
 
     const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, state } = useGlobalStateHelpers()
     const selectedProjectId = activeTabState?.selectedProjectId
@@ -39,8 +40,6 @@ export function AppNavbar() {
 
     const globalTheme = state?.settings.theme
 
-    // Dark mode state
-
     useEffect(() => {
         if (globalTheme === 'dark') {
             document.documentElement.classList.add('dark')
@@ -49,6 +48,7 @@ export function AppNavbar() {
         }
     }, [globalTheme])
 
+    // Health check
     useQuery<{ success: boolean }>({
         queryKey: ['health'],
         refetchInterval: 30000,
@@ -62,6 +62,7 @@ export function AppNavbar() {
         })
     })
 
+    // Hotkeys
     useHotkeys('mod+o', (e: any) => {
         e.preventDefault()
         setOpenDialog(true)
@@ -96,66 +97,46 @@ export function AppNavbar() {
 
     return (
         <>
-            <nav className="flex items-center w-full px-4 py-2 border-b ">
+            <nav className="flex items-center w-full px-4 py-2 border-b">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-4">
+                        {/* Projects link is highlighted if user is on /projects, /tickets, or /project-summarization */}
                         <Link
                             to="/projects"
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnProjectsRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <FolderIcon className="w-4 h-4" />
                             Project
                         </Link>
                         <div className="h-4 w-[1px] bg-border" />
-                        <Link
-                            to="/tickets"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnTicketsRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
-                                }`}
-                        >
-                            <TicketIcon className="w-4 h-4" />
-                            Tickets
-                        </Link>
-                        <div className="h-4 w-[1px] bg-border" />
+
                         <Link
                             to="/chat"
                             search={{ prefill: false }}
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnChatRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
                             Chat
                         </Link>
                         <div className="h-4 w-[1px] bg-border" />
+
                         <Link
                             to="/keys"
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnKeysRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <KeyIcon className="w-4 h-4" />
                             Keys
                         </Link>
-                        <div className="h-4 w-[1px] bg-border" />
-                        <Link
-                            to="/project-summarization"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnSummarizationRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
-                                }`}
-                        >
-                            <ScanEye className="w-4 h-4" />
-                            Summarization
-                        </Link>
                     </div>
-
 
                     <div className="flex items-center gap-2">
                         {!isOnChatRoute && (
@@ -200,6 +181,7 @@ export function AppNavbar() {
                 </div>
             </nav>
 
+            {/* Dialog: Open Project */}
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
