@@ -14,7 +14,8 @@ export {
     or,
     not,
     sql,
-    inArray
+    inArray,
+    desc
 } from 'drizzle-orm';
 
 

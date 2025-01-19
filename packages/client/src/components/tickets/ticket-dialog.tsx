@@ -73,11 +73,22 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[650px]">
+        <Dialog 
+            open={isOpen} 
+            onOpenChange={(open) => {
+                if (!open) onClose();
+            }}
+            modal
+        >
+            <DialogContent 
+                className="sm:max-w-[650px]" 
+                onInteractOutside={(e) => {
+                    e.preventDefault();
+                }}
+            >
                 <DialogHeader>
-                    <DialogTitle>
-                        {ticket ? "Edit Ticket" : "Create New Ticket"}
+                    <DialogTitle className="flex space-x-2 items-center">
+                        <span>{ticket ? "Edit Ticket" : "Create New Ticket"}</span>
                         <InfoTooltip className="max-w-xs">
                             Providing a detailed overview helps auto-generate tasks!
                         </InfoTooltip>

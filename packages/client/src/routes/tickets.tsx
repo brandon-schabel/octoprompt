@@ -1,37 +1,36 @@
 import React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { TicketList } from "../components/tickets/ticket-list";
 import { TicketDialog } from "../components/tickets/ticket-dialog";
-import { TicketEmptyState } from "../components/tickets/ticket-empty-state";
 import { Button } from "../components/ui/button";
 import { Plus } from "lucide-react";
-import { Ticket } from "shared/schema";
-import { useListTickets } from "../hooks/api/use-tickets-api";
 import { useGlobalStateHelpers } from "../components/global-state/use-global-state-helpers";
 import { useGetProject } from "@/hooks/api/use-projects-api";
+import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
+import type { TicketWithCount } from "@/hooks/api/use-tickets-api";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
 });
 
 function TicketsPage() {
-    const [selectedTicket, setSelectedTicket] = React.useState<Ticket | null>(null);
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+    const [selectedTicket, setSelectedTicket] = React.useState<TicketWithCount | null>(null);
 
-    // Grab active project ID from global state
-    const { activeProjectTabState } = useGlobalStateHelpers();
-    const projectId = activeProjectTabState?.selectedProjectId ?? "";
+    // Get active project ID from global state
+    const { state } = useGlobalStateHelpers();
+    const projectId = state.projectTabs[state.projectActiveTabId || ""]?.selectedProjectId ?? null;
 
-    const { data: projectData, isPending: isProjectLoading, error: projectError } = useGetProject(projectId);
+    const { data: projectData, isPending: isProjectLoading, error: projectError } = useGetProject(projectId ?? "");
 
-    // Query for tickets
-    const { data, isLoading, error } = useListTickets(projectId);
-    const tickets = data?.tickets ?? [];
-
-    function handleOpenDialog(ticket?: Ticket) {
-        setSelectedTicket(ticket || null);
+    const handleSelectTicket = React.useCallback((ticket: TicketWithCount) => {
+        setSelectedTicket(ticket);
         setIsDialogOpen(true);
-    }
+    }, []);
+
+    const handleCloseDialog = React.useCallback(() => {
+        setIsDialogOpen(false);
+        setSelectedTicket(null);
+    }, []);
 
     if (!projectId) {
         return (
@@ -42,40 +41,34 @@ function TicketsPage() {
         );
     }
 
-    if (isLoading || isProjectLoading) return <div className="p-4">Loading tickets...</div>;
-    if (error || projectError) return <div className="p-4 text-red-500">Error loading tickets</div>;
+    if (isProjectLoading) return <div className="p-4">Loading project info...</div>;
+    if (projectError) return <div className="p-4 text-red-500">Error loading project</div>;
 
     return (
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 h-full flex flex-col">
             {/* Page Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">
-                    Tickets for {projectData.project?.name}
+                    Tickets for {projectData?.project?.name}
                 </h2>
-                <Button onClick={() => handleOpenDialog()}>
+                <Button onClick={() => setIsDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     New Ticket
                 </Button>
             </div>
 
-            {/* If there are no tickets, show empty state. Otherwise, show TicketList. */}
-            {tickets.length === 0 ? (
-                <TicketEmptyState onCreateTicket={() => handleOpenDialog()} />
-            ) : (
-                <TicketList
-                    tickets={tickets}
-                    selectedTicket={selectedTicket}
-                    onSelectTicket={(ticket) => handleOpenDialog(ticket)}
+            {/* Panel for sorting/filtering tickets, with tasks count, etc. */}
+            <div className="flex-1">
+                <TicketListPanel 
+                    projectTabId={state.projectActiveTabId || "defaultTab"} 
+                    onSelectTicket={handleSelectTicket}
                 />
-            )}
+            </div>
 
-            {/* Dialog for creating or editing a ticket */}
+            {/* Dialog for creating/editing a ticket */}
             <TicketDialog
                 isOpen={isDialogOpen}
-                onClose={() => {
-                    setIsDialogOpen(false);
-                    setSelectedTicket(null);
-                }}
+                onClose={handleCloseDialog}
                 ticket={selectedTicket}
                 projectId={projectId}
             />

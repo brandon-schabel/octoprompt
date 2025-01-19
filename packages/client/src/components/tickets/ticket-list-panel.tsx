@@ -1,0 +1,242 @@
+import React, { useMemo, useCallback } from "react";
+import { TicketWithTasks, useListTicketsWithTasks, TICKET_KEYS, TicketResult } from "@/hooks/api/use-tickets-api";
+import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Badge } from "../ui/badge";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../ui/select";
+import { Copy, Filter, FileText } from "lucide-react";
+import { ScrollArea } from "../ui/scroll-area";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { buildTicketContent } from "./utils/ticket-utils";
+import { useQueryClient } from "@tanstack/react-query";
+
+interface TicketListPanelProps {
+    projectTabId: string;
+    onSelectTicket?: (ticket: TicketWithTasks) => void;
+}
+
+function snippet(text: string, max = 80): string {
+    if (!text) return "";
+    if (text.length <= max) return text;
+    return text.slice(0, max) + "...";
+}
+
+const STATUS_COLORS = {
+    open: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    in_progress: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+    closed: "bg-green-500/10 text-green-700 dark:text-green-400",
+} as const;
+
+const PRIORITY_COLORS = {
+    low: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
+    normal: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    high: "bg-red-500/10 text-red-700 dark:text-red-400",
+} as const;
+
+export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
+    const { state, updateProjectTabState } = useGlobalStateHelpers();
+    const tabState = state.projectTabs[projectTabId];
+    const projectId = tabState?.selectedProjectId || "";
+
+    // Read from the global tabState
+    const ticketSearch = tabState?.ticketSearch ?? "";
+    const ticketSort = tabState?.ticketSort ?? "created_desc";
+    const ticketStatus = tabState?.ticketStatusFilter ?? "all";
+
+    // Update state handlers
+    const setTicketSearch = useCallback((val: string) => {
+        updateProjectTabState(projectTabId, { ticketSearch: val });
+    }, [projectTabId, updateProjectTabState]);
+
+    const setTicketSort = useCallback((val: string) => {
+        updateProjectTabState(projectTabId, { ticketSort: val as any });
+    }, [projectTabId, updateProjectTabState]);
+
+    const setTicketStatusFilter = useCallback((val: string) => {
+        // Reset search when changing status filter
+        updateProjectTabState(projectTabId, { 
+            ticketStatusFilter: val as any,
+            ticketSearch: "" 
+        });
+    }, [projectTabId, updateProjectTabState]);
+
+    // Load tickets with their tasks from the server
+    const { data, isLoading, error } = useListTicketsWithTasks(projectId, ticketStatus);
+    const tickets = (data?.ticketsWithTasks ?? []) as TicketWithTasks[];
+
+    // Copy all ticket content
+    const handleCopyAll = useCallback(async (e: React.MouseEvent, ticket: TicketWithTasks) => {
+        e.stopPropagation();
+        try {
+            const content = buildTicketContent(ticket);
+            await navigator.clipboard.writeText(content);
+            toast.success("Copied ticket content!");
+        } catch (err) {
+            toast.error("Failed to copy ticket content");
+            console.error(err);
+        }
+    }, []);
+
+    // Filter by text
+    const filtered = useMemo(() => {
+        if (!ticketSearch.trim()) return tickets;
+        const lower = ticketSearch.toLowerCase();
+        return tickets.filter(t => {
+            return (
+                t.title.toLowerCase().includes(lower) ||
+                t.overview?.toLowerCase().includes(lower)
+            );
+        });
+    }, [tickets, ticketSearch]);
+
+    // Sort based on ticketSort
+    const sorted = useMemo(() => {
+        const arr = [...filtered];
+        switch (ticketSort) {
+            case "created_asc":
+                return arr.sort((a, b) => {
+                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    return aTime - bTime;
+                });
+            case "created_desc":
+                return arr.sort((a, b) => {
+                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    return bTime - aTime;
+                });
+            case "status":
+                return arr.sort((a, b) => {
+                    const statusOrder = { open: 1, in_progress: 2, closed: 3 };
+                    const aStatus = a.status as keyof typeof statusOrder;
+                    const bStatus = b.status as keyof typeof statusOrder;
+                    return (statusOrder[aStatus] || 0) - (statusOrder[bStatus] || 0);
+                });
+            case "priority":
+                return arr.sort((a, b) => {
+                    const priorityOrder = { low: 1, normal: 2, high: 3 };
+                    const aPriority = a.priority as keyof typeof priorityOrder;
+                    const bPriority = b.priority as keyof typeof priorityOrder;
+                    return (priorityOrder[bPriority] || 2) - (priorityOrder[aPriority] || 2); // default to normal priority
+                });
+            default:
+                return arr;
+        }
+    }, [filtered, ticketSort]);
+
+    // Copy function
+    const copyOverview = useCallback((e: React.MouseEvent, overview: string) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(overview).then(() => {
+            toast.success("Copied ticket overview!");
+        });
+    }, []);
+
+    return (
+        <div className="flex flex-col h-full border rounded-md">
+            {/* Toolbar header */}
+            <div className="flex items-center gap-2 p-3 border-b">
+                <Filter className="mr-1 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Filter tickets..."
+                    value={ticketSearch}
+                    onChange={(e) => setTicketSearch(e.target.value)}
+                    className="max-w-xs"
+                />
+
+                <Select value={ticketStatus} onValueChange={setTicketStatusFilter}>
+                    <SelectTrigger className="w-[140px] text-sm">
+                        <SelectValue placeholder="Status Filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select value={ticketSort} onValueChange={setTicketSort}>
+                    <SelectTrigger className="w-[140px] text-sm">
+                        <SelectValue placeholder="Sort By" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="created_desc">Newest First</SelectItem>
+                        <SelectItem value="created_asc">Oldest First</SelectItem>
+                        <SelectItem value="status">Status</SelectItem>
+                        <SelectItem value="priority">Priority</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Main scroll area */}
+            <ScrollArea className="flex-1 p-3">
+                {isLoading && <p className="text-sm text-muted-foreground">Loading tickets...</p>}
+                {error && <p className="text-sm text-red-500">Error loading tickets</p>}
+                {!isLoading && !error && sorted.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No tickets found.</p>
+                )}
+
+                <div className="space-y-2">
+                    {sorted.map(ticket => (
+                        <div
+                            key={ticket.id}
+                            className="border rounded-md p-3 bg-card hover:bg-card/80 transition-colors cursor-pointer group"
+                            onClick={() => onSelectTicket?.(ticket)}
+                        >
+                            <div className="flex items-center justify-between">
+                                <h2 className="font-semibold">
+                                    {ticket.title}
+                                </h2>
+                                <Badge variant="secondary">
+                                    {ticket.tasks.length} {ticket.tasks.length === 1 ? "task" : "tasks"}
+                                </Badge>
+                            </div>
+                            <div className="mt-1 text-sm text-muted-foreground">
+                                {snippet(ticket.overview ?? "", 100)}
+                            </div>
+                            <div className="mt-2 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Badge 
+                                        className={cn(
+                                            PRIORITY_COLORS[ticket.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS.normal
+                                        )}
+                                    >
+                                        {ticket.priority || "normal"}
+                                    </Badge>
+                                    <Badge 
+                                        className={cn(
+                                            STATUS_COLORS[ticket.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.open
+                                        )}
+                                    >
+                                        {ticket.status?.replace("_", " ").toUpperCase()}
+                                    </Badge>
+                                </div>
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => copyOverview(e, ticket.overview ?? "")}
+                                    >
+                                        <Copy className="h-4 w-4 mr-1" />
+                                        Copy Overview
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => handleCopyAll(e, ticket)}
+                                    >
+                                        <FileText className="h-4 w-4 mr-1" />
+                                        Copy All
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
+        </div>
+    );
+} 

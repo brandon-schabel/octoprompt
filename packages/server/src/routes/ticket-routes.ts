@@ -113,6 +113,27 @@ router.get("/api/projects/:projectId/tickets", {
     return json({ success: true, tickets });
 });
 
+/**
+ * GET /api/projects/:projectId/tickets-with-count
+ * Get tickets with task counts.
+ */
+router.get("/api/projects/:projectId/tickets-with-count", {
+    validation: {
+        params: z.object({ projectId: z.string() }),
+        query: z.object({ status: z.string().optional() }).optional(),
+    },
+}, async (_, { params, query }) => {
+    console.log("GET /api/projects/:projectId/tickets-with-count called with:", {
+        projectId: params.projectId,
+        status: query?.status
+    });
+
+    const results = await ticketService.listTicketsWithTaskCount(params.projectId, query?.status);
+
+    console.log("Sending response:", { success: true, ticketsWithCount: results });
+    return json({ success: true, ticketsWithCount: results });
+});
+
 /** --- TASKS --- **/
 
 /**
@@ -191,4 +212,40 @@ router.post("/api/tickets/:ticketId/auto-generate-tasks", {
 }, async (_, { params }) => {
     const newTasks = await ticketService.autoGenerateTasksFromOverview(params.ticketId);
     return json({ success: true, tasks: newTasks });
+});
+
+/**
+ * GET /api/tickets/bulk-tasks
+ * Get tasks for multiple tickets in a single request.
+ */
+router.get("/api/tickets/bulk-tasks", {
+    validation: {
+        query: z.object({
+            ids: z.string().transform(str => str.split(',')),
+        }),
+    },
+}, async (_, { query }) => {
+    const tasks = await ticketService.getTasksForTickets(query.ids);
+    return json({ success: true, tasks });
+});
+
+router.get("/api/projects/:projectId/tickets-with-tasks", {
+    validation: {
+        params: z.object({ projectId: z.string() }),
+        query: z.object({
+            status: z.string().optional(), // e.g. 'open', 'in_progress', 'closed', or 'all'
+        }).optional(),
+    },
+}, async (_, { params, query }) => {
+    const { projectId } = params;
+    const statusFilter = query?.status === 'all' ? undefined : query?.status;
+
+    // 1) Use our new service method
+    const ticketsWithTasks = await ticketService.listTicketsWithTasks(projectId, statusFilter);
+
+    // 2) Return in a standard JSON response
+    return json({
+        success: true,
+        ticketsWithTasks,
+    });
 });

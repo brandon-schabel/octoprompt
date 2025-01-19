@@ -4,6 +4,10 @@ import { CreateTicketBody, UpdateTicketBody } from 'shared';
 import { Ticket, TicketTask } from 'shared/schema';
 import { commonErrorHandler } from './common-mutation-error-handler';
 
+export interface TicketWithCount extends Ticket {
+    taskCount: number;
+}
+
 export interface TicketResult {
     success: boolean;
     ticket?: Ticket;
@@ -13,13 +17,23 @@ export interface TicketResult {
     suggestedTasks?: string[];
     tasks?: TicketTask[];
     task?: TicketTask;
+    ticketsWithCount?: TicketWithCount[];
+    ticketsWithTasks?: TicketWithTasks[];
+}
+
+
+export interface TicketWithTasks extends Ticket {
+    tasks: TicketTask[];
 }
 
 export const TICKET_KEYS = {
     all: ['tickets'] as const,
     listByProject: (projectId: string) => [...TICKET_KEYS.all, 'list', projectId] as const,
+    listWithCount: (projectId: string) => [...TICKET_KEYS.all, 'list-with-count', projectId] as const,
     detail: (ticketId: string) => [...TICKET_KEYS.all, 'detail', ticketId] as const,
     tasks: (ticketId: string) => [...TICKET_KEYS.detail(ticketId), 'tasks'] as const,
+    bulkTasks: (ticketIds: string[]) => [...TICKET_KEYS.all, 'bulk-tasks', ticketIds.join(',')] as const,
+    listWithTasks: (projectId: string) => [...TICKET_KEYS.all, 'list-with-tasks', projectId] as const,
 };
 
 // List tickets by project
@@ -31,6 +45,20 @@ export function useListTickets(projectId: string, status?: string) {
             const qs = status ? `?status=${status}` : '';
             const resp = await api.request(`/api/projects/${projectId}/tickets${qs}`);
             return resp.json() as Promise<TicketResult>;
+        },
+        enabled: !!projectId,
+    });
+}
+
+export function useListTicketsWithCount(projectId: string, status?: string) {
+    const { api } = useApi();
+    return useQuery({
+        queryKey: TICKET_KEYS.listWithCount(projectId).concat(status || 'all'),
+        queryFn: async () => {
+            const qs = status && status !== "all" ? `?status=${status}` : '';
+            const resp = await api.request(`/api/projects/${projectId}/tickets-with-count${qs}`);
+            const data = await resp.json() as TicketResult;
+            return data;
         },
         enabled: !!projectId,
     });
@@ -50,9 +78,12 @@ export function useCreateTicket() {
             return resp.json();
         },
         onSuccess: (data) => {
-            // Invalidate or refetch
+            // Invalidate all ticket queries for this project
             if (data.ticket?.projectId) {
-                queryClient.invalidateQueries({ queryKey: TICKET_KEYS.listByProject(data.ticket.projectId) });
+                queryClient.invalidateQueries({
+                    queryKey: TICKET_KEYS.all,
+                    refetchType: 'all'
+                });
             }
         },
         onError: commonErrorHandler
@@ -73,8 +104,12 @@ export function useUpdateTicket() {
             return resp.json();
         },
         onSuccess: (data) => {
+            // Invalidate all ticket queries for this project
             if (data.ticket?.projectId) {
-                queryClient.invalidateQueries({ queryKey: TICKET_KEYS.listByProject(data.ticket.projectId) });
+                queryClient.invalidateQueries({
+                    queryKey: TICKET_KEYS.all,
+                    refetchType: 'all'
+                });
             }
         },
         onError: commonErrorHandler
@@ -241,3 +276,51 @@ export function useAutoGenerateTasks() {
         onError: commonErrorHandler,
     });
 };
+
+/**
+ * Hook to fetch tasks for multiple tickets at once
+ */
+export function useBulkTicketTasks(ticketIds: string[]) {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+
+    return useQuery({
+        queryKey: TICKET_KEYS.bulkTasks(ticketIds),
+        queryFn: async () => {
+            if (!ticketIds.length) return { tasks: {} };
+            const resp = await api.request(`/api/tickets/bulk-tasks?ids=${ticketIds.join(',')}`);
+            const data = await resp.json() as { success: boolean; tasks: Record<string, TicketTask[]> };
+
+            // Prefill the cache for individual ticket tasks
+            Object.entries(data.tasks).forEach(([ticketId, tasks]) => {
+                queryClient.setQueryData(
+                    TICKET_KEYS.tasks(ticketId),
+                    { success: true, tasks }
+                );
+            });
+
+            return data;
+        },
+        enabled: ticketIds.length > 0,
+    });
+}
+
+/**
+ * List all tickets for a project with their tasks included.
+ */
+export function useListTicketsWithTasks(
+    projectId: string,
+    status?: string
+) {
+    const { api } = useApi();
+    return useQuery({
+        queryKey: TICKET_KEYS.listWithTasks(projectId).concat(status || 'all'),
+        queryFn: async () => {
+            const qs = status && status !== 'all' ? `?status=${status}` : '';
+            const resp = await api.request(`/api/projects/${projectId}/tickets-with-tasks${qs}`);
+            const data: TicketResult = await resp.json();
+            return data;
+        },
+        enabled: !!projectId,
+    });
+}

@@ -11,12 +11,13 @@ import {
     eq,
     and,
     inArray,
+    sql,
+    desc
 } from "shared";
 import { CreateTicketBody, UpdateTicketBody } from "shared";
 import { ApiError } from "shared";
-import { desc } from "drizzle-orm";
-import { sql } from "drizzle-orm";
 import { getState } from "@/websocket/websocket-config";  // if you use that for global state
+import type { InferSelectModel } from "drizzle-orm";
 
 export class TicketService {
 
@@ -110,7 +111,7 @@ export class TicketService {
         if (!ticket) {
             throw new Error(`Ticket ${ticketId} not found`);
         }
-        // e.g. call LLM or mock
+        // TODO: generate tasks here with an LLM
         return [
             "Review acceptance criteria",
             "Implement data model changes",
@@ -263,4 +264,108 @@ export class TicketService {
         }
         return inserted;
     }
+
+    /**
+     * Lists tickets for a project along with their task counts
+     */
+    async listTicketsWithTaskCount(
+        projectId: string,
+        statusFilter?: string
+    ): Promise<Array<Ticket & { taskCount: number }>> {
+        console.log("listTicketsWithTaskCount called with:", { projectId, statusFilter });
+
+        const whereClause = statusFilter && statusFilter !== "all"
+            ? and(eq(tickets.projectId, projectId), eq(tickets.status, statusFilter))
+            : eq(tickets.projectId, projectId);
+
+        type TicketRow = InferSelectModel<typeof tickets> & { taskCount: number };
+
+        const rows = await db
+            .select({
+                id: tickets.id,
+                projectId: tickets.projectId,
+                title: tickets.title,
+                overview: tickets.overview,
+                status: tickets.status,
+                priority: tickets.priority,
+                createdAt: tickets.createdAt,
+                updatedAt: tickets.updatedAt,
+                taskCount: sql<number>`COUNT(${ticketTasks.id})`.as("taskCount"),
+            })
+            .from(tickets)
+            .leftJoin(ticketTasks, eq(ticketTasks.ticketId, tickets.id))
+            .where(whereClause)
+            .groupBy(tickets.id)
+            .orderBy(desc(tickets.createdAt));
+
+        console.log("Query results:", rows);
+
+        const result = rows.map((r: TicketRow) => ({
+            id: r.id,
+            projectId: r.projectId,
+            title: r.title,
+            overview: r.overview,
+            status: r.status,
+            priority: r.priority,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+            taskCount: Number(r.taskCount || 0),
+        }));
+
+        console.log("Mapped results:", result);
+        return result;
+    }
+
+    /**
+     * Get tasks for multiple tickets in a single query
+     */
+    async getTasksForTickets(ticketIds: string[]): Promise<Record<string, TicketTask[]>> {
+        if (!ticketIds.length) return {};
+
+        const tasks = await db
+            .select()
+            .from(ticketTasks)
+            .where(inArray(ticketTasks.ticketId, ticketIds))
+            .orderBy(ticketTasks.orderIndex);
+
+        // Group tasks by ticketId
+        const tasksByTicket: Record<string, TicketTask[]> = {};
+        for (const task of tasks) {
+            if (!tasksByTicket[task.ticketId]) {
+                tasksByTicket[task.ticketId] = [];
+            }
+            tasksByTicket[task.ticketId].push(task);
+        }
+
+        return tasksByTicket;
+    }
+    /**
+ * Returns tickets for a project along with each ticket's full list of tasks.
+ */
+    async listTicketsWithTasks(
+        projectId: string,
+        statusFilter?: string
+    ): Promise<Array<Ticket & { tasks: TicketTask[] }>> {
+
+        // 1) Fetch all tickets for the given project & optional status.
+        const baseTickets = await this.listTicketsByProject(projectId, statusFilter);
+        if (!baseTickets.length) {
+            return [];
+        }
+
+        // 2) Extract their IDs
+        const ticketIds = baseTickets.map(t => t.id);
+
+        // 3) Fetch tasks for all tickets in one shot
+        const tasksByTicket = await this.getTasksForTickets(ticketIds);
+
+        // 4) Merge tasks into their corresponding ticket
+        const results = baseTickets.map(ticket => ({
+            ...ticket,
+            tasks: tasksByTicket[ticket.id] ?? [],
+        }));
+
+        return results;
+    }
+
 }

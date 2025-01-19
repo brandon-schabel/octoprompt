@@ -26,6 +26,9 @@ export const projectTabStateSchema = z.object({
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
     suggestedFileIds: z.array(z.string()).default([]),
     bookmarkedFileGroups: z.record(z.string(), z.array(z.string())).default({}),
+    ticketSearch: z.string().default(""),
+    ticketSort: z.enum(["created_desc", "created_asc", "status", "priority"]).default("created_desc"),
+    ticketStatusFilter: z.enum(["all", "open", "in_progress", "closed"]).default("all"),
 });
 
 export const linkSettingsSchema = z.object({
@@ -148,6 +151,9 @@ export const createInitialGlobalState = (): GlobalState => ({
             preferredEditor: 'cursor',
             suggestedFileIds: [],
             bookmarkedFileGroups: {},
+            ticketSearch: '',
+            ticketSort: 'created_desc',
+            ticketStatusFilter: 'all',
         },
     },
     chatTabs: {
