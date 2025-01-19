@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
+import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
 
 type SelectedFilesListProps = {
   selectedFiles: string[]
@@ -44,16 +45,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
   const { state, updateProjectTabState } = useGlobalStateHelpers()
-  const [canUndo, setCanUndo] = useState(true) // TODO: Get from state
-  const [canRedo, setCanRedo] = useState(true) // TODO: Get from state
-  const undo = () => {
-    // TODO: Implement undo
-    toast.success('Undo: Reverted file selection')
-  }
-  const redo = () => {
-    // TODO: Implement redo
-    toast.success('Redo: Restored file selection')
-  }
+  const { undo, redo, canUndo, canRedo } = useSelectedFiles()
 
   const projectTab = state?.projectTabs[projectTabId]
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
@@ -237,12 +229,18 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={undo} disabled={!canUndo}>
+              <DropdownMenuItem onClick={() => {
+                undo()
+                toast.success('Undo: Reverted file selection')
+              }} disabled={!canUndo}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 <span>Undo</span>
                 <DropdownMenuShortcut>{formatShortcut('mod+z')}</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={redo} disabled={!canRedo}>
+              <DropdownMenuItem onClick={() => {
+                redo()
+                toast.success('Redo: Restored file selection')
+              }} disabled={!canRedo}>
                 <RotateCw className="mr-2 h-4 w-4" />
                 <span>Redo</span>
                 <DropdownMenuShortcut>{formatShortcut('mod+shift+z')}</DropdownMenuShortcut>

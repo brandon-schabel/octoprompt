@@ -18,8 +18,14 @@ import { CreateTicketBody, UpdateTicketBody } from "shared";
 import { ApiError } from "shared";
 import { getState } from "@/websocket/websocket-config";  // if you use that for global state
 import type { InferSelectModel } from "drizzle-orm";
+import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
 
 export class TicketService {
+    private unifiedProviderService: UnifiedProviderService;
+
+    constructor() {
+        this.unifiedProviderService = new UnifiedProviderService();
+    }
 
     async createTicket(data: CreateTicketBody): Promise<Ticket> {
         const newItem: NewTicket = {
@@ -107,15 +113,153 @@ export class TicketService {
     }
 
     async suggestTasksForTicket(ticketId: string, userContext?: string): Promise<string[]> {
+        console.log("[TicketService] Starting task suggestion for ticket:", ticketId);
+        
         const ticket = await this.getTicketById(ticketId);
         if (!ticket) {
+            console.error("[TicketService] Ticket not found:", ticketId);
             throw new Error(`Ticket ${ticketId} not found`);
         }
-        // TODO: generate tasks here with an LLM
+
+        console.log("[TicketService] Found ticket:", {
+            id: ticket.id,
+            title: ticket.title,
+            overview: ticket.overview?.substring(0, 100) + "...",
+        });
+
+        // Define the JSON schema for task suggestions
+        const taskSchema = {
+            type: "object" as const,  // Fix for type error
+            properties: {
+                tasks: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            title: { type: "string" },
+                            description: { type: "string" },
+                        },
+                        required: ["title"],
+                    },
+                    description: "Array of suggested tasks for the ticket",
+                },
+            },
+            required: ["tasks"],
+            additionalProperties: false,
+        };
+
+        const systemPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
+Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
+Focus on technical implementation tasks, testing, and validation steps.
+Each task should be clear and actionable.
+
+IMPORTANT: Return ONLY valid JSON matching this schema:
+{
+  "tasks": [
+    {
+      "title": "Task title here",
+      "description": "Optional description here"
+    }
+  ]
+}`;
+
+        const userMessage = `Please suggest tasks for this ticket:
+Title: ${ticket.title}
+Overview: ${ticket.overview}
+${userContext ? `Additional Context: ${userContext}` : ''}`;
+
+        console.log("[TicketService] Preparing LLM request:", {
+            systemPrompt,
+            userMessage: userMessage.substring(0, 100) + "...",
+            schema: JSON.stringify(taskSchema, null, 2),
+        });
+
+        try {
+            console.log("[TicketService] Calling UnifiedProviderService...");
+            const stream = await this.unifiedProviderService.processMessage({
+                chatId: `ticket-tasks-${ticketId}`,
+                userMessage,
+                provider: "openrouter",
+                options: {
+                    model: "deepseek/deepseek-chat",
+                    temperature: 0.2,
+                    response_format: {
+                        type: "json_schema",
+                        json_schema: {
+                            name: "TaskSuggestions",
+                            strict: true,
+                            schema: taskSchema,
+                        },
+                    },
+                },
+                systemMessage: systemPrompt,
+            });
+
+            console.log("[TicketService] Got stream response, reading chunks...");
+            
+            // Read the stream to get the structured response
+            const reader = stream.getReader();
+            let rawOutput = "";
+            const decoder = new TextDecoder();
+            let chunkCount = 0;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    console.log("[TicketService] Stream complete after", chunkCount, "chunks");
+                    break;
+                }
+                const chunk = decoder.decode(value);
+                rawOutput += chunk;
+                chunkCount++;
+                
+                console.log("[TicketService] Received chunk", chunkCount, ":", chunk.substring(0, 100) + "...");
+                
+                // Try parsing incrementally to debug streaming JSON
+                try {
+                    const partialParsed = JSON.parse(rawOutput);
+                    console.log("[TicketService] Valid JSON in chunk", chunkCount, ":", partialParsed);
+                } catch (e) {
+                    console.log("[TicketService] Chunk", chunkCount, "doesn't contain complete JSON yet");
+                }
+            }
+
+            console.log("[TicketService] Final raw output:", rawOutput);
+
+            try {
+                console.log("[TicketService] Attempting to parse final output...");
+                const parsed = JSON.parse(rawOutput);
+                console.log("[TicketService] Successfully parsed JSON:", parsed);
+
+                if (parsed?.tasks?.length) {
+                    const taskTitles = parsed.tasks.map((task: { title: string }) => task.title);
+                    console.log("[TicketService] Extracted task titles:", taskTitles);
+                    return taskTitles;
+                } else {
+                    console.warn("[TicketService] Parsed JSON missing tasks array or empty");
+                }
+            } catch (error) {
+                console.error("[TicketService] Failed to parse task suggestions:", error);
+                console.error("[TicketService] Raw output that failed to parse:", rawOutput);
+            }
+        } catch (error) {
+            console.error("[TicketService] Error in LLM request:", error);
+            if (error instanceof Error) {
+                console.error("[TicketService] Error details:", {
+                    message: error.message,
+                    stack: error.stack,
+                });
+            }
+        }
+
+        console.log("[TicketService] Falling back to default tasks");
+        // Fallback default tasks if something goes wrong
         return [
-            "Review acceptance criteria",
-            "Implement data model changes",
-            "Write unit tests",
+            // "Review requirements and acceptance criteria",
+            // "Implement core functionality",
+            // "Write unit tests",
+            // "Perform manual testing",
+            // "Update documentation",
         ];
     }
 

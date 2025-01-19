@@ -6,7 +6,8 @@ import { Plus } from "lucide-react";
 import { useGlobalStateHelpers } from "../components/global-state/use-global-state-helpers";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
-import type { TicketWithCount } from "@/hooks/api/use-tickets-api";
+
+import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -14,15 +15,24 @@ export const Route = createFileRoute("/tickets")({
 
 function TicketsPage() {
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-    const [selectedTicket, setSelectedTicket] = React.useState<TicketWithCount | null>(null);
+
+    // We store a ticket with tasks in local state so it matches
+    // what TicketListPanel provides via onSelectTicket.
+    const [selectedTicket, setSelectedTicket] = React.useState<TicketWithTasks | null>(null);
 
     // Get active project ID from global state
     const { state } = useGlobalStateHelpers();
     const projectId = state.projectTabs[state.projectActiveTabId || ""]?.selectedProjectId ?? null;
 
-    const { data: projectData, isPending: isProjectLoading, error: projectError } = useGetProject(projectId ?? "");
+    const {
+        data: projectData,
+        isPending: isProjectLoading,
+        error: projectError
+    } = useGetProject(projectId ?? "");
 
-    const handleSelectTicket = React.useCallback((ticket: TicketWithCount) => {
+    // Because TicketListPanel calls onSelectTicket with a TicketWithTasks,
+    // this callback must accept a TicketWithTasks too.
+    const handleSelectTicket = React.useCallback((ticket: TicketWithTasks) => {
         setSelectedTicket(ticket);
         setIsDialogOpen(true);
     }, []);
@@ -41,8 +51,12 @@ function TicketsPage() {
         );
     }
 
-    if (isProjectLoading) return <div className="p-4">Loading project info...</div>;
-    if (projectError) return <div className="p-4 text-red-500">Error loading project</div>;
+    if (isProjectLoading) {
+        return <div className="p-4">Loading project info...</div>;
+    }
+    if (projectError) {
+        return <div className="p-4 text-red-500">Error loading project</div>;
+    }
 
     return (
         <div className="p-4 space-y-4 h-full flex flex-col">
@@ -57,10 +71,10 @@ function TicketsPage() {
                 </Button>
             </div>
 
-            {/* Panel for sorting/filtering tickets, with tasks count, etc. */}
+            {/* Panel for listing/filtering tickets; returns TicketWithTasks to onSelectTicket */}
             <div className="flex-1">
-                <TicketListPanel 
-                    projectTabId={state.projectActiveTabId || "defaultTab"} 
+                <TicketListPanel
+                    projectTabId={state.projectActiveTabId || "defaultTab"}
                     onSelectTicket={handleSelectTicket}
                 />
             </div>
@@ -77,4 +91,3 @@ function TicketsPage() {
 }
 
 export default TicketsPage;
-

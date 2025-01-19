@@ -26,6 +26,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     const [overview, setOverview] = useState("");
     const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
     const [status, setStatus] = useState<"open" | "in_progress" | "closed">("open");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // On open/edit, populate form with existing ticket data or reset
     useEffect(() => {
@@ -44,6 +45,9 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
         try {
             if (ticket) {
                 // Editing existing ticket
@@ -66,17 +70,29 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                     status,
                 });
             }
+            // Only close on successful submission
             onClose();
         } catch (err) {
             console.error("Failed to save ticket:", err);
+            // Don't close on error
+        } finally {
+            setIsSubmitting(false);
         }
     }
+
+    const handleClose = () => {
+        if (!isSubmitting) {
+            onClose();
+        }
+    };
 
     return (
         <Dialog 
             open={isOpen} 
             onOpenChange={(open) => {
-                if (!open) onClose();
+                if (!open && !isSubmitting) {
+                    handleClose();
+                }
             }}
             modal
         >
@@ -84,6 +100,11 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                 className="sm:max-w-[650px]" 
                 onInteractOutside={(e) => {
                     e.preventDefault();
+                }}
+                onEscapeKeyDown={(e) => {
+                    if (isSubmitting) {
+                        e.preventDefault();
+                    }
                 }}
             >
                 <DialogHeader>
@@ -164,11 +185,19 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                     )}
 
                     <div className="flex justify-end space-x-2">
-                        <Button variant="outline" onClick={onClose}>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={handleClose}
+                            disabled={isSubmitting}
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit">
-                            {ticket ? "Update" : "Create"}
+                        <Button 
+                            type="submit"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? "Saving..." : ticket ? "Update" : "Create"}
                         </Button>
                     </div>
                 </form>

@@ -200,6 +200,22 @@ export class UnifiedProviderService {
     }
 
     /**
+     * Helper to parse potentially structured responses from the model
+     */
+    private tryParseStructuredResponse(text: string): any {
+        try {
+            // Clean up any markdown code fences if present
+            const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
+            const matched = text.match(tripleBacktickRegex);
+            const cleanedText = matched ? matched[1].trim() : text.trim();
+            
+            return JSON.parse(cleanedText);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
      * Stream messages using SSE
      * (Simplified: we remove creation of user/assistant messages since that's done in processMessage.)
      */
@@ -207,7 +223,7 @@ export class UnifiedProviderService {
         streamConfig: StreamParams & {
             provider: APIProviders;
             systemMessage?: string;
-            assistantMessageId: string; // We now require this to handle partial updates
+            assistantMessageId: string;
         }
     ): Promise<ReadableStream<Uint8Array>> {
         const {
@@ -222,8 +238,10 @@ export class UnifiedProviderService {
         // 1) Pick the right plugin
         const plugin = await this.getProviderPlugin(provider, options);
 
-        // 2) Accumulate partial text
+        // 2) Accumulate partial text and structured data
         let fullResponse = "";
+        let structuredResponse: any = null;
+        const isStructuredOutput = options?.response_format?.type === "json_schema";
 
         // 3) Stream SSE
         return createSSEStream({
@@ -240,14 +258,38 @@ export class UnifiedProviderService {
                 },
                 onPartial: async (partial) => {
                     fullResponse += partial.content;
-                    // Update the placeholder assistant message as we stream
-                    await this.chatService.updateMessageContent(
-                        assistantMessageId,
-                        fullResponse
-                    );
+                    
+                    // For structured output, try to parse each chunk
+                    if (isStructuredOutput) {
+                        const parsed = this.tryParseStructuredResponse(fullResponse);
+                        if (parsed) {
+                            structuredResponse = parsed;
+                            // Update with the stringified structured response
+                            await this.chatService.updateMessageContent(
+                                assistantMessageId,
+                                JSON.stringify(structuredResponse, null, 2)
+                            );
+                        }
+                    } else {
+                        // Regular text response
+                        await this.chatService.updateMessageContent(
+                            assistantMessageId,
+                            fullResponse
+                        );
+                    }
                 },
                 onDone: async (final) => {
                     fullResponse = final.content;
+                    
+                    // For structured output, ensure we have valid JSON at the end
+                    if (isStructuredOutput) {
+                        const parsed = this.tryParseStructuredResponse(fullResponse);
+                        if (parsed) {
+                            structuredResponse = parsed;
+                            fullResponse = JSON.stringify(structuredResponse, null, 2);
+                        }
+                    }
+                    
                     // Update one last time with the final content
                     await this.chatService.updateMessageContent(
                         assistantMessageId,

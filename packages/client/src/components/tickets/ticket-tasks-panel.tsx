@@ -47,13 +47,17 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
 
     const tasks = data?.tasks ?? [];
 
-    const handleCreateTask = async () => {
+    const handleCreateTask = async (e?: React.MouseEvent | React.KeyboardEvent) => {
+        e?.preventDefault();
+        e?.stopPropagation();
         if (!newTaskContent.trim()) return;
         await createTaskMut.mutateAsync({ ticketId, content: newTaskContent });
         setNewTaskContent("");
     };
 
-    const handleToggleDone = (task: TicketTask) => {
+    const handleToggleDone = (e: React.MouseEvent, task: TicketTask) => {
+        e.preventDefault();
+        e.stopPropagation();
         updateTaskMut.mutate({
             ticketId,
             taskId: task.id,
@@ -61,25 +65,29 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
         });
     };
 
-    const handleDeleteTask = (task: TicketTask) => {
+    const handleDeleteTask = (e: React.MouseEvent, task: TicketTask) => {
+        e.preventDefault();
+        e.stopPropagation();
         deleteTaskMut.mutate({ ticketId, taskId: task.id });
     };
 
-    const moveTaskUp = (idx: number) => {
+    const moveTaskUp = (e: React.MouseEvent, idx: number) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (idx <= 0) return;
         const newOrder = [...tasks];
-        // swap tasks
         const temp = newOrder[idx];
         newOrder[idx] = newOrder[idx - 1];
         newOrder[idx - 1] = temp;
-        // reassign orderIndex
         reorderMut.mutate({
             ticketId,
             tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i })),
         });
     };
 
-    const moveTaskDown = (idx: number) => {
+    const moveTaskDown = (e: React.MouseEvent, idx: number) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (idx >= tasks.length - 1) return;
         const newOrder = [...tasks];
         const temp = newOrder[idx];
@@ -91,7 +99,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
         });
     };
 
-    const handleCopyTasks = (mode: "markdown" | "bulleted" | "comma") => {
+    const handleCopyTasks = (e: React.MouseEvent, mode: "markdown" | "bulleted" | "comma") => {
+        e.preventDefault();
+        e.stopPropagation();
         const formatted = formatTasks(mode, tasks);
         copyToClipboard(formatted, {
             successMessage: `Tasks copied as ${mode}!`,
@@ -99,8 +109,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
         });
     };
 
-    const handleAutoGenerateTasks = async () => {
-        // Calls the auto-generate endpoint
+    const handleAutoGenerateTasks = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         await autoGenMut.mutateAsync({ ticketId });
         toast.success("Tasks generated from overview!");
     };
@@ -111,6 +122,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
                 <h3 className="text-sm font-semibold">Tasks</h3>
                 <div className="flex items-center space-x-2">
                     <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={handleAutoGenerateTasks}
@@ -122,19 +134,19 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
+                            <Button type="button" variant="outline" size="sm">
                                 <Copy className="h-3 w-3 mr-1" />
                                 Copy Tasks
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => handleCopyTasks("markdown")}>
+                            <DropdownMenuItem onClick={(e) => handleCopyTasks(e, "markdown")}>
                                 Copy as Markdown
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleCopyTasks("bulleted")}>
+                            <DropdownMenuItem onClick={(e) => handleCopyTasks(e, "bulleted")}>
                                 Copy as Bulleted List
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleCopyTasks("comma")}>
+                            <DropdownMenuItem onClick={(e) => handleCopyTasks(e, "comma")}>
                                 Copy as Comma-Separated
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -150,11 +162,12 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
                     onChange={(e) => setNewTaskContent(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                            handleCreateTask();
+                            e.preventDefault();
+                            handleCreateTask(e);
                         }
                     }}
                 />
-                <Button onClick={handleCreateTask}>
+                <Button type="button" onClick={handleCreateTask}>
                     <Plus className="h-4 w-4" />
                 </Button>
             </div>
@@ -173,7 +186,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
                         <div className="flex items-center space-x-3 overflow-hidden">
                             <button
                                 type="button"
-                                onClick={() => handleToggleDone(task)}
+                                onClick={(e) => handleToggleDone(e, task)}
                                 className="flex items-center justify-center"
                             >
                                 <CheckSquare
@@ -192,25 +205,28 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
                         </div>
                         <div className="flex items-center space-x-1">
                             <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => moveTaskUp(idx)}
+                                onClick={(e) => moveTaskUp(e, idx)}
                                 disabled={idx <= 0}
                             >
                                 <ArrowUp className="h-4 w-4" />
                             </Button>
                             <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => moveTaskDown(idx)}
+                                onClick={(e) => moveTaskDown(e, idx)}
                                 disabled={idx >= tasks.length - 1}
                             >
                                 <ArrowDown className="h-4 w-4" />
                             </Button>
                             <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDeleteTask(task)}
+                                onClick={(e) => handleDeleteTask(e, task)}
                             >
                                 <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
