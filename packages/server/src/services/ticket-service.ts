@@ -21,6 +21,19 @@ import type { InferSelectModel } from "drizzle-orm";
 import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
 import { OpenRouterProviderService } from "./model-providers/providers/open-router-provider";
 
+export function stripTripleBackticks(text: string): string {
+    // This regex captures everything inside the first ```json ... ``` block
+    // or (if not found) the first ``` ... ``` block.
+    // If there's more than one, we only handle the first. Adjust as needed.
+    const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
+    const match = text.match(tripleBacktickRegex);
+    if (match) {
+        return match[1].trim();
+    }
+    // If no triple backticks, return the original
+    return text.trim();
+}
+
 export class TicketService {
     private openRouterProvider: OpenRouterProviderService;
 
@@ -130,7 +143,7 @@ export class TicketService {
 
         // Define the JSON schema for task suggestions
         const taskSchema = {
-            type: "object" as const,  // Fix for type error
+            type: "object" as const,
             properties: {
                 tasks: {
                     type: "array",
@@ -150,24 +163,24 @@ export class TicketService {
         };
 
         const systemPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
-Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
-Focus on technical implementation tasks, testing, and validation steps.
-Each task should be clear and actionable.
-
-IMPORTANT: Return ONLY valid JSON matching this schema:
-{
-  "tasks": [
+    Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
+    Focus on technical implementation tasks, testing, and validation steps.
+    Each task should be clear and actionable.
+    
+    IMPORTANT: Return ONLY valid JSON matching this schema:
     {
-      "title": "Task title here",
-      "description": "Optional description here"
-    }
-  ]
-}`;
+      "tasks": [
+        {
+          "title": "Task title here",
+          "description": "Optional description here"
+        }
+      ]
+    }`;
 
         const userMessage = `Please suggest tasks for this ticket:
-Title: ${ticket.title}
-Overview: ${ticket.overview}
-${userContext ? `Additional Context: ${userContext}` : ''}`;
+    Title: ${ticket.title}
+    Overview: ${ticket.overview}
+    ${userContext ? `Additional Context: ${userContext}` : ''}`;
 
         console.log("[TicketService] Preparing LLM request:", {
             systemPrompt,
@@ -216,7 +229,7 @@ ${userContext ? `Additional Context: ${userContext}` : ''}`;
 
                 console.log("[TicketService] Received chunk", chunkCount, ":", chunk.substring(0, 100) + "...");
 
-                // Try parsing incrementally to debug streaming JSON
+                // Try parsing incrementally (optional) to see if any partial JSON is valid so far
                 try {
                     const partialParsed = JSON.parse(rawOutput);
                     console.log("[TicketService] Valid JSON in chunk", chunkCount, ":", partialParsed);
@@ -229,7 +242,13 @@ ${userContext ? `Additional Context: ${userContext}` : ''}`;
 
             try {
                 console.log("[TicketService] Attempting to parse final output...");
-                const parsed = JSON.parse(rawOutput);
+
+                // 1) Strip triple backticks (and optional `json`) before parsing
+                const cleanedOutput = stripTripleBackticks(rawOutput);
+
+                // 2) Then do the JSON parse
+                const parsed = JSON.parse(cleanedOutput);
+
                 console.log("[TicketService] Successfully parsed JSON:", parsed);
 
                 if (parsed?.tasks?.length) {
@@ -255,13 +274,7 @@ ${userContext ? `Additional Context: ${userContext}` : ''}`;
 
         console.log("[TicketService] Falling back to default tasks");
         // Fallback default tasks if something goes wrong
-        return [
-            // "Review requirements and acceptance criteria",
-            // "Implement core functionality",
-            // "Write unit tests",
-            // "Perform manual testing",
-            // "Update documentation",
-        ];
+        return [];
     }
 
     async getTicketsWithFiles(projectId: string): Promise<(Ticket & { fileIds: string[] })[]> {
