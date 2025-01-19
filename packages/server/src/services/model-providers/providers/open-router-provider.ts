@@ -154,7 +154,7 @@ export class OpenRouterProviderService {
         let structuredResponse: any = null;
 
         return createSSEStream({
-            debug: true,
+            // debug: true,
             userMessage,
             systemMessage,
             plugin,

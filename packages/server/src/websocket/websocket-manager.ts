@@ -16,7 +16,7 @@ export const bnkWsManager = new BackendWebSocketManager<GlobalState, InboundMess
     getState,
     setState,
     messageHandlers: allWebsocketHandlers,
-    debug: true, // or false if you prefer less logging
+    // debug: true, // or false if you prefer less logging
 });
 
 /**
