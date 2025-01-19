@@ -12,6 +12,7 @@ import "@/routes/gemini-routes";
 import "@/routes/open-ai-routes";
 import "@/routes/code-editor-routes";
 import "@/routes/promptimizer-routes";
+import "@/routes/ticket-routes";
 
 import { globalStateSchema } from "shared";
 import { json } from "@bnk/router";

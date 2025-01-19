@@ -8,7 +8,7 @@ import { ChatDialog } from "@/components/chat/chat-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
-import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, ScanEye } from "lucide-react"
+import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, ScanEye, TicketIcon } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
@@ -28,6 +28,7 @@ export function AppNavbar() {
     const isOnProjectsRoute = matches.some(match => match.routeId === "/projects")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
     const isOnSummarizationRoute = matches.some(match => match.routeId === "/project-summarization")
+    const isOnTicketsRoute = matches.some(match => match.routeId === "/tickets")
 
     const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, state } = useGlobalStateHelpers()
     const selectedProjectId = activeTabState?.selectedProjectId
@@ -107,6 +108,17 @@ export function AppNavbar() {
                         >
                             <FolderIcon className="w-4 h-4" />
                             Project
+                        </Link>
+                        <div className="h-4 w-[1px] bg-border" />
+                        <Link
+                            to="/tickets"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnTicketsRoute
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                }`}
+                        >
+                            <TicketIcon className="w-4 h-4" />
+                            Tickets
                         </Link>
                         <div className="h-4 w-[1px] bg-border" />
                         <Link

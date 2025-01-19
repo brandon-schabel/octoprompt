@@ -376,11 +376,10 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                 {/* Autocomplete suggestions dropdown */}
                                 {showAutocomplete && fileSearch.trim() && suggestions.length > 0 && (
                                     <ul
-                                        className="absolute top-11 left-0 z-10 w-full bg-white border border-gray-300 rounded-md shadow-md max-h-56 overflow-auto"
+                                        className="absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto"
                                     >
-                                        <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted/50 border-b">
+                                        <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border">
                                             Press Enter{allowSpacebaseToSelect && <span > or Spacebar</span>} to add highlighted file to selection, right arrow to preview file
-
                                         </li>
                                         {suggestions.map((file, index) => {
                                             const isHighlighted = index === autocompleteIndex
@@ -388,8 +387,11 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                             return (
                                                 <li
                                                     key={file.id}
-                                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-gray-200' : ''
-                                                        }`}
+                                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
+                                                        isHighlighted 
+                                                            ? 'bg-accent text-accent-foreground' 
+                                                            : 'hover:bg-accent/50'
+                                                    }`}
                                                     onMouseDown={(e) => {
                                                         e.preventDefault()
                                                         e.stopPropagation()
