@@ -18,6 +18,13 @@ import { matchesAnyPattern } from "shared/src/utils/pattern-matcher"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 /**
  * We no longer import FileSummary. The combined schema means we use ProjectFile and read the .summary field.
@@ -260,14 +267,15 @@ function ProjectSummarizationSettingsPage() {
                     {/* Sort-by dropdown */}
                     <div className="mb-4 flex items-center gap-2">
                         <label>Sort By:</label>
-                        <select
-                            className="border p-1 text-sm"
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value as "name" | "lastSummarized")}
-                        >
-                            <option value="name">Name</option>
-                            <option value="lastSummarized">Last Summarized</option>
-                        </select>
+                        <Select value={sortBy} onValueChange={(value) => setSortBy(value as "name" | "lastSummarized")}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Sort by..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="name">Name</SelectItem>
+                                <SelectItem value="lastSummarized">Last Summarized</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="mb-4 text-sm">

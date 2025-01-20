@@ -31,7 +31,7 @@ export function ProjectSettingsDialog() {
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
     const projectId = activeTabState?.selectedProjectId
-    const isProjectSummarizationDisabled = projectId ? settings.summarizationEnabledProjectIds.includes(projectId) : false
+    const isProjectSummarizationEnabled = projectId ? settings.summarizationEnabledProjectIds.includes(projectId) : false
     const { isFetching: isSyncing, refetch: syncProject } = useSyncProjectInterval(projectId ?? '')
 
 
@@ -58,7 +58,7 @@ export function ProjectSettingsDialog() {
         }))
     }
 
-    const setDisableSummarization = (value: boolean) => {
+    const setEnableProjectSummarization = (value: boolean) => {
         if (!projectId) return
 
         updateSettings(prev => ({
@@ -88,15 +88,15 @@ export function ProjectSettingsDialog() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <div>
-                                <span className="text-sm font-medium">Disable Summarization</span>
+                                <span className="text-sm font-medium">Enable Summarization</span>
                                 <p className="text-sm text-muted-foreground">
-                                    When enabled, files will not be automatically summarized when added to the context.
+                                    When enabled, files will be automatically summarized when added to the context.
                                 </p>
                             </div>
                             <Switch
-                                checked={isProjectSummarizationDisabled}
+                                checked={isProjectSummarizationEnabled}
                                 onCheckedChange={(check) => {
-                                    setDisableSummarization(check)
+                                    setEnableProjectSummarization(check)
                                 }}
                             />
                         </div>
