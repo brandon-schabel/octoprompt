@@ -20,12 +20,16 @@ const shouldSummarizeFile = async (projectId: string, filePath: string): Promise
     const state = await getState()
     const settings = state.settings
 
+    // If the project is not enabled, skip.
+    if (!settings.summarizationEnabledProjectIds.includes(projectId)) {
+        return false
+    }
 
     // If any pattern in summarizationIgnorePatterns matches, skip.
     if (matchesAnyPattern(filePath, settings.summarizationIgnorePatterns)) {
         return false
     }
-    
+
     // If we have allow patterns, at least one must match.
     if (settings.summarizationAllowPatterns.length > 0) {
         if (!matchesAnyPattern(filePath, settings.summarizationAllowPatterns)) {
@@ -33,9 +37,7 @@ const shouldSummarizeFile = async (projectId: string, filePath: string): Promise
         }
     }
 
-    if (settings.summarizationEnabledProjectIds.includes(projectId)) {
-        return true
-    }
+ 
 
     return true
 }
@@ -96,6 +98,11 @@ export class FileSummaryService {
     ): Promise<{ included: number; skipped: number }> {
         const allowPatterns = globalState.settings.summarizationAllowPatterns || []
         const ignorePatterns = globalState.settings.summarizationIgnorePatterns || []
+        const enabledProjectIds = globalState.settings.summarizationEnabledProjectIds || []
+        if (!enabledProjectIds.includes(projectId)) {
+            console.log(`[FileSummaryService] Skipping summarization for project: ${projectId} (not enabled)`)
+            return { included: 0, skipped: filesToSummarize.length }
+        }
 
         console.log(`[FileSummaryService] Starting file summarization for project: ${projectId}`)
         console.log(`[FileSummaryService] Received ${filesToSummarize.length} file(s).`)
