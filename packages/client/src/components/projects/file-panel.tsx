@@ -226,18 +226,18 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <h2 className="text-lg font-semibold hover:cursor-help">
-                                                {projectData.name}
+                                                {projectData?.name}
                                             </h2>
                                         </TooltipTrigger>
                                         <TooltipContent side="bottom" className="flex items-center gap-2 max-w-md">
-                                            <span className="break-all">{projectData.path}</span>
+                                            <span className="break-all">{projectData?.path}</span>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-4 w-4 hover:bg-accent hover:text-accent-foreground"
                                                 onClick={(e) => {
                                                     e.preventDefault()
-                                                    navigator.clipboard.writeText(projectData.path)
+                                                    navigator.clipboard.writeText(projectData?.path || '')
                                                     toast.success('Project path copied to clipboard')
                                                 }}
                                             >
@@ -247,7 +247,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                     </Tooltip>
                                 </TooltipProvider>
                                 <span className="hidden md:block text-sm text-muted-foreground">
-                                    {projectData.path.slice(0, 100)}
+                                    {projectData?.path.slice(0, 100)}
                                 </span>
                             </div>
 
