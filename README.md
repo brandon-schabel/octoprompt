@@ -39,7 +39,13 @@ Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code
 ![Xnapper-2024-12-26-13 55 19](https://github.com/user-attachments/assets/c234a42a-336e-4b9e-82c8-bec7e88ab570)
 
 ## Videos
-https://github.com/user-attachments/assets/3a91404a-a25a-49db-a605-af097e04d03c
+
+
+https://github.com/user-attachments/assets/dcdc4d34-fb67-4ec8-9544-426f7fe95eec
+
+
+
+
 ---
 
 ## Project Setup
