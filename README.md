@@ -38,6 +38,8 @@ Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code
 ### Chat with LLMs
 ![Xnapper-2024-12-26-13 55 19](https://github.com/user-attachments/assets/c234a42a-336e-4b9e-82c8-bec7e88ab570)
 
+## Videos
+https://github.com/user-attachments/assets/3a91404a-a25a-49db-a605-af097e04d03c
 ---
 
 ## Project Setup
@@ -97,6 +99,10 @@ powershell -c "irm bun.sh/install.ps1 | iex"
    The client will be available at [http://localhost:5173](http://localhost:5173)  
 
    The server will be available at [http://localhost:3000](http://localhost:3000)
+
+
+
+
 
 
 ## IMPORTANT - Configure Your Provider Keys
