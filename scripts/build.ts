@@ -101,6 +101,9 @@ async function buildProject() {
         // Copy prompts folder to platform directory
         await $`cp -r ${join(distDir, "prompts")} ${join(platformDir, "prompts")}`;
 
+        // Copy client-dist folder to platform directory
+        await $`cp -r ${join(distDir, "client-dist")} ${join(platformDir, "client-dist")}`;
+
         // Build the standalone binary with version in the name
         const executableName = `${pkg.name}-v${pkg.version}${executableExt}`;
         await $`cd ${serverDir} && bun build --compile --target=${target} ./server.ts --outfile ${join(platformDir, executableName)}`;

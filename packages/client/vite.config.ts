@@ -24,7 +24,6 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../server/client-dist',
     emptyOutDir: true,
     rollupOptions: {
       input: {

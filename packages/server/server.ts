@@ -1,4 +1,3 @@
-
 import { serve } from "bun";
 import { join } from "node:path";
 import { statSync } from "node:fs";
@@ -24,8 +23,9 @@ import { getState, setState } from "./src/websocket/websocket-config";
 import { bnkWsManager } from "./src/websocket/websocket-manager";
 import { logger } from "src/utils/logger";
 
+const isDevEnv = process.env.DEV === 'true';
 // built client files
-const CLIENT_PATH = join(__dirname, "client-dist");
+const CLIENT_PATH = isDevEnv ? join(import.meta.dir, "client-dist") : "./client-dist";
 
 type ServerConfig = {
   port?: number;
@@ -35,7 +35,6 @@ type Server = ReturnType<typeof serve>;
 
 const DEV_PORT = 3000;
 const PROD_PORT = 3579;
-const isDevEnv = process.env.DEV === 'true';
 const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
 
 // Instantiate watchers manager
