@@ -238,14 +238,6 @@ function ProjectSummarizationSettingsPage() {
         }
     }
 
-    // function handleResummarizeAll() {
-    //     if (!selectedProjectId) return
-    //     resummarizeAllMutation.mutate(undefined, {
-    //         onSuccess: (resp) => {
-    //             alert(resp.message || "All files will be resummarized!")
-    //         }
-    //     })
-    // }
 
     if (isLoading) {
         return <div className="p-4">Loading files...</div>

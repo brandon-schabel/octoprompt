@@ -3,7 +3,7 @@ import { files } from 'shared/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { ProjectFile as ProjectFileType, GlobalState } from 'shared'
 import { matchesAnyPattern } from 'shared/src/utils/pattern-matcher'
-import { promptsMap } from '@/prompts/prompts-map'
+import { promptsMap } from '@/utils/prompts-map'
 import { UnifiedProviderService } from '../model-providers/providers/unified-provider-service'
 import { getState } from '@/websocket/websocket-config'
 

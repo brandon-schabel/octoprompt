@@ -1,4 +1,4 @@
-import { promptsMap } from '../prompts/prompts-map';
+import { promptsMap } from '../utils/prompts-map';
 import { UnifiedProviderService } from './model-providers/providers/unified-provider-service';
 
 export class PromptimizerService {
