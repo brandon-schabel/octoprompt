@@ -17,6 +17,8 @@ import { useEditFile } from '@/hooks/api/use-code-editor-api'
 import { toast } from 'sonner'
 import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { InfoTooltip } from '@/components/info-tooltip'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
@@ -40,7 +42,7 @@ function ProjectsPage() {
     const fileSearch = activeTabState?.fileSearch ?? ''
     const searchByContent = activeTabState?.searchByContent ?? false
     const selectedProvider = 'openai'
-    
+
     // Single source of truth for selected files state
     const selectedFilesState = useSelectedFiles()
 
@@ -190,36 +192,98 @@ function ProjectsPage() {
         )
     }
 
+    // Check if we're on the default tab with no project selected
+    const isDefaultTab = state?.projectActiveTabId === 'defaultTab'
+    const isFirstVisit = isDefaultTab && !selectedProjectId
+    const [showWelcomeDialog, setShowWelcomeDialog] = useState(true)
 
     return (
-        <div className="flex-col h-full w-full overflow-hidden flex ">
+        <div className="flex-col h-full w-full overflow-hidden flex">
             <ProjectsTabManager />
 
             <div className='flex-1 flex flex-row overflow-hidden'>
-                {projectData && selectedProjectId && (
-                    <FilePanel
-                        ref={filePanelRef}
-                        selectedProjectId={selectedProjectId}
-                        projectData={projectData}
-                        fileSearch={fileSearch}
-                        setFileSearch={setFileSearch}
-                        searchByContent={searchByContent}
-                        setSearchByContent={setSearchByContent}
-                        className="w-3/5"
-                        onNavigateToPrompts={() => promptPanelRef.current?.focusPrompt()}
-                        selectedFilesState={selectedFilesState}
-                    />
-                )}
+                {/* Always show FilePanel, even in default state */}
+                <FilePanel
+                    ref={filePanelRef}
+                    selectedProjectId={selectedProjectId}
+                    projectData={projectData || null}
+                    fileSearch={fileSearch}
+                    setFileSearch={setFileSearch}
+                    searchByContent={searchByContent}
+                    setSearchByContent={setSearchByContent}
+                    className="w-3/5"
+                    onNavigateToPrompts={() => promptPanelRef.current?.focusPrompt()}
+                    selectedFilesState={selectedFilesState}
+                />
 
-                {selectedProjectId && promptData && (
-                    <PromptOverviewPanel
-                        ref={promptPanelRef}
-                        selectedProjectId={selectedProjectId}
-                        fileMap={fileMap}
-                        promptData={promptData}
-                        className="w-2/5"
-                        selectedFilesState={selectedFilesState}
-                    />
+                {/* Always show PromptOverviewPanel, even in default state */}
+                <PromptOverviewPanel
+                    ref={promptPanelRef}
+                    selectedProjectId={selectedProjectId ?? ''}
+                    fileMap={fileMap}
+                    promptData={promptData}
+                    className="w-2/5"
+                    selectedFilesState={selectedFilesState}
+                />
+
+                {/* Welcome Dialog */}
+                {isFirstVisit && (
+                    <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
+                        <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                                <DialogTitle>Welcome to Project View!</DialogTitle>
+                                <DialogDescription className="space-y-2">
+                                    <p>This is where you'll explore and interact with your codebase.</p>
+                                    <p className="text-sm bg-muted/50 p-2 rounded-md flex items-center gap-2">
+                                        <span>💡</span> Click the <strong>"Projects"</strong> button in the top right to open a project
+                                    </p>
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="grid grid-cols-2 gap-6 py-6">
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        File Explorer
+                                        <InfoTooltip>
+                                            Browse, search, and manage your project files
+                                        </InfoTooltip>
+                                    </h3>
+                                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                                        <li>Browse your project files</li>
+                                        <li>Search by filename or content</li>
+                                        <li>Select files for AI context</li>
+                                        <li>View and edit code</li>
+                                    </ul>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        AI Interaction
+                                        <InfoTooltip>
+                                            Leverage AI to understand and improve your code
+                                        </InfoTooltip>
+                                    </h3>
+                                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                                        <li>Create reusable prompts</li>
+                                        <li>Get AI suggestions</li>
+                                        <li>Analyze code context</li>
+                                        <li>Generate code improvements</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <DialogFooter className="gap-2">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => {
+                                        setShowWelcomeDialog(false)
+                                    }}
+                                >
+                                    Got it
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 )}
             </div>
 
@@ -228,23 +292,6 @@ function ProjectsPage() {
                 viewedFile={viewedFile}
                 onClose={closeFileViewer}
             />
-            {/* <div className="space-y-2">
-                <Label className="text-sm font-medium">Describe your fix/feature:</Label>
-                <Textarea
-                    className="block w-full border rounded p-2"
-                    rows={4}
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="Explain your desired code changes..."
-                />
-
-                <Button
-                    disabled={aiCodeEditMutation.isPending}
-                    onClick={handleApplyFixes}
-                >
-                    {aiCodeEditMutation.isPending ? 'Applying Fixes...' : 'Apply AI Fixes'}
-                </Button>
-            </div> */}
         </div>
     )
 }

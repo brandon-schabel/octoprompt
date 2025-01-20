@@ -69,10 +69,6 @@ export function useSelectedFiles() {
 
   // Commit a new selection to local history, and also update global selection
   const commitSelectionChange = useCallback((newSelected: string[]) => {
-    console.log({
-      isInitialized,
-      newSelected,
-    })
     if (!isInitialized) return
 
     // Update global store's selection (no more history indexing there)
@@ -188,11 +184,6 @@ export function useSelectedFiles() {
   const canRedo = useMemo(() => {
     return undoRedoState !== null && undoRedoState.index < undoRedoState.history.length - 1
   }, [undoRedoState])
-  console.log({
-    canUndo,
-    canRedo,
-    undoRedoState,
-  })
 
   return {
     selectedFiles,

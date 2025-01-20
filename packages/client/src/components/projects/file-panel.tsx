@@ -35,7 +35,7 @@ export type FilePanelRef = {
 
 type FilePanelProps = {
     selectedProjectId: string | null
-    projectData: Project
+    projectData: Project | null
     fileSearch: string
     setFileSearch: (search: string) => void
     searchByContent: boolean
@@ -492,14 +492,65 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground">No files found.</p>
+                                    <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-4">
+                                        {fileSearch ? (
+                                            // No files found after search
+                                            <>
+                                                <p className="text-muted-foreground">No files found matching "{fileSearch}"</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Try adjusting your search or {' '}
+                                                    <Button
+                                                        variant="link"
+                                                        className="p-0 h-auto"
+                                                        onClick={() => {
+                                                            setFileSearch('')
+                                                            setSearchByContent(false)
+                                                        }}
+                                                    >
+                                                        clear the search
+                                                    </Button>
+                                                </p>
+                                                {!searchByContent && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setSearchByContent(true)}
+                                                    >
+                                                        Try searching file contents
+                                                    </Button>
+                                                )}
+                                            </>
+                                        ) : (
+                                            // No files in project
+                                            <>
+                                                <p className="text-muted-foreground">This project appears to be empty.</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Make sure you've selected the correct project directory and it contains files.
+                                                </p>
+                                            </>
+                                        )}
+                                    </div>
                                 )
                             )}
                         </div>
                     </div>
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                        <p className="text-muted-foreground">Select a project to view files</p>
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6">
+                        <div className="max-w-md space-y-4">
+                            <h3 className="text-lg font-semibold">No Project Selected</h3>
+                            <p className="text-muted-foreground">
+                                Select a project to start exploring files, or create a new project if you haven't added one yet.
+                            </p>
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">Quick Tips:</p>
+                                <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+                                    <li>Use <kbd className="px-1 rounded bg-muted">{formatShortcut('mod+f')}</kbd> to quickly search files</li>
+                                    <li>Use <kbd className="px-1 rounded bg-muted">{formatShortcut('mod+g')}</kbd> to focus the file tree</li>
+                                    <li>Enable content search to find text within files</li>
+                                    <li>Select files to include them in your AI prompts</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

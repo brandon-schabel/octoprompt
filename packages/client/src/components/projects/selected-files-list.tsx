@@ -171,7 +171,62 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   }
 
   if (selectedFiles.length === 0) {
-    return <p className="text-sm text-muted-foreground p-2">No files selected</p>
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-4 text-center space-y-4">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">No files selected yet</p>
+          <div className="space-y-2">
+            <p className="text-xs font-medium">How to select files:</p>
+            <ul className="text-xs text-muted-foreground space-y-1.5 list-disc list-inside">
+              <li>Click files in the file tree</li>
+              <li>Search and select from results</li>
+              <li>Use <kbd className="px-1 rounded bg-muted">{formatShortcut('mod+f')}</kbd> to search</li>
+              <li>Use <kbd className="px-1 rounded bg-muted">↑</kbd> <kbd className="px-1 rounded bg-muted">↓</kbd> to navigate</li>
+              <li>Press <kbd className="px-1 rounded bg-muted">Enter</kbd> or <kbd className="px-1 rounded bg-muted">Space</kbd> to select</li>
+            </ul>
+          </div>
+          {Object.entries(bookmarkedGroups).length > 0 && (
+            <div className="pt-2">
+              <p className="text-xs font-medium mb-1">Or load a bookmark group:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {Object.entries(bookmarkedGroups).slice(0, 3).map(([name]) => (
+                  <Button
+                    key={name}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      updateProjectTabState(projectTabId, {
+                        selectedFiles: bookmarkedGroups[name]
+                      })
+                      toast.success(`Loaded bookmark group "${name}"`)
+                    }}
+                  >
+                    <Bookmark className="mr-1 h-3 w-3" />
+                    {name}
+                  </Button>
+                ))}
+                {Object.entries(bookmarkedGroups).length > 3 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      const menu = document.querySelector('[data-radix-collection-item]')
+                      if (menu instanceof HTMLElement) {
+                        menu.click()
+                      }
+                    }}
+                  >
+                    +{Object.entries(bookmarkedGroups).length - 3} more
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (

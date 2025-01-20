@@ -36,17 +36,20 @@ function KeysPage() {
     }
 
     const providerData = PROVIDERS.find(p => p.id === selectedProvider);
+
     return (
         <div className="p-4 space-y-4 bg-secondary h-full">
             <Card>
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <CardTitle>Provider Keys</CardTitle>
-                        <InfoTooltip  >
-                            {`Provider keys are API keys required to use different AI services. \n Each provider (like OpenAI, Anthropic) needs its own key which you can get from their website. Links will be shown for each selected provider. Once added, you can use their AI models in the app.`}
+                        <InfoTooltip>
+                            {`Provider keys let you tap into external AI services (e.g. OpenAI, OpenRouter). Adding these keys unlocks extra features like file suggestions, summarizations, and voice input with Whisper. If no key is added, you can still use local LLMs in the chat.`}
                         </InfoTooltip>
                     </div>
-                    <CardDescription>Add API keys for different AI providers</CardDescription>
+                    <CardDescription>
+                        Add API keys for different AI providers here.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -65,13 +68,19 @@ function KeysPage() {
                                     </SelectContent>
                                 </Select>
                                 <Input
-                                    placeholder={providerData?.isLocal ? "No API Key needed, However Download Is Needed" : "Enter API key"}
+                                    placeholder={providerData?.isLocal ? "No API Key needed, but might need local config" : "Enter API key"}
                                     value={newKeyVal}
                                     onChange={e => setNewKeyVal(e.target.value)}
                                     type="password"
                                     disabled={providerData?.isLocal ?? false}
                                 />
-                                <Button onClick={handleCreate} disabled={!selectedProvider || !newKeyVal}>
+                                <Button
+                                    onClick={handleCreate}
+                                    disabled={
+                                        !selectedProvider ||
+                                        (!newKeyVal && !(providerData?.isLocal ?? false))
+                                    }
+                                >
                                     Add
                                 </Button>
                             </div>
@@ -97,7 +106,10 @@ function KeysPage() {
                         ) : keys && keys.length > 0 ? (
                             <ul className="space-y-2">
                                 {keys.map(k => (
-                                    <li key={k.id} className="flex items-center justify-between border p-2 rounded">
+                                    <li
+                                        key={k.id}
+                                        className="flex items-center justify-between border p-2 rounded"
+                                    >
                                         <div>
                                             <div className="font-medium">
                                                 {PROVIDERS.find(p => p.id === k.provider)?.name || k.provider}
@@ -117,7 +129,19 @@ function KeysPage() {
                                 ))}
                             </ul>
                         ) : (
-                            <div>No keys added yet.</div>
+                            <div className="text-sm text-muted-foreground">
+                                <p className="mb-2">
+                                    <strong>No keys added yet.</strong>
+                                </p>
+                                <p>
+                                    You can still chat with local LLMs without any keys. However, by adding
+                                    <strong> OpenAI </strong> or <strong> OpenRouter </strong> keys, you’ll unlock advanced
+                                    features like file summarizations, file suggestions, voice commands
+                                    (via Whisper), and the ability to create tasks on tickets from chat.
+                                    <br /><br />
+                                    Simply select a provider above, enter your key, and click <em>Add</em>.
+                                </p>
+                            </div>
                         )}
                     </div>
                 </CardContent>
