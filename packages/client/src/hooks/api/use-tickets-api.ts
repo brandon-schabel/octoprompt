@@ -116,6 +116,39 @@ export function useUpdateTicket() {
     });
 }
 
+// Delete a ticket
+export function useDeleteTicket() {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+
+    return useMutation<TicketResult, Error, { ticketId: string }>({
+        mutationFn: async ({ ticketId }) => {
+            const resp = await api.request(`/api/tickets/${ticketId}`, {
+                method: 'DELETE',
+            });
+            return resp.json();
+        },
+        onSuccess: (data, { ticketId }) => {
+            // Invalidate all ticket-related queries
+            queryClient.invalidateQueries({
+                queryKey: TICKET_KEYS.all,
+                refetchType: 'all'
+            });
+
+            // Also invalidate specific ticket queries
+            queryClient.invalidateQueries({
+                queryKey: TICKET_KEYS.detail(ticketId)
+            });
+
+            // Invalidate tasks for this ticket
+            queryClient.invalidateQueries({
+                queryKey: TICKET_KEYS.tasks(ticketId)
+            });
+        },
+        onError: commonErrorHandler
+    });
+}
+
 // Link files to ticket
 export function useLinkFilesToTicket() {
     const { api } = useApi();

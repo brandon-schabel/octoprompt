@@ -1,16 +1,27 @@
 import React, { useMemo, useCallback } from "react";
-import { TicketWithTasks, useListTicketsWithTasks, TICKET_KEYS, TicketResult } from "@/hooks/api/use-tickets-api";
+import { TicketWithTasks, useListTicketsWithTasks, TICKET_KEYS, TicketResult, useDeleteTicket } from "@/hooks/api/use-tickets-api";
 import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../ui/select";
-import { Copy, Filter, FileText } from "lucide-react";
+import { Copy, Filter, FileText, Trash2 } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { buildTicketContent } from "./utils/ticket-utils";
-import { useQueryClient } from "@tanstack/react-query";
+import { Progress } from "../ui/progress";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "../ui/alert-dialog";
+import { useState } from "react";
 
 interface TicketListPanelProps {
     projectTabId: string;
@@ -134,6 +145,36 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
         });
     }, []);
 
+    const [ticketToDelete, setTicketToDelete] = useState<TicketWithTasks | null>(null);
+    const deleteTicket = useDeleteTicket();
+
+    const handleDeleteTicket = useCallback(async (e: React.MouseEvent, ticket: TicketWithTasks) => {
+        e.stopPropagation();
+        setTicketToDelete(ticket);
+    }, []);
+
+    const confirmDelete = useCallback(async () => {
+        if (!ticketToDelete) return;
+        
+        try {
+            await deleteTicket.mutateAsync({ ticketId: ticketToDelete.id });
+            toast.success("Ticket deleted successfully");
+        } catch (err) {
+            toast.error("Failed to delete ticket");
+            console.error(err);
+        } finally {
+            setTicketToDelete(null);
+        }
+    }, [ticketToDelete, deleteTicket]);
+
+    // Calculate task completion for a ticket
+    const getTaskCompletion = useCallback((ticket: TicketWithTasks) => {
+        const totalTasks = ticket.tasks.length;
+        const completedTasks = ticket.tasks.filter(task => task.done).length;
+        const percentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+        return { completedTasks, totalTasks, percentage };
+    }, []);
+
     return (
         <div className="flex flex-col h-full border rounded-md">
             {/* Toolbar header */}
@@ -180,63 +221,104 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                 )}
 
                 <div className="space-y-2">
-                    {sorted.map(ticket => (
-                        <div
-                            key={ticket.id}
-                            className="border rounded-md p-3 bg-card hover:bg-card/80 transition-colors cursor-pointer group"
-                            onClick={() => onSelectTicket?.(ticket)}
-                        >
-                            <div className="flex items-center justify-between">
-                                <h2 className="font-semibold">
-                                    {ticket.title}
-                                </h2>
-                                <Badge variant="secondary">
-                                    {ticket.tasks.length} {ticket.tasks.length === 1 ? "task" : "tasks"}
-                                </Badge>
-                            </div>
-                            <div className="mt-1 text-sm text-muted-foreground">
-                                {snippet(ticket.overview ?? "", 100)}
-                            </div>
-                            <div className="mt-2 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Badge 
-                                        className={cn(
-                                            PRIORITY_COLORS[ticket.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS.normal
-                                        )}
-                                    >
-                                        {ticket.priority || "normal"}
-                                    </Badge>
-                                    <Badge 
-                                        className={cn(
-                                            STATUS_COLORS[ticket.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.open
-                                        )}
-                                    >
-                                        {ticket.status?.replace("_", " ").toUpperCase()}
+                    {sorted.map(ticket => {
+                        const { completedTasks, totalTasks, percentage } = getTaskCompletion(ticket);
+                        
+                        return (
+                            <div
+                                key={ticket.id}
+                                className="border rounded-md p-3 bg-card hover:bg-card/80 transition-colors cursor-pointer group"
+                                onClick={() => onSelectTicket?.(ticket)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <h2 className="font-semibold">
+                                        {ticket.title}
+                                    </h2>
+                                    <Badge variant="secondary">
+                                        {completedTasks}/{totalTasks} tasks
                                     </Badge>
                                 </div>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={(e) => copyOverview(e, ticket.overview ?? "")}
-                                    >
-                                        <Copy className="h-4 w-4 mr-1" />
-                                        Copy Overview
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={(e) => handleCopyAll(e, ticket)}
-                                    >
-                                        <FileText className="h-4 w-4 mr-1" />
-                                        Copy All
-                                    </Button>
+                                <div className="mt-1 text-sm text-muted-foreground">
+                                    {snippet(ticket.overview ?? "", 100)}
+                                </div>
+                                <div className="mt-2 mb-2">
+                                    <Progress 
+                                        value={percentage}
+                                        variant="fullness"
+                                        className="h-1"
+                                    />
+                                </div>
+                                <div className="mt-2 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Badge 
+                                            className={cn(
+                                                PRIORITY_COLORS[ticket.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS.normal
+                                            )}
+                                        >
+                                            {ticket.priority || "normal"}
+                                        </Badge>
+                                        <Badge 
+                                            className={cn(
+                                                STATUS_COLORS[ticket.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.open
+                                            )}
+                                        >
+                                            {ticket.status?.replace("_", " ").toUpperCase()}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => copyOverview(e, ticket.overview ?? "")}
+                                        >
+                                            <Copy className="h-4 w-4 mr-1" />
+                                            Copy Overview
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => handleCopyAll(e, ticket)}
+                                        >
+                                            <FileText className="h-4 w-4 mr-1" />
+                                            Copy All
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-destructive hover:text-destructive"
+                                            onClick={(e) => handleDeleteTicket(e, ticket)}
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-1" />
+                                            Delete
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </ScrollArea>
+
+            <AlertDialog open={!!ticketToDelete} onOpenChange={(open) => !open && setTicketToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this ticket?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the ticket
+                            "{ticketToDelete?.title}" and all its associated tasks.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 } 

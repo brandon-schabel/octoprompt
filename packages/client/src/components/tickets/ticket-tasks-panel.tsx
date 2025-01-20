@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useReorderTasks, useAutoGenerateTasks } from "../../hooks/api/use-tickets-api";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { ArrowDown, ArrowUp, CheckSquare, Copy, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Circle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { TicketTask } from "shared/schema";
@@ -189,16 +189,20 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
                                 onClick={(e) => handleToggleDone(e, task)}
                                 className="flex items-center justify-center"
                             >
-                                <CheckSquare
-                                    className={`h-4 w-4 ${
-                                        task.done ? "text-green-600" : "text-gray-400"
-                                    }`}
-                                />
+
+                                {task.done ? (
+                                    <CircleCheckBig
+                                        className={`h-4 w-4 text-green-600`}
+                                    />
+                                ) : (
+                                    <Circle
+                                        className={`h-4 w-4 text-gray-400`}
+                                    />
+                                )}
                             </button>
                             <span
-                                className={`text-sm whitespace-pre-wrap ${
-                                    task.done ? "line-through text-gray-400" : ""
-                                }`}
+                                className={`text-sm whitespace-pre-wrap ${task.done ? "line-through text-gray-400" : ""
+                                    }`}
                             >
                                 {task.content}
                             </span>
