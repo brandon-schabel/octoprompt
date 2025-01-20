@@ -19,11 +19,23 @@ Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code
 - **Customizable**  
   Extensible plugin-based design. Add or remove features, tweak watchers, or build your own modules.
 
+
+
 ## Screenshots
 
-![Xnapper-2024-12-26-13 52 57](https://github.com/user-attachments/assets/482f09c0-3398-4a14-bdbb-2b36d2a874fb)
-![Xnapper-2024-12-26-13 53 53](https://github.com/user-attachments/assets/16786417-d420-4e12-9bbe-c896ea20f4b6)
-![Xnapper-2024-12-26-13 54 52](https://github.com/user-attachments/assets/1e1d0484-177b-4b2d-95f7-4de5c00e693d)
+### Project View, select files, prompts, and provid instructions
+![tickets-1](https://github.com/user-attachments/assets/43f08ccd-6ae7-4325-a531-1438c3cf214c)
+
+### View all tickets for your project
+![tickets-2](https://github.com/user-attachments/assets/784cb82b-44d9-40e5-8692-d7d814afa5e1)
+
+### Auto Generate a list of tasks based on the overview provided
+![tickets-3](https://github.com/user-attachments/assets/ecac1202-ffda-4456-94ad-bd04edbcde95)
+
+### Copy the contents of the ticket to your clipboard, in various formats
+![tickets-4](https://github.com/user-attachments/assets/2de8190b-ff4c-4712-91a3-5ca59a129fc7)
+
+### Chat with LLMs
 ![Xnapper-2024-12-26-13 55 19](https://github.com/user-attachments/assets/c234a42a-336e-4b9e-82c8-bec7e88ab570)
 
 ---
