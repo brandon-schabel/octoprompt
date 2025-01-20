@@ -173,16 +173,41 @@ router.post("/api/projects/:projectId/suggest-files", {
     console.log("userMessage", userMessage);
 
     try {
-        const stream = await unifiedProviderService.processMessage({
-            chatId: "fileSuggester",
-            userMessage,
-            provider: 'openrouter',
-            options: {
-                model: 'deepseek/deepseek-chat',
-                max_tokens: 1024,
-                temperature: 0.2,
+        const fileSchema = {
+            type: "object",
+            properties: {
+                fileIds: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "An array of file IDs relevant to the user input",
+                },
             },
-            systemMessage: systemPrompt,
+            required: ["fileIds"],
+            additionalProperties: false,
+        };
+
+        // Then in your route or service method:
+        const stream = await unifiedProviderService.processMessage({
+            chatId: "whatever-chat-id",
+            userMessage: "User asks for suggested files, but we want strictly { fileIds: string[] }",
+            provider: "openrouter",
+            options: {
+                model: "deepseek/deepseek-chat",
+                temperature: 0.2,
+                // The key part: pass a `response_format` object
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "FileSuggestions",
+                        strict: true, // strongly enforce returning valid JSON
+                        schema: fileSchema,
+                    },
+                },
+            },
+            systemMessage: `
+              You are a file suggestion assistant. Return an array of file IDs in valid JSON only.
+              Example: { "fileIds": ["file-1", "file-2"] }
+            `,
         });
 
         const reader = stream.getReader();

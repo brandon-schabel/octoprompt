@@ -12,6 +12,34 @@ export type ChatCompletionOptions = Partial<{
     debug: boolean;
 }>;
 
+export type JsonSchema = {
+    type: "object";
+    properties: Record<string, any>;
+    required?: string[];
+    additionalProperties?: boolean;
+};
+
+export type ResponseFormat = {
+    type: "json_schema";
+    json_schema: {
+        name: string;
+        strict: boolean;
+        schema: JsonSchema;
+    };
+};
+
+export type StreamOptions = {
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
+    top_p?: number;
+    frequency_penalty?: number;
+    presence_penalty?: number;
+    top_k?: number;
+    debug?: boolean;
+    response_format?: ResponseFormat;
+};
+
 /**
  * The parameters used when streaming the assistant's message.
  * Notice we removed `chatService` because it now lives fully in the UnifiedProviderService.
@@ -20,7 +48,7 @@ export type ChatCompletionOptions = Partial<{
 export type StreamParams = {
     chatId: string;
     userMessage: string;
-    options: ChatCompletionOptions;
+    options?: StreamOptions;
     tempId?: string;
 };
 
@@ -32,7 +60,7 @@ export type ProcessMessageParams = {
     chatId: string;
     userMessage: string;
     provider?: APIProviders;
-    options?: ChatCompletionOptions;
+    options?: StreamOptions;
     tempId?: string;
     systemMessage?: string;
 };

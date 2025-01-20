@@ -1,5 +1,6 @@
 import type { BaseMessage } from "@bnk/backend-websocket-manager";
 import type { GlobalState } from "../global-state/global-state-schema";
+import type { Ticket } from "../..";
 
 /** Outbound message to broadcast the entire GlobalState */
 export interface StateUpdateMessage extends BaseMessage {
@@ -80,6 +81,23 @@ export interface UpdateGlobalStateKeyMessage extends BaseMessage {
     };
 }
 
+
+export interface TicketCreatedMessage extends BaseMessage {
+    type: "ticket_created";
+    ticket: Ticket;
+}
+
+export interface TicketUpdatedMessage extends BaseMessage {
+    type: "ticket_updated";
+    ticket: Ticket;
+}
+
+export interface TicketDeletedMessage extends BaseMessage {
+    type: "ticket_deleted";
+    ticketId: string;
+    projectId: string; // so clients know which project’s ticket was deleted
+}
+
 /** 
  * Union of all possible inbound messages. 
  * Both state_update and initial_state are included since they can be 
@@ -98,6 +116,9 @@ export type InboundMessage =
     | UpdateChatTabPartialMessage
     | DeleteChatTabMessage
     | SetActiveChatTabMessage
-    | UpdateGlobalStateKeyMessage;
+    | UpdateGlobalStateKeyMessage
+    | TicketCreatedMessage
+    | TicketUpdatedMessage
+    | TicketDeletedMessage
 
 export type { BaseMessage }

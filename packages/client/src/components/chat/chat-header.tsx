@@ -102,7 +102,7 @@ export function ChatHeader({
             const content = buildPromptContent({
                 fileMap,
                 promptData,
-                selectedFiles: linkSettings.includeSelectedFiles ? linkedProjectState.selectedFiles : [],
+                selectedFiles: linkSettings.includeSelectedFiles ? linkedProjectState.selectedFiles || [] : [],
                 selectedPrompts: linkSettings.includePrompts ? linkedProjectState.selectedPrompts : [],
                 userPrompt: linkSettings.includeUserPrompt ? linkedProjectState.userPrompt : '',
             });
@@ -216,7 +216,7 @@ export function ChatHeader({
                                                                         {tabState.displayName || tabId}
                                                                     </div>
                                                                     <div className="text-xs text-muted-foreground">
-                                                                        {tabState.selectedFiles.length} selected files
+                                                                        {tabState.selectedFiles?.length || 0} selected files
                                                                     </div>
                                                                     {tabState.userPrompt && (
                                                                         <div className="text-xs text-muted-foreground truncate">

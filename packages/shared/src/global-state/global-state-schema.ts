@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const EDITOR_OPTIONS = [
     { value: 'vscode', label: 'VS Code' },
@@ -14,19 +14,19 @@ export const projectTabStateSchema = z.object({
     promptDialogOpen: z.boolean(),
     editPromptId: z.string().nullable(),
     fileSearch: z.string(),
-    selectedFiles: z.array(z.string()),
+    selectedFiles: z.array(z.string()).nullable(),
     selectedPrompts: z.array(z.string()),
     userPrompt: z.string(),
     searchByContent: z.boolean(),
     displayName: z.string().optional(),
-    selectedFilesHistory: z.array(z.array(z.string())).default([]),
-    selectedFilesHistoryIndex: z.number().default(0),
     contextLimit: z.number().default(128000),
     resolveImports: z.boolean().default(false),
     preferredEditor: z.enum(['vscode', 'cursor']).default('vscode'),
     suggestedFileIds: z.array(z.string()).default([]),
-    // e.g. { "my-group1": ["fileId1", "fileId2"], "my-group2": ["fileId3"] }
     bookmarkedFileGroups: z.record(z.string(), z.array(z.string())).default({}),
+    ticketSearch: z.string().default(""),
+    ticketSort: z.enum(["created_desc", "created_asc", "status", "priority"]).default("created_desc"),
+    ticketStatusFilter: z.enum(["all", "open", "in_progress", "closed"]).default("all"),
 });
 
 export const linkSettingsSchema = z.object({
@@ -53,7 +53,7 @@ export type APIProviders = z.infer<typeof providerSchema>;
 export const apiProviders = providerSchema.options;
 
 export const chatTabStateSchema = z.object({
-    provider: providerSchema.default('openrouter'),
+    provider: providerSchema.default('openai'),
     model: z.string().default('gpt-4o'),
     input: z.string().default(''),
     messages: z.array(
@@ -66,13 +66,8 @@ export const chatTabStateSchema = z.object({
     excludedMessageIds: z.array(z.string()).default([]),
     displayName: z.string().optional(),
     activeChatId: z.string().optional(),
-
-    // NEW FIELDS for linking a chat to a project tab
     linkedProjectTabId: z.string().nullable().default(null),
     linkSettings: linkSettingsSchema.optional(),
-    // optional ollama url, for example if a user wanted to have per tab ollama instances
-    // for example if a user had 5 ollama instances on their network 
-    // TODO: this still needs to be implemented 
     ollamaUrl: z.string().optional(),
     lmStudioUrl: z.string().optional(),
 });
@@ -85,9 +80,8 @@ export const appSettingsSchema = z.object({
     theme: themeSchema.default('light'),
     codeThemeLight: z.string().default('atomOneLight'),
     codeThemeDark: z.string().default('atomOneDark'),
-    // the global url for ollama
     ollamaGlobalUrl: z.string().default('http://localhost:11434'),
-    lmStudioGlobalUrl: z.string().default('http://localhost:1234'),
+    lmStudioGlobalUrl: z.string().default('http://localhost:8000'),
     summarizationIgnorePatterns: z.array(z.string()).default([]),
     summarizationAllowPatterns: z.array(z.string()).default([]),
     summarizationEnabledProjectIds: z.array(z.string()).default([]),
@@ -98,6 +92,7 @@ export const appSettingsSchema = z.object({
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
+
 
 export type ChatTabState = z.infer<typeof chatTabStateSchema>;
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
@@ -114,7 +109,6 @@ export const globalStateSchema = z.object({
     projectActiveTabId: z.string().nullable(),
     chatTabs: chatTabsStateRecordSchema,
     chatActiveTabId: z.string().nullable(),
-
 });
 
 export type GlobalState = z.infer<typeof globalStateSchema>;
@@ -143,18 +137,19 @@ export const createInitialGlobalState = (): GlobalState => ({
             promptDialogOpen: false,
             editPromptId: null,
             fileSearch: '',
-            selectedFiles: [],
+            selectedFiles: null, // start uninitialized
             selectedPrompts: [],
             userPrompt: '',
             searchByContent: false,
             displayName: 'Default Tab',
-            selectedFilesHistory: [[]],
-            selectedFilesHistoryIndex: 0,
             contextLimit: 128000,
             resolveImports: false,
             preferredEditor: 'cursor',
             suggestedFileIds: [],
             bookmarkedFileGroups: {},
+            ticketSearch: '',
+            ticketSort: 'created_desc',
+            ticketStatusFilter: 'all',
         },
     },
     chatTabs: {

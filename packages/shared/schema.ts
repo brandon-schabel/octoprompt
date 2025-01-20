@@ -4,6 +4,7 @@ import {
     text,
     integer,
     type SQLiteTableWithColumns,
+    primaryKey,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -207,3 +208,71 @@ export const providerKeys = sqliteTable("provider_keys", {
 });
 
 export type ProviderKey = InferSelectModel<typeof providerKeys>;
+
+
+// ----------------------
+// TICKETS (NEW)
+// ----------------------
+export const tickets = sqliteTable("tickets", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
+    projectId: text("project_id")
+        .notNull()
+        .references(() => projects.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    overview: text("overview").default(""),
+    status: text("status").default("open"),   // e.g. "open", "in_progress", "closed"
+    priority: text("priority").default("normal"), // e.g. "low", "normal", "high"
+    createdAt: integer("created_at", { mode: "timestamp" })
+        .default(sql`CURRENT_TIMESTAMP`)
+        .notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+        .default(sql`CURRENT_TIMESTAMP`)
+        .notNull(),
+});
+
+// For Drizzle
+export type Ticket = InferSelectModel<typeof tickets>;
+export type NewTicket = InferInsertModel<typeof tickets>;
+
+// Relationship table for associating files to a ticket
+export const ticketFiles = sqliteTable("ticket_files", {
+    ticketId: text("ticket_id")
+        .notNull()
+        .references(() => tickets.id, { onDelete: "cascade" }),
+    fileId: text("file_id")
+        .notNull()
+        .references(() => files.id, { onDelete: "cascade" }),
+    // If you want to store additional fields, e.g. a reason or notes, add them here
+    // e.g. "notes" or "type" of link
+}, (ticketFiles) => ({
+    pk: primaryKey({ columns: [ticketFiles.ticketId, ticketFiles.fileId] }),
+}));
+
+export type TicketFile = InferSelectModel<typeof ticketFiles>;
+
+/** --- TICKET TASKS --- **/
+export const ticketTasks = sqliteTable("ticket_tasks", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
+    ticketId: text("ticket_id")
+        .notNull()
+        .references(() => tickets.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),  // e.g. "Implement auth flow"
+    done: integer("done", { mode: "boolean" })
+        .default(false) // false
+        .notNull(),
+    orderIndex: integer("order_index")
+        .default(0)
+        .notNull(), // used for reordering
+    createdAt: integer("created_at", { mode: "timestamp" })
+        .default(sql`CURRENT_TIMESTAMP`)
+        .notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+        .default(sql`CURRENT_TIMESTAMP`)
+        .notNull(),
+});
+export type TicketTask = InferSelectModel<typeof ticketTasks>;
+export type NewTicketTask = InferInsertModel<typeof ticketTasks>;

@@ -198,7 +198,7 @@ ${promptsMap.summarizationSteps}
                     model: 'deepseek/deepseek-chat',
                     max_tokens: 1024,
                     temperature: 0.2,
-                    debug: true
+                    // debug: true
                 },
                 systemMessage: systemPrompt,
             })

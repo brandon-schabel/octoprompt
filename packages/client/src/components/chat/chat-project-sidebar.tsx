@@ -9,14 +9,14 @@ import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { buildPromptContent } from '@/components/projects/utils/projects-utils'
 import { ProjectFile } from 'shared/schema'
 import { toast } from 'sonner'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { linkSettingsSchema, LinkSettings } from 'shared'
-import { Copy, Folder, FolderOpen, FolderOpenIcon } from 'lucide-react'
+import { Copy, FolderOpen, FolderOpenIcon } from 'lucide-react'
 import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { SlidingSidebar } from '@/components/sliding-sidebar'
 import { PromptsList } from '../projects/prompts-list'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string
@@ -26,7 +26,8 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
     const { state, updateChatLinkSettings, unlinkChatTab, activeChatTabState } = useGlobalStateHelpers()
     const linkedProjectState = state?.projectTabs[linkedProjectTabId]
     const [tabValue, setTabValue] = useState('files')
-
+    const selectedFilesState = useSelectedFiles()
+    const { selectedFiles, removeSelectedFile, } = selectedFilesState
     const { copyToClipboard } = useCopyClipboard()
 
     // If there's no linked project tab, nothing to show
@@ -42,12 +43,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
     const { data: promptsData } = useGetProjectPrompts(linkedProjectId || '')
     const { data: filesData } = useGetProjectFiles(linkedProjectId || '')
 
-    // The useSelectedFiles hook (for the currently active project tab)
-    const {
-        selectedFiles,
-        removeSelectedFile,
-        getSelectedFilesData,
-    } = useSelectedFiles()
+
 
     const fileMap = new Map<string, ProjectFile>()
     if (filesData?.files) {
@@ -82,7 +78,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
         const content = buildPromptContent({
             fileMap,
             promptData: promptsData,
-            selectedFiles: linkSettings.includeSelectedFiles ? linkedProjectState.selectedFiles : [],
+            selectedFiles: linkSettings.includeSelectedFiles ? linkedProjectState.selectedFiles || [] : [],
             selectedPrompts: linkSettings.includePrompts ? linkedProjectState.selectedPrompts : [],
             userPrompt: linkSettings.includeUserPrompt ? linkedProjectState.userPrompt : '',
         })
@@ -157,6 +153,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
                                 fileMap={fileMap}
                                 onRemoveFile={(fileId) => removeSelectedFile(fileId)}
                                 projectTabId={linkedProjectTabId}
+                                selectedFilesState={selectedFilesState}
                             />
                         </ScrollArea>
                     </TabsContent>

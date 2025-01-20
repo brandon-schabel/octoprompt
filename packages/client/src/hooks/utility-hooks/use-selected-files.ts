@@ -1,90 +1,143 @@
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
-import { useCallback } from 'react'
 import { ProjectFile } from 'shared'
 
 const MAX_HISTORY_SIZE = 50
 
+type UndoRedoState = {
+  history: string[][]
+  index: number
+}
+
+// Keep history cache in module scope memory
+const historyCache = new Map<string, UndoRedoState>()
+
 export function useSelectedFiles() {
-  const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab } = useGlobalStateHelpers()
-  const selectedFiles = activeTabState?.selectedFiles || []
-  const history = activeTabState?.selectedFilesHistory ?? [[]]
-  const historyIndex = activeTabState?.selectedFilesHistoryIndex ?? 0
+  const { activeProjectTabState, updateActiveProjectTab, state } = useGlobalStateHelpers()
+  
 
-  // currentSelection is whatever is in selectedFiles for convenience,
-  // but we can also treat the "official" selection as `history[historyIndex]`.
-  // It's typically a good idea to keep `selectedFiles` always synced with `history[historyIndex]`.
+  // Keep undo/redo history in local state
+  const [undoRedoState, setUndoRedoState] = useState<UndoRedoState | null>(null)
 
-  // Commits a new array of selected files to the global store’s history
+  // Effect to handle tab changes and initialize from cache if available
+  useEffect(() => {
+    const tabId = state.projectActiveTabId
+    if (!tabId) {
+      setUndoRedoState(null)
+      return
+    }
+
+    // Check cache first
+    const cachedState = historyCache.get(tabId)
+    if (cachedState) {
+      setUndoRedoState(cachedState)
+      return
+    }
+
+    // Initialize new state if we have selectedFiles
+    if (activeProjectTabState?.selectedFiles !== null) {
+      const newState = {
+        history: [activeProjectTabState?.selectedFiles || []],
+        index: 0,
+      }
+      historyCache.set(tabId, newState)
+      setUndoRedoState(newState)
+    }
+  }, [state.projectActiveTabId, activeProjectTabState?.selectedFiles])
+
+  // Update cache whenever undoRedoState changes
+  useEffect(() => {
+    if (undoRedoState && state.projectActiveTabId) {
+      historyCache.set(state.projectActiveTabId, undoRedoState)
+    }
+  }, [undoRedoState, state.projectActiveTabId])
+
+  // Cleanup cache when component unmounts
+  useEffect(() => {
+    return () => {
+      historyCache.clear()
+    }
+  }, [])
+
+  // The actual 'selectedFiles' is whatever is at the current index, or empty array if not initialized
+  const selectedFiles = useMemo(() => {
+    return undoRedoState?.history[undoRedoState.index] ?? []
+  }, [undoRedoState])
+
+  // Only allow operations once we have initialized the state
+  const isInitialized = undoRedoState !== null
+
+  // Commit a new selection to local history, and also update global selection
   const commitSelectionChange = useCallback((newSelected: string[]) => {
-    updateActiveTab((prevTab) => {
-      const prevHistory = prevTab.selectedFilesHistory ?? [[]]
-      const prevIndex = prevTab.selectedFilesHistoryIndex ?? 0
+    console.log({
+      isInitialized,
+      newSelected,
+    })
+    if (!isInitialized) return
 
-      // 1) Cut off any "future" states if we had undone some changes
-      const truncated = prevHistory.slice(0, prevIndex + 1)
+    // Update global store's selection (no more history indexing there)
+    updateActiveProjectTab((prevTab) => ({
+      ...prevTab,
+      selectedFiles: newSelected,
+    }))
 
-      // 2) Add the new selection
+    // Push this new selection onto our local history stack
+    setUndoRedoState(currentState => {
+      if (!currentState) return currentState
+      const { history, index } = currentState
+      const truncated = history.slice(0, index + 1)
       truncated.push(newSelected)
-
-      // 3) Possibly limit the total length
       if (truncated.length > MAX_HISTORY_SIZE) {
         truncated.shift()
       }
-
-      // 4) The new index is the last item
-      const newIndex = truncated.length - 1
-
       return {
-        ...prevTab,
-        // Always keep selectedFiles in sync with the new state
-        selectedFiles: newSelected,
-
-        // Update our history
-        selectedFilesHistory: truncated,
-        selectedFilesHistoryIndex: newIndex,
+        history: truncated,
+        index: truncated.length - 1,
       }
     })
-  }, [updateActiveTab])
+  }, [isInitialized, updateActiveProjectTab])
 
-  // Undo
+  // Undo: just move 'index' back one and update global selection
   const undo = useCallback(() => {
-    updateActiveTab((prevTab) => {
-      const prevIndex = prevTab.selectedFilesHistoryIndex ?? 0
-      if (prevIndex <= 0) return prevTab // can't undo
+    if (!undoRedoState) return
 
-      const newIndex = prevIndex - 1
-      const nextHistory = prevTab.selectedFilesHistory ?? [[]]
-      const undoneSelection = nextHistory[newIndex] ?? []
-
-      return {
-        ...prevTab,
-        selectedFiles: undoneSelection,
-        selectedFilesHistoryIndex: newIndex,
+    setUndoRedoState((state): UndoRedoState => {
+      if (!state) return undoRedoState
+      const { history, index } = state
+      if (index <= 0) {
+        return state
       }
+      const newIndex = index - 1
+      updateActiveProjectTab((prevTab) => ({
+        ...prevTab,
+        selectedFiles: history[newIndex],
+      }))
+      return { history, index: newIndex }
     })
-  }, [updateActiveTab])
+  }, [undoRedoState, updateActiveProjectTab])
 
-  // Redo
+  // Redo: just move 'index' forward one and update global selection
   const redo = useCallback(() => {
-    updateActiveTab((prevTab) => {
-      const prevIndex = prevTab.selectedFilesHistoryIndex ?? 0
-      const nextHistory = prevTab.selectedFilesHistory ?? [[]]
+    if (!undoRedoState) return
 
-      if (prevIndex >= nextHistory.length - 1) return prevTab // can't redo
-
-      const newIndex = prevIndex + 1
-      const redoneSelection = nextHistory[newIndex] ?? []
-
-      return {
-        ...prevTab,
-        selectedFiles: redoneSelection,
-        selectedFilesHistoryIndex: newIndex,
+    setUndoRedoState((state): UndoRedoState => {
+      if (!state) return undoRedoState
+      const { history, index } = state
+      if (index >= history.length - 1) {
+        return state
       }
+      const newIndex = index + 1
+      updateActiveProjectTab((prevTab) => ({
+        ...prevTab,
+        selectedFiles: history[newIndex],
+      }))
+      return { history, index: newIndex }
     })
-  }, [updateActiveTab])
+  }, [undoRedoState, updateActiveProjectTab])
 
-  // Normal selection methods (all calling commitSelectionChange)
+  // Basic selection helpers
   const toggleFile = useCallback((fileId: string) => {
+    if (!isInitialized) return
     const newSet = new Set(selectedFiles)
     if (newSet.has(fileId)) {
       newSet.delete(fileId)
@@ -92,48 +145,54 @@ export function useSelectedFiles() {
       newSet.add(fileId)
     }
     commitSelectionChange([...newSet])
-  }, [selectedFiles, commitSelectionChange])
+  }, [selectedFiles, commitSelectionChange, isInitialized])
 
   const removeSelectedFile = useCallback((fileId: string) => {
+    if (!isInitialized) return
     commitSelectionChange(selectedFiles.filter(id => id !== fileId))
-  }, [selectedFiles, commitSelectionChange])
+  }, [selectedFiles, commitSelectionChange, isInitialized])
 
   const toggleFiles = useCallback((fileIds: string[]) => {
+    if (!isInitialized) return
     const newSet = new Set(selectedFiles)
     fileIds.forEach(id => {
-      if (newSet.has(id)) {
-        newSet.delete(id)
-      } else {
-        newSet.add(id)
-      }
+      newSet.has(id) ? newSet.delete(id) : newSet.add(id)
     })
     commitSelectionChange([...newSet])
-  }, [selectedFiles, commitSelectionChange])
+  }, [selectedFiles, commitSelectionChange, isInitialized])
 
   const selectFiles = useCallback((fileIds: string[]) => {
+    if (!isInitialized) return
     commitSelectionChange(fileIds)
-  }, [commitSelectionChange])
+  }, [commitSelectionChange, isInitialized])
 
   const clearSelectedFiles = useCallback(() => {
+    if (!isInitialized) return
     commitSelectionChange([])
-  }, [commitSelectionChange])
+  }, [commitSelectionChange, isInitialized])
 
-  // Helpers
+  // Utilities
   const isFileSelected = useCallback((fileId: string) => {
     return selectedFiles.includes(fileId)
   }, [selectedFiles])
 
-  const getSelectedFilesData = useCallback((fileMap: Map<string, ProjectFile>): ProjectFile[] => {
+  const getSelectedFilesData = useCallback((fileMap: Map<string, ProjectFile>) => {
     return selectedFiles
       .map(id => fileMap.get(id))
       .filter((file): file is ProjectFile => file !== undefined)
   }, [selectedFiles])
 
-  // For convenience, we can define whether we can undo/redo
-  const canUndo = historyIndex > 0
-  const canRedo = historyIndex < (history.length - 1)
-
-
+  const canUndo = useMemo(() => {
+    return undoRedoState !== null && undoRedoState.index > 0
+  }, [undoRedoState])
+  const canRedo = useMemo(() => {
+    return undoRedoState !== null && undoRedoState.index < undoRedoState.history.length - 1
+  }, [undoRedoState])
+  console.log({
+    canUndo,
+    canRedo,
+    undoRedoState,
+  })
 
   return {
     selectedFiles,
@@ -150,4 +209,6 @@ export function useSelectedFiles() {
     canUndo,
     canRedo,
   }
-} 
+}
+
+export type UseSelectedFileReturn = ReturnType<typeof useSelectedFiles>

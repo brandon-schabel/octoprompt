@@ -14,7 +14,8 @@ export {
     or,
     not,
     sql,
-    inArray
+    inArray,
+    desc
 } from 'drizzle-orm';
 
 
@@ -26,6 +27,7 @@ export type { ModelOptions } from './src/validation/model-options-schema';
 export { projectsApiValidation } from './src/validation/projects-api-validation';
 export { promptApiValidation } from './src/validation/prompt-api-validation';
 export { providerKeyApiValidation } from './src/validation/provider-key-api-validation';
+export { ticketsApiValidation, type CreateTicketBody, type UpdateTicketBody, createTicketSchema, linkFilesSchema, suggestTasksSchema, updateTicketSchema} from './src/validation/ticket-api-validation';
 export { codeEditorApiValidation, type EditFileBody, type EditFileParams } from './src/validation/code-editor-api-validation';
 export {
     globalStateSchema, createInitialGlobalState, type GlobalState, type ProjectTabState, projectTabStateSchema as tabStateSchema, type LinkSettings, linkSettingsSchema, type ChatTabState, chatTabStateSchema, chatTabsStateRecordSchema,
