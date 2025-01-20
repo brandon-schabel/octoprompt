@@ -1,4 +1,5 @@
 import { APIProviders } from "shared";
+import { } from "@bnk/ai"
 
 /** Options used by certain completion endpoints */
 export type ChatCompletionOptions = Partial<{
@@ -38,6 +39,8 @@ export type StreamOptions = {
     top_k?: number;
     debug?: boolean;
     response_format?: ResponseFormat;
+    referrer?: string;
+    title?: string;
 };
 
 /**

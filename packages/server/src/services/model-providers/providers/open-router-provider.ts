@@ -35,11 +35,11 @@ export class OpenRouterProviderService {
             debug.log('initKey', 'Key already initialized');
             return;
         }
-        
+
         debug.log('initKey', 'Fetching OpenRouter API key');
         const keys = await this.providerKeyService.listKeys();
         this.openRouterKey = keys.find(k => k.provider === "openrouter")?.key;
-        
+
         if (!this.openRouterKey) {
             debug.error('initKey', 'OpenRouter API key not found');
             throw new Error("OpenRouter API key not found");
@@ -139,8 +139,8 @@ export class OpenRouterProviderService {
         options?: StreamParams["options"];
         tempId?: string;
     }): Promise<ReadableStream<Uint8Array>> {
-        debug.log('streamMessage', 'Starting message stream', { 
-            chatId, 
+        debug.log('streamMessage', 'Starting message stream', {
+            chatId,
             assistantMessageId,
             isStructured: options?.response_format?.type === "json_schema"
         });
@@ -158,7 +158,11 @@ export class OpenRouterProviderService {
             userMessage,
             systemMessage,
             plugin,
-            options,
+            options: {
+                ...options,
+                referrer: 'http://octoprompt.com',
+                title: 'OctoPrompt',
+            },
             handlers: {
                 onSystemMessage: async (msg) => {
                     debug.log('streamMessage:onSystemMessage', msg.content);
@@ -194,7 +198,7 @@ export class OpenRouterProviderService {
                     debug.log('streamMessage:onDone', 'Stream completed', {
                         finalLength: final.content.length
                     });
-                    
+
                     fullResponse = final.content;
                     if (isStructured) {
                         const parsed = this.tryParseStructuredResponse(fullResponse);

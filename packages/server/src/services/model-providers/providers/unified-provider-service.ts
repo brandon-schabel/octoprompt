@@ -208,7 +208,7 @@ export class UnifiedProviderService {
             const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
             const matched = text.match(tripleBacktickRegex);
             const cleanedText = matched ? matched[1].trim() : text.trim();
-            
+
             return JSON.parse(cleanedText);
         } catch (error) {
             return null;
@@ -243,12 +243,20 @@ export class UnifiedProviderService {
         let structuredResponse: any = null;
         const isStructuredOutput = options?.response_format?.type === "json_schema";
 
+
         // 3) Stream SSE
         return createSSEStream({
+            debug: {
+                plugin: true,
+            },
             userMessage,
             systemMessage,
             plugin,
-            options,
+            options: {
+                ...options,
+                referrer: 'http://octoprompt.com',
+                title: 'OctoPrompt',
+            },
             handlers: {
                 onSystemMessage: async (msg) => {
                     console.log("[ProviderService] systemMessage:", msg.content);
@@ -258,7 +266,7 @@ export class UnifiedProviderService {
                 },
                 onPartial: async (partial) => {
                     fullResponse += partial.content;
-                    
+
                     // For structured output, try to parse each chunk
                     if (isStructuredOutput) {
                         const parsed = this.tryParseStructuredResponse(fullResponse);
@@ -280,7 +288,7 @@ export class UnifiedProviderService {
                 },
                 onDone: async (final) => {
                     fullResponse = final.content;
-                    
+
                     // For structured output, ensure we have valid JSON at the end
                     if (isStructuredOutput) {
                         const parsed = this.tryParseStructuredResponse(fullResponse);
@@ -289,7 +297,7 @@ export class UnifiedProviderService {
                             fullResponse = JSON.stringify(structuredResponse, null, 2);
                         }
                     }
-                    
+
                     // Update one last time with the final content
                     await this.chatService.updateMessageContent(
                         assistantMessageId,
