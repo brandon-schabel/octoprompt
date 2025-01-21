@@ -3,6 +3,7 @@ import {
     tickets,
     ticketFiles,
     ticketTasks,
+    files,
     type Ticket,
     type TicketFile,
     type NewTicket,
@@ -79,13 +80,14 @@ export class TicketService {
             overview: data.overview ?? "",
             status: data.status ?? "open",
             priority: data.priority ?? "normal",
+            suggestedFileIds: data.suggestedFileIds
+                ? JSON.stringify(data.suggestedFileIds)
+                : "[]",
         };
 
         const [created] = await db.insert(tickets)
             .values(newItem)
             .returning();
-
-
 
         return created;
     }
@@ -111,15 +113,43 @@ export class TicketService {
     }
 
     async updateTicket(ticketId: string, data: UpdateTicketBody): Promise<Ticket | null> {
-        const [updated] = await db.update(tickets)
+        const existing = await this.getTicketById(ticketId);
+        if (!existing) {
+            return null;
+        }
+
+        let suggestedFileIds: string | undefined;
+        if (data.suggestedFileIds) {
+            const allIds = data.suggestedFileIds;
+            const foundFiles = await db
+                .select({ id: files.id })
+                .from(files)
+                .where(inArray(files.id, allIds));
+            const foundIds = new Set(foundFiles.map((f) => f.id));
+            const invalids = allIds.filter((id) => !foundIds.has(id));
+            if (invalids.length) {
+                throw new ApiError(
+                    `Some fileIds no longer exist on disk: ${invalids.join(", ")}`,
+                    400,
+                    "INVALID_FILE_IDS"
+                );
+            }
+
+            suggestedFileIds = JSON.stringify(allIds);
+        }
+
+        const [updated] = await db
+            .update(tickets)
             .set({
-                ...data,
+                title: data.title ?? existing.title,
+                overview: data.overview ?? existing.overview,
+                status: data.status ?? existing.status,
+                priority: data.priority ?? existing.priority,
+                suggestedFileIds: suggestedFileIds ?? existing.suggestedFileIds,
                 updatedAt: new Date(),
             })
             .where(eq(tickets.id, ticketId))
             .returning();
-
-
 
         return updated ?? null;
     }
@@ -131,7 +161,6 @@ export class TicketService {
         const [deleted] = await db.delete(tickets)
             .where(eq(tickets.id, ticketId))
             .returning();
-
 
         return !!deleted;
     }
@@ -477,6 +506,7 @@ export class TicketService {
                 overview: tickets.overview,
                 status: tickets.status,
                 priority: tickets.priority,
+                suggestedFileIds: tickets.suggestedFileIds,
                 createdAt: tickets.createdAt,
                 updatedAt: tickets.updatedAt,
                 taskCount: sql<number>`COUNT(${ticketTasks.id})`.as("taskCount"),
@@ -496,6 +526,7 @@ export class TicketService {
             overview: r.overview,
             status: r.status,
             priority: r.priority,
+            suggestedFileIds: r.suggestedFileIds,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
             taskCount: Number(r.taskCount || 0),
@@ -555,6 +586,30 @@ export class TicketService {
         }));
 
         return results;
+    }
+
+    /**
+     * Helper to parse suggestedFileIds from a ticket
+     */
+    private parseSuggestedFileIds(ticket: Ticket): string[] {
+        try {
+            return JSON.parse(ticket.suggestedFileIds || "[]");
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Get a ticket with its suggested file IDs parsed
+     */
+    async getTicketWithSuggestedFiles(ticketId: string): Promise<(Ticket & { parsedSuggestedFileIds: string[] }) | null> {
+        const ticket = await this.getTicketById(ticketId);
+        if (!ticket) return null;
+
+        return {
+            ...ticket,
+            parsedSuggestedFileIds: this.parseSuggestedFileIds(ticket)
+        };
     }
 
 }

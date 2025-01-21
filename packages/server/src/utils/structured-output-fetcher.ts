@@ -33,7 +33,7 @@ export interface StructuredOutputRequest<T> {
     };
 
     /**
-     * Name for the structured output block, used in OpenRouter’s `response_format.json_schema`.
+     * Name for the structured output block, used in OpenRouter's `response_format.json_schema`.
      */
     schemaName?: string;
 
@@ -137,13 +137,21 @@ export async function fetchStructuredOutput<T>(
 
 /**
  * Utility function that strips triple backticks (e.g., ```json ... ```).
+ * Also removes any JSON comments before returning.
  * If there's no backtick wrapping, returns the original string.
  */
 function stripTripleBackticks(text: string): string {
+    // First strip triple backticks if they exist
     const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
     const match = text.match(tripleBacktickRegex);
-    if (match) {
-        return match[1].trim();
-    }
-    return text.trim();
+    const content = match ? match[1].trim() : text.trim();
+
+    // Then remove both single-line and multi-line comments
+    // This handles: 
+    // 1. Single line comments: // comment
+    // 2. Multi-line comments: /* comment */
+    // 3. Trailing commas with comments: "key": "value", // comment
+    return content
+        .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '') // Remove comments
+        .replace(/,(\s*[}\]])/g, '$1'); // Fix any trailing commas that might be left
 }

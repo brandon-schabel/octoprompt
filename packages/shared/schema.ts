@@ -224,6 +224,13 @@ export const tickets = sqliteTable("tickets", {
     overview: text("overview").default(""),
     status: text("status").default("open"),   // e.g. "open", "in_progress", "closed"
     priority: text("priority").default("normal"), // e.g. "low", "normal", "high"
+
+    /**
+     * NEW FIELD: suggestedFileIds - a JSON string storing an array of file IDs.
+     * Because SQLite doesn't have an array type, we store it as JSON text.
+     */
+    suggestedFileIds: text("suggested_file_ids").default("[]"),
+
     createdAt: integer("created_at", { mode: "timestamp" })
         .default(sql`CURRENT_TIMESTAMP`)
         .notNull(),

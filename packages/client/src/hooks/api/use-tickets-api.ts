@@ -357,3 +357,50 @@ export function useListTicketsWithTasks(
         enabled: !!projectId,
     });
 }
+
+export function useUpdateTicketSuggestedFiles() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ ticketId, suggestedFileIds }: { ticketId: string; suggestedFileIds: string[] }) => {
+            const response = await fetch(`/api/tickets/${ticketId}/suggested-files`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ suggestedFileIds }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to update ticket suggested files");
+            }
+
+            const data = await response.json();
+            return data.ticket;
+        },
+        onSuccess: (ticket) => {
+            // Invalidate all ticket queries to ensure UI updates
+            queryClient.invalidateQueries({ queryKey: TICKET_KEYS.all });
+        },
+    });
+}
+
+export type SuggestFilesResponse = {
+    success: boolean;
+    recommendedFileIds?: string[];
+    combinedSummaries?: string;
+    message?: string;
+}
+
+export function useSuggestFilesForTicket(ticketId: string) {
+    const { api } = useApi();
+
+    return useMutation<SuggestFilesResponse, Error, { extraUserInput?: string }>({
+        mutationFn: async ({ extraUserInput }) => {
+            const response = await api.request(`/api/tickets/${ticketId}/suggest-files`, {
+                method: 'POST',
+                body: { extraUserInput },
+            });
+            return response.json();
+        },
+        onError: commonErrorHandler,
+    });
+}

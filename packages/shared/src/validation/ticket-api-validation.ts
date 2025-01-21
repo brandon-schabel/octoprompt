@@ -7,6 +7,7 @@ export const createTicketSchema = z.object({
     overview: z.string().default(""),
     status: z.enum(["open", "in_progress", "closed"]).default("open"),
     priority: z.enum(["low", "normal", "high"]).default("normal"),
+    suggestedFileIds: z.array(z.string()).optional(),
 });
 
 export const updateTicketSchema = z.object({
@@ -14,6 +15,7 @@ export const updateTicketSchema = z.object({
     overview: z.string().optional(),
     status: z.enum(["open", "in_progress", "closed"]).optional(),
     priority: z.enum(["low", "normal", "high"]).optional(),
+    suggestedFileIds: z.array(z.string()).optional(),
 });
 
 export const linkFilesSchema = z.object({
@@ -44,6 +46,10 @@ export const reorderTasksSchema = z.object({
     ),
 });
 
+export const updateSuggestedFilesSchema = z.object({
+    suggestedFileIds: z.array(z.string()).nonempty(),
+});
+
 export const ticketsApiValidation = {
     create: {
         body: createTicketSchema
@@ -67,6 +73,12 @@ export const ticketsApiValidation = {
     },
     suggestTasks: {
         body: suggestTasksSchema,
+        params: z.object({
+            ticketId: z.string(),
+        })
+    },
+    updateSuggestedFiles: {
+        body: updateSuggestedFilesSchema,
         params: z.object({
             ticketId: z.string(),
         })

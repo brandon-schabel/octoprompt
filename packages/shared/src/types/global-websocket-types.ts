@@ -95,7 +95,14 @@ export interface TicketUpdatedMessage extends BaseMessage {
 export interface TicketDeletedMessage extends BaseMessage {
     type: "ticket_deleted";
     ticketId: string;
-    projectId: string; // so clients know which project’s ticket was deleted
+    projectId: string; // so clients know which project's ticket was deleted
+}
+
+export interface CreateProjectTabFromTicketMessage extends BaseMessage {
+    type: "create_project_tab_from_ticket";
+    tabId: string;
+    ticketId: string;
+    data: GlobalState["projectTabs"][string];
 }
 
 /** 
@@ -120,5 +127,6 @@ export type InboundMessage =
     | TicketCreatedMessage
     | TicketUpdatedMessage
     | TicketDeletedMessage
+    | CreateProjectTabFromTicketMessage
 
 export type { BaseMessage }

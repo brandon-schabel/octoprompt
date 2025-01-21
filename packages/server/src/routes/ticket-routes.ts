@@ -5,9 +5,14 @@ import { z } from "zod";
 import { TicketService } from "@/services/ticket-service";
 import { ApiError } from "shared";
 import { ticketsApiValidation } from "shared";
+import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
+import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
+import { FileSuggestionsZodSchema, FileSuggestionsJsonSchema } from "@/routes/suggest-files-routes";
 
 // Create an instance of the TicketService
 const ticketService = new TicketService();
+const openRouter = new OpenRouterProviderService();
+
 
 /**
  * POST /api/tickets
@@ -207,7 +212,7 @@ router.patch("/api/tickets/:ticketId/tasks/reorder", {
  */
 router.post("/api/tickets/:ticketId/auto-generate-tasks", {
     validation: {
-        params: z.object({ ticketId: z.string(),}),
+        params: z.object({ ticketId: z.string(), }),
     },
 }, async (_, { params }) => {
     const newTasks = await ticketService.autoGenerateTasksFromOverview(params.ticketId);
@@ -249,3 +254,74 @@ router.get("/api/projects/:projectId/tickets-with-tasks", {
         ticketsWithTasks,
     });
 });
+
+
+/**
+ * POST /api/tickets/:ticketId/suggest-files
+ * Suggest relevant files based on this ticket’s overview and tasks.
+ */
+router.post(
+    "/api/tickets/:ticketId/suggest-files",
+    {
+        validation: {
+            params: z.object({ ticketId: z.string() }),
+            body: z.object({ extraUserInput: z.string().optional() }),
+        },
+    },
+    async (_, { params, body }) => {
+        const { ticketId } = params;
+        const { extraUserInput } = body;
+
+        // 1) Fetch the ticket, including tasks if needed
+        const ticket = await ticketService.getTicketById(ticketId);
+        if (!ticket) {
+            throw new ApiError("Ticket not found", 404, "NOT_FOUND");
+        }
+        const tasks = await ticketService.getTasks(ticketId); // optional
+
+        // 2) Build userMessage from ticket’s data
+        const userMessage = `
+  Ticket Title: ${ticket.title}
+  Overview: ${ticket.overview}
+  Additional User Input: ${extraUserInput ?? ""}
+  Tasks:
+  ${tasks.map((t, i) => ` ${i + 1}) ${t.content}`).join("\n")}
+  
+  Now suggest relevant files for completing this ticket.
+  `;
+
+        // 3) LLM system prompt (similar to /suggest-files)
+        const systemPrompt = `
+  You are a code assistant that recommends relevant files based on a ticket’s overview and tasks.
+     You have a list of file summaries and a user request.
+
+      Return only valid JSON with the shape: {"fileIds": ["abc123", "def456"]}
+
+      Guidelines:
+      - For simple tasks: return max 5 files
+      - For complex tasks: return max 10 files
+      - For very complex tasks: return max 20 files
+      - Do not add comments in your response
+      - Strictly follow the JSON schema, do not add any additional properties or comments
+  `;
+
+        // 4) Use your structured-output-fetcher or direct parse
+        const result = await fetchStructuredOutput(openRouter, {
+            userMessage,
+            systemMessage: systemPrompt,
+            zodSchema: FileSuggestionsZodSchema,
+            // @ts-ignore
+            jsonSchema: FileSuggestionsJsonSchema,
+            schemaName: "TicketFileSuggestions",
+            model: "deepseek/deepseek-r1",
+            temperature: 0.2,
+            chatId: `ticket-${ticketId}-suggest-files`,
+        });
+
+        // e.g. result.fileIds: string[]
+        return json({
+            success: true,
+            recommendedFileIds: result.fileIds,
+        });
+    }
+);

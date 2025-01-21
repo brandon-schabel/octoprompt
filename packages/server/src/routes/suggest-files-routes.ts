@@ -13,14 +13,14 @@ const openRouterProviderService = new OpenRouterProviderService();
  * Zod schema for our final structured response:
  * { fileIds: string[] }
  */
-const FileSuggestionsZodSchema = z.object({
+export const FileSuggestionsZodSchema = z.object({
     fileIds: z.array(z.string())
 });
 
 /**
  * JSON Schema counterpart, passed to the model to enforce valid JSON output.
  */
-const FileSuggestionsJsonSchema = {
+export const FileSuggestionsJsonSchema = {
     type: "object",
     properties: {
         fileIds: {
@@ -61,7 +61,6 @@ router.post(
       You are a code assistant that recommends relevant files based on user input.
       You have a list of file summaries and a user request.
 
-      If you are unsure, return an empty array. 
       Return only valid JSON with the shape: {"fileIds": ["abc123", "def456"]}
 
       Guidelines:
