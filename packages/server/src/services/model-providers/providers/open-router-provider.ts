@@ -101,9 +101,13 @@ export class OpenRouterProviderService {
      */
     private tryParseStructuredResponse(text: string): any {
         try {
+            console.log('tryParseStructuredResponse', 'text', text);
             const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
+            console.log('tryParseStructuredResponse', 'tripleBacktickRegex', tripleBacktickRegex);
             const matched = text.match(tripleBacktickRegex);
+            console.log('tryParseStructuredResponse', 'matched', matched);
             const cleanedText = matched ? matched[1].trim() : text.trim();
+            console.log('tryParseStructuredResponse', 'cleanedText', cleanedText);
             const result = JSON.parse(cleanedText);
 
             return result;
@@ -140,7 +144,7 @@ export class OpenRouterProviderService {
         let structuredResponse: any = null;
 
         return createSSEStream({
-            // debug: true,
+            debug: true,
             userMessage,
             systemMessage,
             plugin,
@@ -152,6 +156,9 @@ export class OpenRouterProviderService {
             handlers: {
                 onPartial: async (partial) => {
                     fullResponse += partial.content;
+
+
+                    console.log('onPartial', 'fullResponse', fullResponse); 
 
 
                     if (isStructured) {
@@ -171,6 +178,8 @@ export class OpenRouterProviderService {
                     }
                 },
                 onDone: async (final) => {
+
+                    console.log('onDone', 'final', final);
 
 
                     fullResponse = final.content;

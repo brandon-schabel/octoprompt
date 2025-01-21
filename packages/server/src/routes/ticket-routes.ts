@@ -207,7 +207,7 @@ router.patch("/api/tickets/:ticketId/tasks/reorder", {
  */
 router.post("/api/tickets/:ticketId/auto-generate-tasks", {
     validation: {
-        params: z.object({ ticketId: z.string() }),
+        params: z.object({ ticketId: z.string(),}),
     },
 }, async (_, { params }) => {
     const newTasks = await ticketService.autoGenerateTasksFromOverview(params.ticketId);

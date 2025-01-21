@@ -41,3 +41,5 @@ export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher
 
 export * from './schema'
 export * from './src/types/global-websocket-types';
+
+export { buildCombinedFileSummaries } from './src/utils/summary-formatter';

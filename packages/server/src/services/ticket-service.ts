@@ -16,10 +16,41 @@ import {
 } from "shared";
 import { CreateTicketBody, UpdateTicketBody } from "shared";
 import { ApiError } from "shared";
-import { getState } from "@/websocket/websocket-config";  // if you use that for global state
 import type { InferSelectModel } from "drizzle-orm";
-import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
 import { OpenRouterProviderService } from "./model-providers/providers/open-router-provider";
+import { promptsMap } from "@/utils/prompts-map";
+import { getFullProjectSummary } from "@/utils/get-full-project-summary";
+
+
+
+const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
+{
+  "tasks": [
+    {
+      "title": "Task title here",
+      "description": "Optional description here"
+    }
+  ]
+}`;
+
+
+
+export const defeaultTaskPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
+Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
+Focus on technical implementation tasks, testing, and validation steps.
+Each task should be clear and actionable.
+
+${validTaskFormatPrompt}
+`;
+
+
+
+// export const octopromptPlanningPrompt = `
+// ${promptsMap.octopromptPlanningMetaPrompt}
+
+// ${defeaultTaskPrompt}
+// `
+
 
 export function stripTripleBackticks(text: string): string {
     // This regex captures everything inside the first ```json ... ``` block
@@ -135,6 +166,8 @@ export class TicketService {
             throw new Error(`Ticket ${ticketId} not found`);
         }
 
+        const projectId = ticket.projectId
+
         console.log("[TicketService] Found ticket:", {
             id: ticket.id,
             title: ticket.title,
@@ -162,25 +195,23 @@ export class TicketService {
             additionalProperties: false,
         };
 
-        const systemPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
-    Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
-    Focus on technical implementation tasks, testing, and validation steps.
-    Each task should be clear and actionable.
-    
-    IMPORTANT: Return ONLY valid JSON matching this schema:
-    {
-      "tasks": [
-        {
-          "title": "Task title here",
-          "description": "Optional description here"
-        }
-      ]
-    }`;
+
+        const systemPrompt = defeaultTaskPrompt
+        // const systemPrompt = octopromptPlanningPrompt
+
+        const projectSummary = await getFullProjectSummary(projectId)
 
         const userMessage = `Please suggest tasks for this ticket:
     Title: ${ticket.title}
     Overview: ${ticket.overview}
-    ${userContext ? `Additional Context: ${userContext}` : ''}`;
+
+    UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
+
+    Below is a combined summary of project files:
+    ${projectSummary}
+    `;
+
+
 
         console.log("[TicketService] Preparing LLM request:", {
             systemPrompt,
@@ -195,7 +226,7 @@ export class TicketService {
                 userMessage,
                 provider: "openrouter",
                 options: {
-                    model: "deepseek/deepseek-chat",
+                    model: "deepseek/deepseek-r1",
                     temperature: 0.2,
                     response_format: {
                         type: "json_schema",

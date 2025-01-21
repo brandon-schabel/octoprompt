@@ -12,6 +12,7 @@ import "@/routes/open-ai-routes";
 import "@/routes/code-editor-routes";
 import "@/routes/promptimizer-routes";
 import "@/routes/ticket-routes";
+import "@/routes/suggest-files-routes";
 
 import { globalStateSchema } from "shared";
 import { json } from "@bnk/router";
@@ -22,6 +23,7 @@ import { ProjectService } from "@/services/project-service";
 import { getState, setState } from "./src/websocket/websocket-config";
 import { bnkWsManager } from "./src/websocket/websocket-manager";
 import { logger } from "src/utils/logger";
+import { CleanupService } from "@/services/file-services/cleanup-service";
 
 const isDevEnv = process.env.DEV === 'true';
 // built client files
@@ -37,11 +39,15 @@ const DEV_PORT = 3000;
 const PROD_PORT = 3579;
 const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
 
+const fileSyncService = new FileSyncService();
+const fileSummaryService = new FileSummaryService();
+const projectService = new ProjectService();
+
 // Instantiate watchers manager
 const watchersManager = new WatchersManager(
-  new FileSummaryService(),
-  new FileSyncService(),
-  new ProjectService()
+  fileSummaryService,
+  fileSyncService,
+  projectService
 );
 
 export const instantiateServer = ({
@@ -168,6 +174,12 @@ export const instantiateServer = ({
         "*.tmp",
         "*.db-journal"
       ]);
+
+      // 5) Start the cleanup service to run periodically (e.g., every 5 minutes)
+      const cleanupService = new CleanupService(fileSyncService, projectService, {
+        intervalMs: 5 * 60 * 1000
+      });
+      cleanupService.start();
     }
   })();
 
