@@ -227,6 +227,9 @@ Specifically, cover the following:
 - Your output must be strictly textual, focusing only on the essential information about the file.
 - Avoid any filler words or phases, just get straight to the information, use abbreviations, use symbols instead of words when necessary
 - Output the compressed prompt in a code-like format for clarity, ensuring each essential piece of information remains accessible.
+- abreviate typescript types string -> str, number -> num, boolean -> bool, array -> arr, object -> obj, function -> fn, any -> any
+- avoid using filler words like "the file" or "the code", use symbols instead of words when necessary to reduce verbosity
+- summaries of variables and functions must be extremly brief, only include the most important details
 `;
             const userMessage = fileContent.slice(0, 50000);
 

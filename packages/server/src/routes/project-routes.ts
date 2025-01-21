@@ -5,13 +5,9 @@ import { json } from '@bnk/router';
 import { projectsApiValidation, ApiError, buildCombinedFileSummaries } from "shared";
 import { z } from "zod";
 import { FileSummaryService } from "@/services/file-services/file-summary-service";
-import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
-import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 
 const projectService = new ProjectService();
 const fileSummaryService = new FileSummaryService();
-const openRouterProviderService = new OpenRouterProviderService();
 
 router.post("/api/projects", {
     validation: projectsApiValidation.create,
