@@ -1,6 +1,6 @@
 # Server
 
-A TypeScript server built with Bun, featuring authentication, Stripe integration, and a service-oriented architecture.
+A TypeScript server built with Bun
 
 ## Getting Started
 
@@ -20,6 +20,7 @@ bun test
 The server follows a service-oriented architecture with clear separation of concerns:
 
 ### Directory Structure
+
 ```
 server/
 ├── src/
@@ -45,7 +46,6 @@ server/
 2. **Routes Layer** (`/src/routes/`)
    - API endpoint definitions
    - Request validation using Zod
-   - Authentication middleware
    - Routes are grouped by feature
 
 3. **Database Layer**
@@ -70,6 +70,7 @@ describe('Auth Operations', () => {
 ```
 
 Key testing principles:
+
 - Tests run against a real server instance
 - Each test suite handles its own cleanup
 - Helpers for common operations (e.g., `ensureLoggedOut`)
@@ -80,6 +81,7 @@ Key testing principles:
 ### Setting Up Stripe Webhooks
 
 1. **Get Webhook Secret**
+
    ```bash
    # Install Stripe CLI
    brew install stripe/stripe-cli/stripe
@@ -92,6 +94,7 @@ Key testing principles:
    ```
 
 2. **Configure Environment**
+
    ```env
    STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
    ```
@@ -108,6 +111,7 @@ Key testing principles:
 ### Local Development with Stripe
 
 1. **Forward Webhooks**
+
    ```bash
    # Start webhook forwarding
    stripe listen --forward-to localhost:3000/api/webhook/stripe
@@ -117,12 +121,14 @@ Key testing principles:
    ```
 
 2. **Test Webhooks**
+
    ```bash
    # Trigger test events
    stripe trigger payment_intent.succeeded
    ```
 
 3. **Monitor Webhook Events**
+
    ```bash
    # View webhook logs
    stripe webhooks logs
@@ -131,12 +137,14 @@ Key testing principles:
 ### Webhook Implementation
 
 The webhook handler (`/src/routes/subscription/webhook-routes.ts`):
+
 1. Verifies Stripe signature
 2. Routes events to appropriate handlers
 3. Updates database accordingly
 4. Handles errors gracefully
 
 Example webhook flow:
+
 ```typescript
 router.post({
     path: '/api/webhook/stripe',
@@ -157,6 +165,7 @@ router.post({
 ## Environment Variables
 
 Required environment variables:
+
 ```env
 DATABASE_URL=
 JWT_SECRET=
@@ -167,24 +176,27 @@ STRIPE_WEBHOOK_SECRET=
 ## Development Workflow
 
 1. **Start the Server**
+
    ```bash
    bun run server.ts
    ```
 
 2. **Run Tests**
+
    ```bash
    bun test          # Run all tests
    bun test e2e     # Run e2e tests only
    ```
 
 3. **Database Migrations**
+
    ```bash
    bun run migrate
    ```
 
 ## API Documentation
 
-The server uses a strongly-typed router with built-in validation, authentication, and error handling. Here's an example route implementation:
+The server uses a strongly-typed router with built-in validation, and error handling. Here's an example route implementation:
 
 ```typescript
 // Define validation schemas
@@ -251,6 +263,7 @@ router.post(
 ### Router Features
 
 1. **Type-Safe Validation**
+
    ```typescript
    const validation = {
        create: {
@@ -261,19 +274,8 @@ router.post(
    } as const;
    ```
 
-2. **Authentication**
-   ```typescript
-   router.get(
-       '/api/protected',
-       { auth: true },  // Requires authentication
-       async (req) => {
-           const userId = req.auth!.userId;  // Typed auth data
-           return json({ userId });
-       }
-   );
-   ```
-
 3. **Error Handling**
+
    ```typescript
    try {
        // Route logic
@@ -283,6 +285,7 @@ router.post(
    ```
 
 4. **Response Helpers**
+
    ```typescript
    // JSON responses with proper typing
    return json(data, { 
@@ -296,6 +299,7 @@ router.post(
 Each route can specify:
 
 1. **Path Parameters**
+
    ```typescript
    router.get(
        '/api/todos/:id',
@@ -313,6 +317,7 @@ Each route can specify:
    ```
 
 2. **Query Parameters**
+
    ```typescript
    router.get(
        '/api/todos',
@@ -331,6 +336,7 @@ Each route can specify:
    ```
 
 3. **Request Body**
+
    ```typescript
    router.post(
        '/api/todos',
@@ -435,6 +441,7 @@ router.post<typeof quizValidation.createQuiz>({
    - `headers`: Custom headers (optional)
 
 2. **Type Inference**
+
    ```typescript
    type RouteConfig = typeof quizValidation.createQuiz;
    type RequestBody = z.infer<RouteConfig['body']>;
@@ -442,6 +449,7 @@ router.post<typeof quizValidation.createQuiz>({
    ```
 
 3. **Error Handling**
+
    ```typescript
    // Automatic error responses for invalid data
    {
@@ -462,6 +470,7 @@ The server uses Drizzle ORM with TypeScript for full type safety from database t
 ### Schema Definition and Type Inference
 
 1. **Database Schema** (`schema.ts`):
+
 ```typescript
 export const questions = pgTable('questions', {
     id: uuid('id').defaultRandom().primaryKey(),
@@ -479,6 +488,7 @@ type Question = InferSelectModel<typeof questions>;
 ```
 
 2. **Service Layer** (`quiz-service.ts`):
+
 ```typescript
 import { questions, questionCategories } from "shared";
 import type { InferSelectModel } from "drizzle-orm";
@@ -506,6 +516,7 @@ export class QuizService {
    - TypeScript errors catch mismatches immediately
 
 2. **Input/Output Type Safety**
+
    ```typescript
    // Input types can extend schema types
    type CreateQuestionInput = Pick<Question, 
@@ -517,6 +528,7 @@ export class QuizService {
    ```
 
 3. **Query Type Safety**
+
    ```typescript
    // Drizzle provides type-safe query building
    const result = await db
@@ -576,6 +588,7 @@ router.post<typeof validation.createCategory>({
 ```
 
 This pattern ensures:
+
 - Full type safety from database to API
 - Runtime validation of all inputs
 - Automatic type updates when schema changes
@@ -587,6 +600,7 @@ This pattern ensures:
 The server implements a comprehensive testing strategy with both unit tests and end-to-end (E2E) tests.
 
 ### Test Structure
+
 ```
 server/
 ├── e2e/
@@ -628,6 +642,7 @@ The `package.json` includes various test commands:
 ### E2E Testing Flow
 
 1. **Setup Phase**
+
    ```bash
    # 1. Setup test database
    bun test:setup-db
@@ -640,12 +655,14 @@ The `package.json` includes various test commands:
    ```
 
 2. **Test Execution**
+
    ```bash
    # Run E2E tests
    bun test:e2e
    ```
 
 3. **Cleanup Phase**
+
    ```bash
    # Teardown test database
    bun test:teardown-db
@@ -689,22 +706,13 @@ describe('Auth Operations', () => {
         
         await ensureLoggedOut();
     });
-
-    test('protected route works when authenticated', async () => {
-        await authApi.login(testUser);
-        
-        const response = await api.request('/api/protected-resource', {
-            method: 'GET'
-        });
-        
-        expect(response.status).toBe(200);
-    });
 });
 ```
 
 ### Test Environment
 
 The E2E tests use:
+
 - Separate test database (specified in `.env.test`)
 - Test server running on port 3001
 - Clean database state for each test suite
@@ -723,6 +731,7 @@ The E2E tests use:
    - Environment isolation
 
 3. **Test Utilities**
+
    ```typescript
    // e2e/utils/get-auth-test-api.ts
    export const getAuthTescounttApi = () => {
@@ -735,6 +744,7 @@ The E2E tests use:
    ```
 
 4. **Test Lifecycle**
+
    ```typescript
    // Example test lifecycle
    beforeAll(async () => {
@@ -762,16 +772,7 @@ The E2E tests use:
    - Verify error responses
    - Check error message content
 
-3. **Authentication Testing**
-   ```typescript
-   test('protected route fails when not authenticated', async () => {
-       await ensureLoggedOut();
-       const response = await api.request('/api/protected-resource');
-       expect(response.status).toBe(401);
-   });
-   ```
-
-4. **Data Verification**
+3. **Data Verification**
    - Check database state after operations
    - Verify response formats
    - Test data relationships

@@ -57,6 +57,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // 3) Finding Suggested Files mutation
         const findSuggestedFilesMutation = useFindSuggestedFiles(selectedProjectId)
+        
         function handleFindSuggestedFiles(userPrompt: string) {
             if (!userPrompt.trim()) {
                 alert("Please enter a prompt!")

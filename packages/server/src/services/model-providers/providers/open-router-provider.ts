@@ -5,16 +5,9 @@ import {
     StreamParams,
     ProcessMessageParams,
 } from "./unified-provider-types";
-import { createSSEStream, OpenRouterPlugin, OpenRouterStructuredPlugin } from "@bnk/ai"; // or your SSE streaming helper
+import { createSSEStream, OpenRouterPlugin, OpenRouterStructuredPlugin } from "@bnk/ai";
 
-const debug = {
-    log: (context: string, message: string, data?: any) => {
-        console.log(`[OpenRouterProviderService:${context}]`, message, data ? data : '');
-    },
-    error: (context: string, message: string, error?: any) => {
-        console.error(`[OpenRouterProviderService:${context}]`, message, error ? error : '');
-    }
-};
+
 
 export class OpenRouterProviderService {
     private providerKeyService: ProviderKeyService;
@@ -22,7 +15,6 @@ export class OpenRouterProviderService {
     private openRouterKey: string | undefined;
 
     constructor() {
-        debug.log('constructor', 'Initializing OpenRouterProviderService');
         this.providerKeyService = new ProviderKeyService();
         this.chatService = new ChatService();
     }
@@ -32,19 +24,19 @@ export class OpenRouterProviderService {
      */
     private async initKey(): Promise<void> {
         if (this.openRouterKey) {
-            debug.log('initKey', 'Key already initialized');
+
             return;
         }
 
-        debug.log('initKey', 'Fetching OpenRouter API key');
+
         const keys = await this.providerKeyService.listKeys();
         this.openRouterKey = keys.find(k => k.provider === "openrouter")?.key;
 
         if (!this.openRouterKey) {
-            debug.error('initKey', 'OpenRouter API key not found');
+            console.error('initKey', 'OpenRouter API key not found');
             throw new Error("OpenRouter API key not found");
         }
-        debug.log('initKey', 'Successfully initialized OpenRouter API key');
+
     }
 
     /**
@@ -62,10 +54,10 @@ export class OpenRouterProviderService {
         let assistantMessageId: string | undefined;
 
         try {
-            debug.log('processMessage', 'Starting message processing', { chatId, tempId });
+
             await this.initKey();
 
-            debug.log('processMessage', 'Saving user message', { chatId });
+
             await this.chatService.saveMessage({
                 chatId,
                 role: "user",
@@ -73,7 +65,7 @@ export class OpenRouterProviderService {
             });
             await this.chatService.updateChatTimestamp(chatId);
 
-            debug.log('processMessage', 'Creating placeholder assistant message', { chatId });
+
             const initialAssistantMessage = await this.chatService.saveMessage({
                 chatId,
                 role: "assistant",
@@ -81,7 +73,7 @@ export class OpenRouterProviderService {
                 tempId,
             });
             assistantMessageId = initialAssistantMessage.id;
-            debug.log('processMessage', 'Created assistant message', { assistantMessageId });
+
 
             return this.streamMessage({
                 chatId,
@@ -92,7 +84,7 @@ export class OpenRouterProviderService {
                 systemMessage,
             });
         } catch (error) {
-            debug.error('processMessage', 'Error processing message', error);
+            console.error('processMessage', 'Error processing message', error);
             if (assistantMessageId) {
                 await this.chatService.updateMessageContent(
                     assistantMessageId,
@@ -113,10 +105,10 @@ export class OpenRouterProviderService {
             const matched = text.match(tripleBacktickRegex);
             const cleanedText = matched ? matched[1].trim() : text.trim();
             const result = JSON.parse(cleanedText);
-            debug.log('tryParseStructuredResponse', 'Successfully parsed JSON response');
+
             return result;
         } catch (error) {
-            debug.error('tryParseStructuredResponse', 'Failed to parse JSON response', error);
+            console.error('tryParseStructuredResponse', 'Failed to parse JSON response', error);
             return null;
         }
     }
@@ -139,12 +131,6 @@ export class OpenRouterProviderService {
         options?: StreamParams["options"];
         tempId?: string;
     }): Promise<ReadableStream<Uint8Array>> {
-        debug.log('streamMessage', 'Starting message stream', {
-            chatId,
-            assistantMessageId,
-            isStructured: options?.response_format?.type === "json_schema"
-        });
-
         const isStructured = options?.response_format?.type === "json_schema";
         const plugin = isStructured
             ? new OpenRouterStructuredPlugin(this.openRouterKey!)
@@ -164,23 +150,13 @@ export class OpenRouterProviderService {
                 title: 'OctoPrompt',
             },
             handlers: {
-                onSystemMessage: async (msg) => {
-                    debug.log('streamMessage:onSystemMessage', msg.content);
-                },
-                onUserMessage: async (msg) => {
-                    debug.log('streamMessage:onUserMessage', msg.content);
-                },
                 onPartial: async (partial) => {
                     fullResponse += partial.content;
-                    debug.log('streamMessage:onPartial', 'Received partial response', {
-                        length: partial.content.length,
-                        totalLength: fullResponse.length
-                    });
+
 
                     if (isStructured) {
                         const parsed = this.tryParseStructuredResponse(fullResponse);
                         if (parsed) {
-                            debug.log('streamMessage:onPartial', 'Updated structured response');
                             structuredResponse = parsed;
                             await this.chatService.updateMessageContent(
                                 assistantMessageId,
@@ -195,9 +171,7 @@ export class OpenRouterProviderService {
                     }
                 },
                 onDone: async (final) => {
-                    debug.log('streamMessage:onDone', 'Stream completed', {
-                        finalLength: final.content.length
-                    });
+
 
                     fullResponse = final.content;
                     if (isStructured) {
@@ -205,20 +179,16 @@ export class OpenRouterProviderService {
                         if (parsed) {
                             structuredResponse = parsed;
                             fullResponse = JSON.stringify(parsed, null, 2);
-                            debug.log('streamMessage:onDone', 'Final structured response parsed');
                         }
                     }
                     await this.chatService.updateMessageContent(
                         assistantMessageId,
                         fullResponse
                     );
-                    debug.log('streamMessage:onDone', 'Final response saved');
                 },
                 onError: async (err, partialSoFar) => {
-                    debug.error('streamMessage:onError', 'Stream error occurred', err);
                     if (partialSoFar.content) {
                         fullResponse = partialSoFar.content;
-                        debug.log('streamMessage:onError', 'Saving partial response before error');
                         await this.chatService.updateMessageContent(
                             assistantMessageId,
                             fullResponse

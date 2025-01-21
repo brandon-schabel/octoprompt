@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
     Card,
     CardHeader,
@@ -25,6 +26,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { useMutation } from "@tanstack/react-query"
 
 /**
  * We no longer import FileSummary. The combined schema means we use ProjectFile and read the .summary field.
@@ -136,6 +138,7 @@ function ProjectSummarizationSettingsPage() {
     const settings = state.settings
     const projectActiveTabId = state.projectActiveTabId
     const selectedProjectId = projectActiveTabId && state.projectTabs[projectActiveTabId]?.selectedProjectId
+    const isProjectSummarizationEnabled = selectedProjectId ? settings.summarizationEnabledProjectIds.includes(selectedProjectId) : false
 
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
     const [expandedSummaryFileId, setExpandedSummaryFileId] = useState<string | null>(null)
@@ -165,6 +168,7 @@ function ProjectSummarizationSettingsPage() {
     }, [summaries])
 
     // 3) Summarize selected files
+    console.log({selectedProjectId})
     const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? "")
     const resummarizeAllMutation = useResummarizeAllFiles(selectedProjectId ?? "")
 
@@ -223,9 +227,23 @@ function ProjectSummarizationSettingsPage() {
             alert("No files selected!")
             return
         }
-        summarizeMutation.mutate(selectedFileIds, {
+
+        summarizeMutation.mutate({ fileIds: selectedFileIds }, {
             onSuccess: (resp) => {
                 alert(resp.summary || "Summaries updated!")
+            },
+        })
+    }
+
+    function handleForceSummarize() {
+        if (!selectedFileIds.length) {
+            alert("No files selected!")
+            return
+        }
+
+        summarizeMutation.mutate({ fileIds: selectedFileIds, force: true }, {
+            onSuccess: (resp) => {
+                alert(resp.message || "Files force re-summarized!")
             },
         })
     }
@@ -256,10 +274,37 @@ function ProjectSummarizationSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    <div className="space-y-2 mb-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="text-sm font-medium">Enable Summarization</span>
+                                <p className="text-sm text-muted-foreground">
+                                    When enabled, files will be automatically summarized when added to the context.
+                                </p>
+                            </div>
+                            <Switch
+                                checked={isProjectSummarizationEnabled}
+                                onCheckedChange={(check) => {
+                                    if (!selectedProjectId) return
+                                    updateSettings(prev => ({
+                                        ...prev,
+                                        summarizationEnabledProjectIds: check
+                                            ? [...prev.summarizationEnabledProjectIds, selectedProjectId]
+                                            : prev.summarizationEnabledProjectIds.filter(id => id !== selectedProjectId)
+                                    }))
+                                }}
+                            />
+                        </div>
+                    </div>
+
                     {/* Sort-by dropdown */}
                     <div className="mb-4 flex items-center gap-2">
                         <label>Sort By:</label>
-                        <Select value={sortBy} onValueChange={(value) => setSortBy(value as "name" | "lastSummarized")}>
+                        <Select 
+                            value={sortBy} 
+                            onValueChange={(value) => setSortBy(value as "name" | "lastSummarized")}
+                            disabled={!isProjectSummarizationEnabled}
+                        >
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Sort by..." />
                             </SelectTrigger>
@@ -283,29 +328,31 @@ function ProjectSummarizationSettingsPage() {
 
                     {/* Patterns */}
                     <h3 className="text-sm font-medium">Ignore Patterns</h3>
-                    <PatternList
-                        patterns={ignorePatterns}
-                        onAdd={(pattern) =>
-                            updateSettings((prev) => ({
-                                ...prev,
-                                summarizationIgnorePatterns: [...prev.summarizationIgnorePatterns, pattern],
-                            }))
-                        }
-                        onRemove={(pattern) =>
-                            updateSettings((prev) => ({
-                                ...prev,
-                                summarizationIgnorePatterns: prev.summarizationIgnorePatterns.filter((p) => p !== pattern),
-                            }))
-                        }
-                        onUpdate={(oldP, newP) =>
-                            updateSettings((prev) => ({
-                                ...prev,
-                                summarizationIgnorePatterns: prev.summarizationIgnorePatterns.map((p) =>
-                                    p === oldP ? newP : p
-                                ),
-                            }))
-                        }
-                    />
+                    <div className={!isProjectSummarizationEnabled ? "opacity-50 pointer-events-none" : ""}>
+                        <PatternList
+                            patterns={ignorePatterns}
+                            onAdd={(pattern) =>
+                                updateSettings((prev) => ({
+                                    ...prev,
+                                    summarizationIgnorePatterns: [...prev.summarizationIgnorePatterns, pattern],
+                                }))
+                            }
+                            onRemove={(pattern) =>
+                                updateSettings((prev) => ({
+                                    ...prev,
+                                    summarizationIgnorePatterns: prev.summarizationIgnorePatterns.filter((p) => p !== pattern),
+                                }))
+                            }
+                            onUpdate={(oldP, newP) =>
+                                updateSettings((prev) => ({
+                                    ...prev,
+                                    summarizationIgnorePatterns: prev.summarizationIgnorePatterns.map((p) =>
+                                        p === oldP ? newP : p
+                                    ),
+                                }))
+                            }
+                        />
+                    </div>
 
                     <div className="mt-6 grid grid-cols-2 gap-4">
                         <div>
@@ -315,6 +362,7 @@ function ProjectSummarizationSettingsPage() {
                                     <Checkbox
                                         id="select-all"
                                         checked={selectedFileIds.length === includedFiles.length}
+                                        disabled={!isProjectSummarizationEnabled}
                                         onCheckedChange={(checked) => {
                                             if (checked) {
                                                 setSelectedFileIds(includedFiles.map(f => f.id))
@@ -328,7 +376,7 @@ function ProjectSummarizationSettingsPage() {
                                     </label>
                                 </div>
                             </div>
-                            <ul className="mt-2 space-y-1">
+                            <ul className={`mt-2 space-y-1 ${!isProjectSummarizationEnabled ? "opacity-50" : ""}`}>
                                 {includedFiles.map((file) => {
                                     const fileRecord = summariesMap.get(file.id)
                                     const hasSummary = !!fileRecord?.summary
@@ -342,6 +390,7 @@ function ProjectSummarizationSettingsPage() {
                                                 <Checkbox
                                                     id={file.id}
                                                     checked={selectedFileIds.includes(file.id)}
+                                                    disabled={!isProjectSummarizationEnabled}
                                                     onCheckedChange={() => toggleFileSelection(file.id)}
                                                 />
                                                 <label
@@ -359,6 +408,7 @@ function ProjectSummarizationSettingsPage() {
                                                     <button
                                                         className="flex items-center gap-1 text-blue-600 hover:underline"
                                                         onClick={() => handleToggleSummary(file.id)}
+                                                        disabled={!isProjectSummarizationEnabled}
                                                     >
                                                         <Info className="h-4 w-4" />
                                                         View
@@ -379,21 +429,21 @@ function ProjectSummarizationSettingsPage() {
                             <div className="mt-4 flex gap-2">
                                 <Button
                                     onClick={handleSummarize}
-                                    disabled={selectedFileIds.length === 0 || summarizeMutation.isPending}
+                                    disabled={selectedFileIds.length === 0 || summarizeMutation.isPending || !isProjectSummarizationEnabled}
                                 >
                                     {summarizeMutation.isPending ? "Summarizing..." : "Summarize Selected Files"}
                                 </Button>
-                                {/* <Button
+                                <Button
                                     variant="outline"
-                                    onClick={handleResummarizeAll}
-                                    disabled={resummarizeAllMutation.isPending}
+                                    onClick={handleForceSummarize}
+                                    disabled={selectedFileIds.length === 0 || summarizeMutation.isPending || !isProjectSummarizationEnabled}
                                 >
-                                    {resummarizeAllMutation.isPending ? "Processing..." : "Resummarize All Files"}
-                                </Button> */}
+                                    {summarizeMutation.isPending ? "Re-summarizing..." : "Force Re-summarize Selected"}
+                                </Button>
                             </div>
                         </div>
 
-                        <div>
+                        <div className={!isProjectSummarizationEnabled ? "opacity-50" : ""}>
                             <h3 className="text-sm font-semibold">Excluded Files</h3>
                             <ul className="mt-2 list-inside list-disc space-y-1 pl-4">
                                 {excludedFiles.map((file) => (

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 
-import { ModelSelector } from "./components/model-selector"
 import { APIProviders } from "shared"
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api"
 import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"

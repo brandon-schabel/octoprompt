@@ -3,7 +3,6 @@ import { files } from 'shared/schema'
 import { eq, and, inArray } from 'drizzle-orm'
 import { ProjectFile as ProjectFileType, GlobalState } from 'shared'
 import { matchesAnyPattern } from 'shared/src/utils/pattern-matcher'
-import { promptsMap } from '@/utils/prompts-map'
 import { UnifiedProviderService } from '../model-providers/providers/unified-provider-service'
 import { getState } from '@/websocket/websocket-config'
 
@@ -37,7 +36,7 @@ const shouldSummarizeFile = async (projectId: string, filePath: string): Promise
         }
     }
 
- 
+
 
     return true
 }
@@ -186,23 +185,32 @@ export class FileSummaryService {
             }
 
             const systemPrompt = `
-<SystemPrompt>
-You are a coding assistant that summarizes code. Summarize the content below in a concise bullet-list,
-highlight any exported or important functions, and mention how they might be used.
-</SystemPrompt>
+## You are a coding assistant that specializes in concise code summaries.
+Goal: Given a code file, your task is to create a short, essential overview of its contents.
 
-<SummarizationSteps>
-${promptsMap.summarizationSteps}
-</SummarizationSteps>
+Specifically, cover the following:
+1. A brief summary of what the file does.  
+2. Exported functions/classes: outline each one along with key inputs (parameters) and outputs (return values).  
+3. Any other critical information needed to understand the file's core functionality.
+
+**Rules**  
+- Do **not** provide suggestions for improvements or refactoring.  
+- Do **not** include code blocks.  
+- Your output must be strictly textual, focusing only on the essential information about the file.
 `
-            const userMessage = fileContent.slice(0, 10000)
+            const userMessage = fileContent.slice(0, 50000)
+
+            if (fileContent.length > 50000) {
+                console.warn(`[FileSummaryService] File content is too long for file: ${file.name}`)
+                return
+            }
 
             const stream = await this.unifiedProviderService.processMessage({
                 chatId: 'fileSummaryChat',
                 userMessage,
                 provider: 'openrouter',
                 options: {
-                    model: 'deepseek/deepseek-chat',
+                    model: 'mistralai/codestral-2501',
                     max_tokens: 1024,
                     temperature: 0.2,
                     // debug: true
@@ -240,5 +248,35 @@ ${promptsMap.summarizationSteps}
         } catch (error) {
             console.error('[FileSummaryService] Error summarizing file:', file.name, error)
         }
+    }
+
+    /**
+     * Force re-summarize specific files by ID, ignoring last update checks.
+     */
+    public async forceResummarizeSelectedFiles(
+        projectId: string,
+        filesToSummarize: ProjectFileType[],
+        globalState: GlobalState
+    ): Promise<{ included: number; skipped: number }> {
+        console.log(`[FileSummaryService] Force re-summarizing ${filesToSummarize.length} selected file(s) for project: ${projectId}`)
+
+        const chunks = chunkArray(filesToSummarize, this.concurrency)
+        let included = 0
+        let skipped = 0
+
+        for (const chunk of chunks) {
+            const chunkPromises = chunk.map(async (file) => {
+                if (await shouldSummarizeFile(projectId, file.path)) {
+                    await this.summarizeFile(file)
+                    return { included: true }
+                }
+                return { included: false }
+            })
+            const results = await Promise.all(chunkPromises)
+            included += results.filter(r => r.included).length
+            skipped += results.filter(r => !r.included).length
+        }
+
+        return { included, skipped }
     }
 }

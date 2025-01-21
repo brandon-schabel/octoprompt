@@ -134,6 +134,35 @@ export class ProjectService {
     }
 
     /**
+     * Force re-summarize a selected set of files by ID, ignoring last update checks.
+     */
+    async forceResummarizeSelectedFiles(projectId: string, fileIds: string[]) {
+        const selectedFiles = await db.select()
+            .from(files)
+            .where(
+                and(
+                    eq(files.projectId, projectId),
+                    inArray(files.id, fileIds),
+                )
+            );
+
+        if (!selectedFiles.length) {
+            return { included: 0, skipped: 0, message: "No matching files found" };
+        }
+
+        const globalState = await getState();
+        const result = await fileSummaryService.forceResummarizeSelectedFiles(
+            projectId,
+            selectedFiles,
+            globalState
+        );
+        return {
+            ...result,
+            message: "Selected files have been force re-summarized",
+        };
+    }
+
+    /**
      * Summarize a selected set of files by ID.
      */
     async summarizeSelectedFiles(projectId: string, fileIds: string[]) {

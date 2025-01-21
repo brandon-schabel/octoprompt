@@ -6,10 +6,12 @@ import { projectsApiValidation, ApiError } from "shared";
 import { z } from "zod";
 import { FileSummaryService } from "@/services/file-services/file-summary-service";
 import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
+import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
+import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 
 const projectService = new ProjectService();
 const fileSummaryService = new FileSummaryService();
-const unifiedProviderService = new UnifiedProviderService();
+const openRouterProviderService = new OpenRouterProviderService();
 
 router.post("/api/projects", {
     validation: projectsApiValidation.create,
@@ -98,25 +100,56 @@ router.post("/api/projects/:projectId/summarize", {
     validation: {
         body: z.object({
             fileIds: z.array(z.string()).nonempty(),
+            force: z.boolean().optional(),
         }),
         params: projectsApiValidation.sync.params,
     },
 }, async (_, { params, body }) => {
     const { projectId } = params;
-    const { fileIds } = body;
+    const { fileIds, force } = body;
 
     const project = await projectService.getProjectById(projectId);
     if (!project) {
         throw new ApiError("Project not found", 404, "NOT_FOUND");
     }
 
-    const result = await projectService.summarizeSelectedFiles(projectId, fileIds);
+    const result = force
+        ? await projectService.forceResummarizeSelectedFiles(projectId, fileIds)
+        : await projectService.summarizeSelectedFiles(projectId, fileIds);
+
     return json({
         success: true,
         ...result,
     });
 });
 
+/**
+ * Zod schema for our final structured response:
+ * { fileIds: string[] }
+ */
+const FileSuggestionsZodSchema = z.object({
+    fileIds: z.array(z.string())
+});
+
+/**
+ * JSON Schema counterpart, passed to the model to enforce valid JSON output.
+ */
+const FileSuggestionsJsonSchema = {
+    type: "object",
+    properties: {
+        fileIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "An array of file IDs relevant to the user input"
+        }
+    },
+    required: ["fileIds"],
+    additionalProperties: false
+};
+
+
+
+// const debugSuggestFiles = false;
 router.post("/api/projects/:projectId/suggest-files", {
     validation: {
         body: z.object({
@@ -150,104 +183,51 @@ router.post("/api/projects/:projectId/suggest-files", {
     combinedSummaries += "</all_summaries>\n";
 
     const systemPrompt = `
-    You are a code assistant that recommends relevant files based on user input.
-    You have a list of file summaries and a user request.
-    
-    **IMPORTANT**: Return only valid JSON containing an array of file IDs in the shape:
-    { "fileIds": ["abc123", "def456", ...] }
-    
-    No markdown, no code fences, no additional text.
-    If you are unsure, return an empty array.
+  You are a code assistant that recommends relevant files based on user input.
+  You have a list of file summaries and a user request.
+  
+  
+  
+  No markdown, no code fences, no additional text.
+  If you are unsure, return an empty array.
+  
+  Additionally, consider whether the user's request indicates creating or modifying a particular type of file (e.g., services, components). In such cases, also include related or similar files that may provide helpful patterns or context.
 
-    Additionally, consider whether the user’s request indicates creating or modifying a particular type of file (e.g., services, components). In such cases, also include related or similar files that may provide helpful patterns or contextual information.
-    `;
+  IMPORTANT: Return only valid JSON containing an array of file IDs in the shape:
+  {"fileIds": ["abc123", "def456"]}
+  `;
 
+    // Combine the user's question with the summaries
     const userMessage = `
-    User Query: ${userInput}
-    List of files with summaries:
-    ${combinedSummaries}
+  User Query: ${userInput}
+  List of files with summaries:
+  ${combinedSummaries}
     `;
 
-    console.log("finding suggestions for user input:", userInput);
-    console.log("systemPrompt", systemPrompt);
-    console.log("userMessage", userMessage);
+    console.log("[SuggestFiles] systemPrompt:", systemPrompt);
+    console.log("[SuggestFiles] userMessage:", userMessage);
 
     try {
-        const fileSchema = {
-            type: "object",
-            properties: {
-                fileIds: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "An array of file IDs relevant to the user input",
-                },
-            },
-            required: ["fileIds"],
-            additionalProperties: false,
-        };
-
-        // Then in your route or service method:
-        const stream = await unifiedProviderService.processMessage({
-            chatId: "whatever-chat-id",
-            userMessage: "User asks for suggested files, but we want strictly { fileIds: string[] }",
-            provider: "openrouter",
-            options: {
-                model: "deepseek/deepseek-chat",
-                temperature: 0.2,
-                // The key part: pass a `response_format` object
-                response_format: {
-                    type: "json_schema",
-                    json_schema: {
-                        name: "FileSuggestions",
-                        strict: true, // strongly enforce returning valid JSON
-                        schema: fileSchema,
-                    },
-                },
-            },
-            systemMessage: `
-              You are a file suggestion assistant. Return an array of file IDs in valid JSON only.
-              Example: { "fileIds": ["file-1", "file-2"] }
-            `,
+        // Instead of streaming manually, fetch structured JSON directly
+        const result = await fetchStructuredOutput(openRouterProviderService, {
+            userMessage,
+            systemMessage: systemPrompt,
+            zodSchema: FileSuggestionsZodSchema,
+            // @ts-ignore
+            jsonSchema: FileSuggestionsJsonSchema,
+            schemaName: "FileSuggestions",
+            model: "deepseek/deepseek-r1",
+            temperature: 0.2,
+            chatId: `project-${projectId}-suggest-files`,
         });
 
-        const reader = stream.getReader();
-        let rawLLMOutput = "";
-        const decoder = new TextDecoder();
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            rawLLMOutput += decoder.decode(value);
-        }
-
-        // Strip out code fences if present
-        let cleanedOutput = rawLLMOutput.trim();
-        const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
-        const matched = cleanedOutput.match(tripleBacktickRegex);
-        if (matched) {
-            cleanedOutput = matched[1].trim();
-        }
-
-        let recommendedFileIds: string[] = [];
-        try {
-            const parsed = JSON.parse(cleanedOutput);
-            if (
-                typeof parsed === 'object' &&
-                Array.isArray(parsed.fileIds) &&
-                parsed.fileIds.every((id: unknown) => typeof id === 'string')
-            ) {
-                recommendedFileIds = parsed.fileIds;
-            }
-        } catch (error) {
-            console.error('Failed to parse JSON from LLM:', error);
-        }
-
+        // result.fileIds is guaranteed by the Zod schema
         return json({
             success: true,
-            recommendedFileIds,
-            rawLLMOutput,
+            recommendedFileIds: result.fileIds,
         });
     } catch (error) {
-        console.error("Suggest-files error:", error);
+        console.error("[SuggestFiles] Error:", error);
         throw new ApiError("Failed to suggest files", 500, "INTERNAL_ERROR");
     }
 });

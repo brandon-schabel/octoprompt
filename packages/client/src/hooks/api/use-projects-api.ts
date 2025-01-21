@@ -31,6 +31,7 @@ export type SyncResponse = {
 export type SummarizeFilesResponse = {
     success: boolean;
     summary?: string;
+    message?: string;
     error?: string;
 };
 
@@ -106,11 +107,12 @@ async function syncProject(api: ReturnType<typeof useApi>['api'], projectId: str
 async function summarizeProjectFiles(
     api: ReturnType<typeof useApi>['api'],
     projectId: string,
-    fileIds: string[]
+    fileIds: string[],
+    force?: boolean
 ): Promise<SummarizeFilesResponse> {
     const response = await api.request(`/api/projects/${projectId}/summarize`, {
         method: 'POST',
-        body: { fileIds },
+        body: { fileIds, force },
     });
     return response.json();
 }
@@ -237,12 +239,8 @@ export const useSummarizeProjectFiles = (projectId: string) => {
     const { globalState } = useGlobalStateContext();
 
     return useMutation({
-        mutationFn: (fileIds: string[]) => {
-            const enabled = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
-            if (!enabled) {
-                return Promise.reject(new Error("Summarization is disabled for this project."));
-            }
-            return summarizeProjectFiles(api, projectId, fileIds);
+        mutationFn: ({ fileIds, force }: { fileIds: string[], force?: boolean }) => {            
+            return summarizeProjectFiles(api, projectId, fileIds, force);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summarize(projectId) });

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button'
 import { Edit, Save, XCircle } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs'
+import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { Textarea } from '@/components/ui/textarea'
 import { ProjectFile } from 'shared/schema'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
@@ -50,7 +50,8 @@ export function FileViewerDialog({
     const settings = state.settings
 
     const isDarkMode = settings.theme === "dark"
-    const selectedTheme = isDarkMode ? settings.codeThemeDark : settings.codeThemeLight
+    // @ts-ignore
+    const selectedTheme = isDarkMode ? themes[settings.codeThemeDark] : themes[settings.codeThemeLight]
     const { copyToClipboard } = useCopyClipboard()
 
     useEffect(() => {
@@ -115,7 +116,6 @@ export function FileViewerDialog({
                                     {/* @ts-ignore */}
                                     <SyntaxHighlighter
                                         language="markdown"
-                                        // @ts-ignore
                                         style={selectedTheme}
                                         showLineNumbers
                                         wrapLongLines
@@ -135,7 +135,7 @@ export function FileViewerDialog({
                             // @ts-ignore
                             <SyntaxHighlighter
                                 language={getLanguageByExtension(viewedFile?.extension)}
-                                style={atomOneLight}
+                                style={selectedTheme}
                                 showLineNumbers
                                 wrapLongLines
                             >
