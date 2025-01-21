@@ -47,7 +47,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
   const { state, updateProjectTabState } = useGlobalStateHelpers()
-  const { undo, redo, canUndo, canRedo } = selectedFilesState
+  const { undo, redo, canUndo, canRedo, clearSelectedFiles } = selectedFilesState
 
   const projectTab = state?.projectTabs[projectTabId]
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
@@ -277,8 +277,14 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 <Copy className="mr-2 h-4 w-4" />
                 <span>Copy All Files</span>
               </DropdownMenuItem>
+
+              {/*
+                IMPORTANT CHANGE:
+                Instead of updateProjectTabState(...),
+                call selectedFilesState.clearSelectedFiles().
+              */}
               <DropdownMenuItem onClick={() => {
-                updateProjectTabState(projectTabId, { selectedFiles: [] })
+                clearSelectedFiles()
                 toast.success("Cleared all selected files")
               }}>
                 <X className="mr-2 h-4 w-4" />
@@ -286,18 +292,24 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => {
-                undo()
-                toast.success('Undo: Reverted file selection')
-              }} disabled={!canUndo}>
+              <DropdownMenuItem
+                onClick={() => {
+                  undo()
+                  toast.success('Undo: Reverted file selection')
+                }}
+                disabled={!canUndo}
+              >
                 <RotateCcw className="mr-2 h-4 w-4" />
                 <span>Undo</span>
                 <DropdownMenuShortcut>{formatShortcut('mod+z')}</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                redo()
-                toast.success('Redo: Restored file selection')
-              }} disabled={!canRedo}>
+              <DropdownMenuItem
+                onClick={() => {
+                  redo()
+                  toast.success('Redo: Restored file selection')
+                }}
+                disabled={!canRedo}
+              >
                 <RotateCw className="mr-2 h-4 w-4" />
                 <span>Redo</span>
                 <DropdownMenuShortcut>{formatShortcut('mod+shift+z')}</DropdownMenuShortcut>
@@ -309,7 +321,12 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   <span>Sort By</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as "default" | "alphabetical" | "size_asc" | "size_desc")}>
+                  <DropdownMenuRadioGroup
+                    value={sortOrder}
+                    onValueChange={(value) =>
+                      setSortOrder(value as "default" | "alphabetical" | "size_asc" | "size_desc")
+                    }
+                  >
                     <DropdownMenuRadioItem value="default">
                       <ArrowUpDown className="mr-2 h-4 w-4" />
                       <span>Added Order</span>
@@ -400,16 +417,16 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   <span className="text-sm truncate">{file.name}</span>
                   {file.content && (
                     <div className="ml-auto">
-                      <Badge
-                        className="ml-2"
-                      >
+                      <Badge className="ml-2">
                         <FormatTokenCount tokenContent={file.content} />
                       </Badge>
                     </div>
                   )}
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground truncate">{file.path.split('/').slice(-3).join('/').slice(-30)}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {file.path.split('/').slice(-3).join('/').slice(-30)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -418,4 +435,4 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
       </div>
     </>
   )
-}) 
+})
