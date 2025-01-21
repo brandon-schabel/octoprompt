@@ -13,6 +13,7 @@ async function buildProject() {
     const rootDir = process.cwd();
     const serverDir = join(rootDir, "packages", "server");
     const clientDir = join(rootDir, "packages", "client");
+    const sharedDir = join(rootDir, "packages", "shared");
     const distDir = join(rootDir, "dist");
 
     // clear dist
@@ -52,7 +53,7 @@ async function buildProject() {
     // Apply migrations programmatically
     console.log("Applying migrations...");
     await migrate(db, {
-        migrationsFolder: join(serverDir, "drizzle")
+        migrationsFolder: join(sharedDir, "drizzle")
     });
 
     // Close the database connection
