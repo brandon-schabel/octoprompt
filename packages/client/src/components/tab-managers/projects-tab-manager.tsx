@@ -7,21 +7,21 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
 
 type DialogContentProps = {
-    tabId: string;
-    isEditing: boolean;
-    displayName: string;
-    dialogEditingName: string;
-    setDialogEditingName: (name: string) => void;
-    startDialogRename: (tabId: string) => void;
-    saveDialogRename: () => void;
-    onDeleteTab: (tabId: string) => void;
+  tabId: string;
+  isEditing: boolean;
+  displayName: string;
+  dialogEditingName: string;
+  setDialogEditingName: (name: string) => void;
+  startDialogRename: (tabId: string) => void;
+  saveDialogRename: () => void;
+  onDeleteTab: (tabId: string) => void;
 }
 
 type ProjectTab = {
-    selectedFiles: string[];
-    selectedPrompts: string[];
-    userPrompt?: string;
-    displayName?: string;
+  selectedFiles: string[];
+  selectedPrompts: string[];
+  userPrompt?: string;
+  displayName?: string;
 }
 
 export function ProjectsTabManager() {
@@ -32,8 +32,10 @@ export function ProjectsTabManager() {
     setActiveProjectTab,
     updateProjectTab,
     deleteProjectTab,
-    updateSettings
+    updateSettings,
+    activeProjectTabState
   } = useGlobalStateHelpers()
+  const projectId = activeProjectTabState?.selectedProjectId
 
   const tabs = state?.projectTabs ?? {}
   const activeTabId = state?.projectActiveTabId ?? null
@@ -153,7 +155,7 @@ export function ProjectsTabManager() {
       tabs={tabs}
       activeTabId={activeTabId}
       isReady={isOpen}
-      onCreateTab={createProjectTab}
+      onCreateTab={() => createProjectTab({ projectId: projectId ?? '' })}
       onSetActiveTab={setActiveProjectTab}
       onRenameTab={(tabId, newName) => updateProjectTab(tabId, { displayName: newName })}
       onDeleteTab={deleteProjectTab}

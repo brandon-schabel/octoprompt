@@ -2,7 +2,7 @@
   "name": "octoprompt",
   "module": "server.ts",
   "type": "module",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "scripts": {
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",

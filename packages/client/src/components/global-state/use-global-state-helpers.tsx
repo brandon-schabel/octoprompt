@@ -6,8 +6,6 @@ import {
     ChatTabState,
     LinkSettings,
     linkSettingsSchema,
-    Ticket,
-    TicketTask,
 } from "shared";
 import { v4 as uuidv4 } from "uuid";
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils";
