@@ -8,6 +8,8 @@ import {
     linkSettingsSchema,
 } from "shared";
 import { v4 as uuidv4 } from "uuid";
+import { buildTicketContent } from "@/components/tickets/utils/ticket-utils";
+import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
 
 export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
 
@@ -60,19 +62,45 @@ export function useGlobalStateHelpers() {
     }
 
 
-    function createProjectTab() {
-        if (!canProceed() || !state?.projectActiveTabId) return;
+    function createProjectTab({
+        projectId,
+        userPrompt = "",
+        selectedFiles = [],
+        displayName = "New Project Tab",
+    }: {
+        projectId: string;
+        userPrompt?: string;
+        selectedFiles?: string[];
+        displayName?: string;
+    }) {
+        if (!canProceed()) return;
         const newTabId = `project-tab-${uuidv4()}`;
-        const sourceTabId = state.projectActiveTabId;
-        const sourceTabState = state.projectTabs[sourceTabId];
+
+        const newTabData = {
+            selectedProjectId: projectId,
+            editProjectId: null,
+            promptDialogOpen: false,
+            editPromptId: null,
+            fileSearch: "",
+            selectedFiles,
+            selectedPrompts: [],
+            userPrompt,
+            searchByContent: false,
+            displayName,
+            contextLimit: 128000,
+            resolveImports: false,
+            preferredEditor: "cursor" as const,
+            suggestedFileIds: [],
+            bookmarkedFileGroups: {},
+            ticketSearch: "",
+            ticketSort: "created_desc" as const,
+            ticketStatusFilter: "all" as const
+        };
 
         sendWSMessage({
             type: "create_project_tab",
             tabId: newTabId,
-            data: {
-                ...sourceTabState,
-                displayName: `Project Tab ${Object.keys(state.projectTabs).length + 1}`,
-            },
+            data: newTabData,
         });
 
         setActiveProjectTab(newTabId);
@@ -99,7 +127,7 @@ export function useGlobalStateHelpers() {
     function deleteProjectTab(tabId: string) {
         if (!canProceed() || !state) return;
 
-        // e.g. Don’t delete if it’s the last tab
+        // e.g. Don't delete if it's the last tab
         if (Object.keys(state.projectTabs).length <= 1) {
             console.warn("Cannot delete the last remaining project tab");
             return;
@@ -223,7 +251,7 @@ export function useGlobalStateHelpers() {
     function deleteChatTab(tabId: string) {
         if (!canProceed() || !state) return;
 
-        // e.g. Don’t delete if it’s the last chat tab
+        // e.g. Don't delete if it's the last chat tab
         if (Object.keys(state.chatTabs).length <= 1) {
             console.warn("Cannot delete the last remaining chat tab");
             return;
@@ -338,6 +366,46 @@ export function useGlobalStateHelpers() {
         });
     }
 
+    function createProjectTabFromTicket(ticket: TicketWithTasks, customTabId?: string) {
+        if (!canProceed() || !state?.projectActiveTabId) return;
+        const tabId = customTabId ?? `ticket-tab-${crypto.randomUUID()}`;
+        
+        // Get current tab state to preserve settings
+        const currentTab = state.projectTabs[state.projectActiveTabId];
+        if (!currentTab) return;
+
+        // Use buildTicketContent to format the ticket content consistently
+        // Pass the ticket directly, which includes the tasks array
+        const userPrompt = buildTicketContent(ticket);
+
+        console.log("userPrompt", userPrompt);
+
+        // Create new tab data based on current tab, but override with ticket information
+        const newTabData = {
+            ...currentTab,
+            selectedProjectId: ticket.projectId, // Use the ticket's project ID
+            selectedFiles: JSON.parse(ticket.suggestedFileIds || "[]"), // Use the ticket's suggested files
+            suggestedFileIds: JSON.parse(ticket.suggestedFileIds || "[]"), // Also store in suggestedFileIds
+            userPrompt, // Use our nicely formatted ticket content with tasks
+            displayName: ticket.title || "Ticket Tab", // Use ticket title as tab name
+            // Reset UI state
+            editProjectId: null,
+            promptDialogOpen: false,
+            editPromptId: null,
+            fileSearch: "",
+            ticketSearch: "",
+        };
+
+        sendWSMessage({
+            type: "create_project_tab_from_ticket",
+            tabId,
+            ticketId: ticket.id,
+            data: newTabData
+        });
+
+        // Immediately set this as the active tab
+        setActiveProjectTab(tabId);
+    }
 
     const activeProjectTabState = state.projectActiveTabId
         ? state.projectTabs[state.projectActiveTabId]
@@ -365,6 +433,7 @@ export function useGlobalStateHelpers() {
         updateActiveProjectTab,
         updateProjectTabState,
         updateActiveProjectTabStateKey,
+        createProjectTabFromTicket,
 
         /** Chat tabs */
         createChatTab,

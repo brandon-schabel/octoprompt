@@ -2,7 +2,7 @@
   "name": "octoprompt",
   "module": "server.ts",
   "type": "module",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "scripts": {
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
@@ -22,7 +22,7 @@
     "drizzle-orm": "^0.36.3"
   },
   "dependencies": {
-    "@bnk/ai": "1.0.12",
+    "@bnk/ai": "^1.0.12",
     "@bnk/backend-websocket-manager": "^1.0.0",
     "@bnk/router": "1.0.6",
     "@types/archiver": "^6.0.3",

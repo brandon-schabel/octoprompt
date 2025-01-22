@@ -1,8 +1,47 @@
 // websocket-handlers.ts
 import { MessageHandler } from "@bnk/backend-websocket-manager";
 import { globalStateSchema } from "shared";
-import type { InboundMessage, GlobalState } from "shared";
+import type { InboundMessage, GlobalState, ProjectTabState } from "shared";
 import { logger } from "../utils/logger";
+import { TicketService } from "@/services/ticket-service";
+
+
+const ticketServiceForWS = new TicketService();
+
+
+/**
+ * A small helper to supply all the defaults that
+ * `projectTabStateSchema` requires, so you don't have to fill
+ * them out one-by-one.
+ */
+function buildDefaultProjectTabState(partial?: Partial<ProjectTabState>): ProjectTabState {
+    // Manually define or import from a shared place:
+    return {
+        // Required fields
+        selectedProjectId: null,
+        editProjectId: null,
+        promptDialogOpen: false,
+        editPromptId: null,
+        fileSearch: "",
+        selectedFiles: [],
+        selectedPrompts: [],
+        userPrompt: "",
+        searchByContent: false,
+
+        // Optional fields with default or fallback
+        displayName: partial?.displayName ?? "Untitled Tab",
+        contextLimit: partial?.contextLimit ?? 128000,
+        resolveImports: partial?.resolveImports ?? false,
+        preferredEditor: partial?.preferredEditor ?? "vscode",
+        suggestedFileIds: partial?.suggestedFileIds ?? [],
+        bookmarkedFileGroups: partial?.bookmarkedFileGroups ?? {},
+        ticketSearch: partial?.ticketSearch ?? "",
+        ticketSort: partial?.ticketSort ?? "created_desc",
+        ticketStatusFilter: partial?.ticketStatusFilter ?? "all",
+        ...partial,
+    };
+}
+
 
 /**
  * Handler for broadcasting entire state updates to all clients
@@ -274,6 +313,38 @@ export const updateGlobalStateKeyHandler: MessageHandler<GlobalState, InboundMes
     },
 };
 
+/**
+ * NEW Handler: create a project tab from an existing Ticket's context
+ */
+export const createProjectTabFromTicketHandler: MessageHandler<GlobalState, InboundMessage> = {
+    type: "create_project_tab_from_ticket",
+    async handle(ws, message, getStateFn, setStateFn) {
+        const { tabId, ticketId, data } = message;
+        const state = await getStateFn();
+
+        // 1) Validate the new tabId is not already used
+        if (state.projectTabs[tabId]) {
+            throw new Error(`Project tab ${tabId} already exists`);
+        }
+
+        // 2) Build the new tab data, ensuring we fill in all required fields
+        const newTabData = buildDefaultProjectTabState(data);
+
+        // Insert new project tab
+        state.projectTabs[tabId] = newTabData;
+
+        // Add to settings.projectTabIdOrder
+        state.settings.projectTabIdOrder.push(tabId);
+
+        // Set it active
+        state.projectActiveTabId = tabId;
+
+        // Validate and save
+        const validated = globalStateSchema.parse(state);
+        await setStateFn(validated);
+    },
+};
+
 // --------------------------------------------------
 // Combine all message handlers into a single array
 // --------------------------------------------------
@@ -293,4 +364,5 @@ export const allWebsocketHandlers = [
     setActiveChatTabHandler,
 
     updateGlobalStateKeyHandler,
+    createProjectTabFromTicketHandler,
 ];

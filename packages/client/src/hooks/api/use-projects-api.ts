@@ -137,6 +137,18 @@ async function resummarizeAllFiles(
     return response.json();
 }
 
+async function removeSummariesFromFiles(
+    api: ReturnType<typeof useApi>['api'],
+    projectId: string,
+    fileIds: string[]
+): Promise<{ success: boolean; removedCount: number; message?: string }> {
+    const response = await api.request(`/api/projects/${projectId}/remove-summaries`, {
+        method: 'POST',
+        body: { fileIds },
+    });
+    return response.json();
+}
+
 // Hooks
 export const useGetProjects = () => {
     const { api } = useApi();
@@ -289,6 +301,19 @@ export const useResummarizeAllFiles = (projectId: string) => {
         mutationFn: () => resummarizeAllFiles(api, projectId),
         onSuccess: () => {
             // Invalidate file summaries to trigger a refresh
+            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.fileSummaries(projectId) });
+        },
+        onError: commonErrorHandler
+    });
+};
+
+export const useRemoveSummariesFromFiles = (projectId: string) => {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (fileIds: string[]) => removeSummariesFromFiles(api, projectId, fileIds),
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.fileSummaries(projectId) });
         },
         onError: commonErrorHandler

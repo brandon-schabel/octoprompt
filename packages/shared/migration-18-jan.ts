@@ -6,7 +6,7 @@ function main() {
   const newDb = new Database('sqlite.db');
 
   // Attach the old DB
-  newDb.exec("ATTACH 'sqlite-old.db' AS oldDb");
+  newDb.exec("ATTACH '21-jan-db.db' AS oldDb");
 
   // Wrap all inserts in a single transaction for speed and atomicity
   newDb.exec('BEGIN');
@@ -181,6 +181,66 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.provider_keys;
+    `);
+
+    // 10) tickets
+    newDb.exec(`
+      INSERT INTO tickets (
+        id,
+        project_id,
+        title,
+        overview,
+        status,
+        priority,
+        suggested_file_ids,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        project_id,
+        title,
+        overview,
+        status,
+        priority,
+        suggested_file_ids,
+        created_at,
+        updated_at
+      FROM oldDb.tickets;
+    `);
+
+    // 11) ticket_files (junction table)
+    newDb.exec(`
+      INSERT INTO ticket_files (
+        ticket_id,
+        file_id
+      )
+      SELECT
+        ticket_id,
+        file_id
+      FROM oldDb.ticket_files;
+    `);
+
+    // 12) ticket_tasks
+    newDb.exec(`
+      INSERT INTO ticket_tasks (
+        id,
+        ticket_id,
+        content,
+        done,
+        order_index,
+        created_at,
+        updated_at
+      )
+      SELECT
+        id,
+        ticket_id,
+        content,
+        done,
+        order_index,
+        created_at,
+        updated_at
+      FROM oldDb.ticket_tasks;
     `);
 
     // Commit the transaction

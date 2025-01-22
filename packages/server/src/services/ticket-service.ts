@@ -3,6 +3,7 @@ import {
     tickets,
     ticketFiles,
     ticketTasks,
+    files,
     type Ticket,
     type TicketFile,
     type NewTicket,
@@ -16,10 +17,41 @@ import {
 } from "shared";
 import { CreateTicketBody, UpdateTicketBody } from "shared";
 import { ApiError } from "shared";
-import { getState } from "@/websocket/websocket-config";  // if you use that for global state
 import type { InferSelectModel } from "drizzle-orm";
-import { UnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
 import { OpenRouterProviderService } from "./model-providers/providers/open-router-provider";
+import { promptsMap } from "@/utils/prompts-map";
+import { getFullProjectSummary } from "@/utils/get-full-project-summary";
+
+
+
+const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
+{
+  "tasks": [
+    {
+      "title": "Task title here",
+      "description": "Optional description here"
+    }
+  ]
+}`;
+
+
+
+export const defeaultTaskPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
+Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
+Focus on technical implementation tasks, testing, and validation steps.
+Each task should be clear and actionable.
+
+${validTaskFormatPrompt}
+`;
+
+
+
+// export const octopromptPlanningPrompt = `
+// ${promptsMap.octopromptPlanningMetaPrompt}
+
+// ${defeaultTaskPrompt}
+// `
+
 
 export function stripTripleBackticks(text: string): string {
     // This regex captures everything inside the first ```json ... ``` block
@@ -48,13 +80,14 @@ export class TicketService {
             overview: data.overview ?? "",
             status: data.status ?? "open",
             priority: data.priority ?? "normal",
+            suggestedFileIds: data.suggestedFileIds
+                ? JSON.stringify(data.suggestedFileIds)
+                : "[]",
         };
 
         const [created] = await db.insert(tickets)
             .values(newItem)
             .returning();
-
-
 
         return created;
     }
@@ -80,15 +113,43 @@ export class TicketService {
     }
 
     async updateTicket(ticketId: string, data: UpdateTicketBody): Promise<Ticket | null> {
-        const [updated] = await db.update(tickets)
+        const existing = await this.getTicketById(ticketId);
+        if (!existing) {
+            return null;
+        }
+
+        let suggestedFileIds: string | undefined;
+        if (data.suggestedFileIds) {
+            const allIds = data.suggestedFileIds;
+            const foundFiles = await db
+                .select({ id: files.id })
+                .from(files)
+                .where(inArray(files.id, allIds));
+            const foundIds = new Set(foundFiles.map((f) => f.id));
+            const invalids = allIds.filter((id) => !foundIds.has(id));
+            if (invalids.length) {
+                throw new ApiError(
+                    `Some fileIds no longer exist on disk: ${invalids.join(", ")}`,
+                    400,
+                    "INVALID_FILE_IDS"
+                );
+            }
+
+            suggestedFileIds = JSON.stringify(allIds);
+        }
+
+        const [updated] = await db
+            .update(tickets)
             .set({
-                ...data,
+                title: data.title ?? existing.title,
+                overview: data.overview ?? existing.overview,
+                status: data.status ?? existing.status,
+                priority: data.priority ?? existing.priority,
+                suggestedFileIds: suggestedFileIds ?? existing.suggestedFileIds,
                 updatedAt: new Date(),
             })
             .where(eq(tickets.id, ticketId))
             .returning();
-
-
 
         return updated ?? null;
     }
@@ -100,7 +161,6 @@ export class TicketService {
         const [deleted] = await db.delete(tickets)
             .where(eq(tickets.id, ticketId))
             .returning();
-
 
         return !!deleted;
     }
@@ -135,6 +195,8 @@ export class TicketService {
             throw new Error(`Ticket ${ticketId} not found`);
         }
 
+        const projectId = ticket.projectId
+
         console.log("[TicketService] Found ticket:", {
             id: ticket.id,
             title: ticket.title,
@@ -162,25 +224,23 @@ export class TicketService {
             additionalProperties: false,
         };
 
-        const systemPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
-    Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
-    Focus on technical implementation tasks, testing, and validation steps.
-    Each task should be clear and actionable.
-    
-    IMPORTANT: Return ONLY valid JSON matching this schema:
-    {
-      "tasks": [
-        {
-          "title": "Task title here",
-          "description": "Optional description here"
-        }
-      ]
-    }`;
+
+        const systemPrompt = defeaultTaskPrompt
+        // const systemPrompt = octopromptPlanningPrompt
+
+        const projectSummary = await getFullProjectSummary(projectId)
 
         const userMessage = `Please suggest tasks for this ticket:
     Title: ${ticket.title}
     Overview: ${ticket.overview}
-    ${userContext ? `Additional Context: ${userContext}` : ''}`;
+
+    UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
+
+    Below is a combined summary of project files:
+    ${projectSummary}
+    `;
+
+
 
         console.log("[TicketService] Preparing LLM request:", {
             systemPrompt,
@@ -195,7 +255,7 @@ export class TicketService {
                 userMessage,
                 provider: "openrouter",
                 options: {
-                    model: "deepseek/deepseek-chat",
+                    model: "deepseek/deepseek-r1",
                     temperature: 0.2,
                     response_format: {
                         type: "json_schema",
@@ -446,6 +506,7 @@ export class TicketService {
                 overview: tickets.overview,
                 status: tickets.status,
                 priority: tickets.priority,
+                suggestedFileIds: tickets.suggestedFileIds,
                 createdAt: tickets.createdAt,
                 updatedAt: tickets.updatedAt,
                 taskCount: sql<number>`COUNT(${ticketTasks.id})`.as("taskCount"),
@@ -465,6 +526,7 @@ export class TicketService {
             overview: r.overview,
             status: r.status,
             priority: r.priority,
+            suggestedFileIds: r.suggestedFileIds,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
             taskCount: Number(r.taskCount || 0),
@@ -524,6 +586,30 @@ export class TicketService {
         }));
 
         return results;
+    }
+
+    /**
+     * Helper to parse suggestedFileIds from a ticket
+     */
+    private parseSuggestedFileIds(ticket: Ticket): string[] {
+        try {
+            return JSON.parse(ticket.suggestedFileIds || "[]");
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Get a ticket with its suggested file IDs parsed
+     */
+    async getTicketWithSuggestedFiles(ticketId: string): Promise<(Ticket & { parsedSuggestedFileIds: string[] }) | null> {
+        const ticket = await this.getTicketById(ticketId);
+        if (!ticket) return null;
+
+        return {
+            ...ticket,
+            parsedSuggestedFileIds: this.parseSuggestedFileIds(ticket)
+        };
     }
 
 }

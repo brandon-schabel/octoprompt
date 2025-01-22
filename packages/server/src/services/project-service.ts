@@ -190,4 +190,28 @@ export class ProjectService {
             message: "Requested files have been summarized",
         };
     }
+
+    /**
+     * Remove summaries from selected files by ID.
+     */
+    async removeSummariesFromFiles(projectId: string, fileIds: string[]) {
+        const result = await db.update(files)
+            .set({
+                summary: null,
+                summaryLastUpdatedAt: undefined,
+            })
+            .where(
+                and(
+                    eq(files.projectId, projectId),
+                    inArray(files.id, fileIds),
+                )
+            )
+            .returning();
+
+        return {
+            success: true,
+            removedCount: result.length,
+            message: `Removed summaries from ${result.length} files`,
+        };
+    }
 }

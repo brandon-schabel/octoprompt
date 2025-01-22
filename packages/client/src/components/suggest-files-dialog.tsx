@@ -1,14 +1,14 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { ProjectFile } from "shared"
-import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ProjectFile } from "shared";
+import { type UseSelectedFileReturn } from "@/hooks/utility-hooks/use-selected-files";
 
 type SuggestedFilesDialogProps = {
-    open: boolean
-    onClose: () => void
-    suggestedFiles: ProjectFile[]
-    selectedFilesState: UseSelectedFileReturn
-}
+    open: boolean;
+    onClose: () => void;
+    suggestedFiles: ProjectFile[];
+    selectedFilesState: UseSelectedFileReturn;
+};
 
 export function SuggestedFilesDialog({
     open,
@@ -16,11 +16,11 @@ export function SuggestedFilesDialog({
     suggestedFiles,
     selectedFilesState
 }: SuggestedFilesDialogProps) {
-    const { selectedFiles, toggleFile, toggleFiles } = selectedFilesState
+    const { selectedFiles, toggleFile, toggleFiles } = selectedFilesState;
 
     // (Optional) "Select All" just toggles all suggestions
     function handleSelectAll() {
-        toggleFiles(suggestedFiles.map((file) => file.id))
+        toggleFiles(suggestedFiles.map((file) => file.id));
     }
 
     return (
@@ -35,7 +35,7 @@ export function SuggestedFilesDialog({
 
                 <div className="mt-2 space-y-2 max-h-[300px] overflow-y-auto pr-2">
                     {suggestedFiles.map((file) => {
-                        const isSelected = selectedFiles.includes(file.id)
+                        const isSelected = selectedFiles.includes(file.id);
                         return (
                             <div key={file.id} className="flex items-center gap-2">
                                 <input
@@ -48,7 +48,7 @@ export function SuggestedFilesDialog({
                                     <div className="text-xs text-muted-foreground">{file.path}</div>
                                 </div>
                             </div>
-                        )
+                        );
                     })}
                 </div>
 
@@ -60,5 +60,5 @@ export function SuggestedFilesDialog({
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    )
+    );
 }

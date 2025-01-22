@@ -1,61 +1,62 @@
-// packages/server/src/services/model-providers/structured-output-fetcher.ts
+// packages/server/src/utils/structured-output-fetcher.ts
 
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider"
-import { z, ZodTypeAny } from "zod"
+import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
+import { z } from "zod";
 
 /**
  * Defines the input parameters for requesting structured output.
- * @template T Parsed type after Zod validation
  */
 export interface StructuredOutputRequest<T> {
     /**
      * The text prompt or user message you want to send to the LLM.
      */
-    userMessage: string
+    userMessage: string;
+
     /**
      * An optional system instruction or higher-level directive to control the model.
      */
-    systemMessage?: string
+    systemMessage?: string;
 
     /**
      * A Zod schema representing the final shape you expect from the LLM.
      * The returned data is validated against this schema.
      */
-    zodSchema: z.ZodType<T>
+    zodSchema: z.ZodType<T>;
 
     /**
      * A JSON Schema object matching the same structure as `zodSchema`.
      * This is passed to OpenRouter for server-side validation of the LLM output.
      */
     jsonSchema: {
-        type: "object" | "array" | "string" | "number" | "boolean"
-        [key: string]: any
-    }
+        type: "object" | "array" | "string" | "number" | "boolean";
+        [key: string]: any;
+    };
 
     /**
-     * Name for the structured output block, used in OpenRouter’s `response_format.json_schema`.
+     * Name for the structured output block, used in OpenRouter's `response_format.json_schema`.
      */
-    schemaName?: string
+    schemaName?: string;
 
     /**
-     * Optional model name. Defaults to something like "openai/gpt-3.5-turbo" or any other model ID recognized by OpenRouter.
+     * Optional model name. Defaults to something recognized by OpenRouter.
      */
-    model?: string
+    model?: string;
 
     /**
-     * Temperature value for the LLM (0.0 - 1.0). 0.0 = deterministic, 1.0 = more creative.
+     * Temperature value for the LLM (0.0 - 1.0).
+     * 0.0 = deterministic, 1.0 = more creative.
      */
-    temperature?: number
+    temperature?: number;
 
     /**
      * An optional chatId if you want to store conversation threads in your DB.
      */
-    chatId?: string
+    chatId?: string;
 
     /**
      * If you want to associate the streaming partial text with a temporary message ID.
      */
-    tempId?: string
+    tempId?: string;
 }
 
 /**
@@ -75,7 +76,7 @@ export async function fetchStructuredOutput<T>(
         temperature = 0.7,
         chatId = "structured-chat",
         tempId
-    } = params
+    } = params;
 
     // 1) Invoke the streaming request on OpenRouter with "json_schema" response format
     const stream = await openRouterService.processMessage({
@@ -97,52 +98,60 @@ export async function fetchStructuredOutput<T>(
                 }
             }
         }
-    })
+    });
 
     // 2) Read the entire stream into a single string
-    const reader = stream.getReader()
-    const decoder = new TextDecoder()
-    let rawOutput = ""
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let rawOutput = "";
 
     while (true) {
-        const { done, value } = await reader.read()
+        const { done, value } = await reader.read();
         if (done) {
-            break
+            break;
         }
-        rawOutput += decoder.decode(value)
+        rawOutput += decoder.decode(value);
     }
 
     // 3) Attempt to parse the final text as JSON
-    let json: unknown
+    let json: unknown;
     try {
-        json = JSON.parse(stripTripleBackticks(rawOutput))
+        json = JSON.parse(stripTripleBackticks(rawOutput));
     } catch (err) {
-        console.error("[fetchStructuredOutput] Failed to parse JSON from model:", err)
-        console.error("Raw model output was:", rawOutput)
-        throw new Error("Model response did not contain valid JSON.")
+        console.error("[fetchStructuredOutput] Failed to parse JSON from model:", err);
+        console.error("Raw model output was:", rawOutput);
+        throw new Error("Model response did not contain valid JSON.");
     }
 
     // 4) Validate the parsed JSON with your Zod schema for type safety
-    const parsed = zodSchema.safeParse(json)
+    const parsed = zodSchema.safeParse(json);
     if (!parsed.success) {
-        console.error("[fetchStructuredOutput] Zod validation failed:", parsed.error)
-        console.error("Raw JSON output was:", JSON.stringify(json, null, 2))
-        throw new Error("Structured output did not match the expected schema.")
+        console.error("[fetchStructuredOutput] Zod validation failed:", parsed.error);
+        console.error("Raw JSON output was:", JSON.stringify(json, null, 2));
+        throw new Error("Structured output did not match the expected schema.");
     }
 
     // 5) Return fully validated result
-    return parsed.data
+    return parsed.data;
 }
 
 /**
  * Utility function that strips triple backticks (e.g., ```json ... ```).
+ * Also removes any JSON comments before returning.
  * If there's no backtick wrapping, returns the original string.
  */
 function stripTripleBackticks(text: string): string {
-    const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/
-    const match = text.match(tripleBacktickRegex)
-    if (match) {
-        return match[1].trim()
-    }
-    return text.trim()
+    // First strip triple backticks if they exist
+    const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
+    const match = text.match(tripleBacktickRegex);
+    const content = match ? match[1].trim() : text.trim();
+
+    // Then remove both single-line and multi-line comments
+    // This handles: 
+    // 1. Single line comments: // comment
+    // 2. Multi-line comments: /* comment */
+    // 3. Trailing commas with comments: "key": "value", // comment
+    return content
+        .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '') // Remove comments
+        .replace(/,(\s*[}\]])/g, '$1'); // Fix any trailing commas that might be left
 }

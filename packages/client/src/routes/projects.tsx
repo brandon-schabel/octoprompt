@@ -159,7 +159,7 @@ function ProjectsPage() {
                                 We see you have at least one project, but no tabs created yet.
                                 Create a new tab to start exploring your project!
                             </p>
-                            <Button onClick={() => createNewTab()}>
+                            <Button onClick={() => createNewTab({ projectId: projects.projects[0].id })}>
                                 + Create a Tab
                             </Button>
                         </>
@@ -273,8 +273,8 @@ function ProjectsPage() {
                             </div>
 
                             <DialogFooter className="gap-2">
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     onClick={() => {
                                         setShowWelcomeDialog(false)
                                     }}

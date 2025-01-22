@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../ui/select";
-import { Copy, Filter, FileText, Trash2 } from "lucide-react";
+import { Copy, Filter, FileText, Trash2, ExternalLink } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import {
     AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { useState } from "react";
+import { useNavigate } from '@tanstack/react-router';
 
 interface TicketListPanelProps {
     projectTabId: string;
@@ -47,7 +48,8 @@ const PRIORITY_COLORS = {
 } as const;
 
 export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
-    const { state, updateProjectTabState } = useGlobalStateHelpers();
+    const navigate = useNavigate();
+    const { state, updateProjectTabState, createProjectTabFromTicket } = useGlobalStateHelpers();
     const tabState = state.projectTabs[projectTabId];
     const projectId = tabState?.selectedProjectId || "";
 
@@ -67,9 +69,9 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
 
     const setTicketStatusFilter = useCallback((val: string) => {
         // Reset search when changing status filter
-        updateProjectTabState(projectTabId, { 
+        updateProjectTabState(projectTabId, {
             ticketStatusFilter: val as any,
-            ticketSearch: "" 
+            ticketSearch: ""
         });
     }, [projectTabId, updateProjectTabState]);
 
@@ -155,7 +157,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
 
     const confirmDelete = useCallback(async () => {
         if (!ticketToDelete) return;
-        
+
         try {
             await deleteTicket.mutateAsync({ ticketId: ticketToDelete.id });
             toast.success("Ticket deleted successfully");
@@ -223,7 +225,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                 <div className="space-y-2">
                     {sorted.map(ticket => {
                         const { completedTasks, totalTasks, percentage } = getTaskCompletion(ticket);
-                        
+
                         return (
                             <div
                                 key={ticket.id}
@@ -242,7 +244,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                                     {snippet(ticket.overview ?? "", 100)}
                                 </div>
                                 <div className="mt-2 mb-2">
-                                    <Progress 
+                                    <Progress
                                         value={percentage}
                                         variant="fullness"
                                         className="h-1"
@@ -250,14 +252,14 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                                 </div>
                                 <div className="mt-2 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <Badge 
+                                        <Badge
                                             className={cn(
                                                 PRIORITY_COLORS[ticket.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS.normal
                                             )}
                                         >
                                             {ticket.priority || "normal"}
                                         </Badge>
-                                        <Badge 
+                                        <Badge
                                             className={cn(
                                                 STATUS_COLORS[ticket.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.open
                                             )}
@@ -281,6 +283,18 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                                         >
                                             <FileText className="h-4 w-4 mr-1" />
                                             Copy All
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                createProjectTabFromTicket(ticket);
+                                                navigate({ to: '/projects' });
+                                            }}
+                                        >
+                                            <ExternalLink className="h-4 w-4 mr-1" />
+                                            Open in Project Tab
                                         </Button>
                                         <Button
                                             variant="ghost"

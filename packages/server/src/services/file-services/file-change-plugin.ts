@@ -4,6 +4,7 @@ import { FileSummaryService } from './file-summary-service';
 import { FileSyncService } from './file-sync-service';
 import { ProjectService } from '../project-service';
 import { Project } from 'shared';
+import { resolve, relative } from 'node:path';
 
 export class FileChangePlugin {
     private watcher: FileChangeWatcher;
@@ -26,10 +27,10 @@ export class FileChangePlugin {
         this.watcher.registerListener({
             onFileChanged: async (event: FileChangeEvent, changedFilePath: string) => {
                 try {
-                    // 1) Re-sync the changed file(s) with DB
+                    // 1) Always call syncProject, which handles insert/update/remove from DB
                     await this.fileSyncService.syncProject(project);
 
-                    // 2) Grab the updated list of files from DB
+                    // 2) Re-fetch updated list of files from DB
                     const allFiles = await this.projectService.getProjectFiles(project.id);
                     if (!allFiles) {
                         console.warn(`[FileChangePlugin] No files returned for project: ${project.id}`);
@@ -37,9 +38,10 @@ export class FileChangePlugin {
                     }
 
                     // 3) Convert the absolute changedFilePath to a relative path
-                    const relativePath = changedFilePath.replace(`${project.path}/`, '');
+                    const absoluteProjectPath = resolve(project.path);
+                    const relativePath = relative(absoluteProjectPath, changedFilePath);
 
-                    // 4) Find the matching file by relative path
+                    // 4) Lookup the DB record for that file’s path
                     const updatedFile = allFiles.find((f) => f.path === relativePath);
                     if (!updatedFile) {
                         console.warn(`[FileChangePlugin] Could not find a DB record matching path: ${relativePath}`);
@@ -48,21 +50,12 @@ export class FileChangePlugin {
 
                     console.log(`[FileChangePlugin] Rerunning summary for file ID: ${updatedFile.id} (${event})`);
 
-                    const globalState = await getState();
-
-
-
-
-
-
-
-
                     // 5) Re-run summarization for this single file
+                    const globalState = await getState();
                     await this.summaryService.summarizeFiles(
                         project.id,
                         [updatedFile],
                         globalState
-
                     );
                 } catch (err) {
                     console.error('[FileChangePlugin] Error handling file change:', err);
@@ -70,7 +63,7 @@ export class FileChangePlugin {
             },
         });
 
-        // Start actual directory watch
+        // Start the actual directory watch
         this.watcher.startWatching({
             directory: project.path,
             ignorePatterns,

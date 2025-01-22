@@ -1,6 +1,6 @@
 {
     "name": "shared",
-    "version": "1.0.0",
+    "version": "0.1.4",
     "description": "Shared types and utilities for both client and server",
     "type": "module",
     "main": "index.ts",
@@ -29,4 +29,4 @@
         "picomatch": "^4.0.2",
         "zod": "^3.23.8"
     }
-} 
+}
