@@ -1,6 +1,6 @@
 # OctoPrompt
 
-Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code companion. Built on **Bun** (for blazing-fast server performance) and **React** (for a modern and responsive frontend), OctoPrompt is designed to make your dev life easier without bogging down your system. Because everything runs locally, you have complete control over your data and can fine-tune functionality to suit your needs.
+Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code companion. Built on **Bun** and **React**, OctoPrompt is designed to make your dev life easier without bogging down your system. Because everything runs locally, you have complete control over your data and can fine-tune functionality to suit your needs.
 
 ## Key Features
 
