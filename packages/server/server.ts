@@ -13,6 +13,7 @@ import "@/routes/code-editor-routes";
 import "@/routes/promptimizer-routes";
 import "@/routes/ticket-routes";
 import "@/routes/suggest-files-routes";
+import "@/routes/kv-routes";
 
 import { globalStateSchema } from "shared";
 import { json } from "@bnk/router";
@@ -24,6 +25,7 @@ import { getState, setState } from "./src/websocket/websocket-config";
 import { bnkWsManager } from "./src/websocket/websocket-manager";
 import { logger } from "src/utils/logger";
 import { CleanupService } from "@/services/file-services/cleanup-service";
+import { initKvStore } from "@/services/kv-service";
 
 const isDevEnv = process.env.DEV === 'true';
 // built client files
@@ -205,15 +207,18 @@ function serveStatic(path: string): Response {
 // Only start the server if this file is being run directly
 if (import.meta.main) {
   console.log('Starting server...');
-  const server = instantiateServer();
+  (async () => {
+    await initKvStore();
+    const server = instantiateServer();
 
-  function handleShutdown() {
-    console.log('Received kill signal. Shutting down gracefully...');
-    watchersManager.stopAll?.();
-    server.stop();
-    process.exit(0);
-  }
+    function handleShutdown() {
+      console.log('Received kill signal. Shutting down gracefully...');
+      watchersManager.stopAll?.();
+      server.stop();
+      process.exit(0);
+    }
 
-  process.on('SIGINT', handleShutdown);
-  process.on('SIGTERM', handleShutdown);
+    process.on('SIGINT', handleShutdown);
+    process.on('SIGTERM', handleShutdown);
+  })();
 }

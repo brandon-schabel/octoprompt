@@ -5,7 +5,7 @@ import { type Project } from 'shared';
 import { files, eq, and, inArray } from 'shared';
 import { db } from "shared/database";
 
-const ALLOWED_EXTENSIONS = ['.md', '.txt', '.ts', '.tsx', '.js', '.jsx', '.json'];
+const ALLOWED_EXTENSIONS = ['.md', '.txt', '.ts', '.tsx', '.js', '.jsx', '.json', '.py', '.python-version', '.toml', '.yaml', '.yml', ];
 const DEFAULT_EXCLUSIONS = [
   'node_modules',
   '.npm',
@@ -37,6 +37,11 @@ const DEFAULT_EXCLUSIONS = [
   'out',
   'public',
   'client-dist',
+  "*.lock",
+  "*.lockfile",
+  "*.lock.json",
+  "*.lock.yaml",
+  "*.lock.yml",
 ];
 
 const customExclusions = process.env.EXCLUDE_PATTERNS
