@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { CommandItem } from '@/components/ui/command'
-import { FileIcon, ChatBubbleIcon } from '@radix-ui/react-icons'
+import { FileIcon, ChatBubbleIcon, CounterClockwiseClockIcon } from '@radix-ui/react-icons'
 
 type NavigationCommandProps = {
   onSelect?: () => void
@@ -27,6 +27,12 @@ export function NavigationCommands({ onSelect }: NavigationCommandProps) {
       >
         <ChatBubbleIcon />
         <span>Go to Chat</span>
+      </CommandItem>
+      <CommandItem
+        onSelect={() => handleNavigate('/counter')}
+      >
+        <CounterClockwiseClockIcon />
+        <span>Go to Counter</span>
       </CommandItem>
     </>
   )

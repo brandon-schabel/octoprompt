@@ -7,7 +7,7 @@ import {
     deleteKvKey,
 } from '@/services/kv-service';
 
-import { KVKeyEnum, KvSchemas } from 'shared/src/kv-validators';
+import { KVKeyEnum, kvKeyEnumSchema, KvSchemas } from 'shared/src/kv-validators';
 import { router } from 'server-router';
 import { ApiError } from 'shared/index';
 
@@ -19,7 +19,7 @@ import { ApiError } from 'shared/index';
  * }
  */
 const kvSetSchema = z.object({
-    key: z.enum([KVKeyEnum.userProfile, KVKeyEnum.featureFlags]),
+    key: kvKeyEnumSchema,
     value: z.any(), // We'll re-validate with the correct schema in our route
 });
 
@@ -32,13 +32,14 @@ router.get(
     {
         validation: {
             query: z.object({
-                key: z.enum([KVKeyEnum.userProfile, KVKeyEnum.featureFlags]),
+                key: kvKeyEnumSchema,
             }),
         },
     },
     async (_, { query }) => {
         const { key } = query;
         const value = await getKvValue(key);
+        console.log('value', value);
         return json({ success: true, key, value });
     }
 );
@@ -82,7 +83,7 @@ router.delete(
     {
         validation: {
             params: z.object({
-                key: z.enum([KVKeyEnum.userProfile, KVKeyEnum.featureFlags]),
+                key: kvKeyEnumSchema,
             }),
         },
     },
