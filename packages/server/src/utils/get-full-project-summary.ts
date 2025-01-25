@@ -1,16 +1,11 @@
-
-import { router } from "server-router";
 import { ProjectService } from "@/services/project-service";
 import { json } from "@bnk/router";
 import { ApiError } from "shared";
-import { z } from "zod";
 import { FileSummaryService } from "@/services/file-services/file-summary-service";
-import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { ProjectFile } from "shared/schema";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter";
-import { getState } from "@/websocket/websocket-config";
+import { websocketStateAdapter } from "./websocket/websocket-state-adapter";
 
 const projectService = new ProjectService();
 const fileSummaryService = new FileSummaryService();
@@ -49,7 +44,7 @@ export const getFullProjectSummary = async (projectId: string) => {
     }
 
     // Retrieve global state to get ignore patterns (or other filtering preferences)
-    const globalState = await getState();
+    const globalState = await websocketStateAdapter.getState();
     const ignorePatterns = globalState.settings.summarizationIgnorePatterns || [];
     const allowPatterns = globalState.settings.summarizationAllowPatterns || [];
 

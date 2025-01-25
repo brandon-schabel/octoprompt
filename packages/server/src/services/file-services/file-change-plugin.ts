@@ -1,10 +1,10 @@
-import { getState } from '@/websocket/websocket-config';
 import { FileChangeWatcher, FileChangeEvent } from './file-change-watcher';
 import { FileSummaryService } from './file-summary-service';
 import { FileSyncService } from './file-sync-service';
 import { ProjectService } from '../project-service';
 import { Project } from 'shared';
 import { resolve, relative } from 'node:path';
+import { websocketStateAdapter } from '@/utils/websocket/websocket-state-adapter';
 
 export class FileChangePlugin {
     private watcher: FileChangeWatcher;
@@ -51,7 +51,8 @@ export class FileChangePlugin {
                     console.log(`[FileChangePlugin] Rerunning summary for file ID: ${updatedFile.id} (${event})`);
 
                     // 5) Re-run summarization for this single file
-                    const globalState = await getState();
+                    const globalState = await websocketStateAdapter.getState();
+                    console.log(`[FileChangePlugin] Global state: ${JSON.stringify(globalState, null, 2)}`);
                     await this.summaryService.summarizeFiles(
                         project.id,
                         [updatedFile],

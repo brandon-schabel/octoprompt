@@ -12,7 +12,7 @@ import {
 import { FileSyncService } from './file-services/file-sync-service';
 import { FileSummaryService } from './file-services/file-summary-service';
 import { db } from "shared/database";
-import { getState } from "@/websocket/websocket-config";
+import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 
 
 const fileSyncService = new FileSyncService();
@@ -101,7 +101,7 @@ export class ProjectService {
             throw new Error('No files found for project');
         }
 
-        const globalState = await getState()
+        const globalState = await websocketStateAdapter.getState()
         await fileSummaryService.forceSummarizeFiles(projectId, allFiles, globalState);
     }
 
@@ -150,7 +150,7 @@ export class ProjectService {
             return { included: 0, skipped: 0, message: "No matching files found" };
         }
 
-        const globalState = await getState();
+        const globalState = await websocketStateAdapter.getState();
         const result = await fileSummaryService.forceResummarizeSelectedFiles(
             projectId,
             selectedFiles,
@@ -179,7 +179,8 @@ export class ProjectService {
             return { included: 0, skipped: 0, message: "No matching files found" };
         }
 
-        const globalState = await getState();
+        const globalState = await websocketStateAdapter.getState();
+        console.log(`[ProjectService] Global state: ${JSON.stringify(globalState, null, 2)}`);
         const result = await fileSummaryService.summarizeFiles(
             projectId,
             selectedFiles,

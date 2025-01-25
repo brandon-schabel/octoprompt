@@ -27,6 +27,7 @@ export const projectTabStateSchema = z.object({
     ticketSearch: z.string().default(""),
     ticketSort: z.enum(["created_desc", "created_asc", "status", "priority"]).default("created_desc"),
     ticketStatusFilter: z.enum(["all", "open", "in_progress", "closed"]).default("all"),
+    ticketId: z.string().nullable().default(null),
 });
 
 export const linkSettingsSchema = z.object({
@@ -150,6 +151,7 @@ export const createInitialGlobalState = (): GlobalState => ({
             ticketSearch: '',
             ticketSort: 'created_desc',
             ticketStatusFilter: 'all',
+            ticketId: null,
         },
     },
     chatTabs: {

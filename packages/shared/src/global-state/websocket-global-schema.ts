@@ -148,7 +148,7 @@ export const createProjectTabFromTicketSchema = baseInboundMessageSchema.extend(
   type: z.literal("create_project_tab_from_ticket"),
   tabId: z.string(),
   ticketId: z.string(),
-  data: z.record(z.unknown()).default({}),
+  data: projectTabStateSchema.partial().default({}),
 });
 
 /**

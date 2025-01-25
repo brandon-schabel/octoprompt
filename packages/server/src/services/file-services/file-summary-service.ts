@@ -4,7 +4,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { ProjectFile as ProjectFileType, GlobalState } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { UnifiedProviderService } from "../model-providers/providers/unified-provider-service";
-import { getState } from "@/websocket/websocket-config";
+import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
     const chunks: T[][] = [];
@@ -18,7 +18,7 @@ const shouldSummarizeFile = async (
     projectId: string,
     filePath: string
 ): Promise<boolean> => {
-    const state = await getState();
+    const state = await websocketStateAdapter.getState();
     const settings = state.settings;
 
     // If the project is not enabled, skip.
@@ -94,6 +94,7 @@ export class FileSummaryService {
         filesToSummarize: ProjectFileType[],
         globalState: GlobalState
     ): Promise<{ included: number; skipped: number }> {
+        console.log(`[FileSummaryService] Summarizing files for project: ${projectId}`);
         const allowPatterns = globalState.settings.summarizationAllowPatterns || [];
         const ignorePatterns =
             globalState.settings.summarizationIgnorePatterns || [];

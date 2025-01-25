@@ -22,7 +22,7 @@ import {
 } from "@bnk/ai";
 import { ModelFetcherService, type ProviderKeysConfig } from "@bnk/ai";
 import type { UnifiedModel } from "@bnk/ai";
-import { getState } from "@/websocket/websocket-config";
+import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 
 export class UnifiedProviderService {
     private providerKeyService: ProviderKeyService;
@@ -109,7 +109,7 @@ export class UnifiedProviderService {
                 return new GeminiPlugin(apiKey, GEMINI_BASE_URL, options?.model || "models/gemini-1.5-pro");
             },
             lmstudio: async () => {
-                const state = await getState()
+                const state = await websocketStateAdapter.getState()
                 const lmStudioUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL
                 const lmStudioClient = new OpenAI({
                     baseURL: lmStudioUrl,
@@ -131,7 +131,7 @@ export class UnifiedProviderService {
                 return new TogetherPlugin(tKey, TOGETHER_BASE_URL);
             },
             ollama: async () => {
-                const state = await getState()
+                const state = await websocketStateAdapter.getState()
                 const ollamaUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL
                 return new OllamaPlugin(ollamaUrl);
             },
@@ -324,7 +324,7 @@ export class UnifiedProviderService {
      */
     async listModels(provider: APIProviders): Promise<UnifiedModel[]> {
         await this.initModelFetcherService();
-        const state = await getState()
+        const state = await websocketStateAdapter.getState()
 
         const ollamaBaseUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL
         const lmstudioBaseUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL
