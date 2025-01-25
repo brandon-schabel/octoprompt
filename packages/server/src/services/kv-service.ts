@@ -1,4 +1,3 @@
-// packages/server/src/services/kv-service.ts
 import { KeyValueStore, FileAdapter, type ValueValidator } from '@bnk/kv-store';
 
 import { KVKey, KvSchemas, KVValue } from 'shared';

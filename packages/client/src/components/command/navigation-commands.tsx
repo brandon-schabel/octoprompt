@@ -28,12 +28,6 @@ export function NavigationCommands({ onSelect }: NavigationCommandProps) {
         <ChatBubbleIcon />
         <span>Go to Chat</span>
       </CommandItem>
-      <CommandItem
-        onSelect={() => handleNavigate('/counter')}
-      >
-        <CounterClockwiseClockIcon />
-        <span>Go to Counter</span>
-      </CommandItem>
     </>
   )
 } 
