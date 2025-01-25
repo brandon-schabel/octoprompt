@@ -1,6 +1,6 @@
 import { GlobalState, InboundMessage, validateIncomingMessage, createInitialGlobalState, globalStateSchema } from "shared";
 import { allWebsocketHandlers } from "./websocket-handlers";
-import { BackendWebSocketManager, FileWebSocketAdapter } from "@bnk/backend-websocket-manager";
+import { BackendWebSocketManager, FileWebSocketAdapter, MessageHandler } from "@bnk/backend-websocket-manager";
 
 const STATE_FILE_PATH = "./websocket-state.json";
 
@@ -22,7 +22,8 @@ export const instantiateWebsocketStateAdapter = async () => {
     const bnkWsManager = new BackendWebSocketManager<GlobalState, InboundMessage>({
         defaultState: createInitialGlobalState(),
         adapter: websocketFileAdapter,
-        messageHandlers: allWebsocketHandlers,
+        
+        messageHandlers: [...allWebsocketHandlers] as MessageHandler<GlobalState, InboundMessage>[],
         validateMessage: validateIncomingMessage,
         debug: true
     });

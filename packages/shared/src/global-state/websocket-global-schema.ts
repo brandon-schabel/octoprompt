@@ -1,281 +1,211 @@
-/**
- * packages/shared/src/types/websocket-schemas.ts
- */
-
 import { z } from "zod";
-import { 
-  globalStateSchema, 
-  type GlobalState,
-  projectTabStateSchema,
-  chatTabStateSchema,
-  linkSettingsSchema,
-  providerSchema,
-  type APIProviders,
-  themeSchema,
-  type Theme,
-  appSettingsSchema,
-  type AppSettings,
-  type ChatTabState,
-  type ProjectTabState
+import {
+    globalStateSchema,
+    projectTabStateSchema,
+    chatTabStateSchema,
+    linkSettingsSchema,
+    providerSchema,
+    themeSchema,
+    appSettingsSchema,
+    type GlobalState
 } from "./global-state-schema";
 
 /**
- * A "base" inbound message shape:
- * The BNK manager expects at least a `type` field.
- * If you want other top-level fields, define them below.
+ * Base inbound shape: must have a `type` field.
  */
 export const baseInboundMessageSchema = z.object({
-  type: z.string(),
+    type: z.string(),
 });
 
 /**
- * For partial updates, define a smaller schema that
- * only enforces certain fields as partial. Example:
- */
-const partialGlobalStateSchema = globalStateSchema.deepPartial();
-
-/**
- * Example: partial of ProjectTab. 
- * If you want more precise partial schemas for each message type,
- * do so the same way. This is just a demonstration:
- */
-// import { projectTabStateSchema } from "../global-state/global-state-schema";
-// const partialProjectTabSchema = projectTabStateSchema.deepPartial();
-
-/**
- * Now define each *specific* message schema.
- * We use .extend({ ... }) to ensure they also contain "type: <literal>"
- * so the union can discriminate on "type".
+ * Concrete message schemas.
+ * Use .extend({ type: z.literal("...") }) to discriminate by `type`.
  */
 
-// 1) state_update: the client is providing a new full GlobalState
+// 1) State update
 export const stateUpdateMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("state_update"),
-  data: globalStateSchema,
+    type: z.literal("state_update"),
+    data: globalStateSchema,
 });
 
-// 2) initial_state: the client is providing an initial GlobalState (or requesting it)
+// 2) Initial state
 export const initialStateMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("initial_state"),
-  data: globalStateSchema,
+    type: z.literal("initial_state"),
+    data: globalStateSchema,
 });
 
-// Create a default project tab state
-const defaultProjectTab = {
-  selectedProjectId: null,
-  editProjectId: null,
-  promptDialogOpen: false,
-  editPromptId: null,
-  fileSearch: '',
-  selectedFiles: null,
-  selectedPrompts: [],
-  userPrompt: '',
-  searchByContent: false,
-  contextLimit: 128000,
-  resolveImports: false,
-  preferredEditor: 'vscode' as const,
-  suggestedFileIds: [],
-  bookmarkedFileGroups: {},
-  ticketSearch: '',
-  ticketSort: 'created_desc' as const,
-  ticketStatusFilter: 'all' as const,
-};
-
-// 3) create_project_tab
+// 3) Create project tab
 export const createProjectTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("create_project_tab"),
-  tabId: z.string(),
-  data: projectTabStateSchema.default(defaultProjectTab),
+    type: z.literal("create_project_tab"),
+    tabId: z.string(),
+    data: projectTabStateSchema,
 });
 
-// 4) update_project_tab
+// 4) Update project tab
 export const updateProjectTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_project_tab"),
-  tabId: z.string(),
-  data: projectTabStateSchema,
+    type: z.literal("update_project_tab"),
+    tabId: z.string(),
+    data: projectTabStateSchema,
 });
 
-// 5) update_project_tab_partial
+// 5) Update project tab partial
 export const updateProjectTabPartialMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_project_tab_partial"),
-  tabId: z.string(),
-  partial: projectTabStateSchema.partial().default({}),
+    type: z.literal("update_project_tab_partial"),
+    tabId: z.string(),
+    partial: projectTabStateSchema.partial().default({}),
 });
 
-// ... and so on for each message type you need:
-
+// 6) Delete project tab
 export const deleteProjectTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("delete_project_tab"),
-  tabId: z.string(),
+    type: z.literal("delete_project_tab"),
+    tabId: z.string(),
 });
 
+// 7) Set active project tab
 export const setActiveProjectTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("set_active_project_tab"),
-  tabId: z.string(),
+    type: z.literal("set_active_project_tab"),
+    tabId: z.string(),
 });
 
-// Chat tab messages
+// 8) Create chat tab
 export const createChatTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("create_chat_tab"),
-  tabId: z.string(),
-  data: chatTabStateSchema.default({}),
+    type: z.literal("create_chat_tab"),
+    tabId: z.string(),
+    data: chatTabStateSchema,
 });
 
+// 9) Update chat tab
 export const updateChatTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_chat_tab"),
-  tabId: z.string(),
-  data: chatTabStateSchema,
+    type: z.literal("update_chat_tab"),
+    tabId: z.string(),
+    data: chatTabStateSchema,
 });
 
+// 10) Update chat tab partial
 export const updateChatTabPartialMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_chat_tab_partial"),
-  tabId: z.string(),
-  partial: chatTabStateSchema.partial().default({}),
+    type: z.literal("update_chat_tab_partial"),
+    tabId: z.string(),
+    partial: chatTabStateSchema.partial().default({}),
 });
 
+// 11) Delete chat tab
 export const deleteChatTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("delete_chat_tab"),
-  tabId: z.string(),
+    type: z.literal("delete_chat_tab"),
+    tabId: z.string(),
 });
 
+// 12) Set active chat tab
 export const setActiveChatTabMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("set_active_chat_tab"),
-  tabId: z.string(),
+    type: z.literal("set_active_chat_tab"),
+    tabId: z.string(),
 });
 
-// Example: create_project_tab_from_ticket
+// 13) Create project tab from ticket
 export const createProjectTabFromTicketSchema = baseInboundMessageSchema.extend({
-  type: z.literal("create_project_tab_from_ticket"),
-  tabId: z.string(),
-  ticketId: z.string(),
-  data: projectTabStateSchema.partial().default({}),
+    type: z.literal("create_project_tab_from_ticket"),
+    tabId: z.string(),
+    ticketId: z.string(),
+    data: projectTabStateSchema.partial().default({}),
 });
 
-/**
- * If you have messages to do a partial update of the entire GlobalState,
- * you could do something like:
- */
+// 14) Update global state key (generic partial)
 export const updateGlobalStateKeyMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_global_state_key"),
-  data: z.object({
-    key: z.string(),
-    partial: z.record(z.unknown()).default({}),
-  }),
+    type: z.literal("update_global_state_key"),
+    data: z.object({
+        key: z.string(),
+        // Accept any shape, default to {}
+        partial: z.record(z.unknown()).optional().default({}),
+    }),
 });
 
-// Add settings related message schemas
+// 15) Update entire settings
 export const updateSettingsMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_settings"),
-  data: appSettingsSchema,
+    type: z.literal("update_settings"),
+    data: appSettingsSchema,
 });
 
+// 16) Update partial settings
 export const updateSettingsPartialMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_settings_partial"),
-  partial: appSettingsSchema.partial(),
+    type: z.literal("update_settings_partial"),
+    partial: appSettingsSchema.partial().default({}),
 });
 
-// Add theme related message schema
+// 17) Update theme
 export const updateThemeMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_theme"),
-  theme: themeSchema,
+    type: z.literal("update_theme"),
+    theme: themeSchema,
 });
 
-// Add provider related message schema
+// 18) Update provider
 export const updateProviderMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_provider"),
-  provider: providerSchema,
-  tabId: z.string(),
+    type: z.literal("update_provider"),
+    provider: providerSchema,
+    tabId: z.string(),
 });
 
-// Add link settings related message schema
+// 19) Update link settings
 export const updateLinkSettingsMessageSchema = baseInboundMessageSchema.extend({
-  type: z.literal("update_link_settings"),
-  tabId: z.string(),
-  settings: linkSettingsSchema,
+    type: z.literal("update_link_settings"),
+    tabId: z.string(),
+    settings: linkSettingsSchema,
 });
 
 /**
- * Combine all the above into a *discriminated union* on "type".
- * This ensures that the .parse() can figure out which shape it is,
- * and you get a strongly typed result.
+ * Combine all into a single discriminated union on "type".
  */
 export const inboundMessageSchema = z.discriminatedUnion("type", [
-  stateUpdateMessageSchema,
-  initialStateMessageSchema,
-  createProjectTabMessageSchema,
-  updateProjectTabMessageSchema,
-  updateProjectTabPartialMessageSchema,
-  deleteProjectTabMessageSchema,
-  setActiveProjectTabMessageSchema,
-
-  createChatTabMessageSchema,
-  updateChatTabMessageSchema,
-  updateChatTabPartialMessageSchema,
-  deleteChatTabMessageSchema,
-  setActiveChatTabMessageSchema,
-
-  updateGlobalStateKeyMessageSchema,
-  createProjectTabFromTicketSchema,
-  updateSettingsMessageSchema,
-  updateSettingsPartialMessageSchema,
-  updateThemeMessageSchema,
-  updateProviderMessageSchema,
-  updateLinkSettingsMessageSchema,
-  // add others as needed...
+    stateUpdateMessageSchema,
+    initialStateMessageSchema,
+    createProjectTabMessageSchema,
+    updateProjectTabMessageSchema,
+    updateProjectTabPartialMessageSchema,
+    deleteProjectTabMessageSchema,
+    setActiveProjectTabMessageSchema,
+    createChatTabMessageSchema,
+    updateChatTabMessageSchema,
+    updateChatTabPartialMessageSchema,
+    deleteChatTabMessageSchema,
+    setActiveChatTabMessageSchema,
+    createProjectTabFromTicketSchema,
+    updateGlobalStateKeyMessageSchema,
+    updateSettingsMessageSchema,
+    updateSettingsPartialMessageSchema,
+    updateThemeMessageSchema,
+    updateProviderMessageSchema,
+    updateLinkSettingsMessageSchema,
 ]);
 
-/**
- * Type for all inbound messages after passing through Zod.
- */
 export type InboundMessage = z.infer<typeof inboundMessageSchema>;
 
 /**
- * OPTIONAL: If you have outbound messages from server->client, define them similarly.
+ * OPTIONAL: define outbound messages similarly, if needed.
  */
 export const outboundMessageSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("state_update"),
-    data: globalStateSchema,
-  }),
-  z.object({
-    type: z.literal("error"),
-    error: z.string(),
-    code: z.number().optional(),
-  }),
-  z.object({
-    type: z.literal("success"),
-    message: z.string(),
-  }),
+    z.object({
+        type: z.literal("state_update"),
+        data: globalStateSchema,
+    }),
+    z.object({
+        type: z.literal("error"),
+        error: z.string(),
+        code: z.number().optional(),
+    }),
+    z.object({
+        type: z.literal("success"),
+        message: z.string(),
+    }),
 ]);
 export type OutboundMessage = z.infer<typeof outboundMessageSchema>;
 
 /**
- * validateIncomingMessage - used in BNK manager to parse incoming data.
- * This ensures the entire message is typed for your handlers.
+ * validateIncomingMessage - used in BNK manager to parse incoming data
  */
 export function validateIncomingMessage(raw: unknown): InboundMessage {
-  // If the raw data is already a string, parse JSON first:
-  const asJson =
-    typeof raw === "string"
-      ? JSON.parse(raw)
-      : typeof raw === "object"
-      ? raw
-      : {};
-
-  return inboundMessageSchema.parse(asJson);
+    const asJson =
+        typeof raw === "string"
+            ? JSON.parse(raw)
+            : typeof raw === "object"
+                ? raw
+                : {};
+    return inboundMessageSchema.parse(asJson);
 }
-
-// Add type helpers for specific message types
-export type UpdateSettingsMessage = z.infer<typeof updateSettingsMessageSchema>;
-export type UpdateThemeMessage = z.infer<typeof updateThemeMessageSchema>;
-export type UpdateProviderMessage = z.infer<typeof updateProviderMessageSchema>;
-export type UpdateLinkSettingsMessage = z.infer<typeof updateLinkSettingsMessageSchema>;
-
-// Add validation helper for specific message types
-export const validateSettingsUpdate = (data: unknown): UpdateSettingsMessage => {
-  return updateSettingsMessageSchema.parse(data);
-};
-
-export const validateThemeUpdate = (data: unknown): UpdateThemeMessage => {
-  return updateThemeMessageSchema.parse(data);
-};

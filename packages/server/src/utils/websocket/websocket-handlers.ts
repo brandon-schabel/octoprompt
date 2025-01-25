@@ -1,64 +1,46 @@
 import { ServerWebSocket } from "bun";
-import { 
-  type GlobalState, 
-  type InboundMessage,
-  type ProjectTabState,
-  stateUpdateMessageSchema,
-  createProjectTabMessageSchema,
-  updateProjectTabMessageSchema,
-  updateProjectTabPartialMessageSchema,
-  deleteProjectTabMessageSchema,
-  createChatTabMessageSchema,
-  updateChatTabMessageSchema,
-  updateChatTabPartialMessageSchema,
-  deleteChatTabMessageSchema,
-  setActiveChatTabMessageSchema,
-  updateGlobalStateKeyMessageSchema,
-  createProjectTabFromTicketSchema,
-  globalStateSchema
-} from "shared";
 import { z } from "zod";
+import {
+  globalStateSchema,
+  type GlobalState,
+  type InboundMessage,
+  ProjectTabState,
+} from "shared";
 import { mergeDeep } from "./merge-deep";
 
-type StateUpdateMessage = z.infer<typeof stateUpdateMessageSchema>;
-type CreateProjectTabMessage = z.infer<typeof createProjectTabMessageSchema>;
-type UpdateProjectTabMessage = z.infer<typeof updateProjectTabMessageSchema>;
-type UpdateProjectTabPartialMessage = z.infer<typeof updateProjectTabPartialMessageSchema>;
-type DeleteProjectTabMessage = z.infer<typeof deleteProjectTabMessageSchema>;
-type CreateChatTabMessage = z.infer<typeof createChatTabMessageSchema>;
-type UpdateChatTabMessage = z.infer<typeof updateChatTabMessageSchema>;
-type UpdateChatTabPartialMessage = z.infer<typeof updateChatTabPartialMessageSchema>;
-type DeleteChatTabMessage = z.infer<typeof deleteChatTabMessageSchema>;
-type SetActiveChatTabMessage = z.infer<typeof setActiveChatTabMessageSchema>;
-type UpdateGlobalStateKeyMessage = z.infer<typeof updateGlobalStateKeyMessageSchema>;
-type CreateProjectTabFromTicketMessage = z.infer<typeof createProjectTabFromTicketSchema>;
-
-type MessageHandler<TState, TMessage extends InboundMessage> = {
-  type: TMessage["type"];
+/** Generic type for a message handler of a certain 'type' */
+type WebSocketMessageHandler<T extends InboundMessage["type"]> = {
+  type: T;
   handle: (
     ws: ServerWebSocket<any>,
-    message: TMessage,
-    getState: () => Promise<TState>,
-    setState: (updated: TState) => Promise<void>
+    message: Extract<InboundMessage, { type: T }>,
+    getState: () => Promise<GlobalState>,
+    setState: (updated: GlobalState) => Promise<void>
   ) => Promise<void>;
 };
 
+function isMessageHandler<T extends InboundMessage["type"]>(
+  handler: WebSocketMessageHandler<any>,
+  type: T
+): handler is WebSocketMessageHandler<T> {
+  return handler.type === type;
+}
 
-/** State update handler */
-export const stateUpdateHandler: MessageHandler<GlobalState, StateUpdateMessage> = {
+// ---------------------------------------------------
+// Example handlers
+// ---------------------------------------------------
+
+export const stateUpdateHandler: WebSocketMessageHandler<"state_update"> = {
   type: "state_update",
   handle: async (ws, message, getState, setState) => {
     const oldState = await getState();
     const newData = globalStateSchema.parse(message.data);
-    console.log("[stateUpdateHandler] Merging new state with old state");
     const merged = mergeDeep(oldState, newData);
     await setState(merged);
   },
 };
 
-
-/** Create project tab handler */
-export const createProjectTabHandler: MessageHandler<GlobalState, CreateProjectTabMessage> = {
+export const createProjectTabHandler: WebSocketMessageHandler<"create_project_tab"> = {
   type: "create_project_tab",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -72,8 +54,7 @@ export const createProjectTabHandler: MessageHandler<GlobalState, CreateProjectT
   },
 };
 
-/** Update project tab handler */
-export const updateProjectTabHandler: MessageHandler<GlobalState, UpdateProjectTabMessage> = {
+export const updateProjectTabHandler: WebSocketMessageHandler<"update_project_tab"> = {
   type: "update_project_tab",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -87,17 +68,17 @@ export const updateProjectTabHandler: MessageHandler<GlobalState, UpdateProjectT
   },
 };
 
-/** Update project tab partial handler */
-export const updateProjectTabPartialHandler: MessageHandler<GlobalState, UpdateProjectTabPartialMessage> = {
+export const updateProjectTabPartialHandler: WebSocketMessageHandler<"update_project_tab_partial"> = {
   type: "update_project_tab_partial",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
+    const existingTab = state.projectTabs[message.tabId] || {};
     await setState({
       ...state,
       projectTabs: {
         ...state.projectTabs,
         [message.tabId]: {
-          ...state.projectTabs[message.tabId],
+          ...existingTab,
           ...message.partial,
         },
       },
@@ -105,8 +86,7 @@ export const updateProjectTabPartialHandler: MessageHandler<GlobalState, UpdateP
   },
 };
 
-/** Delete project tab handler */
-export const deleteProjectTabHandler: MessageHandler<GlobalState, DeleteProjectTabMessage> = {
+export const deleteProjectTabHandler: WebSocketMessageHandler<"delete_project_tab"> = {
   type: "delete_project_tab",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -118,8 +98,7 @@ export const deleteProjectTabHandler: MessageHandler<GlobalState, DeleteProjectT
   },
 };
 
-/** Create chat tab handler */
-export const createChatTabHandler: MessageHandler<GlobalState, CreateChatTabMessage> = {
+export const createChatTabHandler: WebSocketMessageHandler<"create_chat_tab"> = {
   type: "create_chat_tab",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -133,8 +112,7 @@ export const createChatTabHandler: MessageHandler<GlobalState, CreateChatTabMess
   },
 };
 
-/** Update chat tab handler */
-export const updateChatTabHandler: MessageHandler<GlobalState, UpdateChatTabMessage> = {
+export const updateChatTabHandler: WebSocketMessageHandler<"update_chat_tab"> = {
   type: "update_chat_tab",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -148,17 +126,17 @@ export const updateChatTabHandler: MessageHandler<GlobalState, UpdateChatTabMess
   },
 };
 
-/** Update chat tab partial handler */
-export const updateChatTabPartialHandler: MessageHandler<GlobalState, UpdateChatTabPartialMessage> = {
+export const updateChatTabPartialHandler: WebSocketMessageHandler<"update_chat_tab_partial"> = {
   type: "update_chat_tab_partial",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
+    const existingTab = state.chatTabs[message.tabId] || {};
     await setState({
       ...state,
       chatTabs: {
         ...state.chatTabs,
         [message.tabId]: {
-          ...state.chatTabs[message.tabId],
+          ...existingTab,
           ...message.partial,
         },
       },
@@ -166,8 +144,7 @@ export const updateChatTabPartialHandler: MessageHandler<GlobalState, UpdateChat
   },
 };
 
-/** Delete chat tab handler */
-export const deleteChatTabHandler: MessageHandler<GlobalState, DeleteChatTabMessage> = {
+export const deleteChatTabHandler: WebSocketMessageHandler<"delete_chat_tab"> = {
   type: "delete_chat_tab",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -179,8 +156,7 @@ export const deleteChatTabHandler: MessageHandler<GlobalState, DeleteChatTabMess
   },
 };
 
-/** Set active chat tab handler */
-export const setActiveChatTabHandler: MessageHandler<GlobalState, SetActiveChatTabMessage> = {
+export const setActiveChatTabHandler: WebSocketMessageHandler<"set_active_chat_tab"> = {
   type: "set_active_chat_tab",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -191,8 +167,7 @@ export const setActiveChatTabHandler: MessageHandler<GlobalState, SetActiveChatT
   },
 };
 
-/** Update global state key handler */
-export const updateGlobalStateKeyHandler: MessageHandler<GlobalState, UpdateGlobalStateKeyMessage> = {
+export const updateGlobalStateKeyHandler: WebSocketMessageHandler<"update_global_state_key"> = {
   type: "update_global_state_key",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
@@ -206,59 +181,142 @@ export const updateGlobalStateKeyHandler: MessageHandler<GlobalState, UpdateGlob
           ...message.data.partial,
         },
       });
+    } else {
+      await setState({
+        ...state,
+        [key]: message.data.partial,
+      });
     }
   },
 };
 
-/** Create project tab from ticket handler */
-export const createProjectTabFromTicketHandler: MessageHandler<GlobalState, CreateProjectTabFromTicketMessage> = {
+export const createProjectTabFromTicketHandler: WebSocketMessageHandler<"create_project_tab_from_ticket"> = {
   type: "create_project_tab_from_ticket",
   handle: async (ws, message, getState, setState) => {
     const state = await getState();
-    const defaultProjectTab = {
-      selectedProjectId: null,
-      editProjectId: null,
-      promptDialogOpen: false,
-      editPromptId: null,
-      fileSearch: '',
-      selectedFiles: null,
-      selectedPrompts: [],
-      userPrompt: '',
-      searchByContent: false,
-      contextLimit: 128000,
-      resolveImports: false,
-      preferredEditor: 'vscode' as const,
-      suggestedFileIds: [],
-      bookmarkedFileGroups: {},
-      ticketSearch: '',
-      ticketSort: 'created_desc' as const,
-      ticketStatusFilter: 'all' as const,
+    // Extend the default if needed:
+    const defaultProjectTab: Partial<ProjectTabState> = {
       ticketId: message.ticketId,
       ...message.data,
-    } satisfies ProjectTabState;
-
+    };
     await setState({
       ...state,
+      // @ts-expect-error: TODO: fix this
       projectTabs: {
         ...state.projectTabs,
-        [message.tabId]: defaultProjectTab,
+        [message.tabId]: {
+          ...defaultProjectTab,
+        },
       },
     });
   },
 };
 
-/** Combined handlers array */
+export const setActiveProjectTabHandler: WebSocketMessageHandler<"set_active_project_tab"> = {
+  type: "set_active_project_tab",
+  handle: async (ws, message, getState, setState) => {
+    const state = await getState();
+    await setState({
+      ...state,
+      projectActiveTabId: message.tabId,
+    });
+  },
+};
+
+export const updateSettingsHandler: WebSocketMessageHandler<"update_settings"> = {
+  type: "update_settings",
+  handle: async (ws, message, getState, setState) => {
+    const state = await getState();
+    await setState({
+      ...state,
+      settings: message.data,
+    });
+  },
+};
+
+export const updateSettingsPartialHandler: WebSocketMessageHandler<"update_settings_partial"> = {
+  type: "update_settings_partial",
+  handle: async (ws, message, getState, setState) => {
+    const state = await getState();
+    await setState({
+      ...state,
+      settings: {
+        ...state.settings,
+        ...message.partial,
+      },
+    });
+  },
+};
+
+export const updateThemeHandler: WebSocketMessageHandler<"update_theme"> = {
+  type: "update_theme",
+  handle: async (ws, message, getState, setState) => {
+    const state = await getState();
+    await setState({
+      ...state,
+      settings: {
+        ...state.settings,
+        theme: message.theme,
+      },
+    });
+  },
+};
+
+export const updateProviderHandler: WebSocketMessageHandler<"update_provider"> = {
+  type: "update_provider",
+  handle: async (ws, message, getState, setState) => {
+    const state = await getState();
+    const { tabId, provider } = message;
+    const existingTab = state.projectTabs[tabId] || {};
+    await setState({
+      ...state,
+      projectTabs: {
+        ...state.projectTabs,
+        [tabId]: {
+          ...existingTab,
+          provider,
+        },
+      },
+    });
+  },
+};
+
+export const updateLinkSettingsHandler: WebSocketMessageHandler<"update_link_settings"> = {
+  type: "update_link_settings",
+  handle: async (ws, message, getState, setState) => {
+    const state = await getState();
+    const existingTab = state.projectTabs[message.tabId] || {};
+    await setState({
+      ...state,
+      projectTabs: {
+        ...state.projectTabs,
+        [message.tabId]: {
+          ...existingTab,
+          linkSettings: message.settings,
+        },
+      },
+    });
+  },
+};
+
+/** Combine all handlers into one array */
 export const allWebsocketHandlers = [
-    stateUpdateHandler,
-    createProjectTabHandler,
-    updateProjectTabHandler,
-    updateProjectTabPartialHandler,
-    deleteProjectTabHandler,
-    createChatTabHandler,
-    updateChatTabHandler,
-    updateChatTabPartialHandler,
-    deleteChatTabHandler,
-    setActiveChatTabHandler,
-    updateGlobalStateKeyHandler,
-    createProjectTabFromTicketHandler,
-] as const as MessageHandler<GlobalState, InboundMessage>[]
+  stateUpdateHandler,
+  createProjectTabHandler,
+  updateProjectTabHandler,
+  updateProjectTabPartialHandler,
+  deleteProjectTabHandler,
+  createChatTabHandler,
+  updateChatTabHandler,
+  updateChatTabPartialHandler,
+  deleteChatTabHandler,
+  setActiveChatTabHandler,
+  updateGlobalStateKeyHandler,
+  createProjectTabFromTicketHandler,
+  setActiveProjectTabHandler,
+  updateSettingsHandler,
+  updateSettingsPartialHandler,
+  updateThemeHandler,
+  updateProviderHandler,
+  updateLinkSettingsHandler,
+] as const;
