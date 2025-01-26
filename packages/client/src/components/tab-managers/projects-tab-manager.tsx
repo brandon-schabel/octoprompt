@@ -38,13 +38,12 @@ export function ProjectsTabManager() {
   const updateProjectTab = useUpdateProjectTab()
   const deleteProjectTab = useDeleteProjectTab()
   const updateSettings = useUpdateSettings()
-  const { tabData: activeProjectTabState } = useActiveProjectTab()
+  const { tabData: activeProjectTabState, id: activeTabId } = useActiveProjectTab()
   const settings = useSettings()
 
   const projectId = activeProjectTabState?.selectedProjectId
 
   const tabs = useProjectTabs()
-  const activeTabId = state?.projectActiveTabId ?? null
 
   const tabOrder = settings?.projectTabIdOrder
     ? settings.projectTabIdOrder
