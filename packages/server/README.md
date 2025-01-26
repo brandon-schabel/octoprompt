@@ -650,7 +650,7 @@ The `package.json` includes various test commands:
    # 2. Create test user
    bun test:setup-user
    
-   # 3. Start test server (port 3001)
+   # 3. Start test server (port 3000)
    bun test:server
    ```
 
@@ -714,7 +714,7 @@ describe('Auth Operations', () => {
 The E2E tests use:
 
 - Separate test database (specified in `.env.test`)
-- Test server running on port 3001
+- Test server running on port 3000
 - Clean database state for each test suite
 - Real HTTP requests to test the full stack
 
@@ -736,7 +736,7 @@ The E2E tests use:
    // e2e/utils/get-auth-test-api.ts
    export const getAuthTescounttApi = () => {
        const api = new APIInterface({
-           baseUrl: 'http://localhost:3001',
+           baseUrl: 'http://localhost:3000',
            // Test-specific configuration
        });
        return new AuthAPI(api);

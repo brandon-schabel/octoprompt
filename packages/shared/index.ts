@@ -40,6 +40,8 @@ export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher
 // export type { ChatAppState, ChatClientMessage, IncomingServerMessage, InitialStateServerMessage, OutgoingClientMessage, StateUpdateServerMessage } from './src/types/chat-types'
 
 export * from './schema'
-export * from './src/types/global-websocket-types';
+// export * from './src/types/global-websocket-types';
 
 export { buildCombinedFileSummaries } from './src/utils/summary-formatter';
+export * from './src/kv-validators';
+export * from './src/global-state/websocket-global-schema';

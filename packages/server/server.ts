@@ -13,21 +13,29 @@ import "@/routes/code-editor-routes";
 import "@/routes/promptimizer-routes";
 import "@/routes/ticket-routes";
 import "@/routes/suggest-files-routes";
+import "@/routes/kv-routes";
 
-import { globalStateSchema } from "shared";
 import { json } from "@bnk/router";
 import { WatchersManager } from "@/services/file-services/watchers-manager";
 import { FileSyncService } from "@/services/file-services/file-sync-service";
 import { FileSummaryService } from "@/services/file-services/file-summary-service";
 import { ProjectService } from "@/services/project-service";
-import { getState, setState } from "./src/websocket/websocket-config";
-import { bnkWsManager } from "./src/websocket/websocket-manager";
 import { logger } from "src/utils/logger";
 import { CleanupService } from "@/services/file-services/cleanup-service";
+import { initKvStore } from "@/services/kv-service";
 
-const isDevEnv = process.env.DEV === 'true';
-// built client files
-const CLIENT_PATH = isDevEnv ? join(import.meta.dir, "client-dist") : "./client-dist";
+import {
+  globalStateSchema,
+} from "shared";
+
+import { websocketStateAdapter, initialGlobalState } from "./src/utils/websocket/websocket-state-adapter";
+
+
+
+const isDevEnv = process.env.DEV === "true";
+const CLIENT_PATH = isDevEnv
+  ? join(import.meta.dir, "client-dist")
+  : "./client-dist";
 
 type ServerConfig = {
   port?: number;
@@ -42,89 +50,70 @@ const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
 const fileSyncService = new FileSyncService();
 const fileSummaryService = new FileSummaryService();
 const projectService = new ProjectService();
-
-// Instantiate watchers manager
 const watchersManager = new WatchersManager(
   fileSummaryService,
   fileSyncService,
   projectService
 );
 
-export const instantiateServer = ({
-  port = PORT
-}: ServerConfig = {}): Server => {
+export async function instantiateServer({ port = PORT }: ServerConfig = {}): Promise<Server> {
+
   const server: Server = serve<{ clientId: string }>({
-    idleTimeout: 255, // 255 seconds, we're dealing with streaming and non streaming llm responses which can take a while.
+    idleTimeout: 255,
     port,
     async fetch(req: Request): Promise<Response | undefined> {
       const url = new URL(req.url);
 
-      // Handle base URL request
-      if (url.pathname === '/') {
-        return new Response(Bun.file(join(CLIENT_PATH, 'index.html')));
+      if (url.pathname === "/") {
+        return new Response(Bun.file(join(CLIENT_PATH, "index.html")));
       }
 
-      // Handle WebSocket upgrade requests
       if (url.pathname === "/ws") {
         const clientId = crypto.randomUUID();
-        const upgraded: boolean = server.upgrade(req, {
-          data: { clientId }
-        });
-
-        return upgraded
-          ? undefined
-          : new Response("WebSocket upgrade failed", { status: 400 });
+        const upgraded: boolean = server.upgrade(req, { data: { clientId } });
+        return upgraded ? undefined : new Response("WebSocket upgrade failed", { status: 400 });
       }
 
-      router.get("/api/health", {}, async () => {
-        return json({ success: true });
-      });
+      router.get("/api/health", {}, async () => json({ success: true }));
 
-      // Handle state-related HTTP endpoints
-      if (url.pathname === '/api/state') {
-        if (req.method === 'GET') {
+      if (url.pathname === "/api/state") {
+        if (req.method === "GET") {
           try {
-            const state = await getState();
-            return Response.json(state);
+            const currentState = websocketStateAdapter.getState();
+            return Response.json(currentState);
           } catch (error) {
-            console.error('Error fetching state:', error);
-            return new Response(
-              JSON.stringify({ error: "Failed to fetch state" }),
-              { status: 500 }
-            );
+            console.error("Error fetching state:", error);
+            return new Response(JSON.stringify({ error: "Failed to fetch state" }), { status: 500 });
           }
         }
-
-        if (req.method === 'POST') {
+        if (req.method === "POST") {
           try {
             const body = await req.json();
-            const currentState = await getState();
             const { key, value } = body as { key: string; value: unknown };
+            const currentState = websocketStateAdapter.getState();
 
+            // Shallow update
             const newState = { ...currentState, [key]: value };
             const validated = globalStateSchema.parse(newState);
 
-            await setState(validated);
-            bnkWsManager.broadcastState();
+            // Set & broadcast
+            await websocketStateAdapter.setState(validated, true);
 
             return Response.json(validated);
           } catch (error) {
-            console.error('Error updating state:', error);
-            return new Response(
-              JSON.stringify({ error: String(error) }),
-              { status: 400 }
-            );
+            console.error("Error updating state:", error);
+            return new Response(JSON.stringify({ error: String(error) }), { status: 400 });
           }
         }
       }
 
-      // Regular HTTP routing
-      if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')) {
+      if (url.pathname.startsWith("/api") || url.pathname.startsWith("/auth")) {
         const routerResponse = await router.handle(req);
         if (routerResponse) return routerResponse;
       }
 
-      const isStaticFile = /\.(js|css|html|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(url.pathname);
+      const isStaticFile =
+        /\.(js|css|html|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(url.pathname);
       if (isStaticFile) {
         return serveStatic(url.pathname);
       }
@@ -134,37 +123,38 @@ export const instantiateServer = ({
         return routerResponse;
       }
 
-      const frontendEnpoints = ['/projects', '/chat'];
-      if (routerResponse && routerResponse?.status === 404 && frontendEnpoints.includes(url.pathname)) {
-        return serveStatic('index.html');
+      const frontendEnpoints = ["/projects", "/chat"];
+      if (routerResponse?.status === 404 && frontendEnpoints.includes(url.pathname)) {
+        return serveStatic("index.html");
       }
 
-      return serveStatic('index.html');
+      return serveStatic("index.html");
     },
 
     websocket: {
-      open(ws) {
+      async open(ws) {
         logger.debug("New WS connection", { clientId: ws.data.clientId });
-        bnkWsManager.handleOpen(ws);
+        websocketStateAdapter.handleOpen(ws);
+        // broadcast current state to newly connected client
+        await websocketStateAdapter.broadcastState();
       },
       close(ws) {
         logger.debug("WS closed", { clientId: ws.data.clientId });
-        bnkWsManager.handleClose(ws);
+        websocketStateAdapter.handleClose(ws);
       },
       async message(ws, rawMessage) {
         try {
-          await bnkWsManager.handleMessage(ws, rawMessage.toString());
+          await websocketStateAdapter.handleMessage(ws, rawMessage.toString());
+          await websocketStateAdapter.broadcastState();
         } catch (err) {
           logger.error("Error handling WS message:", err);
         }
-        await bnkWsManager.broadcastState();
       },
     },
   });
 
-  // Once the server is up, start watchers for all existing projects
+  // Start watchers for existing projects
   (async () => {
-    const projectService = new ProjectService();
     const allProjects = await projectService.listProjects();
     for (const project of allProjects) {
       watchersManager.startWatchingProject(project, [
@@ -172,12 +162,11 @@ export const instantiateServer = ({
         "dist",
         ".git",
         "*.tmp",
-        "*.db-journal"
+        "*.db-journal",
       ]);
 
-      // 5) Start the cleanup service to run periodically (e.g., every 5 minutes)
       const cleanupService = new CleanupService(fileSyncService, projectService, {
-        intervalMs: 5 * 60 * 1000
+        intervalMs: 5 * 60 * 1000,
       });
       cleanupService.start();
     }
@@ -185,14 +174,12 @@ export const instantiateServer = ({
 
   console.log(`Server running at http://localhost:${server.port}`);
   return server;
-};
+}
 
-// Modify the serveStatic function to handle 404s properly
 function serveStatic(path: string): Response {
   try {
     const filePath = join(CLIENT_PATH, path);
     const stat = statSync(filePath);
-
     if (stat.isFile()) {
       return new Response(Bun.file(filePath));
     }
@@ -202,18 +189,18 @@ function serveStatic(path: string): Response {
   }
 }
 
-// Only start the server if this file is being run directly
 if (import.meta.main) {
-  console.log('Starting server...');
-  const server = instantiateServer();
-
-  function handleShutdown() {
-    console.log('Received kill signal. Shutting down gracefully...');
-    watchersManager.stopAll?.();
-    server.stop();
-    process.exit(0);
-  }
-
-  process.on('SIGINT', handleShutdown);
-  process.on('SIGTERM', handleShutdown);
+  console.log("Starting server...");
+  (async () => {
+    await initKvStore();
+    const server = await instantiateServer();
+    function handleShutdown() {
+      console.log("Received kill signal. Shutting down gracefully...");
+      watchersManager.stopAll?.();
+      server.stop();
+      process.exit(0);
+    }
+    process.on("SIGINT", handleShutdown);
+    process.on("SIGTERM", handleShutdown);
+  })();
 }

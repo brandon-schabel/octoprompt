@@ -1,50 +1,70 @@
 import { useCallback } from "react";
-import { useGlobalStateContext } from "./websocket-config-context";
-import {
-    GlobalState,
-    ProjectTabState,
-    ChatTabState,
-    LinkSettings,
-    linkSettingsSchema,
-} from "shared";
+import { useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils";
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
 
+import { useGlobalStateContext } from "@/components/global-state/global-state-websocket";
+
+import {
+    GlobalState,
+    ProjectTabState,
+    ChatTabState,
+    linkSettingsSchema,
+    LinkSettings,
+} from "shared";
+import { useGlobalState } from "./use-global-state";
+
+/**
+ * We define a small helper to handle partial updates.
+ */
 export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
 
 function getPartial<T>(prev: T, partialOrFn: PartialOrFn<T>): Partial<T> {
     return typeof partialOrFn === "function" ? partialOrFn(prev) : partialOrFn;
 }
 
+/**
+ * Main hook for updating / reading global state via BNK + React Query.
+ */
 export function useGlobalStateHelpers() {
-    const { globalState, isOpen, wsClient } = useGlobalStateContext();
-    const state = globalState;
+    // 1) Access BNK manager + isOpen from the new context
+    const { manager, isOpen } = useGlobalStateContext();
 
+    // We pull the entire globalState from the cache:
+    const { data: state } = useGlobalState();
+
+    // Helper to confirm if safe to proceed
     const canProceed = useCallback((): boolean => {
         if (!isOpen) {
             console.warn("WebSocket not open, cannot send message");
             return false;
         }
         if (!state) {
-            console.warn("No state loaded yet, cannot proceed");
+            console.warn("No global state loaded yet, cannot proceed");
             return false;
         }
         return true;
     }, [isOpen, state]);
 
-    const sendWSMessage = useCallback((msg: Parameters<typeof wsClient.sendMessage>[0]) => {
-        if (canProceed()) {
-            wsClient.sendMessage(msg);
-        }
-    }, [canProceed, wsClient.sendMessage]);
+    // Utility to send messages
+    const sendWSMessage = useCallback(
+        (msg: Parameters<typeof manager.sendMessage>[0]) => {
+            if (canProceed()) {
+                manager.sendMessage(msg);
+            }
+        },
+        [manager, canProceed]
+    );
 
-
+    // --------------------------------------------------
+    // Example functions for updating global state
+    // --------------------------------------------------
     function updateGlobalStateKey<K extends keyof GlobalState>(
         key: K,
         partialOrFn: PartialOrFn<GlobalState[K]>
     ) {
-        if (!canProceed()) return;
+        if (!canProceed() || !state) return;
         const currentValue = state[key];
         if (currentValue === undefined) return;
         const finalPartial = getPartial(currentValue, partialOrFn);
@@ -58,10 +78,17 @@ export function useGlobalStateHelpers() {
     }
 
     function updateSettings(partialOrFn: PartialOrFn<GlobalState["settings"]>) {
-        updateGlobalStateKey("settings", partialOrFn);
+        if (!canProceed() || !state) return;
+        const finalPartial = getPartial(state.settings, partialOrFn);
+        sendWSMessage({
+            type: "update_settings_partial",
+            partial: finalPartial,
+        });
     }
 
-
+    // --------------------------------------------------
+    // Project Tab
+    // --------------------------------------------------
     function createProjectTab({
         projectId,
         userPrompt = "",
@@ -73,10 +100,10 @@ export function useGlobalStateHelpers() {
         selectedFiles?: string[];
         displayName?: string;
     }) {
-        if (!canProceed()) return;
+        if (!canProceed() || !state) return;
         const newTabId = `project-tab-${uuidv4()}`;
 
-        const newTabData = {
+        const newTabData: ProjectTabState = {
             selectedProjectId: projectId,
             editProjectId: null,
             promptDialogOpen: false,
@@ -89,12 +116,13 @@ export function useGlobalStateHelpers() {
             displayName,
             contextLimit: 128000,
             resolveImports: false,
-            preferredEditor: "cursor" as const,
+            preferredEditor: "cursor",
             suggestedFileIds: [],
             bookmarkedFileGroups: {},
             ticketSearch: "",
-            ticketSort: "created_desc" as const,
-            ticketStatusFilter: "all" as const
+            ticketSort: "created_desc",
+            ticketStatusFilter: "all",
+            ticketId: null,
         };
 
         sendWSMessage({
@@ -102,8 +130,6 @@ export function useGlobalStateHelpers() {
             tabId: newTabId,
             data: newTabData,
         });
-
-        setActiveProjectTab(newTabId);
     }
 
     function setActiveProjectTab(tabId: string) {
@@ -117,49 +143,37 @@ export function useGlobalStateHelpers() {
     function updateProjectTab(tabId: string, partial: Partial<ProjectTabState>) {
         if (!canProceed()) return;
         sendWSMessage({
-            type: "update_project_tab",
+            type: "update_project_tab_partial",
             tabId,
-            // @ts-ignore TODO: Fix this - although it works for now
-            data: partial,
+            partial,
         });
     }
 
     function deleteProjectTab(tabId: string) {
         if (!canProceed() || !state) return;
-
-        // e.g. Don't delete if it's the last tab
         if (Object.keys(state.projectTabs).length <= 1) {
             console.warn("Cannot delete the last remaining project tab");
             return;
         }
-
         sendWSMessage({
             type: "delete_project_tab",
             tabId,
         });
     }
 
-    /**
-     * Partially update the currently active project tab
-     */
     function updateActiveProjectTab(partialOrFn: PartialOrFn<ProjectTabState>) {
         if (!canProceed() || !state?.projectActiveTabId) return;
-        const { projectActiveTabId, projectTabs } = state;
-        const currentTab = projectTabs[projectActiveTabId];
+        const currentTab = state.projectTabs[state.projectActiveTabId];
         const finalPartial = getPartial(currentTab, partialOrFn);
-
         sendWSMessage({
             type: "update_project_tab_partial",
-            tabId: projectActiveTabId,
+            tabId: state.projectActiveTabId,
             partial: finalPartial,
         });
     }
 
-    /**
-     * Update any project tab (by ID) using partial or function
-     */
     function updateProjectTabState(tabId: string, partialOrFn: PartialOrFn<ProjectTabState>) {
-        if (!canProceed()) return;
+        if (!canProceed() || !state) return;
         const currentTab = state.projectTabs[tabId];
         if (!currentTab) return;
 
@@ -171,7 +185,6 @@ export function useGlobalStateHelpers() {
         });
     }
 
-
     function updateActiveProjectTabStateKey<K extends keyof ProjectTabState>(
         key: K,
         valueOrFn: ProjectTabState[K] | ((prevValue: ProjectTabState[K]) => ProjectTabState[K])
@@ -182,6 +195,43 @@ export function useGlobalStateHelpers() {
         });
     }
 
+    function createProjectTabFromTicket(ticket: TicketWithTasks, customTabId?: string) {
+        if (!canProceed() || !state?.projectActiveTabId) return;
+        const tabId = customTabId ?? `ticket-tab-${uuidv4()}`;
+
+        const currentTab = state.projectTabs[state.projectActiveTabId];
+        if (!currentTab) return;
+
+        const userPrompt = buildTicketContent(ticket);
+
+        const newTabData: ProjectTabState = {
+            ...currentTab,
+            selectedProjectId: ticket.projectId,
+            selectedFiles: JSON.parse(ticket.suggestedFileIds || "[]"),
+            suggestedFileIds: JSON.parse(ticket.suggestedFileIds || "[]"),
+            userPrompt,
+            displayName: ticket.title || "Ticket Tab",
+            editProjectId: null,
+            promptDialogOpen: false,
+            editPromptId: null,
+            fileSearch: "",
+            ticketSearch: "",
+            ticketId: ticket.id,
+        };
+
+        sendWSMessage({
+            type: "create_project_tab_from_ticket",
+            tabId,
+            ticketId: ticket.id,
+            data: newTabData,
+        });
+
+        setActiveProjectTab(tabId);
+    }
+
+    // --------------------------------------------------
+    // Chat Tab
+    // --------------------------------------------------
     function createChatTab(options?: {
         cleanTab?: boolean;
         model?: string;
@@ -193,38 +243,22 @@ export function useGlobalStateHelpers() {
         const sourceTabId = state.chatActiveTabId;
         const sourceTabState = state.chatTabs[sourceTabId];
 
-        let messageData = {
+        const messageData: ChatTabState = {
             ...sourceTabState,
             displayName: options?.title || `Chat ${Object.keys(state.chatTabs).length + 1}`,
             model: options?.model ?? sourceTabState.model,
-            provider: options?.provider ?? sourceTabState.provider,
+            provider: (options?.provider ?? sourceTabState.provider) as ChatTabState["provider"],
+            messages: [],
+            input: "",
+            excludedMessageIds: [],
+            activeChatId: undefined,
+            linkSettings: options?.cleanTab ? undefined : sourceTabState.linkSettings,
+            linkedProjectTabId: options?.cleanTab ? null : sourceTabState.linkedProjectTabId,
         };
-
-        if (options?.cleanTab) {
-            messageData = {
-                ...messageData,
-                messages: [],
-                activeChatId: undefined,
-                excludedMessageIds: [],
-                linkSettings: {
-                    includePrompts: false,
-                    includeSelectedFiles: false,
-                    includeUserPrompt: false,
-                },
-                linkedProjectTabId: null,
-            };
-        } else {
-            // If you want to keep old messages or not, adjust logic here
-            messageData = {
-                ...messageData,
-                messages: [],
-            };
-        }
 
         sendWSMessage({
             type: "create_chat_tab",
             tabId: newTabId,
-            // @ts-ignore TODO: Fix this - although it works for now 
             data: messageData,
         });
 
@@ -242,21 +276,18 @@ export function useGlobalStateHelpers() {
     function updateChatTab(tabId: string, partial: Partial<ChatTabState>) {
         if (!canProceed()) return;
         sendWSMessage({
-            type: "update_chat_tab",
+            type: "update_chat_tab_partial",
             tabId,
-            data: partial,
+            partial,
         });
     }
 
     function deleteChatTab(tabId: string) {
         if (!canProceed() || !state) return;
-
-        // e.g. Don't delete if it's the last chat tab
         if (Object.keys(state.chatTabs).length <= 1) {
             console.warn("Cannot delete the last remaining chat tab");
             return;
         }
-
         sendWSMessage({
             type: "delete_chat_tab",
             tabId,
@@ -265,59 +296,58 @@ export function useGlobalStateHelpers() {
 
     function updateActiveChatTab(partialOrFn: PartialOrFn<ChatTabState>) {
         if (!canProceed() || !state?.chatActiveTabId) return;
-        const { chatActiveTabId, chatTabs } = state;
-        const currentTab = chatTabs[chatActiveTabId];
+        const currentTab = state.chatTabs[state.chatActiveTabId];
         const finalPartial = getPartial(currentTab, partialOrFn);
-
         sendWSMessage({
-            type: "update_chat_tab",
-            tabId: chatActiveTabId,
-            data: finalPartial,
+            type: "update_chat_tab_partial",
+            tabId: state.chatActiveTabId,
+            partial: finalPartial,
         });
     }
 
     function updateChatTabState(tabId: string, partialOrFn: PartialOrFn<ChatTabState>) {
-        if (!canProceed()) return;
+        if (!canProceed() || !state) return;
         const currentTab = state.chatTabs[tabId];
         if (!currentTab) return;
 
         const finalPartial = getPartial(currentTab, partialOrFn);
         sendWSMessage({
-            type: "update_chat_tab",
+            type: "update_chat_tab_partial",
             tabId,
-            data: finalPartial,
+            partial: finalPartial,
         });
     }
 
-
-
+    // --------------------------------------------------
+    // Linking
+    // --------------------------------------------------
     function linkChatTabToProjectTab(
         chatTabId: string,
         projectTabId: string,
         settings?: Partial<LinkSettings>
     ) {
         if (!canProceed()) return;
-        const partial = {
-            linkedProjectTabId: projectTabId,
-            linkSettings: {
-                includeSelectedFiles: settings?.includeSelectedFiles ?? true,
-                includePrompts: settings?.includePrompts ?? true,
-                includeUserPrompt: settings?.includeUserPrompt ?? true,
-            },
-        };
         sendWSMessage({
-            type: "update_chat_tab",
+            type: "update_chat_tab_partial",
             tabId: chatTabId,
-            data: partial,
+            partial: {
+                linkedProjectTabId: projectTabId,
+                linkSettings: {
+                    includeSelectedFiles: true,
+                    includePrompts: true,
+                    includeUserPrompt: true,
+                    ...settings,
+                } satisfies LinkSettings,
+            },
         });
     }
 
     function unlinkChatTab(chatTabId: string) {
         if (!canProceed()) return;
         sendWSMessage({
-            type: "update_chat_tab",
+            type: "update_chat_tab_partial",
             tabId: chatTabId,
-            data: {
+            partial: {
                 linkedProjectTabId: null,
                 linkSettings: undefined,
             },
@@ -325,29 +355,34 @@ export function useGlobalStateHelpers() {
     }
 
     function updateChatLinkSettings(chatTabId: string, partialSettings: Partial<LinkSettings>) {
-        if (!canProceed()) return;
-        // Optionally validate:
+        if (!canProceed() || !state) return;
         const existing = state.chatTabs[chatTabId]?.linkSettings ?? {};
         const merged = { ...existing, ...partialSettings };
-        linkSettingsSchema.parse(merged); // Validate with Zod
+        linkSettingsSchema.parse(merged);
         sendWSMessage({
-            type: "update_chat_tab",
+            type: "update_chat_tab_partial",
             tabId: chatTabId,
-            // @ts-ignore TODO: Fix this - although it works for now
-            data: { linkSettings: merged },
+            partial: {
+                linkSettings: {
+                    includePrompts: merged.includePrompts ?? true,
+                    includeSelectedFiles: merged.includeSelectedFiles ?? true,
+                    includeUserPrompt: merged.includeUserPrompt ?? true,
+                },
+            },
         });
     }
 
+    // --------------------------------------------------
+    // Misc
+    // --------------------------------------------------
     function setProjectSummarizationEnabled(projectId: string, enabled: boolean) {
         updateSettings((prev) => {
             let list = prev.summarizationEnabledProjectIds ?? [];
             if (!enabled) {
-                // disable summarization => add projectId
                 if (!list.includes(projectId)) {
                     list = [...list, projectId];
                 }
             } else {
-                // enable summarization => remove projectId
                 list = list.filter((id) => id !== projectId);
             }
             return { summarizationEnabledProjectIds: list };
@@ -355,77 +390,34 @@ export function useGlobalStateHelpers() {
     }
 
     function addFileGroup(groupName: string, fileIds: string[]) {
-        updateActiveProjectTab((prevTab) => {
-            return {
-                ...prevTab,
-                bookmarkedFileGroups: {
-                    ...prevTab.bookmarkedFileGroups,
-                    [groupName]: fileIds,
-                },
-            };
-        });
+        updateActiveProjectTab((prevTab) => ({
+            bookmarkedFileGroups: {
+                ...prevTab.bookmarkedFileGroups,
+                [groupName]: fileIds,
+            },
+        }));
     }
 
-    function createProjectTabFromTicket(ticket: TicketWithTasks, customTabId?: string) {
-        if (!canProceed() || !state?.projectActiveTabId) return;
-        const tabId = customTabId ?? `ticket-tab-${crypto.randomUUID()}`;
-        
-        // Get current tab state to preserve settings
-        const currentTab = state.projectTabs[state.projectActiveTabId];
-        if (!currentTab) return;
-
-        // Use buildTicketContent to format the ticket content consistently
-        // Pass the ticket directly, which includes the tasks array
-        const userPrompt = buildTicketContent(ticket);
-
-        console.log("userPrompt", userPrompt);
-
-        // Create new tab data based on current tab, but override with ticket information
-        const newTabData = {
-            ...currentTab,
-            selectedProjectId: ticket.projectId, // Use the ticket's project ID
-            selectedFiles: JSON.parse(ticket.suggestedFileIds || "[]"), // Use the ticket's suggested files
-            suggestedFileIds: JSON.parse(ticket.suggestedFileIds || "[]"), // Also store in suggestedFileIds
-            userPrompt, // Use our nicely formatted ticket content with tasks
-            displayName: ticket.title || "Ticket Tab", // Use ticket title as tab name
-            // Reset UI state
-            editProjectId: null,
-            promptDialogOpen: false,
-            editPromptId: null,
-            fileSearch: "",
-            ticketSearch: "",
-        };
-
-        sendWSMessage({
-            type: "create_project_tab_from_ticket",
-            tabId,
-            ticketId: ticket.id,
-            data: newTabData
-        });
-
-        // Immediately set this as the active tab
-        setActiveProjectTab(tabId);
-    }
-
-    const activeProjectTabState = state.projectActiveTabId
+    // Convenient references to active tabs
+    const activeProjectTabState = state?.projectActiveTabId
         ? state.projectTabs[state.projectActiveTabId]
         : undefined;
 
-    const activeChatTabState = state.chatActiveTabId
+    const activeChatTabState = state?.chatActiveTabId
         ? state.chatTabs[state.chatActiveTabId]
         : undefined;
 
-
+    // Return everything the rest of the app might need
     return {
-        // The entire state
+        // Current global state from React Query
         state,
         isOpen,
 
-        /** Generic Updaters */
+        // Generic
         updateGlobalStateKey,
         updateSettings,
 
-        /** Project tabs */
+        // Project tab
         createProjectTab,
         setActiveProjectTab,
         updateProjectTab,
@@ -434,24 +426,24 @@ export function useGlobalStateHelpers() {
         updateProjectTabState,
         updateActiveProjectTabStateKey,
         createProjectTabFromTicket,
+        activeProjectTabState,
 
-        /** Chat tabs */
+        // Chat
         createChatTab,
         setActiveChatTab,
         updateChatTab,
         deleteChatTab,
         updateActiveChatTab,
         updateChatTabState,
-
-        /** Current tab states */
-        activeProjectTabState,
         activeChatTabState,
 
-        /** Linking Helpers */
+        // Linking
         linkChatTabToProjectTab,
         unlinkChatTab,
         updateChatLinkSettings,
+
+        // Misc
         setProjectSummarizationEnabled,
-        addFileGroup
+        addFileGroup,
     };
 }

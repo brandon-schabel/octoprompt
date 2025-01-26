@@ -15,6 +15,9 @@ import {
   CommandShortcut,
 } from "@/components/ui/command"
 import { NavigationCommands } from '@/components/command/navigation-commands'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
 
 type RouterContext = {
   api: APIInterface
@@ -62,35 +65,42 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootComponent() {
-
-
-
   return (
+    <ErrorBoundary>
+      <div className="h-screen w-screen flex flex-col">
+        <header className="flex-none">
+          <ComponentErrorBoundary componentName="Navigation">
+            <AppNavbar />
+          </ComponentErrorBoundary>
+        </header>
 
-    <div className="h-screen w-screen flex flex-col">
-      <header className="flex-none">
-        <AppNavbar />
-      </header>
+        {/* Main content area with proper overflow handling */}
+        <main className="flex-1 min-h-0 overflow-auto">
+          <ComponentErrorBoundary componentName="Main Content">
+            <Outlet />
+          </ComponentErrorBoundary>
+        </main>
 
-      {/* Main content area with proper overflow handling */}
-      <main className="flex-1 min-h-0 overflow-auto">
-        <Outlet />
-      </main>
+        {/* Global keyboard-driven UI components */}
+        <ComponentErrorBoundary componentName="Command Palette">
+          <GlobalCommandPalette />
+        </ComponentErrorBoundary>
 
-      {/* Global keyboard-driven UI components */}
-      <GlobalCommandPalette />
-
-      {/* {process.env.NODE_ENV === 'development' && (
-          <TanStackRouterDevtools
-            position="bottom-left"
-            toggleButtonProps={{
-              style: {
-                marginLeft: '60px',
-                marginBottom: "15px"
-              }
-            }}
-          />
-        )} */}
-    </div>
+        {/* {process.env.NODE_ENV === 'development' && (
+            <TanStackRouterDevtools
+              position="bottom-left"
+              toggleButtonProps={{
+                style: {
+                  marginLeft: '60px',
+                  marginBottom: "15px"
+                }
+              }}
+            />
+          )} */}
+        <ComponentErrorBoundary componentName="Development Tools">
+          <ReactQueryDevtools />
+        </ComponentErrorBoundary>
+      </div>
+    </ErrorBoundary>
   )
 }

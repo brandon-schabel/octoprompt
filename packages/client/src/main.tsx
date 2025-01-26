@@ -5,8 +5,8 @@ import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { APIInterface } from './utils/api/api-interface'
 import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
-import { GlobalStateWebsocketProvider } from './components/global-state/websocket-config-context'
 import { Toaster } from './components/ui/sonner'
+import { GlobalStateProvider } from './components/global-state/global-state-websocket'
 
 // Initialize core services
 const queryClient = new QueryClient()
@@ -41,11 +41,11 @@ const rootElement = document.getElementById('root') as HTMLElement
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
-    <GlobalStateWebsocketProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <GlobalStateProvider>
         <RouterProvider router={router} />
         <Toaster />
-      </QueryClientProvider>
-    </GlobalStateWebsocketProvider>
+      </GlobalStateProvider>
+    </QueryClientProvider>
   )
 }
