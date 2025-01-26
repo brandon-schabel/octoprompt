@@ -17,7 +17,7 @@ import { PromptsList } from '../projects/prompts-list'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useUpdateChatLinkSettings, useUnlinkChatTab } from '@/components/global-state/global-helper-hooks'
 import { useSelectedFiles, } from '@/hooks/utility-hooks/use-selected-files'
-import { useActiveChatTab, useProjectTab } from '../global-state/global-websocket-selectors'
+import { useActiveChatTab, useProjectTab } from '../global-state/websocket-selector-hoooks'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string

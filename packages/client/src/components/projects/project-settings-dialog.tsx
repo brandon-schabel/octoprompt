@@ -21,7 +21,7 @@ import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
 import { useUpdateActiveProjectTab, useUpdateGlobalStateKey } from '@/components/global-state/global-helper-hooks'
 import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab, useSettings } from '../global-state/global-websocket-selectors'
+import { useActiveProjectTab, useSettings } from '../global-state/websocket-selector-hoooks'
 
 
 export function ProjectSettingsDialog() {

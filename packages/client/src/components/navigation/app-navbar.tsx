@@ -14,7 +14,7 @@ import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useUpdateActiveProjectTab } from "@/components/global-state/global-helper-hooks"
-import { useActiveProjectTab, useSettings } from "../global-state/global-websocket-selectors"
+import { useActiveProjectTab, useSettings } from "../global-state/websocket-selector-hoooks"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)

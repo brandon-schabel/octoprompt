@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
-import { useActiveChatTab, useChatTabs } from "../global-state/global-websocket-selectors"
+import { useActiveChatTab } from "../global-state/websocket-selector-hoooks"
 
 export type HelpDialogProps = {
     open?: boolean

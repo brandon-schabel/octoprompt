@@ -2,7 +2,7 @@ import { HelpCircle, LucideIcon } from "lucide-react"
 import { ReactNode } from "react"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useSettings } from "./global-state/global-websocket-selectors"
+import { useSettings } from "./global-state/websocket-selector-hoooks"
 
 type InfoTooltipProps = {
     children: ReactNode

@@ -1,4 +1,4 @@
-import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors';
+import { useActiveProjectTab } from '@/components/global-state/websocket-selector-hoooks';
 import { useGeminiFileSearch } from '@/hooks/api/use-gemini-file-search';
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react';

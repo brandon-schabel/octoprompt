@@ -5,7 +5,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { useActiveChatTab, useChatTabs, useSettings } from '../global-state/global-websocket-selectors'
+import { useActiveChatTab, useAllChatTabs, useSettings } from '../global-state/websocket-selector-hoooks'
 
 type DialogContentProps = {
     tabId: string;
@@ -35,7 +35,7 @@ export function ChatTabManager() {
     const deleteChatTab = useDeleteChatTab()
     const updateSettings = useUpdateSettings()
     const settings = useSettings()
-    const tabs = useChatTabs()
+    const tabs = useAllChatTabs()
 
 
     const tabOrder = settings?.chatTabIdOrder

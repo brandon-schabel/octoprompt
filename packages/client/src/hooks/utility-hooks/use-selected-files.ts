@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
 import { ProjectFile } from 'shared'
-import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors'
+import { useActiveProjectTab } from '@/components/global-state/websocket-selector-hoooks'
 
 const MAX_HISTORY_SIZE = 50
 

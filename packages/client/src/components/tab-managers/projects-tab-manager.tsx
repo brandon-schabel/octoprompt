@@ -12,7 +12,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { useActiveProjectTab, useProjectTabs, useSettings } from '../global-state/global-websocket-selectors'
+import { useActiveProjectTab, useAllProjectTabs, useSettings } from '../global-state/websocket-selector-hoooks'
 
 type DialogContentProps = {
   tabId: string;
@@ -43,7 +43,7 @@ export function ProjectsTabManager() {
 
   const projectId = activeProjectTabState?.selectedProjectId
 
-  const tabs = useProjectTabs()
+  const tabs = useAllProjectTabs()
 
   const tabOrder = settings?.projectTabIdOrder
     ? settings.projectTabIdOrder

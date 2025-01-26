@@ -14,7 +14,7 @@ import { useGlobalStateCore, useUpdateProjectTabState } from "@/components/globa
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
-import { useProjectTab } from "../global-state/global-websocket-selectors"
+import { useProjectTab } from "../global-state/websocket-selector-hoooks"
 
 type SelectedFilesListProps = {
   selectedFiles: string[]

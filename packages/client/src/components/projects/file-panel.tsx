@@ -27,7 +27,7 @@ import { TicketIcon, ScanEye } from "lucide-react"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
 import { useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
 import { ProjectTabState } from 'shared'
-import { useActiveProjectTab, useSettings } from '../global-state/global-websocket-selectors'
+import { useActiveProjectTab, useSettings } from '../global-state/websocket-selector-hoooks'
 
 export type FilePanelRef = {
     focusSearch: () => void

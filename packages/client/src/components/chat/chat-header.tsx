@@ -17,9 +17,9 @@ import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useLinkChatTabToProjectTab, } from "@/components/global-state/global-helper-hooks";
 import {
     useActiveChatTab,
+    useAllProjectTabs,
     useProjectTab,
-    useProjectTabs
-} from "@/components/global-state/global-websocket-selectors";
+} from "@/components/global-state/websocket-selector-hoooks";
 
 interface ChatHeaderProps {
     onForkChat: () => void;
@@ -47,7 +47,7 @@ export function ChatHeader({
 
     const activeChatId = activeChatTabState?.activeChatId;
 
-    const projectTabsRecord = useProjectTabs()
+    const projectTabsRecord = useAllProjectTabs()
     const linkedProjectState = useProjectTab(activeChatTabState?.linkedProjectTabId || '')
 
     const linkChatTabToProjectTab = useLinkChatTabToProjectTab()

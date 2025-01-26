@@ -47,7 +47,7 @@ import {
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSettings } from "shared/src/global-state/global-state-schema"
-import { useActiveProjectTab, useSettings } from "@/components/global-state/global-websocket-selectors"
+import { useActiveProjectTab, useSettings } from "@/components/global-state/websocket-selector-hoooks"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,

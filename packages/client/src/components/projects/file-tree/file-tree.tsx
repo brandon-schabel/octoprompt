@@ -28,7 +28,7 @@ import { buildNodeContent } from '@/components/projects/utils/projects-utils'
 import clsx from 'clsx'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
 import { useGlobalStateCore } from '@/components/global-state/global-helper-hooks'
-import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors'
+import { useActiveProjectTab } from '@/components/global-state/websocket-selector-hoooks'
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 

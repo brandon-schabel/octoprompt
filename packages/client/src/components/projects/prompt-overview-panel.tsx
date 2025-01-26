@@ -23,7 +23,7 @@ import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
-import { useActiveProjectTab } from '../global-state/global-websocket-selectors'
+import { useActiveProjectTab } from '../global-state/websocket-selector-hoooks'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
