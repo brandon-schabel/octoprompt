@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@bnk/ai": "^1.0.12",
-    "@bnk/backend-websocket-manager": "link:@bnk/backend-websocket-manager",
+    "@bnk/backend-websocket-manager": "1.0.3",
     "@bnk/kv-store": "1.0.1",
     "@bnk/router": "^1.0.8",
     "@types/archiver": "^6.0.3",
