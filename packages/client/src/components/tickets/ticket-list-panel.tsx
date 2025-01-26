@@ -50,7 +50,7 @@ const PRIORITY_COLORS = {
 
 export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
     const navigate = useNavigate();
-    const updateProjectTabState = useUpdateProjectTabState();
+    const updateProjectTabState = useUpdateProjectTabState(projectTabId);
     const createProjectTabFromTicket = useCreateProjectTabFromTicket();
     const tabState = useProjectTab(projectTabId)
     const projectId = tabState?.selectedProjectId || "";
@@ -62,16 +62,16 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
 
     // Update state handlers
     const setTicketSearch = useCallback((val: string) => {
-        updateProjectTabState(projectTabId, { ticketSearch: val });
+        updateProjectTabState({ ticketSearch: val });
     }, [projectTabId, updateProjectTabState]);
 
     const setTicketSort = useCallback((val: string) => {
-        updateProjectTabState(projectTabId, { ticketSort: val as any });
+        updateProjectTabState({ ticketSort: val as any });
     }, [projectTabId, updateProjectTabState]);
 
     const setTicketStatusFilter = useCallback((val: string) => {
         // Reset search when changing status filter
-        updateProjectTabState(projectTabId, {
+        updateProjectTabState({
             ticketStatusFilter: val as any,
             ticketSearch: ""
         });

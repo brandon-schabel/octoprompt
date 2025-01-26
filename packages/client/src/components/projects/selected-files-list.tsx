@@ -47,7 +47,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [filterText, setFilterText] = useState("")
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
-  const updateProjectTabState = useUpdateProjectTabState()
+  const updateProjectTabState = useUpdateProjectTabState(projectTabId)
   const { undo, redo, canUndo, canRedo, clearSelectedFiles } = selectedFilesState
 
   const projectTab = useProjectTab(projectTabId)
@@ -68,7 +68,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
   const handleCreateBookmark = () => {
     if (!bookmarkName.trim()) return
-    updateProjectTabState(projectTabId, (prev) => ({
+    updateProjectTabState((prev) => ({
       bookmarkedFileGroups: {
         ...prev.bookmarkedFileGroups,
         [bookmarkName.trim()]: selectedFiles
@@ -197,7 +197,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                     size="sm"
                     className="text-xs"
                     onClick={() => {
-                      updateProjectTabState(projectTabId, {
+                      updateProjectTabState({
                         selectedFiles: bookmarkedGroups[name]
                       })
                       toast.success(`Loaded bookmark group "${name}"`)
@@ -354,7 +354,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                     <DropdownMenuItem
                       key={name}
                       onClick={() => {
-                        updateProjectTabState(projectTabId, {
+                        updateProjectTabState({
                           selectedFiles: fileIds
                         })
                         toast.success(`Loaded bookmark group "${name}"`)

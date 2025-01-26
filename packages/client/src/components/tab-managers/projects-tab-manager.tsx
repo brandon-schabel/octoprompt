@@ -157,7 +157,7 @@ export function ProjectsTabManager() {
     <GenericTabManager<ProjectTab>
       // @ts-ignore
       tabs={tabs}
-      activeTabId={activeTabId}
+      activeTabId={activeTabId ?? null}
       onCreateTab={() => createProjectTab({ projectId: projectId ?? '' })}
       onSetActiveTab={setActiveProjectTab}
       onRenameTab={(tabId, newName) => updateProjectTab(tabId, { displayName: newName })}

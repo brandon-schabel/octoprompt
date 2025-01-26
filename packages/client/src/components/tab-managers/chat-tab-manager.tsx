@@ -146,7 +146,7 @@ export function ChatTabManager() {
         <GenericTabManager<ChatTab>
             // @ts-ignore
             tabs={tabs}
-            activeTabId={activeTabId}
+            activeTabId={activeTabId ?? null}
             onCreateTab={createChatTab}
             onSetActiveTab={setActiveChatTab}
             onRenameTab={(tabId, newName) => updateChatTab(tabId, { displayName: newName })}

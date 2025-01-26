@@ -10,7 +10,7 @@ import {
     type LinkSettings,
     linkSettingsSchema,
 } from "shared";
-import { useActiveChatTab, useActiveProjectTab, useSettings } from "../selectors/websocket-selector-hoooks";
+import { useActiveChatTab, useActiveProjectTab, useProjectTab, useSettings } from "../selectors/websocket-selector-hoooks";
 
 /**
  * Helper for partial updates of state.
@@ -208,20 +208,25 @@ export function useUpdateActiveProjectTab() {
 /**
  * Hook: update a specified project tab by partial or function
  */
-export function useUpdateProjectTabState() {
+export function useUpdateProjectTabState(projectTabId: string) {
     const { canProceed, sendWSMessage } = useSendWebSocketMessage();
+    const projectTab = useProjectTab(projectTabId);
 
     return useCallback(
-        (tabId: string, partialOrFn: PartialOrFn<ProjectTabState>, currentTab: ProjectTabState) => {
+        (partialOrFn: PartialOrFn<ProjectTabState>) => {
+            if (!projectTab) {
+                console.warn(`Project tab ${projectTabId} not found`);
+                return;
+            }
             if (!canProceed()) return;
-            const finalPartial = getPartial(currentTab, partialOrFn);
+            const finalPartial = getPartial(projectTab, partialOrFn);
             sendWSMessage({
                 type: "update_project_tab_partial",
-                tabId,
+                tabId: projectTabId,
                 partial: finalPartial,
             });
         },
-        [canProceed, sendWSMessage]
+        [canProceed, projectTabId, projectTab, sendWSMessage]
     );
 }
 

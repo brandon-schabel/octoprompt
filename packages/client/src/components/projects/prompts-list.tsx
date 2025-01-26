@@ -38,7 +38,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     className = '',
 }, ref) => {
     // Access global state
-    const updateProjectTabState = useUpdateProjectTabState()
+    const updateProjectTabState = useUpdateProjectTabState(projectTabId)
     const projectTab = useProjectTab(projectTabId)
     const selectedPrompts = projectTab?.selectedPrompts || []
     const selectedProjectId = projectTab?.selectedProjectId || ''
@@ -161,7 +161,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
             case ' ':
                 e.preventDefault();
                 // Toggle selection
-                updateProjectTabState(projectTabId, (prev) => {
+                updateProjectTabState((prev) => {
                     const isSelected = prev.selectedPrompts.includes(promptId)
                     const newSelected = isSelected
                         ? prev.selectedPrompts.filter(p => p !== promptId)
@@ -278,7 +278,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onClick={() => {
-                                        updateProjectTabState(projectTabId, (prev) => ({
+                                        updateProjectTabState((prev) => ({
                                             ...prev,
                                             selectedPrompts: []
                                         }))
@@ -344,7 +344,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                             <Checkbox
                                                 checked={selectedPrompts.includes(prompt.id)}
                                                 onCheckedChange={(checked) => {
-                                                    updateProjectTabState(projectTabId, (prev) => {
+                                                    updateProjectTabState((prev) => {
                                                         const isSelected = prev.selectedPrompts.includes(prompt.id)
                                                         const newSelected = isSelected
                                                             ? prev.selectedPrompts.filter(p => p !== prompt.id)
