@@ -2,7 +2,7 @@ import { HelpCircle, LucideIcon } from "lucide-react"
 import { ReactNode } from "react"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useGlobalStateHelpers } from "./global-state/use-global-state-helpers"
+import { useGlobalStateCore } from "./global-state/global-helper-hooks"
 
 type InfoTooltipProps = {
     children: ReactNode
@@ -11,7 +11,7 @@ type InfoTooltipProps = {
 }
 
 export const InfoTooltip = ({ children, icon: Icon = HelpCircle, className }: InfoTooltipProps) => {
-    const { state } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
     const hideInformationalTooltips = state?.settings?.hideInformationalTooltips ?? false
 
     if (hideInformationalTooltips) return null

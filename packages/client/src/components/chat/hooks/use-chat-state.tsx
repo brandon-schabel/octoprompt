@@ -8,16 +8,14 @@ import {
 import { useChatModelControl } from './use-chat-model-control';
 import { ChatMessage } from 'shared/schema';
 import { APIProviders } from 'shared/index';
-import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers';
+import { useGlobalStateCore, useUpdateActiveChatTab } from '@/components/global-state/global-helper-hooks';
 
 type TempChatMessage = ChatMessage & { tempId?: string };
 
 export function useChatControl() {
-    const {
-        activeChatTabState,
-        updateActiveChatTab,
-        isOpen,
-    } = useGlobalStateHelpers();
+    const { state, isOpen } = useGlobalStateCore();
+    const updateActiveChatTab = useUpdateActiveChatTab();
+    const activeChatTabState = state?.chatTabs[state?.chatActiveTabId ?? ''];
 
     // If you'd like to keep a local "pending" queue that hasn't yet been
     // committed to the global state, you can do so here:

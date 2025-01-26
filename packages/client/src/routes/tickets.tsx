@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TicketDialog } from "../components/tickets/ticket-dialog";
 import { Button } from "../components/ui/button";
 import { Plus } from "lucide-react";
-import { useGlobalStateHelpers } from "../components/global-state/use-global-state-helpers";
+import { useGlobalStateCore } from "@/components/global-state/global-helper-hooks";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
@@ -21,7 +21,7 @@ function TicketsPage() {
     const [selectedTicket, setSelectedTicket] = React.useState<TicketWithTasks | null>(null);
 
     // Get active project ID from global state
-    const { state } = useGlobalStateHelpers();
+    const { state } = useGlobalStateCore();
     const projectId = state.projectTabs[state.projectActiveTabId || ""]?.selectedProjectId ?? null;
 
     const {

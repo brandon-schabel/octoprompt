@@ -15,7 +15,11 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { 
+    useGlobalStateCore,
+    useUpdateActiveProjectTab,
+    useActiveProjectTabState 
+} from '@/components/global-state/global-helper-hooks'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '../info-tooltip'
@@ -36,7 +40,10 @@ interface PromptOverviewPanelProps {
 
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
     ({ selectedProjectId, fileMap, promptData, className, selectedFilesState }, ref) => {
-        const { state, updateActiveProjectTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
+        const { state } = useGlobalStateCore()
+        const updateActiveProjectTab = useUpdateActiveProjectTab()
+        const { tabData: activeTabState } = useActiveProjectTabState()
+        
         const selectedPrompts = activeTabState?.selectedPrompts || []
         const globalUserPrompt = activeTabState?.userPrompt || ''
         const contextLimit = activeTabState?.contextLimit || 128000

@@ -9,7 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select"
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
+import { useGlobalStateCore, useUpdateGlobalStateKey } from "@/components/global-state/global-helper-hooks"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 
@@ -34,7 +34,8 @@ type SettingsDialogProps = {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const { state, updateGlobalStateKey } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
+    const updateGlobalStateKey = useUpdateGlobalStateKey()
     const isDarkMode = state?.settings.theme === 'dark'
     const settings = state?.settings
     const codeLightTheme = settings?.codeThemeLight ?? 'atomOneLight'

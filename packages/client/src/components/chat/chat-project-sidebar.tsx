@@ -15,7 +15,7 @@ import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { SlidingSidebar } from '@/components/sliding-sidebar'
 import { PromptsList } from '../projects/prompts-list'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useGlobalStateCore, useUpdateChatLinkSettings, useUnlinkChatTab } from '@/components/global-state/global-helper-hooks'
 import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 type ChatProjectSidebarProps = {
@@ -23,27 +23,27 @@ type ChatProjectSidebarProps = {
 }
 
 export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarProps) {
-    const { state, updateChatLinkSettings, unlinkChatTab, activeChatTabState } = useGlobalStateHelpers()
-    const linkedProjectState = state?.projectTabs[linkedProjectTabId]
+    const { state } = useGlobalStateCore();
+    const updateChatLinkSettings = useUpdateChatLinkSettings();
+    const unlinkChatTab = useUnlinkChatTab();
+    const activeChatTabState = state?.chatTabs[state?.chatActiveTabId ?? ''];
     const [tabValue, setTabValue] = useState('files')
     const selectedFilesState = useSelectedFiles()
     const { selectedFiles, removeSelectedFile, } = selectedFilesState
     const { copyToClipboard } = useCopyClipboard()
 
     // If there's no linked project tab, nothing to show
-    if (!linkedProjectState) {
+    if (!state?.projectTabs[linkedProjectTabId]) {
         return null
     }
 
     // The actual selected project ID
-    const linkedProjectId = linkedProjectState.selectedProjectId
+    const linkedProjectId = state?.projectTabs[linkedProjectTabId].selectedProjectId
     const linkSettings = activeChatTabState?.linkSettings
 
     // Pull files & prompts from the actual project
     const { data: promptsData } = useGetProjectPrompts(linkedProjectId || '')
     const { data: filesData } = useGetProjectFiles(linkedProjectId || '')
-
-
 
     const fileMap = new Map<string, ProjectFile>()
     if (filesData?.files) {
@@ -71,16 +71,16 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
             toast.error('No link settings found for this project tab.')
             return
         }
-        if (!linkedProjectState) {
+        if (!state?.projectTabs[linkedProjectTabId]) {
             toast.error('Linked project tab not found.')
             return
         }
         const content = buildPromptContent({
             fileMap,
             promptData: promptsData,
-            selectedFiles: linkSettings.includeSelectedFiles ? linkedProjectState.selectedFiles || [] : [],
-            selectedPrompts: linkSettings.includePrompts ? linkedProjectState.selectedPrompts : [],
-            userPrompt: linkSettings.includeUserPrompt ? linkedProjectState.userPrompt : '',
+            selectedFiles: linkSettings.includeSelectedFiles ? state?.projectTabs[linkedProjectTabId].selectedFiles || [] : [],
+            selectedPrompts: linkSettings.includePrompts ? state?.projectTabs[linkedProjectTabId].selectedPrompts : [],
+            userPrompt: linkSettings.includeUserPrompt ? state?.projectTabs[linkedProjectTabId].userPrompt : '',
         })
 
         if (!content.trim()) {
@@ -114,7 +114,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
                         <Link>
                             <div className='flex items-center gap-2'>
                                 <span className="font-semibold">
-                                    {linkedProjectState.displayName || 'Linked Project'}
+                                    {state?.projectTabs[linkedProjectTabId].displayName || 'Linked Project'}
                                 </span>
                                 <FolderOpen className="h-4 w-4" />
                             </div>
@@ -220,7 +220,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
                             </Button>
                             <p className="text-xs text-muted-foreground mt-2">
                                 This removes the link for this chat from project tab "
-                                {linkedProjectState.displayName || linkedProjectTabId}".
+                                {state?.projectTabs[linkedProjectTabId].displayName || linkedProjectTabId}".
                             </p>
                         </div>
                     </TabsContent>

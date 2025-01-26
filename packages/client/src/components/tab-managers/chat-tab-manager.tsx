@@ -1,4 +1,4 @@
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useGlobalStateCore, useCreateChatTab, useSetActiveChatTab, useUpdateChatTab, useDeleteChatTab, useUpdateSettings } from '@/components/global-state/global-helper-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { Input } from '../ui/input'
@@ -27,15 +27,12 @@ type ChatTab = {
 }
 
 export function ChatTabManager() {
-    const {
-        state,
-        isOpen,
-        createChatTab,
-        setActiveChatTab,
-        updateChatTab,
-        deleteChatTab,
-        updateSettings
-    } = useGlobalStateHelpers()
+    const { state, isOpen } = useGlobalStateCore()
+    const createChatTab = useCreateChatTab()
+    const setActiveChatTab = useSetActiveChatTab()
+    const updateChatTab = useUpdateChatTab()
+    const deleteChatTab = useDeleteChatTab()
+    const updateSettings = useUpdateSettings()
 
     const tabs = state?.chatTabs ?? {}
     const activeTabId = state?.chatActiveTabId ?? null
@@ -149,7 +146,7 @@ export function ChatTabManager() {
             // @ts-ignore
             tabs={tabs}
             activeTabId={activeTabId}
-            isReady={isOpen}
+            isReady={isOpen ?? false}
             onCreateTab={createChatTab}
             onSetActiveTab={setActiveChatTab}
             onRenameTab={(tabId, newName) => updateChatTab(tabId, { displayName: newName })}

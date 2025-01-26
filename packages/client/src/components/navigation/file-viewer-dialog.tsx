@@ -9,7 +9,7 @@ import { ProjectFile } from 'shared/schema'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
-import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
+import { useGlobalStateCore } from '@/components/global-state/global-helper-hooks'
 
 type FileViewerDialogProps = {
     open: boolean
@@ -46,7 +46,7 @@ export function FileViewerDialog({
     const [isEditingFile, setIsEditingFile] = useState(false)
     const [editedContent, setEditedContent] = useState<string>('')
     const [showRawMarkdown, setShowRawMarkdown] = useState(false)
-    const { state } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
     const settings = state.settings
 
     const isDarkMode = settings.theme === "dark"

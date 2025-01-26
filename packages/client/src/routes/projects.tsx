@@ -14,7 +14,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { Button } from '@/components/ui/button'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
+import { useActiveProjectTabState, useCreateProjectTab, useGlobalStateCore, useUpdateActiveProjectTabStateKey } from '@/components/global-state/global-helper-hooks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { InfoTooltip } from '@/components/info-tooltip'
 
@@ -26,16 +26,10 @@ function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
-
-
-    const {
-        state,
-        activeProjectTabState: activeTabState,
-        createProjectTab: createNewTab,
-        isOpen,
-        updateActiveProjectTabStateKey: updateActiveTabStateKey,
-    } = useGlobalStateHelpers()
-
+    const { state, isOpen } = useGlobalStateCore()
+    const { tabData: activeTabState } = useActiveProjectTabState()
+    const createNewTab = useCreateProjectTab()
+    const updateActiveTabStateKey = useUpdateActiveProjectTabStateKey()
 
     const selectedProjectId = activeTabState?.selectedProjectId ?? null
     const fileSearch = activeTabState?.fileSearch ?? ''
@@ -49,8 +43,6 @@ function ProjectsPage() {
 
     // Check for "no tabs" scenario
     const noTabsYet = Object.keys(state?.projectTabs ?? {}).length === 0
-
-
 
     const setFileSearch = (value: string) => {
         updateActiveTabStateKey('fileSearch', value)

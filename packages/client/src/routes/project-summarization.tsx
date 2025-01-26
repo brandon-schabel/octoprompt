@@ -26,7 +26,7 @@ import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
+import { useGlobalStateCore, useUpdateSettings } from "@/components/global-state/global-helper-hooks"
 import {
     Select,
     SelectContent,
@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { AppSettings } from "shared/src/global-state/global-state-schema"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -89,7 +90,8 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 }
 
 function ProjectSummarizationSettingsPage() {
-    const { updateSettings, state } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
+    const updateSettings = useUpdateSettings()
     const settings = state.settings
     const projectActiveTabId = state.projectActiveTabId
     const selectedProjectId =
@@ -373,7 +375,7 @@ function ProjectSummarizationSettingsPage() {
     }
 
     function handleExcludeFile(filePath: string) {
-        updateSettings((prev) => ({
+        updateSettings((prev: AppSettings) => ({
             ...prev,
             summarizationIgnorePatterns: [
                 ...prev.summarizationIgnorePatterns,
@@ -524,12 +526,12 @@ function ProjectSummarizationSettingsPage() {
                                 checked={isProjectSummarizationEnabled}
                                 onCheckedChange={(check) => {
                                     if (!selectedProjectId) return
-                                    updateSettings((prev) => ({
+                                    updateSettings((prev: AppSettings) => ({
                                         ...prev,
                                         summarizationEnabledProjectIds: check
                                             ? [...prev.summarizationEnabledProjectIds, selectedProjectId]
                                             : prev.summarizationEnabledProjectIds.filter(
-                                                (id) => id !== selectedProjectId
+                                                (id: string) => id !== selectedProjectId
                                             ),
                                     }))
                                 }}
@@ -867,14 +869,15 @@ function ProjectSummarizationSettingsPage() {
  * to keep the main component smaller.
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
-    const { state, updateSettings } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
+    const updateSettings = useUpdateSettings()
     const patterns = state.settings.summarizationIgnorePatterns
     const [newPattern, setNewPattern] = useState("")
 
     function handleAdd() {
         const trimmed = newPattern.trim()
         if (!trimmed) return
-        updateSettings((prev) => ({
+        updateSettings((prev: AppSettings) => ({
             ...prev,
             summarizationIgnorePatterns: [...prev.summarizationIgnorePatterns, trimmed],
         }))
@@ -882,9 +885,9 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
     }
 
     function handleRemove(pattern: string) {
-        updateSettings((prev) => ({
+        updateSettings((prev: AppSettings) => ({
             ...prev,
-            summarizationIgnorePatterns: prev.summarizationIgnorePatterns.filter((p) => p !== pattern),
+            summarizationIgnorePatterns: prev.summarizationIgnorePatterns.filter((p: string) => p !== pattern),
         }))
     }
 

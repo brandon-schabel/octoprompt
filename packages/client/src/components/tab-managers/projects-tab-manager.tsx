@@ -1,4 +1,12 @@
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { 
+  useGlobalStateCore,
+  useCreateProjectTab,
+  useSetActiveProjectTab,
+  useUpdateProjectTab,
+  useDeleteProjectTab,
+  useUpdateSettings,
+  useActiveProjectTabState
+} from '@/components/global-state/global-helper-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { Input } from '../ui/input'
@@ -25,16 +33,14 @@ type ProjectTab = {
 }
 
 export function ProjectsTabManager() {
-  const {
-    state,
-    isOpen,
-    createProjectTab,
-    setActiveProjectTab,
-    updateProjectTab,
-    deleteProjectTab,
-    updateSettings,
-    activeProjectTabState
-  } = useGlobalStateHelpers()
+  const { state, isOpen } = useGlobalStateCore()
+  const createProjectTab = useCreateProjectTab()
+  const setActiveProjectTab = useSetActiveProjectTab()
+  const updateProjectTab = useUpdateProjectTab()
+  const deleteProjectTab = useDeleteProjectTab()
+  const updateSettings = useUpdateSettings()
+  const { tabData: activeProjectTabState } = useActiveProjectTabState()
+
   const projectId = activeProjectTabState?.selectedProjectId
 
   const tabs = state?.projectTabs ?? {}

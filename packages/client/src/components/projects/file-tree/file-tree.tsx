@@ -27,7 +27,7 @@ import { toast } from 'sonner'
 import { buildNodeContent } from '@/components/projects/utils/projects-utils'
 import clsx from 'clsx'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
+import { useGlobalStateCore } from '@/components/global-state/global-helper-hooks'
 import { formatShortcut } from '@/lib/shortcuts'
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
@@ -99,7 +99,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
     onViewFile,
     projectRoot,
 }, ref) => {
-    const { activeProjectTabState: activeTabState } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
+    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? '']
     const selectedFiles = activeTabState?.selectedFiles || []
     const resolveImports = activeTabState?.resolveImports || false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'

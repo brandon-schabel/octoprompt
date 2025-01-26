@@ -1,4 +1,4 @@
-import { X, Copy, Bookmark, BookmarkPlus, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw } from "lucide-react"
+import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProjectFile } from "shared"
 import { cn } from "@/lib/utils"
@@ -10,7 +10,7 @@ import { Input } from "../ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuShortcut } from "../ui/dropdown-menu"
 import { toast } from "sonner"
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
+import { useGlobalStateCore, useUpdateProjectTabState } from "@/components/global-state/global-helper-hooks"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
@@ -46,7 +46,8 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [filterText, setFilterText] = useState("")
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
-  const { state, updateProjectTabState } = useGlobalStateHelpers()
+  const { state } = useGlobalStateCore()
+  const updateProjectTabState = useUpdateProjectTabState()
   const { undo, redo, canUndo, canRedo, clearSelectedFiles } = selectedFilesState
 
   const projectTab = state?.projectTabs[projectTabId]

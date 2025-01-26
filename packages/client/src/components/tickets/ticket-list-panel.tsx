@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { TicketWithTasks, useListTicketsWithTasks, TICKET_KEYS, TicketResult, useDeleteTicket } from "@/hooks/api/use-tickets-api";
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
+import { useGlobalStateCore, useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/components/global-state/global-helper-hooks";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -49,7 +49,9 @@ const PRIORITY_COLORS = {
 
 export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
     const navigate = useNavigate();
-    const { state, updateProjectTabState, createProjectTabFromTicket } = useGlobalStateHelpers();
+    const { state } = useGlobalStateCore();
+    const updateProjectTabState = useUpdateProjectTabState();
+    const createProjectTabFromTicket = useCreateProjectTabFromTicket();
     const tabState = state.projectTabs[projectTabId];
     const projectId = tabState?.selectedProjectId || "";
 

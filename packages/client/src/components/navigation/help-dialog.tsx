@@ -1,7 +1,7 @@
 import { useHotkeys } from "react-hotkeys-hook"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
+import { useGlobalStateCore } from "@/components/global-state/global-helper-hooks"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
 
@@ -10,10 +10,8 @@ export type HelpDialogProps = {
     onOpenChange?: (open: boolean) => void
 }
 
-
-
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
-    const { state } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
 
     // Toggle help dialog with mod + /
     useHotkeys("mod+/", (e) => {

@@ -15,7 +15,7 @@ import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
+import { useGlobalStateCore, useLinkChatTabToProjectTab, useSetActiveProjectTab } from "@/components/global-state/global-helper-hooks";
 
 interface ChatHeaderProps {
     onForkChat: () => void;
@@ -44,12 +44,9 @@ export function ChatHeader({
 
     const activeChatId = activeChatTabState?.activeChatId;
 
-    const {
-        state,
-        linkChatTabToProjectTab,
-        setActiveProjectTab,
-        unlinkChatTab,
-    } = useGlobalStateHelpers();
+    const { state } = useGlobalStateCore();
+    const linkChatTabToProjectTab = useLinkChatTabToProjectTab();
+    const setActiveProjectTab = useSetActiveProjectTab();
 
     const {
         provider,

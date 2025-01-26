@@ -19,13 +19,15 @@ import {
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useGlobalStateCore, useUpdateActiveProjectTab, useUpdateGlobalStateKey } from '@/components/global-state/global-helper-hooks'
 import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
 
 
 export function ProjectSettingsDialog() {
-    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
-    const { state, updateSettings } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
+    const updateActiveProjectTab = useUpdateActiveProjectTab()
+    const updateGlobalStateKey = useUpdateGlobalStateKey()
+    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? '']
     const settings = state?.settings
     const contextLimit = activeTabState?.contextLimit || 128000
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
@@ -36,7 +38,7 @@ export function ProjectSettingsDialog() {
 
 
     const setContextLimit = (value: number) => {
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             contextLimit: value
         }))
@@ -44,7 +46,7 @@ export function ProjectSettingsDialog() {
 
     const setPreferredEditor = (value: EditorType) => {
         // @ts-ignore
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             preferredEditor: value as EditorType
         }))
@@ -52,7 +54,7 @@ export function ProjectSettingsDialog() {
 
 
     const setResolveImports = (value: boolean) => {
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             resolveImports: value
         }))
@@ -61,7 +63,7 @@ export function ProjectSettingsDialog() {
     const setEnableProjectSummarization = (value: boolean) => {
         if (!projectId) return
 
-        updateSettings(prev => ({
+        updateGlobalStateKey('settings', (prev) => ({
             ...prev,
             summarizationEnabledProjectIds: value
                 ? [...prev.summarizationEnabledProjectIds, projectId]

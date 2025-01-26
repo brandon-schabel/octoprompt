@@ -12,7 +12,7 @@ import { TicketTasksPanel } from "./ticket-tasks-panel";
 import { useGetProjectFiles } from "@/hooks/api/use-projects-api";
 import { Checkbox } from "../ui/checkbox";
 import { ScrollArea } from "../ui/scroll-area";
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers";
+import { useCreateProjectTab } from "@/components/global-state/global-helper-hooks";
 
 interface TicketDialogProps {
     isOpen: boolean;
@@ -27,7 +27,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
     const { data: fileData } = useGetProjectFiles(projectId);
     const allFiles = fileData?.files ?? [];
-    const { createProjectTab } = useGlobalStateHelpers();
+    const createProjectTab = useCreateProjectTab();
 
     // Local form state
     const [title, setTitle] = useState("");

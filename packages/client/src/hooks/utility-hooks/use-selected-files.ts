@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
+import { useGlobalStateCore, useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
 import { ProjectFile } from 'shared'
 
 const MAX_HISTORY_SIZE = 50
@@ -13,8 +13,9 @@ type UndoRedoState = {
 const historyCache = new Map<string, UndoRedoState>()
 
 export function useSelectedFiles() {
-  const { activeProjectTabState, updateActiveProjectTab, state } = useGlobalStateHelpers()
-  
+  const { state } = useGlobalStateCore()
+  const updateActiveProjectTab = useUpdateActiveProjectTab()
+  const activeProjectTabState = state?.projectTabs[state?.projectActiveTabId ?? '']
 
   // Keep undo/redo history in local state
   const [undoRedoState, setUndoRedoState] = useState<UndoRedoState | null>(null)

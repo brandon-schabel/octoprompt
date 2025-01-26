@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
+import { useGlobalStateCore, useUpdateActiveProjectTab, useUpdateGlobalStateKey } from "@/components/global-state/global-helper-hooks"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -31,8 +31,10 @@ export function AppNavbar() {
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
-    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, state } = useGlobalStateHelpers()
-    const selectedProjectId = activeTabState?.selectedProjectId
+    const { state } = useGlobalStateCore();
+    const updateActiveProjectTab = useUpdateActiveProjectTab();
+    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? ''];
+    const selectedProjectId = activeTabState?.selectedProjectId;
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
@@ -74,7 +76,7 @@ export function AppNavbar() {
     })
 
     const handleSelectProject = (id: string) => {
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             selectedProjectId: id,
             selectedFiles: [],

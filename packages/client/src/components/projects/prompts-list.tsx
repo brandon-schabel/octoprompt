@@ -15,12 +15,11 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useGlobalStateCore, useUpdateProjectTabState } from '@/components/global-state/global-helper-hooks'
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '../ui/dropdown-menu'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '../ui/badge'
-import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 
@@ -38,7 +37,8 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     className = '',
 }, ref) => {
     // Access global state
-    const { state, updateProjectTabState } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore()
+    const updateProjectTabState = useUpdateProjectTabState()
     const projectTab = state?.projectTabs[projectTabId]
     const selectedPrompts = projectTab?.selectedPrompts || []
     const selectedProjectId = projectTab?.selectedProjectId || ''

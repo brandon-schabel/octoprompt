@@ -17,7 +17,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { SelectedFilesDrawer } from './selected-files-drawer'
 import { Badge } from '../ui/badge'
 import { ProjectSettingsDialog } from './project-settings-dialog'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
 import { InfoTooltip } from '../info-tooltip'
 import { formatShortcut } from '@/lib/shortcuts'
 import { ShortcutDisplay } from '../app-shortcut-display'
@@ -26,6 +25,8 @@ import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-f
 import { Link, useMatches } from "@tanstack/react-router"
 import { TicketIcon, ScanEye } from "lucide-react"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
+import { useGlobalStateCore, useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
+import { ProjectTabState } from 'shared'
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -60,10 +61,11 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const fileTreeRef = useRef<FileTreeRef>(null)
     const selectedFilesListRef = useRef<SelectedFilesListRef>(null)
     const promptsRef = useRef<HTMLDivElement>(null)
-    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
+    const { state } = useGlobalStateCore();
+    const updateActiveProjectTab = useUpdateActiveProjectTab();
+    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? ''];
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
-    const { state } = useGlobalStateHelpers()
     const allowSpacebaseToSelect = state?.settings?.useSpacebarToSelectAutocomplete ?? true
     const activeProjectTabId = state?.projectActiveTabId
 
@@ -385,10 +387,10 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
                                         <SelectedFilesDrawer
                                             selectedFiles={selectedFiles}
                                             fileMap={allFilesMap}
-                                            onRemoveFile={(fileId) => {
-                                                updateActiveTab(prev => ({
+                                            onRemoveFile={(fileId: string) => {
+                                                updateActiveProjectTab((prev: ProjectTabState) => ({
                                                     ...prev,
-                                                    selectedFiles: prev.selectedFiles?.filter(id => id !== fileId) || []
+                                                    selectedFiles: prev.selectedFiles?.filter((id: string) => id !== fileId) || []
                                                 }))
                                             }}
                                             trigger={selectedFilesButton}
