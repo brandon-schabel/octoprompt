@@ -190,3 +190,4 @@ kv-store.json
 **/global-state.json
 **/global-state-backup.json
 **/websocket-state.json
+**/**.tsbuildinfo
