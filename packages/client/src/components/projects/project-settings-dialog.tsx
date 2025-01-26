@@ -19,14 +19,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
-import { useUpdateActiveProjectTab, useUpdateGlobalStateKey } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useUpdateActiveProjectTab, useUpdateSettings } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
 import { useActiveProjectTab, useSettings } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()
-    const updateGlobalStateKey = useUpdateGlobalStateKey()
     const { tabData: activeTabState } = useActiveProjectTab()
     const settings = useSettings()
     const contextLimit = activeTabState?.contextLimit || 128000
@@ -35,6 +34,7 @@ export function ProjectSettingsDialog() {
     const projectId = activeTabState?.selectedProjectId
     const isProjectSummarizationEnabled = projectId ? settings?.summarizationEnabledProjectIds.includes(projectId) : false
     const { isFetching: isSyncing, refetch: syncProject } = useSyncProjectInterval(projectId ?? '')
+    const updateSettings = useUpdateSettings()
 
 
     const setContextLimit = (value: number) => {
@@ -63,7 +63,7 @@ export function ProjectSettingsDialog() {
     const setEnableProjectSummarization = (value: boolean) => {
         if (!projectId) return
 
-        updateGlobalStateKey('settings', (prev) => ({
+        updateSettings(prev => ({
             ...prev,
             summarizationEnabledProjectIds: value
                 ? [...prev.summarizationEnabledProjectIds, projectId]

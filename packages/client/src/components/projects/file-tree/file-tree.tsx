@@ -27,7 +27,6 @@ import { toast } from 'sonner'
 import { buildNodeContent } from '@/components/projects/utils/projects-utils'
 import clsx from 'clsx'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateCore } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;

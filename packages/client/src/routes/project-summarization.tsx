@@ -26,7 +26,7 @@ import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useGlobalStateCore, useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 import {
     Select,
     SelectContent,

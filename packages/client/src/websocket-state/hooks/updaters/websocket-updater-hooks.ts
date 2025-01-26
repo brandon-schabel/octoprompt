@@ -1,17 +1,16 @@
 import { useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useGlobalStateContext } from "@/websocket-state/global-state-websocket-handler-context";
-import { useGlobalState } from "../selectors/use-global-state";
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils";
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
 import {
-    GlobalState,
-    ProjectTabState,
-    ChatTabState,
+    type ProjectTabState,
+    type ChatTabState,
+    type AppSettings,
+    type LinkSettings,
     linkSettingsSchema,
-    LinkSettings,
 } from "shared";
-import { useActiveChatTab, useActiveProjectTab } from "../selectors/websocket-selector-hoooks";
+import { useActiveChatTab, useActiveProjectTab, useSettings } from "../selectors/websocket-selector-hoooks";
 
 /**
  * Helper for partial updates of state.
@@ -21,9 +20,6 @@ export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
 function getPartial<T>(prev: T, partialOrFn: PartialOrFn<T>): Partial<T> {
     return typeof partialOrFn === "function" ? partialOrFn(prev) : partialOrFn;
 }
-
-
-
 
 export function useSendWebSocketMessage() {
     const { manager, isOpen } = useGlobalStateContext();
@@ -53,83 +49,22 @@ export function useSendWebSocketMessage() {
 }
 
 /**
- * This hook provides the underlying references (WebSocket manager, global state, etc.)
- * needed by the smaller custom hooks.
- */
-export function useGlobalStateCore() {
-    const { manager, isOpen } = useSendWebSocketMessage();
-    const { data: state } = useGlobalState();
-
-    const canProceed = useCallback((): boolean => {
-        if (!isOpen) {
-            console.warn("WebSocket not open, cannot send message");
-            return false;
-        }
-        if (!state) {
-            console.warn("No global state loaded yet, cannot proceed");
-            return false;
-        }
-        return true;
-    }, [isOpen, state]);
-
-    const sendWSMessage = useCallback(
-        (msg: Parameters<typeof manager.sendMessage>[0]) => {
-            if (canProceed()) {
-                manager.sendMessage(msg);
-            }
-        },
-        [manager, canProceed]
-    );
-
-    return {
-        manager,
-        state,
-        isOpen,
-        canProceed,
-        sendWSMessage,
-    };
-}
-
-/**
- * Hook: update global state key
- */
-export function useUpdateGlobalStateKey() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
-
-    return useCallback(
-        <K extends keyof GlobalState>(key: K, partialOrFn: PartialOrFn<GlobalState[K]>) => {
-            if (!canProceed() || !state) return;
-            const currentValue = state[key];
-            if (currentValue === undefined) return;
-            const finalPartial = getPartial(currentValue, partialOrFn);
-            sendWSMessage({
-                type: "update_global_state_key",
-                data: {
-                    key,
-                    partial: finalPartial,
-                },
-            });
-        },
-        [canProceed, state, sendWSMessage]
-    );
-}
-
-/**
  * Hook: update settings
  */
 export function useUpdateSettings() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
+    const settings = useSettings();
 
     return useCallback(
-        (partialOrFn: PartialOrFn<GlobalState["settings"]>) => {
-            if (!canProceed() || !state) return;
-            const finalPartial = getPartial(state.settings, partialOrFn);
+        (partialOrFn: PartialOrFn<AppSettings>) => {
+            if (!canProceed() || !settings) return;
+            const finalPartial = getPartial(settings, partialOrFn);
             sendWSMessage({
                 type: "update_settings_partial",
                 partial: finalPartial,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, settings, sendWSMessage]
     );
 }
 
@@ -141,7 +76,7 @@ export function useUpdateSettings() {
  * Hook: create a project tab
  */
 export function useCreateProjectTab() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
         ({
@@ -155,7 +90,7 @@ export function useCreateProjectTab() {
             selectedFiles?: string[];
             displayName?: string;
         }) => {
-            if (!canProceed() || !state) return;
+            if (!canProceed()) return;
             const newTabId = `project-tab-${uuidv4()}`;
             const newTabData: ProjectTabState = {
                 selectedProjectId: projectId,
@@ -185,7 +120,7 @@ export function useCreateProjectTab() {
                 data: newTabData,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, sendWSMessage]
     );
 }
 
@@ -193,7 +128,7 @@ export function useCreateProjectTab() {
  * Hook: set active project tab
  */
 export function useSetActiveProjectTab() {
-    const { canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
         (tabId: string) => {
@@ -211,7 +146,7 @@ export function useSetActiveProjectTab() {
  * Hook: update project tab
  */
 export function useUpdateProjectTab() {
-    const { canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
         (tabId: string, partial: Partial<ProjectTabState>) => {
@@ -230,12 +165,13 @@ export function useUpdateProjectTab() {
  * Hook: delete project tab
  */
 export function useDeleteProjectTab() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
+    const settings = useSettings();
 
     return useCallback(
         (tabId: string) => {
-            if (!canProceed() || !state) return;
-            if (Object.keys(state.projectTabs).length <= 1) {
+            if (!canProceed() || !settings) return;
+            if (settings.projectTabIdOrder.length <= 1) {
                 console.warn("Cannot delete the last remaining project tab");
                 return;
             }
@@ -244,7 +180,7 @@ export function useDeleteProjectTab() {
                 tabId,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, settings, sendWSMessage]
     );
 }
 
@@ -252,21 +188,20 @@ export function useDeleteProjectTab() {
  * Hook: update the currently active project tab
  */
 export function useUpdateActiveProjectTab() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
-    const { id: activeProjectTabId } = useActiveProjectTab()
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
+    const { id: activeProjectTabId, tabData: activeProjectTab } = useActiveProjectTab();
 
     return useCallback(
         (partialOrFn: PartialOrFn<ProjectTabState>) => {
-            if (!canProceed() || !activeProjectTabId) return;
-            const currentTab = state.projectTabs[activeProjectTabId];
-            const finalPartial = getPartial(currentTab, partialOrFn);
+            if (!canProceed() || !activeProjectTabId || !activeProjectTab) return;
+            const finalPartial = getPartial(activeProjectTab, partialOrFn);
             sendWSMessage({
                 type: "update_project_tab_partial",
                 tabId: activeProjectTabId,
                 partial: finalPartial,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, activeProjectTabId, activeProjectTab, sendWSMessage]
     );
 }
 
@@ -274,13 +209,11 @@ export function useUpdateActiveProjectTab() {
  * Hook: update a specified project tab by partial or function
  */
 export function useUpdateProjectTabState() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
-        (tabId: string, partialOrFn: PartialOrFn<ProjectTabState>) => {
-            if (!canProceed() || !state) return;
-            const currentTab = state.projectTabs[tabId];
-            if (!currentTab) return;
+        (tabId: string, partialOrFn: PartialOrFn<ProjectTabState>, currentTab: ProjectTabState) => {
+            if (!canProceed()) return;
             const finalPartial = getPartial(currentTab, partialOrFn);
             sendWSMessage({
                 type: "update_project_tab_partial",
@@ -288,7 +221,7 @@ export function useUpdateProjectTabState() {
                 partial: finalPartial,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, sendWSMessage]
     );
 }
 
@@ -317,22 +250,20 @@ export function useUpdateActiveProjectTabStateKey() {
  * Hook: create a project tab from a ticket
  */
 export function useCreateProjectTabFromTicket() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
+    const { tabData: activeProjectTab } = useActiveProjectTab();
     const setActiveProjectTab = useSetActiveProjectTab();
 
     return useCallback(
         (ticket: TicketWithTasks, customTabId?: string) => {
-            if (!canProceed() || !state?.projectActiveTabId) return;
+            if (!canProceed() || !activeProjectTab) return;
             const tabId = customTabId ?? `ticket-tab-${uuidv4()}`;
-
-            const currentTab = state.projectTabs[state.projectActiveTabId];
-            if (!currentTab) return;
 
             const userPrompt = buildTicketContent(ticket);
             const suggestedFileIds = JSON.parse(ticket.suggestedFileIds || "[]");
 
             const newTabData: ProjectTabState = {
-                ...currentTab,
+                ...activeProjectTab,
                 selectedProjectId: ticket.projectId,
                 selectedFiles: suggestedFileIds,
                 suggestedFileIds,
@@ -355,7 +286,7 @@ export function useCreateProjectTabFromTicket() {
 
             setActiveProjectTab(tabId);
         },
-        [canProceed, state, sendWSMessage, setActiveProjectTab]
+        [canProceed, activeProjectTab, sendWSMessage, setActiveProjectTab]
     );
 }
 
@@ -367,29 +298,26 @@ export function useCreateProjectTabFromTicket() {
  * Hook: create chat tab
  */
 export function useCreateChatTab() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
     const setActiveChatTab = useSetActiveChatTab();
-    const { id: activeChatTabId } = useActiveChatTab()
-
+    const { tabData: activeChatTab } = useActiveChatTab();
 
     return useCallback(
         (options?: { cleanTab?: boolean; model?: string; provider?: string; title?: string }) => {
-            if (!canProceed() || !activeChatTabId) return;
+            if (!canProceed() || !activeChatTab) return;
             const newTabId = `chat-tab-${uuidv4()}`;
-            const sourceTabId = activeChatTabId;
-            const sourceTabState = state.chatTabs[sourceTabId];
 
             const messageData: ChatTabState = {
-                ...sourceTabState,
-                displayName: options?.title || `Chat ${Object.keys(state.chatTabs).length + 1}`,
-                model: options?.model ?? sourceTabState.model,
-                provider: (options?.provider ?? sourceTabState.provider) as ChatTabState["provider"],
+                ...activeChatTab,
+                displayName: options?.title || `Chat ${Date.now()}`,
+                model: options?.model ?? activeChatTab.model,
+                provider: (options?.provider ?? activeChatTab.provider) as ChatTabState["provider"],
                 messages: [],
                 input: "",
                 excludedMessageIds: [],
                 activeChatId: undefined,
-                linkSettings: options?.cleanTab ? undefined : sourceTabState.linkSettings,
-                linkedProjectTabId: options?.cleanTab ? null : sourceTabState.linkedProjectTabId,
+                linkSettings: options?.cleanTab ? undefined : activeChatTab.linkSettings,
+                linkedProjectTabId: options?.cleanTab ? null : activeChatTab.linkedProjectTabId,
             };
 
             sendWSMessage({
@@ -400,7 +328,7 @@ export function useCreateChatTab() {
 
             setActiveChatTab(newTabId);
         },
-        [canProceed, state, sendWSMessage, setActiveChatTab]
+        [canProceed, activeChatTab, sendWSMessage, setActiveChatTab]
     );
 }
 
@@ -408,7 +336,7 @@ export function useCreateChatTab() {
  * Hook: set active chat tab
  */
 export function useSetActiveChatTab() {
-    const { canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
         (tabId: string) => {
@@ -426,7 +354,7 @@ export function useSetActiveChatTab() {
  * Hook: update chat tab
  */
 export function useUpdateChatTab() {
-    const { canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
         (tabId: string, partial: Partial<ChatTabState>) => {
@@ -445,12 +373,13 @@ export function useUpdateChatTab() {
  * Hook: delete chat tab
  */
 export function useDeleteChatTab() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
+    const settings = useSettings();
 
     return useCallback(
         (tabId: string) => {
-            if (!canProceed() || !state) return;
-            if (Object.keys(state.chatTabs).length <= 1) {
+            if (!canProceed() || !settings) return;
+            if (settings.chatTabIdOrder.length <= 1) {
                 console.warn("Cannot delete the last remaining chat tab");
                 return;
             }
@@ -459,7 +388,7 @@ export function useDeleteChatTab() {
                 tabId,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, settings, sendWSMessage]
     );
 }
 
@@ -467,21 +396,20 @@ export function useDeleteChatTab() {
  * Hook: update the currently active chat tab
  */
 export function useUpdateActiveChatTab() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
-    const { id: activeChatTabId } = useActiveChatTab()
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
+    const { id: activeChatTabId, tabData: activeChatTab } = useActiveChatTab();
 
     return useCallback(
         (partialOrFn: PartialOrFn<ChatTabState>) => {
-            if (!canProceed() || !activeChatTabId) return;
-            const currentTab = state.chatTabs[activeChatTabId];
-            const finalPartial = getPartial(currentTab, partialOrFn);
+            if (!canProceed() || !activeChatTabId || !activeChatTab) return;
+            const finalPartial = getPartial(activeChatTab, partialOrFn);
             sendWSMessage({
                 type: "update_chat_tab_partial",
                 tabId: activeChatTabId,
                 partial: finalPartial,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, activeChatTabId, activeChatTab, sendWSMessage]
     );
 }
 
@@ -489,13 +417,11 @@ export function useUpdateActiveChatTab() {
  * Hook: update a specified chat tab by partial or function
  */
 export function useUpdateChatTabState() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
-        (tabId: string, partialOrFn: PartialOrFn<ChatTabState>) => {
-            if (!canProceed() || !state) return;
-            const currentTab = state.chatTabs[tabId];
-            if (!currentTab) return;
+        (tabId: string, partialOrFn: PartialOrFn<ChatTabState>, currentTab: ChatTabState) => {
+            if (!canProceed()) return;
             const finalPartial = getPartial(currentTab, partialOrFn);
             sendWSMessage({
                 type: "update_chat_tab_partial",
@@ -503,7 +429,7 @@ export function useUpdateChatTabState() {
                 partial: finalPartial,
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, sendWSMessage]
     );
 }
 
@@ -515,7 +441,7 @@ export function useUpdateChatTabState() {
  * Hook: link chat tab to a project tab
  */
 export function useLinkChatTabToProjectTab() {
-    const { canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
         (chatTabId: string, projectTabId: string, settings?: Partial<LinkSettings>) => {
@@ -542,7 +468,7 @@ export function useLinkChatTabToProjectTab() {
  * Hook: unlink chat tab
  */
 export function useUnlinkChatTab() {
-    const { canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
         (chatTabId: string) => {
@@ -564,12 +490,12 @@ export function useUnlinkChatTab() {
  * Hook: update chat link settings
  */
 export function useUpdateChatLinkSettings() {
-    const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
     return useCallback(
-        (chatTabId: string, partialSettings: Partial<LinkSettings>) => {
-            if (!canProceed() || !state) return;
-            const existing = state.chatTabs[chatTabId]?.linkSettings ?? {};
+        (chatTabId: string, partialSettings: Partial<LinkSettings>, currentSettings?: LinkSettings) => {
+            if (!canProceed()) return;
+            const existing = currentSettings ?? {};
             const merged = { ...existing, ...partialSettings };
             linkSettingsSchema.parse(merged);
             sendWSMessage({
@@ -584,7 +510,7 @@ export function useUpdateChatLinkSettings() {
                 },
             });
         },
-        [canProceed, state, sendWSMessage]
+        [canProceed, sendWSMessage]
     );
 }
 

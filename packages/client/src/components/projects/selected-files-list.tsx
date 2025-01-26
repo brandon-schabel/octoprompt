@@ -10,7 +10,7 @@ import { Input } from "../ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuShortcut } from "../ui/dropdown-menu"
 import { toast } from "sonner"
-import { useGlobalStateCore, useUpdateProjectTabState } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useUpdateProjectTabState } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'

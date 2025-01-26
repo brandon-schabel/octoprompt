@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { TicketWithTasks, useListTicketsWithTasks, TICKET_KEYS, TicketResult, useDeleteTicket } from "@/hooks/api/use-tickets-api";
-import { useGlobalStateCore, useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import { useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";

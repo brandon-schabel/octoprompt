@@ -17,7 +17,7 @@ import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
-import { useGlobalStateCore } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useGlobalStateContext } from '@/websocket-state/global-state-websocket-handler-context'
 
 type RouterContext = {
   api: APIInterface
@@ -84,7 +84,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootComponent() {
-  const { isOpen } = useGlobalStateCore()
+  const { isOpen } = useGlobalStateContext()
 
   if (!isOpen) {
     return <LoadingScreen />

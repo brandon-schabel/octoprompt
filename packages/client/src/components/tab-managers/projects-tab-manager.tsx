@@ -1,5 +1,4 @@
 import {
-  useGlobalStateCore,
   useCreateProjectTab,
   useSetActiveProjectTab,
   useUpdateProjectTab,
