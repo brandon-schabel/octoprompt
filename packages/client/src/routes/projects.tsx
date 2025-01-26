@@ -17,7 +17,7 @@ import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useCreateProjectTab, useGlobalStateCore, useUpdateActiveProjectTabStateKey } from '@/components/global-state/global-helper-hooks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { InfoTooltip } from '@/components/info-tooltip'
-import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors'
+import { useActiveProjectTab, useProjectTabs } from '@/components/global-state/global-websocket-selectors'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
@@ -27,10 +27,10 @@ function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
-    const { state } = useGlobalStateCore()
+    const tabs = useProjectTabs()
 
     // new way pulling from the query cahce for the project tabs
-    const { tabData: activeTabState } = useActiveProjectTab()
+    const { tabData: activeTabState, id: projectActiveTabId } = useActiveProjectTab()
     const selectedProjectId = activeTabState?.selectedProjectId ?? null
 
     const createNewTab = useCreateProjectTab()
@@ -46,7 +46,7 @@ function ProjectsPage() {
     const { data: projects } = useGetProjects()
 
     // Check for "no tabs" scenario
-    const noTabsYet = Object.keys(state?.projectTabs ?? {}).length === 0
+    const noTabsYet = Object.keys(tabs ?? {}).length === 0
 
     const setFileSearch = (value: string) => {
         updateActiveTabStateKey('fileSearch', value)
@@ -60,7 +60,7 @@ function ProjectsPage() {
     const { data: fileData } = useGetProjectFiles(selectedProjectId ?? '')
     const { data: promptData } = useGetProjectPrompts(selectedProjectId ?? '')
     // Check if we're on the default tab with no project selected
-    const isDefaultTab = state?.projectActiveTabId === 'defaultTab'
+    const isDefaultTab = projectActiveTabId === 'defaultTab'
     const isFirstVisit = isDefaultTab && !selectedProjectId
     const [showWelcomeDialog, setShowWelcomeDialog] = useState(true)
 

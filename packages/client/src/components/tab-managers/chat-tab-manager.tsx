@@ -1,11 +1,11 @@
-import { useGlobalStateCore, useCreateChatTab, useSetActiveChatTab, useUpdateChatTab, useDeleteChatTab, useUpdateSettings } from '@/components/global-state/global-helper-hooks'
+import { useCreateChatTab, useSetActiveChatTab, useUpdateChatTab, useDeleteChatTab, useUpdateSettings } from '@/components/global-state/global-helper-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { useActiveChatTab, useSettings } from '../global-state/global-websocket-selectors'
+import { useActiveChatTab, useChatTabs, useSettings } from '../global-state/global-websocket-selectors'
 
 type DialogContentProps = {
     tabId: string;
@@ -28,7 +28,6 @@ type ChatTab = {
 }
 
 export function ChatTabManager() {
-    const { state, isOpen } = useGlobalStateCore()
     const { id: activeTabId } = useActiveChatTab()
     const createChatTab = useCreateChatTab()
     const setActiveChatTab = useSetActiveChatTab()
@@ -36,8 +35,8 @@ export function ChatTabManager() {
     const deleteChatTab = useDeleteChatTab()
     const updateSettings = useUpdateSettings()
     const settings = useSettings()
+    const tabs = useChatTabs()
 
-    const tabs = state?.chatTabs ?? {}
 
     const tabOrder = settings?.chatTabIdOrder
         ? settings.chatTabIdOrder
@@ -148,7 +147,6 @@ export function ChatTabManager() {
             // @ts-ignore
             tabs={tabs}
             activeTabId={activeTabId}
-            isReady={isOpen ?? false}
             onCreateTab={createChatTab}
             onSetActiveTab={setActiveChatTab}
             onRenameTab={(tabId, newName) => updateChatTab(tabId, { displayName: newName })}

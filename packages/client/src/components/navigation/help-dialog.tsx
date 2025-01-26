@@ -1,10 +1,9 @@
 import { useHotkeys } from "react-hotkeys-hook"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { useGlobalStateCore } from "@/components/global-state/global-helper-hooks"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
-import { useActiveChatTab } from "../global-state/global-websocket-selectors"
+import { useActiveChatTab, useChatTabs } from "../global-state/global-websocket-selectors"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -12,8 +11,7 @@ export type HelpDialogProps = {
 }
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
-    const { state } = useGlobalStateCore()
-    const { id: activeChatTabId } = useActiveChatTab()
+    const { id: activeChatTabId, tabData: chatTabState } = useActiveChatTab()
 
     // Toggle help dialog with mod + /
     useHotkeys("mod+/", (e) => {
@@ -23,7 +21,6 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
 
     if (!activeChatTabId) return null
 
-    const chatTabState = state.chatTabs[activeChatTabId]
     if (!chatTabState) return null
 
     const { provider, model } = chatTabState

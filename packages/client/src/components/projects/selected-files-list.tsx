@@ -14,6 +14,7 @@ import { useGlobalStateCore, useUpdateProjectTabState } from "@/components/globa
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { useProjectTab } from "../global-state/global-websocket-selectors"
 
 type SelectedFilesListProps = {
   selectedFiles: string[]
@@ -46,11 +47,10 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [filterText, setFilterText] = useState("")
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
-  const { state } = useGlobalStateCore()
   const updateProjectTabState = useUpdateProjectTabState()
   const { undo, redo, canUndo, canRedo, clearSelectedFiles } = selectedFilesState
 
-  const projectTab = state?.projectTabs[projectTabId]
+  const projectTab = useProjectTab(projectTabId)
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
 
   const copyAllSelectedFiles = async () => {

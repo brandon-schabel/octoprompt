@@ -8,6 +8,7 @@ import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
+import { useActiveProjectTab } from "@/components/global-state/global-websocket-selectors";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -20,9 +21,8 @@ function TicketsPage() {
     // what TicketListPanel provides via onSelectTicket.
     const [selectedTicket, setSelectedTicket] = React.useState<TicketWithTasks | null>(null);
 
-    // Get active project ID from global state
-    const { state } = useGlobalStateCore();
-    const projectId = state.projectTabs[state.projectActiveTabId || ""]?.selectedProjectId ?? null;
+    const { tabData: projectTabState } = useActiveProjectTab()
+    const projectId = projectTabState?.selectedProjectId ?? null;
 
     const {
         data: projectData,

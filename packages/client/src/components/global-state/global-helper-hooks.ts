@@ -22,12 +22,42 @@ function getPartial<T>(prev: T, partialOrFn: PartialOrFn<T>): Partial<T> {
     return typeof partialOrFn === "function" ? partialOrFn(prev) : partialOrFn;
 }
 
+
+
+
+export function useSendWebSocketMessage() {
+    const { manager, isOpen } = useGlobalStateContext();
+    const canProceed = useCallback((): boolean => {
+        if (!isOpen) {
+            console.warn("WebSocket not open, cannot send message");
+            return false;
+        }
+        return true;
+    }, [isOpen]);
+
+    const sendWSMessage = useCallback(
+        (msg: Parameters<typeof manager.sendMessage>[0]) => {
+            if (canProceed()) {
+                manager.sendMessage(msg);
+            }
+        },
+        [manager, canProceed]
+    );
+
+    return {
+        manager,
+        isOpen,
+        canProceed,
+        sendWSMessage,
+    };
+}
+
 /**
  * This hook provides the underlying references (WebSocket manager, global state, etc.)
  * needed by the smaller custom hooks.
  */
 export function useGlobalStateCore() {
-    const { manager, isOpen } = useGlobalStateContext();
+    const { manager, isOpen } = useSendWebSocketMessage();
     const { data: state } = useGlobalState();
 
     const canProceed = useCallback((): boolean => {
@@ -558,64 +588,3 @@ export function useUpdateChatLinkSettings() {
     );
 }
 
-/* --------------------------------------------------
-   MISC HOOKS
-   -------------------------------------------------- */
-
-/**
- * Hook: enable or disable project summarization
- */
-export function useSetProjectSummarizationEnabled() {
-    const updateSettings = useUpdateSettings();
-
-    return useCallback(
-        (projectId: string, enabled: boolean) => {
-            updateSettings((prev) => {
-                let list = prev.summarizationEnabledProjectIds ?? [];
-                if (!enabled) {
-                    if (!list.includes(projectId)) {
-                        list = [...list, projectId];
-                    }
-                } else {
-                    list = list.filter((id) => id !== projectId);
-                }
-                return { summarizationEnabledProjectIds: list };
-            });
-        },
-        [updateSettings]
-    );
-}
-
-/**
- * Hook: add a file group to the active project tab
- */
-export function useAddFileGroup() {
-    const updateActiveProjectTab = useUpdateActiveProjectTab();
-
-    return useCallback(
-        (groupName: string, fileIds: string[]) => {
-            updateActiveProjectTab((prevTab) => ({
-                bookmarkedFileGroups: {
-                    ...prevTab.bookmarkedFileGroups,
-                    [groupName]: fileIds,
-                },
-            }));
-        },
-        [updateActiveProjectTab]
-    );
-}
-
-/**
- * Convenience hooks to get the active project tab and active chat tab from the global state.
- * (Useful if you need them outside the original giant helper.)
- */
-export function useActiveProjectTabState() {
-    const { data: state } = useGlobalState();
-    const activeTabId = state?.projectActiveTabId
-    const tabData = activeTabId ? state?.projectTabs[activeTabId] : null
-
-    return {
-        id: activeTabId,
-        tabData
-    }
-}

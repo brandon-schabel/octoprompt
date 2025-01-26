@@ -28,6 +28,7 @@ import { buildNodeContent } from '@/components/projects/utils/projects-utils'
 import clsx from 'clsx'
 import { EditorType } from 'shared/src/global-state/global-state-schema'
 import { useGlobalStateCore } from '@/components/global-state/global-helper-hooks'
+import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors'
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 
@@ -98,11 +99,10 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
     onViewFile,
     projectRoot,
 }, ref) => {
-    const { state } = useGlobalStateCore()
-    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? '']
-    const selectedFiles = activeTabState?.selectedFiles || []
-    const resolveImports = activeTabState?.resolveImports || false
-    const preferredEditor = activeTabState?.preferredEditor || 'vscode'
+    const { tabData: projectTabState } = useActiveProjectTab()
+    const selectedFiles = projectTabState?.selectedFiles || []
+    const resolveImports = projectTabState?.resolveImports || false
+    const preferredEditor = projectTabState?.preferredEditor || 'vscode'
 
 
     const isFolder = item.node._folder === true

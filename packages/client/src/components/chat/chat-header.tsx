@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useChatControl } from "./hooks/use-chat-state";
-import { useNavigate } from "@tanstack/react-router"
 import { buildPromptContent } from "@/components/projects/utils/projects-utils";
 import { useGetProjectPrompts } from "@/hooks/api/use-prompts-api";
 import { ProjectFile } from "shared/schema";
@@ -15,10 +14,11 @@ import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useGlobalStateCore, useLinkChatTabToProjectTab, } from "@/components/global-state/global-helper-hooks";
+import { useLinkChatTabToProjectTab, } from "@/components/global-state/global-helper-hooks";
 import {
     useActiveChatTab,
-    useProjectTab
+    useProjectTab,
+    useProjectTabs
 } from "@/components/global-state/global-websocket-selectors";
 interface ChatHeaderProps {
     onForkChat: () => void;
@@ -46,7 +46,7 @@ export function ChatHeader({
 
     const activeChatId = activeChatTabState?.activeChatId;
 
-    const { state } = useGlobalStateCore();
+    const projectTabsRecord = useProjectTabs()
     const linkedProjectState = useProjectTab(activeChatTabState?.linkedProjectTabId || '')
 
     const linkChatTabToProjectTab = useLinkChatTabToProjectTab()
@@ -63,7 +63,7 @@ export function ChatHeader({
     const activeChatData = chats?.data?.find(c => c.id === activeChatId);
 
     const excludedMessageCount = activeChatTabState?.excludedMessageIds?.length || 0;
-    const projectTabs = Object.entries(state?.projectTabs ?? {});
+    const projectTabs = Object.entries(projectTabsRecord ?? {});
     const filteredProjectTabs = projectTabs.filter(([_, tabState]) =>
         tabState.displayName?.toLowerCase().includes(projectSearch.toLowerCase()) ||
         tabState.userPrompt?.toLowerCase().includes(projectSearch.toLowerCase())

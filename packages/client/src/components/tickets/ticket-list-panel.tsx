@@ -23,6 +23,7 @@ import {
 } from "../ui/alert-dialog";
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
+import { useProjectTab } from "../global-state/global-websocket-selectors";
 
 interface TicketListPanelProps {
     projectTabId: string;
@@ -49,10 +50,9 @@ const PRIORITY_COLORS = {
 
 export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
     const navigate = useNavigate();
-    const { state } = useGlobalStateCore();
     const updateProjectTabState = useUpdateProjectTabState();
     const createProjectTabFromTicket = useCreateProjectTabFromTicket();
-    const tabState = state.projectTabs[projectTabId];
+    const tabState = useProjectTab(projectTabId)
     const projectId = tabState?.selectedProjectId || "";
 
     // Read from the global tabState

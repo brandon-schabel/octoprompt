@@ -137,3 +137,52 @@ export function useTheme() {
     const settings = useSettings()
     return settings?.theme ?? "light"
 }
+
+
+export function useProjectTabs(): Record<string, ProjectTabState> {
+    const { data: globalState } = useGlobalState()
+    const queryClient = useQueryClient()
+
+    return useMemo(() => {
+        if (!globalState?.projectTabs) return {}
+
+        const result: Record<string, ProjectTabState> = {}
+        for (const tabId of Object.keys(globalState.projectTabs)) {
+            // Attempt to read sub‐query for that tab
+            const subData = queryClient.getQueryData<ProjectTabState>([
+                "globalState",
+                "projectTab",
+                tabId,
+            ])
+            // Fall back to top‐level if the subData doesn’t exist
+            result[tabId] = subData ?? globalState.projectTabs[tabId]
+        }
+        return result
+    }, [globalState, queryClient])
+}
+
+/**
+ *  UseChatTabs: returns a dictionary of all chat tabs,
+ *  pulling each from its sub‐query if available.
+ */
+export function useChatTabs(): Record<string, ChatTabState> {
+    const { data: globalState } = useGlobalState()
+    const queryClient = useQueryClient()
+
+    return useMemo(() => {
+        if (!globalState?.chatTabs) return {}
+
+        const result: Record<string, ChatTabState> = {}
+        for (const tabId of Object.keys(globalState.chatTabs)) {
+            // Attempt to read sub‐query for that chat tab
+            const subData = queryClient.getQueryData<ChatTabState>([
+                "globalState",
+                "chatTab",
+                tabId,
+            ])
+            // Fall back to top‐level if the subData doesn’t exist
+            result[tabId] = subData ?? globalState.chatTabs[tabId]
+        }
+        return result
+    }, [globalState, queryClient])
+}

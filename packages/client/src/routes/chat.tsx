@@ -10,8 +10,8 @@ import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-cont
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
 import { InfoTooltip } from '@/components/info-tooltip'
-import { useGlobalStateCore, useCreateChatTab } from '@/components/global-state/global-helper-hooks'
-import { useActiveChatTab } from '@/components/global-state/global-websocket-selectors'
+import { useCreateChatTab } from '@/components/global-state/global-helper-hooks'
+import { useActiveChatTab, useChatTabs } from '@/components/global-state/global-websocket-selectors'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,
@@ -22,10 +22,10 @@ export const Route = createFileRoute('/chat')({
 
 function ChatPage() {
   // Global state to check if user has any chat tabs at all
-  const { state } = useGlobalStateCore()
   const { id: activeTabId } = useActiveChatTab()
   const createChatTab = useCreateChatTab()
-  const noChatTabsYet = Object.keys(state?.chatTabs ?? {}).length === 0
+  const tabs = useChatTabs()
+  const noChatTabsYet = Object.keys(tabs ?? {}).length === 0
   const isDefaultTab = activeTabId === 'defaultTab'
 
   // Basic model & chat control

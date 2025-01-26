@@ -47,7 +47,7 @@ import {
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSettings } from "shared/src/global-state/global-state-schema"
-import { useSettings } from "@/components/global-state/global-websocket-selectors"
+import { useActiveProjectTab, useSettings } from "@/components/global-state/global-websocket-selectors"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -91,14 +91,13 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 }
 
 function ProjectSummarizationSettingsPage() {
-    const { state } = useGlobalStateCore()
+    const settings = useSettings()
+    const { tabData: projectTabState } = useActiveProjectTab()
     const updateSettings = useUpdateSettings()
-    const settings = state.settings
-    const projectActiveTabId = state.projectActiveTabId
-    const selectedProjectId =
-        projectActiveTabId && state.projectTabs[projectActiveTabId]?.selectedProjectId
+
+    const selectedProjectId = projectTabState?.selectedProjectId
     const isProjectSummarizationEnabled = selectedProjectId
-        ? settings.summarizationEnabledProjectIds.includes(selectedProjectId)
+        ? settings?.summarizationEnabledProjectIds.includes(selectedProjectId)
         : false
 
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
@@ -134,7 +133,7 @@ function ProjectSummarizationSettingsPage() {
     const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? "")
     const resummarizeAllMutation = useResummarizeAllFiles(selectedProjectId ?? "")
 
-    const ignorePatterns = settings.summarizationIgnorePatterns
+    const ignorePatterns = settings?.summarizationIgnorePatterns ?? []
     const includedFiles: ProjectFile[] = []
     const excludedFiles: ProjectFile[] = []
 
@@ -431,7 +430,7 @@ function ProjectSummarizationSettingsPage() {
 
     const formattedCombinedSummary = useMemo(() => {
         const includedSummaries = summaries.filter(file =>
-            !matchesAnyPattern(file.path, settings.summarizationIgnorePatterns)
+            !matchesAnyPattern(file.path, settings?.summarizationIgnorePatterns ?? [])
         );
 
         return buildCombinedFileSummaries(includedSummaries, {
@@ -443,7 +442,7 @@ function ProjectSummarizationSettingsPage() {
                 }`,
             includeEmptySummaries: false,
         });
-    }, [summaries, settings.summarizationIgnorePatterns]);
+    }, [summaries, settings?.summarizationIgnorePatterns]);
 
     const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false);
 
