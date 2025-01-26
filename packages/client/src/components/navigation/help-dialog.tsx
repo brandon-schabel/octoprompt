@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { useGlobalStateCore } from "@/components/global-state/global-helper-hooks"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
+import { useActiveChatTab } from "../global-state/global-websocket-selectors"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -12,6 +13,7 @@ export type HelpDialogProps = {
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
     const { state } = useGlobalStateCore()
+    const { id: activeChatTabId } = useActiveChatTab()
 
     // Toggle help dialog with mod + /
     useHotkeys("mod+/", (e) => {
@@ -19,10 +21,9 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
         onOpenChange?.(!open)
     })
 
-    const chatTabStateTabId = state.chatActiveTabId
-    if (!chatTabStateTabId) return null
+    if (!activeChatTabId) return null
 
-    const chatTabState = state.chatTabs[chatTabStateTabId]
+    const chatTabState = state.chatTabs[activeChatTabId]
     if (!chatTabState) return null
 
     const { provider, model } = chatTabState
@@ -47,7 +48,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         <h3 className="font-semibold mt-4 mb-2">File Search & Autocomplete</h3>
                         <p><ShortcutDisplay shortcut={['up', 'down']} delimiter=" / "></ShortcutDisplay>: Navigate through suggestions</p>
                         <p><ShortcutDisplay shortcut={['enter', 'space']} delimiter=" / " />: Select highlighted file</p>
-                        <p><ShortcutDisplay shortcut={['right']}/>: Preview highlighted file</p>
+                        <p><ShortcutDisplay shortcut={['right']} />: Preview highlighted file</p>
                         <p><AppShortcutDisplay shortcut="close-suggestions" />: Close suggestions</p>
 
                         <h3 className="font-semibold mt-4 mb-2">File Tree Navigation</h3>

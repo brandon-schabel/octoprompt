@@ -13,7 +13,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useGlobalStateCore, useUpdateActiveProjectTab, useUpdateGlobalStateKey } from "@/components/global-state/global-helper-hooks"
+import { useUpdateActiveProjectTab } from "@/components/global-state/global-helper-hooks"
+import { useActiveProjectTab, useSettings } from "../global-state/global-websocket-selectors"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -31,16 +32,17 @@ export function AppNavbar() {
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
-    const { state } = useGlobalStateCore();
+    const settings = useSettings()
     const updateActiveProjectTab = useUpdateActiveProjectTab();
-    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? ''];
-    const selectedProjectId = activeTabState?.selectedProjectId;
+    const { tabData: activeProjectTabState } = useActiveProjectTab()
+    const selectedProjectId = activeProjectTabState?.selectedProjectId;
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
     const { api } = useApi()
 
-    const globalTheme = state?.settings.theme
+
+    const globalTheme = settings?.theme || 'dark'
 
     useEffect(() => {
         if (globalTheme === 'dark') {
@@ -106,8 +108,8 @@ export function AppNavbar() {
                         <Link
                             to="/projects"
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnProjectsRoute
-                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <FolderIcon className="w-4 h-4" />
@@ -119,8 +121,8 @@ export function AppNavbar() {
                             to="/chat"
                             search={{ prefill: false }}
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnChatRoute
-                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
@@ -131,8 +133,8 @@ export function AppNavbar() {
                         <Link
                             to="/keys"
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnKeysRoute
-                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <KeyIcon className="w-4 h-4" />

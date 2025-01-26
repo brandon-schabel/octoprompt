@@ -1,4 +1,4 @@
-import { useGlobalStateCore } from '@/components/global-state/global-helper-hooks';
+import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors';
 import { useGeminiFileSearch } from '@/hooks/api/use-gemini-file-search';
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react';
@@ -10,9 +10,9 @@ export const Route = createFileRoute('/file-search-interface')({
 function FileSearchInterface() {
     const [query, setQuery] = useState('');
     const { status, result, error, search, reset } = useGeminiFileSearch();
-    const { state } = useGlobalStateCore()
-    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? '']
-    const selectedProjectId = activeTabState?.selectedProjectId
+    const { tabData: activeProjectTabState } = useActiveProjectTab()
+
+    const selectedProjectId = activeProjectTabState?.selectedProjectId
 
     const handleSearch = () => {
         search({ projectId: selectedProjectId || '', query });

@@ -9,7 +9,7 @@ import { ProjectFile } from 'shared/schema'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
-import { useGlobalStateCore } from '@/components/global-state/global-helper-hooks'
+import { useSettings } from '../global-state/global-websocket-selectors'
 
 type FileViewerDialogProps = {
     open: boolean
@@ -46,12 +46,11 @@ export function FileViewerDialog({
     const [isEditingFile, setIsEditingFile] = useState(false)
     const [editedContent, setEditedContent] = useState<string>('')
     const [showRawMarkdown, setShowRawMarkdown] = useState(false)
-    const { state } = useGlobalStateCore()
-    const settings = state.settings
+    const settings = useSettings()
 
-    const isDarkMode = settings.theme === "dark"
+    const isDarkMode = settings?.theme === "dark"
     // @ts-ignore
-    const selectedTheme = isDarkMode ? themes[settings.codeThemeDark] : themes[settings.codeThemeLight]
+    const selectedTheme = isDarkMode ? themes[settings?.codeThemeDark] : themes[settings?.codeThemeLight]
     const { copyToClipboard } = useCopyClipboard()
 
     useEffect(() => {

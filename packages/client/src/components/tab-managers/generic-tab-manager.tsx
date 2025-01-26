@@ -92,7 +92,6 @@ export type GenericTabManagerProps<T = any> = {
 export function GenericTabManager<T = any>({
     tabs,
     activeTabId,
-    isReady,
     onCreateTab,
     onSetActiveTab,
     onRenameTab,
@@ -165,9 +164,6 @@ export function GenericTabManager<T = any>({
         onSetActiveTab(finalTabOrder[prevIndex])
     })
 
-    if (!isReady) {
-        return <div>Connecting...</div>
-    }
     if (Object.keys(tabs ?? {}).length === 0) {
         return (
             <div className="flex flex-col gap-2">

@@ -19,21 +19,21 @@ import {
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateCore, useUpdateActiveProjectTab, useUpdateGlobalStateKey } from '@/components/global-state/global-helper-hooks'
+import { useUpdateActiveProjectTab, useUpdateGlobalStateKey } from '@/components/global-state/global-helper-hooks'
 import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
+import { useActiveProjectTab, useSettings } from '../global-state/global-websocket-selectors'
 
 
 export function ProjectSettingsDialog() {
-    const { state } = useGlobalStateCore()
     const updateActiveProjectTab = useUpdateActiveProjectTab()
     const updateGlobalStateKey = useUpdateGlobalStateKey()
-    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? '']
-    const settings = state?.settings
+    const { tabData: activeTabState } = useActiveProjectTab()
+    const settings = useSettings()
     const contextLimit = activeTabState?.contextLimit || 128000
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
     const projectId = activeTabState?.selectedProjectId
-    const isProjectSummarizationEnabled = projectId ? settings.summarizationEnabledProjectIds.includes(projectId) : false
+    const isProjectSummarizationEnabled = projectId ? settings?.summarizationEnabledProjectIds.includes(projectId) : false
     const { isFetching: isSyncing, refetch: syncProject } = useSyncProjectInterval(projectId ?? '')
 
 

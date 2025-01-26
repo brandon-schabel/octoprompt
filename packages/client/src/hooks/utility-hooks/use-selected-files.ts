@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { useGlobalStateCore, useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
+import { useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
 import { ProjectFile } from 'shared'
+import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors'
 
 const MAX_HISTORY_SIZE = 50
 
@@ -13,23 +14,21 @@ type UndoRedoState = {
 const historyCache = new Map<string, UndoRedoState>()
 
 export function useSelectedFiles() {
-  const { state } = useGlobalStateCore()
+  const { id: activeProjectTabId, tabData: activeProjectTabState } = useActiveProjectTab()
   const updateActiveProjectTab = useUpdateActiveProjectTab()
-  const activeProjectTabState = state?.projectTabs[state?.projectActiveTabId ?? '']
 
   // Keep undo/redo history in local state
   const [undoRedoState, setUndoRedoState] = useState<UndoRedoState | null>(null)
 
   // Effect to handle tab changes and initialize from cache if available
   useEffect(() => {
-    const tabId = state.projectActiveTabId
-    if (!tabId) {
+    if (!activeProjectTabId) {
       setUndoRedoState(null)
       return
     }
 
     // Check cache first
-    const cachedState = historyCache.get(tabId)
+    const cachedState = historyCache.get(activeProjectTabId)
     if (cachedState) {
       setUndoRedoState(cachedState)
       return
@@ -41,17 +40,17 @@ export function useSelectedFiles() {
         history: [activeProjectTabState?.selectedFiles || []],
         index: 0,
       }
-      historyCache.set(tabId, newState)
+      historyCache.set(activeProjectTabId, newState)
       setUndoRedoState(newState)
     }
-  }, [state.projectActiveTabId, activeProjectTabState?.selectedFiles])
+  }, [activeProjectTabId, activeProjectTabState?.selectedFiles])
 
   // Update cache whenever undoRedoState changes
   useEffect(() => {
-    if (undoRedoState && state.projectActiveTabId) {
-      historyCache.set(state.projectActiveTabId, undoRedoState)
+    if (undoRedoState && activeProjectTabId) {
+      historyCache.set(activeProjectTabId, undoRedoState)
     }
-  }, [undoRedoState, state.projectActiveTabId])
+  }, [undoRedoState, activeProjectTabId])
 
   // Cleanup cache when component unmounts
   useEffect(() => {

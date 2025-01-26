@@ -14,9 +14,10 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { Button } from '@/components/ui/button'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useActiveProjectTabState, useCreateProjectTab, useGlobalStateCore, useUpdateActiveProjectTabStateKey } from '@/components/global-state/global-helper-hooks'
+import { useCreateProjectTab, useGlobalStateCore, useUpdateActiveProjectTabStateKey } from '@/components/global-state/global-helper-hooks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { InfoTooltip } from '@/components/info-tooltip'
+import { useActiveProjectTab } from '@/components/global-state/global-websocket-selectors'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
@@ -26,12 +27,15 @@ function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
-    const { state, isOpen } = useGlobalStateCore()
-    const { tabData: activeTabState } = useActiveProjectTabState()
+    const { state } = useGlobalStateCore()
+
+    // new way pulling from the query cahce for the project tabs
+    const { tabData: activeTabState } = useActiveProjectTab()
+    const selectedProjectId = activeTabState?.selectedProjectId ?? null
+
     const createNewTab = useCreateProjectTab()
     const updateActiveTabStateKey = useUpdateActiveProjectTabStateKey()
 
-    const selectedProjectId = activeTabState?.selectedProjectId ?? null
     const fileSearch = activeTabState?.fileSearch ?? ''
     const searchByContent = activeTabState?.searchByContent ?? false
 
@@ -55,6 +59,11 @@ function ProjectsPage() {
 
     const { data: fileData } = useGetProjectFiles(selectedProjectId ?? '')
     const { data: promptData } = useGetProjectPrompts(selectedProjectId ?? '')
+    // Check if we're on the default tab with no project selected
+    const isDefaultTab = state?.projectActiveTabId === 'defaultTab'
+    const isFirstVisit = isDefaultTab && !selectedProjectId
+    const [showWelcomeDialog, setShowWelcomeDialog] = useState(true)
+
 
     const projectForm = useForm<z.infer<typeof projectSchema>>({
         resolver: zodResolver(projectSchema),
@@ -65,12 +74,11 @@ function ProjectsPage() {
         },
     })
     useEffect(() => {
-        if (!isOpen) return // skip if WebSocket not ready
         if (!activeTabState) return
         if (!activeTabState.selectedProjectId && projects?.projects?.length) {
             updateActiveTabStateKey('selectedProjectId', projects.projects[0].id)
         }
-    }, [isOpen, activeTabState, projects, updateActiveTabStateKey])
+    }, [activeTabState, projects, updateActiveTabStateKey])
 
     // Load the project form whenever selectedProjectId changes
     useEffect(() => {
@@ -155,11 +163,6 @@ function ProjectsPage() {
             </div>
         )
     }
-
-    // Check if we're on the default tab with no project selected
-    const isDefaultTab = state?.projectActiveTabId === 'defaultTab'
-    const isFirstVisit = isDefaultTab && !selectedProjectId
-    const [showWelcomeDialog, setShowWelcomeDialog] = useState(true)
 
     return (
         <div className="flex-col h-full w-full overflow-hidden flex">

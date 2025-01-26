@@ -51,7 +51,22 @@ function applyInboundToQueryClient(
         // ------------------
         case "state_update":
         case "initial_state": {
+            // 1) Set the entire globalState
             queryClient.setQueryData(["globalState"], inbound.data);
+
+            // 2) Split out each project tab into its own query
+            if (inbound.data.projectTabs) {
+                Object.entries(inbound.data.projectTabs).forEach(([tabId, tabData]) => {
+                    queryClient.setQueryData(["globalState", "projectTab", tabId], tabData);
+                });
+            }
+
+            // 3) Split out each chat tab into its own query
+            if (inbound.data.chatTabs) {
+                Object.entries(inbound.data.chatTabs).forEach(([tabId, tabData]) => {
+                    queryClient.setQueryData(["globalState", "chatTab", tabId], tabData);
+                });
+            }
             break;
         }
 
@@ -59,7 +74,10 @@ function applyInboundToQueryClient(
         // Project tab messages
         // ------------------
         case "create_project_tab": {
+            // Create the sub-query
             queryClient.setQueryData(["globalState", "projectTab", inbound.tabId], inbound.data);
+
+            // Update top-level globalState
             queryClient.setQueryData<GlobalState | undefined>(["globalState"], (prev) => {
                 if (!prev) return prev;
                 return {
@@ -69,6 +87,10 @@ function applyInboundToQueryClient(
                         projectTabIdOrder: [...prev.settings.projectTabIdOrder, inbound.tabId],
                     },
                     projectActiveTabId: inbound.tabId,
+                    projectTabs: {
+                        ...prev.projectTabs,
+                        [inbound.tabId]: inbound.data,
+                    },
                 };
             });
             break;
@@ -76,28 +98,47 @@ function applyInboundToQueryClient(
 
         case "update_project_tab":
         case "update_project_tab_partial": {
+            // Update the sub-query
             queryClient.setQueryData(["globalState", "projectTab", inbound.tabId], (prev: any) => ({
                 ...prev,
                 ...(inbound.type === "update_project_tab" ? inbound.data : inbound.partial),
             }));
+
+            // Update the top-level state
+            queryClient.setQueryData<GlobalState | undefined>(["globalState"], (prev) => {
+                if (!prev) return prev;
+                const newTabs = { ...prev.projectTabs };
+                const currentTab = newTabs[inbound.tabId] ?? {};
+                newTabs[inbound.tabId] = {
+                    ...currentTab,
+                    ...(inbound.type === "update_project_tab" ? inbound.data : inbound.partial),
+                };
+                return {
+                    ...prev,
+                    projectTabs: newTabs,
+                };
+            });
             break;
         }
 
         case "delete_project_tab": {
+            // Remove the sub-query
             queryClient.removeQueries({ queryKey: ["globalState", "projectTab", inbound.tabId] });
+
+            // Update top-level state
             queryClient.setQueryData<GlobalState | undefined>(["globalState"], (prev) => {
                 if (!prev) return prev;
                 const newState: GlobalState = { ...prev };
-                // remove tabId from tab order
+                const { [inbound.tabId]: _, ...remainingTabs } = prev.projectTabs;
+                newState.projectTabs = remainingTabs;
                 newState.settings = {
                     ...newState.settings,
                     projectTabIdOrder: newState.settings.projectTabIdOrder.filter(
                         (id) => id !== inbound.tabId
                     ),
                 };
-                // if active was removed, pick another
                 if (prev.projectActiveTabId === inbound.tabId) {
-                    const remaining = Object.keys(prev.projectTabs).filter((id) => id !== inbound.tabId);
+                    const remaining = Object.keys(remainingTabs);
                     newState.projectActiveTabId = remaining.length > 0 ? remaining[0] : null;
                 }
                 return newState;
@@ -135,7 +176,10 @@ function applyInboundToQueryClient(
         // Chat tab messages
         // ------------------
         case "create_chat_tab": {
+            // Create the sub-query
             queryClient.setQueryData(["globalState", "chatTab", inbound.tabId], inbound.data);
+
+            // Update top-level state
             queryClient.setQueryData<GlobalState | undefined>(["globalState"], (prev) => {
                 if (!prev) return prev;
                 return {
@@ -145,6 +189,10 @@ function applyInboundToQueryClient(
                         chatTabIdOrder: [...prev.settings.chatTabIdOrder, inbound.tabId],
                     },
                     chatActiveTabId: inbound.tabId,
+                    chatTabs: {
+                        ...prev.chatTabs,
+                        [inbound.tabId]: inbound.data,
+                    },
                 };
             });
             break;
@@ -152,25 +200,45 @@ function applyInboundToQueryClient(
 
         case "update_chat_tab":
         case "update_chat_tab_partial": {
+            // Update the sub-query
             queryClient.setQueryData(["globalState", "chatTab", inbound.tabId], (prev: any) => ({
                 ...prev,
                 ...(inbound.type === "update_chat_tab" ? inbound.data : inbound.partial),
             }));
+
+            // Update top-level state
+            queryClient.setQueryData<GlobalState | undefined>(["globalState"], (prev) => {
+                if (!prev) return prev;
+                const newTabs = { ...prev.chatTabs };
+                const currentTab = newTabs[inbound.tabId] ?? {};
+                newTabs[inbound.tabId] = {
+                    ...currentTab,
+                    ...(inbound.type === "update_chat_tab" ? inbound.data : inbound.partial),
+                };
+                return {
+                    ...prev,
+                    chatTabs: newTabs,
+                };
+            });
             break;
         }
 
         case "delete_chat_tab": {
+            // Remove the sub-query
             queryClient.removeQueries({ queryKey: ["globalState", "chatTab", inbound.tabId] });
+
+            // Update top-level state
             queryClient.setQueryData<GlobalState | undefined>(["globalState"], (prev) => {
                 if (!prev) return prev;
                 const newState: GlobalState = { ...prev };
-                // remove tabId from chat order
+                const { [inbound.tabId]: _, ...remainingTabs } = prev.chatTabs;
+                newState.chatTabs = remainingTabs;
                 newState.settings = {
                     ...newState.settings,
                     chatTabIdOrder: newState.settings.chatTabIdOrder.filter((id) => id !== inbound.tabId),
                 };
                 if (prev.chatActiveTabId === inbound.tabId) {
-                    const remaining = Object.keys(prev.chatTabs).filter((id) => id !== inbound.tabId);
+                    const remaining = Object.keys(remainingTabs);
                     newState.chatActiveTabId = remaining.length > 0 ? remaining[0] : null;
                 }
                 return newState;

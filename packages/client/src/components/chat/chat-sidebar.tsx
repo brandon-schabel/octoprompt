@@ -12,16 +12,18 @@ import {
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
-import { useGlobalStateCore, useUpdateActiveChatTab } from '@/components/global-state/global-helper-hooks';
+import { useUpdateActiveChatTab } from '@/components/global-state/global-helper-hooks';
+import { useActiveChatTab } from '../global-state/global-websocket-selectors';
 
 type ChatSidebarProps = {
     // We no longer pass the modelControl here
 };
 
 export function ChatSidebar({ }: ChatSidebarProps) {
-    const { state } = useGlobalStateCore();
     const updateActiveChatTab = useUpdateActiveChatTab();
-    const activeChatTabState = state?.chatTabs[state?.chatActiveTabId ?? ''];
+    
+    const { tabData: activeChatTabState } = useActiveChatTab()
+
 
     const [newChatTitle, setNewChatTitle] = useState('');
     const [editingChatId, setEditingChatId] = useState<string | null>(null);

@@ -15,16 +15,15 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { 
-    useGlobalStateCore,
+import {
     useUpdateActiveProjectTab,
-    useActiveProjectTabState 
 } from '@/components/global-state/global-helper-hooks'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { useActiveProjectTab } from '../global-state/global-websocket-selectors'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -40,14 +39,12 @@ interface PromptOverviewPanelProps {
 
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
     ({ selectedProjectId, fileMap, promptData, className, selectedFilesState }, ref) => {
-        const { state } = useGlobalStateCore()
         const updateActiveProjectTab = useUpdateActiveProjectTab()
-        const { tabData: activeTabState } = useActiveProjectTabState()
-        
+        const { tabData: activeTabState, id: activeProjectTabId } = useActiveProjectTab()
+
         const selectedPrompts = activeTabState?.selectedPrompts || []
         const globalUserPrompt = activeTabState?.userPrompt || ''
         const contextLimit = activeTabState?.contextLimit || 128000
-        const activeProjectTabId = state?.projectActiveTabId
         const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
 
         // 1) Grab the project files
@@ -64,7 +61,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // 3) Finding Suggested Files mutation
         const findSuggestedFilesMutation = useFindSuggestedFiles(selectedProjectId)
-        
+
         function handleFindSuggestedFiles(userPrompt: string) {
             if (!userPrompt.trim()) {
                 alert("Please enter a prompt!")
@@ -200,7 +197,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             }
         }), [])
 
-     
+
         return (
             <div className={`flex flex-col overflow-y-auto ${className}`}>
                 {/* SUGGESTED FILES DIALOG */}

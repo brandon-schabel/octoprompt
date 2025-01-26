@@ -1,11 +1,10 @@
-import { useGlobalStateCore, useUpdateActiveChatTab } from "@/components/global-state/global-helper-hooks";
+import { useUpdateActiveChatTab } from "@/components/global-state/global-helper-hooks";
+import { useActiveChatTab } from "@/components/global-state/global-websocket-selectors";
 import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {
-    const { state } = useGlobalStateCore();
     const updateActiveChatTab = useUpdateActiveChatTab();
-
-    const activeChatTabState = state?.chatTabs[state?.chatActiveTabId ?? ''];
+    const { tabData: activeChatTabState } = useActiveChatTab()
 
     // Fall back to defaults if no tab is active
     const provider: APIProviders = activeChatTabState?.provider ?? 'openai';

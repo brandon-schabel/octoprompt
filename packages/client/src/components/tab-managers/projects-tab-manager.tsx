@@ -1,11 +1,10 @@
-import { 
+import {
   useGlobalStateCore,
   useCreateProjectTab,
   useSetActiveProjectTab,
   useUpdateProjectTab,
   useDeleteProjectTab,
   useUpdateSettings,
-  useActiveProjectTabState
 } from '@/components/global-state/global-helper-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
@@ -13,6 +12,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
+import { useActiveProjectTab, useSettings } from '../global-state/global-websocket-selectors'
 
 type DialogContentProps = {
   tabId: string;
@@ -33,21 +33,22 @@ type ProjectTab = {
 }
 
 export function ProjectsTabManager() {
-  const { state, isOpen } = useGlobalStateCore()
+  const { state } = useGlobalStateCore()
   const createProjectTab = useCreateProjectTab()
   const setActiveProjectTab = useSetActiveProjectTab()
   const updateProjectTab = useUpdateProjectTab()
   const deleteProjectTab = useDeleteProjectTab()
   const updateSettings = useUpdateSettings()
-  const { tabData: activeProjectTabState } = useActiveProjectTabState()
+  const { tabData: activeProjectTabState } = useActiveProjectTab()
+  const settings = useSettings()
 
   const projectId = activeProjectTabState?.selectedProjectId
 
   const tabs = state?.projectTabs ?? {}
   const activeTabId = state?.projectActiveTabId ?? null
 
-  const tabOrder = state?.settings.projectTabIdOrder
-    ? state.settings.projectTabIdOrder
+  const tabOrder = settings?.projectTabIdOrder
+    ? settings.projectTabIdOrder
     : Object.keys(tabs)
 
   // When user reorders the tabs, store that array in global state:
@@ -160,7 +161,6 @@ export function ProjectsTabManager() {
       // @ts-ignore
       tabs={tabs}
       activeTabId={activeTabId}
-      isReady={isOpen}
       onCreateTab={() => createProjectTab({ projectId: projectId ?? '' })}
       onSetActiveTab={setActiveProjectTab}
       onRenameTab={(tabId, newName) => updateProjectTab(tabId, { displayName: newName })}

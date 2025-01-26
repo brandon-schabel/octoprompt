@@ -15,8 +15,11 @@ import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useGlobalStateCore, useLinkChatTabToProjectTab, useSetActiveProjectTab } from "@/components/global-state/global-helper-hooks";
-
+import { useGlobalStateCore, useLinkChatTabToProjectTab, } from "@/components/global-state/global-helper-hooks";
+import {
+    useActiveChatTab,
+    useProjectTab
+} from "@/components/global-state/global-websocket-selectors";
 interface ChatHeaderProps {
     onForkChat: () => void;
     chatControl: ReturnType<typeof useChatControl>;
@@ -28,9 +31,7 @@ export function ChatHeader({
     chatControl,
     modelControl,
 }: ChatHeaderProps) {
-    const navigate = useNavigate();
     const [showLinkSettings, setShowLinkSettings] = useState(false);
-    const [showChatSettings, setShowChatSettings] = useState(false);
     const [projectSearch, setProjectSearch] = useState("");
 
     const {
@@ -38,15 +39,17 @@ export function ChatHeader({
     } = useGetChats();
 
     const {
-        activeChatTabState,
         clearExcludedMessages,
     } = chatControl;
+
+    const { id: activeChatTabId, tabData: activeChatTabState } = useActiveChatTab()
 
     const activeChatId = activeChatTabState?.activeChatId;
 
     const { state } = useGlobalStateCore();
-    const linkChatTabToProjectTab = useLinkChatTabToProjectTab();
-    const setActiveProjectTab = useSetActiveProjectTab();
+    const linkedProjectState = useProjectTab(activeChatTabState?.linkedProjectTabId || '')
+
+    const linkChatTabToProjectTab = useLinkChatTabToProjectTab()
 
     const {
         provider,
@@ -55,9 +58,7 @@ export function ChatHeader({
         setCurrentModel,
     } = modelControl;
 
-    const activeChatTabId = state?.chatActiveTabId;
     const linkedProjectTabId = activeChatTabState?.linkedProjectTabId ?? '';
-    const linkedProjectState = state?.projectTabs[linkedProjectTabId];
     const linkedProjectId = linkedProjectState?.selectedProjectId ?? '';
     const activeChatData = chats?.data?.find(c => c.id === activeChatId);
 
@@ -113,7 +114,7 @@ export function ChatHeader({
             toast.error("Failed to copy linked content.");
         }
     }
-    
+
     function handleLinkProjectTab(projectTabId: string) {
         if (!activeChatTabId) return;
         linkChatTabToProjectTab(activeChatTabId, projectTabId, {

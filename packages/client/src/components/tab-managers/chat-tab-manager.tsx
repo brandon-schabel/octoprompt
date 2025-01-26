@@ -5,6 +5,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
+import { useActiveChatTab, useSettings } from '../global-state/global-websocket-selectors'
 
 type DialogContentProps = {
     tabId: string;
@@ -28,17 +29,18 @@ type ChatTab = {
 
 export function ChatTabManager() {
     const { state, isOpen } = useGlobalStateCore()
+    const { id: activeTabId } = useActiveChatTab()
     const createChatTab = useCreateChatTab()
     const setActiveChatTab = useSetActiveChatTab()
     const updateChatTab = useUpdateChatTab()
     const deleteChatTab = useDeleteChatTab()
     const updateSettings = useUpdateSettings()
+    const settings = useSettings()
 
     const tabs = state?.chatTabs ?? {}
-    const activeTabId = state?.chatActiveTabId ?? null
 
-    const tabOrder = state?.settings.chatTabIdOrder
-        ? state.settings.chatTabIdOrder
+    const tabOrder = settings?.chatTabIdOrder
+        ? settings.chatTabIdOrder
         : Object.keys(tabs)
 
     // When user reorders the tabs, store that array in global state:

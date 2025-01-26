@@ -47,6 +47,7 @@ import {
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSettings } from "shared/src/global-state/global-state-schema"
+import { useSettings } from "@/components/global-state/global-websocket-selectors"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -869,9 +870,9 @@ function ProjectSummarizationSettingsPage() {
  * to keep the main component smaller.
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
-    const { state } = useGlobalStateCore()
     const updateSettings = useUpdateSettings()
-    const patterns = state.settings.summarizationIgnorePatterns
+    const settings = useSettings()
+    const patterns = settings?.summarizationIgnorePatterns ?? []
     const [newPattern, setNewPattern] = useState("")
 
     function handleAdd() {

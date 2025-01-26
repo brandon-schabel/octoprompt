@@ -9,9 +9,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select"
-import { useGlobalStateCore, useUpdateGlobalStateKey } from "@/components/global-state/global-helper-hooks"
+import { useUpdateGlobalStateKey } from "@/components/global-state/global-helper-hooks"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { useSettings } from "../global-state/global-websocket-selectors"
 
 type ThemeOption = {
     label: string;
@@ -34,10 +35,9 @@ type SettingsDialogProps = {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const { state } = useGlobalStateCore()
     const updateGlobalStateKey = useUpdateGlobalStateKey()
-    const isDarkMode = state?.settings.theme === 'dark'
-    const settings = state?.settings
+    const settings = useSettings()
+    const isDarkMode = settings?.theme === 'dark'
     const codeLightTheme = settings?.codeThemeLight ?? 'atomOneLight'
     const codeDarkTheme = settings?.codeThemeDark ?? 'atomOneDark'
     const ollamaUrl = settings?.ollamaGlobalUrl;

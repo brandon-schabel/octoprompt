@@ -11,6 +11,7 @@ import {
     linkSettingsSchema,
     LinkSettings,
 } from "shared";
+import { useActiveChatTab, useActiveProjectTab } from "./global-websocket-selectors";
 
 /**
  * Helper for partial updates of state.
@@ -222,15 +223,16 @@ export function useDeleteProjectTab() {
  */
 export function useUpdateActiveProjectTab() {
     const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { id: activeProjectTabId } = useActiveProjectTab()
 
     return useCallback(
         (partialOrFn: PartialOrFn<ProjectTabState>) => {
-            if (!canProceed() || !state?.projectActiveTabId) return;
-            const currentTab = state.projectTabs[state.projectActiveTabId];
+            if (!canProceed() || !activeProjectTabId) return;
+            const currentTab = state.projectTabs[activeProjectTabId];
             const finalPartial = getPartial(currentTab, partialOrFn);
             sendWSMessage({
                 type: "update_project_tab_partial",
-                tabId: state.projectActiveTabId,
+                tabId: activeProjectTabId,
                 partial: finalPartial,
             });
         },
@@ -337,12 +339,14 @@ export function useCreateProjectTabFromTicket() {
 export function useCreateChatTab() {
     const { state, canProceed, sendWSMessage } = useGlobalStateCore();
     const setActiveChatTab = useSetActiveChatTab();
+    const { id: activeChatTabId } = useActiveChatTab()
+
 
     return useCallback(
         (options?: { cleanTab?: boolean; model?: string; provider?: string; title?: string }) => {
-            if (!canProceed() || !state?.chatActiveTabId) return;
+            if (!canProceed() || !activeChatTabId) return;
             const newTabId = `chat-tab-${uuidv4()}`;
-            const sourceTabId = state.chatActiveTabId;
+            const sourceTabId = activeChatTabId;
             const sourceTabState = state.chatTabs[sourceTabId];
 
             const messageData: ChatTabState = {
@@ -434,15 +438,16 @@ export function useDeleteChatTab() {
  */
 export function useUpdateActiveChatTab() {
     const { state, canProceed, sendWSMessage } = useGlobalStateCore();
+    const { id: activeChatTabId } = useActiveChatTab()
 
     return useCallback(
         (partialOrFn: PartialOrFn<ChatTabState>) => {
-            if (!canProceed() || !state?.chatActiveTabId) return;
-            const currentTab = state.chatTabs[state.chatActiveTabId];
+            if (!canProceed() || !activeChatTabId) return;
+            const currentTab = state.chatTabs[activeChatTabId];
             const finalPartial = getPartial(currentTab, partialOrFn);
             sendWSMessage({
                 type: "update_chat_tab_partial",
-                tabId: state.chatActiveTabId,
+                tabId: activeChatTabId,
                 partial: finalPartial,
             });
         },
@@ -605,20 +610,9 @@ export function useAddFileGroup() {
  * (Useful if you need them outside the original giant helper.)
  */
 export function useActiveProjectTabState() {
-    const { state } = useGlobalStateCore();
+    const { data: state } = useGlobalState();
     const activeTabId = state?.projectActiveTabId
     const tabData = activeTabId ? state?.projectTabs[activeTabId] : null
-
-    return {
-        id: activeTabId,
-        tabData
-    }
-}
-
-export function useActiveChatTabState() {
-    const { state } = useGlobalStateCore();
-    const activeTabId = state?.chatActiveTabId
-    const tabData = activeTabId ? state?.chatTabs[activeTabId] : null
 
     return {
         id: activeTabId,

@@ -25,8 +25,9 @@ import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-f
 import { Link, useMatches } from "@tanstack/react-router"
 import { TicketIcon, ScanEye } from "lucide-react"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
-import { useGlobalStateCore, useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
+import { useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
 import { ProjectTabState } from 'shared'
+import { useActiveProjectTab, useSettings } from '../global-state/global-websocket-selectors'
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -61,13 +62,12 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(({
     const fileTreeRef = useRef<FileTreeRef>(null)
     const selectedFilesListRef = useRef<SelectedFilesListRef>(null)
     const promptsRef = useRef<HTMLDivElement>(null)
-    const { state } = useGlobalStateCore();
+    const settings = useSettings()
+    const { tabData: activeTabState, id: activeProjectTabId } = useActiveProjectTab()
     const updateActiveProjectTab = useUpdateActiveProjectTab();
-    const activeTabState = state?.projectTabs[state?.projectActiveTabId ?? ''];
     const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
     const preferredEditor = activeTabState?.preferredEditor || 'vscode'
-    const allowSpacebaseToSelect = state?.settings?.useSpacebarToSelectAutocomplete ?? true
-    const activeProjectTabId = state?.projectActiveTabId
+    const allowSpacebaseToSelect = settings?.useSpacebarToSelectAutocomplete ?? true
 
     const matches = useMatches()
     const isOnTicketsRoute = matches.some(match => match.routeId === "/tickets")

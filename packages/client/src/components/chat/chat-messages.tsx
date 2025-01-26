@@ -18,15 +18,15 @@ import {
 
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useGlobalStateCore } from "@/components/global-state/global-helper-hooks";
+import { useSettings } from "../global-state/global-websocket-selectors";
 
 export function ChatMessages({
     chatControl,
 }: {
     chatControl: ReturnType<typeof useChatControl>;
 }) {
-    const { state } = useGlobalStateCore();
-    const settings = state?.settings;
+    const settings = useSettings()
+
     const isDarkMode = settings?.theme === "dark";
     const selectedTheme = isDarkMode
         ? settings?.codeThemeDark
