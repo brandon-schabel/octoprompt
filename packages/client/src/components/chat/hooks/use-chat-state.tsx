@@ -8,8 +8,8 @@ import {
 import { useChatModelControl } from './use-chat-model-control';
 import { ChatMessage } from 'shared/schema';
 import { APIProviders } from 'shared/index';
-import { useUpdateActiveChatTab } from '@/components/global-state/global-helper-hooks';
-import { useActiveChatTab } from '@/components/global-state/websocket-selector-hoooks';
+import { useUpdateActiveChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks';
+import { useActiveChatTab } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks';
 
 type TempChatMessage = ChatMessage & { tempId?: string };
 

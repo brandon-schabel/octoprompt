@@ -1,5 +1,5 @@
-import { useUpdateActiveChatTab } from "@/components/global-state/global-helper-hooks";
-import { useActiveChatTab } from "@/components/global-state/websocket-selector-hoooks";
+import { useUpdateActiveChatTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
 import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {

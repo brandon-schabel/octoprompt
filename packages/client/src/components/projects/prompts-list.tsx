@@ -15,14 +15,14 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
-import { useUpdateProjectTabState } from '@/components/global-state/global-helper-hooks'
+import { useUpdateProjectTabState } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '../ui/dropdown-menu'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '../ui/badge'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { useProjectTab } from '../global-state/websocket-selector-hoooks'
+import { useProjectTab } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 export type PromptsListRef = {
     focusPrompts: () => void;

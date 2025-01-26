@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api"
-import { useUpdateActiveChatTab } from "@/components/global-state/global-helper-hooks"
+import { useUpdateActiveChatTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 
 type ChatDialogProps = {
     open: boolean

@@ -14,10 +14,10 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { Button } from '@/components/ui/button'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useCreateProjectTab, useUpdateActiveProjectTabStateKey } from '@/components/global-state/global-helper-hooks'
+import { useCreateProjectTab, useUpdateActiveProjectTabStateKey } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { InfoTooltip } from '@/components/info-tooltip'
-import { useActiveProjectTab, useAllProjectTabs } from '@/components/global-state/websocket-selector-hoooks'
+import { useActiveProjectTab, useAllProjectTabs } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,

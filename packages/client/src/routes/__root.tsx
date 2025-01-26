@@ -1,5 +1,4 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { APIInterface } from '@/utils/api/api-interface'
 import { AppNavbar } from "@/components/navigation/app-navbar"
 import { useState } from 'react'
@@ -18,7 +17,7 @@ import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
-import { useGlobalStateCore } from '@/components/global-state/global-helper-hooks'
+import { useGlobalStateCore } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 
 type RouterContext = {
   api: APIInterface

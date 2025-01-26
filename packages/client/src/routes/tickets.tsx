@@ -3,12 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TicketDialog } from "../components/tickets/ticket-dialog";
 import { Button } from "../components/ui/button";
 import { Plus } from "lucide-react";
-import { useGlobalStateCore } from "@/components/global-state/global-helper-hooks";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
-import { useActiveProjectTab } from "@/components/global-state/websocket-selector-hoooks";
+import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -21,7 +20,7 @@ function TicketsPage() {
     // what TicketListPanel provides via onSelectTicket.
     const [selectedTicket, setSelectedTicket] = React.useState<TicketWithTasks | null>(null);
 
-    const { tabData: projectTabState } = useActiveProjectTab()
+    const { tabData: projectTabState, id: projectActiveTabId } = useActiveProjectTab()
     const projectId = projectTabState?.selectedProjectId ?? null;
 
     const {
@@ -74,7 +73,7 @@ function TicketsPage() {
             {/* Panel for listing/filtering tickets; returns TicketWithTasks to onSelectTicket */}
             <div className="flex-1">
                 <TicketListPanel
-                    projectTabId={state.projectActiveTabId || "defaultTab"}
+                    projectTabId={projectActiveTabId || "defaultTab"}
                     onSelectTicket={handleSelectTicket}
                 />
             </div>

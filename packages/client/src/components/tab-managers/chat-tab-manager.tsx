@@ -1,11 +1,11 @@
-import { useCreateChatTab, useSetActiveChatTab, useUpdateChatTab, useDeleteChatTab, useUpdateSettings } from '@/components/global-state/global-helper-hooks'
+import { useCreateChatTab, useSetActiveChatTab, useUpdateChatTab, useDeleteChatTab, useUpdateSettings } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { useActiveChatTab, useAllChatTabs, useSettings } from '../global-state/websocket-selector-hoooks'
+import { useActiveChatTab, useAllChatTabs, useSettings } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 type DialogContentProps = {
     tabId: string;

@@ -14,12 +14,12 @@ import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useLinkChatTabToProjectTab, } from "@/components/global-state/global-helper-hooks";
+import { useLinkChatTabToProjectTab, } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 import {
     useActiveChatTab,
     useAllProjectTabs,
     useProjectTab,
-} from "@/components/global-state/websocket-selector-hoooks";
+} from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
 
 interface ChatHeaderProps {
     onForkChat: () => void;

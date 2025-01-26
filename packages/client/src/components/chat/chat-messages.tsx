@@ -18,7 +18,7 @@ import {
 
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useSettings } from "../global-state/websocket-selector-hoooks";
+import { useSettings } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
 
 export function ChatMessages({
     chatControl,

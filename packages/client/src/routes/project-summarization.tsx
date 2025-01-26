@@ -26,7 +26,7 @@ import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useGlobalStateCore, useUpdateSettings } from "@/components/global-state/global-helper-hooks"
+import { useGlobalStateCore, useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 import {
     Select,
     SelectContent,
@@ -47,7 +47,7 @@ import {
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSettings } from "shared/src/global-state/global-state-schema"
-import { useActiveProjectTab, useSettings } from "@/components/global-state/websocket-selector-hoooks"
+import { useActiveProjectTab, useSettings } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,

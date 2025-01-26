@@ -25,9 +25,9 @@ import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-f
 import { Link, useMatches } from "@tanstack/react-router"
 import { TicketIcon, ScanEye } from "lucide-react"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
-import { useUpdateActiveProjectTab } from '@/components/global-state/global-helper-hooks'
+import { useUpdateActiveProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { ProjectTabState } from 'shared'
-import { useActiveProjectTab, useSettings } from '../global-state/websocket-selector-hoooks'
+import { useActiveProjectTab, useSettings } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 export type FilePanelRef = {
     focusSearch: () => void

@@ -17,13 +17,13 @@ import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-proje
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import {
     useUpdateActiveProjectTab,
-} from '@/components/global-state/global-helper-hooks'
+} from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
-import { useActiveProjectTab } from '../global-state/websocket-selector-hoooks'
+import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void

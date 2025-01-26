@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { useGlobalStateContext } from "@/components/global-state/global-state-websocket-handler-context";
-import { useGlobalState } from "./use-global-state";
+import { useGlobalStateContext } from "@/websocket-state/global-state-websocket-handler-context";
+import { useGlobalState } from "../selectors/use-global-state";
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils";
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
 import {
@@ -11,7 +11,7 @@ import {
     linkSettingsSchema,
     LinkSettings,
 } from "shared";
-import { useActiveChatTab, useActiveProjectTab } from "./websocket-selector-hoooks";
+import { useActiveChatTab, useActiveProjectTab } from "../selectors/websocket-selector-hoooks";
 
 /**
  * Helper for partial updates of state.

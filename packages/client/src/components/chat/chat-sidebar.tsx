@@ -12,8 +12,8 @@ import {
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
-import { useUpdateActiveChatTab } from '@/components/global-state/global-helper-hooks';
-import { useActiveChatTab } from '../global-state/websocket-selector-hoooks';
+import { useUpdateActiveChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks';
+import { useActiveChatTab } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks';
 
 type ChatSidebarProps = {
     // We no longer pass the modelControl here

@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { ChatMessages } from '@/components/chat/chat-messages'
@@ -10,8 +9,8 @@ import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-cont
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
 import { InfoTooltip } from '@/components/info-tooltip'
-import { useCreateChatTab } from '@/components/global-state/global-helper-hooks'
-import { useActiveChatTab, useAllChatTabs } from '@/components/global-state/websocket-selector-hoooks'
+import { useCreateChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useActiveChatTab, useAllChatTabs } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 export const Route = createFileRoute('/chat')({
   component: ChatPage,

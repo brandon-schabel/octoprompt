@@ -9,10 +9,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select"
-import { useUpdateGlobalStateKey } from "@/components/global-state/global-helper-hooks"
+import { useUpdateGlobalStateKey } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useSettings } from "../global-state/websocket-selector-hoooks"
+import { useSettings } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks"
 
 type ThemeOption = {
     label: string;
