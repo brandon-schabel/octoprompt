@@ -180,21 +180,7 @@ export type InboundMessage = z.infer<typeof inboundMessageSchema>;
 /**
  * OPTIONAL: define outbound messages similarly, if needed.
  */
-export const outboundMessageSchema = z.discriminatedUnion("type", [
-    z.object({
-        type: z.literal("state_update"),
-        data: globalStateSchema,
-    }),
-    z.object({
-        type: z.literal("error"),
-        error: z.string(),
-        code: z.number().optional(),
-    }),
-    z.object({
-        type: z.literal("success"),
-        message: z.string(),
-    }),
-]);
+export const outboundMessageSchema = inboundMessageSchema;
 export type OutboundMessage = z.infer<typeof outboundMessageSchema>;
 
 /**

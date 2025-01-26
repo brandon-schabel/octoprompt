@@ -13,9 +13,7 @@ import { ProjectFile } from 'shared/schema'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { Button } from '@/components/ui/button'
-import { useEditFile } from '@/hooks/api/use-code-editor-api'
-import { toast } from 'sonner'
-import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { InfoTooltip } from '@/components/info-tooltip'
@@ -28,6 +26,8 @@ function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
+
+
     const {
         state,
         activeProjectTabState: activeTabState,
@@ -35,13 +35,11 @@ function ProjectsPage() {
         isOpen,
         updateActiveProjectTabStateKey: updateActiveTabStateKey,
     } = useGlobalStateHelpers()
-    const [aiPrompt, setAiPrompt] = useState('')
-    const aiCodeEditMutation = useEditFile()
+
 
     const selectedProjectId = activeTabState?.selectedProjectId ?? null
     const fileSearch = activeTabState?.fileSearch ?? ''
     const searchByContent = activeTabState?.searchByContent ?? false
-    const selectedProvider = 'openai'
 
     // Single source of truth for selected files state
     const selectedFilesState = useSelectedFiles()
@@ -52,33 +50,7 @@ function ProjectsPage() {
     // Check for "no tabs" scenario
     const noTabsYet = Object.keys(state?.projectTabs ?? {}).length === 0
 
-    const handleApplyFixes = async () => {
-        if (!selectedProjectId) {
-            toast.error('No project selected!')
-            return
-        }
-        if (selectedFilesState.selectedFiles.length === 0) {
-            toast.error('No files selected!')
-            return
-        }
-        if (!aiPrompt.trim()) {
-            toast.error('Enter an AI prompt describing your desired code changes.')
-            return
-        }
 
-        try {
-            const result = await aiCodeEditMutation.mutateAsync({
-                projectId: selectedProjectId,
-                provider: selectedProvider,
-                instructions: aiPrompt,
-                fileId: selectedFilesState.selectedFiles[0],
-            })
-
-            toast.success(`AI Edits Applied`)
-        } catch (err: any) {
-            toast.error(`Failed to apply AI fixes: ${err.message}`)
-        }
-    }
 
     const setFileSearch = (value: string) => {
         updateActiveTabStateKey('fileSearch', value)

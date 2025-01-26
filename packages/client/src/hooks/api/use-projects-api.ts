@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
 import { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, ApiError, } from 'shared';
 import { commonErrorHandler } from './common-mutation-error-handler';
-import { useGlobalStateContext } from '@/components/global-state/websocket-config-context';
 
 export type ProjectResponse = {
     success: boolean;
@@ -248,7 +247,6 @@ export const useSyncProjectInterval = (projectId: string) => {
 export const useSummarizeProjectFiles = (projectId: string) => {
     const { api } = useApi();
     const queryClient = useQueryClient();
-    const { globalState } = useGlobalStateContext();
 
     return useMutation({
         mutationFn: ({ fileIds, force }: { fileIds: string[], force?: boolean }) => {            

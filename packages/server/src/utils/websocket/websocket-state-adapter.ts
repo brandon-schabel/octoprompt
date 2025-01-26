@@ -2,7 +2,7 @@ import { GlobalState, InboundMessage, validateIncomingMessage, createInitialGlob
 import { allWebsocketHandlers } from "./websocket-handlers";
 import { BackendWebSocketManager, FileWebSocketAdapter, MessageHandler } from "@bnk/backend-websocket-manager";
 
-const STATE_FILE_PATH = "./websocket-state.json";
+const STATE_FILE_PATH = "./data/websocket-state.json";
 
 const websocketFileAdapter = new FileWebSocketAdapter<GlobalState>({
     filePath: STATE_FILE_PATH,
