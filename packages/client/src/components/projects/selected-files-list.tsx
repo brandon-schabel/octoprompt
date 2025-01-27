@@ -26,7 +26,7 @@ import { useUpdateProjectTabState } from "@/websocket-state/hooks/updaters/webso
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
-import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks"
+import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors"
 
 type SelectedFilesListProps = {
   selectedFiles: string[]

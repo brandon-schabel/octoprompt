@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo, useRef, useState, memo, RefObject } from 'react'
+import { useMemo, useRef, useState, RefObject } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -12,18 +12,12 @@ import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useCreateProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
-import { useActiveProjectTab, useAllProjectTabs } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
-import { useProjectTabField } from '@/websocket-state/project-tab-hooks'
+import { useActiveProjectTab, useAllProjectTabs } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useProjectTabField } from '@/websocket-state/hooks/project-tab/project-tab-hooks'
 import { ProjectFile } from 'shared/schema'
 import type { Project } from 'shared'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Page
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// We wrap this in React.memo so that it won't re-render every time the file search changes.
-//
-const ProjectsPage = memo(function ProjectsPage() {
+function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
@@ -84,7 +78,7 @@ const ProjectsPage = memo(function ProjectsPage() {
             />
         </div>
     )
-})
+}
 
 
 export const Route = createFileRoute('/projects')({
@@ -108,7 +102,7 @@ type MainProjectsLayoutProps = {
     selectedFilesState: ReturnType<typeof useSelectedFiles>
 }
 
-export const MainProjectsLayout = memo(function MainProjectsLayout({
+function MainProjectsLayout({
     filePanelRef,
     promptPanelRef,
     selectedProjectId,
@@ -201,7 +195,7 @@ export const MainProjectsLayout = memo(function MainProjectsLayout({
             />
         </div>
     )
-})
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subcomponent: NoTabsYetView
@@ -212,7 +206,7 @@ type NoTabsYetViewProps = {
     createNewTab: (args: { projectId: string }) => void
 }
 
-const NoTabsYetView = memo(function NoTabsYetView({
+function NoTabsYetView({
     projects,
     createNewTab
 }: NoTabsYetViewProps) {
@@ -244,19 +238,19 @@ const NoTabsYetView = memo(function NoTabsYetView({
             </div>
         </div>
     )
-})
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subcomponent: NoActiveTabView
 // Shown if there *are* tabs, but none is selected
 // ─────────────────────────────────────────────────────────────────────────────
-const NoActiveTabView = memo(function NoActiveTabView() {
+function NoActiveTabView() {
     return (
         <p className="text-sm text-muted-foreground">
             No active tab selected. Create or select a tab above.
         </p>
     )
-})
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subcomponent: WelcomeDialog
@@ -267,7 +261,7 @@ type WelcomeDialogProps = {
     setShowWelcomeDialog: (open: boolean) => void
 }
 
-const WelcomeDialog = memo(function WelcomeDialog({
+function WelcomeDialog({
     showWelcomeDialog,
     setShowWelcomeDialog
 }: WelcomeDialogProps) {
@@ -327,4 +321,4 @@ const WelcomeDialog = memo(function WelcomeDialog({
             </DialogContent>
         </Dialog>
     )
-})
+}

@@ -16,7 +16,7 @@ import {
 import {
   useActiveChatTab,
   useAllChatTabs,
-} from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+} from "@/websocket-state/hooks/selectors/websocket-selectors";
 import { useSendChatMessage, useChatMessages } from "@/components/chat/hooks/chat-hooks";
 import { APIProviders } from "shared/index";
 
@@ -67,9 +67,6 @@ function ChatPage() {
   // The id of the linked project tab (if any)
   const linkedProjectTabId = currentChat?.linkedProjectTabId || "";
 
-  // -----------------------------------------------
-  // EMPTY STATE: brand new user with no chat tabs
-  // -----------------------------------------------
   if (noChatTabsYet) {
     return (
       <div className="p-4">
@@ -155,28 +152,6 @@ function ChatPage() {
       </div>
     );
   }
-
-  /**
-   * Example: If you want streaming "sendMessage" logic, you can integrate the new
-   * `useSendMessageHook` here. Typically, you pass userInput, provider, model, etc.
-   *
-   * For brevity, this example shows a simpler "handleSendWithDebug" that logs out,
-   * but you would call your `handleSendMessage()` from `useSendMessageHook`.
-   */
-
-  // 1) (Optional) We can define or import useSendMessageHook here:
-  // import { useSendMessageHook } from "@/components/chat/hooks/use-send-message";
-  // const { handleSendMessage } = useSendMessageHook({ 
-  //   chatId,
-  //   userInput: newMessage,
-  //   provider,
-  //   model: currentModel,
-  //   excludedMessageIds: currentChat?.excludedMessageIds || [],
-  //   clearUserInput: () => updateActiveChatTab({ input: "" }),
-  //   pendingMessages: ...
-  //   setPendingMessages: ...
-  //   refetchMessages: ...
-  // });
 
   async function handleSendWithDebug() {
     // If you had your `handleSendMessage` from `useSendMessageHook`, you could call it here:

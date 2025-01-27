@@ -5,7 +5,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { useActiveChatTab, useAllChatTabs, useSettings } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
+import { useActiveChatTab, useAllChatTabs, useSettings } from '@/websocket-state/hooks/selectors/websocket-selectors'
 
 type DialogContentProps = {
     tabId: string;

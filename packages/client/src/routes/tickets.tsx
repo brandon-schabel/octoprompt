@@ -7,7 +7,7 @@ import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
-import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,

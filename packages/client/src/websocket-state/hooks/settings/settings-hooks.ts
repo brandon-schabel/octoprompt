@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import type { AppSettings } from "shared"
-import { useUpdateSettings } from "./hooks/updaters/websocket-updater-hooks"
 import { useCallback } from "react"
-import { useSettings } from "./hooks/selectors/websocket-selector-hoooks"
+import { useSettings } from "../selectors/websocket-selectors"
+import { useUpdateSettings } from "../updaters/websocket-updater-hooks"
 
 /**
  * Subscribes to exactly one field in the global app settings.

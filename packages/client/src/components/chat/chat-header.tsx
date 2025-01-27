@@ -20,9 +20,9 @@ import { useLinkChatTabToProjectTab } from "@/websocket-state/hooks/updaters/web
 import {
     useChatTabField,
     useChatTabFieldUpdater,
-} from "@/websocket-state/chat-tab-hooks";
+} from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
 import { useGlobalState } from "@/websocket-state/hooks/selectors/use-global-state";
-import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 import { useForkChatHandler, useCreateChatHandler, TempChatMessage } from "./hooks/chat-hooks";
 
 interface ChatHeaderProps {

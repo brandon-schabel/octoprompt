@@ -1,5 +1,5 @@
-import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
-import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
+import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {

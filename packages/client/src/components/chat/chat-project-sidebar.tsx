@@ -21,10 +21,10 @@ import {
 } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useQuery } from "@tanstack/react-query";
-import { useChatTabField } from '@/websocket-state/chat-tab-hooks'
 import {
     useProjectTabField,
-} from '@/websocket-state/project-tab-hooks'
+} from '@/websocket-state/hooks/project-tab/project-tab-hooks'
+import { useChatTabField } from '@/websocket-state/hooks/chat-tab/chat-tab-hooks'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string

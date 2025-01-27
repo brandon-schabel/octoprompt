@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { APIInterface } from './utils/api/api-interface'
 import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
 import { Toaster } from './components/ui/sonner'
-import { GlobalStateProvider } from './websocket-state/global-state-websocket-handler-context'
+import { GlobalStateProvider } from './websocket-state/context/global-state-provider'
 
 // Initialize core services
 const queryClient = new QueryClient()

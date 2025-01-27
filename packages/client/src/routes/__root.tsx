@@ -17,7 +17,7 @@ import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
-import { useGlobalStateContext } from '@/websocket-state/global-state-websocket-handler-context'
+import { useGlobalStateContext } from '@/websocket-state/context/global-state-provider'
 
 type RouterContext = {
   api: APIInterface

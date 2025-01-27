@@ -22,7 +22,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '../ui/badge'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { useProjectTab } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
+import { useProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
 
 export type PromptsListRef = {
     focusPrompts: () => void;

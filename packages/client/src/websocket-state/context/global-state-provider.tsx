@@ -7,7 +7,6 @@ import { SERVER_WS_ENDPOINT } from "@/constants/server-constants";
 import {
     type InboundMessage,
     type OutboundMessage,
-    type GlobalState,
     type AppSettings,
     type ProjectTabState,
     type ChatTabState,

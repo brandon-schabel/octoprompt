@@ -25,14 +25,15 @@ import { buildFileTree } from '@/components/projects/utils/projects-utils'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useListTicketsWithTasks } from '@/hooks/api/use-tickets-api'
 import useClickAway from '@/hooks/use-click-away'
-import { useSettings } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
-import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
+import { useSettings } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 import {
     useProjectTabField,
     useProjectTabFieldUpdater,
-} from '@/websocket-state/project-tab-hooks'
+} from '@/websocket-state/hooks/project-tab/project-tab-hooks'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
+import { useProjectTabFieldGeneric } from '@/websocket-state/hooks/project-tab/project-tab-hooks-updated'
 
 /* -------------------------------------------------------------------------
    Types
@@ -73,32 +74,38 @@ export const FilePanel = memo(
         const [autocompleteIndex, setAutocompleteIndex] = useState<number>(-1)
         const [showAutocomplete, setShowAutocomplete] = useState<boolean>(false)
 
+
+
         // -------------------------------------------------------------
         // Pull other fields from global if you truly want them shared
         // e.g. "searchByContent" could remain global if toggling it 
         // is important across multiple components
         // -------------------------------------------------------------
-        const { data: searchByContent = false } = useProjectTabField(
-            useActiveProjectTab().id ?? '',
-            'searchByContent'
-        )
-        const { mutate: setSearchByContent } = useProjectTabFieldUpdater(
-            useActiveProjectTab().id ?? '',
+        // const { data: searchByContent = false } = useProjectTabField(
+        //     activeProjectTabId,
+        //     'searchByContent'
+        // )
+
+        const { id: activeProjectTabId = '' } = useActiveProjectTab()
+
+
+        const { data: searchByContent = false, mutate: setSearchByContent } = useProjectTabFieldGeneric(
+            activeProjectTabId ?? '',
             'searchByContent'
         )
 
-        // Example: these remain global if you want them globally in sync:
-        const { data: resolveImports = false } = useProjectTabField(
-            useActiveProjectTab().id ?? '',
-            'resolveImports'
-        )
-        const { data: preferredEditor = 'vscode' } = useProjectTabField(
-            useActiveProjectTab().id ?? '',
+        const { data: preferredEditor = 'vscode' } = useProjectTabFieldGeneric(
+            activeProjectTabId ?? '',
             'preferredEditor'
         )
 
+        const { data: resolveImports = false, mutate: setResolveImports } = useProjectTabFieldGeneric(
+            activeProjectTabId ?? '',
+            'resolveImports'
+        )
+
+
         // Active tab ID
-        const { id: activeProjectTabId } = useActiveProjectTab()
 
         // Local or global "selectedFiles"
         const { data: selectedFiles = [] } = useProjectTabField(activeProjectTabId ?? '', 'selectedFiles')

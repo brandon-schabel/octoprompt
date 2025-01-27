@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { ChatTabState } from "shared/index"
-import { useChatTabById } from "./hooks/selectors/websocket-selector-hoooks"
-import { useUpdateChatTabState } from "./hooks/updaters/websocket-updater-hooks"
+import { useChatTabById } from "../selectors/websocket-selectors"
+import { useUpdateChatTabState } from "../updaters/websocket-updater-hooks"
 
 /**
  * Subscribe to a **single** field within a given chat tab's data.

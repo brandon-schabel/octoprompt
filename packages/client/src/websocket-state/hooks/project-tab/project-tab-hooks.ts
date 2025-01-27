@@ -3,10 +3,7 @@ import { useCallback, } from "react"
 import {
     type ProjectTabState,
 } from "shared"
-import { useUpdateProjectTabState } from "./hooks/updaters/websocket-updater-hooks"
-/* ===========================================================================
-   NEW HOOKS FOR SUBSCRIBING TO A SINGLE FIELD
-   =========================================================================== */
+import { useUpdateProjectTabState } from "../updaters/websocket-updater-hooks"
 
 /**
  * Subscribe to a **single** field within a given project tab's data.

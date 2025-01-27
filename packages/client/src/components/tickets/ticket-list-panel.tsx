@@ -23,7 +23,7 @@ import {
 } from "../ui/alert-dialog";
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
-import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 
 interface TicketListPanelProps {
     projectTabId: string;
