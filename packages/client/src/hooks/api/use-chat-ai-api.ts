@@ -273,12 +273,13 @@ export const useDeleteMessage = () => {
 
     return useMutation<void, Error, string>({
         mutationFn: (messageId: string) => deleteMessage(api, messageId),
-        onSuccess: (_) => {
-            // Invalidate all message queries since we don't know which chat this belonged to
-            queryClient.invalidateQueries({
-                predicate: (query) => query.queryKey[0] === 'chat' && query.queryKey[2] === 'messages'
+        onSuccess: () => {
+            // Invalidate all message queries
+            queryClient.invalidateQueries({ 
+                queryKey: CHAT_KEYS.all,
             });
         },
+        onError: commonErrorHandler
     });
 };
 

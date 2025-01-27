@@ -1,6 +1,5 @@
 import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
 import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
-import { useQuery } from "@tanstack/react-query";
 import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {

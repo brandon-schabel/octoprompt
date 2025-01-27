@@ -10,16 +10,16 @@ import { useCreateChat } from "@/hooks/api/use-chat-ai-api";
 import { useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
 
 export function useClearExcludedMessages(tabId: string) {
-  const { mutate: setExcludedMessageIds } = useChatTabFieldUpdater(
-    tabId,
-    "excludedMessageIds"
-  );
+    const { mutate: setExcludedMessageIds } = useChatTabFieldUpdater(
+        tabId,
+        "excludedMessageIds"
+    );
 
-  const clearExcludedMessages = useCallback(() => {
-    setExcludedMessageIds([]);
-  }, [setExcludedMessageIds]);
+    const clearExcludedMessages = useCallback(() => {
+        setExcludedMessageIds([]);
+    }, [setExcludedMessageIds]);
 
-  return { clearExcludedMessages };
+    return { clearExcludedMessages };
 }
 export function useCreateChatHandler() {
     const createChatMutation = useCreateChat();
@@ -56,7 +56,7 @@ interface UseSendMessageArgs {
     refetchMessages: () => Promise<any>;
 }
 
-export function useSendMessageHook(args: UseSendMessageArgs) {
+export function useSendChatMessage(args: UseSendMessageArgs) {
     const {
         chatId,
         userInput,
