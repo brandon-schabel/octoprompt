@@ -1,33 +1,42 @@
-import { useUpdateActiveChatTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
-import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
+import { useQuery } from "@tanstack/react-query";
 import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {
-    const updateActiveChatTab = useUpdateActiveChatTab();
-    const { tabData: activeChatTabState } = useActiveChatTab()
+    // 1) Find the active chat tab ID
+    const { data: chatActiveTabId } = useQuery({
+        queryKey: ["globalState"],
+        select: (gs: any) => gs?.chatActiveTabId ?? null,
+    });
 
-    // Fall back to defaults if no tab is active
-    const provider: APIProviders = activeChatTabState?.provider ?? 'openai';
-    const currentModel: string = activeChatTabState?.model ?? 'gpt-4o';
+    // 2) Single-field read
+    const { data: provider = "openai" } =
+        useChatTabField(chatActiveTabId ?? "", "provider");
+    const { data: model = "gpt-4o" } =
+        useChatTabField(chatActiveTabId ?? "", "model");
 
-    // Whenever you set a new provider, update the active chat tab in global state
+    // 3) Single-field updaters
+    const { mutate: setProviderField } = useChatTabFieldUpdater(
+        chatActiveTabId ?? "",
+        "provider"
+    );
+    const { mutate: setModelField } = useChatTabFieldUpdater(
+        chatActiveTabId ?? "",
+        "model"
+    );
+
     function setProvider(newProvider: APIProviders) {
-        updateActiveChatTab({
-            provider: newProvider,
-        });
+        setProviderField(newProvider);
     }
 
-    // Similarly for model changes
     function setCurrentModel(modelId: string) {
-        updateActiveChatTab({
-            model: modelId,
-        });
+        setModelField(modelId);
     }
 
     return {
         provider,
         setProvider,
-        currentModel,
+        currentModel: model,
         setCurrentModel,
     };
 };

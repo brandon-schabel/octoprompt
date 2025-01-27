@@ -17,14 +17,13 @@ import { useProjectTabField } from '@/websocket-state/project-tab-hooks'
 import { ProjectFile } from 'shared/schema'
 import type { Project } from 'shared'
 
-export const Route = createFileRoute('/projects')({
-    component: ProjectsPage,
-})
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────────────────────────────────────
-function ProjectsPage() {
+//
+// We wrap this in React.memo so that it won't re-render every time the file search changes.
+//
+const ProjectsPage = memo(function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
@@ -85,14 +84,20 @@ function ProjectsPage() {
             />
         </div>
     )
-}
+})
 
-export default ProjectsPage
+
+export const Route = createFileRoute('/projects')({
+    component: ProjectsPage,
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Subcomponent: Main Layout
 // Renders the two main panels + handles the welcome dialog logic
 // ─────────────────────────────────────────────────────────────────────────────
+//
+// Already wrapped in `memo` to avoid unnecessary re-renders.
+//
 type MainProjectsLayoutProps = {
     filePanelRef: React.RefObject<FilePanelRef>
     promptPanelRef: React.RefObject<PromptOverviewPanelRef>
@@ -103,7 +108,7 @@ type MainProjectsLayoutProps = {
     selectedFilesState: ReturnType<typeof useSelectedFiles>
 }
 
-const MainProjectsLayout = memo(function MainProjectsLayout({
+export const MainProjectsLayout = memo(function MainProjectsLayout({
     filePanelRef,
     promptPanelRef,
     selectedProjectId,

@@ -1,4 +1,3 @@
-import React from "react";
 import { Copy, GitFork, Trash } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -18,69 +17,78 @@ import {
 
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
+import { useQuery } from "@tanstack/react-query";
 import { useSettingsField } from "@/websocket-state/settings-hooks";
+import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
 
 export function ChatMessages({
     chatControl,
 }: {
     chatControl: ReturnType<typeof useChatControl>;
 }) {
-    const { data: theme = 'light' } = useSettingsField('theme')
-    const isDarkMode = theme === 'dark'
+    // 1) Get the active chat tab ID from globalState
+    const { data: chatActiveTabId } = useQuery({
+        queryKey: ["globalState"],
+        select: (gs: any) => gs?.chatActiveTabId ?? null,
+    });
 
-    const { data: codeThemeLight = 'atomOneLight' } = useSettingsField('codeThemeLight')
-    const { data: codeThemeDark = 'atomOneDark' } = useSettingsField('codeThemeDark')
+    // 2) Get single fields from settings
+    const { data: theme } = useSettingsField("theme");
+    const { data: codeThemeLight } = useSettingsField("codeThemeLight");
+    const { data: codeThemeDark } = useSettingsField("codeThemeDark");
 
-    const selectedTheme = isDarkMode
-        ? codeThemeDark
-        : codeThemeLight;
+    // 3) If we have an active chat tab, fetch the excludedMessageIds from that tab
+    const { data: excludedMessageIds = [] } =
+        useChatTabField(chatActiveTabId ?? "", "excludedMessageIds");
 
-    // Provide a fallback style if selectedTheme is not found
-    // or pass it directly if you know it always exists in `themes`.
-    const themeStyle = selectedTheme;
+    // 4) For toggling or updating excludedMessageIds
+    const { mutate: setExcludedMessageIds } = useChatTabFieldUpdater(
+        chatActiveTabId ?? "",
+        "excludedMessageIds"
+    );
+
+    const isDarkMode = theme === "dark";
+    const selectedTheme = isDarkMode ? codeThemeDark : codeThemeLight;
+    const themeStyle = selectedTheme || "atomOneLight"; // fallback
 
     const {
         messages,
         chatId,
         refetchMessages,
-        activeChatTabState,
-        updateActiveChatTab,
     } = chatControl;
 
     const { copyToClipboard } = useCopyClipboard()
 
     const deleteMessageMutation = useDeleteMessage();
     const forkChatFromMessageMutation = useForkChatFromMessage();
-    const excludedIds = new Set(activeChatTabState?.excludedMessageIds ?? []);
 
+    const excludedIds = new Set(excludedMessageIds);
+
+    // We define a helper for toggling a message ID in/out of excludedMessageIds
     const toggleMessageExclusion = (messageId: string) => {
-        if (!activeChatTabState) return;
-        const newExcluded = new Set(activeChatTabState.excludedMessageIds ?? []);
-        if (newExcluded.has(messageId)) {
-            newExcluded.delete(messageId);
-            toast.success("Message included in context");
-        } else {
-            newExcluded.add(messageId);
-            toast.success("Message excluded from context");
-        }
-        updateActiveChatTab({ excludedMessageIds: Array.from(newExcluded) });
+        if (!chatActiveTabId) return;
+        setExcludedMessageIds((prev) => {
+            const newSet = new Set(prev ?? []);
+            if (newSet.has(messageId)) {
+                newSet.delete(messageId);
+                toast.success("Message included in context");
+            } else {
+                newSet.add(messageId);
+                toast.success("Message excluded from context");
+            }
+            return Array.from(newSet);
+        });
     };
 
     const handleForkFromMessage = async (messageId: string) => {
         if (!chatId) return;
         try {
-            const excludedMessageIds =
-                activeChatTabState?.excludedMessageIds ?? [];
             const newChat = await forkChatFromMessageMutation.mutateAsync({
                 chatId,
                 messageId,
                 excludedMessageIds,
             });
-            updateActiveChatTab({
-                activeChatId: newChat.id,
-                excludedMessageIds: [],
-            });
-            refetchMessages();
+            // Optionally switch to the newly forked chat if desired
             toast.success("Chat forked successfully");
         } catch (error) {
             console.error("Error forking chat from message:", error);
@@ -121,9 +129,7 @@ export function ChatMessages({
                     messages.map((message, i) => (
                         <div
                             key={`${message.id}-${i}`}
-                            className={`relative mb-6 flex w-full ${excludedIds.has(message.id)
-                                ? "opacity-50"
-                                : ""
+                            className={`relative mb-6 flex w-full ${excludedIds.has(message.id) ? "opacity-50" : ""
                                 } ${message.role === "user"
                                     ? "justify-end"
                                     : "justify-start"

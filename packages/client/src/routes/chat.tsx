@@ -9,7 +9,7 @@ import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-cont
 import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
 import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
 import { InfoTooltip } from '@/components/info-tooltip'
-import { useCreateChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useCreateChatTab, useUpdateActiveChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { useActiveChatTab, useAllChatTabs } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
 
 export const Route = createFileRoute('/chat')({
@@ -30,12 +30,12 @@ function ChatPage() {
   // Basic model & chat control
   const modelControl = useChatModelControl()
   const chatControl = useChatControl()
+  const { tabData: activeChatTabState } = useActiveChatTab()
+  const updateActiveChatTab = useUpdateActiveChatTab()
 
   const {
-    activeChatTabState,
     handleSendMessage,
     handleForkChat,
-    updateActiveChatTab
   } = chatControl
 
   const currentChat = activeChatTabState

@@ -36,7 +36,7 @@
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useMemo } from "react"
+import { useMemo } from "react"
 import {
     type ProjectTabState,
     type ChatTabState,
