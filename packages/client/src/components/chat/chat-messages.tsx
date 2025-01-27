@@ -18,19 +18,22 @@ import {
 
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useSettings } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useSettingsField } from "@/websocket-state/settings-hooks";
 
 export function ChatMessages({
     chatControl,
 }: {
     chatControl: ReturnType<typeof useChatControl>;
 }) {
-    const settings = useSettings()
+    const { data: theme = 'light' } = useSettingsField('theme')
+    const isDarkMode = theme === 'dark'
 
-    const isDarkMode = settings?.theme === "dark";
+    const { data: codeThemeLight = 'atomOneLight' } = useSettingsField('codeThemeLight')
+    const { data: codeThemeDark = 'atomOneDark' } = useSettingsField('codeThemeDark')
+
     const selectedTheme = isDarkMode
-        ? settings?.codeThemeDark
-        : settings?.codeThemeLight;
+        ? codeThemeDark
+        : codeThemeLight;
 
     // Provide a fallback style if selectedTheme is not found
     // or pass it directly if you know it always exists in `themes`.

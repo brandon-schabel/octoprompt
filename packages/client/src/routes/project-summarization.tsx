@@ -47,7 +47,8 @@ import {
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSettings } from "shared/src/global-state/global-state-schema"
-import { useActiveProjectTab, useSettings } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks"
+import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks"
+import { useSettingsField } from "@/websocket-state/settings-hooks"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -91,13 +92,14 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 }
 
 function ProjectSummarizationSettingsPage() {
-    const settings = useSettings()
+    const { data: summarizationEnabledProjectIds = [] } = useSettingsField('summarizationEnabledProjectIds')
+    const { data: summarizationIgnorePatterns = [] } = useSettingsField('summarizationIgnorePatterns')
     const { tabData: projectTabState } = useActiveProjectTab()
     const updateSettings = useUpdateSettings()
 
     const selectedProjectId = projectTabState?.selectedProjectId
     const isProjectSummarizationEnabled = selectedProjectId
-        ? settings?.summarizationEnabledProjectIds.includes(selectedProjectId)
+        ? summarizationEnabledProjectIds?.includes(selectedProjectId)
         : false
 
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
@@ -133,7 +135,7 @@ function ProjectSummarizationSettingsPage() {
     const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? "")
     const resummarizeAllMutation = useResummarizeAllFiles(selectedProjectId ?? "")
 
-    const ignorePatterns = settings?.summarizationIgnorePatterns ?? []
+    const ignorePatterns = summarizationIgnorePatterns ?? []
     const includedFiles: ProjectFile[] = []
     const excludedFiles: ProjectFile[] = []
 
@@ -430,7 +432,7 @@ function ProjectSummarizationSettingsPage() {
 
     const formattedCombinedSummary = useMemo(() => {
         const includedSummaries = summaries.filter(file =>
-            !matchesAnyPattern(file.path, settings?.summarizationIgnorePatterns ?? [])
+            !matchesAnyPattern(file.path, summarizationIgnorePatterns ?? [])
         );
 
         return buildCombinedFileSummaries(includedSummaries, {
@@ -442,7 +444,7 @@ function ProjectSummarizationSettingsPage() {
                 }`,
             includeEmptySummaries: false,
         });
-    }, [summaries, settings?.summarizationIgnorePatterns]);
+    }, [summaries, summarizationIgnorePatterns]);
 
     const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false);
 
@@ -870,8 +872,7 @@ function ProjectSummarizationSettingsPage() {
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
     const updateSettings = useUpdateSettings()
-    const settings = useSettings()
-    const patterns = settings?.summarizationIgnorePatterns ?? []
+    const { data: patterns } = useSettingsField('summarizationIgnorePatterns')
     const [newPattern, setNewPattern] = useState("")
 
     function handleAdd() {
@@ -909,12 +910,12 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
                         </Button>
                     </CollapsibleTrigger>
                     <span className="text-sm font-medium">
-                        Current Patterns ({patterns.length})
+                        Current Patterns ({patterns?.length ?? 0})
                     </span>
                 </div>
                 <CollapsibleContent>
                     <ul className="mt-2 space-y-1">
-                        {patterns.map((pattern, idx) => (
+                        {patterns?.map((pattern, idx) => (
                             <li
                                 key={`${pattern}-${idx}`}
                                 className="flex items-center justify-between rounded p-1 hover:bg-accent/10"

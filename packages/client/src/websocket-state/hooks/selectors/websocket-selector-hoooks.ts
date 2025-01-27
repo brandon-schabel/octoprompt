@@ -36,7 +36,7 @@
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import {
     type ProjectTabState,
     type ChatTabState,
@@ -198,6 +198,7 @@ export function useProjectTabs(): Record<string, ProjectTabState> {
         return result
     }, [settings?.projectTabIdOrder, queryClient])
 }
+
 
 /**
  * =============================================================================

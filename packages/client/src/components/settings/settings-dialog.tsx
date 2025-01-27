@@ -11,8 +11,8 @@ import {
 } from "../ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useSettings } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks"
 import { useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useSettingsField } from "@/websocket-state/settings-hooks"
 
 type ThemeOption = {
     label: string;
@@ -35,13 +35,17 @@ type SettingsDialogProps = {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const settings = useSettings()
-    const isDarkMode = settings?.theme === 'dark'
-    const codeLightTheme = settings?.codeThemeLight ?? 'atomOneLight'
-    const codeDarkTheme = settings?.codeThemeDark ?? 'atomOneDark'
-    const ollamaUrl = settings?.ollamaGlobalUrl;
-    const lmStudioUrl = settings?.lmStudioGlobalUrl;
-    const hideInformationalTooltips = settings?.hideInformationalTooltips ?? false
+    const { data: theme } = useSettingsField('theme')
+    const isDarkMode = theme === 'dark'
+
+    const { data: spacebarToSelectAutocomplete = true } = useSettingsField('useSpacebarToSelectAutocomplete')
+    const { data: hideInformationalTooltips } = useSettingsField('hideInformationalTooltips')
+    const { data: ollamaGlobalUrl = 'http://localhost:11434' } = useSettingsField('ollamaGlobalUrl')
+    const { data: lmStudioGlobalUrl = 'http://localhost:1234' } = useSettingsField('lmStudioGlobalUrl')
+    const { data: codeThemeLight = 'atomOneLight' } = useSettingsField('codeThemeLight')
+    const { data: codeThemeDark = 'atomOneDark' } = useSettingsField('codeThemeDark')
+
+
     const updateSettings = useUpdateSettings()
 
     const handleThemeToggle = () => {
@@ -96,9 +100,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         </Label>
                         <Switch
                             id="spacebar-select"
-                            checked={settings?.useSpacebarToSelectAutocomplete ?? true}
+                            checked={spacebarToSelectAutocomplete}
                             onCheckedChange={(checked) => {
-                                updateGlobalStateKey('settings', (prev) => ({
+                                updateSettings(prev => ({
                                     ...prev,
                                     useSpacebarToSelectAutocomplete: checked,
                                 }))
@@ -114,7 +118,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             id="hide-informational-tooltips"
                             checked={hideInformationalTooltips}
                             onCheckedChange={(checked) => {
-                                updateGlobalStateKey('settings', (prev) => ({
+                                updateSettings(prev => ({
                                     ...prev,
                                     hideInformationalTooltips: checked,
                                 }))
@@ -128,7 +132,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             <Input
                                 id="ollama-url"
                                 placeholder="http://localhost:11434"
-                                value={ollamaUrl}
+                                value={ollamaGlobalUrl}
                                 onChange={(e) => handleUrlChange('ollamaGlobalUrl', e.target.value)}
                             />
                         </div>
@@ -138,7 +142,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             <Input
                                 id="lmstudio-url"
                                 placeholder="http://localhost:1234"
-                                value={lmStudioUrl}
+                                value={lmStudioGlobalUrl}
                                 onChange={(e) => handleUrlChange('lmStudioGlobalUrl', e.target.value)}
                             />
                         </div>
@@ -148,7 +152,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         <div className="flex flex-col gap-2">
                             <Label>Light Mode Code Theme</Label>
                             <Select
-                                value={codeLightTheme}
+                                value={codeThemeLight}
                                 onValueChange={(value) => handleSetCodeTheme(value, false)}
                             >
                                 <SelectTrigger>
@@ -167,7 +171,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         <div className="flex flex-col gap-2">
                             <Label>Dark Mode Code Theme</Label>
                             <Select
-                                value={codeDarkTheme}
+                                value={codeThemeDark}
                                 onValueChange={(value) => handleSetCodeTheme(value, true)}
                             >
                                 <SelectTrigger>

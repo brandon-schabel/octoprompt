@@ -1,259 +1,194 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { useMemo, useRef, useState, memo, RefObject } from 'react'
+import { useHotkeys } from 'react-hotkeys-hook'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { InfoTooltip } from '@/components/info-tooltip'
 import { useGetProjects, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel'
-import { projectSchema } from '@/components/projects/utils/projects-utils'
-import { ProjectFile } from 'shared/schema'
-import { useHotkeys } from 'react-hotkeys-hook'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
-import { Button } from '@/components/ui/button'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useCreateProjectTab, useUpdateActiveProjectTabStateKey } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { InfoTooltip } from '@/components/info-tooltip'
+import { useCreateProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { useActiveProjectTab, useAllProjectTabs } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
+import { useProjectTabField } from '@/websocket-state/project-tab-hooks'
+import { ProjectFile } from 'shared/schema'
+import type { Project } from 'shared'
 
 export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────────────────
 function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
+    // All tabs + active tab
     const tabs = useAllProjectTabs()
+    const { id: projectActiveTabId } = useActiveProjectTab()
 
-    // new way pulling from the query cahce for the project tabs
-    const { tabData: activeTabState, id: projectActiveTabId } = useActiveProjectTab()
-    const selectedProjectId = activeTabState?.selectedProjectId ?? null
+    // Field-specific state from the active tab
+    const { data: selectedProjectId } = useProjectTabField(projectActiveTabId ?? '', 'selectedProjectId')
 
+    // We track the existence of tabs to handle "no tabs" scenario
+    const noTabsYet = useMemo(() => Object.keys(tabs || {}).length === 0, [tabs])
+
+    // Create a new tab from WebSocket side
     const createNewTab = useCreateProjectTab()
-    const updateActiveTabStateKey = useUpdateActiveProjectTabStateKey()
 
-    const fileSearch = activeTabState?.fileSearch ?? ''
-    const searchByContent = activeTabState?.searchByContent ?? false
-
-    // Single source of truth for selected files state
+    // Single source of truth for selected files (local undo/redo & server sync)
     const selectedFilesState = useSelectedFiles()
 
-    // Query all projects
+    // Load all projects & relevant data
     const { data: projects } = useGetProjects()
-
-    // Check for "no tabs" scenario
-    const noTabsYet = Object.keys(tabs ?? {}).length === 0
-
-    const setFileSearch = (value: string) => {
-        updateActiveTabStateKey('fileSearch', value)
-    }
-    const setSearchByContent = (value: boolean) => {
-        updateActiveTabStateKey('searchByContent', value)
-    }
-
-    const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
-
     const { data: fileData } = useGetProjectFiles(selectedProjectId ?? '')
     const { data: promptData } = useGetProjectPrompts(selectedProjectId ?? '')
-    // Check if we're on the default tab with no project selected
-    const isDefaultTab = projectActiveTabId === 'defaultTab'
-    const isFirstVisit = isDefaultTab && !selectedProjectId
-    const [showWelcomeDialog, setShowWelcomeDialog] = useState(true)
 
-
-    const projectForm = useForm<z.infer<typeof projectSchema>>({
-        resolver: zodResolver(projectSchema),
-        defaultValues: {
-            name: '',
-            description: '',
-            path: '',
-        },
-    })
-    useEffect(() => {
-        if (!activeTabState) return
-        if (!activeTabState.selectedProjectId && projects?.projects?.length) {
-            updateActiveTabStateKey('selectedProjectId', projects.projects[0].id)
-        }
-    }, [activeTabState, projects, updateActiveTabStateKey])
-
-    // Load the project form whenever selectedProjectId changes
-    useEffect(() => {
-        if (projects?.projects) {
-            const project = projects.projects.find(p => p.id === selectedProjectId)
-            if (project) {
-                projectForm.setValue('name', project.name)
-                projectForm.setValue('description', project?.description ?? '')
-                projectForm.setValue('path', project.path)
-            } else {
-                projectForm.reset()
-            }
-        }
-    }, [selectedProjectId, projects?.projects, projectForm])
-
-    // CMD+S for focusing the file search
-    useHotkeys('mod+s', (e) => {
-        e.preventDefault()
-        filePanelRef.current?.focusSearch()
-    }, [])
-
-    // CMD+I for focusing the prompt input
-    useHotkeys('mod+i', (e) => {
-        e.preventDefault()
-        promptPanelRef.current?.focusPrompt()
-    }, [])
-
-    const fileMap = useMemo(() => {
-        const map = new Map<string, ProjectFile>()
-        if (fileData?.files) {
-            fileData.files.forEach(f => map.set(f.id, f))
-        }
-        return map
-    }, [fileData?.files])
-
-    const projectData = projects?.projects.find(p => p.id === selectedProjectId)
-    const closeFileViewer = () => {
-        setViewedFile(null)
-    }
-
-    // If the user has no tabs at all, show a more helpful message
+    // If the user has no tabs at all, show the "NoTabsYetView"
     if (noTabsYet) {
         return (
-            <div className="p-4">
-                <ProjectsTabManager />
-                <div className="mt-4 flex flex-col items-start gap-3">
-                    {projects?.projects && projects.projects.length > 0 ? (
-                        <>
-                            <p className="text-sm text-muted-foreground">
-                                We see you have at least one project, but no tabs created yet.
-                                Create a new tab to start exploring your project!
-                            </p>
-                            <Button onClick={() => createNewTab({ projectId: projects.projects[0].id })}>
-                                + Create a Tab
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                            <p className="text-sm text-muted-foreground">
-                                Looks like you haven't created any projects yet.
-                                Click below to create a new project or import one.
-                            </p>
-                            {/* Replace with your "create project" logic as needed */}
-                            <Button onClick={() => /* handleCreateProject() */ console.log('create project')}>
-                                + Create a Project
-                            </Button>
-                        </>
-                    )}
-                </div>
-            </div>
+            <NoTabsYetView
+                projects={projects?.projects || []}
+                createNewTab={createNewTab}
+            />
         )
     }
 
-    // If there are tabs, but no active tab is selected, show a prompt
-    if (!activeTabState) {
+    // If there are tabs, but no active tab is selected, show a short prompt
+    if (!selectedProjectId) {
         return (
             <div className="p-4">
                 <ProjectsTabManager />
-                <p className="text-sm text-muted-foreground">
-                    No active tab selected. Create or select a tab above.
-                </p>
+                <NoActiveTabView />
             </div>
         )
     }
 
+    // Otherwise, we have an active tab + selectedProjectId
     return (
         <div className="flex-col h-full w-full overflow-hidden flex">
             <ProjectsTabManager />
 
-            <div className='flex-1 flex flex-row overflow-hidden'>
-                {/* Always show FilePanel, even in default state */}
-                <FilePanel
-                    ref={filePanelRef}
-                    selectedProjectId={selectedProjectId}
-                    projectData={projectData || null}
-                    fileSearch={fileSearch}
-                    setFileSearch={setFileSearch}
-                    searchByContent={searchByContent}
-                    setSearchByContent={setSearchByContent}
-                    className="w-3/5"
-                    onNavigateToPrompts={() => promptPanelRef.current?.focusPrompt()}
-                    selectedFilesState={selectedFilesState}
-                />
+            <MainProjectsLayout
+                filePanelRef={filePanelRef as RefObject<FilePanelRef>}
+                promptPanelRef={promptPanelRef as RefObject<PromptOverviewPanelRef>}
+                selectedProjectId={selectedProjectId}
+                projects={projects?.projects ?? []}
+                fileData={fileData?.files || []}
+                promptData={promptData}
+                selectedFilesState={selectedFilesState}
+            />
+        </div>
+    )
+}
 
-                {/* Always show PromptOverviewPanel, even in default state */}
-                <PromptOverviewPanel
-                    ref={promptPanelRef}
-                    selectedProjectId={selectedProjectId ?? ''}
-                    fileMap={fileMap}
-                    promptData={promptData}
-                    className="w-2/5"
-                    selectedFilesState={selectedFilesState}
-                />
+export default ProjectsPage
 
-                {/* Welcome Dialog */}
-                {isFirstVisit && (
-                    <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
-                        <DialogContent className="sm:max-w-[600px]">
-                            <DialogHeader>
-                                <DialogTitle>Welcome to Project View!</DialogTitle>
-                                <DialogDescription className="space-y-2">
-                                    <p>This is where you'll explore and interact with your codebase.</p>
-                                    <p className="text-sm bg-muted/50 p-2 rounded-md flex items-center gap-2">
-                                        <span>💡</span> Click the <strong>"Projects"</strong> button in the top right to open a project
-                                    </p>
-                                </DialogDescription>
-                            </DialogHeader>
+// ─────────────────────────────────────────────────────────────────────────────
+// Subcomponent: Main Layout
+// Renders the two main panels + handles the welcome dialog logic
+// ─────────────────────────────────────────────────────────────────────────────
+type MainProjectsLayoutProps = {
+    filePanelRef: React.RefObject<FilePanelRef>
+    promptPanelRef: React.RefObject<PromptOverviewPanelRef>
+    selectedProjectId: string
+    projects: Project[]
+    fileData: ProjectFile[]
+    promptData: any
+    selectedFilesState: ReturnType<typeof useSelectedFiles>
+}
 
-                            <div className="grid grid-cols-2 gap-6 py-6">
-                                <div className="space-y-2">
-                                    <h3 className="font-semibold flex items-center gap-2">
-                                        File Explorer
-                                        <InfoTooltip>
-                                            Browse, search, and manage your project files
-                                        </InfoTooltip>
-                                    </h3>
-                                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                                        <li>Browse your project files</li>
-                                        <li>Search by filename or content</li>
-                                        <li>Select files for AI context</li>
-                                        <li>View and edit code</li>
-                                    </ul>
-                                </div>
+const MainProjectsLayout = memo(function MainProjectsLayout({
+    filePanelRef,
+    promptPanelRef,
+    selectedProjectId,
+    projects,
+    fileData,
+    promptData,
+    selectedFilesState
+}: MainProjectsLayoutProps) {
+    const projectData = useMemo(
+        () => projects.find((p) => p.id === selectedProjectId),
+        [projects, selectedProjectId]
+    )
 
-                                <div className="space-y-2">
-                                    <h3 className="font-semibold flex items-center gap-2">
-                                        AI Interaction
-                                        <InfoTooltip>
-                                            Leverage AI to understand and improve your code
-                                        </InfoTooltip>
-                                    </h3>
-                                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                                        <li>Create reusable prompts</li>
-                                        <li>Get AI suggestions</li>
-                                        <li>Analyze code context</li>
-                                        <li>Generate code improvements</li>
-                                    </ul>
-                                </div>
-                            </div>
+    // Initialize welcome dialog state from localStorage
+    const [showWelcomeDialog, setShowWelcomeDialog] = useState(() => {
+        const hasSeenWelcome = localStorage.getItem('hasSeenProjectsWelcome')
+        return !hasSeenWelcome
+    })
 
-                            <DialogFooter className="gap-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setShowWelcomeDialog(false)
-                                    }}
-                                >
-                                    Got it
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                )}
-            </div>
+    // Update localStorage when dialog is closed
+    const handleCloseWelcomeDialog = () => {
+        localStorage.setItem('hasSeenProjectsWelcome', 'true')
+        setShowWelcomeDialog(false)
+    }
 
+    // For file viewer
+    const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
+    const closeFileViewer = () => setViewedFile(null)
+
+    // CMD+S => focus file search
+    useHotkeys(
+        'mod+s',
+        (e) => {
+            e.preventDefault()
+            filePanelRef.current?.focusSearch()
+        },
+        []
+    )
+
+    // CMD+I => focus prompt input
+    useHotkeys(
+        'mod+i',
+        (e) => {
+            e.preventDefault()
+            promptPanelRef.current?.focusPrompt()
+        },
+        []
+    )
+
+    // Build a file map for the prompt panel
+    const fileMap = useMemo(() => {
+        const map = new Map<string, ProjectFile>()
+        fileData.forEach((f) => map.set(f.id, f))
+        return map
+    }, [fileData])
+
+    return (
+        <div className="flex-1 flex flex-row overflow-hidden">
+            {/* Left panel: FilePanel */}
+            <FilePanel
+                ref={filePanelRef}
+                selectedProjectId={selectedProjectId}
+                projectData={projectData || null}
+                className="w-3/5"
+                onNavigateToPrompts={() => promptPanelRef.current?.focusPrompt()}
+                selectedFilesState={selectedFilesState}
+            />
+
+            {/* Right panel: PromptOverviewPanel */}
+            <PromptOverviewPanel
+                ref={promptPanelRef}
+                selectedProjectId={selectedProjectId}
+                fileMap={fileMap}
+                promptData={promptData}
+                className="w-2/5"
+                selectedFilesState={selectedFilesState}
+            />
+
+            {/* Welcome Dialog Example */}
+            <WelcomeDialog
+                showWelcomeDialog={showWelcomeDialog}
+                setShowWelcomeDialog={handleCloseWelcomeDialog}
+            />
+
+            {/* File Viewer Dialog */}
             <FileViewerDialog
                 open={!!viewedFile}
                 viewedFile={viewedFile}
@@ -261,6 +196,130 @@ function ProjectsPage() {
             />
         </div>
     )
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subcomponent: NoTabsYetView
+// Shown if there are zero existing tabs across the entire app
+// ─────────────────────────────────────────────────────────────────────────────
+type NoTabsYetViewProps = {
+    projects: Project[]
+    createNewTab: (args: { projectId: string }) => void
 }
 
-export default ProjectsPage
+const NoTabsYetView = memo(function NoTabsYetView({
+    projects,
+    createNewTab
+}: NoTabsYetViewProps) {
+    return (
+        <div className="p-4">
+            <ProjectsTabManager />
+            <div className="mt-4 flex flex-col items-start gap-3">
+                {projects.length > 0 ? (
+                    <>
+                        <p className="text-sm text-muted-foreground">
+                            We see you have at least one project, but no tabs created yet.
+                            Create a new tab to start exploring your project!
+                        </p>
+                        <Button onClick={() => createNewTab({ projectId: projects[0].id })}>
+                            + Create a Tab
+                        </Button>
+                    </>
+                ) : (
+                    <>
+                        <p className="text-sm text-muted-foreground">
+                            Looks like you haven't created any projects yet.
+                            Click below to create a new project or import one.
+                        </p>
+                        <Button onClick={() => console.log('create project')}>
+                            + Create a Project
+                        </Button>
+                    </>
+                )}
+            </div>
+        </div>
+    )
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subcomponent: NoActiveTabView
+// Shown if there *are* tabs, but none is selected
+// ─────────────────────────────────────────────────────────────────────────────
+const NoActiveTabView = memo(function NoActiveTabView() {
+    return (
+        <p className="text-sm text-muted-foreground">
+            No active tab selected. Create or select a tab above.
+        </p>
+    )
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subcomponent: WelcomeDialog
+// A simple example "getting started" dialog
+// ─────────────────────────────────────────────────────────────────────────────
+type WelcomeDialogProps = {
+    showWelcomeDialog: boolean
+    setShowWelcomeDialog: (open: boolean) => void
+}
+
+const WelcomeDialog = memo(function WelcomeDialog({
+    showWelcomeDialog,
+    setShowWelcomeDialog
+}: WelcomeDialogProps) {
+    return (
+        <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle>Welcome to Project View!</DialogTitle>
+                    <DialogDescription className="space-y-2">
+                        <p>This is where you'll explore and interact with your codebase.</p>
+                        <p className="text-sm bg-muted/50 p-2 rounded-md flex items-center gap-2">
+                            <span>💡</span> Click the <strong>"Projects"</strong> button in the top right to open a project
+                        </p>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-2 gap-6 py-6">
+                    <div className="space-y-2">
+                        <h3 className="font-semibold flex items-center gap-2">
+                            File Explorer
+                            <InfoTooltip>
+                                Browse, search, and manage your project files
+                            </InfoTooltip>
+                        </h3>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                            <li>Browse your project files</li>
+                            <li>Search by filename or content</li>
+                            <li>Select files for AI context</li>
+                            <li>View and edit code</li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-2">
+                        <h3 className="font-semibold flex items-center gap-2">
+                            AI Interaction
+                            <InfoTooltip>
+                                Leverage AI to understand and improve your code
+                            </InfoTooltip>
+                        </h3>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                            <li>Create reusable prompts</li>
+                            <li>Get AI suggestions</li>
+                            <li>Analyze code context</li>
+                            <li>Generate code improvements</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <DialogFooter className="gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setShowWelcomeDialog(false)}
+                    >
+                        Got it
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+})

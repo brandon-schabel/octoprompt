@@ -22,17 +22,20 @@ import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-
 import { useUpdateActiveProjectTab, useUpdateSettings } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
 import { useActiveProjectTab, useSettings } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
+import { useProjectTabField } from '@/websocket-state/project-tab-hooks'
+import { useSettingsField } from '@/websocket-state/settings-hooks'
 
 
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()
-    const { tabData: activeTabState } = useActiveProjectTab()
-    const settings = useSettings()
-    const contextLimit = activeTabState?.contextLimit || 128000
-    const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
-    const preferredEditor = activeTabState?.preferredEditor || 'vscode'
-    const projectId = activeTabState?.selectedProjectId
-    const isProjectSummarizationEnabled = projectId ? settings?.summarizationEnabledProjectIds.includes(projectId) : false
+    const { id: activeTabId } = useActiveProjectTab()
+    const { data: contextLimit } = useProjectTabField(activeTabId ?? '', 'contextLimit')
+    const { data: summarizationEnabledProjectIds } = useSettingsField('summarizationEnabledProjectIds')
+    const { data: resolveImports } = useProjectTabField(activeTabId ?? '', 'resolveImports')
+    const { data: preferredEditor } = useProjectTabField(activeTabId ?? '', 'preferredEditor')
+    const { data: projectId } = useProjectTabField(activeTabId ?? '', 'selectedProjectId')
+
+    const isProjectSummarizationEnabled = projectId ? summarizationEnabledProjectIds?.includes(projectId) : false
     const { isFetching: isSyncing, refetch: syncProject } = useSyncProjectInterval(projectId ?? '')
     const updateSettings = useUpdateSettings()
 
@@ -164,7 +167,7 @@ export function ProjectSettingsDialog() {
                             />
                             <div className="flex-1">
                                 <Slider
-                                    value={[contextLimit]}
+                                    value={[contextLimit ?? 128000]}
                                     onValueChange={(val) => setContextLimit(val[0])}
                                     min={4000}
                                     max={1000000}

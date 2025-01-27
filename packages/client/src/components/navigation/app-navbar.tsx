@@ -15,6 +15,7 @@ import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useUpdateActiveProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 import { useActiveProjectTab, useSettings } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks"
+import { useSettingsField } from "@/websocket-state/settings-hooks"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -32,7 +33,8 @@ export function AppNavbar() {
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
-    const settings = useSettings()
+    const { data: theme = 'dark' } = useSettingsField('theme')
+
     const updateActiveProjectTab = useUpdateActiveProjectTab();
     const { tabData: activeProjectTabState } = useActiveProjectTab()
     const selectedProjectId = activeProjectTabState?.selectedProjectId;
@@ -42,7 +44,7 @@ export function AppNavbar() {
     const { api } = useApi()
 
 
-    const globalTheme = settings?.theme || 'dark'
+    const globalTheme = theme || 'dark'
 
     useEffect(() => {
         if (globalTheme === 'dark') {
