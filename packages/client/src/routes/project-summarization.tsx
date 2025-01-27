@@ -26,7 +26,7 @@ import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
+import { useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 import {
     Select,
     SelectContent,
@@ -46,6 +46,9 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { AppSettings } from "shared/src/global-state/global-state-schema"
+import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors"
+import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -89,13 +92,14 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 }
 
 function ProjectSummarizationSettingsPage() {
-    const { updateSettings, state } = useGlobalStateHelpers()
-    const settings = state.settings
-    const projectActiveTabId = state.projectActiveTabId
-    const selectedProjectId =
-        projectActiveTabId && state.projectTabs[projectActiveTabId]?.selectedProjectId
+    const { data: summarizationEnabledProjectIds = [] } = useSettingsField('summarizationEnabledProjectIds')
+    const { data: summarizationIgnorePatterns = [] } = useSettingsField('summarizationIgnorePatterns')
+    const { tabData: projectTabState } = useActiveProjectTab()
+    const updateSettings = useUpdateSettings()
+
+    const selectedProjectId = projectTabState?.selectedProjectId
     const isProjectSummarizationEnabled = selectedProjectId
-        ? settings.summarizationEnabledProjectIds.includes(selectedProjectId)
+        ? summarizationEnabledProjectIds?.includes(selectedProjectId)
         : false
 
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
@@ -131,7 +135,7 @@ function ProjectSummarizationSettingsPage() {
     const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? "")
     const resummarizeAllMutation = useResummarizeAllFiles(selectedProjectId ?? "")
 
-    const ignorePatterns = settings.summarizationIgnorePatterns
+    const ignorePatterns = summarizationIgnorePatterns ?? []
     const includedFiles: ProjectFile[] = []
     const excludedFiles: ProjectFile[] = []
 
@@ -373,7 +377,7 @@ function ProjectSummarizationSettingsPage() {
     }
 
     function handleExcludeFile(filePath: string) {
-        updateSettings((prev) => ({
+        updateSettings((prev: AppSettings) => ({
             ...prev,
             summarizationIgnorePatterns: [
                 ...prev.summarizationIgnorePatterns,
@@ -428,7 +432,7 @@ function ProjectSummarizationSettingsPage() {
 
     const formattedCombinedSummary = useMemo(() => {
         const includedSummaries = summaries.filter(file =>
-            !matchesAnyPattern(file.path, settings.summarizationIgnorePatterns)
+            !matchesAnyPattern(file.path, summarizationIgnorePatterns ?? [])
         );
 
         return buildCombinedFileSummaries(includedSummaries, {
@@ -440,7 +444,7 @@ function ProjectSummarizationSettingsPage() {
                 }`,
             includeEmptySummaries: false,
         });
-    }, [summaries, settings.summarizationIgnorePatterns]);
+    }, [summaries, summarizationIgnorePatterns]);
 
     const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false);
 
@@ -524,12 +528,12 @@ function ProjectSummarizationSettingsPage() {
                                 checked={isProjectSummarizationEnabled}
                                 onCheckedChange={(check) => {
                                     if (!selectedProjectId) return
-                                    updateSettings((prev) => ({
+                                    updateSettings((prev: AppSettings) => ({
                                         ...prev,
                                         summarizationEnabledProjectIds: check
                                             ? [...prev.summarizationEnabledProjectIds, selectedProjectId]
                                             : prev.summarizationEnabledProjectIds.filter(
-                                                (id) => id !== selectedProjectId
+                                                (id: string) => id !== selectedProjectId
                                             ),
                                     }))
                                 }}
@@ -867,14 +871,14 @@ function ProjectSummarizationSettingsPage() {
  * to keep the main component smaller.
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
-    const { state, updateSettings } = useGlobalStateHelpers()
-    const patterns = state.settings.summarizationIgnorePatterns
+    const updateSettings = useUpdateSettings()
+    const { data: patterns } = useSettingsField('summarizationIgnorePatterns')
     const [newPattern, setNewPattern] = useState("")
 
     function handleAdd() {
         const trimmed = newPattern.trim()
         if (!trimmed) return
-        updateSettings((prev) => ({
+        updateSettings((prev: AppSettings) => ({
             ...prev,
             summarizationIgnorePatterns: [...prev.summarizationIgnorePatterns, trimmed],
         }))
@@ -882,9 +886,9 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
     }
 
     function handleRemove(pattern: string) {
-        updateSettings((prev) => ({
+        updateSettings((prev: AppSettings) => ({
             ...prev,
-            summarizationIgnorePatterns: prev.summarizationIgnorePatterns.filter((p) => p !== pattern),
+            summarizationIgnorePatterns: prev.summarizationIgnorePatterns.filter((p: string) => p !== pattern),
         }))
     }
 
@@ -906,12 +910,12 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
                         </Button>
                     </CollapsibleTrigger>
                     <span className="text-sm font-medium">
-                        Current Patterns ({patterns.length})
+                        Current Patterns ({patterns?.length ?? 0})
                     </span>
                 </div>
                 <CollapsibleContent>
                     <ul className="mt-2 space-y-1">
-                        {patterns.map((pattern, idx) => (
+                        {patterns?.map((pattern, idx) => (
                             <li
                                 key={`${pattern}-${idx}`}
                                 className="flex items-center justify-between rounded p-1 hover:bg-accent/10"

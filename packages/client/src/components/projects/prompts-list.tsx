@@ -15,14 +15,14 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useUpdateProjectTabState } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '../ui/dropdown-menu'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '../ui/badge'
-import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
+import { useProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
@@ -38,8 +38,8 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     className = '',
 }, ref) => {
     // Access global state
-    const { state, updateProjectTabState } = useGlobalStateHelpers()
-    const projectTab = state?.projectTabs[projectTabId]
+    const updateProjectTabState = useUpdateProjectTabState(projectTabId)
+    const projectTab = useProjectTab(projectTabId)
     const selectedPrompts = projectTab?.selectedPrompts || []
     const selectedProjectId = projectTab?.selectedProjectId || ''
 
@@ -161,7 +161,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
             case ' ':
                 e.preventDefault();
                 // Toggle selection
-                updateProjectTabState(projectTabId, (prev) => {
+                updateProjectTabState((prev) => {
                     const isSelected = prev.selectedPrompts.includes(promptId)
                     const newSelected = isSelected
                         ? prev.selectedPrompts.filter(p => p !== promptId)
@@ -276,9 +276,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                     <Pencil className="mr-2 h-4 w-4" />
                                     <span>Copy Selected Prompts</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                     onClick={() => {
-                                        updateProjectTabState(projectTabId, (prev) => ({
+                                        updateProjectTabState((prev) => ({
                                             ...prev,
                                             selectedPrompts: []
                                         }))
@@ -344,7 +344,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                             <Checkbox
                                                 checked={selectedPrompts.includes(prompt.id)}
                                                 onCheckedChange={(checked) => {
-                                                    updateProjectTabState(projectTabId, (prev) => {
+                                                    updateProjectTabState((prev) => {
                                                         const isSelected = prev.selectedPrompts.includes(prompt.id)
                                                         const newSelected = isSelected
                                                             ? prev.selectedPrompts.filter(p => p !== prompt.id)

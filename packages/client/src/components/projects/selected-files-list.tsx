@@ -1,4 +1,4 @@
-import { X, Copy, Bookmark, BookmarkPlus, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw } from "lucide-react"
+import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProjectFile } from "shared"
 import { cn } from "@/lib/utils"
@@ -8,12 +8,25 @@ import { FormatTokenCount } from "../format-token-count"
 import { forwardRef, useRef, useState, useImperativeHandle, KeyboardEvent, useMemo } from 'react'
 import { Input } from "../ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuShortcut } from "../ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuShortcut
+} from "../ui/dropdown-menu"
 import { toast } from "sonner"
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
+import { useUpdateProjectTabState } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors"
 
 type SelectedFilesListProps = {
   selectedFiles: string[]
@@ -46,10 +59,13 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [filterText, setFilterText] = useState("")
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
-  const { state, updateProjectTabState } = useGlobalStateHelpers()
-  const { undo, redo, canUndo, canRedo, clearSelectedFiles } = selectedFilesState
+  const updateProjectTabState = useUpdateProjectTabState(projectTabId)
+  const {
+    undo, redo, canUndo, canRedo,
+    clearSelectedFiles
+  } = selectedFilesState
 
-  const projectTab = state?.projectTabs[projectTabId]
+  const projectTab = useProjectTab(projectTabId)
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
 
   const copyAllSelectedFiles = async () => {
@@ -67,7 +83,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
   const handleCreateBookmark = () => {
     if (!bookmarkName.trim()) return
-    updateProjectTabState(projectTabId, (prev) => ({
+    updateProjectTabState((prev) => ({
       bookmarkedFileGroups: {
         ...prev.bookmarkedFileGroups,
         [bookmarkName.trim()]: selectedFiles
@@ -78,6 +94,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     setBookmarkDialogOpen(false)
   }
 
+  // Sorting
   let displayFiles = [...selectedFiles]
   if (sortOrder === "alphabetical") {
     displayFiles.sort((a, b) => {
@@ -107,7 +124,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     })
   }, [filterText, displayFiles, fileMap])
 
-  // Add hotkeys for removing files with r + number
+  // Hotkeys for removing files with r + number
   useHotkeys('r+1', () => selectedFiles[0] && onRemoveFile(selectedFiles[0]))
   useHotkeys('r+2', () => selectedFiles[1] && onRemoveFile(selectedFiles[1]))
   useHotkeys('r+3', () => selectedFiles[2] && onRemoveFile(selectedFiles[2]))
@@ -117,6 +134,11 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   useHotkeys('r+7', () => selectedFiles[6] && onRemoveFile(selectedFiles[6]))
   useHotkeys('r+8', () => selectedFiles[7] && onRemoveFile(selectedFiles[7]))
   useHotkeys('r+9', () => selectedFiles[8] && onRemoveFile(selectedFiles[8]))
+
+  // If you want CMD/CTRL+Z hotkeys to trigger undo/redo automatically,
+  // you could add these:
+  // useHotkeys('ctrl+z,meta+z', () => { if (canUndo) undo() })
+  // useHotkeys('ctrl+shift+z,meta+shift+z', () => { if (canRedo) redo() })
 
   useImperativeHandle(ref, () => ({
     focusList: () => {
@@ -170,6 +192,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     }
   }
 
+  // If no files selected:
   if (selectedFiles.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-center space-y-4">
@@ -196,7 +219,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                     size="sm"
                     className="text-xs"
                     onClick={() => {
-                      updateProjectTabState(projectTabId, {
+                      updateProjectTabState({
                         selectedFiles: bookmarkedGroups[name]
                       })
                       toast.success(`Loaded bookmark group "${name}"`)
@@ -278,15 +301,12 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 <span>Copy All Files</span>
               </DropdownMenuItem>
 
-              {/*
-                IMPORTANT CHANGE:
-                Instead of updateProjectTabState(...),
-                call selectedFilesState.clearSelectedFiles().
-              */}
-              <DropdownMenuItem onClick={() => {
-                clearSelectedFiles()
-                toast.success("Cleared all selected files")
-              }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  clearSelectedFiles()
+                  toast.success("Cleared all selected files")
+                }}
+              >
                 <X className="mr-2 h-4 w-4" />
                 <span>Clear Selected Files</span>
               </DropdownMenuItem>
@@ -314,6 +334,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 <span>Redo</span>
                 <DropdownMenuShortcut>{formatShortcut('mod+shift+z')}</DropdownMenuShortcut>
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
@@ -346,6 +367,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+
               {Object.entries(bookmarkedGroups).length > 0 && (
                 <>
                   <DropdownMenuSeparator />
@@ -353,7 +375,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                     <DropdownMenuItem
                       key={name}
                       onClick={() => {
-                        updateProjectTabState(projectTabId, {
+                        updateProjectTabState({
                           selectedFiles: fileIds
                         })
                         toast.success(`Loaded bookmark group "${name}"`)
@@ -400,14 +422,16 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
               >
                 <X className="h-4 w-4" />
               </Button>
-              <div className={cn(
-                "flex flex-col p-2 rounded-md border bg-muted/50",
-                "transform transition-all duration-100",
-                "group-hover:translate-x-12",
-                "group-hover:bg-muted group-hover:border-muted-foreground/20",
-                "dark:group-hover:bg-muted/70 dark:group-hover:border-muted-foreground/30",
-                index === focusedIndex && "bg-muted border-muted-foreground/20"
-              )}>
+              <div
+                className={cn(
+                  "flex flex-col p-2 rounded-md border bg-muted/50",
+                  "transform transition-all duration-100",
+                  "group-hover:translate-x-12",
+                  "group-hover:bg-muted group-hover:border-muted-foreground/20",
+                  "dark:group-hover:bg-muted/70 dark:group-hover:border-muted-foreground/30",
+                  index === focusedIndex && "bg-muted border-muted-foreground/20"
+                )}
+              >
                 <div className="flex items-center">
                   {showShortcut && (
                     <span className="text-xs text-muted-foreground mr-2 whitespace-nowrap">

@@ -1,19 +1,17 @@
 import { useHotkeys } from "react-hotkeys-hook"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
+import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors"
 
 export type HelpDialogProps = {
     open?: boolean
     onOpenChange?: (open: boolean) => void
 }
 
-
-
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
-    const { state } = useGlobalStateHelpers()
+    const { id: activeChatTabId, tabData: chatTabState } = useActiveChatTab()
 
     // Toggle help dialog with mod + /
     useHotkeys("mod+/", (e) => {
@@ -21,10 +19,8 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
         onOpenChange?.(!open)
     })
 
-    const chatTabStateTabId = state.chatActiveTabId
-    if (!chatTabStateTabId) return null
+    if (!activeChatTabId) return null
 
-    const chatTabState = state.chatTabs[chatTabStateTabId]
     if (!chatTabState) return null
 
     const { provider, model } = chatTabState
@@ -49,7 +45,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         <h3 className="font-semibold mt-4 mb-2">File Search & Autocomplete</h3>
                         <p><ShortcutDisplay shortcut={['up', 'down']} delimiter=" / "></ShortcutDisplay>: Navigate through suggestions</p>
                         <p><ShortcutDisplay shortcut={['enter', 'space']} delimiter=" / " />: Select highlighted file</p>
-                        <p><ShortcutDisplay shortcut={['right']}/>: Preview highlighted file</p>
+                        <p><ShortcutDisplay shortcut={['right']} />: Preview highlighted file</p>
                         <p><AppShortcutDisplay shortcut="close-suggestions" />: Close suggestions</p>
 
                         <h3 className="font-semibold mt-4 mb-2">File Tree Navigation</h3>

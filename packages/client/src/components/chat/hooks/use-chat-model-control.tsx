@@ -1,34 +1,38 @@
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers";
+import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
+import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {
-    const {
-        activeChatTabState,
-        updateActiveChatTab,
-    } = useGlobalStateHelpers();
+    // 1) Find the active chat tab ID
+    const { id: chatActiveTabId } = useActiveChatTab()
+    // 2) Single-field read
+    const { data: provider = "openai" } =
+        useChatTabField(chatActiveTabId ?? "", "provider");
+    const { data: model = "gpt-4o" } =
+        useChatTabField(chatActiveTabId ?? "", "model");
 
-    // Fall back to defaults if no tab is active
-    const provider: APIProviders = activeChatTabState?.provider ?? 'openai';
-    const currentModel: string = activeChatTabState?.model ?? 'gpt-4o';
+    // 3) Single-field updaters
+    const { mutate: setProviderField } = useChatTabFieldUpdater(
+        chatActiveTabId ?? "",
+        "provider"
+    );
+    const { mutate: setModelField } = useChatTabFieldUpdater(
+        chatActiveTabId ?? "",
+        "model"
+    );
 
-    // Whenever you set a new provider, update the active chat tab in global state
     function setProvider(newProvider: APIProviders) {
-        updateActiveChatTab({
-            provider: newProvider,
-        });
+        setProviderField(newProvider);
     }
 
-    // Similarly for model changes
     function setCurrentModel(modelId: string) {
-        updateActiveChatTab({
-            model: modelId,
-        });
+        setModelField(modelId);
     }
 
     return {
         provider,
         setProvider,
-        currentModel,
+        currentModel: model,
         setCurrentModel,
     };
 };

@@ -1,5 +1,4 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { APIInterface } from '@/utils/api/api-interface'
 import { AppNavbar } from "@/components/navigation/app-navbar"
 import { useState } from 'react'
@@ -18,9 +17,29 @@ import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
+import { useGlobalStateContext } from '@/websocket-state/context/global-state-provider'
 
 type RouterContext = {
   api: APIInterface
+}
+
+function LoadingScreen() {
+  return (
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-background">
+      <div className="relative">
+        <img
+          src="/android-chrome-512x512.png"
+          alt="Logo"
+          className="w-24 h-24 animate-pulse"
+        />
+        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+          <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
+            <div className="h-full w-1/2 bg-primary animate-[move_1s_ease-in-out_infinite]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function GlobalCommandPalette() {
@@ -65,6 +84,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootComponent() {
+  const { isOpen } = useGlobalStateContext()
+
+  if (!isOpen) {
+    return <LoadingScreen />
+  }
+
   return (
     <ErrorBoundary>
       <div className="h-screen w-screen flex flex-col">
@@ -98,7 +123,7 @@ function RootComponent() {
             />
           )} */}
         <ComponentErrorBoundary componentName="Development Tools">
-          <ReactQueryDevtools />
+          {/* <ReactQueryDevtools /> */}
         </ComponentErrorBoundary>
       </div>
     </ErrorBoundary>

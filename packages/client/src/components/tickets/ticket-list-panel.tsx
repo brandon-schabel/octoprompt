@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { TicketWithTasks, useListTicketsWithTasks, TICKET_KEYS, TicketResult, useDeleteTicket } from "@/hooks/api/use-tickets-api";
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
+import { useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -23,6 +23,7 @@ import {
 } from "../ui/alert-dialog";
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
+import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 
 interface TicketListPanelProps {
     projectTabId: string;
@@ -49,8 +50,9 @@ const PRIORITY_COLORS = {
 
 export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
     const navigate = useNavigate();
-    const { state, updateProjectTabState, createProjectTabFromTicket } = useGlobalStateHelpers();
-    const tabState = state.projectTabs[projectTabId];
+    const updateProjectTabState = useUpdateProjectTabState(projectTabId);
+    const createProjectTabFromTicket = useCreateProjectTabFromTicket();
+    const tabState = useProjectTab(projectTabId)
     const projectId = tabState?.selectedProjectId || "";
 
     // Read from the global tabState
@@ -60,16 +62,16 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
 
     // Update state handlers
     const setTicketSearch = useCallback((val: string) => {
-        updateProjectTabState(projectTabId, { ticketSearch: val });
+        updateProjectTabState({ ticketSearch: val });
     }, [projectTabId, updateProjectTabState]);
 
     const setTicketSort = useCallback((val: string) => {
-        updateProjectTabState(projectTabId, { ticketSort: val as any });
+        updateProjectTabState({ ticketSort: val as any });
     }, [projectTabId, updateProjectTabState]);
 
     const setTicketStatusFilter = useCallback((val: string) => {
         // Reset search when changing status filter
-        updateProjectTabState(projectTabId, {
+        updateProjectTabState({
             ticketStatusFilter: val as any,
             ticketSearch: ""
         });

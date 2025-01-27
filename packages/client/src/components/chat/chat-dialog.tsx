@@ -4,36 +4,37 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 
-import { APIProviders } from "shared"
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api"
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
+import { useUpdateActiveChatTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 
 type ChatDialogProps = {
     open: boolean
     onOpenChange: (open: boolean) => void
 }
 
+export type CreateChatOptions = {
+    title: string;
+    copyExisting: boolean;
+    currentChatId?: string;
+}
+
 export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
     const [title, setTitle] = useState("")
     const [copyExisting, setCopyExisting] = useState(false)
-    const [provider, setProvider] = useState<APIProviders>("openai")
-    const [currentModel, setCurrentModel] = useState<string>("")
     const createChatMutation = useCreateChat();
-    const {
-        activeChatTabState,
-        updateActiveChatTab,
-    } = useGlobalStateHelpers();
-
-    const truncateText = (text: string, maxLength = 24) => {
-        return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
-    };
+    const updateActiveChatTab = useUpdateActiveChatTab()
+    const [activeChatId, setActiveChatId] = useState<string | undefined>(undefined);
 
     const generateDefaultTitle = () => `Chat ${new Date().toLocaleTimeString()}`;
     async function handleCreateChat(e: React.FormEvent<HTMLButtonElement>) {
         e.preventDefault();
         const chatTitle = title.trim() || generateDefaultTitle();
         try {
-            const newChat = await createChatMutation.mutateAsync({ title: chatTitle });
+            const newChat = await createChatMutation.mutateAsync({ 
+                title: chatTitle,
+                copyExisting,
+                currentChatId: copyExisting ? activeChatId : undefined 
+            });
             setTitle('');
             updateActiveChatTab({ activeChatId: newChat.id });
             onOpenChange(false);
@@ -43,20 +44,6 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
             return null;
         }
     }
-
-    // const handleCreateChat = () => {
-
-
-    //     createChatTab({
-    //         cleanTab: !copyExisting,
-    //         model: currentModel,
-    //         provider,
-    //         title: title.trim() || undefined
-    //     })
-    //     setTitle("")
-    //     setCopyExisting(false)
-    //     onOpenChange(false)
-    // }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,13 +60,6 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
                             className="flex-1"
                         />
                     </div>
-
-                    {/* <ModelSelector
-                        provider={provider}
-                        currentModel={currentModel}
-                        onProviderChange={setProvider}
-                        onModelChange={setCurrentModel}
-                    /> */}
 
                     <div className="flex items-center space-x-2">
                         <Checkbox
@@ -99,4 +79,4 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
             </DialogContent>
         </Dialog>
     )
-} 
+}

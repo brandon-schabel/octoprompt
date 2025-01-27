@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from "@/hooks/api/use-projects-api"
 import { useEffect, useState } from "react"
 import { CreateProjectBody } from "shared/index"
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
+import { useUpdateActiveProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
 
 type ProjectDialogProps = {
     open: boolean
@@ -23,7 +23,7 @@ type ProjectDialogProps = {
 
 export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogProps) {
     const navigate = useNavigate()
-    const { updateActiveProjectTab: updateActiveTab } = useGlobalStateHelpers()
+    const updateActiveProjectTab = useUpdateActiveProjectTab()
     const [formData, setFormData] = useState<CreateProjectBody>({
         name: "",
         description: "",
@@ -81,7 +81,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
                 onSuccess: (response) => {
                     if (response.project) {
                         // Set newly created project as current
-                        updateActiveTab(prev => ({
+                        updateActiveProjectTab(prev => ({
                             ...prev,
                             selectedProjectId: response?.project?.id || null,
                             selectedFiles: [],

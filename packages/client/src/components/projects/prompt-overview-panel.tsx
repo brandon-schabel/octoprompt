@@ -1,26 +1,30 @@
 import { useState, useMemo, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
+import { memo } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useHotkeys } from 'react-hotkeys-hook'
+import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-list'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
-import { PromptListResponse, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from "@/hooks/api/use-prompts-api"
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { toast } from 'sonner'
+import { PromptListResponse, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
 import { ProjectFile } from 'shared'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useHotkeys } from 'react-hotkeys-hook'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
-import { SuggestedFilesDialog } from '../suggest-files-dialog'
+import { useUpdateActiveProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { formatShortcut } from '@/lib/shortcuts'
-import { InfoTooltip } from '../info-tooltip'
-import { ShortcutDisplay } from '../app-shortcut-display'
+import { InfoTooltip } from '@/components/info-tooltip'
+import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { SuggestedFilesDialog } from '../suggest-files-dialog'
+import { useProjectTabField } from '@/websocket-state/hooks/project-tab/project-tab-hooks'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -34,33 +38,106 @@ interface PromptOverviewPanelProps {
     selectedFilesState: UseSelectedFileReturn
 }
 
-export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
-    ({ selectedProjectId, fileMap, promptData, className, selectedFilesState }, ref) => {
-        const { state, updateActiveProjectTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
-        const selectedPrompts = activeTabState?.selectedPrompts || []
-        const globalUserPrompt = activeTabState?.userPrompt || ''
-        const contextLimit = activeTabState?.contextLimit || 128000
-        const activeProjectTabId = state?.projectActiveTabId
-        const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
+export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
+    function PromptOverviewPanel(
+        { selectedProjectId, fileMap, promptData, className, selectedFilesState },
+        ref
+    ) {
+        const { tabData: activeTabState, id: activeProjectTabId } = useActiveProjectTab()
+        const updateActiveProjectTab = useUpdateActiveProjectTab()
 
-        // 1) Grab the project files
+        const { data: selectedPrompts = [] } = useProjectTabField(activeProjectTabId ?? "", 'selectedPrompts')
+        const { data: globalUserPrompt = '' } = useProjectTabField(activeProjectTabId ?? "", 'userPrompt')
+        const { data: contextLimit = 128000 } = useProjectTabField(activeProjectTabId ?? "", 'contextLimit')
+
+
+        // Local state
+        const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
+        const [dialogOpen, setDialogOpen] = useState(false)
+        const [promptDialogOpen, setPromptDialogOpen] = useState(false)
+        const [editPromptId, setEditPromptId] = useState<string | null>(null)
+
+        // Refs
+        const promptInputRef = useRef<HTMLTextAreaElement>(null)
+        const promptsListRef = useRef<PromptsListRef>(null)
+
+        // Project files
         const { data: fileData } = useGetProjectFiles(selectedProjectId)
         const allProjectFiles: ProjectFile[] = fileData?.files || []
 
-        // 2) We'll store the suggested files and open the dialog
+        // Suggested files from activeTab
         const suggestedFileIds = activeTabState?.suggestedFileIds || []
         const suggestedFiles = useMemo(
             () => allProjectFiles.filter(file => suggestedFileIds.includes(file.id)),
             [allProjectFiles, suggestedFileIds]
         )
-        const [dialogOpen, setDialogOpen] = useState(false)
 
-        // 3) Finding Suggested Files mutation
         const findSuggestedFilesMutation = useFindSuggestedFiles(selectedProjectId)
-        
+
+        // Keep local and global userPrompt in sync
+        useEffect(() => {
+            if (globalUserPrompt !== localUserPrompt) {
+                setLocalUserPrompt(globalUserPrompt)
+            }
+        }, [globalUserPrompt])
+
+        // Debounce saving to global state
+        const updateGlobalPrompt = useCallback((value: string) => {
+            updateActiveProjectTab(prev => ({
+                ...prev,
+                userPrompt: value,
+            }))
+        }, [updateActiveProjectTab])
+        const debouncedUpdateGlobal = useDebounce(updateGlobalPrompt, 1000)
+
+        // For “undo/redo” + selected files
+        const { selectedFiles } = selectedFilesState
+
+        // Prompt form
+        const promptForm = useForm<z.infer<typeof promptSchema>>({
+            resolver: zodResolver(promptSchema),
+            defaultValues: { name: '', content: '' },
+        })
+
+        const createPromptMutation = useCreatePrompt()
+        const updatePromptMutation = useUpdatePrompt()
+        const deletePromptMutation = useDeletePrompt()
+        const { copyToClipboard } = useCopyClipboard()
+
+        // Calculate total tokens used
+        const totalTokens = useMemo(() => {
+            return calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap)
+        }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap])
+
+        const usagePercentage = contextLimit > 0
+            ? (totalTokens / contextLimit) * 100
+            : 0
+
+        // Build final prompt text
+        const promptBuilder = useCallback(() => {
+            return buildPromptContent({
+                promptData,
+                selectedPrompts,
+                userPrompt: localUserPrompt,
+                selectedFiles,
+                fileMap,
+            })
+        }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap])
+
+        // Copy entire prompt to clipboard
+        const handleCopyToClipboard = useCallback(() => {
+            if (!fileMap.size && !localUserPrompt.trim() && selectedPrompts.length === 0) return
+            const finalPrompt = promptBuilder()
+            copyToClipboard(finalPrompt, {
+                successMessage: 'All Content Copied to clipboard',
+                errorMessage: 'Failed to copy',
+            })
+        }, [fileMap.size, localUserPrompt, selectedPrompts, promptBuilder, copyToClipboard])
+
+        // Find suggested files
         function handleFindSuggestedFiles(userPrompt: string) {
             if (!userPrompt.trim()) {
-                alert("Please enter a prompt!")
+                alert('Please enter a prompt!')
                 return
             }
             findSuggestedFilesMutation.mutate(userPrompt, {
@@ -72,77 +149,14 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                         }))
                         setDialogOpen(true)
                     } else {
-                        alert(resp.message || "No suggestions returned")
+                        alert(resp.message || 'No suggestions returned')
                     }
-                },
+                }
             })
         }
 
-        // Keep localUserPrompt in sync with globalUserPrompt
-        useEffect(() => {
-            if (globalUserPrompt !== localUserPrompt) {
-                setLocalUserPrompt(globalUserPrompt)
-            }
-        }, [globalUserPrompt])
-
-        const updateGlobalPrompt = useCallback((value: string) => {
-            updateActiveProjectTab(prev => ({
-                ...prev,
-                userPrompt: value
-            }))
-        }, [updateActiveProjectTab])
-
-        const debouncedUpdateGlobal = useDebounce(updateGlobalPrompt, 1000)
-
-        const handleUserPromptChange = (value: string) => {
-            setLocalUserPrompt(value)
-            debouncedUpdateGlobal(value)
-        }
-
-        const { selectedFiles } = selectedFilesState
-        const [promptDialogOpen, setPromptDialogOpen] = useState(false)
-        const [editPromptId, setEditPromptId] = useState<string | null>(null)
-        const promptInputRef = useRef<HTMLTextAreaElement>(null)
-        const promptsListRef = useRef<PromptsListRef>(null)
-
-        const promptForm = useForm<z.infer<typeof promptSchema>>({
-            resolver: zodResolver(promptSchema),
-            defaultValues: { name: '', content: '' },
-        })
-
-        const createPromptMutation = useCreatePrompt()
-        const updatePromptMutation = useUpdatePrompt()
-        const deletePromptMutation = useDeletePrompt()
-
-        const { copyToClipboard } = useCopyClipboard()
-
-        // Calculate total tokens used
-        const totalTokens = useMemo(
-            () => calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap),
-            [promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap]
-        )
-        const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
-
-        function promptBuilder() {
-            return buildPromptContent({
-                promptData,
-                selectedPrompts,
-                userPrompt: localUserPrompt,
-                selectedFiles,
-                fileMap,
-            })
-        }
-
-        const handleCopyToClipboard = async () => {
-            if (!fileMap.size && !localUserPrompt.trim() && selectedPrompts.length === 0) return
-            const finalPrompt = promptBuilder()
-            copyToClipboard(finalPrompt, {
-                successMessage: 'All Content Copied to clipboard',
-                errorMessage: 'Failed to copy',
-            })
-        }
-
-        const handleCreatePrompt = async (values: z.infer<typeof promptSchema>) => {
+        // Prompt creation/editing
+        async function handleCreatePrompt(values: z.infer<typeof promptSchema>) {
             if (!selectedProjectId) return
             const result = await createPromptMutation.mutateAsync({
                 ...values,
@@ -154,12 +168,13 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             }
         }
 
-        const handleUpdatePromptContent = async (promptId: string, updates: { name: string; content: string }) => {
+        async function handleUpdatePromptContent(promptId: string, updates: { name: string; content: string }) {
             await updatePromptMutation.mutateAsync({ id: promptId, updates })
             toast.success('Prompt updated successfully')
             setPromptDialogOpen(false)
         }
 
+        // Load prompt data into the form if editing
         useEffect(() => {
             if (editPromptId && promptData?.prompts) {
                 const prompt = promptData.prompts.find(p => p.id === editPromptId)
@@ -172,10 +187,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             }
         }, [editPromptId, promptData?.prompts])
 
-        // Hotkeys
+        // Keyboard shortcuts
         useHotkeys('mod+shift+c', (e) => {
             e.preventDefault()
-            void handleCopyToClipboard()
+            handleCopyToClipboard()
         }, [handleCopyToClipboard])
 
         const copyButtonText = useMemo(() => {
@@ -187,16 +202,21 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             promptsListRef.current?.focusPrompts()
         }, [])
 
+        // Expose “focusPrompt” to the parent
         useImperativeHandle(ref, () => ({
             focusPrompt: () => {
                 promptInputRef.current?.focus()
             }
         }), [])
 
-     
+        // Update local & global user prompt
+        const handleUserPromptChange = useCallback((value: string) => {
+            setLocalUserPrompt(value)
+            debouncedUpdateGlobal(value)
+        }, [debouncedUpdateGlobal])
+
         return (
             <div className={`flex flex-col overflow-y-auto ${className}`}>
-                {/* SUGGESTED FILES DIALOG */}
                 <SuggestedFilesDialog
                     open={dialogOpen}
                     onClose={() => setDialogOpen(false)}
@@ -207,8 +227,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 <div className="bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4 border-l">
                     <div className="flex flex-col h-full overflow-hidden">
 
-
-                        {/* Token usage info */}
+                        {/* 1) Token Usage Info */}
                         <div className="space-y-2 mb-4 border-b">
                             <div className="space-y-1">
                                 <div className="text-xs text-muted-foreground">
@@ -222,7 +241,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             </div>
                         </div>
 
-                        {/* Prompts list */}
+                        {/* 2) Prompts List */}
                         <div className="flex flex-col flex-1 overflow-hidden">
                             <div className="flex-1 min-h-0">
                                 <PromptsList
@@ -234,7 +253,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
                             <hr className="my-2" />
 
-                            {/* Main user prompt & actions */}
+                            {/* 3) User prompt area */}
                             <div className="h-1/2">
                                 <div className="flex flex-col h-full">
                                     <div className="flex items-center gap-2 mb-2">
@@ -243,23 +262,15 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                             <div className="space-y-2">
                                                 <p>Input Features & Shortcuts:</p>
                                                 <ul>
-                                                    <li>- <span className="font-medium">Voice Input:</span> Click the microphone icon to record your prompt</li>
-                                                    <li>- <span className="font-medium">Expand:</span> Use the expand icon for a larger editing area</li>
-                                                    <li>- <span className="font-medium">Copy All:</span> <ShortcutDisplay shortcut={['mod', 'shift', 'c']} /> Copy entire prompt with context</li>
+                                                    <li>- <span className="font-medium">Voice Input:</span> (if implemented)</li>
+                                                    <li>- <span className="font-medium">Expand:</span> Use the expand icon for a bigger editing area</li>
+                                                    <li>- <span className="font-medium">Copy All:</span> <ShortcutDisplay shortcut={['mod', 'shift', 'c']} /> Copy entire prompt</li>
                                                     <li>- <span className="font-medium">Focus Input:</span> <ShortcutDisplay shortcut={['mod', 'i']} /> Focus the input area</li>
                                                 </ul>
-                                                <p className="font-medium mt-2">Promptimizer:</p>
-                                                <p className="text-sm text-muted-foreground">Click the magic wand to optimize your prompt. The Promptimizer will:</p>
-                                                <ul className="text-sm text-muted-foreground">
-                                                    <li>- Make your prompt more specific and clear</li>
-                                                    <li>- Add necessary context</li>
-                                                    <li>- Improve structure for better AI understanding</li>
-                                                    <li>- Suggest better phrasing and terminology</li>
-                                                </ul>
-                                                <p className="text-xs text-muted-foreground mt-2">Your prompt will be combined with selected files and prompts when sent to the AI.</p>
                                             </div>
                                         </InfoTooltip>
                                     </div>
+
                                     <ExpandableTextarea
                                         ref={promptInputRef}
                                         placeholder="Type your user prompt here..."
@@ -276,7 +287,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                             onClick={() => handleFindSuggestedFiles(localUserPrompt)}
                                             disabled={findSuggestedFilesMutation.isPending}
                                         >
-                                            {findSuggestedFilesMutation.isPending ? "Finding..." : "Find Suggested Files"}
+                                            {findSuggestedFilesMutation.isPending ? 'Finding...' : 'Find Suggested Files'}
                                         </Button>
                                     </div>
                                 </div>
@@ -284,13 +295,15 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                         </div>
                     </div>
 
-                    {/* Prompt creation / editing dialog */}
+                    {/* Prompt creation/editing dialog */}
                     <PromptDialog
                         open={promptDialogOpen}
-                        editPromptId={null}
+                        editPromptId={editPromptId}
                         promptForm={promptForm}
                         handleCreatePrompt={handleCreatePrompt}
-                        handleUpdatePrompt={(values) => handleUpdatePromptContent(editPromptId!, values)}
+                        handleUpdatePrompt={(updates) =>
+                            handleUpdatePromptContent(editPromptId!, updates)
+                        }
                         createPromptPending={createPromptMutation.isPending}
                         updatePromptPending={updatePromptMutation.isPending}
                         onClose={() => setPromptDialogOpen(false)}
@@ -299,4 +312,4 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             </div>
         )
     }
-)
+))

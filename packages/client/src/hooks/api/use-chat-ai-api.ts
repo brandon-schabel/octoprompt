@@ -3,6 +3,7 @@ import { useApi } from '../use-api';
 import { CreateChatBody, Chat, ChatMessage, APIProviders } from 'shared'
 import { CreateMessageBodyGeneric } from 'shared/src/validation/chat-api-validation';
 import { commonErrorHandler } from './common-mutation-error-handler';
+import { CreateChatOptions } from '@/components/chat/chat-dialog';
 
 
 interface UnifiedModel {
@@ -149,12 +150,11 @@ export const useCreateChat = () => {
     const { api } = useApi();
     const queryClient = useQueryClient();
 
-    return useMutation<Chat, Error, CreateChatBody>({
-        mutationFn: async (input: CreateChatBody) => {
+    return useMutation<Chat, Error, CreateChatOptions>({
+        mutationFn: async (input: CreateChatOptions) => {
             const response = await api.request('/api/ai/chats', {
                 method: 'POST',
                 body: input,
-
             });
 
             if (!response.ok) {
@@ -273,12 +273,13 @@ export const useDeleteMessage = () => {
 
     return useMutation<void, Error, string>({
         mutationFn: (messageId: string) => deleteMessage(api, messageId),
-        onSuccess: (_) => {
-            // Invalidate all message queries since we don't know which chat this belonged to
-            queryClient.invalidateQueries({
-                predicate: (query) => query.queryKey[0] === 'chat' && query.queryKey[2] === 'messages'
+        onSuccess: () => {
+            // Invalidate all message queries
+            queryClient.invalidateQueries({ 
+                queryKey: CHAT_KEYS.all,
             });
         },
+        onError: commonErrorHandler
     });
 };
 

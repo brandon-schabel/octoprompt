@@ -1,4 +1,3 @@
-/* packages/client/src/components/tickets/ticket-dialog.tsx */
 import React, { useState, useEffect } from "react";
 import { Ticket } from "shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -12,7 +11,7 @@ import { TicketTasksPanel } from "./ticket-tasks-panel";
 import { useGetProjectFiles } from "@/hooks/api/use-projects-api";
 import { Checkbox } from "../ui/checkbox";
 import { ScrollArea } from "../ui/scroll-area";
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers";
+import { useCreateProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 
 interface TicketDialogProps {
     isOpen: boolean;
@@ -27,7 +26,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
     const { data: fileData } = useGetProjectFiles(projectId);
     const allFiles = fileData?.files ?? [];
-    const { createProjectTab } = useGlobalStateHelpers();
+    const createProjectTab = useCreateProjectTab();
 
     // Local form state
     const [title, setTitle] = useState("");
@@ -247,23 +246,23 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                     </div>
 
                     {/* Multi-select checkboxes for suggested files */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium flex items-center gap-2">
+                    {/* <div className="space-y-2"> */}
+                    {/* <label className="text-sm font-medium flex items-center gap-2">
                             Suggested Files
                             <InfoTooltip>
                                 Select files relevant to this ticket. Or auto-fetch suggestions below.
                             </InfoTooltip>
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <Button
+                        </label> */}
+                    {/* <div className="flex items-center gap-2"> */}
+                    {/* <Button
                                 type="button"
                                 variant="secondary"
                                 onClick={handleSuggestFiles}
                                 disabled={!ticket || suggestFilesMutation.isPending}
                             >
                                 {suggestFilesMutation.isPending ? "Suggesting..." : "Suggest"}
-                            </Button>
-
+                            </Button> */}
+                    {/* 
                             {ticket && (
                                 <Button
                                     type="button"
@@ -273,9 +272,9 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                                 >
                                     Open in Project Tab
                                 </Button>
-                            )}
-                        </div>
-                        <ScrollArea className="h-48 border rounded-md mt-1">
+                            )} */}
+                    {/* </div> */}
+                    {/* <ScrollArea className="h-48 border rounded-md mt-1">
                             <div className="p-2">
                                 {allFiles.map((file) => {
                                     const checked = selectedFileIds.includes(file.id);
@@ -290,8 +289,8 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                                     );
                                 })}
                             </div>
-                        </ScrollArea>
-                    </div>
+                        </ScrollArea> */}
+                    {/* </div> */}
 
                     {/* Render tasks panel only if editing an existing ticket */}
                     {ticket && (

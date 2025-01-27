@@ -1,65 +1,89 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { ChatSidebar } from '@/components/chat/chat-sidebar'
-import { ChatMessages } from '@/components/chat/chat-messages'
-import { ChatHeader } from '@/components/chat/chat-header'
-import { AdaptiveChatInput } from '@/components/adaptive-chat-input'
-import { useChatControl } from '@/components/chat/hooks/use-chat-state'
-import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
-import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
-import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
-import { InfoTooltip } from '@/components/info-tooltip'
-import { useGlobalStateHelpers } from '@/components/global-state/use-global-state-helpers'
+import { createFileRoute } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { ChatMessages } from "@/components/chat/chat-messages";
+import { ChatHeader } from "@/components/chat/chat-header";
+import { AdaptiveChatInput } from "@/components/adaptive-chat-input";
 
-export const Route = createFileRoute('/chat')({
+import { ChatTabManager } from "@/components/tab-managers/chat-tab-manager";
+import { ChatProjectSidebar } from "@/components/chat/chat-project-sidebar";
+import { InfoTooltip } from "@/components/info-tooltip";
+
+import {
+  useCreateChatTab,
+  useUpdateActiveChatTab,
+} from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import {
+  useActiveChatTab,
+  useAllChatTabs,
+} from "@/websocket-state/hooks/selectors/websocket-selectors";
+import { useSendChatMessage, useChatMessages } from "@/components/chat/hooks/chat-hooks";
+import { APIProviders } from "shared/index";
+
+
+export const Route = createFileRoute("/chat")({
   component: ChatPage,
   validateSearch: (search) => ({
-    prefill: Boolean(search.prefill)
-  })
-})
+    prefill: Boolean(search.prefill),
+  }),
+});
 
 function ChatPage() {
   // Global state to check if user has any chat tabs at all
-  const { state, createChatTab } = useGlobalStateHelpers()
-  const noChatTabsYet = Object.keys(state?.chatTabs ?? {}).length === 0
-  const isDefaultTab = state?.chatActiveTabId === 'defaultTab'
+  const { id: activeTabId, tabData: activeChatTabState } = useActiveChatTab();
+  const createChatTab = useCreateChatTab();
+  const tabs = useAllChatTabs();
+  const noChatTabsYet = Object.keys(tabs ?? {}).length === 0;
+  const isDefaultTab = activeTabId === "defaultTab";
 
-  // Basic model & chat control
-  const modelControl = useChatModelControl()
-  const chatControl = useChatControl()
+  const currentChat = activeChatTabState;
+  const newMessage = activeChatTabState?.input ?? "";
+  const chatId = currentChat?.activeChatId ?? "";
 
-  const [isLinkedContentOpen, setIsLinkedContentOpen] = useState(false)
+  // Get messages and pending state management
   const {
-    activeChatTabState,
-    handleSendMessage,
-    handleForkChat,
-    updateActiveChatTab
-  } = chatControl
+    messages,
+    pendingMessages,
+    setPendingMessages,
+    refetchMessages,
+    isFetching,
+  } = useChatMessages(chatId);
 
-  const currentChat = activeChatTabState
-  const newMessage = activeChatTabState?.input ?? ''
+  // Initialize send message hook with proper state management
+  const { handleSendMessage } = useSendChatMessage({
+    chatId,
+    userInput: newMessage,
+    provider: activeChatTabState?.provider as APIProviders ?? "openai",
+    model: activeChatTabState?.model ?? "gpt-4o-mini",
+    excludedMessageIds: activeChatTabState?.excludedMessageIds ?? [],
+    clearUserInput: () => updateActiveChatTab({ input: "" }),
+    pendingMessages,
+    setPendingMessages,
+    refetchMessages,
+  });
+
+  const updateActiveChatTab = useUpdateActiveChatTab();
 
   // The id of the linked project tab (if any)
-  const linkedProjectTabId = currentChat?.linkedProjectTabId || ''
+  const linkedProjectTabId = currentChat?.linkedProjectTabId || "";
 
-  // -----------------------------------------------
-  // EMPTY STATE: brand new user with no chat tabs
-  // -----------------------------------------------
   if (noChatTabsYet) {
     return (
       <div className="p-4">
         <ChatTabManager />
         <div className="mt-4 flex flex-col items-start gap-3">
           <p className="text-sm text-muted-foreground">
-            You haven't started any chat sessions yet. You can chat with local LLMs immediately,
-            but if you add OpenAI or OpenRouter keys on the <strong>Keys</strong> page,
-            you'll unlock extra features like summarization, advanced file suggestions,
-            and voice input (using Whisper).
+            You haven't started any chat sessions yet. You can chat with local
+            LLMs immediately, but if you add OpenAI or OpenRouter keys on the{" "}
+            <strong>Keys</strong> page, you'll unlock extra features like
+            summarization, advanced file suggestions, and voice input (using
+            Whisper).
           </p>
           <InfoTooltip>
             <div className="space-y-2 text-sm">
-              <p><strong>Why add provider keys?</strong></p>
+              <p>
+                <strong>Why add provider keys?</strong>
+              </p>
               <ul className="list-disc list-inside">
                 <li>Advanced AI completions</li>
                 <li>Project summarizations and ticket creation from chat</li>
@@ -73,7 +97,7 @@ function ChatPage() {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   // -----------------------------------------------
@@ -85,7 +109,9 @@ function ChatPage() {
         <ChatTabManager />
         <div className="flex-1 p-4">
           <div className="max-w-2xl mx-auto mt-8 space-y-6">
-            <h2 className="text-2xl font-bold text-center">Welcome to Your Default Chat Tab!</h2>
+            <h2 className="text-2xl font-bold text-center">
+              Welcome to Your Default Chat Tab!
+            </h2>
             <div className="bg-muted/50 rounded-lg p-6 space-y-4">
               <p className="text-center text-muted-foreground">
                 This is your default chat tab. You can:
@@ -109,22 +135,27 @@ function ChatPage() {
             <AdaptiveChatInput
               value={newMessage}
               onChange={(val) => updateActiveChatTab({ input: val })}
-              onSubmit={handleSendMessage}
+              onSubmit={() => {
+                // Example call to a direct "send message" approach:
+                console.log("[DefaultTab] Send message: ", newMessage);
+              }}
               placeholder="Type your message..."
               disabled={!currentChat}
               className="w-full"
-              preserveFormatting={true}
+              preserveFormatting
             />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!currentChat}
-            >
+            <Button onClick={() => console.log("Sending message...")} disabled={!currentChat}>
               Send
             </Button>
           </div>
         </div>
       </div>
-    )
+    );
+  }
+
+  async function handleSendWithDebug() {
+    // If you had your `handleSendMessage` from `useSendMessageHook`, you could call it here:
+    await handleSendMessage();
   }
 
   return (
@@ -137,31 +168,27 @@ function ChatPage() {
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <ChatHeader
-            onForkChat={handleForkChat}
-            chatControl={chatControl}
-            modelControl={modelControl}
-          />
 
-          {currentChat && (
-            <ChatMessages chatControl={chatControl} />
-          )}
+          {currentChat && <ChatMessages
+            messages={messages}
+            isFetching={isFetching}
+            excludedMessageIds={currentChat?.excludedMessageIds ?? []}
+
+          />
+          }
 
           <div className="relative mx-2 mb-2">
             <div className="flex gap-2 bg-background rounded-md">
               <AdaptiveChatInput
                 value={newMessage}
                 onChange={(val) => updateActiveChatTab({ input: val })}
-                onSubmit={handleSendMessage}
+                onSubmit={handleSendWithDebug}
                 placeholder="Type your message..."
                 disabled={!currentChat}
                 className="w-full"
-                preserveFormatting={true}
+                preserveFormatting
               />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!currentChat}
-              >
+              <Button onClick={handleSendWithDebug} disabled={!currentChat}>
                 Send
               </Button>
             </div>
@@ -174,5 +201,5 @@ function ChatPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -13,7 +13,9 @@ import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useGlobalStateHelpers } from "@/components/global-state/use-global-state-helpers"
+import { useUpdateActiveProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useActiveProjectTab, useSettings } from "@/websocket-state/hooks/selectors/websocket-selectors"
+import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -31,14 +33,18 @@ export function AppNavbar() {
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
 
-    const { activeProjectTabState: activeTabState, updateActiveProjectTab: updateActiveTab, updateGlobalStateKey, state } = useGlobalStateHelpers()
-    const selectedProjectId = activeTabState?.selectedProjectId
+    const { data: theme = 'dark' } = useSettingsField('theme')
+
+    const updateActiveProjectTab = useUpdateActiveProjectTab();
+    const { tabData: activeProjectTabState } = useActiveProjectTab()
+    const selectedProjectId = activeProjectTabState?.selectedProjectId;
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
     const { api } = useApi()
 
-    const globalTheme = state?.settings.theme
+
+    const globalTheme = theme || 'dark'
 
     useEffect(() => {
         if (globalTheme === 'dark') {
@@ -74,7 +80,7 @@ export function AppNavbar() {
     })
 
     const handleSelectProject = (id: string) => {
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             selectedProjectId: id,
             selectedFiles: [],
@@ -104,8 +110,8 @@ export function AppNavbar() {
                         <Link
                             to="/projects"
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnProjectsRoute
-                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <FolderIcon className="w-4 h-4" />
@@ -117,8 +123,8 @@ export function AppNavbar() {
                             to="/chat"
                             search={{ prefill: false }}
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnChatRoute
-                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
@@ -129,8 +135,8 @@ export function AppNavbar() {
                         <Link
                             to="/keys"
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnKeysRoute
-                                    ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
+                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
                                 }`}
                         >
                             <KeyIcon className="w-4 h-4" />

@@ -9,9 +9,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select"
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks"
 
 type ThemeOption = {
     label: string;
@@ -34,18 +35,22 @@ type SettingsDialogProps = {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const { state, updateGlobalStateKey } = useGlobalStateHelpers()
-    const isDarkMode = state?.settings.theme === 'dark'
-    const settings = state?.settings
-    const codeLightTheme = settings?.codeThemeLight ?? 'atomOneLight'
-    const codeDarkTheme = settings?.codeThemeDark ?? 'atomOneDark'
-    const ollamaUrl = settings?.ollamaGlobalUrl;
-    const lmStudioUrl = settings?.lmStudioGlobalUrl;
-    const hideInformationalTooltips = settings?.hideInformationalTooltips ?? false
+    const { data: theme } = useSettingsField('theme')
+    const isDarkMode = theme === 'dark'
+
+    const { data: spacebarToSelectAutocomplete = true } = useSettingsField('useSpacebarToSelectAutocomplete')
+    const { data: hideInformationalTooltips } = useSettingsField('hideInformationalTooltips')
+    const { data: ollamaGlobalUrl = 'http://localhost:11434' } = useSettingsField('ollamaGlobalUrl')
+    const { data: lmStudioGlobalUrl = 'http://localhost:1234' } = useSettingsField('lmStudioGlobalUrl')
+    const { data: codeThemeLight = 'atomOneLight' } = useSettingsField('codeThemeLight')
+    const { data: codeThemeDark = 'atomOneDark' } = useSettingsField('codeThemeDark')
+
+
+    const updateSettings = useUpdateSettings()
 
     const handleThemeToggle = () => {
         const newTheme: Theme = isDarkMode ? 'light' : 'dark'
-        updateGlobalStateKey('settings', (prev) => ({
+        updateSettings(prev => ({
             ...prev,
             theme: newTheme as Theme,
         }))
@@ -55,7 +60,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         const theme = themeOptions.find(t => t.value === value);
         if (!theme) return;
 
-        updateGlobalStateKey('settings', (prev) => ({
+        updateSettings(prev => ({
             ...prev,
             ...(isDark ? { codeThemeDark: value } : { codeThemeLight: value }),
         }))
@@ -65,7 +70,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         key: 'ollamaGlobalUrl' | 'lmStudioGlobalUrl',
         value: string
     ) => {
-        updateGlobalStateKey('settings', (prev) => ({
+        updateSettings(prev => ({
             ...prev,
             [key]: value,
         }))
@@ -95,9 +100,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         </Label>
                         <Switch
                             id="spacebar-select"
-                            checked={settings?.useSpacebarToSelectAutocomplete ?? true}
+                            checked={spacebarToSelectAutocomplete}
                             onCheckedChange={(checked) => {
-                                updateGlobalStateKey('settings', (prev) => ({
+                                updateSettings(prev => ({
                                     ...prev,
                                     useSpacebarToSelectAutocomplete: checked,
                                 }))
@@ -113,7 +118,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             id="hide-informational-tooltips"
                             checked={hideInformationalTooltips}
                             onCheckedChange={(checked) => {
-                                updateGlobalStateKey('settings', (prev) => ({
+                                updateSettings(prev => ({
                                     ...prev,
                                     hideInformationalTooltips: checked,
                                 }))
@@ -127,7 +132,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             <Input
                                 id="ollama-url"
                                 placeholder="http://localhost:11434"
-                                value={ollamaUrl}
+                                value={ollamaGlobalUrl}
                                 onChange={(e) => handleUrlChange('ollamaGlobalUrl', e.target.value)}
                             />
                         </div>
@@ -137,7 +142,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             <Input
                                 id="lmstudio-url"
                                 placeholder="http://localhost:1234"
-                                value={lmStudioUrl}
+                                value={lmStudioGlobalUrl}
                                 onChange={(e) => handleUrlChange('lmStudioGlobalUrl', e.target.value)}
                             />
                         </div>
@@ -147,7 +152,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         <div className="flex flex-col gap-2">
                             <Label>Light Mode Code Theme</Label>
                             <Select
-                                value={codeLightTheme}
+                                value={codeThemeLight}
                                 onValueChange={(value) => handleSetCodeTheme(value, false)}
                             >
                                 <SelectTrigger>
@@ -166,7 +171,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         <div className="flex flex-col gap-2">
                             <Label>Dark Mode Code Theme</Label>
                             <Select
-                                value={codeDarkTheme}
+                                value={codeThemeDark}
                                 onValueChange={(value) => handleSetCodeTheme(value, true)}
                             >
                                 <SelectTrigger>

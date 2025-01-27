@@ -19,24 +19,29 @@ import {
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import { useUpdateActiveProjectTab, useUpdateSettings } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
+import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useProjectTabField } from '@/websocket-state/hooks/project-tab/project-tab-hooks'
+import { useSettingsField } from '@/websocket-state/hooks/settings/settings-hooks'
 
 
 export function ProjectSettingsDialog() {
-    const { updateActiveProjectTab: updateActiveTab, activeProjectTabState: activeTabState } = useGlobalStateHelpers()
-    const { state, updateSettings } = useGlobalStateHelpers()
-    const settings = state?.settings
-    const contextLimit = activeTabState?.contextLimit || 128000
-    const resolveImports = typeof activeTabState?.resolveImports === 'boolean' ? activeTabState?.resolveImports : false
-    const preferredEditor = activeTabState?.preferredEditor || 'vscode'
-    const projectId = activeTabState?.selectedProjectId
-    const isProjectSummarizationEnabled = projectId ? settings.summarizationEnabledProjectIds.includes(projectId) : false
+    const updateActiveProjectTab = useUpdateActiveProjectTab()
+    const { id: activeTabId } = useActiveProjectTab()
+    const { data: contextLimit } = useProjectTabField(activeTabId ?? '', 'contextLimit')
+    const { data: summarizationEnabledProjectIds } = useSettingsField('summarizationEnabledProjectIds')
+    const { data: resolveImports } = useProjectTabField(activeTabId ?? '', 'resolveImports')
+    const { data: preferredEditor } = useProjectTabField(activeTabId ?? '', 'preferredEditor')
+    const { data: projectId } = useProjectTabField(activeTabId ?? '', 'selectedProjectId')
+
+    const isProjectSummarizationEnabled = projectId ? summarizationEnabledProjectIds?.includes(projectId) : false
     const { isFetching: isSyncing, refetch: syncProject } = useSyncProjectInterval(projectId ?? '')
+    const updateSettings = useUpdateSettings()
 
 
     const setContextLimit = (value: number) => {
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             contextLimit: value
         }))
@@ -44,7 +49,7 @@ export function ProjectSettingsDialog() {
 
     const setPreferredEditor = (value: EditorType) => {
         // @ts-ignore
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             preferredEditor: value as EditorType
         }))
@@ -52,7 +57,7 @@ export function ProjectSettingsDialog() {
 
 
     const setResolveImports = (value: boolean) => {
-        updateActiveTab(prev => ({
+        updateActiveProjectTab(prev => ({
             ...prev,
             resolveImports: value
         }))
@@ -162,7 +167,7 @@ export function ProjectSettingsDialog() {
                             />
                             <div className="flex-1">
                                 <Slider
-                                    value={[contextLimit]}
+                                    value={[contextLimit ?? 128000]}
                                     onValueChange={(val) => setContextLimit(val[0])}
                                     min={4000}
                                     max={1000000}

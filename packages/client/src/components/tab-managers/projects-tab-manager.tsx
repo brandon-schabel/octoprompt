@@ -1,10 +1,17 @@
-import { useGlobalStateHelpers } from '../global-state/use-global-state-helpers'
+import {
+  useCreateProjectTab,
+  useSetActiveProjectTab,
+  useUpdateProjectTab,
+  useDeleteProjectTab,
+  useUpdateSettings,
+} from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
+import { useActiveProjectTab, useAllProjectTabs, useSettings } from '@/websocket-state/hooks/selectors/websocket-selectors'
 
 type DialogContentProps = {
   tabId: string;
@@ -25,23 +32,20 @@ type ProjectTab = {
 }
 
 export function ProjectsTabManager() {
-  const {
-    state,
-    isOpen,
-    createProjectTab,
-    setActiveProjectTab,
-    updateProjectTab,
-    deleteProjectTab,
-    updateSettings,
-    activeProjectTabState
-  } = useGlobalStateHelpers()
+  const createProjectTab = useCreateProjectTab()
+  const setActiveProjectTab = useSetActiveProjectTab()
+  const updateProjectTab = useUpdateProjectTab()
+  const deleteProjectTab = useDeleteProjectTab()
+  const updateSettings = useUpdateSettings()
+  const { tabData: activeProjectTabState, id: activeTabId } = useActiveProjectTab()
+  const settings = useSettings()
+
   const projectId = activeProjectTabState?.selectedProjectId
 
-  const tabs = state?.projectTabs ?? {}
-  const activeTabId = state?.projectActiveTabId ?? null
+  const tabs = useAllProjectTabs()
 
-  const tabOrder = state?.settings.projectTabIdOrder
-    ? state.settings.projectTabIdOrder
+  const tabOrder = settings?.projectTabIdOrder
+    ? settings.projectTabIdOrder
     : Object.keys(tabs)
 
   // When user reorders the tabs, store that array in global state:
@@ -153,8 +157,7 @@ export function ProjectsTabManager() {
     <GenericTabManager<ProjectTab>
       // @ts-ignore
       tabs={tabs}
-      activeTabId={activeTabId}
-      isReady={isOpen}
+      activeTabId={activeTabId ?? null}
       onCreateTab={() => createProjectTab({ projectId: projectId ?? '' })}
       onSetActiveTab={setActiveProjectTab}
       onRenameTab={(tabId, newName) => updateProjectTab(tabId, { displayName: newName })}

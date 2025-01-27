@@ -3,11 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TicketDialog } from "../components/tickets/ticket-dialog";
 import { Button } from "../components/ui/button";
 import { Plus } from "lucide-react";
-import { useGlobalStateHelpers } from "../components/global-state/use-global-state-helpers";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
+import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -20,9 +20,8 @@ function TicketsPage() {
     // what TicketListPanel provides via onSelectTicket.
     const [selectedTicket, setSelectedTicket] = React.useState<TicketWithTasks | null>(null);
 
-    // Get active project ID from global state
-    const { state } = useGlobalStateHelpers();
-    const projectId = state.projectTabs[state.projectActiveTabId || ""]?.selectedProjectId ?? null;
+    const { tabData: projectTabState, id: projectActiveTabId } = useActiveProjectTab()
+    const projectId = projectTabState?.selectedProjectId ?? null;
 
     const {
         data: projectData,
@@ -74,7 +73,7 @@ function TicketsPage() {
             {/* Panel for listing/filtering tickets; returns TicketWithTasks to onSelectTicket */}
             <div className="flex-1">
                 <TicketListPanel
-                    projectTabId={state.projectActiveTabId || "defaultTab"}
+                    projectTabId={projectActiveTabId || "defaultTab"}
                     onSelectTicket={handleSelectTicket}
                 />
             </div>

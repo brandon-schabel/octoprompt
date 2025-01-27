@@ -4,189 +4,197 @@ import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { ScrollArea } from "../ui/scroll-area";
 import { Switch } from "../ui/switch";
-import { toast } from "sonner";
-import {
-    useDeleteMessage,
-    useForkChatFromMessage,
-} from "@/hooks/api/use-chat-ai-api";
-import { useChatControl } from "./hooks/use-chat-state";
-import {
-    Popover,
-    PopoverTrigger,
-    PopoverContent,
-} from "@/components/ui/popover";
-
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useGlobalStateHelpers } from "../global-state/use-global-state-helpers";
+import { ChatMessage } from "shared/schema";
+import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-ai-api";
+import { useUpdateActiveChatTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import { toast } from "sonner";
 
-export function ChatMessages({
-    chatControl,
-}: {
-    chatControl: ReturnType<typeof useChatControl>;
-}) {
-    const { state } = useGlobalStateHelpers();
-    const settings = state?.settings;
-    const isDarkMode = settings?.theme === "dark";
-    const selectedTheme = isDarkMode
-        ? settings?.codeThemeDark
-        : settings?.codeThemeLight;
+interface ChatMessagesProps {
+    messages: ChatMessage[];          // Already merged local + server messages
+    isFetching: boolean;
+    excludedMessageIds: string[];     // For marking "excluded" messages
+}
 
-    // Provide a fallback style if selectedTheme is not found
-    // or pass it directly if you know it always exists in `themes`.
-    const themeStyle = selectedTheme;
 
+export function ChatMessages(props: ChatMessagesProps) {
     const {
         messages,
-        chatId,
-        refetchMessages,
-        activeChatTabState,
-        updateActiveChatTab,
-    } = chatControl;
+        isFetching,
+        excludedMessageIds = [],
+    } = props;
 
-    const { copyToClipboard } = useCopyClipboard()
-
+    const { copyToClipboard } = useCopyClipboard();
+    const excludedSet = new Set(excludedMessageIds);
+    const updateActiveChatTab = useUpdateActiveChatTab();
     const deleteMessageMutation = useDeleteMessage();
-    const forkChatFromMessageMutation = useForkChatFromMessage();
-    const excludedIds = new Set(activeChatTabState?.excludedMessageIds ?? []);
+    const forkChatMutation = useForkChatFromMessage();
 
-    const toggleMessageExclusion = (messageId: string) => {
-        if (!activeChatTabState) return;
-        const newExcluded = new Set(activeChatTabState.excludedMessageIds ?? []);
-        if (newExcluded.has(messageId)) {
-            newExcluded.delete(messageId);
-            toast.success("Message included in context");
+    const handleToggleExclude = (messageId: string) => {
+        const newExcludedMessageIds = new Set(excludedSet);
+        if (newExcludedMessageIds.has(messageId)) {
+            newExcludedMessageIds.delete(messageId);
         } else {
-            newExcluded.add(messageId);
-            toast.success("Message excluded from context");
+            newExcludedMessageIds.add(messageId);
         }
-        updateActiveChatTab({ excludedMessageIds: Array.from(newExcluded) });
+
+        updateActiveChatTab({
+            excludedMessageIds: Array.from(newExcludedMessageIds),
+        });
     };
 
     const handleForkFromMessage = async (messageId: string) => {
-        if (!chatId) return;
         try {
-            const excludedMessageIds =
-                activeChatTabState?.excludedMessageIds ?? [];
-            const newChat = await forkChatFromMessageMutation.mutateAsync({
-                chatId,
+            const result = await forkChatMutation.mutateAsync({
+                chatId: messages[0]?.chatId ?? '', // Get chatId from first message
                 messageId,
                 excludedMessageIds,
             });
             updateActiveChatTab({
-                activeChatId: newChat.id,
+                activeChatId: result.id,
                 excludedMessageIds: [],
             });
-            refetchMessages();
             toast.success("Chat forked successfully");
         } catch (error) {
-            console.error("Error forking chat from message:", error);
+            console.error('Error forking chat:', error);
             toast.error("Failed to fork chat");
         }
     };
 
     const handleDeleteMessage = async (messageId: string) => {
-        if (!chatId) return;
-        if (window.confirm("Are you sure you want to delete this message?")) {
-            try {
-                await deleteMessageMutation.mutateAsync(messageId);
-                refetchMessages();
-                toast.success("Message deleted successfully");
-            } catch (error) {
-                console.error("Error deleting message:", error);
-                toast.error("Failed to delete message");
-            }
+        if (!messageId) {
+            toast.error("Invalid message ID");
+            return;
+        }
+
+        const message = messages.find(m => m.id === messageId);
+        if (!message) {
+            toast.error("Message not found");
+            return;
+        }
+
+        // Show confirmation dialog
+        const confirmDelete = window.confirm("Are you sure you want to delete this message?");
+        if (!confirmDelete) {
+            return;
+        }
+
+        try {
+            await deleteMessageMutation.mutateAsync(messageId);
+            // The query invalidation in useDeleteMessage will trigger a refetch
+            toast.success("Message deleted successfully");
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            toast.error("Failed to delete message");
         }
     };
 
-    return (
-        <ScrollArea className="flex-1 h-full overflow-y-auto p-2" id="chat-messages">
-            <div className="py-4">
-                {messages.length === 0 ? (
-                    <div className="h-full flex items-center justify-center">
-                        <Card className="p-6 max-w-md text-center">
-                            <h3 className="text-lg font-semibold mb-2">
-                                No messages yet
-                            </h3>
-                            <p className="text-muted-foreground">
-                                Start the conversation by typing your message below.
-                                I&apos;m here to help!
-                            </p>
-                        </Card>
-                    </div>
-                ) : (
-                    messages.map((message, i) => (
-                        <div
-                            key={`${message.id}-${i}`}
-                            className={`relative mb-6 flex w-full ${excludedIds.has(message.id)
-                                ? "opacity-50"
-                                : ""
-                                } ${message.role === "user"
-                                    ? "justify-end"
-                                    : "justify-start"
-                                }`}
-                        >
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Card
-                                        className="p-2 max-w-[80vw] w-fit break-words cursor-pointer bg-secondary"
-                                    >
-                                        <MarkdownRenderer
-                                            content={message.content}
-                                            isDarkMode={isDarkMode}
-                                            themeStyle={themeStyle}
-                                            copyToClipboard={copyToClipboard}
-                                        />
-                                    </Card>
-                                </PopoverTrigger>
+    if (isFetching && messages.length === 0) {
+        return (
+            <div className="flex-1 overflow-y-auto p-4">
+                <div className="text-sm text-muted-foreground">Loading messages...</div>
+            </div>
+        );
+    }
 
-                                <PopoverContent
-                                    align={message.role === "user" ? "end" : "start"}
-                                    side="bottom"
-                                >
-                                    <div className="flex gap-1 items-center">
+    if (!messages.length) {
+        return (
+            <div className="flex-1 overflow-y-auto p-4">
+                <div className="h-full flex items-center justify-center">
+                    <Card className="p-6 max-w-md text-center">
+                        <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
+                        <p className="text-muted-foreground">
+                            Start the conversation by typing your message below.
+                        </p>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <ScrollArea className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
+                {messages.map((msg, i) => {
+                    const isUser = msg.role === "user";
+                    const excluded = excludedSet.has(msg.id);
+                    return (
+                        <div
+                            key={`${msg.id}-${i}`}
+                            className={`relative rounded-lg p-3 ${isUser ? "bg-muted" : "bg-muted/50"
+                                } ${excluded ? "opacity-50" : ""}`}
+                        >
+                            {/* Heading row: "You" vs. "Assistant" */}
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="font-semibold">
+                                    {isUser ? "You" : "Assistant"}
+                                </div>
+
+                                {/* Popover with copy/fork/delete/exclude */}
+                                <Popover>
+                                    <PopoverTrigger asChild>
                                         <Button
                                             variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6"
-                                            onClick={() => copyToClipboard(message.content)}
-                                            title="Copy message"
+                                            size="sm"
+                                            className="text-xs opacity-70 hover:opacity-100"
                                         >
-                                            <Copy className="h-3 w-3" />
+                                            Options
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6"
-                                            onClick={() => handleForkFromMessage(message.id)}
-                                            title="Fork chat from here"
-                                        >
-                                            <GitFork className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6"
-                                            onClick={() => handleDeleteMessage(message.id)}
-                                            title="Delete message"
-                                        >
-                                            <Trash className="h-3 w-3" />
-                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent align="end" side="bottom">
                                         <div className="flex items-center gap-2">
-                                            <Switch
-                                                checked={excludedIds.has(message.id)}
-                                                onCheckedChange={() => toggleMessageExclusion(message.id)}
-                                            />
-                                            <span className="text-xs text-muted-foreground">
-                                                Exclude
-                                            </span>
+                                            {/* Copy */}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => copyToClipboard(msg.content)}
+                                                title="Copy message"
+                                            >
+                                                <Copy className="h-3 w-3" />
+                                            </Button>
+                                            {/* Fork */}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleForkFromMessage(msg.id)}
+                                                title="Fork from here"
+                                            >
+                                                <GitFork className="h-3 w-3" />
+                                            </Button>
+                                            {/* Delete */}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleDeleteMessage(msg.id)}
+                                                title="Delete message"
+                                            >
+                                                <Trash className="h-3 w-3" />
+                                            </Button>
+                                            {/* Exclude switch */}
+                                            <div className="flex items-center gap-1">
+                                                <Switch
+                                                    checked={excluded}
+                                                    onCheckedChange={() => handleToggleExclude(msg.id)}
+                                                />
+                                                <span className="text-xs text-muted-foreground">
+                                                    Exclude
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+
+                            {/* Message content - using markdown renderer */}
+                            <MarkdownRenderer content={msg.content} />
                         </div>
-                    ))
-                )}
+                    );
+                })}
             </div>
         </ScrollArea>
     );
