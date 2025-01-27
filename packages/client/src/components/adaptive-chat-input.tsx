@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useWhisperTranscription } from "@/hooks/api/use-whisper-transcription"
 import { useHotkeys } from "react-hotkeys-hook"
+import { useDebounce } from "@/hooks/utility-hooks/use-debounce"
 import {
     Dialog,
     DialogContent,
@@ -39,6 +40,7 @@ export function AdaptiveChatInput({
     disabled = false,
     preserveFormatting = true,
 }: AdaptiveChatInputProps) {
+    const [localValue, setLocalValue] = useState(value)
     const [isExpanded, setIsExpanded] = useState(false)
     const [expandedValue, setExpandedValue] = useState(value)
     const [isMultiline, setIsMultiline] = useState(false)
@@ -54,6 +56,8 @@ export function AdaptiveChatInput({
         startRecording,
         stopRecording,
     } = useWhisperTranscription({ debug: false })
+
+    const debouncedOnChange = useDebounce(onChange, 300)
 
     useHotkeys('v', (evt) => {
         if (evt.type === 'keydown' && !isRecording) {
@@ -73,6 +77,17 @@ export function AdaptiveChatInput({
     const lastTranscriptRef = useRef<string | null>(null)
 
     useEffect(() => {
+        if (value !== localValue) {
+            setLocalValue(value)
+        }
+    }, [value])
+
+    const handleValueChange = useCallback((newValue: string) => {
+        setLocalValue(newValue)
+        debouncedOnChange(newValue)
+    }, [debouncedOnChange])
+
+    useEffect(() => {
         if (!transcript ||
             isHandlingTranscript ||
             transcript === lastTranscriptRef.current) {
@@ -83,7 +98,7 @@ export function AdaptiveChatInput({
         lastTranscriptRef.current = transcript
 
         try {
-            const currentValue = isExpanded ? expandedValue : latestValueRef.current
+            const currentValue = isExpanded ? expandedValue : localValue
             const element = isMultiline ? textareaRef.current : inputRef.current
 
             const start = element?.selectionStart ?? currentValue.length
@@ -94,7 +109,7 @@ export function AdaptiveChatInput({
             if (isExpanded) {
                 setExpandedValue(newValue)
             }
-            onChange(newValue)
+            handleValueChange(newValue)
 
             const newPosition = start + transcript.length
             requestAnimationFrame(() => {
@@ -108,7 +123,7 @@ export function AdaptiveChatInput({
                 setIsHandlingTranscript(false)
             }, 100)
         }
-    }, [transcript, isExpanded, isMultiline, onChange, expandedValue])
+    }, [transcript, isExpanded, isMultiline, handleValueChange, expandedValue, localValue])
 
     useEffect(() => {
         const shouldBeMultiline = value.length > 100 || value.includes('\n')
@@ -120,21 +135,17 @@ export function AdaptiveChatInput({
                 return
             }
 
-            // Prevent the default paste so we can handle the text ourselves:
             e.preventDefault()
 
             const pasteText = e.clipboardData?.getData("text/plain") ?? ""
             const target = e.target as HTMLTextAreaElement | HTMLInputElement
             let newValue = target.value
 
-            // Calculate the selection range manually:
             const start = target.selectionStart ?? newValue.length
             const end = target.selectionEnd ?? newValue.length
 
-            // Insert the pasted text at the current cursor/selection range:
             newValue = newValue.slice(0, start) + pasteText + newValue.slice(end)
 
-            // If you want to do light reformatting (and it doesn't contain code blocks):
             const html = e.clipboardData?.getData("text/html") ?? ""
             if (!html.includes("```")) {
                 newValue = newValue
@@ -144,20 +155,18 @@ export function AdaptiveChatInput({
                     .replace(/\n{3,}/g, "\n\n")
             }
 
-            onChange(newValue)
+            handleValueChange(newValue)
 
-            // If newValue introduces multi-line content, switch to multiline
             if (newValue.includes("\n")) {
                 setIsMultiline(true)
             }
 
-            // Restore the cursor/selection position if needed
             requestAnimationFrame(() => {
                 target.setSelectionRange(start + pasteText.length, start + pasteText.length)
                 target.focus()
             })
         },
-        [onChange, preserveFormatting]
+        [handleValueChange, preserveFormatting]
     )
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -173,7 +182,7 @@ export function AdaptiveChatInput({
 
     const handleDialogClose = (open: boolean) => {
         if (!open) {
-            onChange(expandedValue)
+            handleValueChange(expandedValue)
         }
         setIsExpanded(open)
     }
@@ -227,9 +236,9 @@ export function AdaptiveChatInput({
     }, [isMultiline, handleSelectionChange])
 
     const baseProps = {
-        value,
+        value: localValue,
         onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            onChange(e.target.value)
+            handleValueChange(e.target.value)
         },
         onKeyDown: handleKeyDown,
         onPaste: handlePaste,

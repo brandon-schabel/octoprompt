@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState, memo, RefObject } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState, memo, RefObject, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { Link, useMatches } from '@tanstack/react-router'
@@ -32,6 +32,7 @@ import {
     useProjectTabField,
     useProjectTabFieldUpdater,
 } from '@/websocket-state/project-tab-hooks'
+import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 
 /* -------------------------------------------------------------------------
    Types
@@ -353,7 +354,7 @@ type FileExplorerProps = {
     showAutocomplete: boolean
     setShowAutocomplete: React.Dispatch<React.SetStateAction<boolean>>
 
-    // The following remain “global” if desired:
+    // The following remain "global" if desired:
     searchByContent: boolean
     setSearchByContent: (valOrFn: boolean | ((prev: boolean) => boolean)) => void
     resolveImports: boolean
@@ -394,10 +395,31 @@ const FileExplorer = memo(function FileExplorer({
 }: FileExplorerProps) {
     const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId)
 
-    // Filtered files based on local "fileSearch" and "searchByContent"
+    // Add local state for immediate UI updates
+    const [localFileSearch, setLocalFileSearch] = useState(fileSearch)
+
+    // Debounce the update to the parent state
+    const debouncedSetFileSearch = useDebounce(setFileSearch, 300)
+
+    // Keep local and parent states in sync
+    useEffect(() => {
+        if (fileSearch !== localFileSearch) {
+            setLocalFileSearch(fileSearch)
+        }
+    }, [fileSearch])
+
+    // Update handler that updates local state immediately and debounces parent update
+    const handleSearchChange = useCallback((value: string) => {
+        setLocalFileSearch(value)
+        debouncedSetFileSearch(value)
+        setShowAutocomplete(!!value.trim())
+        setAutocompleteIndex(-1)
+    }, [debouncedSetFileSearch])
+
+    // Update the filtered files to use localFileSearch instead of fileSearch
     const filteredFiles = useMemo(() => {
         if (!fileData?.files) return []
-        const trimmed = fileSearch.trim()
+        const trimmed = localFileSearch.trim()
         if (!trimmed) return fileData.files
 
         const lowerSearch = trimmed.toLowerCase()
@@ -410,7 +432,7 @@ const FileExplorer = memo(function FileExplorer({
         } else {
             return fileData.files.filter((f) => f.path.toLowerCase().includes(lowerSearch))
         }
-    }, [fileData?.files, fileSearch, searchByContent])
+    }, [fileData?.files, localFileSearch, searchByContent])
 
     const fileTree = useMemo(() => {
         if (!filteredFiles.length) return null
@@ -486,21 +508,17 @@ const FileExplorer = memo(function FileExplorer({
                             ref={searchInputRef}
                             placeholder={`Search file ${searchByContent ? 'content' : 'name'
                                 }... (${formatShortcut('mod+f')})`}
-                            value={fileSearch}
-                            onChange={(e) => {
-                                setFileSearch(e.target.value)
-                                setShowAutocomplete(!!e.target.value.trim())
-                                setAutocompleteIndex(-1)
-                            }}
+                            value={localFileSearch}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             className="pr-8 w-full"
-                            onFocus={() => setShowAutocomplete(!!fileSearch.trim())}
+                            onFocus={() => setShowAutocomplete(!!localFileSearch.trim())}
                             onKeyDown={(e) => {
                                 if (e.key === 'Escape') {
                                     searchInputRef.current?.blur()
                                     setShowAutocomplete(false)
                                 } else if (e.key === 'ArrowDown') {
                                     e.preventDefault()
-                                    if (showAutocomplete && fileSearch.trim()) {
+                                    if (showAutocomplete && localFileSearch.trim()) {
                                         setAutocompleteIndex((prev) =>
                                             Math.min(suggestions.length - 1, prev + 1)
                                         )
@@ -509,7 +527,7 @@ const FileExplorer = memo(function FileExplorer({
                                     }
                                 } else if (e.key === 'ArrowUp') {
                                     e.preventDefault()
-                                    if (showAutocomplete && fileSearch.trim()) {
+                                    if (showAutocomplete && localFileSearch.trim()) {
                                         setAutocompleteIndex((prev) => Math.max(0, prev - 1))
                                     }
                                 } else if (e.key === 'ArrowRight') {
@@ -533,14 +551,14 @@ const FileExplorer = memo(function FileExplorer({
                         />
                     </div>
 
-                    {fileSearch && (
+                    {localFileSearch && (
                         <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-accent hover:text-accent-foreground"
                             onClick={() => {
-                                setFileSearch('')
+                                handleSearchChange('')
                                 setShowAutocomplete(false)
                                 setAutocompleteIndex(-1)
                                 searchInputRef.current?.focus()
@@ -584,7 +602,7 @@ const FileExplorer = memo(function FileExplorer({
                     </div>
                 </InfoTooltip>
 
-                {/* Mobile-only button: show “Selected Files” in a drawer */}
+                {/* Mobile-only button: show "Selected Files" in a drawer */}
                 <div className="flex lg:hidden items-center justify-between">
                     <MobileSelectedFilesDrawerButton
                         selectedFiles={selectedFiles}
@@ -594,7 +612,7 @@ const FileExplorer = memo(function FileExplorer({
                     />
                 </div>
 
-                {showAutocomplete && fileSearch.trim() && suggestions.length > 0 && (
+                {showAutocomplete && localFileSearch.trim() && suggestions.length > 0 && (
                     <ul className="absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto">
                         <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border">
                             Press Enter
@@ -638,16 +656,16 @@ const FileExplorer = memo(function FileExplorer({
             ) : !fileData?.files?.length ? (
                 /* If the project is empty: */
                 <EmptyProjectScreen
-                    fileSearch={fileSearch}
-                    setFileSearch={setFileSearch}
+                    fileSearch={localFileSearch}
+                    setFileSearch={setLocalFileSearch}
                     setSearchByContent={setSearchByContent}
                 />
             ) : !filteredFiles.length ? (
                 /* No matches for the current search */
                 <NoResultsScreen
-                    fileSearch={fileSearch}
+                    fileSearch={localFileSearch}
                     searchByContent={searchByContent}
-                    setFileSearch={setFileSearch}
+                    setFileSearch={setLocalFileSearch}
                     setSearchByContent={setSearchByContent}
                 />
             ) : (
