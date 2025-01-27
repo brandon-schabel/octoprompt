@@ -123,7 +123,7 @@ function RootComponent() {
             />
           )} */}
         <ComponentErrorBoundary componentName="Development Tools">
-          <ReactQueryDevtools />
+          {/* <ReactQueryDevtools /> */}
         </ComponentErrorBoundary>
       </div>
     </ErrorBoundary>

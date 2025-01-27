@@ -3,6 +3,7 @@ import { useApi } from '../use-api';
 import { CreateChatBody, Chat, ChatMessage, APIProviders } from 'shared'
 import { CreateMessageBodyGeneric } from 'shared/src/validation/chat-api-validation';
 import { commonErrorHandler } from './common-mutation-error-handler';
+import { CreateChatOptions } from '@/components/chat/chat-dialog';
 
 
 interface UnifiedModel {
@@ -149,12 +150,11 @@ export const useCreateChat = () => {
     const { api } = useApi();
     const queryClient = useQueryClient();
 
-    return useMutation<Chat, Error, CreateChatBody>({
-        mutationFn: async (input: CreateChatBody) => {
+    return useMutation<Chat, Error, CreateChatOptions>({
+        mutationFn: async (input: CreateChatOptions) => {
             const response = await api.request('/api/ai/chats', {
                 method: 'POST',
                 body: input,
-
             });
 
             if (!response.ok) {

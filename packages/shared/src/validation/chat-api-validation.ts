@@ -8,7 +8,9 @@ export const chatApiValidation = {
     },
     createChat: {
         body: z.object({
-            title: z.string().min(1)
+            title: z.string().min(1),
+            copyExisting: z.boolean().optional(),
+            currentChatId: z.string().optional()
         })
     },
     getMessages: {

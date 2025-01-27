@@ -36,7 +36,7 @@ export function useSelectedFiles() {
 
     // Initialize new state if we have selectedFiles
     if (activeProjectTabState?.selectedFiles !== null) {
-      const newState = {
+      const newState: UndoRedoState = {
         history: [activeProjectTabState?.selectedFiles || []],
         index: 0,
       }
@@ -52,12 +52,15 @@ export function useSelectedFiles() {
     }
   }, [undoRedoState, activeProjectTabId])
 
-  // Cleanup cache when component unmounts
+  // IMPORTANT: Removing this means we do NOT lose our entire history every time the component unmounts.
+  // If you need partial cleanup, handle it more carefully instead of clearing everything.
+  /*
   useEffect(() => {
     return () => {
       historyCache.clear()
     }
   }, [])
+  */
 
   // The actual 'selectedFiles' is whatever is at the current index, or empty array if not initialized
   const selectedFiles = useMemo(() => {
@@ -71,7 +74,7 @@ export function useSelectedFiles() {
   const commitSelectionChange = useCallback((newSelected: string[]) => {
     if (!isInitialized) return
 
-    // Update global store's selection (no more history indexing there)
+    // Update global store's selection
     updateActiveProjectTab((prevTab) => ({
       ...prevTab,
       selectedFiles: newSelected,
@@ -93,16 +96,15 @@ export function useSelectedFiles() {
     })
   }, [isInitialized, updateActiveProjectTab])
 
-  // Undo: just move 'index' back one and update global selection
+  // Undo: move 'index' back one and update global selection
   const undo = useCallback(() => {
     if (!undoRedoState) return
 
     setUndoRedoState((state): UndoRedoState => {
       if (!state) return undoRedoState
       const { history, index } = state
-      if (index <= 0) {
-        return state
-      }
+      if (index <= 0) return state
+
       const newIndex = index - 1
       updateActiveProjectTab((prevTab) => ({
         ...prevTab,
@@ -112,16 +114,15 @@ export function useSelectedFiles() {
     })
   }, [undoRedoState, updateActiveProjectTab])
 
-  // Redo: just move 'index' forward one and update global selection
+  // Redo: move 'index' forward one and update global selection
   const redo = useCallback(() => {
     if (!undoRedoState) return
 
     setUndoRedoState((state): UndoRedoState => {
       if (!state) return undoRedoState
       const { history, index } = state
-      if (index >= history.length - 1) {
-        return state
-      }
+      if (index >= history.length - 1) return state
+
       const newIndex = index + 1
       updateActiveProjectTab((prevTab) => ({
         ...prevTab,
@@ -131,7 +132,7 @@ export function useSelectedFiles() {
     })
   }, [undoRedoState, updateActiveProjectTab])
 
-  // Basic selection helpers
+  // Selection helpers
   const toggleFile = useCallback((fileId: string) => {
     if (!isInitialized) return
     const newSet = new Set(selectedFiles)
@@ -181,6 +182,7 @@ export function useSelectedFiles() {
   const canUndo = useMemo(() => {
     return undoRedoState !== null && undoRedoState.index > 0
   }, [undoRedoState])
+
   const canRedo = useMemo(() => {
     return undoRedoState !== null && undoRedoState.index < undoRedoState.history.length - 1
   }, [undoRedoState])

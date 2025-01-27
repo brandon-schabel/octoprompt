@@ -9,11 +9,36 @@ import {
 } from "shared";
 import { db } from "shared/database";
 
+type CreateChatOptions = {
+    copyExisting?: boolean;
+    currentChatId?: string;
+};
+
 export class ChatService {
     /** Creates a new chat session */
-    async createChat(title: string): Promise<Chat> {
+    async createChat(title: string, options?: CreateChatOptions): Promise<Chat> {
         const [chat] = await db.insert(chats).values({ title }).returning();
         if (!chat) throw new Error("Failed to create chat");
+
+        // Only copy messages if explicitly requested and we have a source chat
+        if (options?.copyExisting && options?.currentChatId) {
+            const sourceMessages = await db
+                .select()
+                .from(chatMessages)
+                .where(eq(chatMessages.chatId, options.currentChatId))
+                .orderBy(chatMessages.createdAt)
+                .all();
+
+            if (sourceMessages.length > 0) {
+                const newMessages = sourceMessages.map((m: ChatMessage) => ({
+                    chatId: chat.id,
+                    role: m.role,
+                    content: m.content,
+                }));
+                await db.insert(chatMessages).values(newMessages).run();
+            }
+        }
+
         return chat;
     }
 

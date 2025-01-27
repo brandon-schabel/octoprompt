@@ -44,6 +44,15 @@ function ChatPage() {
   // The id of the linked project tab (if any)
   const linkedProjectTabId = currentChat?.linkedProjectTabId || ''
 
+  // Add debug wrapper for send message
+  const handleSendWithDebug = async () => {
+    try {
+      await handleSendMessage()
+    } catch (error) {
+      console.error('Error sending message:', error)
+    }
+  }
+
   // -----------------------------------------------
   // EMPTY STATE: brand new user with no chat tabs
   // -----------------------------------------------
@@ -110,14 +119,14 @@ function ChatPage() {
             <AdaptiveChatInput
               value={newMessage}
               onChange={(val) => updateActiveChatTab({ input: val })}
-              onSubmit={handleSendMessage}
+              onSubmit={handleSendWithDebug}
               placeholder="Type your message..."
               disabled={!currentChat}
               className="w-full"
               preserveFormatting={true}
             />
             <Button
-              onClick={handleSendMessage}
+              onClick={handleSendWithDebug}
               disabled={!currentChat}
             >
               Send
@@ -153,14 +162,14 @@ function ChatPage() {
               <AdaptiveChatInput
                 value={newMessage}
                 onChange={(val) => updateActiveChatTab({ input: val })}
-                onSubmit={handleSendMessage}
+                onSubmit={handleSendWithDebug}
                 placeholder="Type your message..."
                 disabled={!currentChat}
                 className="w-full"
                 preserveFormatting={true}
               />
               <Button
-                onClick={handleSendMessage}
+                onClick={handleSendWithDebug}
                 disabled={!currentChat}
               >
                 Send

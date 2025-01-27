@@ -34,7 +34,10 @@ router.post(`${AI_BASE_PATH}/chat`, {
 router.post(`${AI_BASE_PATH}/chats`, {
     validation: chatApiValidation.createChat,
 }, async (_, { body }) => {
-    const chat = await chatService.createChat(body.title);
+    const chat = await chatService.createChat(body.title, {
+        copyExisting: body.copyExisting,
+        currentChatId: body.currentChatId
+    });
     return json({ data: chat });
 });
 

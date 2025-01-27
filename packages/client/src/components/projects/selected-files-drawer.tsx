@@ -61,12 +61,11 @@ export function SelectedFilesDrawer({
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader>
           <DrawerTitle className="flex justify-between items-center">
-            <span><Badge variant="secondary">{selectedFiles.length}</Badge> Selected Files </span>
+            <span>
+              <Badge variant="secondary">{selectedFiles.length}</Badge> Selected Files
+            </span>
 
             <FormatTokenCount tokenContent={totalTokens} />
-            {/* <span className="text-sm text-muted-foreground">
-              ~{totalTokens} tokens
-            </span> */}
           </DrawerTitle>
         </DrawerHeader>
 
@@ -82,4 +81,4 @@ export function SelectedFilesDrawer({
       </DrawerContent>
     </Drawer>
   )
-} 
+}

@@ -1,5 +1,3 @@
-/* packages/client/src/components/chat/hooks/use-chat-state.tsx */
-
 import { useState } from 'react';
 import {
     useCreateChat,
@@ -18,8 +16,8 @@ type TempChatMessage = ChatMessage & { tempId?: string };
 export function useChatControl() {
     // 1) Determine which chat tab is active
     const { data: chatActiveTabId } = useQuery({
-        queryKey: ["globalState"],
-        select: (gs: any) => gs?.chatActiveTabId ?? null,
+        queryKey: ["globalState", "chatActiveTabId"],
+        select: (gs: string | null) => gs ?? null,
     });
 
     // 2) Grab fields from that tab: input, excludedMessageIds, etc.
@@ -83,7 +81,7 @@ export function useChatControl() {
     /** ========== CREATE CHAT ========== */
     async function handleCreateChat(chatTitle: string) {
         try {
-            const newChat = await createChatMutation.mutateAsync({ title: chatTitle });
+            const newChat = await createChatMutation.mutateAsync({ title: chatTitle, copyExisting: false, currentChatId: chatId });
             return newChat;
         } catch (error) {
             console.error('[handleCreateChat] Error:', error);
@@ -94,7 +92,11 @@ export function useChatControl() {
     /** ========== SEND MESSAGE ========== */
     async function handleSendMessage() {
         const userInput = input.trim();
-        if (!userInput || !chatActiveTabId) return;
+
+        if (!userInput || !chatActiveTabId) {
+            console.log('[handleSendMessage] Aborting - no input or no active tab');
+            return;
+        }
 
         // Clear input in global state
         setInput("");
@@ -102,6 +104,7 @@ export function useChatControl() {
         // Make temp IDs
         const userTempId = `temp-user-${Date.now()}`;
         const assistantTempId = `temp-assistant-${Date.now()}`;
+
 
         const userMessage: TempChatMessage = {
             id: userTempId,
@@ -121,9 +124,12 @@ export function useChatControl() {
             tempId: assistantTempId,
         };
 
+        console.log('[handleSendMessage] Created messages:', { userMessage, assistantMessage });
+
         setPendingMessages(prev => [...prev, userMessage, assistantMessage]);
 
         try {
+
             const stream = await sendMessageMutation.mutateAsync({
                 message: userInput,
                 chatId,
@@ -132,6 +138,7 @@ export function useChatControl() {
                 options: { model },
                 excludedMessageIds,
             });
+
 
             const reader = stream.getReader();
             let assistantContent = '';
@@ -161,8 +168,7 @@ export function useChatControl() {
                     m.id === assistantTempId
                         ? {
                             ...m,
-                            content: `Error: ${error instanceof Error ? error.message : 'Failed to get response.'
-                                }`
+                            content: `Error: ${error instanceof Error ? error.message : 'Failed to get response.'}`
                         }
                         : m
                 )

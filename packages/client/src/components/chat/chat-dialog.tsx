@@ -12,18 +12,29 @@ type ChatDialogProps = {
     onOpenChange: (open: boolean) => void
 }
 
+export type CreateChatOptions = {
+    title: string;
+    copyExisting: boolean;
+    currentChatId?: string;
+}
+
 export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
     const [title, setTitle] = useState("")
     const [copyExisting, setCopyExisting] = useState(false)
     const createChatMutation = useCreateChat();
     const updateActiveChatTab = useUpdateActiveChatTab()
+    const [activeChatId, setActiveChatId] = useState<string | undefined>(undefined);
 
     const generateDefaultTitle = () => `Chat ${new Date().toLocaleTimeString()}`;
     async function handleCreateChat(e: React.FormEvent<HTMLButtonElement>) {
         e.preventDefault();
         const chatTitle = title.trim() || generateDefaultTitle();
         try {
-            const newChat = await createChatMutation.mutateAsync({ title: chatTitle });
+            const newChat = await createChatMutation.mutateAsync({ 
+                title: chatTitle,
+                copyExisting,
+                currentChatId: copyExisting ? activeChatId : undefined 
+            });
             setTitle('');
             updateActiveChatTab({ activeChatId: newChat.id });
             onOpenChange(false);

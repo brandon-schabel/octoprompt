@@ -11,9 +11,9 @@ import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-cont
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useLinkChatTabToProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
-import { useQuery } from "@tanstack/react-query";
 import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
 import { useGlobalState } from "@/websocket-state/hooks/selectors/use-global-state";
+import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
 
 interface ChatHeaderProps {
     onForkChat: () => void;
@@ -28,12 +28,7 @@ export function ChatHeader({
 }: ChatHeaderProps) {
     const [showLinkSettings, setShowLinkSettings] = useState(false);
     const [projectSearch, setProjectSearch] = useState("");
-
-    // 1) Grab the active chat tab ID from global state
-    const { data: chatActiveTabId } = useQuery({
-        queryKey: ["globalState"],
-        select: (gs: any) => gs?.chatActiveTabId ?? null,
-    });
+    const { id: chatActiveTabId } = useActiveChatTab()
 
     // 2) From that tab, read single fields
     const { data: activeChatId } = useChatTabField(chatActiveTabId ?? "", "activeChatId");
