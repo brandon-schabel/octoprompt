@@ -5,7 +5,7 @@ import { APIProviders } from "shared";
 export const useChatModelControl = () => {
     // 1) Find the active chat tab ID
     const { data: chatActiveTabId } = useQuery({
-        queryKey: ["globalState"],
+        queryKey: ["globalState", "chatActiveTabId"],
         select: (gs: any) => gs?.chatActiveTabId ?? null,
     });
 

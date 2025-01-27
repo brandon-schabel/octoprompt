@@ -1,83 +1,110 @@
 import { useMemo, useState } from "react";
 import { FolderOpen, Copy, LinkIcon } from "lucide-react";
-import { Link } from "@tanstack/react-router"
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useChatControl } from "./hooks/use-chat-state";
+
+
 import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useLinkChatTabToProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
-import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
+import {
+    useChatTabField,
+    useChatTabFieldUpdater,
+} from "@/websocket-state/chat-tab-hooks";
 import { useGlobalState } from "@/websocket-state/hooks/selectors/use-global-state";
 import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useForkChatHandler, useCreateChatHandler } from "./hooks/chat-hooks";
 
 interface ChatHeaderProps {
-    onForkChat: () => void;
-    chatControl: ReturnType<typeof useChatControl>;
-    modelControl: ReturnType<typeof useChatModelControl>;
+    // Instead of expecting `chatControl`, we can accept relevant IDs directly
+    chatId?: string;
+    excludedMessageIds?: string[];
 }
 
-export function ChatHeader({
-    onForkChat,
-    chatControl,
-    modelControl,
-}: ChatHeaderProps) {
+/**
+ * ChatHeader:
+ * Demonstrates direct usage of hooking into global state fields,
+ * plus new create/fork logic from the splitted hooks.
+ */
+export function ChatHeader({ chatId, excludedMessageIds = [] }: ChatHeaderProps) {
     const [showLinkSettings, setShowLinkSettings] = useState(false);
     const [projectSearch, setProjectSearch] = useState("");
-    const { id: chatActiveTabId } = useActiveChatTab()
 
-    // 2) From that tab, read single fields
-    const { data: activeChatId } = useChatTabField(chatActiveTabId ?? "", "activeChatId");
-    const { data: linkedProjectTabId } = useChatTabField(chatActiveTabId ?? "", "linkedProjectTabId");
-    const { data: excludedMessageIds = [] } =
-        useChatTabField(chatActiveTabId ?? "", "excludedMessageIds");
+    // We see which tab is active from global state:
+    const { id: chatActiveTabId } = useActiveChatTab();
 
-    // For clearing excluded messages, we can call the single-field updater:
+    // For the "excludedMessageIds" field, we also define an updater:
     const { mutate: setExcludedMessageIds } = useChatTabFieldUpdater(
         chatActiveTabId ?? "",
         "excludedMessageIds"
     );
 
+    // We also see if there's a linked project tab
+    const { data: linkedProjectTabId } = useChatTabField(
+        chatActiveTabId ?? "",
+        "linkedProjectTabId"
+    );
+
     // If we also want the chat's displayName or provider/model, we can do so:
-    const { data: displayName } = useChatTabField(chatActiveTabId ?? "", "displayName");
+    const { data: displayName } = useChatTabField(
+        chatActiveTabId ?? "",
+        "displayName"
+    );
 
-    const {
-        data: chats
-    } = useGetChats();
+    // For referencing the actual chat DB row:
+    const { data: chats } = useGetChats();
+    const activeChatData = chats?.data?.find((c) => c.id === chatId);
 
+    // Hook to link project tabs
     const linkChatTabToProjectTab = useLinkChatTabToProjectTab();
 
     // Model logic from the custom hook
+    const modelControl = useChatModelControl();
     const { provider, setProvider, currentModel, setCurrentModel } = modelControl;
 
-    // For referencing the actual chat DB row:
-    const activeChatData = chats?.data?.find(c => c.id === activeChatId);
-
+    // The rest is exactly the same UI logic as before...
     const excludedMessageCount = excludedMessageIds.length;
 
-    // If we have a bunch of project tabs, we might list them for linking:
-    const { data: globalState } = useGlobalState()
+    const { data: globalState } = useGlobalState();
     const projectTabsRecord = globalState?.projectTabs || {};
     const projectTabs = Object.entries(projectTabsRecord);
-    const filteredProjectTabs = useMemo(() => projectTabs.filter(([_, tabState]) =>
-        tabState.displayName?.toLowerCase().includes(projectSearch.toLowerCase()) ||
-        tabState.userPrompt?.toLowerCase().includes(projectSearch.toLowerCase())
-    ), [projectTabs, projectSearch]);
+    const filteredProjectTabs = useMemo(
+        () =>
+            projectTabs.filter(([_, tabState]) =>
+                tabState.displayName
+                    ?.toLowerCase()
+                    .includes(projectSearch.toLowerCase())
+            ),
+        [projectTabs, projectSearch]
+    );
 
-    const { copyToClipboard } = useCopyClipboard()
+    const { copyToClipboard } = useCopyClipboard();
 
-    // We won't do an actual linkedProject fetch if we only have the ID. The logic is similar to chat-project-sidebar:
+    // For demonstration, hooking in the old "fork chat" logic with new splitted hook
+    const { handleForkChat } = useForkChatHandler({
+        chatId: chatId ?? "",
+        excludedMessageIds,
+    });
+
+    // If we also want the create chat logic, we can do:
+    const { handleCreateChat } = useCreateChatHandler();
+
     async function handleCopyAllLinkedContent() {
         if (!linkedProjectTabId) {
             toast.error("This chat is not linked to a project tab.");
             return;
         }
         // ... build content with buildPromptContent if desired ...
-        // Implementation omitted for brevity
         copyToClipboard("some content");
     }
 
@@ -102,17 +129,15 @@ export function ChatHeader({
                 <div className="flex items-center space-x-4 gap-2">
                     <div>
                         <span className="font-bold text-xl">
-                            {activeChatData?.title || 'No Chat Selected'}
+                            {activeChatData?.title || "No Chat Selected"}
                         </span>
                     </div>
                     <div className="flex items-center space-x-2 text-muted-foreground">
-                        <span>
-                            {displayName || 'No Tab Name'}
-                        </span>
+                        <span>{displayName || "No Tab Name"}</span>
                         {linkedProjectTabId && (
                             <>
                                 <LinkIcon className="h-4 w-4" />
-                                <Link to={'/projects'}>
+                                <Link to={"/projects"}>
                                     <div className="flex items-center space-x-2">
                                         <span>{linkedProjectTabId}</span>
                                         <FolderOpen className="h-4 w-4" />
@@ -129,7 +154,8 @@ export function ChatHeader({
                 {excludedMessageCount > 0 && (
                     <>
                         <Badge variant="secondary">
-                            {excludedMessageCount} message{excludedMessageCount !== 1 ? "s" : ""} excluded
+                            {excludedMessageCount} message
+                            {excludedMessageCount !== 1 ? "s" : ""} excluded
                         </Badge>
                         <Button variant="outline" size="sm" onClick={clearExcludedMessages}>
                             Clear Excluded
@@ -171,27 +197,26 @@ export function ChatHeader({
                                             />
                                             <div className="overflow-y-auto flex-1">
                                                 <div className="space-y-2">
-                                                    {filteredProjectTabs.map(([tabId, tabState]) => {
-                                                        return (
-                                                            <div
-                                                                key={tabId}
-                                                                className="p-3 rounded-md cursor-pointer hover:bg-accent"
-                                                                onClick={() => handleLinkProjectTab(tabId)}
-                                                            >
-                                                                <div className="font-semibold">
-                                                                    {tabState.displayName || tabId}
-                                                                </div>
-                                                                <div className="text-xs text-muted-foreground">
-                                                                    {tabState.selectedFiles?.length || 0} selected files
-                                                                </div>
-                                                                {tabState.userPrompt && (
-                                                                    <div className="text-xs text-muted-foreground truncate">
-                                                                        {tabState.userPrompt}
-                                                                    </div>
-                                                                )}
+                                                    {filteredProjectTabs.map(([tabId, tabState]) => (
+                                                        <div
+                                                            key={tabId}
+                                                            className="p-3 rounded-md cursor-pointer hover:bg-accent"
+                                                            onClick={() => handleLinkProjectTab(tabId)}
+                                                        >
+                                                            <div className="font-semibold">
+                                                                {tabState.displayName || tabId}
                                                             </div>
-                                                        );
-                                                    })}
+                                                            <div className="text-xs text-muted-foreground">
+                                                                {tabState.selectedFiles?.length || 0} selected
+                                                                files
+                                                            </div>
+                                                            {tabState.userPrompt && (
+                                                                <div className="text-xs text-muted-foreground truncate">
+                                                                    {tabState.userPrompt}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
                                         </div>
@@ -222,7 +247,7 @@ export function ChatHeader({
                 />
 
                 {/* Fork Chat Button */}
-                <Button variant="outline" onClick={onForkChat} size="sm">
+                <Button variant="outline" onClick={handleForkChat} size="sm">
                     Fork Chat
                 </Button>
             </div>

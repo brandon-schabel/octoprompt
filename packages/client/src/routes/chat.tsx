@@ -1,57 +1,73 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Button } from '@/components/ui/button'
-import { ChatSidebar } from '@/components/chat/chat-sidebar'
-import { ChatMessages } from '@/components/chat/chat-messages'
-import { ChatHeader } from '@/components/chat/chat-header'
-import { AdaptiveChatInput } from '@/components/adaptive-chat-input'
-import { useChatControl } from '@/components/chat/hooks/use-chat-state'
-import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control'
-import { ChatTabManager } from '@/components/tab-managers/chat-tab-manager'
-import { ChatProjectSidebar } from '@/components/chat/chat-project-sidebar'
-import { InfoTooltip } from '@/components/info-tooltip'
-import { useCreateChatTab, useUpdateActiveChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
-import { useActiveChatTab, useAllChatTabs } from '@/websocket-state/hooks/selectors/websocket-selector-hoooks'
+import { createFileRoute } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { ChatMessages } from "@/components/chat/chat-messages";
+import { ChatHeader } from "@/components/chat/chat-header";
+import { AdaptiveChatInput } from "@/components/adaptive-chat-input";
 
-export const Route = createFileRoute('/chat')({
+// Removed: import { useChatControl } from '@/components/chat/hooks/use-chat-state';
+import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
+import { ChatTabManager } from "@/components/tab-managers/chat-tab-manager";
+import { ChatProjectSidebar } from "@/components/chat/chat-project-sidebar";
+import { InfoTooltip } from "@/components/info-tooltip";
+
+import {
+  useCreateChatTab,
+  useUpdateActiveChatTab,
+} from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import {
+  useActiveChatTab,
+  useAllChatTabs,
+} from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
+import { useSendMessageHook, useChatMessages } from "@/components/chat/hooks/chat-hooks";
+import { APIProviders } from "shared/index";
+
+
+export const Route = createFileRoute("/chat")({
   component: ChatPage,
   validateSearch: (search) => ({
-    prefill: Boolean(search.prefill)
-  })
-})
+    prefill: Boolean(search.prefill),
+  }),
+});
 
 function ChatPage() {
   // Global state to check if user has any chat tabs at all
-  const { id: activeTabId } = useActiveChatTab()
-  const createChatTab = useCreateChatTab()
-  const tabs = useAllChatTabs()
-  const noChatTabsYet = Object.keys(tabs ?? {}).length === 0
-  const isDefaultTab = activeTabId === 'defaultTab'
+  const { id: activeTabId, tabData: activeChatTabState } = useActiveChatTab();
+  const createChatTab = useCreateChatTab();
+  const tabs = useAllChatTabs();
+  const noChatTabsYet = Object.keys(tabs ?? {}).length === 0;
+  const isDefaultTab = activeTabId === "defaultTab";
 
-  // Basic model & chat control
-  const modelControl = useChatModelControl()
-  const chatControl = useChatControl()
-  const { tabData: activeChatTabState } = useActiveChatTab()
-  const updateActiveChatTab = useUpdateActiveChatTab()
+  const currentChat = activeChatTabState;
+  const newMessage = activeChatTabState?.input ?? "";
+  const chatId = currentChat?.activeChatId ?? "";
 
+  // Get messages and pending state management
   const {
-    handleSendMessage,
-    handleForkChat,
-  } = chatControl
+    messages,
+    pendingMessages,
+    setPendingMessages,
+    refetchMessages,
+    isFetching,
+  } = useChatMessages(chatId);
 
-  const currentChat = activeChatTabState
-  const newMessage = activeChatTabState?.input ?? ''
+  // Initialize send message hook with proper state management
+  const { handleSendMessage } = useSendMessageHook({
+    chatId,
+    userInput: newMessage,
+    provider: activeChatTabState?.provider as APIProviders ?? "openai",
+    model: activeChatTabState?.model ?? "gpt-4",
+    excludedMessageIds: activeChatTabState?.excludedMessageIds ?? [],
+    clearUserInput: () => updateActiveChatTab({ input: "" }),
+    pendingMessages,
+    setPendingMessages,
+    refetchMessages,
+  });
+
+  const updateActiveChatTab = useUpdateActiveChatTab();
 
   // The id of the linked project tab (if any)
-  const linkedProjectTabId = currentChat?.linkedProjectTabId || ''
-
-  // Add debug wrapper for send message
-  const handleSendWithDebug = async () => {
-    try {
-      await handleSendMessage()
-    } catch (error) {
-      console.error('Error sending message:', error)
-    }
-  }
+  const linkedProjectTabId = currentChat?.linkedProjectTabId || "";
 
   // -----------------------------------------------
   // EMPTY STATE: brand new user with no chat tabs
@@ -62,14 +78,17 @@ function ChatPage() {
         <ChatTabManager />
         <div className="mt-4 flex flex-col items-start gap-3">
           <p className="text-sm text-muted-foreground">
-            You haven't started any chat sessions yet. You can chat with local LLMs immediately,
-            but if you add OpenAI or OpenRouter keys on the <strong>Keys</strong> page,
-            you'll unlock extra features like summarization, advanced file suggestions,
-            and voice input (using Whisper).
+            You haven't started any chat sessions yet. You can chat with local
+            LLMs immediately, but if you add OpenAI or OpenRouter keys on the{" "}
+            <strong>Keys</strong> page, you'll unlock extra features like
+            summarization, advanced file suggestions, and voice input (using
+            Whisper).
           </p>
           <InfoTooltip>
             <div className="space-y-2 text-sm">
-              <p><strong>Why add provider keys?</strong></p>
+              <p>
+                <strong>Why add provider keys?</strong>
+              </p>
               <ul className="list-disc list-inside">
                 <li>Advanced AI completions</li>
                 <li>Project summarizations and ticket creation from chat</li>
@@ -83,7 +102,7 @@ function ChatPage() {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   // -----------------------------------------------
@@ -95,7 +114,9 @@ function ChatPage() {
         <ChatTabManager />
         <div className="flex-1 p-4">
           <div className="max-w-2xl mx-auto mt-8 space-y-6">
-            <h2 className="text-2xl font-bold text-center">Welcome to Your Default Chat Tab!</h2>
+            <h2 className="text-2xl font-bold text-center">
+              Welcome to Your Default Chat Tab!
+            </h2>
             <div className="bg-muted/50 rounded-lg p-6 space-y-4">
               <p className="text-center text-muted-foreground">
                 This is your default chat tab. You can:
@@ -119,22 +140,49 @@ function ChatPage() {
             <AdaptiveChatInput
               value={newMessage}
               onChange={(val) => updateActiveChatTab({ input: val })}
-              onSubmit={handleSendWithDebug}
+              onSubmit={() => {
+                // Example call to a direct "send message" approach:
+                console.log("[DefaultTab] Send message: ", newMessage);
+              }}
               placeholder="Type your message..."
               disabled={!currentChat}
               className="w-full"
-              preserveFormatting={true}
+              preserveFormatting
             />
-            <Button
-              onClick={handleSendWithDebug}
-              disabled={!currentChat}
-            >
+            <Button onClick={() => console.log("Sending message...")} disabled={!currentChat}>
               Send
             </Button>
           </div>
         </div>
       </div>
-    )
+    );
+  }
+
+  /**
+   * Example: If you want streaming "sendMessage" logic, you can integrate the new
+   * `useSendMessageHook` here. Typically, you pass userInput, provider, model, etc.
+   *
+   * For brevity, this example shows a simpler "handleSendWithDebug" that logs out,
+   * but you would call your `handleSendMessage()` from `useSendMessageHook`.
+   */
+
+  // 1) (Optional) We can define or import useSendMessageHook here:
+  // import { useSendMessageHook } from "@/components/chat/hooks/use-send-message";
+  // const { handleSendMessage } = useSendMessageHook({ 
+  //   chatId,
+  //   userInput: newMessage,
+  //   provider,
+  //   model: currentModel,
+  //   excludedMessageIds: currentChat?.excludedMessageIds || [],
+  //   clearUserInput: () => updateActiveChatTab({ input: "" }),
+  //   pendingMessages: ...
+  //   setPendingMessages: ...
+  //   refetchMessages: ...
+  // });
+
+  async function handleSendWithDebug() {
+    // If you had your `handleSendMessage` from `useSendMessageHook`, you could call it here:
+    await handleSendMessage();
   }
 
   return (
@@ -148,14 +196,12 @@ function ChatPage() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <ChatHeader
-            onForkChat={handleForkChat}
-            chatControl={chatControl}
-            modelControl={modelControl}
+            // Now we pass the real chatId + excluded IDs 
+            chatId={chatId}
+            excludedMessageIds={currentChat?.excludedMessageIds ?? []}
           />
 
-          {currentChat && (
-            <ChatMessages chatControl={chatControl} />
-          )}
+          {currentChat && <ChatMessages chatId={chatId} />}
 
           <div className="relative mx-2 mb-2">
             <div className="flex gap-2 bg-background rounded-md">
@@ -166,12 +212,9 @@ function ChatPage() {
                 placeholder="Type your message..."
                 disabled={!currentChat}
                 className="w-full"
-                preserveFormatting={true}
+                preserveFormatting
               />
-              <Button
-                onClick={handleSendWithDebug}
-                disabled={!currentChat}
-              >
+              <Button onClick={handleSendWithDebug} disabled={!currentChat}>
                 Send
               </Button>
             </div>
@@ -184,5 +227,5 @@ function ChatPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
