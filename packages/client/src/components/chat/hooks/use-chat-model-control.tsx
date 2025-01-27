@@ -1,14 +1,11 @@
 import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/chat-tab-hooks";
+import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selector-hoooks";
 import { useQuery } from "@tanstack/react-query";
 import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {
     // 1) Find the active chat tab ID
-    const { data: chatActiveTabId } = useQuery({
-        queryKey: ["globalState", "chatActiveTabId"],
-        select: (gs: any) => gs?.chatActiveTabId ?? null,
-    });
-
+    const { id: chatActiveTabId } = useActiveChatTab()
     // 2) Single-field read
     const { data: provider = "openai" } =
         useChatTabField(chatActiveTabId ?? "", "provider");
