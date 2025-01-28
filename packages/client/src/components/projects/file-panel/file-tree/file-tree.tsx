@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getRecursiveImports, buildTsconfigAliasMap } from './utils/import-resolver'
+import { getRecursiveImports, buildTsconfigAliasMap } from './file-tree-utils/import-resolver'
 import { getEditorUrl } from '@/lib/editor-urls'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
@@ -21,7 +21,7 @@ import {
     toggleFile as toggleFileUtil,
     toggleFolder as toggleFolderUtil,
     formatTokenCount
-} from './utils/file-node-tree-utils'
+} from './file-tree-utils/file-node-tree-utils'
 import { ProjectFile } from 'shared/schema'
 import { toast } from 'sonner'
 import { buildNodeContent } from '@/components/projects/utils/projects-utils'

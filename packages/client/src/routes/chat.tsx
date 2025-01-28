@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
-import { ChatHeader } from "@/components/chat/chat-header";
 import { AdaptiveChatInput } from "@/components/adaptive-chat-input";
 
 import { ChatTabManager } from "@/components/tab-managers/chat-tab-manager";

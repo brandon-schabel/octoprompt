@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
 import { useGetKvValue, useSetKvValue } from '@/hooks/api/use-kv-api';
-import { KVKeyEnum, KVValue } from 'shared/index';
+import { KVKeyEnum } from 'shared/index';
 
 export const Route = createFileRoute('/counter')({
     component: CounterPage

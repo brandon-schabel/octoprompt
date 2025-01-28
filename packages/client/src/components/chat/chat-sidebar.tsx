@@ -15,11 +15,8 @@ import { SlidingSidebar } from '../sliding-sidebar';
 import { useUpdateActiveChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks';
 import { useActiveChatTab } from '@/websocket-state/hooks/selectors/websocket-selectors';
 
-type ChatSidebarProps = {
-    // We no longer pass the modelControl here
-};
 
-export function ChatSidebar({ }: ChatSidebarProps) {
+export function ChatSidebar() {
     const updateActiveChatTab = useUpdateActiveChatTab();
     
     const { tabData: activeChatTabState } = useActiveChatTab()

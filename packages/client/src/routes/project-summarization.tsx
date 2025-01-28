@@ -35,7 +35,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { FormatTokenCount } from "@/components/format-token-count"
-import { estimateTokenCount } from "@/components/projects/file-tree/utils/file-node-tree-utils"
+import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
 import {
     Dialog,
     DialogContent,

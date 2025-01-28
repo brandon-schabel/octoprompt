@@ -49,6 +49,7 @@ export function useActiveProjectTab() {
         id: activeTabId,
         tabData: query.data,
         rawQuery: query,
+        selectedProjectId: query.data?.selectedProjectId ?? '',
     }
 }
 

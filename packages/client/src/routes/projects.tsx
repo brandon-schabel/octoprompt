@@ -8,7 +8,7 @@ import { useGetProjects, useGetProjectFiles } from '@/hooks/api/use-projects-api
 import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
-import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel'
+import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useCreateProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'

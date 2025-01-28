@@ -1,8 +1,8 @@
-import { estimateTokenCount } from "@/components/projects/file-tree/utils/file-node-tree-utils"
+import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
 import { PromptListResponse } from "@/hooks/api/use-prompts-api"
 import { ProjectFile } from "shared/schema"
 import { z } from 'zod'
-import { FileNode } from "@/components/projects/file-tree/utils/file-node-tree-utils"
+import { FileNode } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
 
 export const projectSchema = z.object({
     name: z.string().min(1, 'Project name is required'),

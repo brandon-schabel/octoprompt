@@ -8,7 +8,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { estimateTokenCount } from "@/components/projects/file-tree/utils/file-node-tree-utils"
+import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
 import { ProjectFile } from "shared"
 import { SelectedFilesList } from "@/components/projects/selected-files-list"
 import { useState } from "react"
