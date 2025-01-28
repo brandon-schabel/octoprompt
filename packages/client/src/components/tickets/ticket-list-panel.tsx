@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from "react";
-import { TicketWithTasks, useListTicketsWithTasks, TICKET_KEYS, TicketResult, useDeleteTicket } from "@/hooks/api/use-tickets-api";
+import { TicketWithTasks, useListTicketsWithTasks, useDeleteTicket } from "@/hooks/api/use-tickets-api";
 import { useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";

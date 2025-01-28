@@ -1,5 +1,5 @@
 import { Project } from "shared/schema"
-import { Link, ScanEye } from "lucide-react"
+import { ScanEye } from "lucide-react"
 import { toast } from "sonner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -8,6 +8,7 @@ import { Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProjectSettingsDialog } from "../project-settings-dialog"
 import { Badge } from "@/components/ui/badge"
+import { Link } from "@tanstack/react-router"
 
 type ProjectHeaderProps = {
     projectData: Project | null

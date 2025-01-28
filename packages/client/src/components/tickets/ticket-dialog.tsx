@@ -9,8 +9,6 @@ import { useCreateTicket, useUpdateTicket, useUpdateTicketSuggestedFiles, useSug
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
 import { useGetProjectFiles } from "@/hooks/api/use-projects-api";
-import { Checkbox } from "../ui/checkbox";
-import { ScrollArea } from "../ui/scroll-area";
 import { useCreateProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 
 interface TicketDialogProps {
@@ -25,7 +23,6 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     const updateTicket = useUpdateTicket();
     const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
     const { data: fileData } = useGetProjectFiles(projectId);
-    const allFiles = fileData?.files ?? [];
     const createProjectTab = useCreateProjectTab();
 
     // Local form state
