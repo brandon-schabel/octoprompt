@@ -1,49 +1,19 @@
-import { useQuery } from "@tanstack/react-query"
-import type { AppSettings } from "shared"
-import { useCallback } from "react"
+import { AppSettings } from "shared/index"
 import { useSettings } from "../selectors/websocket-selectors"
 import { useUpdateSettings } from "../updaters/websocket-updater-hooks"
+import { useGenericField } from "../helpers/use-generic-field"
 
-/**
- * Subscribes to exactly one field in the global app settings.
- * If that field doesn't change, your component won't re-render
- * even if other settings fields are updated.
- */
-export function useSettingsField<K extends keyof AppSettings>(key: K) {
-    return useQuery<AppSettings, unknown, AppSettings[K]>({
-        queryKey: ["globalState", "settings"],
-        select: (fullSettings) => fullSettings?.[key],
-    })
-}
 
-/**
- * Returns an updater that can mutate exactly one field
- * in the global app settings.
- */
-export function useSettingsFieldUpdater<K extends keyof AppSettings>(key: K) {
-    const updateSettings = useUpdateSettings()
+// TOOD: this now uses the generic field hook which comes to readers/writers from the store, so these need to be implemented in the pages
+export function useSettingsField<K extends keyof AppSettings>(fieldKey: K) {
     const settings = useSettings()
+    const updateSettings = useUpdateSettings()
 
-    const mutate = useCallback(
-        (
-            valueOrFn:
-                | AppSettings[K]
-                | ((prevValue: AppSettings[K]) => AppSettings[K])
-        ) => {
-            if (!settings) return
-            updateSettings((prev) => {
-                const currentValue = prev[key]
-                const newValue =
-                    typeof valueOrFn === "function"
-                        ? (valueOrFn as (prevVal: AppSettings[K]) => AppSettings[K])(
-                            currentValue
-                        )
-                        : valueOrFn
-                return { [key]: newValue }
-            })
-        },
-        [settings, key, updateSettings]
-    )
-
-    return { mutate }
+    return useGenericField<AppSettings, K>({
+        queryKey: ["globalState", "settings"],
+        fieldKey,
+        currentRecord: settings,
+        // If there's no dynamic "id" for settings, you can omit "enabled" or pass `true`
+        onUpdate: (updater) => updateSettings(updater),
+    })
 }

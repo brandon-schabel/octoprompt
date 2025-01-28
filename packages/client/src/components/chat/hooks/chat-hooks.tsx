@@ -7,10 +7,10 @@ export type TempChatMessage = ChatMessage & { tempId?: string };
 import { useSendMessage } from "@/hooks/api/use-chat-ai-api";
 import { APIProviders } from "shared";
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api";
-import { useChatTabFieldUpdater } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
+import { useChatTabField } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
 
 export function useClearExcludedMessages(tabId: string) {
-    const { mutate: setExcludedMessageIds } = useChatTabFieldUpdater(
+    const { mutate: setExcludedMessageIds } = useChatTabField(
         tabId,
         "excludedMessageIds"
     );

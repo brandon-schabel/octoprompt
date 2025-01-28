@@ -32,6 +32,7 @@ type ChatProjectSidebarProps = {
 
 export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarProps) {
     // 1) Which chat tab is active?
+    // TODO move chatActiveTabId to settings or somewhere esle 
     const { data: chatActiveTabId } = useQuery({
         queryKey: ["globalState"],
         select: (gs: any) => gs?.chatActiveTabId ?? null,
@@ -99,10 +100,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
             linkedProjectTabId,
             "userPrompt"
         );
-        const { data: displayName } = useProjectTabField(
-            linkedProjectTabId,
-            "displayName"
-        );
+
 
         // Build the content
         const content = buildPromptContent({

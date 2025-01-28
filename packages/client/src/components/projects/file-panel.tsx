@@ -30,10 +30,8 @@ import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 import {
     useProjectTabField,
-    useProjectTabFieldUpdater,
 } from '@/websocket-state/hooks/project-tab/project-tab-hooks'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-import { useProjectTabFieldGeneric } from '@/websocket-state/hooks/project-tab/project-tab-hooks-updated'
 
 /* -------------------------------------------------------------------------
    Types
@@ -89,17 +87,17 @@ export const FilePanel = memo(
         const { id: activeProjectTabId = '' } = useActiveProjectTab()
 
 
-        const { data: searchByContent = false, mutate: setSearchByContent } = useProjectTabFieldGeneric(
+        const { data: searchByContent = false, mutate: setSearchByContent } = useProjectTabField(
             activeProjectTabId ?? '',
             'searchByContent'
         )
 
-        const { data: preferredEditor = 'vscode' } = useProjectTabFieldGeneric(
+        const { data: preferredEditor = 'vscode' } = useProjectTabField(
             activeProjectTabId ?? '',
             'preferredEditor'
         )
 
-        const { data: resolveImports = false, mutate: setResolveImports } = useProjectTabFieldGeneric(
+        const { data: resolveImports = false, mutate: setResolveImports } = useProjectTabField(
             activeProjectTabId ?? '',
             'resolveImports'
         )
@@ -108,8 +106,7 @@ export const FilePanel = memo(
         // Active tab ID
 
         // Local or global "selectedFiles"
-        const { data: selectedFiles = [] } = useProjectTabField(activeProjectTabId ?? '', 'selectedFiles')
-        const { mutate: setSelectedFiles } = useProjectTabFieldUpdater(activeProjectTabId ?? '', 'selectedFiles')
+        const { data: selectedFiles = [], mutate: setSelectedFiles } = useProjectTabField(activeProjectTabId ?? '', 'selectedFiles')
 
         // Settings from server
         const settings = useSettings()

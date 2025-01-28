@@ -19,11 +19,10 @@ import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useLinkChatTabToProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 import {
     useChatTabField,
-    useChatTabFieldUpdater,
 } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
 import { useGlobalState } from "@/websocket-state/hooks/selectors/use-global-state";
 import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
-import { useForkChatHandler, useCreateChatHandler, TempChatMessage } from "./hooks/chat-hooks";
+import { useForkChatHandler, useCreateChatHandler } from "./hooks/chat-hooks";
 
 interface ChatHeaderProps {
     // Instead of expecting `chatControl`, we can accept relevant IDs directly
@@ -37,7 +36,7 @@ interface ChatHeaderProps {
  * Demonstrates direct usage of hooking into global state fields,
  * plus new create/fork logic from the splitted hooks.
  */
-export function ChatHeader({ chatId, excludedMessageIds = [],  }: ChatHeaderProps) {
+export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps) {
     const [showLinkSettings, setShowLinkSettings] = useState(false);
     const [projectSearch, setProjectSearch] = useState("");
 
@@ -45,7 +44,7 @@ export function ChatHeader({ chatId, excludedMessageIds = [],  }: ChatHeaderProp
     const { id: chatActiveTabId } = useActiveChatTab();
 
     // For the "excludedMessageIds" field, we also define an updater:
-    const { mutate: setExcludedMessageIds } = useChatTabFieldUpdater(
+    const { mutate: setExcludedMessageIds } = useChatTabField(
         chatActiveTabId ?? "",
         "excludedMessageIds"
     );

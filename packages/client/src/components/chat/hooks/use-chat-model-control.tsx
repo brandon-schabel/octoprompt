@@ -1,4 +1,4 @@
-import { useChatTabField, useChatTabFieldUpdater } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
+import { useChatTabField } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
 import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
 import { APIProviders } from "shared";
 
@@ -12,11 +12,11 @@ export const useChatModelControl = () => {
         useChatTabField(chatActiveTabId ?? "", "model");
 
     // 3) Single-field updaters
-    const { mutate: setProviderField } = useChatTabFieldUpdater(
+    const { mutate: setProviderField } = useChatTabField(
         chatActiveTabId ?? "",
         "provider"
     );
-    const { mutate: setModelField } = useChatTabFieldUpdater(
+    const { mutate: setModelField } = useChatTabField(
         chatActiveTabId ?? "",
         "model"
     );
