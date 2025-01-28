@@ -1,7 +1,6 @@
 // packages/server/src/services/code-editor-service.ts
 import { ProjectService } from "@/services/project-service";
 import { APIProviders, ProjectFile } from "shared";
-import { ChatService } from "../chat/chat-service";
 import { UnifiedProviderService } from "../providers/unified-provider-service";
 
 // Define your structure for diff-based responses:

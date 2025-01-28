@@ -14,7 +14,7 @@ import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useUpdateActiveProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
-import { useActiveProjectTab, useSettings } from "@/websocket-state/hooks/selectors/websocket-selectors"
+import { useActiveProjectTab,  } from "@/websocket-state/hooks/selectors/websocket-selectors"
 import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks"
 
 export function AppNavbar() {

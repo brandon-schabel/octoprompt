@@ -25,56 +25,32 @@ import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-se
 import { useForkChatHandler, useCreateChatHandler } from "./hooks/chat-hooks";
 
 interface ChatHeaderProps {
-    // Instead of expecting `chatControl`, we can accept relevant IDs directly
     chatId?: string;
     excludedMessageIds?: string[];
-
 }
 
-/**
- * ChatHeader:
- * Demonstrates direct usage of hooking into global state fields,
- * plus new create/fork logic from the splitted hooks.
- */
 export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps) {
     const [showLinkSettings, setShowLinkSettings] = useState(false);
     const [projectSearch, setProjectSearch] = useState("");
-
-    // We see which tab is active from global state:
     const { id: chatActiveTabId } = useActiveChatTab();
-
-    // For the "excludedMessageIds" field, we also define an updater:
     const { mutate: setExcludedMessageIds } = useChatTabField(
         chatActiveTabId ?? "",
         "excludedMessageIds"
     );
-
-    // We also see if there's a linked project tab
     const { data: linkedProjectTabId } = useChatTabField(
         chatActiveTabId ?? "",
         "linkedProjectTabId"
     );
-
-    // If we also want the chat's displayName or provider/model, we can do so:
     const { data: displayName } = useChatTabField(
         chatActiveTabId ?? "",
         "displayName"
     );
-
-    // For referencing the actual chat DB row:
     const { data: chats } = useGetChats();
     const activeChatData = chats?.data?.find((c) => c.id === chatId);
-
-    // Hook to link project tabs
     const linkChatTabToProjectTab = useLinkChatTabToProjectTab();
-
-    // Model logic from the custom hook
     const modelControl = useChatModelControl();
     const { provider, setProvider, currentModel, setCurrentModel } = modelControl;
-
-    // The rest is exactly the same UI logic as before...
     const excludedMessageCount = excludedMessageIds.length;
-
     const { data: globalState } = useGlobalState();
     const projectTabsRecord = globalState?.projectTabs || {};
     const projectTabs = Object.entries(projectTabsRecord);
@@ -90,21 +66,16 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
 
     const { copyToClipboard } = useCopyClipboard();
 
-    // For demonstration, hooking in the old "fork chat" logic with new splitted hook
     const { handleForkChat } = useForkChatHandler({
         chatId: chatId ?? "",
         excludedMessageIds,
     });
-
-    // If we also want the create chat logic, we can do:
-    const { handleCreateChat } = useCreateChatHandler();
 
     async function handleCopyAllLinkedContent() {
         if (!linkedProjectTabId) {
             toast.error("This chat is not linked to a project tab.");
             return;
         }
-        // ... build content with buildPromptContent if desired ...
         copyToClipboard("some content");
     }
 

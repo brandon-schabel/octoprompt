@@ -1,5 +1,4 @@
 import { router } from "server-router";
-import { ProjectService } from "@/services/project-service";
 import { json } from "@bnk/router";
 import { ApiError } from "shared";
 import { z } from "zod";
@@ -32,10 +31,6 @@ export const FileSuggestionsJsonSchema = {
     required: ["fileIds"],
     additionalProperties: false
 };
-
-
-
-
 
 router.post(
     "/api/projects/:projectId/suggest-files",
@@ -78,9 +73,6 @@ router.post(
       Below is a combined summary of project files:
       ${projectSummary}
     `;
-
-        console.log("[SuggestFiles] systemPrompt:", systemPrompt);
-        console.log("[SuggestFiles] userMessage:", userMessage);
 
         try {
             // 1) Use our structured-output-fetcher to get guaranteed-JSON from the LLM

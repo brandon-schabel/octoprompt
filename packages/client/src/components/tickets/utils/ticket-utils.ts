@@ -1,4 +1,3 @@
-import type { TicketWithCount, TicketWithTasks } from "@/hooks/api/use-tickets-api";
 import type { TicketTask } from "shared/schema";
 import type { Ticket } from "shared/schema";
 
