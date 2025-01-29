@@ -1,11 +1,11 @@
-import { useCreateChatTab, useSetActiveChatTab, useUpdateChatTab, useDeleteChatTab, useUpdateSettings } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useCreateChatTab, useSetActiveChatTab, useUpdateChatTab, useDeleteChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { useActiveChatTab, useAllChatTabs, useSettings } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useActiveChatTab, useAllChatTabs } from '@/websocket-state/hooks/selectors/websocket-selectors'
 
 type DialogContentProps = {
     tabId: string;
@@ -19,12 +19,13 @@ type DialogContentProps = {
 }
 
 type ChatTab = {
-    provider: "openai" | "openrouter" | "lmstudio" | "ollama" | "xai" | "google_gemini" | "anthropic" | "groq" | "together";
+    provider: string;
     model: string;
     input: string;
-    messages: { id: string; role: "system" | "user" | "assistant"; content: string; }[];
+    messages: { id: string; role: string; content: string }[];
     displayName?: string;
     lmStudioUrl?: string;
+    sortOrder?: number;
 }
 
 export function ChatTabManager() {
@@ -33,22 +34,20 @@ export function ChatTabManager() {
     const setActiveChatTab = useSetActiveChatTab()
     const updateChatTab = useUpdateChatTab()
     const deleteChatTab = useDeleteChatTab()
-    const updateSettings = useUpdateSettings()
-    const settings = useSettings()
     const tabs = useAllChatTabs()
 
+    // Sort tabs by sortOrder
+    const tabIdsSorted = Object.keys(tabs).sort((a, b) => {
+        const orderA = tabs[a].sortOrder ?? 0
+        const orderB = tabs[b].sortOrder ?? 0
+        return orderA - orderB
+    })
 
-    const tabOrder = settings?.chatTabIdOrder
-        ? settings.chatTabIdOrder
-        : Object.keys(tabs)
-
-    // When user reorders the tabs, store that array in global state:
     const handleTabOrderChange = (newOrder: string[]) => {
-        if (activeTabId) {
-            updateSettings({
-                chatTabIdOrder: newOrder
-            })
-        }
+        console.debug('[ChatTabManager] handleTabOrderChange ->', newOrder)
+        newOrder.forEach((tabId, index) => {
+            updateChatTab(tabId, { sortOrder: index })
+        })
     }
 
     const shortcutInfo = (
@@ -144,8 +143,7 @@ export function ChatTabManager() {
 
     return (
         <GenericTabManager<ChatTab>
-            // @ts-ignore
-            tabs={tabs}
+            tabs={tabs as Record<string, ChatTab>}
             activeTabId={activeTabId ?? null}
             onCreateTab={createChatTab}
             onSetActiveTab={setActiveChatTab}
@@ -159,15 +157,12 @@ export function ChatTabManager() {
             titleTooltip={
                 <div className="space-y-2">
                     <p>
-                        Chat Tabs allow you to use different settings between different chat sessions.
-                        Provider and Model settings are saved on the tab, and not the individual chats.
-                        You can access your different chats by clicking the floating chat icon. You can click and drag
-                        the tabs to reorder them.
+                        Chat Tabs store your conversation settings. Drag to reorder, or use the shortcuts below.
                     </p>
                     {shortcutInfo}
                 </div>
             }
-            tabOrder={tabOrder}
+            tabOrder={tabIdsSorted}
             onTabOrderChange={handleTabOrderChange}
             renderDialogContent={renderDialogContent}
         />

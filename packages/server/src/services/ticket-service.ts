@@ -46,11 +46,11 @@ ${validTaskFormatPrompt}
 
 
 
-// export const octopromptPlanningPrompt = `
-// ${promptsMap.octopromptPlanningMetaPrompt}
+export const octopromptPlanningPrompt = `
+${promptsMap.octopromptPlanningMetaPrompt}
 
-// ${defeaultTaskPrompt}
-// `
+${defeaultTaskPrompt}
+`
 
 
 export function stripTripleBackticks(text: string): string {
@@ -225,8 +225,8 @@ export class TicketService {
         };
 
 
-        const systemPrompt = defeaultTaskPrompt
-        // const systemPrompt = octopromptPlanningPrompt
+        // const systemPrompt = defeaultTaskPrompt
+        const systemPrompt = octopromptPlanningPrompt
 
         const projectSummary = await getFullProjectSummary(projectId)
 

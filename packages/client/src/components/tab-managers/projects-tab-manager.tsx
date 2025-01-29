@@ -3,7 +3,6 @@ import {
   useSetActiveProjectTab,
   useUpdateProjectTab,
   useDeleteProjectTab,
-  useUpdateSettings,
 } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
 import { GenericTabManager } from './generic-tab-manager'
 import { ShortcutDisplay } from '../app-shortcut-display'
@@ -11,7 +10,7 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
-import { useActiveProjectTab, useAllProjectTabs, useSettings } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useActiveProjectTab, useAllProjectTabs } from '@/websocket-state/hooks/selectors/websocket-selectors'
 
 type DialogContentProps = {
   tabId: string;
@@ -29,6 +28,7 @@ type ProjectTab = {
   selectedPrompts: string[];
   userPrompt?: string;
   displayName?: string;
+  sortOrder?: number;
 }
 
 export function ProjectsTabManager() {
@@ -36,28 +36,28 @@ export function ProjectsTabManager() {
   const setActiveProjectTab = useSetActiveProjectTab()
   const updateProjectTab = useUpdateProjectTab()
   const deleteProjectTab = useDeleteProjectTab()
-  const updateSettings = useUpdateSettings()
+
   const { tabData: activeProjectTabState, id: activeTabId } = useActiveProjectTab()
-  const settings = useSettings()
+  const tabs = useAllProjectTabs()
 
   const projectId = activeProjectTabState?.selectedProjectId
 
-  const tabs = useAllProjectTabs()
+  // Sort tabs by sortOrder
+  const tabIdsSorted = Object.keys(tabs).sort((a, b) => {
+    const orderA = tabs[a].sortOrder ?? 0
+    const orderB = tabs[b].sortOrder ?? 0
+    return orderA - orderB
+  })
 
-  const tabOrder = settings?.projectTabIdOrder
-    ? settings.projectTabIdOrder
-    : Object.keys(tabs)
-
-  // When user reorders the tabs, store that array in global state:
+  // Called when user reorders tabs via drag-and-drop
   const handleTabOrderChange = (newOrder: string[]) => {
-    if (activeTabId) {
-      updateSettings({
-        projectTabIdOrder: newOrder
-      })
-    }
+    console.debug('[ProjectsTabManager] handleTabOrderChange ->', newOrder)
+    newOrder.forEach((tabId, index) => {
+      updateProjectTab(tabId, { sortOrder: index })
+    })
   }
 
-  // Function to get stats for a project tab
+  // Simple helper for debugging stats
   function getTabStats(tabId: string) {
     const tabData = tabs[tabId] ?? {}
     const fileCount = tabData.selectedFiles?.length ?? 0
@@ -82,7 +82,6 @@ export function ProjectsTabManager() {
         key={tabId}
         className="group flex items-center justify-between gap-3 px-2 py-1 rounded hover:bg-accent/20"
       >
-        {/* Left side: name and stats */}
         <div className="flex flex-col truncate">
           {isEditing ? (
             <Input
@@ -155,8 +154,7 @@ export function ProjectsTabManager() {
 
   return (
     <GenericTabManager<ProjectTab>
-      // @ts-ignore
-      tabs={tabs}
+      tabs={tabs as Record<string, ProjectTab>}
       activeTabId={activeTabId ?? null}
       onCreateTab={() => createProjectTab({ projectId: projectId ?? '' })}
       onSetActiveTab={setActiveProjectTab}
@@ -170,14 +168,13 @@ export function ProjectsTabManager() {
       titleTooltip={
         <div className="space-y-2">
           <p>
-            Project Tabs keep state and settings within the tabs. So you can either switch between projects,
-            or have multiple tabs of one project open for example with different selections. You can click and drag
-            the tabs to reorder them.
+            Project Tabs keep state and settings within the tabs. You can drag and drop
+            to reorder them. Also, use the shortcuts below to switch quickly.
           </p>
           {shortcutInfo}
         </div>
       }
-      tabOrder={tabOrder}
+      tabOrder={tabIdsSorted}
       onTabOrderChange={handleTabOrderChange}
       renderDialogContent={renderDialogContent}
     />

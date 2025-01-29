@@ -2,12 +2,12 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { InfoTooltip } from '../info-tooltip'
 import { LinkIcon, Plus, Pencil, Trash2, Settings } from 'lucide-react'
 import { useState, ReactNode } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
-import { Badge } from '../ui/badge'
-import { InfoTooltip } from '../info-tooltip'
 import {
     DndContext,
     DragEndEvent,
@@ -29,13 +29,10 @@ export type GenericTabManagerProps<T = any> = {
     tabs: Record<string, T & {
         displayName?: string;
         linkedProjectTabId?: string;
-    }>;
+    }> | null;
 
     /** The currently active tab ID */
     activeTabId: string | null;
-
-    /** If the WebSocket or other initialization is ready */
-    isReady: boolean;
 
     /** Called when the user wants to create a new tab */
     onCreateTab: () => void;
@@ -109,88 +106,88 @@ export function GenericTabManager<T = any>({
     const [editingTabName, setEditingTabName] = useState<{
         id: string;
         name: string;
-    } | null>(null)
+    } | null>(null);
 
-    const [localOrder, setLocalOrder] = useState<string[] | null>(null)
+    const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
-    // Settings Dialog state
-    const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-    const [dialogEditingTab, setDialogEditingTab] = useState<string | null>(null)
-    const [dialogEditingName, setDialogEditingName] = useState('')
+    // Settings dialog state
+    const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+    const [dialogEditingTab, setDialogEditingTab] = useState<string | null>(null);
+    const [dialogEditingName, setDialogEditingName] = useState('');
 
-    // If parent doesn't provide a tabOrder, fallback to Object.keys(tabs)
-    const initialTabOrderProps = tabOrder && tabOrder.length > 0 ? tabOrder : Object.keys(tabs ?? {})
-    const finalTabOrder = localOrder ?? initialTabOrderProps
+    // If parent doesn’t provide a tabOrder, we just use the keys
+    const fallbackOrder = tabs ? Object.keys(tabs) : [];
+    const initialTabOrderProps = tabOrder && tabOrder.length > 0 ? tabOrder : fallbackOrder;
+    const finalTabOrder = localOrder ?? initialTabOrderProps;
 
-    // -------------- DnD-kit setup --------------
-    const sensors = useSensors(useSensor(PointerSensor))
+    const sensors = useSensors(useSensor(PointerSensor));
 
     function handleDragEnd(event: DragEndEvent) {
-        const { active, over } = event
-        if (!over || active.id === over.id) return
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
 
-        const oldIndex = finalTabOrder.indexOf(active.id as string)
-        const newIndex = finalTabOrder.indexOf(over.id as string)
-        const newOrder = arrayMove(finalTabOrder, oldIndex, newIndex)
+        const oldIndex = finalTabOrder.indexOf(active.id as string);
+        const newIndex = finalTabOrder.indexOf(over.id as string);
+        const newOrder = arrayMove(finalTabOrder, oldIndex, newIndex);
 
-        setLocalOrder(newOrder)
-        onTabOrderChange?.(newOrder)
+        console.debug('[GenericTabManager] handleDragEnd ->', newOrder);
+        setLocalOrder(newOrder);
+        onTabOrderChange?.(newOrder);
     }
 
-    // Setup number hotkeys: c+1..9, t+1..9, etc.
+    // Setup hotkeys for t+1..9 or c+1..9
     for (let i = 1; i <= 9; i++) {
         useHotkeys(`${hotkeyPrefix}+${i}`, () => {
-            const targetTabId = finalTabOrder[i - 1]
-            if (targetTabId) onSetActiveTab(targetTabId)
-        })
+            const targetTabId = finalTabOrder[i - 1];
+            if (targetTabId) onSetActiveTab(targetTabId);
+        });
     }
 
-    // Setup tab navigation hotkeys
+    // Setup next/prev hotkeys
     useHotkeys(`${hotkeyPrefix}+tab`, (e) => {
-        e.preventDefault()
-        if (!activeTabId || finalTabOrder.length === 0) return
+        e.preventDefault();
+        if (!activeTabId || finalTabOrder.length === 0) return;
 
-        const currentIndex = finalTabOrder.indexOf(activeTabId)
-        const nextIndex = (currentIndex + 1) % finalTabOrder.length
-        onSetActiveTab(finalTabOrder[nextIndex])
-    })
+        const currentIndex = finalTabOrder.indexOf(activeTabId);
+        const nextIndex = (currentIndex + 1) % finalTabOrder.length;
+        onSetActiveTab(finalTabOrder[nextIndex]);
+    });
 
     useHotkeys(`${hotkeyPrefix}+shift+tab`, (e) => {
-        e.preventDefault()
-        if (!activeTabId || finalTabOrder.length === 0) return
+        e.preventDefault();
+        if (!activeTabId || finalTabOrder.length === 0) return;
 
-        const currentIndex = finalTabOrder.indexOf(activeTabId)
-        const prevIndex = (currentIndex - 1 + finalTabOrder.length) % finalTabOrder.length
-        onSetActiveTab(finalTabOrder[prevIndex])
-    })
+        const currentIndex = finalTabOrder.indexOf(activeTabId);
+        const prevIndex = (currentIndex - 1 + finalTabOrder.length) % finalTabOrder.length;
+        onSetActiveTab(finalTabOrder[prevIndex]);
+    });
 
-    if (Object.keys(tabs ?? {}).length === 0) {
+    if (!tabs || Object.keys(tabs).length === 0) {
         return (
             <div className="flex flex-col gap-2">
                 <Button onClick={onCreateTab}>{`+ ${newTabLabel}`}</Button>
                 <div className="text-sm text-muted-foreground">{emptyMessage}</div>
             </div>
-        )
+        );
     }
 
-    // Inline rename helper
     const handleRenameTab = (tabId: string, newName: string) => {
-        onRenameTab(tabId, newName)
-        setEditingTabName(null)
-    }
+        onRenameTab(tabId, newName);
+        setEditingTabName(null);
+    };
 
-    // Dialog rename helpers
+    // For the dialog-based rename
     const startDialogRename = (tabId: string) => {
-        const currentName = tabs[tabId]?.displayName || tabId
-        setDialogEditingTab(tabId)
-        setDialogEditingName(currentName)
-    }
+        const currentName = tabs?.[tabId]?.displayName || tabId;
+        setDialogEditingTab(tabId);
+        setDialogEditingName(currentName);
+    };
     const saveDialogRename = () => {
-        if (!dialogEditingTab) return
-        onRenameTab(dialogEditingTab, dialogEditingName)
-        setDialogEditingTab(null)
-        setDialogEditingName('')
-    }
+        if (!dialogEditingTab) return;
+        onRenameTab(dialogEditingTab, dialogEditingName);
+        setDialogEditingTab(null);
+        setDialogEditingName('');
+    };
 
     return (
         <>
@@ -221,7 +218,7 @@ export function GenericTabManager<T = any>({
                         </div>
                     )}
 
-                    {/* Only wrap the *sortable tabs* in your SortableContext */}
+                    {/* SortableContext for the tabs */}
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}
@@ -229,8 +226,8 @@ export function GenericTabManager<T = any>({
                     >
                         <SortableContext items={finalTabOrder} strategy={horizontalListSortingStrategy}>
                             {finalTabOrder.map((tabId, index) => {
-                                const displayName = tabs[tabId]?.displayName || tabId
-                                const hasLink = !!tabs[tabId]?.linkedProjectTabId
+                                const displayName = tabs?.[tabId]?.displayName || tabId;
+                                const hasLink = !!tabs?.[tabId]?.linkedProjectTabId;
                                 return (
                                     <SortableTab
                                         key={tabId}
@@ -244,12 +241,12 @@ export function GenericTabManager<T = any>({
                                         onDeleteTab={onDeleteTab}
                                         activeTabId={activeTabId}
                                     />
-                                )
+                                );
                             })}
                         </SortableContext>
                     </DndContext>
 
-                    {/* Place the + button *outside* the SortableContext. */}
+                    {/* + button to create new tab */}
                     <div>
                         <Button onClick={onCreateTab} size="icon" className="w-6 h-6 ml-2">
                             <Plus />
@@ -257,18 +254,17 @@ export function GenericTabManager<T = any>({
                     </div>
                 </TabsList>
             </Tabs>
-            {/* ---------------------------------------------
-                 DIALOG FOR MANAGING/RENAMING/DELETING TABS
-            --------------------------------------------- */}
+
+            {/* Dialog for managing tab rename/delete in bulk */}
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-                <DialogContent className="sm:max-w-sm">
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Manage Tabs</DialogTitle>
                     </DialogHeader>
                     <div className="mt-2 space-y-3">
                         {finalTabOrder.map((tabId) => {
-                            const displayName = tabs[tabId]?.displayName || tabId
-                            const isEditing = dialogEditingTab === tabId
+                            const displayName = tabs?.[tabId]?.displayName || tabId;
+                            const isEditing = dialogEditingTab === tabId;
 
                             if (renderDialogContent) {
                                 return renderDialogContent({
@@ -280,7 +276,7 @@ export function GenericTabManager<T = any>({
                                     startDialogRename,
                                     saveDialogRename,
                                     onDeleteTab,
-                                })
+                                });
                             }
 
                             return (
@@ -288,17 +284,16 @@ export function GenericTabManager<T = any>({
                                     key={tabId}
                                     className="group flex items-center justify-between gap-3 px-2 py-1 rounded hover:bg-accent/20"
                                 >
-                                    {/* Left side: name */}
                                     <div className="flex flex-col truncate">
                                         {isEditing ? (
                                             <Input
                                                 value={dialogEditingName}
                                                 onChange={(e) => setDialogEditingName(e.target.value)}
                                                 onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') saveDialogRename()
+                                                    if (e.key === 'Enter') saveDialogRename();
                                                     if (e.key === 'Escape') {
-                                                        setDialogEditingTab(null)
-                                                        setDialogEditingName('')
+                                                        setDialogEditingTab(null);
+                                                        setDialogEditingName('');
                                                     }
                                                 }}
                                                 autoFocus
@@ -310,7 +305,6 @@ export function GenericTabManager<T = any>({
                                         )}
                                     </div>
 
-                                    {/* Right side: rename/delete icons (only on hover) */}
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                                         {isEditing ? (
                                             <Button
@@ -345,32 +339,28 @@ export function GenericTabManager<T = any>({
                                         </Button>
                                     </div>
                                 </div>
-                            )
+                            );
                         })}
                     </div>
                 </DialogContent>
             </Dialog>
         </>
-    )
+    );
 }
 
 /**
- * Individual sortable tab component. Uses `useSortable({ id: tabId })`.
- * We wrap the <TabsTrigger> + context menu in a <div> so we can attach
- * the ref/listeners. Also apply transform & transition to animate moves.
+ * SortableTab is the draggable item that we wrap around each <TabsTrigger>
  */
 function SortableTab(props: {
-    tabId: string
-    index: number
-    displayName: string
-    hasLink: boolean
-    editingTabName: { id: string; name: string } | null
-    setEditingTabName: React.Dispatch<
-        React.SetStateAction<{ id: string; name: string } | null>
-    >
-    handleRenameTab: (tabId: string, newName: string) => void
-    onDeleteTab: (tabId: string) => void
-    activeTabId: string | null
+    tabId: string;
+    index: number;
+    displayName: string;
+    hasLink: boolean;
+    editingTabName: { id: string; name: string } | null;
+    setEditingTabName: React.Dispatch<React.SetStateAction<{ id: string; name: string } | null>>;
+    handleRenameTab: (tabId: string, newName: string) => void;
+    onDeleteTab: (tabId: string) => void;
+    activeTabId: string | null;
 }) {
     const {
         tabId,
@@ -380,30 +370,20 @@ function SortableTab(props: {
         editingTabName,
         setEditingTabName,
         handleRenameTab,
-        onDeleteTab,
-    } = props
+    } = props;
 
-    const [isHovered, setIsHovered] = useState(false)
-
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: tabId })
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: tabId,
+    });
 
     const style: React.CSSProperties = {
         transform: CSS.Translate.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : undefined,
-    }
+    };
 
-    const showShortcut = index < 9
-    const shortcutNumber = index + 1
-
-
+    const showShortcut = index < 9;
+    const shortcutNumber = index + 1;
 
     return (
         <div
@@ -412,8 +392,6 @@ function SortableTab(props: {
             {...attributes}
             {...listeners}
             className="inline-flex items-center group relative"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
         >
             <TabsTrigger
                 value={tabId}
@@ -431,10 +409,10 @@ function SortableTab(props: {
                         }
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                                handleRenameTab(tabId, editingTabName.name)
+                                handleRenameTab(tabId, editingTabName.name);
                             }
                             if (e.key === 'Escape') {
-                                setEditingTabName(null)
+                                setEditingTabName(null);
                             }
                         }}
                         onBlur={() => handleRenameTab(tabId, editingTabName.name)}
@@ -454,5 +432,5 @@ function SortableTab(props: {
                 )}
             </TabsTrigger>
         </div>
-    )
+    );
 }

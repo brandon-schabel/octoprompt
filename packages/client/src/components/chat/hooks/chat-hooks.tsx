@@ -1,13 +1,15 @@
+// File: packages/client/src/components/chat/hooks/chat-hooks.tsx
 import { useForkChat } from "@/hooks/api/use-chat-ai-api";
-import { useCallback } from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useGetMessages } from "@/hooks/api/use-chat-ai-api";
 import { ChatMessage } from "shared/schema";
-export type TempChatMessage = ChatMessage & { tempId?: string };
 import { useSendMessage } from "@/hooks/api/use-chat-ai-api";
-import { APIProviders } from "shared";
+import { APIProviders, ChatModelSettings } from "shared";
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api";
 import { useChatTabField } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
+import { useChatModelParams } from "./use-chat-model-params";
+
+export type TempChatMessage = ChatMessage & { tempId?: string };
 
 export function useClearExcludedMessages(tabId: string) {
     const { mutate: setExcludedMessageIds } = useChatTabField(
@@ -21,6 +23,7 @@ export function useClearExcludedMessages(tabId: string) {
 
     return { clearExcludedMessages };
 }
+
 export function useCreateChatHandler() {
     const createChatMutation = useCreateChat();
 
@@ -46,7 +49,6 @@ export function useCreateChatHandler() {
 
 interface UseSendMessageArgs {
     chatId: string;
-    userInput: string;                // The user’s typed input
     provider: APIProviders;
     model: string;
     excludedMessageIds: string[];     // For partial context
@@ -56,22 +58,41 @@ interface UseSendMessageArgs {
     refetchMessages: () => Promise<any>;
 }
 
+/**
+ * Hook to handle sending chat messages, with streaming updates.
+ * We incorporate the new model settings from `useChatModelParams`.
+ */
 export function useSendChatMessage(args: UseSendMessageArgs) {
     const {
         chatId,
-        userInput,
         provider,
         model,
         excludedMessageIds,
         clearUserInput,
-        pendingMessages,
         setPendingMessages,
         refetchMessages,
     } = args;
 
+
+
     const sendMessageMutation = useSendMessage();
 
-    const handleSendMessage = useCallback(async () => {
+    const handleSendMessage = useCallback(async ({
+        userInput,
+        modelSettings,
+    }: {
+        userInput: string;
+        modelSettings: ChatModelSettings
+    }) => {
+        const {
+            temperature,
+            max_tokens,
+            top_p,
+            frequency_penalty,
+            presence_penalty,
+            stream,
+        } = modelSettings;
+
         if (!userInput.trim()) {
             console.log("[handleSendMessage] Aborting - no input");
             return;
@@ -106,17 +127,26 @@ export function useSendChatMessage(args: UseSendMessageArgs) {
         setPendingMessages((prev) => [...prev, userMessage, assistantMessage]);
 
         try {
-            const stream = await sendMessageMutation.mutateAsync({
+            // Pass the new settings into `options`
+            const streamResponse = await sendMessageMutation.mutateAsync({
                 message: userInput.trim(),
                 chatId,
                 provider,
                 tempId: assistantTempId,
-                options: { model },
+                options: {
+                    model,
+                    stream,
+                    temperature,
+                    max_tokens,
+                    top_p,
+                    frequency_penalty,
+                    presence_penalty,
+                },
                 excludedMessageIds,
             });
 
             // Stream the response and update assistant message content
-            const reader = stream.getReader();
+            const reader = streamResponse.getReader();
             let assistantContent = "";
 
             while (true) {
@@ -156,7 +186,6 @@ export function useSendChatMessage(args: UseSendMessageArgs) {
             );
         }
     }, [
-        userInput,
         chatId,
         provider,
         model,

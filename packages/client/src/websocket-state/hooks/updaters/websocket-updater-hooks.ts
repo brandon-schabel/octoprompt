@@ -11,6 +11,7 @@ import {
     linkSettingsSchema,
 } from "shared";
 import { useActiveChatTab, useActiveProjectTab, useProjectTab, useSettings } from "../selectors/websocket-selectors";
+import { useGlobalState } from "../selectors/use-global-state";
 
 /**
  * Helper for partial updates of state.
@@ -55,16 +56,17 @@ export function useUpdateSettings() {
     const { canProceed, sendWSMessage } = useSendWebSocketMessage();
     const settings = useSettings();
 
+
     return useCallback(
         (partialOrFn: PartialOrFn<AppSettings>) => {
-            if (!canProceed() || !settings) return;
-            const finalPartial = getPartial(settings, partialOrFn);
+            if (!canProceed()) return;
+            if (!settings) return
             sendWSMessage({
                 type: "update_settings_partial",
-                partial: finalPartial,
+                partial: typeof partialOrFn === "function" ? partialOrFn(settings) : partialOrFn,
             });
         },
-        [canProceed, settings, sendWSMessage]
+        [canProceed, sendWSMessage, settings]
     );
 }
 
@@ -112,6 +114,9 @@ export function useCreateProjectTab() {
                 ticketSort: "created_desc",
                 ticketStatusFilter: "all",
                 ticketId: null,
+                provider: undefined,
+                linkSettings: undefined,
+                sortOrder: 0,
             };
 
             sendWSMessage({
@@ -166,21 +171,18 @@ export function useUpdateProjectTab() {
  */
 export function useDeleteProjectTab() {
     const { canProceed, sendWSMessage } = useSendWebSocketMessage();
-    const settings = useSettings();
 
     return useCallback(
         (tabId: string) => {
-            if (!canProceed() || !settings) return;
-            if (settings.projectTabIdOrder.length <= 1) {
-                console.warn("Cannot delete the last remaining project tab");
-                return;
-            }
+            if (!canProceed()) return;
+            // If you want to ensure at least one tab remains, you can add
+            // logic checking how many project tabs exist in the cache, etc.
             sendWSMessage({
                 type: "delete_project_tab",
                 tabId,
             });
         },
-        [canProceed, settings, sendWSMessage]
+        [canProceed, sendWSMessage]
     );
 }
 
@@ -280,6 +282,7 @@ export function useCreateProjectTabFromTicket() {
                 fileSearch: "",
                 ticketSearch: "",
                 ticketId: ticket.id,
+                sortOrder: 0,
             };
 
             sendWSMessage({
@@ -323,6 +326,7 @@ export function useCreateChatTab() {
                 activeChatId: undefined,
                 linkSettings: options?.cleanTab ? undefined : activeChatTab.linkSettings,
                 linkedProjectTabId: options?.cleanTab ? null : activeChatTab.linkedProjectTabId,
+                sortOrder: 0,
             };
 
             sendWSMessage({
@@ -379,21 +383,16 @@ export function useUpdateChatTab() {
  */
 export function useDeleteChatTab() {
     const { canProceed, sendWSMessage } = useSendWebSocketMessage();
-    const settings = useSettings();
 
     return useCallback(
         (tabId: string) => {
-            if (!canProceed() || !settings) return;
-            if (settings.chatTabIdOrder.length <= 1) {
-                console.warn("Cannot delete the last remaining chat tab");
-                return;
-            }
+            if (!canProceed()) return;
             sendWSMessage({
                 type: "delete_chat_tab",
                 tabId,
             });
         },
-        [canProceed, settings, sendWSMessage]
+        [canProceed, sendWSMessage]
     );
 }
 
@@ -442,9 +441,6 @@ export function useUpdateChatTabState() {
    LINKING HOOKS
    -------------------------------------------------- */
 
-/**
- * Hook: link chat tab to a project tab
- */
 export function useLinkChatTabToProjectTab() {
     const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
@@ -461,7 +457,7 @@ export function useLinkChatTabToProjectTab() {
                         includePrompts: true,
                         includeUserPrompt: true,
                         ...settings,
-                    } satisfies LinkSettings,
+                    },
                 },
             });
         },
@@ -469,9 +465,6 @@ export function useLinkChatTabToProjectTab() {
     );
 }
 
-/**
- * Hook: unlink chat tab
- */
 export function useUnlinkChatTab() {
     const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
@@ -491,9 +484,6 @@ export function useUnlinkChatTab() {
     );
 }
 
-/**
- * Hook: update chat link settings
- */
 export function useUpdateChatLinkSettings() {
     const { canProceed, sendWSMessage } = useSendWebSocketMessage();
 
@@ -518,4 +508,3 @@ export function useUpdateChatLinkSettings() {
         [canProceed, sendWSMessage]
     );
 }
-

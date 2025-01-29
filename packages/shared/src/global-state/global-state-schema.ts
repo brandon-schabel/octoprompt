@@ -69,12 +69,21 @@ export const projectTabStateSchema = z.object({
     ticketId: z.string().nullable().optional().default(null),
     provider: providerSchema.optional(),
     linkSettings: linkSettingsSchema.optional(),
+    sortOrder: z.number().optional().default(0),
 });
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
 
-// ------------------------------------------------------------------
-// Chat tab state
-// ------------------------------------------------------------------
+export const chatModelSettingsSchema = z.object({
+    temperature: z.number().min(0).max(2).default(0.7),
+    max_tokens: z.number().min(100).max(Infinity).default(32000),
+    top_p: z.number().min(0).max(1).default(1),
+    frequency_penalty: z.number().min(-2).max(2).default(0),
+    presence_penalty: z.number().min(-2).max(2).default(0),
+    stream: z.boolean().default(true),
+});
+
+export type ChatModelSettings = z.infer<typeof chatModelSettingsSchema>;
+
 export const chatTabStateSchema = z.object({
     provider: providerSchema.optional().default("openai"),
     model: z.string().optional().default("gpt-4o"),
@@ -96,14 +105,20 @@ export const chatTabStateSchema = z.object({
     linkSettings: linkSettingsSchema.optional(),
     ollamaUrl: z.string().optional(),
     lmStudioUrl: z.string().optional(),
+    temperature: chatModelSettingsSchema.shape.temperature,
+    max_tokens: chatModelSettingsSchema.shape.max_tokens,
+    top_p: chatModelSettingsSchema.shape.top_p,
+    frequency_penalty: chatModelSettingsSchema.shape.frequency_penalty,
+    presence_penalty: chatModelSettingsSchema.shape.presence_penalty,
+    stream: chatModelSettingsSchema.shape.stream,
+    sortOrder: z.number().optional().default(0),
 });
 export type ChatTabState = z.infer<typeof chatTabStateSchema>;
 
-// ------------------------------------------------------------------
-// Theme, app settings
-// ------------------------------------------------------------------
+
 export const themeSchema = z.enum(["light", "dark"]).default("light");
 export type Theme = z.infer<typeof themeSchema>;
+
 
 export const appSettingsSchema = z.object({
     language: z.string().optional().default("en"),
@@ -117,23 +132,16 @@ export const appSettingsSchema = z.object({
     summarizationEnabledProjectIds: z.array(z.string()).optional().default([]),
     useSpacebarToSelectAutocomplete: z.boolean().optional().default(true),
     hideInformationalTooltips: z.boolean().optional().default(false),
-    chatTabIdOrder: z.array(z.string()).optional().default([]),
-    projectTabIdOrder: z.array(z.string()).optional().default([]),
 });
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 
-// ------------------------------------------------------------------
-// Collections of tabs
-// ------------------------------------------------------------------
+
 export const chatTabsStateRecordSchema = z.record(z.string(), chatTabStateSchema);
 export type ChatTabsStateRecord = z.infer<typeof chatTabsStateRecordSchema>;
 
 export const projectTabsStateRecordSchema = z.record(z.string(), projectTabStateSchema);
 export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
 
-// ------------------------------------------------------------------
-// Global state
-// ------------------------------------------------------------------
 export const globalStateSchema = z.object({
     settings: appSettingsSchema,
     counter: z.number().optional().default(0),
@@ -144,9 +152,7 @@ export const globalStateSchema = z.object({
 });
 export type GlobalState = z.infer<typeof globalStateSchema>;
 
-// ------------------------------------------------------------------
-// Function to create an initial global state
-// ------------------------------------------------------------------
+
 export const createInitialGlobalState = (): GlobalState => ({
     settings: {
         language: "en",
@@ -160,8 +166,6 @@ export const createInitialGlobalState = (): GlobalState => ({
         summarizationEnabledProjectIds: [],
         useSpacebarToSelectAutocomplete: true,
         hideInformationalTooltips: false,
-        chatTabIdOrder: [],
-        projectTabIdOrder: [],
     },
     counter: 0,
     projectTabs: {
@@ -187,6 +191,7 @@ export const createInitialGlobalState = (): GlobalState => ({
             ticketId: null,
             provider: undefined,
             linkSettings: undefined,
+            sortOrder: 0,
         },
     },
     chatTabs: {
@@ -206,6 +211,13 @@ export const createInitialGlobalState = (): GlobalState => ({
             },
             ollamaUrl: undefined,
             lmStudioUrl: undefined,
+            temperature: 0.7,
+            max_tokens: 4000,
+            top_p: 1,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+            stream: true,
+            sortOrder: 0,
         },
     },
     chatActiveTabId: "defaultTab",

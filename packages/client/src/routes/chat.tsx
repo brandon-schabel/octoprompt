@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { AdaptiveChatInput } from "@/components/adaptive-chat-input";
+import { ChatHeader } from "@/components/chat/chat-header";
 
 import { ChatTabManager } from "@/components/tab-managers/chat-tab-manager";
 import { ChatProjectSidebar } from "@/components/chat/chat-project-sidebar";
@@ -18,6 +19,7 @@ import {
 } from "@/websocket-state/hooks/selectors/websocket-selectors";
 import { useSendChatMessage, useChatMessages } from "@/components/chat/hooks/chat-hooks";
 import { APIProviders } from "shared/index";
+import { useChatModelParams } from "@/components/chat/hooks/use-chat-model-params";
 
 
 export const Route = createFileRoute("/chat")({
@@ -39,6 +41,8 @@ function ChatPage() {
   const newMessage = activeChatTabState?.input ?? "";
   const chatId = currentChat?.activeChatId ?? "";
 
+  const { settings: modelSettings } = useChatModelParams();
+
   // Get messages and pending state management
   const {
     messages,
@@ -51,7 +55,6 @@ function ChatPage() {
   // Initialize send message hook with proper state management
   const { handleSendMessage } = useSendChatMessage({
     chatId,
-    userInput: newMessage,
     provider: activeChatTabState?.provider as APIProviders ?? "openai",
     model: activeChatTabState?.model ?? "gpt-4o-mini",
     excludedMessageIds: activeChatTabState?.excludedMessageIds ?? [],
@@ -154,7 +157,10 @@ function ChatPage() {
 
   async function handleSendWithDebug() {
     // If you had your `handleSendMessage` from `useSendMessageHook`, you could call it here:
-    await handleSendMessage();
+    await handleSendMessage({
+      userInput: newMessage,
+      modelSettings,
+    });
   }
 
   return (
@@ -167,14 +173,19 @@ function ChatPage() {
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-
-          {currentChat && <ChatMessages
-            messages={messages}
-            isFetching={isFetching}
-            excludedMessageIds={currentChat?.excludedMessageIds ?? []}
-
-          />
-          }
+          {currentChat && (
+            <>
+              <ChatHeader
+                chatId={chatId}
+                excludedMessageIds={currentChat?.excludedMessageIds ?? []}
+              />
+              <ChatMessages
+                messages={messages}
+                isFetching={isFetching}
+                excludedMessageIds={currentChat?.excludedMessageIds ?? []}
+              />
+            </>
+          )}
 
           <div className="relative mx-2 mb-2">
             <div className="flex gap-2 bg-background rounded-md">

@@ -5,6 +5,7 @@ import ts from "react-syntax-highlighter/dist/esm/languages/hljs/typescript";
 import js from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
 // @ts-ignore
 import * as languages from "react-syntax-highlighter/dist/esm/languages/hljs";
+import { useThemeSettings } from "@/websocket-state/hooks/settings/settings-hooks";
 
 Object.entries(languages).forEach(([name, lang]) => {
     SyntaxHighlighter.registerLanguage(name, lang);
@@ -16,17 +17,16 @@ SyntaxHighlighter.registerLanguage("tsx", ts);
 
 type MarkdownRendererProps = {
     content: string;
-    themeStyle?: any;
-    isDarkMode?: boolean;
     copyToClipboard?: (text: string) => void;
 };
 
 export function MarkdownRenderer({
     content,
-    themeStyle = themes.atomOneLight,
-    isDarkMode = false,
     copyToClipboard,
 }: MarkdownRendererProps) {
+
+    const { isDarkMode, selectedTheme } = useThemeSettings()
+
     const components: Components = {
         // @ts-ignore
         code: ({ inline, className, children, ...rest }) => {
@@ -55,7 +55,7 @@ export function MarkdownRenderer({
                         {/* @ts-ignore */}
                         <SyntaxHighlighter
                             language={match[1]}
-                            style={themeStyle}
+                            style={selectedTheme}
                             showLineNumbers
                             wrapLongLines
                         >

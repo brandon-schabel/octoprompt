@@ -2,6 +2,35 @@
 
 Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code companion. Built on **Bun** and **React**, OctoPrompt is designed to make your dev life easier without bogging down your system. Because everything runs locally, you have complete control over your data and can fine-tune functionality to suit your needs.
 
+## Introduction
+
+At its core, you **open a code project**, and the server attaches **file watchers** to that project. You can optionally use an AI agent to **summarize your code files**, while another built-in agent helps you create **tickets** (like a lightweight JIRA) for new features, bug fixes, or any task you need. The AI-driven file summaries allow the ticket agent to create context-aware tasks. A third agent can suggest which specific files are needed to accomplish a ticket.
+
+This workflow is particularly handy for **planning**:
+
+1. **Summarize** your files to build context
+2. **Create** a feature or bugfix ticket
+3. **Generate** a list of tasks relevant to your codebase
+4. **Copy** the tasks or code references with one click to paste them wherever you need—ChatGPT, Cursor, or any LLM interface.
+
+You are always in control of your data. By default, everything runs locally, and the AI features (currently powered by OpenRouter) are entirely optional. This will be configureable, but currently it is hard coded. If you do enable AI, it can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt’s local file watchers, built-in ticket system, quick file searching, and prompt management.
+
+> **Note:** OctoPrompt is still in beta. While features like file search, file selection, prompt management, and project tickets are quite stable, the app has not been extensively tested on very large projects. It should handle hundreds of files without issue, but if you run into any problems—or if you need to ignore certain directories or file patterns—configure your **file watcher filters** accordingly and feel free to file an issue.
+
+---
+
+## Quick Start
+
+For most users, the easiest way to try out OctoPrompt is by downloading the **prebuilt binaries** from our [**latest tags**](https://github.com/brandon-schabel/octoprompt/tags) (substitute the actual repository URL).
+
+1. **Download** the appropriate binary for your platform (Windows, Linux, or macOS).
+2. **Unzip** (if needed) and run the executable.
+3. **Open** [http://localhost:3579](http://localhost:3579) (or as indicated by the binary’s logs) to start using OctoPrompt.
+
+> **Tip:** Even without setting up AI keys, you can still manage projects, create tickets, and explore OctoPrompt’s local file summarization functionality (if you skip AI usage, no external calls will be made).
+
+---
+
 ## Key Features
 
 - **Local-First**  
@@ -14,7 +43,7 @@ Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code
   Uses **Bun** on the backend for top-notch speed with minimal overhead. Avoids heavy libraries and leans on built-in APIs.
 
 - **Batteries Included**  
-  Chat management, file watchers, prompts, code summarization, and more. Instantly ready for local dev tasks.
+  Chat management, file watchers, prompts, code summarization, ticket creation, and more. Instantly ready for local dev tasks.
 
 - **Customizable**  
   Extensible plugin-based design. Add or remove features, tweak watchers, or build your own modules.
@@ -44,8 +73,6 @@ Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code
 https://github.com/user-attachments/assets/dcdc4d34-fb67-4ec8-9544-426f7fe95eec
 
 
-
-
 ---
 
 ## Project Setup
@@ -70,7 +97,7 @@ powershell -c "irm bun.sh/install.ps1 | iex"
 
 ### Installation & Setup
 
-1. **Install dependencies and setup the project**:
+1. **Install dependencies and set up the project**:
 
    ```bash
    # Install all workspace dependencies
@@ -87,33 +114,29 @@ powershell -c "irm bun.sh/install.ps1 | iex"
    bun run dev
    ```
 
-   ### Start Client/Server Seperately
-   
-   #### Start just the client (runs on port 5173)
-   
-   ```bash
-   
-   bun run client:dev
-   ```
+   #### Start Client/Server Separately
 
-   #### Start just the server (runs on port 3000)
+   - **Client** (runs on port 5173):
 
-   ```bash
-   bun run server:dev
-   ```
+     ```bash
+     bun run client:dev
+     ```
 
-   The client will be available at [http://localhost:5173](http://localhost:5173)  
+   - **Server** (runs on port 3000):
 
-   The server will be available at [http://localhost:3000](http://localhost:3000)
+     ```bash
+     bun run server:dev
+     ```
 
+   The client is available at [http://localhost:5173](http://localhost:5173)  
+   The server is available at [http://localhost:3000](http://localhost:3000)
 
-
-
-
+---
 
 ## IMPORTANT - Configure Your Provider Keys
-For the Providers you'll want to use you'll need to click the "Keys" button in the navbar and configure each of your provider keys. 
-For example:
+
+If you choose to enable AI features, click the **"Keys"** button in the navbar and configure each provider key.  
+For example:  
 ![Xnapper-2025-01-13-20 25 41](https://github.com/user-attachments/assets/3b87ca3e-3182-4271-8235-b98477f182ac)
 
 ---
@@ -129,7 +152,7 @@ OctoPrompt is designed with a streamlined production build process where the cli
    - This means the built client files will be directly available to the server for serving static content
    - All test files are automatically excluded from the production build
 
-2. **Server Build**
+2. **Server Build**  
    The server's build process (`build.ts`) handles several key steps:
    - Builds the client first and includes it in the server distribution
    - Bundles the server as a minimized JS bundle
@@ -152,11 +175,11 @@ bun run build
 
 The build process will:
 
-1. Clear the previous dist directory
-2. Build the client and copy it to the server's static files directory
-3. Bundle the server with the client files
-4. Create platform-specific executables
-5. Package everything into distributable zip files
+1. Clear the previous dist directory  
+2. Build the client and copy it to the server's static files directory  
+3. Bundle the server with the client files  
+4. Create platform-specific executables  
+5. Package everything into distributable zip files  
 
 The final builds will be available in `packages/server/dist/`, with separate zip files for each supported platform.
 
@@ -175,9 +198,9 @@ Below are some ways you might interact with OctoPrompt once it’s up and runnin
 ### 1. Simple Local Chat
 
 - **Open** your web client at [localhost:5173](http://localhost:5173).
-- Click "Chat" in the Navbar
-- Click **New Chat** in the top right of the Navbar to top right.  
-- **Type** a question—OctoPrompt will respond in real-time, referencing your local files if you have them synced.
+- Click "Chat" in the Navbar.
+- Click **New Chat** in the top-right corner.
+- **Type** a question—OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.
 
 ### 2. File Summaries & Suggestions
 
@@ -197,7 +220,7 @@ Below are some ways you might interact with OctoPrompt once it’s up and runnin
 
 ## API Documentation (High-Level)
 
-OctoPrompt consists of **TypeScript** modules both on the client and server side. Here’s a quick overview:
+OctoPrompt consists of **TypeScript** modules on both the client and server side. Here’s a quick overview:
 
 ### Server Modules
 
@@ -247,7 +270,7 @@ OctoPrompt consists of **TypeScript** modules both on the client and server side
 - **Local-First**: By default, everything runs on your local environment. You decide if/when to bring in cloud APIs.  
 - **File Watchers**: Add patterns to ignore or allow certain files. Summaries update automatically.  
 - **Custom Prompts**: Create specialized prompts for your tasks. Share them with your teammates if you like.  
-- **Editor Links**: Use your favorite editor (VSCode, WebStorm, etc.) by configuring the open-file links in the UI.
+- **Editor Links**: Use your favorite editor (VSCode, WebStorm, etc.) by configuring open-file links in the UI.
 
 ---
 

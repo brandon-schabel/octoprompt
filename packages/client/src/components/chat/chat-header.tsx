@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-
 import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
@@ -22,7 +21,8 @@ import {
 } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
 import { useGlobalState } from "@/websocket-state/hooks/selectors/use-global-state";
 import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
-import { useForkChatHandler, useCreateChatHandler } from "./hooks/chat-hooks";
+import { useForkChatHandler } from "./hooks/chat-hooks";
+import { ModelSettingsPopover } from "./components/model-settings-popover";
 
 interface ChatHeaderProps {
     chatId?: string;
@@ -71,11 +71,16 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
         excludedMessageIds,
     });
 
+    function clearExcludedMessages() {
+        setExcludedMessageIds([]);
+    }
+
     async function handleCopyAllLinkedContent() {
         if (!linkedProjectTabId) {
             toast.error("This chat is not linked to a project tab.");
             return;
         }
+        // Do your custom copy logic here
         copyToClipboard("some content");
     }
 
@@ -87,10 +92,6 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
             includeUserPrompt: true,
         });
         setShowLinkSettings(false);
-    }
-
-    function clearExcludedMessages() {
-        setExcludedMessageIds([]);
     }
 
     return (
@@ -216,6 +217,9 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
                     onProviderChange={setProvider}
                     onModelChange={setCurrentModel}
                 />
+
+                {/* Model Settings Popover */}
+                <ModelSettingsPopover />
 
                 {/* Fork Chat Button */}
                 <Button variant="outline" onClick={handleForkChat} size="sm">

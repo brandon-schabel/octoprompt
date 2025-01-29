@@ -1,4 +1,4 @@
-import { Copy, GitFork, Trash } from "lucide-react";
+import { Copy, GitFork, Trash, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { ScrollArea } from "../ui/scroll-area";
@@ -10,13 +10,303 @@ import { ChatMessage } from "shared/schema";
 import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-ai-api";
 import { useUpdateActiveChatTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
 import { toast } from "sonner";
+import { useState } from "react";
+import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks";
+
+// Helper function to parse out <think> blocks
+function parseThinkBlock(content: string) {
+    // Only if the message starts with <think>
+    if (!content.startsWith("<think>")) {
+        return {
+            hasThinkBlock: false,
+            isThinking: false,
+            thinkContent: "",
+            mainContent: content,
+        };
+    }
+
+    // If we do have <think>, look for closing tag
+    const endIndex = content.indexOf("</think>");
+    if (endIndex === -1) {
+        // No closing tag -> we're still "thinking"
+        const thinkContent = content.slice("<think>".length);
+        return {
+            hasThinkBlock: true,
+            isThinking: true,
+            thinkContent,
+            mainContent: "",
+        };
+    }
+
+    // Found the closing tag
+    const thinkContent = content.slice("<think>".length, endIndex);
+    const mainContent = content.slice(endIndex + "</think>".length);
+
+    return {
+        hasThinkBlock: true,
+        isThinking: false,
+        thinkContent,
+        mainContent,
+    };
+}
+
+/**
+ * ChatMessageItem
+ * - Renders a single ChatMessage and handles any <think> logic if present.
+ */
+function ChatMessageItem(props: {
+    msg: ChatMessage;
+    excluded: boolean;
+    rawView: boolean;
+    onCopyMessage: () => void;
+    onForkMessage: () => void;
+    onDeleteMessage: () => void;
+    onToggleExclude: () => void;
+    onToggleRawView: () => void;
+    copyToClipboard: (text: string) => void;
+}) {
+    const {
+        msg,
+        excluded,
+        rawView,
+        onCopyMessage,
+        onForkMessage,
+        onDeleteMessage,
+        onToggleExclude,
+        onToggleRawView,
+        copyToClipboard,
+    } = props;
+
+    const isUser = msg.role === "user";
+
+    // If rawView is on, just show raw content
+    if (rawView) {
+        return (
+            <div
+                className={`relative rounded-lg p-3 ${isUser ? "bg-muted" : "bg-muted/50"
+                    } ${excluded ? "opacity-50" : ""}`}
+            >
+                {/* Heading row: "You" vs. "Assistant" */}
+                <div className="flex items-center justify-between mb-2">
+                    <div className="font-semibold">
+                        {isUser ? "You" : "Assistant"}
+                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs opacity-70 hover:opacity-100"
+                            >
+                                Options
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" side="bottom">
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                    {/* Copy */}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={onCopyMessage}
+                                        title="Copy message"
+                                    >
+                                        <Copy className="h-3 w-3" />
+                                    </Button>
+                                    {/* Fork */}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={onForkMessage}
+                                        title="Fork from here"
+                                    >
+                                        <GitFork className="h-3 w-3" />
+                                    </Button>
+                                    {/* Delete */}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={onDeleteMessage}
+                                        title="Delete message"
+                                    >
+                                        <Trash className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 border-t pt-2">
+                                    <div className="flex items-center gap-1">
+                                        <Switch
+                                            checked={excluded}
+                                            onCheckedChange={onToggleExclude}
+                                        />
+                                        <span className="text-xs text-muted-foreground">
+                                            Exclude
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Switch
+                                            checked={rawView}
+                                            onCheckedChange={onToggleRawView}
+                                        />
+                                        <span className="text-xs text-muted-foreground">
+                                            Raw View
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
+
+                {/* Raw content */}
+                <pre className="whitespace-pre-wrap text-sm font-mono p-2 bg-background/50 rounded">
+                    {msg.content}
+                </pre>
+            </div>
+        );
+    }
+
+    // Otherwise, parse for <think> logic
+    const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(msg.content);
+
+    return (
+        <div
+            className={`relative rounded-lg p-3 ${isUser ? "bg-muted" : "bg-muted/50"
+                } ${excluded ? "opacity-50" : ""}`}
+        >
+            {/* Heading row: "You" vs. "Assistant" */}
+            <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold">
+                    {isUser ? "You" : "Assistant"}
+                </div>
+
+                {/* Popover with copy/fork/delete/exclude */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs opacity-70 hover:opacity-100"
+                        >
+                            Options
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" side="bottom">
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                                {/* Copy (main content only) */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={onCopyMessage}
+                                    title="Copy message"
+                                >
+                                    <Copy className="h-3 w-3" />
+                                </Button>
+                                {/* Fork */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={onForkMessage}
+                                    title="Fork from here"
+                                >
+                                    <GitFork className="h-3 w-3" />
+                                </Button>
+                                {/* Delete */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={onDeleteMessage}
+                                    title="Delete message"
+                                >
+                                    <Trash className="h-3 w-3" />
+                                </Button>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 border-t pt-2">
+                                <div className="flex items-center gap-1">
+                                    <Switch
+                                        checked={excluded}
+                                        onCheckedChange={onToggleExclude}
+                                    />
+                                    <span className="text-xs text-muted-foreground">
+                                        Exclude
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Switch
+                                        checked={rawView}
+                                        onCheckedChange={onToggleRawView}
+                                    />
+                                    <span className="text-xs text-muted-foreground">
+                                        Raw View
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            </div>
+
+            {/* Handle a think block if present */}
+            {hasThinkBlock ? (
+                <div className="text-sm space-y-2">
+                    {isThinking ? (
+                        // If the block is not closed, treat as "in-progress" thinking
+                        <div className="p-2 bg-secondary text-secondary-foreground rounded">
+                            <div className="font-semibold mb-1">Thinking...</div>
+                            <div className="animate-pulse text-xs">
+                                {thinkContent}
+                            </div>
+                        </div>
+                    ) : (
+                        // If the block is closed, show collapsible
+                        <details className="bg-secondary/50 text-secondary-foreground rounded p-2">
+                            <summary className="cursor-pointer text-sm font-semibold">
+                                View Hidden Reasoning
+                            </summary>
+                            <div className="mt-2 text-xs whitespace-pre-wrap break-words">
+                                {thinkContent}
+
+                                <div className="mt-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(thinkContent)}
+                                    >
+                                        <Copy className="h-4 w-4 mr-1" />
+                                        Copy Think Text
+                                    </Button>
+                                </div>
+                            </div>
+                        </details>
+                    )}
+                    {/* Main content rendered as Markdown */}
+                    <MarkdownRenderer
+                        content={mainContent}
+                        copyToClipboard={copyToClipboard}
+                    />
+                </div>
+            ) : (
+                // No <think> block, just normal
+                <MarkdownRenderer
+                    content={msg.content}
+                    copyToClipboard={copyToClipboard}
+                />
+            )}
+        </div>
+    );
+}
 
 interface ChatMessagesProps {
     messages: ChatMessage[];          // Already merged local + server messages
     isFetching: boolean;
     excludedMessageIds: string[];     // For marking "excluded" messages
 }
-
 
 export function ChatMessages(props: ChatMessagesProps) {
     const {
@@ -31,6 +321,9 @@ export function ChatMessages(props: ChatMessagesProps) {
     const deleteMessageMutation = useDeleteMessage();
     const forkChatMutation = useForkChatFromMessage();
 
+    // track which messages are in 'raw view'
+    const [rawMessageIds, setRawMessageIds] = useState<Set<string>>(new Set());
+
     const handleToggleExclude = (messageId: string) => {
         const newExcludedMessageIds = new Set(excludedSet);
         if (newExcludedMessageIds.has(messageId)) {
@@ -38,7 +331,6 @@ export function ChatMessages(props: ChatMessagesProps) {
         } else {
             newExcludedMessageIds.add(messageId);
         }
-
         updateActiveChatTab({
             excludedMessageIds: Array.from(newExcludedMessageIds),
         });
@@ -47,7 +339,7 @@ export function ChatMessages(props: ChatMessagesProps) {
     const handleForkFromMessage = async (messageId: string) => {
         try {
             const result = await forkChatMutation.mutateAsync({
-                chatId: messages[0]?.chatId ?? '', // Get chatId from first message
+                chatId: messages[0]?.chatId ?? "", // Get chatId from first message
                 messageId,
                 excludedMessageIds,
             });
@@ -57,7 +349,7 @@ export function ChatMessages(props: ChatMessagesProps) {
             });
             toast.success("Chat forked successfully");
         } catch (error) {
-            console.error('Error forking chat:', error);
+            console.error("Error forking chat:", error);
             toast.error("Failed to fork chat");
         }
     };
@@ -68,7 +360,7 @@ export function ChatMessages(props: ChatMessagesProps) {
             return;
         }
 
-        const message = messages.find(m => m.id === messageId);
+        const message = messages.find((m) => m.id === messageId);
         if (!message) {
             toast.error("Message not found");
             return;
@@ -82,12 +374,23 @@ export function ChatMessages(props: ChatMessagesProps) {
 
         try {
             await deleteMessageMutation.mutateAsync(messageId);
-            // The query invalidation in useDeleteMessage will trigger a refetch
             toast.success("Message deleted successfully");
         } catch (error) {
-            console.error('Error deleting message:', error);
+            console.error("Error deleting message:", error);
             toast.error("Failed to delete message");
         }
+    };
+
+    const handleToggleRawView = (messageId: string) => {
+        setRawMessageIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(messageId)) {
+                newSet.delete(messageId);
+            } else {
+                newSet.add(messageId);
+            }
+            return newSet;
+        });
     };
 
     if (isFetching && messages.length === 0) {
@@ -116,82 +419,23 @@ export function ChatMessages(props: ChatMessagesProps) {
     return (
         <ScrollArea className="flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
-                {messages.map((msg, i) => {
-                    const isUser = msg.role === "user";
+                {messages.map((msg) => {
                     const excluded = excludedSet.has(msg.id);
+                    const rawView = rawMessageIds.has(msg.id);
+
                     return (
-                        <div
-                            key={`${msg.id}-${i}`}
-                            className={`relative rounded-lg p-3 ${isUser ? "bg-muted" : "bg-muted/50"
-                                } ${excluded ? "opacity-50" : ""}`}
-                        >
-                            {/* Heading row: "You" vs. "Assistant" */}
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="font-semibold">
-                                    {isUser ? "You" : "Assistant"}
-                                </div>
-
-                                {/* Popover with copy/fork/delete/exclude */}
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-xs opacity-70 hover:opacity-100"
-                                        >
-                                            Options
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent align="end" side="bottom">
-                                        <div className="flex items-center gap-2">
-                                            {/* Copy */}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => copyToClipboard(msg.content)}
-                                                title="Copy message"
-                                            >
-                                                <Copy className="h-3 w-3" />
-                                            </Button>
-                                            {/* Fork */}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => handleForkFromMessage(msg.id)}
-                                                title="Fork from here"
-                                            >
-                                                <GitFork className="h-3 w-3" />
-                                            </Button>
-                                            {/* Delete */}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => handleDeleteMessage(msg.id)}
-                                                title="Delete message"
-                                            >
-                                                <Trash className="h-3 w-3" />
-                                            </Button>
-                                            {/* Exclude switch */}
-                                            <div className="flex items-center gap-1">
-                                                <Switch
-                                                    checked={excluded}
-                                                    onCheckedChange={() => handleToggleExclude(msg.id)}
-                                                />
-                                                <span className="text-xs text-muted-foreground">
-                                                    Exclude
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-
-                            {/* Message content - using markdown renderer */}
-                            <MarkdownRenderer content={msg.content} />
-                        </div>
+                        <ChatMessageItem
+                            key={msg.id}
+                            msg={msg}
+                            excluded={excluded}
+                            rawView={rawView}
+                            copyToClipboard={copyToClipboard}
+                            onCopyMessage={() => copyToClipboard(msg.content)}
+                            onForkMessage={() => handleForkFromMessage(msg.id)}
+                            onDeleteMessage={() => handleDeleteMessage(msg.id)}
+                            onToggleExclude={() => handleToggleExclude(msg.id)}
+                            onToggleRawView={() => handleToggleRawView(msg.id)}
+                        />
                     );
                 })}
             </div>

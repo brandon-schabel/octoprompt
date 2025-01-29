@@ -1,7 +1,7 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 import { APIInterface } from '@/utils/api/api-interface'
 import { AppNavbar } from "@/components/navigation/app-navbar"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
   CommandDialog,
@@ -23,6 +23,16 @@ type RouterContext = {
 }
 
 function LoadingScreen() {
+  const [showError, setShowError] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowError(true);
+    }, 5000); // Show error message after 5 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-background">
       <div className="relative">
@@ -35,6 +45,15 @@ function LoadingScreen() {
           <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
             <div className="h-full w-1/2 bg-primary animate-[move_1s_ease-in-out_infinite]" />
           </div>
+        </div>
+        <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 whitespace-nowrap">
+          <p className="text-muted-foreground text-sm">
+            {!showError ? (
+              <span className="animate-pulse">Establishing websocket connection</span>
+            ) : (
+              <span className="text-destructive">Having trouble connecting. Please check if the server is running.</span>
+            )}
+          </p>
         </div>
       </div>
     </div>
@@ -83,9 +102,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootComponent() {
-  const { isOpen } = useGlobalStateContext()
+  const { isOpen, hasReceivedInitialState } = useGlobalStateContext()
 
-  if (!isOpen) {
+  // Show loading screen until both WebSocket is connected AND initial state is received
+  if (!isOpen || !hasReceivedInitialState) {
     return <LoadingScreen />
   }
 
