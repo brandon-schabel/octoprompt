@@ -12,8 +12,8 @@ import {
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
-import { useUpdateActiveChatTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks';
-import { useActiveChatTab } from '@/websocket-state/hooks/selectors/websocket-selectors';
+import { useUpdateActiveChatTab } from '@/zustand/updaters';
+import { useActiveChatTab } from '@/zustand/selectors';
 
 
 export function ChatSidebar() {

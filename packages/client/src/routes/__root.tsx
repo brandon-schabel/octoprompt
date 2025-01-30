@@ -16,7 +16,7 @@ import {
 import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
-import { useGlobalStateContext } from '@/websocket-state/context/global-state-provider'
+import { useGlobalStateContext } from '@/zustand/global-state-provider'
 
 type RouterContext = {
   api: APIInterface

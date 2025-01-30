@@ -9,7 +9,7 @@ import { useCreateTicket, useUpdateTicket, useUpdateTicketSuggestedFiles, useSug
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
 import { useGetProjectFiles } from "@/hooks/api/use-projects-api";
-import { useCreateProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import { useCreateProjectTab } from "@/zustand/updaters";
 
 interface TicketDialogProps {
     isOpen: boolean;

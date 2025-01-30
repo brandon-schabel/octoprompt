@@ -15,12 +15,11 @@ import { useGetChats } from "@/hooks/api/use-chat-ai-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useLinkChatTabToProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import { useLinkChatTabToProjectTab } from "@/zustand/updaters";
 import {
     useChatTabField,
-} from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
-import { useGlobalState } from "@/websocket-state/hooks/selectors/use-global-state";
-import { useActiveChatTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
+} from "@/zustand/zustand-utility-hooks";
+import { useActiveChatTab, useAllProjectTabs } from "@/zustand/selectors";
 import { useForkChatHandler } from "./hooks/chat-hooks";
 import { ModelSettingsPopover } from "./components/model-settings-popover";
 
@@ -51,8 +50,9 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
     const modelControl = useChatModelControl();
     const { provider, setProvider, currentModel, setCurrentModel } = modelControl;
     const excludedMessageCount = excludedMessageIds.length;
-    const { data: globalState } = useGlobalState();
-    const projectTabsRecord = globalState?.projectTabs || {};
+
+    const projectTabsRecord = useAllProjectTabs();
+
     const projectTabs = Object.entries(projectTabsRecord);
     const filteredProjectTabs = useMemo(
         () =>

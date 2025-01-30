@@ -11,8 +11,8 @@ import {
 } from "../ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
-import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks"
+import { useUpdateSettings } from "@/zustand/updaters"
+import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 
 type ThemeOption = {
     label: string;

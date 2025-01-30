@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
-import { memo } from 'react'
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -17,14 +16,14 @@ import { ProjectFile } from 'shared'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useFindSuggestedFiles, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useUpdateActiveProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useUpdateActiveProjectTab } from '@/zustand/updaters'
 import { formatShortcut } from '@/lib/shortcuts'
 import { InfoTooltip } from '@/components/info-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
-import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useActiveProjectTab } from '@/zustand/selectors'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
-import { useProjectTabField } from '@/websocket-state/hooks/project-tab/project-tab-hooks'
+import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -38,7 +37,7 @@ interface PromptOverviewPanelProps {
     selectedFilesState: UseSelectedFileReturn
 }
 
-export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
+export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
     function PromptOverviewPanel(
         { selectedProjectId, fileMap, promptData, className, selectedFilesState },
         ref
@@ -67,10 +66,7 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
 
         // Suggested files from activeTab
         const suggestedFileIds = activeTabState?.suggestedFileIds || []
-        const suggestedFiles = useMemo(
-            () => allProjectFiles.filter(file => suggestedFileIds.includes(file.id)),
-            [allProjectFiles, suggestedFileIds]
-        )
+        const suggestedFiles = allProjectFiles.filter(file => suggestedFileIds.includes(file.id))
 
         const findSuggestedFilesMutation = useFindSuggestedFiles(selectedProjectId)
 
@@ -82,12 +78,12 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
         }, [globalUserPrompt])
 
         // Debounce saving to global state
-        const updateGlobalPrompt = useCallback((value: string) => {
+        const updateGlobalPrompt = (value: string) => {
             updateActiveProjectTab(prev => ({
                 ...prev,
                 userPrompt: value,
             }))
-        }, [updateActiveProjectTab])
+        }
         const debouncedUpdateGlobal = useDebounce(updateGlobalPrompt, 1000)
 
         // For “undo/redo” + selected files
@@ -105,16 +101,14 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
         const { copyToClipboard } = useCopyClipboard()
 
         // Calculate total tokens used
-        const totalTokens = useMemo(() => {
-            return calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap)
-        }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap])
+        const totalTokens = calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap)
 
         const usagePercentage = contextLimit > 0
             ? (totalTokens / contextLimit) * 100
             : 0
 
         // Build final prompt text
-        const promptBuilder = useCallback(() => {
+        const promptBuilder = () => {
             return buildPromptContent({
                 promptData,
                 selectedPrompts,
@@ -122,17 +116,18 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
                 selectedFiles,
                 fileMap,
             })
-        }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, fileMap])
+        }
 
         // Copy entire prompt to clipboard
-        const handleCopyToClipboard = useCallback(() => {
+        const handleCopyToClipboard = () => {
             if (!fileMap.size && !localUserPrompt.trim() && selectedPrompts.length === 0) return
             const finalPrompt = promptBuilder()
+
             copyToClipboard(finalPrompt, {
                 successMessage: 'All Content Copied to clipboard',
                 errorMessage: 'Failed to copy',
             })
-        }, [fileMap.size, localUserPrompt, selectedPrompts, promptBuilder, copyToClipboard])
+        }
 
         // Find suggested files
         function handleFindSuggestedFiles(userPrompt: string) {
@@ -193,9 +188,6 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
             handleCopyToClipboard()
         }, [handleCopyToClipboard])
 
-        const copyButtonText = useMemo(() => {
-            return `Copy All ${formatShortcut('mod+shift+c')}`
-        }, [])
 
         useHotkeys('mod+p', (e) => {
             e.preventDefault()
@@ -210,10 +202,10 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
         }), [])
 
         // Update local & global user prompt
-        const handleUserPromptChange = useCallback((value: string) => {
+        const handleUserPromptChange = (value: string) => {
             setLocalUserPrompt(value)
             debouncedUpdateGlobal(value)
-        }, [debouncedUpdateGlobal])
+        }
 
         return (
             <div className={`flex flex-col overflow-y-auto ${className}`}>
@@ -281,7 +273,7 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
 
                                     <div className="flex gap-2 mt-2">
                                         <Button onClick={handleCopyToClipboard}>
-                                            {copyButtonText}
+                                            Copy All {formatShortcut('mod+shift+c')}
                                         </Button>
                                         <Button
                                             onClick={() => handleFindSuggestedFiles(localUserPrompt)}
@@ -312,4 +304,4 @@ export const PromptOverviewPanel = memo(forwardRef<PromptOverviewPanelRef, Promp
             </div>
         )
     }
-))
+)

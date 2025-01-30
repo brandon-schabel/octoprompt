@@ -6,7 +6,7 @@ import { ChatMessage } from "shared/schema";
 import { useSendMessage } from "@/hooks/api/use-chat-ai-api";
 import { APIProviders, ChatModelSettings } from "shared";
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api";
-import { useChatTabField } from "@/websocket-state/hooks/chat-tab/chat-tab-hooks";
+import { useChatTabField } from "@/zustand/zustand-utility-hooks";
 import { useChatModelParams } from "./use-chat-model-params";
 
 export type TempChatMessage = ChatMessage & { tempId?: string };

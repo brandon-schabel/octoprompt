@@ -135,16 +135,22 @@ export const appSettingsSchema = z.object({
 });
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 
+// Base schemas with all fields optional for partial updates
+export const projectTabStateBaseSchema = projectTabStateSchema.partial();
+export type ProjectTabStatePartial = z.infer<typeof projectTabStateBaseSchema>;
+
+export const chatTabStateBaseSchema = chatTabStateSchema.partial();
+export type ChatTabStatePartial = z.infer<typeof chatTabStateBaseSchema>;
+
+// Record schemas for the store state
+export const projectTabsStateRecordSchema = z.record(z.string(), projectTabStateSchema);
+export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
 
 export const chatTabsStateRecordSchema = z.record(z.string(), chatTabStateSchema);
 export type ChatTabsStateRecord = z.infer<typeof chatTabsStateRecordSchema>;
 
-export const projectTabsStateRecordSchema = z.record(z.string(), projectTabStateSchema);
-export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
-
 export const globalStateSchema = z.object({
     settings: appSettingsSchema,
-    counter: z.number().optional().default(0),
     projectTabs: projectTabsStateRecordSchema,
     projectActiveTabId: z.string().nullable().optional().default(null),
     chatTabs: chatTabsStateRecordSchema,
@@ -167,7 +173,6 @@ export const createInitialGlobalState = (): GlobalState => ({
         useSpacebarToSelectAutocomplete: true,
         hideInformationalTooltips: false,
     },
-    counter: 0,
     projectTabs: {
         defaultTab: {
             selectedProjectId: null,

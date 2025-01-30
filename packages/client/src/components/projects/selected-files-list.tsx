@@ -22,11 +22,11 @@ import {
   DropdownMenuShortcut
 } from "../ui/dropdown-menu"
 import { toast } from "sonner"
-import { useUpdateProjectTabState } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useUpdateProjectTabState } from "@/zustand/updaters"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
-import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors"
+import { useProjectTab } from "@/zustand/selectors"
 
 type SelectedFilesListProps = {
   selectedFiles: string[]

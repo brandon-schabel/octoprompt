@@ -9,7 +9,7 @@ import { ProjectFile } from 'shared/schema'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
-import { useSettingsField, useThemeSettings } from '@/websocket-state/hooks/settings/settings-hooks'
+import { useSettingsField, useThemeSettings } from '@/zustand/zustand-utility-hooks'
 
 type FileViewerDialogProps = {
     open: boolean

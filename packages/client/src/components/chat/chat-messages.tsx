@@ -8,10 +8,10 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { ChatMessage } from "shared/schema";
 import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-ai-api";
-import { useUpdateActiveChatTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import { useUpdateActiveChatTab } from "@/zustand/updaters";
 import { toast } from "sonner";
 import { useState } from "react";
-import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks";
+import { useSettingsField } from "@/zustand/zustand-utility-hooks";
 
 // Helper function to parse out <think> blocks
 function parseThinkBlock(content: string) {

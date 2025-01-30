@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useState, useMemo } from "react"
+import { useOptimistic, useFormStatus, useCallback, useMemo, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -26,7 +26,7 @@ import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useUpdateSettings } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useUpdateSettings } from "@/zustand/updaters"
 import {
     Select,
     SelectContent,
@@ -47,8 +47,10 @@ import {
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSettings } from "shared/src/global-state/global-state-schema"
-import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors"
-import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks"
+import { useActiveProjectTab } from "@/zustand/selectors"
+import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+
+
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -60,6 +62,13 @@ type SortOption = "nameAsc" | "nameDesc"
     | "fileTokenAsc" | "fileTokenDesc"
     | "summaryTokenAsc" | "summaryTokenDesc"
     | "sizeAsc" | "sizeDesc"
+
+// Add new type for optimistic state
+type OptimisticState = {
+    selectedFileIds: string[]
+    summarizedFileIds: string[]
+    excludedPatterns: string[]
+}
 
 /**
  * We no longer import a separate "FileSummary" type because file records now store
@@ -91,7 +100,7 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
     )
 }
 
-function ProjectSummarizationSettingsPage() {
+export function ProjectSummarizationSettingsPage() {
     const { data: summarizationEnabledProjectIds = [] } = useSettingsField('summarizationEnabledProjectIds')
     const { data: summarizationIgnorePatterns = [] } = useSettingsField('summarizationIgnorePatterns')
     const { tabData: projectTabState } = useActiveProjectTab()
@@ -102,16 +111,29 @@ function ProjectSummarizationSettingsPage() {
         ? summarizationEnabledProjectIds?.includes(selectedProjectId)
         : false
 
+    // Add transition for better loading states
+    const [isPending, startTransition] = useTransition()
+
+    // Base state
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
     const [expandedSummaryFileId, setExpandedSummaryFileId] = useState<string | null>(null)
     const [summaryDialogOpen, setSummaryDialogOpen] = useState(false)
     const [selectedFileRecord, setSelectedFileRecord] = useState<ProjectFile | null>(null)
-
-    // -- Sorting & Filtering additions --
     const [sortBy, setSortBy] = useState<SortOption>("nameAsc")
-    // Example numeric filters for token counts
     const [minTokensFilter, setMinTokensFilter] = useState<number | null>(null)
     const [maxTokensFilter, setMaxTokensFilter] = useState<number | null>(null)
+    const [isResummarizeDialogOpen, setIsResummarizeDialogOpen] = useState(false)
+    const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false)
+
+    // Optimistic state for better UX
+    const [optimisticState, addOptimisticEntry] = useOptimistic<OptimisticState>(
+        {
+            selectedFileIds,
+            summarizedFileIds: [],
+            excludedPatterns: summarizationIgnorePatterns ?? [],
+        }
+    )
+
 
     // 1) Fetch all project files
     const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? "")
@@ -122,13 +144,10 @@ function ProjectSummarizationSettingsPage() {
     const summaries = summariesData?.summaries || []
 
     // Build a lookup map of fileId -> ProjectFile
-    const summariesMap = useMemo(() => {
-        const map = new Map<string, ProjectFile>()
-        for (const f of summaries) {
-            map.set(f.id, f)
-        }
-        return map
-    }, [summaries])
+    const summariesMap = new Map<string, ProjectFile>()
+    for (const f of summaries) {
+        summariesMap.set(f.id, f)
+    }
 
     // 3) Summarize selected files
     const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? "")
@@ -153,147 +172,135 @@ function ProjectSummarizationSettingsPage() {
     // Compute token counts (used for sorting & filtering).
     // We can memoize a map of { fileId -> tokenCount } for performance.
     // -------------------------------------------------------------
-    const tokensMap = useMemo(() => {
-        const map = new Map<string, number>()
-        for (const file of includedFiles) {
-            if (file.content) {
-                map.set(file.id, estimateTokenCount(file.content))
-            } else {
-                map.set(file.id, 0)
-            }
+    const tokensMap = new Map<string, number>()
+    for (const file of includedFiles) {
+        if (file.content) {
+            tokensMap.set(file.id, estimateTokenCount(file.content))
+        } else {
+            tokensMap.set(file.id, 0)
         }
-        return map
-    }, [includedFiles])
+    }
 
     // Add summaryTokensMap calculation
-    const summaryTokensMap = useMemo(() => {
-        const map = new Map<string, number>()
-        for (const file of includedFiles) {
-            if (file.summary) {
-                map.set(file.id, estimateTokenCount(file.summary))
-            } else {
-                map.set(file.id, 0)
-            }
+    const summaryTokensMap = new Map<string, number>()
+    for (const file of includedFiles) {
+        if (file.summary) {
+            summaryTokensMap.set(file.id, estimateTokenCount(file.summary))
+        } else {
+            summaryTokensMap.set(file.id, 0)
         }
-        return map
-    }, [includedFiles])
+    }
 
     // File size is in the DB (`file.size`), so we can use that directly.
 
     // -------------------------------------------------------------
     // Filtering by token count
     // -------------------------------------------------------------
-    const filteredIncludedFiles = useMemo(() => {
-        return includedFiles.filter((file) => {
-            const tokenCount = tokensMap.get(file.id) ?? 0
-            if (minTokensFilter !== null && tokenCount < minTokensFilter) return false
-            if (maxTokensFilter !== null && tokenCount > maxTokensFilter) return false
-            return true
-        })
-    }, [includedFiles, minTokensFilter, maxTokensFilter, tokensMap])
+    const filteredIncludedFiles = includedFiles.filter((file) => {
+        const tokenCount = tokensMap.get(file.id) ?? 0
+        if (minTokensFilter !== null && tokenCount < minTokensFilter) return false
+        if (maxTokensFilter !== null && tokenCount > maxTokensFilter) return false
+        return true
+    })
 
     // -------------------------------------------------------------
     // Sorting logic
     // -------------------------------------------------------------
-    const sortedIncludedFiles = useMemo(() => {
-        return [...filteredIncludedFiles].sort((a, b) => {
-            const fileA = summariesMap.get(a.id)
-            const fileB = summariesMap.get(b.id)
+    const sortedIncludedFiles = [...filteredIncludedFiles].sort((a, b) => {
+        const fileA = summariesMap.get(a.id)
+        const fileB = summariesMap.get(b.id)
 
-            // Fallbacks
-            const nameA = fileA?.path ?? ""
-            const nameB = fileB?.path ?? ""
-            const updatedA = fileA?.summaryLastUpdatedAt
-                ? new Date(fileA.summaryLastUpdatedAt).getTime()
-                : 0
-            const updatedB = fileB?.summaryLastUpdatedAt
-                ? new Date(fileB.summaryLastUpdatedAt).getTime()
-                : 0
-            const fileTokensA = tokensMap.get(a.id) ?? 0
-            const fileTokensB = tokensMap.get(b.id) ?? 0
-            const summaryTokensA = summaryTokensMap.get(a.id) ?? 0
-            const summaryTokensB = summaryTokensMap.get(b.id) ?? 0
-            const sizeA = fileA?.size ?? 0
-            const sizeB = fileB?.size ?? 0
+        // Fallbacks
+        const nameA = fileA?.path ?? ""
+        const nameB = fileB?.path ?? ""
+        const updatedA = fileA?.summaryLastUpdatedAt
+            ? new Date(fileA.summaryLastUpdatedAt).getTime()
+            : 0
+        const updatedB = fileB?.summaryLastUpdatedAt
+            ? new Date(fileB.summaryLastUpdatedAt).getTime()
+            : 0
+        const fileTokensA = tokensMap.get(a.id) ?? 0
+        const fileTokensB = tokensMap.get(b.id) ?? 0
+        const summaryTokensA = summaryTokensMap.get(a.id) ?? 0
+        const summaryTokensB = summaryTokensMap.get(b.id) ?? 0
+        const sizeA = fileA?.size ?? 0
+        const sizeB = fileB?.size ?? 0
 
-            switch (sortBy) {
-                case "nameAsc":
-                    return nameA.localeCompare(nameB)
-                case "nameDesc":
-                    return nameB.localeCompare(nameA)
+        switch (sortBy) {
+            case "nameAsc":
+                return nameA.localeCompare(nameB)
+            case "nameDesc":
+                return nameB.localeCompare(nameA)
 
-                case "lastSummarizedAsc":
-                    return updatedA - updatedB
-                case "lastSummarizedDesc":
-                    return updatedB - updatedA
+            case "lastSummarizedAsc":
+                return updatedA - updatedB
+            case "lastSummarizedDesc":
+                return updatedB - updatedA
 
-                case "fileTokenAsc":
-                    return fileTokensA - fileTokensB
-                case "fileTokenDesc":
-                    return fileTokensB - fileTokensA
+            case "fileTokenAsc":
+                return fileTokensA - fileTokensB
+            case "fileTokenDesc":
+                return fileTokensB - fileTokensA
 
-                case "summaryTokenAsc":
-                    return summaryTokensA - summaryTokensB
-                case "summaryTokenDesc":
-                    return summaryTokensB - summaryTokensA
+            case "summaryTokenAsc":
+                return summaryTokensA - summaryTokensB
+            case "summaryTokenDesc":
+                return summaryTokensB - summaryTokensA
 
-                case "sizeAsc":
-                    return sizeA - sizeB
-                case "sizeDesc":
-                    return sizeB - sizeA
+            case "sizeAsc":
+                return sizeA - sizeB
+            case "sizeDesc":
+                return sizeB - sizeA
 
-                default:
-                    return 0
-            }
-        })
-    }, [filteredIncludedFiles, summariesMap, sortBy, tokensMap, summaryTokensMap])
+            default:
+                return 0
+        }
+    })
 
     // Similarly for excluded files, if you want them sorted:
-    const sortedExcludedFiles = useMemo(() => {
-        return [...excludedFiles].sort((a, b) => {
-            const fileA = summariesMap.get(a.id)
-            const fileB = summariesMap.get(b.id)
+    const sortedExcludedFiles = [...excludedFiles].sort((a, b) => {
+        const fileA = summariesMap.get(a.id)
+        const fileB = summariesMap.get(b.id)
 
-            // Fallbacks
-            const nameA = fileA?.path ?? ""
-            const nameB = fileB?.path ?? ""
-            const updatedA = fileA?.summaryLastUpdatedAt
-                ? new Date(fileA.summaryLastUpdatedAt).getTime()
-                : 0
-            const updatedB = fileB?.summaryLastUpdatedAt
-                ? new Date(fileB.summaryLastUpdatedAt).getTime()
-                : 0
-            const tokensA = tokensMap.get(a.id) ?? 0
-            const tokensB = tokensMap.get(b.id) ?? 0
-            const sizeA = fileA?.size ?? 0
-            const sizeB = fileB?.size ?? 0
+        // Fallbacks
+        const nameA = fileA?.path ?? ""
+        const nameB = fileB?.path ?? ""
+        const updatedA = fileA?.summaryLastUpdatedAt
+            ? new Date(fileA.summaryLastUpdatedAt).getTime()
+            : 0
+        const updatedB = fileB?.summaryLastUpdatedAt
+            ? new Date(fileB.summaryLastUpdatedAt).getTime()
+            : 0
+        const tokensA = tokensMap.get(a.id) ?? 0
+        const tokensB = tokensMap.get(b.id) ?? 0
+        const sizeA = fileA?.size ?? 0
+        const sizeB = fileB?.size ?? 0
 
-            switch (sortBy) {
-                case "nameAsc":
-                    return nameA.localeCompare(nameB)
-                case "nameDesc":
-                    return nameB.localeCompare(nameA)
+        switch (sortBy) {
+            case "nameAsc":
+                return nameA.localeCompare(nameB)
+            case "nameDesc":
+                return nameB.localeCompare(nameA)
 
-                case "lastSummarizedAsc":
-                    return updatedA - updatedB
-                case "lastSummarizedDesc":
-                    return updatedB - updatedA
+            case "lastSummarizedAsc":
+                return updatedA - updatedB
+            case "lastSummarizedDesc":
+                return updatedB - updatedA
 
-                case "fileTokenAsc":
-                    return tokensA - tokensB
-                case "fileTokenDesc":
-                    return tokensB - tokensA
+            case "fileTokenAsc":
+                return tokensA - tokensB
+            case "fileTokenDesc":
+                return tokensB - tokensA
 
-                case "sizeAsc":
-                    return sizeA - sizeB
-                case "sizeDesc":
-                    return sizeB - sizeA
+            case "sizeAsc":
+                return sizeA - sizeB
+            case "sizeDesc":
+                return sizeB - sizeA
 
-                default:
-                    return 0
-            }
-        })
-    }, [excludedFiles, summariesMap, sortBy, tokensMap])
+            default:
+                return 0
+        }
+    })
 
     function toggleFileSelection(fileId: string) {
         setSelectedFileIds((prev) =>
@@ -301,23 +308,58 @@ function ProjectSummarizationSettingsPage() {
         )
     }
 
-    function handleSummarize() {
+    // Optimistic handlers
+    async function handleSummarizeOptimistic() {
         if (!selectedFileIds.length) {
             toast.error("No Files Selected", {
                 description: "Please select at least one file to summarize",
             })
             return
         }
-        summarizeMutation.mutate(
-            { fileIds: selectedFileIds },
-            {
-                onSuccess: (resp) => {
-                    toast.success(resp.message || "Selected files have been summarized", {
-                        description: "Selected files have been summarized",
-                    })
-                },
-            }
-        )
+
+        startTransition(() => {
+            // Optimistically update UI
+            addOptimisticEntry((current: OptimisticState) => ({
+                ...current,
+                summarizedFileIds: selectedFileIds
+            }))
+
+            // Actual mutation
+            summarizeMutation.mutate(
+                { fileIds: selectedFileIds },
+                {
+                    onSuccess: (resp) => {
+                        toast.success(resp.message || "Selected files have been summarized")
+                    },
+                    onError: () => {
+                        // Reset optimistic state on error
+                        addOptimisticEntry((current: OptimisticState) => ({
+                            ...current,
+                            summarizedFileIds: []
+                        }))
+                    }
+                }
+            )
+        })
+    }
+
+    function handleExcludeFileOptimistic(filePath: string) {
+        startTransition(() => {
+            // Optimistically update UI
+            addOptimisticEntry((current: OptimisticState) => ({
+                ...current,
+                excludedPatterns: [...current.excludedPatterns, filePath]
+            }))
+
+            // Actual update
+            updateSettings((prev: AppSettings) => ({
+                ...prev,
+                summarizationIgnorePatterns: [
+                    ...prev.summarizationIgnorePatterns,
+                    filePath,
+                ],
+            }))
+        })
     }
 
     function handleForceSummarize() {
@@ -363,8 +405,6 @@ function ProjectSummarizationSettingsPage() {
         }
     }
 
-    const [isResummarizeDialogOpen, setIsResummarizeDialogOpen] = useState(false)
-
     function handleResummarizeAll() {
         if (!selectedProjectId) return
         setIsResummarizeDialogOpen(true)
@@ -376,66 +416,42 @@ function ProjectSummarizationSettingsPage() {
         setIsResummarizeDialogOpen(false)
     }
 
-    function handleExcludeFile(filePath: string) {
-        updateSettings((prev: AppSettings) => ({
-            ...prev,
-            summarizationIgnorePatterns: [
-                ...prev.summarizationIgnorePatterns,
-                filePath,
-            ],
-        }))
-    }
-
     // --------------------------------------------
     // "Summary Memory" & aggregated stats
     // --------------------------------------------
-    const totalContentLength = useMemo(() => {
-        let total = 0
-        for (const file of includedFiles) {
-            if (file.content) {
-                total += file.content.length
-            }
+    let totalContentLength = 0
+    for (const file of includedFiles) {
+        if (file.content) {
+            totalContentLength += file.content.length
         }
-        return total
-    }, [includedFiles])
+    }
 
-    const totalTokensInSummaries = useMemo(() => {
-        let total = 0
-        for (const file of includedFiles) {
-            if (file.summary) {
-                total += estimateTokenCount(file.summary)
-            }
+    let totalTokensInSummaries = 0
+    for (const file of includedFiles) {
+        if (file.summary) {
+            totalTokensInSummaries += estimateTokenCount(file.summary)
         }
-        return total
-    }, [includedFiles])
+    }
 
-    const combinedSummary = useMemo(() => {
-        return includedFiles
-            .filter(f => f.summary)
-            .map(f => f.summary)
-            .join("\n\n")
-    }, [includedFiles])
+    const combinedSummary = includedFiles
+        .filter(f => f.summary)
+        .map(f => f.summary)
+        .join("\n\n")
 
-    const combinedSummaryTokens = useMemo(() => {
-        return estimateTokenCount(combinedSummary)
-    }, [combinedSummary])
+    const combinedSummaryTokens = estimateTokenCount(combinedSummary)
 
-    const totalTokensInContent = useMemo(() => {
-        let total = 0
-        for (const file of includedFiles) {
-            if (file.content) {
-                total += estimateTokenCount(file.content)
-            }
+    let totalTokensInContent = 0
+    for (const file of includedFiles) {
+        if (file.content) {
+            totalTokensInContent += estimateTokenCount(file.content)
         }
-        return total
-    }, [includedFiles])
+    }
 
-    const formattedCombinedSummary = useMemo(() => {
-        const includedSummaries = summaries.filter(file =>
+    const formattedCombinedSummary = buildCombinedFileSummaries(
+        summaries.filter(file =>
             !matchesAnyPattern(file.path, summarizationIgnorePatterns ?? [])
-        );
-
-        return buildCombinedFileSummaries(includedSummaries, {
+        ),
+        {
             sectionDelimiter: "----------------------------------------",
             headerStyle: (file) => `File: ${file.path}`,
             footerStyle: (file) => `Last Updated: ${file.summaryLastUpdatedAt
@@ -443,10 +459,8 @@ function ProjectSummarizationSettingsPage() {
                 : 'Never'
                 }`,
             includeEmptySummaries: false,
-        });
-    }, [summaries, summarizationIgnorePatterns]);
-
-    const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false);
+        }
+    );
 
     if (isLoading) {
         return <div className="p-4">Loading files...</div>
@@ -540,8 +554,6 @@ function ProjectSummarizationSettingsPage() {
                             />
                         </div>
                     </div>
-
-
 
                     <div className="mb-4 text-sm">
                         <p>
@@ -713,7 +725,7 @@ function ProjectSummarizationSettingsPage() {
                                                     />
                                                     <button
                                                         className="text-red-600 hover:underline"
-                                                        onClick={() => handleExcludeFile(file.path)}
+                                                        onClick={() => handleExcludeFileOptimistic(file.path)}
                                                         disabled={!isProjectSummarizationEnabled}
                                                     >
                                                         Exclude
@@ -735,16 +747,14 @@ function ProjectSummarizationSettingsPage() {
 
                             <div className="mt-4 flex flex-wrap gap-2">
                                 <Button
-                                    onClick={handleSummarize}
+                                    onClick={handleSummarizeOptimistic}
                                     disabled={
                                         selectedFileIds.length === 0 ||
-                                        summarizeMutation.isPending ||
+                                        isPending ||
                                         !isProjectSummarizationEnabled
                                     }
                                 >
-                                    {summarizeMutation.isPending
-                                        ? "Summarizing..."
-                                        : "Summarize Selected"}
+                                    {isPending ? "Summarizing..." : "Summarize Selected"}
                                 </Button>
                                 <Button
                                     variant="outline"

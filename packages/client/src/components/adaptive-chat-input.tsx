@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, ChangeEvent, ClipboardEvent, KeyboardEvent } from "react"
+import { useState, useRef, useEffect, ChangeEvent, ClipboardEvent, KeyboardEvent } from "react"
 import { Expand, Mic, MicOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -82,10 +82,10 @@ export function AdaptiveChatInput({
         }
     }, [value])
 
-    const handleValueChange = useCallback((newValue: string) => {
+    const handleValueChange = (newValue: string) => {
         setLocalValue(newValue)
         debouncedOnChange(newValue)
-    }, [debouncedOnChange])
+    }
 
     useEffect(() => {
         if (!transcript ||
@@ -129,7 +129,7 @@ export function AdaptiveChatInput({
         const shouldBeMultiline = value.length > 100 || value.includes('\n')
         setIsMultiline(shouldBeMultiline)
     }, [value])
-    const handlePaste = useCallback(
+    const handlePaste =
         (e: ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
             if (!preserveFormatting) {
                 return
@@ -165,9 +165,7 @@ export function AdaptiveChatInput({
                 target.setSelectionRange(start + pasteText.length, start + pasteText.length)
                 target.focus()
             })
-        },
-        [handleValueChange, preserveFormatting]
-    )
+        }
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         if (e.key === 'Enter' && !e.shiftKey && !isMultiline) {
@@ -217,7 +215,7 @@ export function AdaptiveChatInput({
         </Popover>
     )
 
-    const handleSelectionChange = useCallback(() => {
+    const handleSelectionChange = () => {
         if (isHandlingTranscript) return
 
         const element = isMultiline ? textareaRef.current : inputRef.current
@@ -225,15 +223,15 @@ export function AdaptiveChatInput({
             setSelectionStart(element.selectionStart)
             setSelectionEnd(element.selectionEnd)
         }
-    }, [isMultiline, isHandlingTranscript])
+    }
 
-    const handleFocus = useCallback(() => {
+    const handleFocus = () => {
         const element = isMultiline ? textareaRef.current : inputRef.current
         if (element) {
             element.readOnly = false
             handleSelectionChange()
         }
-    }, [isMultiline, handleSelectionChange])
+    }
 
     const baseProps = {
         value: localValue,

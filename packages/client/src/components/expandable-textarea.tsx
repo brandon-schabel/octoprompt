@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useWhisperTranscription } from "@/hooks/api/use-whisper-transcription"
-import { useEffect, useState, useRef, useCallback, forwardRef, useMemo } from "react"
+import { useEffect, useState, useRef, forwardRef, useMemo } from "react"
 import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from "sonner"
@@ -117,16 +117,14 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     setIsExpanded(open)
   }
 
-  const handleSelectionChange = useCallback(() => {
+  const handleSelectionChange = () => {
     if (textareaRef.current) {
       setSelectionStart(textareaRef.current.selectionStart)
       setSelectionEnd(textareaRef.current.selectionEnd)
     }
-  }, [])
+  }
 
-  const placeholderWithShortcut = useMemo(() => {
-    return `${placeholder} (${formatShortcut('mod+i')})`
-  }, [placeholder])
+  const placeholderWithShortcut = `${placeholder} (${formatShortcut('mod+i')})`
 
   const renderMicrophoneButton = () => (
     <Popover open={isRecording}>

@@ -43,6 +43,7 @@ export function buildPromptContent(
         .map(fileId => fileMap.get(fileId))
         .filter((file): file is ProjectFile => !!file?.content)
 
+
     if (filesWithContent.length > 0) {
         contentToCopy += `<file_contents>\n`
         for (const file of filesWithContent) {
@@ -50,7 +51,6 @@ export function buildPromptContent(
         }
         contentToCopy += `</file_contents>\n`
     }
-
     return contentToCopy
 }
 

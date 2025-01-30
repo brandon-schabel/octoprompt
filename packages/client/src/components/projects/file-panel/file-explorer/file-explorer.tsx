@@ -1,11 +1,11 @@
-import { useState, useCallback, useMemo, useRef } from "react"
+import { useState, useRef } from "react"
 import { Project, ProjectFile } from "shared/schema"
 import { FileTree, FileTreeRef } from "../file-tree/file-tree"
 import { SelectedFilesListRef } from "../../selected-files-list"
 import { useDebounce } from "@/hooks/utility-hooks/use-debounce"
 import type { UseSelectedFileReturn } from "@/hooks/utility-hooks/use-selected-files"
-import { useProjectTabField } from "@/websocket-state/hooks/project-tab/project-tab-hooks"
-import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors"
+import { useProjectTabField } from "@/zustand/zustand-utility-hooks"
+import { useActiveProjectTab } from "@/zustand/selectors"
 import { useGetProjectFiles } from "@/hooks/api/use-projects-api"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,7 @@ import { SelectedFilesDrawer } from "../../selected-files-drawer"
 import { ShortcutDisplay } from "@/components/app-shortcut-display"
 import { formatShortcut } from "@/lib/shortcuts"
 import { Skeleton } from "@/components/ui/skeleton"
-import useClickAway from "@/hooks/use-click-away"
+import { useClickAway } from "@/hooks/use-click-away"
 import { buildFileTree } from "../../utils/projects-utils"
 import { NoResultsScreen } from "./no-results-screen"
 import { EmptyProjectScreen } from "./empty-project-screen"
@@ -59,7 +59,7 @@ const FileExplorer = function FileExplorer({
     showAutocomplete,
 }: FileExplorerProps) {
     const { id: activeProjectTabId = '', selectedProjectId } = useActiveProjectTab()
-    const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId)
+    const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId ?? '')
 
     const [autocompleteIndex, setAutocompleteIndex] = useState<number>(-1)
 
@@ -86,59 +86,47 @@ const FileExplorer = function FileExplorer({
 
 
     // Update handler that updates local state immediately and debounces parent update
-    const handleSearchChange = useCallback((value: string) => {
+    const handleSearchChange = (value: string) => {
         setLocalFileSearch(value)
         debouncedSetFileSearch(value)
         setShowAutocomplete(!!value.trim())
         setAutocompleteIndex(-1)
-    }, [debouncedSetFileSearch])
+    }
 
     // Update the filtered files to use localFileSearch instead of fileSearch
-    const filteredFiles = useMemo(() => {
+    const filteredFiles = (() => {
         if (!fileData?.files) return []
         const trimmed = localFileSearch.trim()
         if (!trimmed) return fileData.files
 
-        const lowerSearch = trimmed.toLowerCase()
-        if (searchByContent) {
-            return fileData.files.filter(
-                (f) =>
-                    (f.content && f.content.toLowerCase().includes(lowerSearch)) ||
-                    f.path.toLowerCase().includes(lowerSearch)
-            )
-        } else {
-            return fileData.files.filter((f) => f.path.toLowerCase().includes(lowerSearch))
-        }
-    }, [fileData?.files, localFileSearch, searchByContent])
+        return fileData.files.filter(file => {
+            const searchTerms = trimmed.toLowerCase().split(' ')
+            const filePath = file.path.toLowerCase()
+            return searchTerms.every(term => filePath.includes(term))
+        })
+    })()
 
-    const fileTree = useMemo(() => {
-        if (!filteredFiles.length) return null
-        return buildFileTree(filteredFiles)
-    }, [filteredFiles])
+    // Build file tree from filtered files
+    const fileTree = buildFileTree(filteredFiles)
 
-    // Full map of all files
-    const allFilesMap = useMemo(() => {
-        const map = new Map<string, ProjectFile>()
-        fileData?.files?.forEach((f) => map.set(f.id, f))
-        return map
-    }, [fileData?.files])
+    // Build maps for O(1) lookups
+    const allFilesMap = new Map(fileData?.files?.map(file => [file.id, file]) || [])
+    
+    // Build filtered files map for O(1) lookups
+    const filteredFilesMap = new Map(filteredFiles.map(file => [file.id, file]))
 
-    // Filtered map for the FileTree
-    const filteredFilesMap = useMemo(() => {
-        const map = new Map<string, ProjectFile>()
-        filteredFiles.forEach((f) => map.set(f.id, f))
-        return map
-    }, [filteredFiles])
+    // Handle setting selected files
+    const handleSetSelectedFiles = (updater: (prev: string[]) => string[]) => {
+        const newVal = updater(selectedFiles ?? [])
+        selectedFilesState.selectFiles(newVal) // local "undo/redo" manager
+        setSelectedFiles(newVal) // update server via WebSocket
+        setShowAutocomplete(false)
+        setAutocompleteIndex(-1)
+        searchInputRef.current?.blur()
+    }
 
-    // Combined approach: local undo/redo plus global partial update
-    const handleSetSelectedFiles = useCallback(
-        (updater: (prev: string[]) => string[]) => {
-            const newVal = updater(selectedFiles ?? [])
-            selectedFilesState.selectFiles(newVal) // local "undo/redo" manager
-            setSelectedFiles(newVal) // update server via WebSocket
-        },
-        [selectedFiles, selectedFilesState, setSelectedFiles]
-    )
+    // Get suggestions for autocomplete
+    const suggestions = filteredFiles.slice(0, 10)
 
     const openFileViewer = (file: ProjectFile) => setViewedFile(file)
 
@@ -151,7 +139,6 @@ const FileExplorer = function FileExplorer({
     }
 
     // Autocomplete
-    const suggestions = useMemo(() => filteredFiles.slice(0, 10), [filteredFiles])
     const selectFileFromAutocomplete = (file: ProjectFile) => {
         handleSetSelectedFiles((prev) => {
             if (prev.includes(file.id)) {

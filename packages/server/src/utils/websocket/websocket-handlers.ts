@@ -6,7 +6,7 @@ import {
   type InboundMessage,
   ProjectTabState,
 } from "shared";
-import { mergeDeep } from "./merge-deep";
+import { mergeDeep } from "shared";
 
 /** Generic type for a message handler of a certain 'type' */
 type WebSocketMessageHandler<T extends InboundMessage["type"]> = {

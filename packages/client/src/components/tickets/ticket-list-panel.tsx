@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { TicketWithTasks, useListTicketsWithTasks, useDeleteTicket } from "@/hooks/api/use-tickets-api";
-import { useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+import { useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/zustand/updaters";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -23,7 +23,7 @@ import {
 } from "../ui/alert-dialog";
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
-import { useProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
+import { useProjectTab } from "@/zustand/selectors";
 
 interface TicketListPanelProps {
     projectTabId: string;

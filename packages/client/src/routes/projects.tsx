@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo, useRef, useState, RefObject } from 'react'
+import { useRef, useState, RefObject } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -11,9 +11,9 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useCreateProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
-import { useActiveProjectTab, useAllProjectTabs } from '@/websocket-state/hooks/selectors/websocket-selectors'
-import { useProjectTabField } from '@/websocket-state/hooks/project-tab/project-tab-hooks'
+import { useCreateProjectTab } from '@/zustand/updaters'
+import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors'
+import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
 import { ProjectFile } from 'shared/schema'
 import type { Project } from 'shared'
 
@@ -29,7 +29,7 @@ function ProjectsPage() {
     const { data: selectedProjectId } = useProjectTabField(projectActiveTabId ?? '', 'selectedProjectId')
 
     // We track the existence of tabs to handle "no tabs" scenario
-    const noTabsYet = useMemo(() => Object.keys(tabs || {}).length === 0, [tabs])
+    const noTabsYet = Object.keys(tabs || {}).length === 0
 
     // Create a new tab from WebSocket side
     const createNewTab = useCreateProjectTab()
@@ -41,6 +41,8 @@ function ProjectsPage() {
     const { data: projects } = useGetProjects()
     const { data: fileData } = useGetProjectFiles(selectedProjectId ?? '')
     const { data: promptData } = useGetProjectPrompts(selectedProjectId ?? '')
+
+    const projectData = projects?.projects || []
 
     // If the user has no tabs at all, show the "NoTabsYetView"
     if (noTabsYet) {
@@ -71,7 +73,7 @@ function ProjectsPage() {
                 filePanelRef={filePanelRef as RefObject<FilePanelRef>}
                 promptPanelRef={promptPanelRef as RefObject<PromptOverviewPanelRef>}
                 selectedProjectId={selectedProjectId}
-                projects={projects?.projects ?? []}
+                projects={projectData}
                 fileData={fileData?.files || []}
                 promptData={promptData}
                 selectedFilesState={selectedFilesState}
@@ -111,10 +113,7 @@ function MainProjectsLayout({
     promptData,
     selectedFilesState
 }: MainProjectsLayoutProps) {
-    const projectData = useMemo(
-        () => projects.find((p) => p.id === selectedProjectId),
-        [projects, selectedProjectId]
-    )
+    const projectData = projects.find((p) => p.id === selectedProjectId)
 
     // Initialize welcome dialog state from localStorage
     const [showWelcomeDialog, setShowWelcomeDialog] = useState(() => {
@@ -153,11 +152,7 @@ function MainProjectsLayout({
     )
 
     // Build a file map for the prompt panel
-    const fileMap = useMemo(() => {
-        const map = new Map<string, ProjectFile>()
-        fileData.forEach((f) => map.set(f.id, f))
-        return map
-    }, [fileData])
+    const fileMap = new Map(fileData?.map(file => [file.id, file]) || [])
 
     return (
         <div className="flex-1 flex flex-row overflow-hidden">

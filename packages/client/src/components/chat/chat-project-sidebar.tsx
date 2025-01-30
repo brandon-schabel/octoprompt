@@ -18,13 +18,13 @@ import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import {
     useUpdateChatLinkSettings,
     useUnlinkChatTab,
-} from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+} from '@/zustand/updaters'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useQuery } from "@tanstack/react-query";
 import {
     useProjectTabField,
-} from '@/websocket-state/hooks/project-tab/project-tab-hooks'
-import { useChatTabField } from '@/websocket-state/hooks/chat-tab/chat-tab-hooks'
+} from '@/zustand/zustand-utility-hooks'
+import { useChatTabField } from '@/zustand/zustand-utility-hooks'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string

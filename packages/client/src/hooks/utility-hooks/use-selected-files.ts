@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import { useUpdateActiveProjectTab } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useState, useEffect } from 'react'
+import { useUpdateActiveProjectTab } from '@/zustand/updaters'
 import { ProjectFile } from 'shared'
-import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useActiveProjectTab } from '@/zustand/selectors'
 
 const MAX_HISTORY_SIZE = 50
 
@@ -63,15 +63,13 @@ export function useSelectedFiles() {
   */
 
   // The actual 'selectedFiles' is whatever is at the current index, or empty array if not initialized
-  const selectedFiles = useMemo(() => {
-    return undoRedoState?.history[undoRedoState.index] ?? []
-  }, [undoRedoState])
+  const selectedFiles = undoRedoState?.history[undoRedoState.index] ?? []
 
   // Only allow operations once we have initialized the state
   const isInitialized = undoRedoState !== null
 
   // Commit a new selection to local history, and also update global selection
-  const commitSelectionChange = useCallback((newSelected: string[]) => {
+  const commitSelectionChange = (newSelected: string[]) => {
     if (!isInitialized) return
 
     // Update global store's selection
@@ -94,111 +92,119 @@ export function useSelectedFiles() {
         index: truncated.length - 1,
       }
     })
-  }, [isInitialized, updateActiveProjectTab])
+  }
 
   // Undo: move 'index' back one and update global selection
-  const undo = useCallback(() => {
-    if (!undoRedoState) return
+  const undo = () => {
+    if (!isInitialized) return
+    setUndoRedoState(currentState => {
+      if (!currentState || currentState.index <= 0) return currentState
+      const newIndex = currentState.index - 1
+      const newSelected = currentState.history[newIndex]
 
-    setUndoRedoState((state): UndoRedoState => {
-      if (!state) return undoRedoState
-      const { history, index } = state
-      if (index <= 0) return state
-
-      const newIndex = index - 1
+      // Update global selection
       updateActiveProjectTab((prevTab) => ({
         ...prevTab,
-        selectedFiles: history[newIndex],
+        selectedFiles: newSelected,
       }))
-      return { history, index: newIndex }
+
+      return {
+        ...currentState,
+        index: newIndex,
+      }
     })
-  }, [undoRedoState, updateActiveProjectTab])
+  }
 
   // Redo: move 'index' forward one and update global selection
-  const redo = useCallback(() => {
-    if (!undoRedoState) return
+  const redo = () => {
+    if (!isInitialized) return
+    setUndoRedoState(currentState => {
+      if (!currentState || currentState.index >= currentState.history.length - 1) return currentState
+      const newIndex = currentState.index + 1
+      const newSelected = currentState.history[newIndex]
 
-    setUndoRedoState((state): UndoRedoState => {
-      if (!state) return undoRedoState
-      const { history, index } = state
-      if (index >= history.length - 1) return state
-
-      const newIndex = index + 1
+      // Update global selection
       updateActiveProjectTab((prevTab) => ({
         ...prevTab,
-        selectedFiles: history[newIndex],
+        selectedFiles: newSelected,
       }))
-      return { history, index: newIndex }
+
+      return {
+        ...currentState,
+        index: newIndex,
+      }
     })
-  }, [undoRedoState, updateActiveProjectTab])
+  }
 
-  // Selection helpers
-  const toggleFile = useCallback((fileId: string) => {
+  // Toggle a single file's selection
+  const toggleFile = (fileId: string) => {
     if (!isInitialized) return
-    const newSet = new Set(selectedFiles)
-    if (newSet.has(fileId)) {
-      newSet.delete(fileId)
-    } else {
-      newSet.add(fileId)
-    }
-    commitSelectionChange([...newSet])
-  }, [selectedFiles, commitSelectionChange, isInitialized])
+    commitSelectionChange(
+      selectedFiles.includes(fileId)
+        ? selectedFiles.filter(id => id !== fileId)
+        : [...selectedFiles, fileId]
+    )
+  }
 
-  const removeSelectedFile = useCallback((fileId: string) => {
+  // Remove a file from selection
+  const removeSelectedFile = (fileId: string) => {
     if (!isInitialized) return
     commitSelectionChange(selectedFiles.filter(id => id !== fileId))
-  }, [selectedFiles, commitSelectionChange, isInitialized])
+  }
 
-  const toggleFiles = useCallback((fileIds: string[]) => {
+  // Toggle multiple files at once
+  const toggleFiles = (fileIds: string[]) => {
     if (!isInitialized) return
-    const newSet = new Set(selectedFiles)
-    fileIds.forEach(id => {
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id)
-    })
-    commitSelectionChange([...newSet])
-  }, [selectedFiles, commitSelectionChange, isInitialized])
+    const toAdd = fileIds.filter(id => !selectedFiles.includes(id))
+    const toRemove = fileIds.filter(id => selectedFiles.includes(id))
+    commitSelectionChange(
+      selectedFiles
+        .filter(id => !toRemove.includes(id))
+        .concat(toAdd)
+    )
+  }
 
-  const selectFiles = useCallback((fileIds: string[]) => {
+  // Select multiple files (replacing current selection)
+  const selectFiles = (fileIds: string[]) => {
     if (!isInitialized) return
     commitSelectionChange(fileIds)
-  }, [commitSelectionChange, isInitialized])
+  }
 
-  const clearSelectedFiles = useCallback(() => {
+  // Clear all selected files
+  const clearSelectedFiles = () => {
     if (!isInitialized) return
     commitSelectionChange([])
-  }, [commitSelectionChange, isInitialized])
+  }
 
-  // Utilities
-  const isFileSelected = useCallback((fileId: string) => {
+  // Check if a file is selected
+  const isFileSelected = (fileId: string) => {
     return selectedFiles.includes(fileId)
-  }, [selectedFiles])
+  }
 
-  const getSelectedFilesData = useCallback((fileMap: Map<string, ProjectFile>) => {
+  // Get data for selected files
+  const getSelectedFilesData = (fileMap: Map<string, ProjectFile>) => {
     return selectedFiles
       .map(id => fileMap.get(id))
       .filter((file): file is ProjectFile => file !== undefined)
-  }, [selectedFiles])
+  }
 
-  const canUndo = useMemo(() => {
-    return undoRedoState !== null && undoRedoState.index > 0
-  }, [undoRedoState])
+  // Check if we can undo/redo
+  const canUndo = undoRedoState !== null && undoRedoState.index > 0
 
-  const canRedo = useMemo(() => {
-    return undoRedoState !== null && undoRedoState.index < undoRedoState.history.length - 1
-  }, [undoRedoState])
+  const canRedo = undoRedoState !== null && undoRedoState.index < undoRedoState.history.length - 1
 
   return {
     selectedFiles,
+    commitSelectionChange,
+    undo,
+    redo,
     toggleFile,
+    removeSelectedFile,
     toggleFiles,
     selectFiles,
     clearSelectedFiles,
     isFileSelected,
     getSelectedFilesData,
-    removeSelectedFile,
-    commitSelectionChange,
-    undo,
-    redo,
     canUndo,
     canRedo,
   }

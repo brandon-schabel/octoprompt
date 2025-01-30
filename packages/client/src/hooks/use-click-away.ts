@@ -9,7 +9,7 @@ const defaultEvents = ["mousedown", "touchstart"];
  * @param {(event: E) => void} onClickAway - The callback function to be called when the click event occurs outside of the specified element.
  * @param {string[]} events - An array of event names to listen for.
  */
-const useClickAway = <E extends Event = Event>(
+export const useClickAway = <E extends Event = Event>(
     ref: RefObject<HTMLElement | null>,
     onClickAway: (event: E) => void,
     events: string[] = defaultEvents,
@@ -33,5 +33,3 @@ const useClickAway = <E extends Event = Event>(
         };
     }, [events, ref]);
 };
-
-export default useClickAway; 

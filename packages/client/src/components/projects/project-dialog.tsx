@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from "@/hooks/api/use-projects-api"
 import { useEffect, useState } from "react"
 import { CreateProjectBody } from "shared/index"
-import { useUpdateActiveProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
+import { useUpdateActiveProjectTab } from "@/zustand/updaters"
 
 type ProjectDialogProps = {
     open: boolean

@@ -12,11 +12,11 @@ import { InfoTooltip } from "@/components/info-tooltip";
 import {
   useCreateChatTab,
   useUpdateActiveChatTab,
-} from "@/websocket-state/hooks/updaters/websocket-updater-hooks";
+} from "@/zustand/updaters";
 import {
   useActiveChatTab,
   useAllChatTabs,
-} from "@/websocket-state/hooks/selectors/websocket-selectors";
+} from "@/zustand/selectors";
 import { useSendChatMessage, useChatMessages } from "@/components/chat/hooks/chat-hooks";
 import { APIProviders } from "shared/index";
 import { useChatModelParams } from "@/components/chat/hooks/use-chat-model-params";

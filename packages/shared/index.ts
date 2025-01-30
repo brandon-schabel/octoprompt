@@ -42,3 +42,7 @@ export * from './schema'
 export { buildCombinedFileSummaries } from './src/utils/summary-formatter';
 export * from './src/kv-validators';
 export * from './src/global-state/websocket-global-schema';
+export * from './src/utils/merge-deep'
+
+export * from './src/structured-outputs/structured-output-schema';
+export * from './src/structured-outputs/structured-output-utils';

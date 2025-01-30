@@ -13,9 +13,9 @@ import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useUpdateActiveProjectTab } from "@/websocket-state/hooks/updaters/websocket-updater-hooks"
-import { useActiveProjectTab,  } from "@/websocket-state/hooks/selectors/websocket-selectors"
-import { useSettingsField } from "@/websocket-state/hooks/settings/settings-hooks"
+import { useUpdateActiveProjectTab } from "@/zustand/updaters"
+import { useActiveProjectTab,  } from "@/zustand/selectors"
+import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)

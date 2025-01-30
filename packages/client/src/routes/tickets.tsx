@@ -7,7 +7,7 @@ import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
 import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
-import { useActiveProjectTab } from "@/websocket-state/hooks/selectors/websocket-selectors";
+import { useActiveProjectTab } from "@/zustand/selectors";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -31,15 +31,15 @@ function TicketsPage() {
 
     // Because TicketListPanel calls onSelectTicket with a TicketWithTasks,
     // this callback must accept a TicketWithTasks too.
-    const handleSelectTicket = React.useCallback((ticket: TicketWithTasks) => {
+    const handleSelectTicket = (ticket: TicketWithTasks) => {
         setSelectedTicket(ticket);
         setIsDialogOpen(true);
-    }, []);
+    };
 
-    const handleCloseDialog = React.useCallback(() => {
+    const handleCloseDialog = () => {
         setIsDialogOpen(false);
         setSelectedTicket(null);
-    }, []);
+    };
 
     if (!projectId) {
         return (

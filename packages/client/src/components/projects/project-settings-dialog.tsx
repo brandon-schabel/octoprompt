@@ -19,11 +19,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
-import { useUpdateActiveProjectTab, useUpdateSettings } from '@/websocket-state/hooks/updaters/websocket-updater-hooks'
+import { useUpdateActiveProjectTab, useUpdateSettings } from '@/zustand/updaters'
 import { useSyncProjectInterval } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
-import { useProjectTabField } from '@/websocket-state/hooks/project-tab/project-tab-hooks'
-import { useSettingsField } from '@/websocket-state/hooks/settings/settings-hooks'
+import { useActiveProjectTab } from '@/zustand/selectors'
+import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
+import { useSettingsField } from '@/zustand/zustand-utility-hooks'
 
 
 export function ProjectSettingsDialog() {

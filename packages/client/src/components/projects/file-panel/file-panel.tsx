@@ -11,12 +11,12 @@ import { Project } from 'shared'
 import { ProjectFile } from 'shared/schema'
 
 import { useListTicketsWithTasks } from '@/hooks/api/use-tickets-api'
-import { useSettings } from '@/websocket-state/hooks/selectors/websocket-selectors'
-import { useActiveProjectTab } from '@/websocket-state/hooks/selectors/websocket-selectors'
+import { useSettings } from '@/zustand/selectors'
+import { useActiveProjectTab } from '@/zustand/selectors'
 import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 import {
     useProjectTabField,
-} from '@/websocket-state/hooks/project-tab/project-tab-hooks'
+} from '@/zustand/zustand-utility-hooks'
 import { FileExplorer } from './file-explorer/file-explorer'
 import { ProjectHeader } from './project-header'
 

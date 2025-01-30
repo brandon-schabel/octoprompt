@@ -1,4 +1,3 @@
-// packages/server/src/utils/merge-deep.ts
 type JSONValue = string | number | boolean | null | object | JSONValue[];
 
 /**
