@@ -37,10 +37,12 @@ export class UnifiedProviderService {
         openRouterKey: undefined,
     };
     private modelFetcherService: ModelFetcherService | null = null;
+    private debug: boolean = false;
 
     constructor() {
         this.providerKeyService = new ProviderKeyService();
         this.chatService = new ChatService();
+        this.debug = false;
     }
 
     /**
@@ -246,9 +248,7 @@ export class UnifiedProviderService {
 
         // 3) Stream SSE
         return createSSEStream({
-            debug: {
-                plugin: true,
-            },
+
             userMessage,
             systemMessage,
             plugin,
@@ -259,10 +259,14 @@ export class UnifiedProviderService {
             },
             handlers: {
                 onSystemMessage: async (msg) => {
-                    console.log("[ProviderService] systemMessage:", msg.content);
+                    if (this.debug) {
+                        console.log("[ProviderService] systemMessage:", msg.content);
+                    }
                 },
                 onUserMessage: async (msg) => {
-                    console.log("[ProviderService] user:", msg.content);
+                    if (this.debug) {
+                        console.log("[ProviderService] user:", msg.content);
+                    }
                 },
                 onPartial: async (partial) => {
                     fullResponse += partial.content;
@@ -329,8 +333,11 @@ export class UnifiedProviderService {
         const ollamaBaseUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL
         const lmstudioBaseUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL
 
-        console.log("[ProviderService] ollamaBaseUrl:", ollamaBaseUrl);
-        console.log("[ProviderService] lmstudioBaseUrl:", lmstudioBaseUrl);
+
+        if (this.debug) {
+            console.log("[ProviderService] ollamaBaseUrl:", ollamaBaseUrl);
+            console.log("[ProviderService] lmstudioBaseUrl:", lmstudioBaseUrl);
+        }
 
         return this.modelFetcherService!.listModels(provider, {
             ollamaBaseUrl,

@@ -310,8 +310,6 @@ router.post(
             userMessage,
             systemMessage: systemPrompt,
             zodSchema: FileSuggestionsZodSchema,
-            // @ts-ignore
-            jsonSchema: FileSuggestionsJsonSchema,
             schemaName: "TicketFileSuggestions",
             model: "deepseek/deepseek-r1",
             temperature: 0.2,

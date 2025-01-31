@@ -1,67 +1,53 @@
 // packages/server/src/utils/structured-output-fetcher.ts
-
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { z } from "zod";
+import { zodToStructuredJsonSchema, toOpenRouterSchema } from "shared/src/structured-outputs/structured-output-utils";
 
 /**
- * Defines the input parameters for requesting structured output.
+ * Strips triple backticks and also removes JS/JSON-style comments & trailing commas.
+ * Also attempts to find the last valid JSON object in the stream.
  */
+function stripTripleBackticks(text: string): string {
+    // First remove triple backticks if present
+    const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
+    const match = text.match(tripleBacktickRegex);
+    const content = match ? match[1].trim() : text.trim();
+
+    // Remove comments and trailing commas
+    const withoutComments = content
+        .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "")
+        .replace(/,(\s*[}\]])/g, "$1");
+
+    // Split by newlines and find the last non-empty line that might be JSON
+    const lines = withoutComments.split(/\n/).map(line => line.trim()).filter(Boolean);
+
+    // Try to find the last complete JSON object
+    for (let i = lines.length - 1; i >= 0; i--) {
+        try {
+            // Test if this line parses as valid JSON
+            JSON.parse(lines[i]);
+            return lines[i];
+        } catch (e) {
+            // If it's not valid JSON, continue to the next line
+            continue;
+        }
+    }
+
+    // If we couldn't find any valid JSON, return the cleaned content
+    return withoutComments;
+}
+
 export interface StructuredOutputRequest<T> {
-    /**
-     * The text prompt or user message you want to send to the LLM.
-     */
     userMessage: string;
-
-    /**
-     * An optional system instruction or higher-level directive to control the model.
-     */
     systemMessage?: string;
-
-    /**
-     * A Zod schema representing the final shape you expect from the LLM.
-     * The returned data is validated against this schema.
-     */
     zodSchema: z.ZodType<T>;
-
-    /**
-     * A JSON Schema object matching the same structure as `zodSchema`.
-     * This is passed to OpenRouter for server-side validation of the LLM output.
-     */
-    jsonSchema: {
-        type: "object" | "array" | "string" | "number" | "boolean";
-        [key: string]: any;
-    };
-
-    /**
-     * Name for the structured output block, used in OpenRouter's `response_format.json_schema`.
-     */
     schemaName?: string;
-
-    /**
-     * Optional model name. Defaults to something recognized by OpenRouter.
-     */
     model?: string;
-
-    /**
-     * Temperature value for the LLM (0.0 - 1.0).
-     * 0.0 = deterministic, 1.0 = more creative.
-     */
     temperature?: number;
-
-    /**
-     * An optional chatId if you want to store conversation threads in your DB.
-     */
     chatId?: string;
-
-    /**
-     * If you want to associate the streaming partial text with a temporary message ID.
-     */
     tempId?: string;
 }
 
-/**
- * A standalone function to get a structured JSON response validated by OpenRouter AND your local Zod schema.
- */
 export async function fetchStructuredOutput<T>(
     openRouterService: OpenRouterProviderService,
     params: StructuredOutputRequest<T>
@@ -70,15 +56,18 @@ export async function fetchStructuredOutput<T>(
         userMessage,
         systemMessage,
         zodSchema,
-        jsonSchema,
         schemaName = "StructuredResponse",
         model = "deepseek/deepseek-r1",
         temperature = 0.7,
         chatId = "structured-chat",
-        tempId
+        tempId,
     } = params;
 
-    // 1) Invoke the streaming request on OpenRouter with "json_schema" response format
+    // 1) Convert Zod schema -> JSON schema -> OpenRouter schema
+    const jsonSchema = zodToStructuredJsonSchema(zodSchema);
+    const openRouterSchema = toOpenRouterSchema(jsonSchema);
+
+    // 2) Begin SSE request
     const stream = await openRouterService.processMessage({
         chatId,
         userMessage,
@@ -92,66 +81,58 @@ export async function fetchStructuredOutput<T>(
                 type: "json_schema",
                 json_schema: {
                     name: schemaName,
-                    strict: true, // force the LLM to only return valid JSON
-                    // @ts-ignore
-                    schema: jsonSchema
-                }
-            }
-        }
+                    strict: true,
+                    schema: openRouterSchema,
+                },
+            },
+        },
     });
 
-    // 2) Read the entire stream into a single string
+    // 3) Accumulate SSE lines into `rawOutput`, removing SSE prefix
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let rawOutput = "";
 
     while (true) {
         const { done, value } = await reader.read();
-        if (done) {
+        if (done) break;
+
+        let chunk = decoder.decode(value);
+
+        // If the model signals end: "data: [DONE]" or just "[DONE]"
+        if (chunk.includes("[DONE]")) {
+            // Remove that line and stop
+            chunk = chunk.replace("data: [DONE]", "").replace("[DONE]", "");
+            rawOutput += chunk;
             break;
         }
-        rawOutput += decoder.decode(value);
+
+        // Remove "data: " prefix from each line
+        // So "data: ```json" becomes "```json", etc.
+        chunk = chunk.replace(/^data:\s?/gm, "");
+
+        rawOutput += chunk;
     }
 
-    // 3) Attempt to parse the final text as JSON
-    let json: unknown;
+    // 4) Attempt final JSON parse
+    let data: unknown;
     try {
-        json = JSON.parse(stripTripleBackticks(rawOutput));
+        console.log({ rawOutput })
+        data = JSON.parse(stripTripleBackticks(rawOutput));
     } catch (err) {
-        console.error("[fetchStructuredOutput] Failed to parse JSON from model:", err);
-        console.error("Raw model output was:", rawOutput);
+        console.error("[fetchStructuredOutput] JSON parse error:", err);
+        console.error("Raw output:", rawOutput);
         throw new Error("Model response did not contain valid JSON.");
     }
 
-    // 4) Validate the parsed JSON with your Zod schema for type safety
-    const parsed = zodSchema.safeParse(json);
+
+    // 5) Validate with Zod
+    const parsed = zodSchema.safeParse(data);
     if (!parsed.success) {
         console.error("[fetchStructuredOutput] Zod validation failed:", parsed.error);
-        console.error("Raw JSON output was:", JSON.stringify(json, null, 2));
+        console.error("Raw JSON output:", JSON.stringify(data, null, 2));
         throw new Error("Structured output did not match the expected schema.");
     }
 
-    // 5) Return fully validated result
     return parsed.data;
-}
-
-/**
- * Utility function that strips triple backticks (e.g., ```json ... ```).
- * Also removes any JSON comments before returning.
- * If there's no backtick wrapping, returns the original string.
- */
-function stripTripleBackticks(text: string): string {
-    // First strip triple backticks if they exist
-    const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
-    const match = text.match(tripleBacktickRegex);
-    const content = match ? match[1].trim() : text.trim();
-
-    // Then remove both single-line and multi-line comments
-    // This handles: 
-    // 1. Single line comments: // comment
-    // 2. Multi-line comments: /* comment */
-    // 3. Trailing commas with comments: "key": "value", // comment
-    return content
-        .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '') // Remove comments
-        .replace(/,(\s*[}\]])/g, '$1'); // Fix any trailing commas that might be left
 }

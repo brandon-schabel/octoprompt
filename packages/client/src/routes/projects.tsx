@@ -17,7 +17,7 @@ import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
 import { ProjectFile } from 'shared/schema'
 import type { Project } from 'shared'
 
-function ProjectsPage() {
+export function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 

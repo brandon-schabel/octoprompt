@@ -35,7 +35,6 @@ export function GlobalStateProvider({ children }: { children: ReactNode }) {
     const { isOpen, manager } = useClientWebSocket<InboundMessage, OutboundMessage>({
         config: {
             url: SERVER_WS_ENDPOINT,
-            debug: true,
             validateIncomingMessage,
             autoReconnect: true,
             reconnectIntervalMs: 500,

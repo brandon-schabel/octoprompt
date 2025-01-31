@@ -6,7 +6,6 @@ const STATE_FILE_PATH = "./data/websocket-state.json";
 
 const websocketFileAdapter = new FileWebSocketAdapter<GlobalState>({
     filePath: STATE_FILE_PATH,
-    debug: true,
     validateState: (state) => {
         const result = globalStateSchema.safeParse(state);
         return result.success;
@@ -25,7 +24,6 @@ export const instantiateWebsocketStateAdapter = async () => {
         
         messageHandlers: [...allWebsocketHandlers] as MessageHandler<GlobalState, InboundMessage>[],
         validateMessage: validateIncomingMessage,
-        debug: true
     });
 
     // Load the initial state from the adapter

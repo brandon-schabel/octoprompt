@@ -13,6 +13,7 @@ export class OpenRouterProviderService {
     private providerKeyService: ProviderKeyService;
     private chatService: ChatService;
     private openRouterKey: string | undefined;
+    private debug: boolean = false;
 
     constructor() {
         this.providerKeyService = new ProviderKeyService();
@@ -101,13 +102,9 @@ export class OpenRouterProviderService {
      */
     private tryParseStructuredResponse(text: string): any {
         try {
-            console.log('tryParseStructuredResponse', 'text', text);
             const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
-            console.log('tryParseStructuredResponse', 'tripleBacktickRegex', tripleBacktickRegex);
             const matched = text.match(tripleBacktickRegex);
-            console.log('tryParseStructuredResponse', 'matched', matched);
             const cleanedText = matched ? matched[1].trim() : text.trim();
-            console.log('tryParseStructuredResponse', 'cleanedText', cleanedText);
             const result = JSON.parse(cleanedText);
 
             return result;
