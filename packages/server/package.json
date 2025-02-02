@@ -2,7 +2,7 @@
   "name": "octoprompt",
   "module": "server.ts",
   "type": "module",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "scripts": {
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
@@ -26,7 +26,6 @@
     "@bnk/router": "^1.0.8",
     "@types/archiver": "^6.0.3",
     "archiver": "^7.0.1",
-    "better-sqlite3": "^11.7.2",
     "openai": "^4.78.1",
     "shared": "workspace:*",
     "zod": "^3.24.1"
