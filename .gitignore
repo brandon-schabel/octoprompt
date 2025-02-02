@@ -191,6 +191,3 @@ kv-store.json
 **/global-state-backup.json
 **/websocket-state.json
 **/**.tsbuildinfo
-
-
-routeTree.gen.ts
