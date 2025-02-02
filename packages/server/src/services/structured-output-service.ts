@@ -3,6 +3,7 @@ import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { ApiError } from "shared";
 import { zodToStructuredJsonSchema } from "shared/src/structured-outputs/structured-output-utils";
+import { z } from "zod";
 
 /**
  * Options for generating structured outputs.
@@ -39,7 +40,7 @@ export const structuredOutputsService = {
             outputType,
             userMessage,
             systemMessage,
-            model = "deepseek/deepseek-r1",
+            model = "qwen/qwen-plus",
             temperature = 0.2,
             chatId = "structured-output-generic",
             appendSchemaToPrompt = false,
@@ -75,7 +76,7 @@ Return **only** valid JSON matching the above schema.
             const validatedResult = await fetchStructuredOutput(providerService, {
                 userMessage,
                 systemMessage: finalSystemMessage,
-                zodSchema,
+                zodSchema: zodSchema as z.ZodType<InferStructuredOutput<T>>,
                 schemaName: outputType,
                 model,
                 temperature,

@@ -255,7 +255,7 @@ export class TicketService {
                 userMessage,
                 provider: "openrouter",
                 options: {
-                    model: "deepseek/deepseek-r1",
+                    model: "qwen/qwen-plus",
                     temperature: 0.2,
                     response_format: {
                         type: "json_schema",

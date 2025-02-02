@@ -50,7 +50,7 @@ export const FilePanel =
         const { id: activeProjectTabId = '' } = useActiveProjectTab()
 
         // Local or global "selectedFiles"
-        const { data: selectedFiles = [], mutate: setSelectedFiles } = useProjectTabField(activeProjectTabId ?? '', 'selectedFiles')
+        const { data: selectedFiles = [], mutate: setSelectedFiles } = useProjectTabField('selectedFiles',)
         const settings = useSettings()
         const allowSpacebarToSelect = settings?.useSpacebarToSelectAutocomplete ?? true
 

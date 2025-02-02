@@ -5,36 +5,103 @@ import { zodToStructuredJsonSchema, toOpenRouterSchema } from "shared/src/struct
 
 /**
  * Strips triple backticks and also removes JS/JSON-style comments & trailing commas.
- * Also attempts to find the last valid JSON object in the stream.
+ * Returns the cleaned text.
  */
-function stripTripleBackticks(text: string): string {
+export function stripTripleBackticks(text: string): string {
     // First remove triple backticks if present
     const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
     const match = text.match(tripleBacktickRegex);
     const content = match ? match[1].trim() : text.trim();
 
     // Remove comments and trailing commas
-    const withoutComments = content
+    return content
         .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "")
         .replace(/,(\s*[}\]])/g, "$1");
+}
 
-    // Split by newlines and find the last non-empty line that might be JSON
-    const lines = withoutComments.split(/\n/).map(line => line.trim()).filter(Boolean);
+/**
+ * Extracts top-level (non-overlapping) JSON substrings from the text using a balanced-brackets approach.
+ */
+export function extractJsonObjects(text: string): string[] {
+    const results: string[] = [];
+    let i = 0;
+    while (i < text.length) {
+        const char = text[i];
+        if (char === "{" || char === "[") {
+            const start = i;
+            const stack = [char];
+            let inString = false;
+            let escape = false;
+            let found = false;
+            let j = i + 1;
+            for (; j < text.length; j++) {
+                const c = text[j];
+                if (inString) {
+                    if (escape) {
+                        escape = false;
+                    } else if (c === "\\") {
+                        escape = true;
+                    } else if (c === '"') {
+                        inString = false;
+                    }
+                } else {
+                    if (c === '"') {
+                        inString = true;
+                    } else if (c === "{" || c === "[") {
+                        stack.push(c);
+                    } else if (c === "}" || c === "]") {
+                        stack.pop();
+                        if (stack.length === 0) {
+                            const candidate = text.substring(start, j + 1);
+                            try {
+                                JSON.parse(candidate);
+                                results.push(candidate);
+                            } catch (e) {
+                                // Ignore invalid JSON substrings.
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (found) {
+                i = j; // Skip over the entire JSON block to avoid nested extraction.
+            }
+        }
+        i++;
+    }
+    return results;
+}
 
-    // Try to find the last complete JSON object
-    for (let i = lines.length - 1; i >= 0; i--) {
+/**
+ * Attempts to parse the structured JSON from the raw output.
+ * First, it tries to parse the cleaned text.
+ * If that fails or doesn’t yield an object/array, it falls back to extracting
+ * the last valid JSON substring from the raw output.
+ */
+export function parseStructuredJson(rawOutput: string): unknown {
+    const cleaned = stripTripleBackticks(rawOutput);
+    try {
+        const parsed = JSON.parse(cleaned);
+        if (typeof parsed === "object" && parsed !== null) {
+            return parsed;
+        }
+    } catch (e) {
+        // Fall through to extraction below.
+    }
+    const candidates = extractJsonObjects(rawOutput);
+    for (let i = candidates.length - 1; i >= 0; i--) {
         try {
-            // Test if this line parses as valid JSON
-            JSON.parse(lines[i]);
-            return lines[i];
+            const candidateParsed = JSON.parse(candidates[i]);
+            if (typeof candidateParsed === "object" && candidateParsed !== null) {
+                return candidateParsed;
+            }
         } catch (e) {
-            // If it's not valid JSON, continue to the next line
-            continue;
+            // Ignore parse errors.
         }
     }
-
-    // If we couldn't find any valid JSON, return the cleaned content
-    return withoutComments;
+    return null;
 }
 
 export interface StructuredOutputRequest<T> {
@@ -57,7 +124,7 @@ export async function fetchStructuredOutput<T>(
         systemMessage,
         zodSchema,
         schemaName = "StructuredResponse",
-        model = "deepseek/deepseek-r1",
+        model = "qwen/qwen-plus",
         temperature = 0.7,
         chatId = "structured-chat",
         tempId,
@@ -101,30 +168,24 @@ export async function fetchStructuredOutput<T>(
 
         // If the model signals end: "data: [DONE]" or just "[DONE]"
         if (chunk.includes("[DONE]")) {
-            // Remove that line and stop
             chunk = chunk.replace("data: [DONE]", "").replace("[DONE]", "");
             rawOutput += chunk;
             break;
         }
 
         // Remove "data: " prefix from each line
-        // So "data: ```json" becomes "```json", etc.
         chunk = chunk.replace(/^data:\s?/gm, "");
 
         rawOutput += chunk;
     }
 
-    // 4) Attempt final JSON parse
-    let data: unknown;
-    try {
-        console.log({ rawOutput })
-        data = JSON.parse(stripTripleBackticks(rawOutput));
-    } catch (err) {
-        console.error("[fetchStructuredOutput] JSON parse error:", err);
+    // 4) Attempt final JSON parse using the enhanced logic.
+    const data: unknown = parseStructuredJson(rawOutput);
+    if (data === null) {
+        console.error("[fetchStructuredOutput] Failed to extract valid JSON from raw output:");
         console.error("Raw output:", rawOutput);
         throw new Error("Model response did not contain valid JSON.");
     }
-
 
     // 5) Validate with Zod
     const parsed = zodSchema.safeParse(data);

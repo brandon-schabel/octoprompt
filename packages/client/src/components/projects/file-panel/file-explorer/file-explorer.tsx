@@ -64,18 +64,15 @@ const FileExplorer = function FileExplorer({
     const [autocompleteIndex, setAutocompleteIndex] = useState<number>(-1)
 
     const { data: searchByContent = false, mutate: setSearchByContent } = useProjectTabField(
-        activeProjectTabId ?? '',
-        'searchByContent'
+        'searchByContent',
     )
 
     const { data: preferredEditor = 'vscode' } = useProjectTabField(
-        activeProjectTabId ?? '',
-        'preferredEditor'
+        'preferredEditor',
     )
 
-    const { data: resolveImports = false, mutate: setResolveImports } = useProjectTabField(
-        activeProjectTabId ?? '',
-        'resolveImports'
+    const { data: resolveImports = false } = useProjectTabField(
+        'resolveImports',
     )
 
     // Add local state for immediate UI updates
@@ -111,7 +108,7 @@ const FileExplorer = function FileExplorer({
 
     // Build maps for O(1) lookups
     const allFilesMap = new Map(fileData?.files?.map(file => [file.id, file]) || [])
-    
+
     // Build filtered files map for O(1) lookups
     const filteredFilesMap = new Map(filteredFiles.map(file => [file.id, file]))
 

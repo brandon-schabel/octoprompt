@@ -40,14 +40,14 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
 
     // 2) From that chat tab, read the linkSettings
     const { data: linkSettings } = useChatTabField(
-        chatActiveTabId ?? "",
-        "linkSettings"
+        "linkSettings",
+        chatActiveTabId
     );
 
     // 3) Also read the selectedProjectId from the "linkedProjectTabId"
     const { data: selectedProjectId } = useProjectTabField(
-        linkedProjectTabId,
-        "selectedProjectId"
+        "selectedProjectId",
+        linkedProjectTabId
     );
 
     // We still use the custom utility to read local selection state
@@ -89,16 +89,16 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
         // For multiple fields, you could either do multiple single-field queries
         // or just read the entire tab if you prefer. For demonstration, let's do single fields:
         const { data: projectSelectedFiles } = useProjectTabField(
-            linkedProjectTabId,
-            "selectedFiles"
+            "selectedFiles",
+            linkedProjectTabId
         );
         const { data: projectSelectedPrompts } = useProjectTabField(
-            linkedProjectTabId,
-            "selectedPrompts"
+            "selectedPrompts",
+            linkedProjectTabId
         );
         const { data: userPrompt } = useProjectTabField(
-            linkedProjectTabId,
-            "userPrompt"
+            "userPrompt",
+            linkedProjectTabId
         );
 
 

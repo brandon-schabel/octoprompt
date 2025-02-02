@@ -29,11 +29,15 @@ import { useSettingsField } from '@/zustand/zustand-utility-hooks'
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()
     const { id: activeTabId } = useActiveProjectTab()
-    const { data: contextLimit } = useProjectTabField(activeTabId ?? '', 'contextLimit')
+
+    console.log({
+        "project settings activeTabId": activeTabId,
+    })
+    const { data: contextLimit } = useProjectTabField('contextLimit')
     const { data: summarizationEnabledProjectIds } = useSettingsField('summarizationEnabledProjectIds')
-    const { data: resolveImports } = useProjectTabField(activeTabId ?? '', 'resolveImports')
-    const { data: preferredEditor } = useProjectTabField(activeTabId ?? '', 'preferredEditor')
-    const { data: projectId } = useProjectTabField(activeTabId ?? '', 'selectedProjectId')
+    const { data: resolveImports } = useProjectTabField('resolveImports')
+    const { data: preferredEditor } = useProjectTabField('preferredEditor')
+    const { data: projectId } = useProjectTabField('selectedProjectId')
 
     const isProjectSummarizationEnabled = projectId ? summarizationEnabledProjectIds?.includes(projectId) : false
     const { isFetching: isSyncing, refetch: syncProject } = useSyncProjectInterval(projectId ?? '')

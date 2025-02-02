@@ -311,7 +311,7 @@ router.post(
             systemMessage: systemPrompt,
             zodSchema: FileSuggestionsZodSchema,
             schemaName: "TicketFileSuggestions",
-            model: "deepseek/deepseek-r1",
+            model: "qwen/qwen-plus",
             temperature: 0.2,
             chatId: `ticket-${ticketId}-suggest-files`,
         });

@@ -2,34 +2,22 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { OpenRouterStructuredPlugin } from "@bnk/ai";
 import { createMockSSEStream } from "@bnk/ai";
-import type {
-    SSEEngineParams,
-    SSEEngineHandlers,
-} from "@bnk/ai";
 import { z } from "zod";
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { zodToStructuredJsonSchema } from "shared/index";
-import { fetchStructuredOutput } from "./structured-output-fetcher";
-
+import { extractJsonObjects, fetchStructuredOutput, parseStructuredJson, stripTripleBackticks } from "./structured-output-fetcher";
 
 /**
- * A simple object schema for testing. 
- * We'll ask the LLM to produce { greeting: string; count: number } 
+ * A simple object schema for testing.
+ * We'll ask the LLM to produce { greeting: string; count: number }
  */
 const MyTestSchema = z.object({
     greeting: z.string(),
     count: z.number(),
 });
-
 type MyTestSchemaType = z.infer<typeof MyTestSchema>;
 
-/**
- * We will mock the provider’s `processMessage` method to return
- * a controlled SSE stream. This way, we can feed partial JSON strings,
- * triple backticks, or invalid data as we like.
- */
 describe("fetchStructuredOutput", () => {
-    // We’ll store references to the original method so we can restore it after tests
     let originalProcessMessage: any;
 
     beforeEach(() => {
@@ -41,7 +29,6 @@ describe("fetchStructuredOutput", () => {
     });
 
     it("should handle a well-formed JSON response with triple backticks (markdown style)", async () => {
-        // The final SSE chunk includes the triple backticks around JSON
         const wellFormedChunks = [
             "Hello user, I'm preparing JSON...\n",
             "```json\n",
@@ -49,19 +36,17 @@ describe("fetchStructuredOutput", () => {
             "\n```",
         ];
 
-        // Create an SSE mock that finishes with these chunks, and ends with [DONE]
-        const mockStream = createMockSSEStream([...wellFormedChunks], { endWithDone: true, delayMs: 0 });
-
-        // Mock processMessage to return our SSE stream
+        const mockStream = createMockSSEStream(wellFormedChunks, {
+            endWithDone: true,
+            delayMs: 0,
+        });
         OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
 
-        // Execute fetchStructuredOutput
         const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
             userMessage: "Give me a greeting object",
             zodSchema: MyTestSchema,
         });
 
-        // Validate that the parse & Zod check passed
         expect(result).toEqual({
             greeting: "Hello, world!",
             count: 42,
@@ -69,23 +54,18 @@ describe("fetchStructuredOutput", () => {
     });
 
     it("should handle partial SSE chunks that eventually form valid JSON (no triple backticks)", async () => {
-        // For example, we can break the JSON into multiple chunks that come in partial SSE lines
         const partialJsonChunks = [
             '{"greet',
             'ing":"He',
             'llo"}',
         ];
-
-        // That final JSON is missing the "count" property, so let's add it
-        // We'll simulate the model eventually returning everything in multiple lines
+        // The final chunk includes the required fields
         const finalJsonChunk = '{"greeting":"Hello again","count":99}';
 
-        const mockStream = createMockSSEStream([...partialJsonChunks, finalJsonChunk], {
-            endWithDone: true,
-            delayMs: 0,
-        });
-
-        // Mock the SSE call
+        const mockStream = createMockSSEStream(
+            [...partialJsonChunks, finalJsonChunk],
+            { endWithDone: true, delayMs: 0 }
+        );
         OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
 
         const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
@@ -100,19 +80,17 @@ describe("fetchStructuredOutput", () => {
     });
 
     it("should throw if the JSON is incomplete/broken by the time streaming ends", async () => {
-        // SSE chunks that never produce valid JSON
         const brokenChunks = [
             "```json\n",
             '{"greeting": "Hello there",',
-            // no closing curly bracket or other fields
+            // missing closing brace
         ];
-
-        // The SSE finishes
-        const mockStream = createMockSSEStream(brokenChunks, { endWithDone: true, delayMs: 0 });
-
+        const mockStream = createMockSSEStream(brokenChunks, {
+            endWithDone: true,
+            delayMs: 0,
+        });
         OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
 
-        // Expect an error from fetchStructuredOutput because JSON parse fails
         await expect(
             fetchStructuredOutput(new OpenRouterProviderService(), {
                 userMessage: "Broken JSON example",
@@ -122,22 +100,17 @@ describe("fetchStructuredOutput", () => {
     });
 
     it("should reject if the JSON does not match the Zod schema", async () => {
-        // Provide an object missing the 'count' field
+        // Missing "count" field
         const invalidJson = `{
       "greeting": "I'm missing count!"
     }`;
-
-        // SSE stream with triple backticks around it
-        const chunks = [
-            "```json\n",
-            invalidJson,
-            "\n```",
-        ];
-
-        const mockStream = createMockSSEStream(chunks, { endWithDone: true, delayMs: 0 });
+        const chunks = ["```json\n", invalidJson, "\n```"];
+        const mockStream = createMockSSEStream(chunks, {
+            endWithDone: true,
+            delayMs: 0,
+        });
         OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
 
-        // Because `count` is required, the Zod parse fails
         await expect(
             fetchStructuredOutput(new OpenRouterProviderService(), {
                 userMessage: "Schema mismatch test",
@@ -147,22 +120,22 @@ describe("fetchStructuredOutput", () => {
     });
 
     it("should handle extraneous comments or trailing commas by default strip function", async () => {
-        // The LLM might produce comments, trailing commas, etc.
         const withComments = `
-    \`\`\`json
-    {
-      // This is a comment
-      "greeting": "Hello with trailing comma",
-      "count": 123, 
-    }
-    \`\`\`
+      \`\`\`json
+      {
+        // This is a comment
+        "greeting": "Hello with trailing comma",
+        "count": 123, 
+      }
+      \`\`\`
     `;
 
-        const mockStream = createMockSSEStream([withComments], { endWithDone: true, delayMs: 0 });
+        const mockStream = createMockSSEStream([withComments], {
+            endWithDone: true,
+            delayMs: 0,
+        });
         OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
 
-        // The strip logic should remove the comment and trailing comma. 
-        // Then we parse & validate with Zod.
         const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
             userMessage: "LLM output with comments",
             zodSchema: MyTestSchema,
@@ -175,20 +148,17 @@ describe("fetchStructuredOutput", () => {
     });
 
     it("should reflect 'strict' JSON schema usage in the request if desired", async () => {
-        // We only test that the correct request format is built – 
-        // but let's confirm we can convert Zod to JSON schema and feed it in.
         const mockStream = createMockSSEStream(
             [`{"greeting": "Strict test", "count": 10}`],
             { endWithDone: true, delayMs: 0 }
         );
         const openRouterService = new OpenRouterProviderService();
 
-        // Spy on the method to confirm request is built with the correct schema
         OpenRouterProviderService.prototype.processMessage = mock(async (args) => {
             const { options } = args;
             expect(options?.response_format?.type).toBe("json_schema");
 
-            // Check the dynamic JSON schema matches our Zod
+            // Check that the built schema matches
             const builtSchema = zodToStructuredJsonSchema(MyTestSchema);
             expect(options?.response_format?.json_schema?.schema).toEqual(builtSchema);
             return mockStream;
@@ -200,7 +170,246 @@ describe("fetchStructuredOutput", () => {
             schemaName: "MyStrictOutput",
         });
 
-        // The final parse result
         expect(result).toEqual({ greeting: "Strict test", count: 10 });
     });
+
+    // -------- NEW TESTS FOR ADDITIONAL COVERAGE --------
+
+    it("should successfully parse when final parse fails but incremental parse succeeded", async () => {
+        /**
+         * We'll produce valid JSON in the middle of the stream,
+         * but then some extra invalid text at the very end that breaks final parse.
+         * Our code should still return the last valid parse (if your implementation
+         * stores it, e.g., `lastValidParse`).
+         */
+        const goodJson = '{"greeting": "Mid-stream valid JSON", "count": 777}';
+        const invalidTail = "some random text that breaks final parse";
+
+        const mockStream = createMockSSEStream(
+            [goodJson, invalidTail],
+            { endWithDone: true, delayMs: 0 }
+        );
+        OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
+
+        // If your code uses `lastValidParse`, it should return the JSON from that parse
+        const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
+            userMessage: "Partial valid then invalid tail",
+            zodSchema: MyTestSchema,
+        });
+
+        expect(result).toEqual({
+            greeting: "Mid-stream valid JSON",
+            count: 777,
+        });
+    });
+
+    it("should parse and validate nested JSON objects if the schema includes them", async () => {
+        const nestedSchema = z.object({
+            nested: z.object({
+                greeting: z.string(),
+                count: z.number(),
+            }),
+        });
+        const nestedJson = `{
+      "nested": {
+        "greeting": "Nested hello",
+        "count": 3
+      }
+    }`;
+
+        const mockStream = createMockSSEStream([nestedJson], {
+            endWithDone: true,
+            delayMs: 0,
+        });
+        OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
+
+        const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
+            userMessage: "Nested JSON test",
+            zodSchema: nestedSchema,
+        });
+
+        expect(result).toEqual({
+            nested: {
+                greeting: "Nested hello",
+                count: 3,
+            },
+        });
+    });
+
+    it("should handle multiple JSON objects interleaved, returning the final valid parse", async () => {
+        // Suppose the model starts with a small valid JSON,
+        // then more data that forms a bigger valid JSON at the end.
+        // Our code should end up returning the bigger final parse if it’s valid.
+        const chunk1 = `{"greeting":"Preliminary","count":1}`;
+        const chunk2 = `This is some text in between. `;
+        const chunk3 = `{"greeting":"Final greeting","count":999}`;
+
+        const mockStream = createMockSSEStream([chunk1, chunk2, chunk3], {
+            endWithDone: true,
+            delayMs: 0,
+        });
+        OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
+
+        const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
+            userMessage: "Multiple JSON objects test",
+            zodSchema: MyTestSchema,
+        });
+
+        // We expect the final object
+        expect(result).toEqual({
+            greeting: "Final greeting",
+            count: 999,
+        });
+    });
+
+    it("should ignore garbage text before the JSON starts", async () => {
+        const mockStream = createMockSSEStream(
+            [
+                "Some irrelevant lines\nthat are not JSON\n",
+                '{"greeting":"Finally JSON","count":12}',
+            ],
+            { endWithDone: true, delayMs: 0 }
+        );
+        OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
+
+        const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
+            userMessage: "Ignore preamble lines",
+            zodSchema: MyTestSchema,
+        });
+
+        expect(result).toEqual({
+            greeting: "Finally JSON",
+            count: 12,
+        });
+    });
+
+    it("should ignore extraneous text after the JSON is complete", async () => {
+        // The code might accumulate text, but JSON is already complete in the stream
+        // Then more text appears
+        const chunks = [
+            '{"greeting":"Hello once more","count":2023}',
+            "\nThis text is extraneous\n",
+        ];
+
+        const mockStream = createMockSSEStream(chunks, {
+            endWithDone: true,
+            delayMs: 0,
+        });
+        OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
+
+        const result = await fetchStructuredOutput(new OpenRouterProviderService(), {
+            userMessage: "Extraneous trailing text",
+            zodSchema: MyTestSchema,
+        });
+
+        expect(result).toEqual({
+            greeting: "Hello once more",
+            count: 2023,
+        });
+    });
+
+    it("should handle an empty stream gracefully and throw parse error", async () => {
+        const mockStream = createMockSSEStream([], { endWithDone: true, delayMs: 0 });
+        OpenRouterProviderService.prototype.processMessage = mock(async () => mockStream);
+
+        await expect(
+            fetchStructuredOutput(new OpenRouterProviderService(), {
+                userMessage: "Empty stream",
+                zodSchema: MyTestSchema,
+            })
+        ).rejects.toThrow("Model response did not contain valid JSON.");
+    });
 });
+
+
+describe("stripTripleBackticks", () => {
+    describe("stripTripleBackticks", () => {
+        it("should remove triple backticks and extract the inner content", () => {
+            const input = "```json\n{\"key\": \"value\"}\n```";
+            const result = stripTripleBackticks(input);
+            expect(result).toBe('{"key": "value"}');
+        });
+
+        it("should return trimmed text if no triple backticks exist", () => {
+            const input = "   {\"key\": \"value\"}   ";
+            const result = stripTripleBackticks(input);
+            expect(result).toBe('{"key": "value"}');
+        });
+
+        it("should remove comments and trailing commas", () => {
+            const input = "```json\n{\n  // This is a comment\n  \"greeting\": \"Hello\",\n  \"count\": 42,\n}\n```";
+            const result = stripTripleBackticks(input);
+            expect(JSON.parse(result)).toEqual({ greeting: "Hello", count: 42 });
+        });
+    });
+
+    describe("extractJsonObjects", () => {
+        it("should extract a single JSON object from text", () => {
+            const input = "Some random text {\"key\":\"value\"} some more text";
+            const results = extractJsonObjects(input);
+            expect(results.length).toBe(1);
+            expect(JSON.parse(results[0])).toEqual({ key: "value" });
+        });
+
+        it("should extract multiple non-overlapping JSON objects from text", () => {
+            const input = "Start {\"a\":1} middle {\"b\":2} end";
+            const results = extractJsonObjects(input);
+            expect(results.length).toBe(2);
+            expect(JSON.parse(results[0])).toEqual({ a: 1 });
+            expect(JSON.parse(results[1])).toEqual({ b: 2 });
+        });
+
+        it("should extract nested JSON objects correctly", () => {
+            const input = "Text {\"outer\": {\"inner\": \"value\"}} end";
+            const results = extractJsonObjects(input);
+            expect(results.length).toBe(1);
+            expect(JSON.parse(results[0])).toEqual({ outer: { inner: "value" } });
+        });
+
+        it("should handle JSON objects with braces inside strings", () => {
+            const input = 'Prefix {"key": "value with } brace"} Suffix';
+            const results = extractJsonObjects(input);
+            expect(results.length).toBe(1);
+            expect(JSON.parse(results[0])).toEqual({ key: "value with } brace" });
+        });
+
+        it("should return an empty array if no valid JSON is found", () => {
+            const input = "No JSON here!";
+            const results = extractJsonObjects(input);
+            expect(results.length).toBe(0);
+        });
+    });
+
+    describe("parseStructuredJson", () => {
+        it("should parse valid JSON from cleaned text with triple backticks", () => {
+            const input = "```json\n{\"key\":\"value\"}\n```";
+            const result = parseStructuredJson(input);
+            expect(result).toEqual({ key: "value" });
+        });
+
+        it("should parse valid JSON from text with extraneous data", () => {
+            const input = "Garbage before {\"a\":1} garbage after";
+            const result = parseStructuredJson(input);
+            expect(result).toEqual({ a: 1 });
+        });
+
+        it("should return the last valid JSON object when multiple are present", () => {
+            const input = "First JSON: {\"a\":1} then second JSON: {\"b\":2}";
+            const result = parseStructuredJson(input);
+            expect(result).toEqual({ b: 2 });
+        });
+
+        it("should return null if no valid JSON is present", () => {
+            const input = "This is not JSON at all.";
+            const result = parseStructuredJson(input);
+            expect(result).toBeNull();
+        });
+
+        it("should return null if the cleaned JSON is not an object (e.g. a string)", () => {
+            const input = '```json\n"Just a string"\n```';
+            const result = parseStructuredJson(input);
+            expect(result).toBeNull();
+        });
+    });
+});
+    

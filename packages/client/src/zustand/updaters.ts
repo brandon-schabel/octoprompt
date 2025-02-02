@@ -338,12 +338,19 @@ export function useDeleteChatTab() {
  */
 export function useUpdateActiveChatTab() {
     const { id: activeChatTabId, tabData: activeChatTab } = useActiveChatTab()
+    const { manager } = useGlobalStateContext()
     const updateChatTab = useUpdateChatTab()
 
-    return (partial: Partial<ChatTabState>) => {
+    return (partialOrFn: PartialOrFn<ChatTabState>) => {
         if (!activeChatTabId || !activeChatTab) return
-        updateChatTab(activeChatTabId, partial)
-        // WS
+        const finalPartial = getPartial(activeChatTab, partialOrFn)
+        updateChatTab(activeChatTabId, finalPartial)
+        // Send WebSocket message
+        manager.sendMessage({
+            type: "update_chat_tab_partial",
+            tabId: activeChatTabId,
+            partial: finalPartial,
+        })
     }
 }
 
@@ -353,43 +360,70 @@ export function useUpdateActiveChatTab() {
 
 export function useLinkChatTabToProjectTab() {
     const updateChatTab = useUpdateChatTab()
+    const { manager } = useGlobalStateContext()
+
     return (chatTabId: string, projectTabId: string, settings?: Partial<LinkSettings>) => {
+        const linkSettings = {
+            includeSelectedFiles: true,
+            includePrompts: true,
+            includeUserPrompt: true,
+            ...settings,
+        }
         updateChatTab(chatTabId, {
             linkedProjectTabId: projectTabId,
-            linkSettings: {
-                includeSelectedFiles: true,
-                includePrompts: true,
-                includeUserPrompt: true,
-                ...settings,
+            linkSettings,
+        })
+        // Send WebSocket message
+        manager.sendMessage({
+            type: "update_chat_tab_partial",
+            tabId: chatTabId,
+            partial: {
+                linkedProjectTabId: projectTabId,
+                linkSettings,
             },
         })
-        // WS
     }
 }
 
 export function useUnlinkChatTab() {
     const updateChatTab = useUpdateChatTab()
+    const { manager } = useGlobalStateContext()
+
     return (chatTabId: string) => {
         updateChatTab(chatTabId, {
             linkedProjectTabId: null,
             linkSettings: undefined,
         })
-        // WS
+        // Send WebSocket message
+        manager.sendMessage({
+            type: "update_chat_tab_partial",
+            tabId: chatTabId,
+            partial: {
+                linkedProjectTabId: null,
+                linkSettings: undefined,
+            },
+        })
     }
 }
 
 export function useUpdateChatLinkSettings() {
     const updateChatTab = useUpdateChatTab()
+    const { manager } = useGlobalStateContext()
+
     return (chatTabId: string, partialSettings: Partial<LinkSettings>, currentSettings?: LinkSettings) => {
         const merged = { ...(currentSettings ?? {}), ...partialSettings }
         linkSettingsSchema.parse(merged) // validate
-        updateChatTab(chatTabId, {
-            linkSettings: {
-                includePrompts: merged.includePrompts ?? true,
-                includeSelectedFiles: merged.includeSelectedFiles ?? true,
-                includeUserPrompt: merged.includeUserPrompt ?? true,
-            },
+        const linkSettings = {
+            includePrompts: merged.includePrompts ?? true,
+            includeSelectedFiles: merged.includeSelectedFiles ?? true,
+            includeUserPrompt: merged.includeUserPrompt ?? true,
+        }
+        updateChatTab(chatTabId, { linkSettings })
+        // Send WebSocket message
+        manager.sendMessage({
+            type: "update_chat_tab_partial",
+            tabId: chatTabId,
+            partial: { linkSettings },
         })
-        // WS
     }
 }

@@ -176,11 +176,6 @@ export const promptProjects = sqliteTable("prompt_projects", {
 // export type Bookmark = InferSelectModel<typeof bookmarks>;
 
 
-export const globalStateTable = sqliteTable('global_state', {
-    id: text('id').primaryKey(),
-    state_json: text('state_json').notNull(), // stores the entire JSON state
-});
-
 export const flags = sqliteTable("flags", {
     id: text("id")
         .primaryKey()
