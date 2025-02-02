@@ -18,6 +18,7 @@ import type {
     Theme,
     ChatTabState,
 } from "shared";
+import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
 
 
 export function useZustandGenericField<T extends object, K extends keyof T>(
@@ -172,6 +173,11 @@ export function useThemeSettings() {
         },
         [manager, updateSettings]
     );
+
+    const isDarkMode = currentTheme === "dark"
+
+    const codeThemeDark = settings.codeThemeDark
+    const codeThemeLight = settings.codeThemeLight
 
     // @ts-ignore
     const selectedTheme = isDarkMode ? themes[codeThemeDark] : themes[codeThemeLight]
