@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { InfoTooltip } from '@/components/info-tooltip'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
@@ -18,7 +17,7 @@ export function ProjectsPage() {
 
     // All tabs + active tab
     const tabs = useAllProjectTabs()
-    const { id: projectActiveTabId, selectedProjectId } = useActiveProjectTab()
+    const { selectedProjectId } = useActiveProjectTab()
     const { data: projects } = useGetProjects()
 
     // Create a new tab from WebSocket side
@@ -48,8 +47,8 @@ export function ProjectsPage() {
         <div className="flex-col h-full w-full overflow-hidden flex">
             <ProjectsTabManager />
             <MainProjectsLayout
-                filePanelRef={filePanelRef}
-                promptPanelRef={promptPanelRef}
+                filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
+                promptPanelRef={promptPanelRef as React.RefObject<PromptOverviewPanelRef>}
             />
         </div>
     )
