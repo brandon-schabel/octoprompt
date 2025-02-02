@@ -28,11 +28,6 @@ import { useSettingsField } from '@/zustand/zustand-utility-hooks'
 
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()
-    const { id: activeTabId } = useActiveProjectTab()
-
-    console.log({
-        "project settings activeTabId": activeTabId,
-    })
     const { data: contextLimit } = useProjectTabField('contextLimit')
     const { data: summarizationEnabledProjectIds } = useSettingsField('summarizationEnabledProjectIds')
     const { data: resolveImports } = useProjectTabField('resolveImports')

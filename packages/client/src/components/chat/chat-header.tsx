@@ -210,7 +210,7 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
                 <ModelSelector
                     className="flex-row"
                     provider={provider ?? 'openai'}
-                    currentModel={currentModel ?? 'gpt-4'}
+                    currentModel={currentModel ?? 'gpt-4o'}
                     onProviderChange={setProvider}
                     onModelChange={setCurrentModel}
                 />

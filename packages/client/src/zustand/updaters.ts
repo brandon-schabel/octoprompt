@@ -258,7 +258,7 @@ export function useCreateChatTab() {
             tabId: newTabId,
             data: {
                 provider: (options?.provider || "openai") as ChatTabState["provider"],
-                model: options?.model || "gpt-4",
+                model: options?.model || "gpt-4o",
                 input: "",
                 messages: [],
                 excludedMessageIds: [],
