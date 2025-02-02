@@ -225,8 +225,8 @@ export class TicketService {
         };
 
 
-        const systemPrompt = defeaultTaskPrompt
-        // const systemPrompt = octopromptPlanningPrompt
+        // const systemPrompt = defeaultTaskPrompt
+        const systemPrompt = octopromptPlanningPrompt
 
         const projectSummary = await getFullProjectSummary(projectId)
 

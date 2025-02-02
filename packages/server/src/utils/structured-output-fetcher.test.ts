@@ -1,6 +1,5 @@
 /* open-router-structured-plugin.test.ts */
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { OpenRouterStructuredPlugin } from "@bnk/ai";
 import { createMockSSEStream } from "@bnk/ai";
 import { z } from "zod";
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
@@ -412,4 +411,3 @@ describe("stripTripleBackticks", () => {
         });
     });
 });
-    
