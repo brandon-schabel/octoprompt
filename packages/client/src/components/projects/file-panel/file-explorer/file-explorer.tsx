@@ -22,6 +22,7 @@ import { buildFileTree } from "../../utils/projects-utils"
 import { NoResultsScreen } from "./no-results-screen"
 import { EmptyProjectScreen } from "./empty-project-screen"
 import { SelectedFilesSidebar } from "./selected-files-sidebar"
+import { AIFileChangeDialog } from "@/components/file-changes/ai-file-change-dialog"
 
 
 type FileExplorerProps = {
@@ -59,7 +60,7 @@ const FileExplorer = function FileExplorer({
     showAutocomplete,
 }: FileExplorerProps) {
     const { id: activeProjectTabId = '', selectedProjectId } = useActiveProjectTab()
-    const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId ?? '')
+    const { data: fileData, isLoading: filesLoading, refetch: refetchFiles } = useGetProjectFiles(selectedProjectId ?? '')
 
     const [autocompleteIndex, setAutocompleteIndex] = useState<number>(-1)
 
@@ -81,6 +82,9 @@ const FileExplorer = function FileExplorer({
     // Debounce the update to the parent state
     const debouncedSetFileSearch = useDebounce(setLocalFileSearch, 300)
 
+    // Add state for AI file change dialog
+    const [aiDialogOpen, setAiDialogOpen] = useState(false)
+    const [selectedFile, setSelectedFile] = useState<ProjectFile>()
 
     // Update handler that updates local state immediately and debounces parent update
     const handleSearchChange = (value: string) => {
@@ -176,6 +180,15 @@ const FileExplorer = function FileExplorer({
                 selectedFilesState={selectedFilesState}
             />
         )
+    }
+
+    // Add handler for AI file change requests
+    const handleRequestAIFileChange = (filePath: string) => {
+        const file = fileData?.files?.find(f => f.path === filePath)
+        if (file) {
+            setSelectedFile(file)
+            setAiDialogOpen(true)
+        }
     }
 
     return (
@@ -365,6 +378,7 @@ const FileExplorer = function FileExplorer({
                                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                                 onNavigateRight={handleNavigateToSelectedFiles}
                                 onNavigateToSearch={() => searchInputRef.current?.focus()}
+                                onRequestAIFileChange={handleRequestAIFileChange}
                             />
                         </ScrollArea>
                     </div>
@@ -382,6 +396,19 @@ const FileExplorer = function FileExplorer({
                     </div>
                 </div>
             )}
+
+            {/* Add the AI File Change Dialog */}
+            <AIFileChangeDialog
+                open={aiDialogOpen}
+                onOpenChange={setAiDialogOpen}
+                filePath={(projectData?.path || '') + "/" + (selectedFile?.path || '')}
+                onSuccess={() => {
+                    // Refresh the file list after a successful change
+                    void refetchFiles()
+                    setAiDialogOpen(false)
+                    setSelectedFile(undefined)
+                }}
+            />
         </div>
     )
 }
