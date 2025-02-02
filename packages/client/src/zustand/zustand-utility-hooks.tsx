@@ -173,9 +173,14 @@ export function useThemeSettings() {
         [manager, updateSettings]
     );
 
+    // @ts-ignore
+    const selectedTheme = isDarkMode ? themes[codeThemeDark] : themes[codeThemeLight]
+
     return {
         theme: currentTheme,
         setTheme,
+        isDarkMode: currentTheme === "dark",
+        selectedTheme,
     };
 }
 
