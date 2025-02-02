@@ -22,7 +22,7 @@ import {
 import { useActiveChatTab, useAllProjectTabs } from "@/zustand/selectors";
 import { useForkChatHandler } from "./hooks/chat-hooks";
 import { ModelSettingsPopover } from "./components/model-settings-popover";
-import { DEFAULT_MODEL_CONFIGS } from "shared/index";
+import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared/index";
 
 interface ChatHeaderProps {
     chatId?: string;
@@ -212,7 +212,7 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
                 {/* Model Selector */}
                 <ModelSelector
                     className="flex-row"
-                    provider={provider ?? defaultModelConfigs.provider}
+                    provider={provider as APIProviders ?? defaultModelConfigs.provider as APIProviders}
                     currentModel={currentModel ?? defaultModelConfigs.model}
                     onProviderChange={setProvider}
                     onModelChange={setCurrentModel}
