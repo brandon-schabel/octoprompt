@@ -179,61 +179,63 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
                     <p className="text-sm text-muted-foreground">No tasks yet. Add some above.</p>
                 )}
                 {tasks.map((task, idx) => (
-                    <div
-                        key={task.id}
-                        className="flex items-center justify-between p-2 border rounded"
-                    >
-                        <div className="flex items-center space-x-3 overflow-hidden">
-                            <button
-                                type="button"
-                                onClick={(e) => handleToggleDone(e, task)}
-                                className="flex items-center justify-center"
-                            >
+                    <div>
+                        <div
+                            key={task.id}
+                            className="flex items-center justify-between p-2 border rounded"
+                        >
+                            <div className="flex items-center space-x-3 overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={(e) => handleToggleDone(e, task)}
+                                    className="flex items-center justify-center"
+                                >
 
-                                {task.done ? (
-                                    <CircleCheckBig
-                                        className={`h-4 w-4 text-green-600`}
-                                    />
-                                ) : (
-                                    <Circle
-                                        className={`h-4 w-4 text-gray-400`}
-                                    />
-                                )}
-                            </button>
-                            <span
-                                className={`text-sm whitespace-pre-wrap ${task.done ? "line-through text-gray-400" : ""
-                                    }`}
-                            >
-                                {task.content}
-                            </span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => moveTaskUp(e, idx)}
-                                disabled={idx <= 0}
-                            >
-                                <ArrowUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => moveTaskDown(e, idx)}
-                                disabled={idx >= tasks.length - 1}
-                            >
-                                <ArrowDown className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => handleDeleteTask(e, task)}
-                            >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                                    {task.done ? (
+                                        <CircleCheckBig
+                                            className={`h-4 w-4 text-green-600`}
+                                        />
+                                    ) : (
+                                        <Circle
+                                            className={`h-4 w-4 text-gray-400`}
+                                        />
+                                    )}
+                                </button>
+                                <span
+                                    className={`text-sm whitespace-pre-wrap ${task.done ? "line-through text-gray-400" : ""
+                                        }`}
+                                >
+                                    {task.content}
+                                </span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => moveTaskUp(e, idx)}
+                                    disabled={idx <= 0}
+                                >
+                                    <ArrowUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => moveTaskDown(e, idx)}
+                                    disabled={idx >= tasks.length - 1}
+                                >
+                                    <ArrowDown className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => handleDeleteTask(e, task)}
+                                >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 ))}

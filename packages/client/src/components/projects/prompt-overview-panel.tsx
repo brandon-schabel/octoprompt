@@ -45,9 +45,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const { tabData: activeTabState, id: activeProjectTabId } = useActiveProjectTab()
         const updateActiveProjectTab = useUpdateActiveProjectTab()
 
-        const { data: selectedPrompts = [] } = useProjectTabField(activeProjectTabId ?? "", 'selectedPrompts')
-        const { data: globalUserPrompt = '' } = useProjectTabField(activeProjectTabId ?? "", 'userPrompt')
-        const { data: contextLimit = 128000 } = useProjectTabField(activeProjectTabId ?? "", 'contextLimit')
+        const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts')
+        const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt')
+        const { data: contextLimit = 128000 } = useProjectTabField('contextLimit')
 
 
         // Local state

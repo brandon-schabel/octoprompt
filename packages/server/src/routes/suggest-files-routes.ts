@@ -83,7 +83,7 @@ router.post(
                 // @ts-ignore
                 jsonSchema: FileSuggestionsJsonSchema,
                 schemaName: "FileSuggestions",
-                model: "deepseek/deepseek-r1",
+                model: "qwen/qwen-plus",
                 // model: "qwen/qvq-72b-preview",
                 temperature: 0.2,
                 chatId: `project-${projectId}-suggest-files`

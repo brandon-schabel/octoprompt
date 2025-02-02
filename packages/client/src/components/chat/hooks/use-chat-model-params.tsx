@@ -1,5 +1,4 @@
 import { useChatTabField } from "@/zustand/zustand-utility-hooks";
-import { useActiveChatTab } from "@/zustand/selectors";
 import { ChatModelSettings, chatModelSettingsSchema } from "shared/index";
 
 type ModelParamMutationFn = (value: number) => void;
@@ -11,34 +10,32 @@ type StreamMutationFn = (value: boolean) => void;
  * Similarly, `mutateX` sets the new value in the global chat tab state.
  */
 export function useChatModelParams() {
-    const { id: chatTabId } = useActiveChatTab();
-
     // Each param. If not set yet in global state, use Zod's default.
     const { data: temperatureData = chatModelSettingsSchema.shape.temperature._def.defaultValue() } =
-        useChatTabField(chatTabId ?? "", "temperature");
+        useChatTabField("temperature");
 
     const { data: maxTokensData = chatModelSettingsSchema.shape.max_tokens._def.defaultValue() } =
-        useChatTabField(chatTabId ?? "", "max_tokens");
+        useChatTabField("max_tokens");
 
     const { data: topPData = chatModelSettingsSchema.shape.top_p._def.defaultValue() } =
-        useChatTabField(chatTabId ?? "", "top_p");
+        useChatTabField("top_p");
 
     const { data: freqPenaltyData = chatModelSettingsSchema.shape.frequency_penalty._def.defaultValue() } =
-        useChatTabField(chatTabId ?? "", "frequency_penalty");
+        useChatTabField("frequency_penalty");
 
     const { data: presPenaltyData = chatModelSettingsSchema.shape.presence_penalty._def.defaultValue() } =
-        useChatTabField(chatTabId ?? "", "presence_penalty");
+        useChatTabField("presence_penalty");
 
     const { data: streamData = chatModelSettingsSchema.shape.stream._def.defaultValue() } =
-        useChatTabField(chatTabId ?? "", "stream");
+        useChatTabField("stream");
 
     // Setters with proper type casting
-    const { mutate: setTemperatureRaw } = useChatTabField(chatTabId ?? "", "temperature");
-    const { mutate: setMaxTokensRaw } = useChatTabField(chatTabId ?? "", "max_tokens");
-    const { mutate: setTopPRaw } = useChatTabField(chatTabId ?? "", "top_p");
-    const { mutate: setFreqPenaltyRaw } = useChatTabField(chatTabId ?? "", "frequency_penalty");
-    const { mutate: setPresPenaltyRaw } = useChatTabField(chatTabId ?? "", "presence_penalty");
-    const { mutate: setStreamRaw } = useChatTabField(chatTabId ?? "", "stream");
+    const { mutate: setTemperatureRaw } = useChatTabField("temperature");
+    const { mutate: setMaxTokensRaw } = useChatTabField("max_tokens");
+    const { mutate: setTopPRaw } = useChatTabField("top_p");
+    const { mutate: setFreqPenaltyRaw } = useChatTabField("frequency_penalty");
+    const { mutate: setPresPenaltyRaw } = useChatTabField("presence_penalty");
+    const { mutate: setStreamRaw } = useChatTabField("stream");
 
     // Wrap the raw mutate functions with proper types
     const setTemperature: ModelParamMutationFn = (value) => setTemperatureRaw(value);

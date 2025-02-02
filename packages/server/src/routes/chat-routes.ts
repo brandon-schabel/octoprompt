@@ -21,6 +21,8 @@ router.post(`${AI_BASE_PATH}/chat`, {
         tempId: body.tempId,
     });
 
+
+
     const headers = {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',

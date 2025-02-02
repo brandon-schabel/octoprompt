@@ -310,10 +310,8 @@ router.post(
             userMessage,
             systemMessage: systemPrompt,
             zodSchema: FileSuggestionsZodSchema,
-            // @ts-ignore
-            jsonSchema: FileSuggestionsJsonSchema,
             schemaName: "TicketFileSuggestions",
-            model: "deepseek/deepseek-r1",
+            model: "qwen/qwen-plus",
             temperature: 0.2,
             chatId: `ticket-${ticketId}-suggest-files`,
         });

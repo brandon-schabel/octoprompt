@@ -11,7 +11,7 @@ export class PromptimizerService {
     /**
      * Takes the user's original context/intent/prompt and uses a model
      * to generate a refined (optimized) version of that prompt. This
-     * example calls the `deepseek/deepseek-r1` model by default.
+     * example calls the `qwen/qwen-plus` model by default.
      */
     public async optimizePrompt(userContext: string): Promise<string> {
         // You might want to craft a special system prompt to instruct
@@ -45,7 +45,7 @@ ${promptsMap.contemplativePrompt}
                 userMessage,
                 provider: 'openrouter', // or whichever default you prefer
                 options: {
-                    model: 'deepseek/deepseek-r1',
+                    model: 'qwen/qwen-plus',
                     max_tokens: 2048,
                     temperature: 0.2,
                 },

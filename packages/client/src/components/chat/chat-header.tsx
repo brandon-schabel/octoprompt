@@ -33,16 +33,13 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
     const [projectSearch, setProjectSearch] = useState("");
     const { id: chatActiveTabId } = useActiveChatTab();
     const { mutate: setExcludedMessageIds } = useChatTabField(
-        chatActiveTabId ?? "",
-        "excludedMessageIds"
+        "excludedMessageIds",
     );
     const { data: linkedProjectTabId } = useChatTabField(
-        chatActiveTabId ?? "",
-        "linkedProjectTabId"
+        "linkedProjectTabId",
     );
     const { data: displayName } = useChatTabField(
-        chatActiveTabId ?? "",
-        "displayName"
+        "displayName",
     );
     const { data: chats } = useGetChats();
     const activeChatData = chats?.data?.find((c) => c.id === chatId);
@@ -212,8 +209,8 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
                 {/* Model Selector */}
                 <ModelSelector
                     className="flex-row"
-                    provider={provider}
-                    currentModel={currentModel}
+                    provider={provider ?? 'openai'}
+                    currentModel={currentModel ?? 'gpt-4o'}
                     onProviderChange={setProvider}
                     onModelChange={setCurrentModel}
                 />

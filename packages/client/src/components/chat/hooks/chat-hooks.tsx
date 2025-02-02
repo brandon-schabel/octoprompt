@@ -13,8 +13,8 @@ export type TempChatMessage = ChatMessage & { tempId?: string };
 
 export function useClearExcludedMessages(tabId: string) {
     const { mutate: setExcludedMessageIds } = useChatTabField(
-        tabId,
-        "excludedMessageIds"
+        "excludedMessageIds",
+        tabId
     );
 
     const clearExcludedMessages = useCallback(() => {

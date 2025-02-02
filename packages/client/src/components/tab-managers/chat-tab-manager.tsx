@@ -29,11 +29,12 @@ type ChatTab = {
 }
 
 export function ChatTabManager() {
-    const { id: activeTabId } = useActiveChatTab()
     const createChatTab = useCreateChatTab()
     const setActiveChatTab = useSetActiveChatTab()
     const updateChatTab = useUpdateChatTab()
     const deleteChatTab = useDeleteChatTab()
+    
+    const { id: activeTabId } = useActiveChatTab()
     const tabs = useAllChatTabs()
 
     // Sort tabs by sortOrder

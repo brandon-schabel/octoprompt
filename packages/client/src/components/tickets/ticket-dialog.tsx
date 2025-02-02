@@ -8,7 +8,6 @@ import { Textarea } from "../ui/textarea";
 import { useCreateTicket, useUpdateTicket, useUpdateTicketSuggestedFiles, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
-import { useGetProjectFiles } from "@/hooks/api/use-projects-api";
 import { useCreateProjectTab } from "@/zustand/updaters";
 
 interface TicketDialogProps {
@@ -22,7 +21,6 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     const createTicket = useCreateTicket();
     const updateTicket = useUpdateTicket();
     const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
-    const { data: fileData } = useGetProjectFiles(projectId);
     const createProjectTab = useCreateProjectTab();
 
     // Local form state
@@ -132,6 +130,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     }
 
     // 3) Open in Project Tab
+    // TODO: reimplment this
     function handleOpenInProjectTab() {
         if (!ticket) return;
         // Build a default userPrompt – e.g. the ticket's title & overview

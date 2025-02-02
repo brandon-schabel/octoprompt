@@ -44,15 +44,12 @@ export class FileChangePlugin {
                     // 4) Lookup the DB record for that file’s path
                     const updatedFile = allFiles.find((f) => f.path === relativePath);
                     if (!updatedFile) {
-                        console.warn(`[FileChangePlugin] Could not find a DB record matching path: ${relativePath}`);
                         return;
                     }
 
-                    console.log(`[FileChangePlugin] Rerunning summary for file ID: ${updatedFile.id} (${event})`);
 
                     // 5) Re-run summarization for this single file
                     const globalState = await websocketStateAdapter.getState();
-                    console.log(`[FileChangePlugin] Global state: ${JSON.stringify(globalState, null, 2)}`);
                     await this.summaryService.summarizeFiles(
                         project.id,
                         [updatedFile],

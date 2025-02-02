@@ -13,20 +13,19 @@ import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manag
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useCreateProjectTab } from '@/zustand/updaters'
 import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors'
-import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
 import { ProjectFile } from 'shared/schema'
 import type { Project } from 'shared'
 
-function ProjectsPage() {
+export function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
     // All tabs + active tab
     const tabs = useAllProjectTabs()
-    const { id: projectActiveTabId } = useActiveProjectTab()
+    const { id: projectActiveTabId, selectedProjectId } = useActiveProjectTab()
 
     // Field-specific state from the active tab
-    const { data: selectedProjectId } = useProjectTabField(projectActiveTabId ?? '', 'selectedProjectId')
+    // const { data: selectedProjectId } = useProjectTabField(projectActiveTabId ?? '', 'selectedProjectId')
 
     // We track the existence of tabs to handle "no tabs" scenario
     const noTabsYet = Object.keys(tabs || {}).length === 0
