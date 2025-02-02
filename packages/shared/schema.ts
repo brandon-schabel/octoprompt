@@ -114,7 +114,7 @@ export const projectFileSchema = z.object({
     size: z.number(),
     content: z.string().nullable(),
     summary: z.string().default(""),
-    summaryLastUpdatedAt: z.date().optional(), 
+    summaryLastUpdatedAt: z.date().optional(),
     meta: z.string().default(""),
     checksum: z.string().default(""),
     createdAt: z.date(),
@@ -278,3 +278,13 @@ export const ticketTasks = sqliteTable("ticket_tasks", {
 });
 export type TicketTask = InferSelectModel<typeof ticketTasks>;
 export type NewTicketTask = InferInsertModel<typeof ticketTasks>;
+
+
+export const fileChanges = sqliteTable("file_changes", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    filePath: text("file_path").notNull(),
+    originalContent: text("original_content").notNull(),
+    suggestedDiff: text("suggested_diff").notNull(),
+    status: text("status").notNull(), // e.g. "pending", "confirmed"
+    timestamp: integer("timestamp", { mode: "number" }).notNull(),
+});

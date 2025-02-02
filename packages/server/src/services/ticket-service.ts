@@ -21,6 +21,9 @@ import type { InferSelectModel } from "drizzle-orm";
 import { OpenRouterProviderService } from "./model-providers/providers/open-router-provider";
 import { promptsMap } from "@/utils/prompts-map";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
+import { z } from "zod";
+import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
+import { DEFAULT_MODEL_CONFIGS } from "shared";
 
 
 
@@ -65,6 +68,16 @@ export function stripTripleBackticks(text: string): string {
     // If no triple backticks, return the original
     return text.trim();
 }
+
+// Define the Zod schema for task suggestions outside the class
+export const TaskSuggestionsZodSchema = z.object({
+    tasks: z.array(z.object({
+        title: z.string(),
+        description: z.string().optional(),
+    })),
+});
+
+export type TaskSuggestions = z.infer<typeof TaskSuggestionsZodSchema>;
 
 export class TicketService {
     private openRouterProvider: OpenRouterProviderService;
@@ -195,146 +208,44 @@ export class TicketService {
             throw new Error(`Ticket ${ticketId} not found`);
         }
 
-        const projectId = ticket.projectId
-
-        console.log("[TicketService] Found ticket:", {
-            id: ticket.id,
-            title: ticket.title,
-            overview: ticket.overview?.substring(0, 100) + "...",
-        });
-
-        // Define the JSON schema for task suggestions
-        const taskSchema = {
-            type: "object" as const,
-            properties: {
-                tasks: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            title: { type: "string" },
-                            description: { type: "string" },
-                        },
-                        required: ["title"],
-                    },
-                    description: "Array of suggested tasks for the ticket",
-                },
-            },
-            required: ["tasks"],
-            additionalProperties: false,
-        };
-
-
-        // const systemPrompt = defeaultTaskPrompt
-        const systemPrompt = octopromptPlanningPrompt
-
-        const projectSummary = await getFullProjectSummary(projectId)
+        const projectId = ticket.projectId;
+        const projectSummary = await getFullProjectSummary(projectId);
 
         const userMessage = `Please suggest tasks for this ticket:
-    Title: ${ticket.title}
-    Overview: ${ticket.overview}
+Title: ${ticket.title}
+Overview: ${ticket.overview}
 
-    UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
+UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
 
-    Below is a combined summary of project files:
-    ${projectSummary}
-    `;
-
-
-
-        console.log("[TicketService] Preparing LLM request:", {
-            systemPrompt,
-            userMessage: userMessage.substring(0, 100) + "...",
-            schema: JSON.stringify(taskSchema, null, 2),
-        });
+Below is a combined summary of project files:
+${projectSummary}
+`;
 
         try {
-            console.log("[TicketService] Calling OpenRouterProviderService...");
-            const stream = await this.openRouterProvider.processMessage({
-                chatId: `ticket-tasks-${ticketId}`,
+            const cfg = DEFAULT_MODEL_CONFIGS['suggest-ticket-tasks'];
+
+            const result = await fetchStructuredOutput(this.openRouterProvider, {
                 userMessage,
-                provider: "openrouter",
-                options: {
-                    model: "qwen/qwen-plus",
-                    temperature: 0.2,
-                    response_format: {
-                        type: "json_schema",
-                        json_schema: {
-                            name: "TaskSuggestions",
-                            strict: true,
-                            schema: taskSchema,
-                        },
-                    },
-                },
-                systemMessage: systemPrompt,
+                systemMessage: octopromptPlanningPrompt,
+                zodSchema: TaskSuggestionsZodSchema,
+                schemaName: "TaskSuggestions",
+                model: cfg.model,
+                temperature: cfg.temperature,
+                chatId: `ticket-${ticketId}-suggest-tasks`,
             });
 
-            console.log("[TicketService] Got stream response, reading chunks...");
 
-            // Read the stream to get the structured response
-            const reader = stream.getReader();
-            let rawOutput = "";
-            const decoder = new TextDecoder();
-            let chunkCount = 0;
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) {
-                    console.log("[TicketService] Stream complete after", chunkCount, "chunks");
-                    break;
-                }
-                const chunk = decoder.decode(value);
-                rawOutput += chunk;
-                chunkCount++;
-
-                console.log("[TicketService] Received chunk", chunkCount, ":", chunk.substring(0, 100) + "...");
-
-                // Try parsing incrementally (optional) to see if any partial JSON is valid so far
-                try {
-                    const partialParsed = JSON.parse(rawOutput);
-                    console.log("[TicketService] Valid JSON in chunk", chunkCount, ":", partialParsed);
-                } catch (e) {
-                    console.log("[TicketService] Chunk", chunkCount, "doesn't contain complete JSON yet");
-                }
-            }
-
-            console.log("[TicketService] Final raw output:", rawOutput);
-
-            try {
-                console.log("[TicketService] Attempting to parse final output...");
-
-                // 1) Strip triple backticks (and optional `json`) before parsing
-                const cleanedOutput = stripTripleBackticks(rawOutput);
-
-                // 2) Then do the JSON parse
-                const parsed = JSON.parse(cleanedOutput);
-
-                console.log("[TicketService] Successfully parsed JSON:", parsed);
-
-                if (parsed?.tasks?.length) {
-                    const taskTitles = parsed.tasks.map((task: { title: string }) => task.title);
-                    console.log("[TicketService] Extracted task titles:", taskTitles);
-                    return taskTitles;
-                } else {
-                    console.warn("[TicketService] Parsed JSON missing tasks array or empty");
-                }
-            } catch (error) {
-                console.error("[TicketService] Failed to parse task suggestions:", error);
-                console.error("[TicketService] Raw output that failed to parse:", rawOutput);
-            }
+            return result.tasks.map(task => task.title);
         } catch (error) {
-            console.error("[TicketService] Error in LLM request:", error);
+            console.error("[TicketService] Error in task suggestion:", error);
             if (error instanceof Error) {
                 console.error("[TicketService] Error details:", {
                     message: error.message,
                     stack: error.stack,
                 });
             }
+            return [];
         }
-
-        console.log("[TicketService] Falling back to default tasks");
-        // Fallback default tasks if something goes wrong
-        return [];
     }
 
     async getTicketsWithFiles(projectId: string): Promise<(Ticket & { fileIds: string[] })[]> {

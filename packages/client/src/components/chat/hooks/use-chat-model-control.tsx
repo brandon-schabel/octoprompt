@@ -1,10 +1,12 @@
 import { useChatTabField } from "@/zustand/zustand-utility-hooks";
-import { APIProviders } from "shared";
+import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared";
+
+const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 export const useChatModelControl = () => {
-    const { data: provider = "openai" } =
+    const { data: provider = defaultModelConfigs.provider } =
         useChatTabField("provider");
-    const { data: model = "gpt-4o" } =
+    const { data: model = defaultModelConfigs.model } =
         useChatTabField("model");
 
     const { mutate: setProviderField } = useChatTabField(

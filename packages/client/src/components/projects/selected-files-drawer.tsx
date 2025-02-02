@@ -14,7 +14,7 @@ import { SelectedFilesList } from "@/components/projects/selected-files-list"
 import { useState } from "react"
 import { FormatTokenCount } from "../format-token-count"
 import { Badge } from "../ui/badge"
-import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 
 type SelectedFilesDrawerProps = {
   selectedFiles: string[]
@@ -22,28 +22,33 @@ type SelectedFilesDrawerProps = {
   onRemoveFile: (fileId: string) => void
   trigger?: React.ReactNode
   projectTabId: string
-  selectedFilesState: UseSelectedFileReturn
 }
 
+
+const getTotalFileTokens = ({ files, fileMap }: { files: string[], fileMap: Map<string, ProjectFile> }) => {
+  return files.reduce((total, fileId) => {
+    const file = fileMap.get(fileId)
+    if (file?.content) {
+      return total + estimateTokenCount(file.content)
+    }
+    return total
+  }, 0)
+}
+
+
 export function SelectedFilesDrawer({
-  selectedFiles,
-  fileMap,
   onRemoveFile,
   trigger,
   projectTabId,
-  selectedFilesState
 }: SelectedFilesDrawerProps) {
+
+  const { selectedFiles, projectFileMap } = useSelectedFiles({ tabId: projectTabId })
   const [open, setOpen] = useState(false)
 
-  const totalTokens = React.useMemo(() => {
-    return selectedFiles.reduce((total, fileId) => {
-      const file = fileMap.get(fileId)
-      if (file?.content) {
-        return total + estimateTokenCount(file.content)
-      }
-      return total
-    }, 0)
-  }, [selectedFiles, fileMap])
+  const totalTokens = getTotalFileTokens({
+    files: selectedFiles,
+    fileMap: projectFileMap,
+  })
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
@@ -71,11 +76,8 @@ export function SelectedFilesDrawer({
 
         <ScrollArea className="p-4 h-[50vh]">
           <SelectedFilesList
-            selectedFiles={selectedFiles}
-            fileMap={fileMap}
             onRemoveFile={onRemoveFile}
             projectTabId={projectTabId}
-            selectedFilesState={selectedFilesState}
           />
         </ScrollArea>
       </DrawerContent>

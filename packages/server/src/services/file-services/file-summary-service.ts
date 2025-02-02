@@ -1,7 +1,7 @@
 import { db } from "shared/database";
 import { files } from "shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { ProjectFile as ProjectFileType, GlobalState } from "shared";
+import { ProjectFile as ProjectFileType, GlobalState, DEFAULT_MODEL_CONFIGS } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { UnifiedProviderService } from "../model-providers/providers/unified-provider-service";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
@@ -241,14 +241,17 @@ Specifically, cover the following:
                 return;
             }
 
+            const cfg = DEFAULT_MODEL_CONFIGS['summarize-file']
+
             const stream = await this.unifiedProviderService.processMessage({
                 chatId: "fileSummaryChat",
                 userMessage,
                 provider: "openrouter",
                 options: {
-                    model: "mistralai/codestral-2501",
-                    max_tokens: 1024,
-                    temperature: 0.2,
+                    model: cfg.model,
+                    max_tokens: cfg.max_tokens,
+                    temperature: cfg.temperature,
+                    
                 },
                 systemMessage: systemPrompt,
             });

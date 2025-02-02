@@ -51,8 +51,6 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
     );
 
     // We still use the custom utility to read local selection state
-    const selectedFilesState = useSelectedFiles()
-    const { selectedFiles, removeSelectedFile } = selectedFilesState
     const { copyToClipboard } = useCopyClipboard()
 
     // We keep the original updaters for linking/unlinking
@@ -64,12 +62,9 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
 
     // Pull files & prompts from the actual project
     const { data: promptsData } = useGetProjectPrompts(selectedProjectId || '')
-    const { data: filesData } = useGetProjectFiles(selectedProjectId || '')
 
-    const fileMap = new Map<string, ProjectFile>()
-    if (filesData?.files) {
-        filesData.files.forEach(f => fileMap.set(f.id, f))
-    }
+    const { removeSelectedFile, projectFileMap } = useSelectedFiles({ tabId: linkedProjectTabId })
+
 
     function handleLinkSettingChange(key: keyof LinkSettings, value: boolean) {
         if (!chatActiveTabId) return
@@ -104,7 +99,7 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
 
         // Build the content
         const content = buildPromptContent({
-            fileMap,
+            fileMap: projectFileMap,
             promptData: promptsData,
             selectedFiles: linkSettings.includeSelectedFiles ? projectSelectedFiles || [] : [],
             selectedPrompts: linkSettings.includePrompts ? projectSelectedPrompts || [] : [],
@@ -122,10 +117,12 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
         })
     }
 
+
     // If there's no linked project ID, we can't show anything
     if (!selectedProjectId) {
         return null
     }
+
 
     return (
         <SlidingSidebar
@@ -176,11 +173,8 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
                     <TabsContent value="files" className="flex-1 overflow-hidden">
                         <ScrollArea className="h-full p-2">
                             <SelectedFilesList
-                                selectedFiles={selectedFiles}
-                                fileMap={fileMap}
                                 onRemoveFile={(fileId) => removeSelectedFile(fileId)}
                                 projectTabId={linkedProjectTabId}
-                                selectedFilesState={selectedFilesState}
                             />
                         </ScrollArea>
                     </TabsContent>

@@ -8,21 +8,30 @@ import { Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ProjectSettingsDialog } from "../project-settings-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Link } from "@tanstack/react-router"
+import { Link, useMatches } from "@tanstack/react-router"
+import { useImperativeHandle } from "react"
+import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
+import { useActiveProjectTab } from "@/zustand/selectors"
 
 type ProjectHeaderProps = {
     projectData: Project | null
-    isOnTicketsRoute: boolean
-    isOnSummarizationRoute: boolean
-    openTicketsCount: number
 }
 
 const ProjectHeader = function ProjectHeader({
     projectData,
-    isOnTicketsRoute,
-    isOnSummarizationRoute,
-    openTicketsCount,
 }: ProjectHeaderProps) {
+    // Router info (for highlighting tickets, etc.)
+    const matches = useMatches()
+    const { selectedProjectId } = useActiveProjectTab()
+    const isOnTicketsRoute = matches.some((m) => m.routeId === '/tickets')
+    const isOnSummarizationRoute = matches.some((m) => m.routeId === '/project-summarization')
+
+    // Tickets for this project
+    const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? '')
+    const openTicketsCount =
+        ticketsData?.ticketsWithTasks?.filter((t) => t.status === 'open').length ?? 0
+
+
     if (!projectData) return null
 
     return (

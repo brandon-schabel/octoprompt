@@ -6,7 +6,7 @@ function main() {
   const newDb = new Database('sqlite.db');
 
   // Attach the old DB
-  newDb.exec("ATTACH '21-jan-db.db' AS oldDb");
+  newDb.exec("ATTACH 'sqlite-old.db' AS oldDb");
 
   // Wrap all inserts in a single transaction for speed and atomicity
   newDb.exec('BEGIN');
@@ -67,9 +67,6 @@ function main() {
     `);
 
     // 4) files
-    // Make sure the new schema columns match exactly. 
-    // For example, "checksum" might be new or empty in old DB (if at all).
-    // If the old DB doesn't have it, you can use a default or skip the column.
     newDb.exec(`
       INSERT INTO files (
         id,
@@ -97,7 +94,7 @@ function main() {
         summary,
         summary_last_updated_at,
         meta,
-        '' AS checksum,  -- or replace with checksum if it exists in old DB
+        '' AS checksum,  -- use default value since old DB doesn't have checksum
         created_at,
         updated_at
       FROM oldDb.files;
@@ -135,17 +132,9 @@ function main() {
       FROM oldDb.prompt_projects;
     `);
 
-    // 7) global_state
-    newDb.exec(`
-      INSERT INTO global_state (
-        id,
-        state_json
-      )
-      SELECT
-        id,
-        state_json
-      FROM oldDb.global_state;
-    `);
+    // 7) global_state is deprecated.
+    // Instead of migrating its data, drop the table from the new DB if it exists.
+    newDb.exec(`DROP TABLE IF EXISTS global_state;`);
 
     // 8) flags
     newDb.exec(`
@@ -243,14 +232,18 @@ function main() {
       FROM oldDb.ticket_tasks;
     `);
 
+    // 13) file_changes is a new table.
+    // Since legacy data doesn't exist for it, no INSERT is necessary.
+    // (It will be empty in the new DB.)
+
     // Commit the transaction
     newDb.exec('COMMIT');
   } catch (error) {
-    // If something fails, roll back
+    // Roll back if something fails
     newDb.exec('ROLLBACK');
     throw error;
   } finally {
-    // Detach old DB, close connection
+    // Detach the old DB and close the connection
     newDb.exec('DETACH oldDb');
     newDb.close();
   }

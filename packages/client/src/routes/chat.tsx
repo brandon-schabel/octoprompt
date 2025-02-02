@@ -18,7 +18,7 @@ import {
   useAllChatTabs,
 } from "@/zustand/selectors";
 import { useSendChatMessage, useChatMessages } from "@/components/chat/hooks/chat-hooks";
-import { APIProviders } from "shared/index";
+import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared/index";
 import { useChatModelParams } from "@/components/chat/hooks/use-chat-model-params";
 
 
@@ -28,6 +28,9 @@ export const Route = createFileRoute("/chat")({
     prefill: Boolean(search.prefill),
   }),
 });
+
+
+const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 function ChatPage() {
   // Global state to check if user has any chat tabs at all
@@ -55,8 +58,8 @@ function ChatPage() {
   // Initialize send message hook with proper state management
   const { handleSendMessage } = useSendChatMessage({
     chatId,
-    provider: activeChatTabState?.provider as APIProviders ?? "openai",
-    model: activeChatTabState?.model ?? "gpt-4o-mini",
+    provider: activeChatTabState?.provider as APIProviders ?? defaultModelConfigs.provider,
+    model: activeChatTabState?.model ?? defaultModelConfigs.model,
     excludedMessageIds: activeChatTabState?.excludedMessageIds ?? [],
     clearUserInput: () => updateActiveChatTab({ input: "" }),
     pendingMessages,

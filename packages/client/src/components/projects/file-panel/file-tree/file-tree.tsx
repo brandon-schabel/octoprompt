@@ -1,33 +1,60 @@
-import { useState, useRef, useEffect, useCallback, KeyboardEvent, forwardRef, useImperativeHandle } from 'react'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { getRecursiveImports, buildTsconfigAliasMap } from './file-tree-utils/import-resolver'
-import { getEditorUrl } from '@/lib/editor-urls'
-import { useHotkeys } from 'react-hotkeys-hook'
+// file-tree.tsx
+
+import React, {
+    useState,
+    useRef,
+    useEffect,
+    useCallback,
+    KeyboardEvent,
+    forwardRef,
+    useImperativeHandle,
+    RefObject,
+} from "react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Folder,
+    File as FileIcon,
+    ChevronRight,
+    Eye,
+    Code,
+    Copy,
+    Wand2,
+} from "lucide-react";
+import clsx from "clsx";
+import { toast } from "sonner";
 import {
     ContextMenu,
     ContextMenuContent,
     ContextMenuItem,
     ContextMenuTrigger,
-} from "@/components/ui/context-menu"
+} from "@/components/ui/context-menu";
+
+import { useHotkeys } from "react-hotkeys-hook";
+import { cn } from "@/lib/utils";
+import { buildTsconfigAliasMap, getRecursiveImports } from "./file-tree-utils/import-resolver";
 import {
-    FileNode,
-    countTotalFiles,
+    toggleFile as toggleFileUtil,
+    toggleFolder as toggleFolderUtil,
     calculateFolderTokens,
     areAllFolderFilesSelected,
     isFolderPartiallySelected,
-    toggleFile as toggleFileUtil,
-    toggleFolder as toggleFolderUtil,
-    formatTokenCount
-} from './file-tree-utils/file-node-tree-utils'
-import { ProjectFile } from 'shared/schema'
-import { toast } from 'sonner'
-import { buildNodeContent } from '@/components/projects/utils/projects-utils'
-import clsx from 'clsx'
-import { EditorType } from 'shared/src/global-state/global-state-schema'
-import { useActiveProjectTab } from '@/zustand/selectors'
+    countTotalFiles,
+    formatTokenCount,
+    FileNode,
+} from "./file-tree-utils/file-node-tree-utils";
+import { buildNodeContent } from "@/components/projects/utils/projects-utils";
+
+import { getEditorUrl } from "@/lib/editor-urls";
+import { useActiveProjectTab } from "@/zustand/selectors";
+import { ProjectFile } from "shared/schema";
+import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
+
+
+/**
+ * The user's preferred external editor.
+ */
+export type EditorType = "vscode" | "webstorm" | "cursor" | "other";
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 
@@ -40,132 +67,153 @@ type VisibleItem = {
 };
 
 type FileTreeProps = {
-    root: Record<string, FileNode>
-    selectedFiles: string[]
-    setSelectedFiles: SetSelectedFilesFunction
-    fileMap: Map<string, ProjectFile>
-    onViewFile?: (file: ProjectFile) => void
-    projectRoot: string
-    resolveImports?: boolean
-    preferredEditor: EditorType
-    onNavigateRight?: () => void
-    onNavigateToSearch?: () => void
-}
+    root: Record<string, FileNode>;
+    onViewFile?: (file: ProjectFile) => void;
+    projectRoot: string;
+    resolveImports?: boolean;
+    preferredEditor: EditorType;
+    onNavigateRight?: () => void;
+    onNavigateToSearch?: () => void;
+    onRequestAIFileChange?(filePath: string): void;
+};
 
 async function copyFilePath(path: string) {
     try {
-        await navigator.clipboard.writeText(path)
-        toast.success("File path copied to clipboard")
+        await navigator.clipboard.writeText(path);
+        toast.success("File path copied to clipboard");
     } catch (err) {
-        console.error("Failed to copy file path", err)
-        toast.error("Failed to copy file path")
+        console.error("Failed to copy file path", err);
+        toast.error("Failed to copy file path");
     }
 }
 
-
+/**
+ * Utility to recursively build the folder tree structure as text.
+ */
 export function buildTreeStructure(node: FileNode, indent = ""): string {
-    let lines: string[] = []
+    const lines: string[] = [];
+
     if (node._folder && node.children) {
         for (const [name, child] of Object.entries(node.children)) {
-            lines.push(`${indent}${name}`)
+            lines.push(`${indent}${name}`);
             if (child._folder) {
-                lines.push(buildTreeStructure(child, indent + "  "))
+                lines.push(buildTreeStructure(child, indent + "  "));
             }
         }
     }
-    return lines.join("\n")
+    return lines.join("\n");
 }
 
+/**
+ * Single row in the file tree (folder or file).
+ * ForwardRef so we can focus DOM nodes from parent.
+ */
+const FileTreeNodeRow = forwardRef<
+    HTMLDivElement,
+    {
+        item: VisibleItem;
+        isOpen: boolean;
+        isFocused: boolean;
+        onFocus: () => void;
+        onToggleOpen: () => void;
+        onViewFile?: (file: ProjectFile) => void;
+        projectRoot: string;
+        onRequestAIFileChange?: (filePath: string) => void;
+    }
+>(function FileTreeNodeRow(
+    {
+        item,
+        isOpen,
+        isFocused,
+        onFocus,
+        onToggleOpen,
+        onViewFile,
+        projectRoot,
+        onRequestAIFileChange,
+    },
+    ref
+) {
+    const { tabData: projectTabState } = useActiveProjectTab();
+    const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+    const resolveImports = projectTabState?.resolveImports ?? false;
+    const preferredEditor = projectTabState?.preferredEditor ?? "vscode";
 
-const FileTreeNodeRow = forwardRef<HTMLDivElement, {
-    item: VisibleItem;
-    isOpen: boolean;
-    isFocused: boolean;
-    onFocus: () => void;
-    onToggleOpen: () => void;
-    setSelectedFiles: SetSelectedFilesFunction;
-    fileMap: Map<string, ProjectFile>;
-    onViewFile?: (file: ProjectFile) => void;
-    projectRoot: string;
-}>(({
-    item,
-    isOpen,
-    isFocused,
-    onFocus,
-    onToggleOpen,
-    setSelectedFiles,
-    fileMap,
-    onViewFile,
-    projectRoot,
-}, ref) => {
-    const { tabData: projectTabState } = useActiveProjectTab()
-    const selectedFiles = projectTabState?.selectedFiles || []
-    const resolveImports = projectTabState?.resolveImports || false
-    const preferredEditor = projectTabState?.preferredEditor || 'vscode'
-
-
-    const isFolder = item.node._folder === true
+    const isFolder = item.node._folder === true;
 
     const folderChecked = isFolder
         ? areAllFolderFilesSelected(item.node, selectedFiles)
-        : selectedFiles.includes(item.node.file?.id ?? '')
+        : selectedFiles.includes(item.node.file?.id ?? "");
 
-    const folderIndeterminate = isFolder && isFolderPartiallySelected(item.node, selectedFiles)
+    const folderIndeterminate =
+        isFolder && isFolderPartiallySelected(item.node, selectedFiles);
 
-    const handleToggleFile = (fileId: string): void => {
-        setSelectedFiles(prev => toggleFileUtil(
-            fileId,
-            prev,
-            resolveImports ?? false,
-            fileMap,
-            getRecursiveImports,
-            buildTsconfigAliasMap
-        ))
-    }
+    const handleToggleFile = useCallback(
+        (fileId: string) => {
+            selectFiles(
+                toggleFileUtil(
+                    fileId,
+                    selectedFiles,
+                    resolveImports,
+                    projectFileMap,
+                    getRecursiveImports,
+                    buildTsconfigAliasMap
+                )
+            );
+        },
+        [selectFiles, resolveImports, projectFileMap]
+    );
 
-    const handleToggleFolder = (folderNode: FileNode, select: boolean): void => {
-        setSelectedFiles(prev => toggleFolderUtil(folderNode, select, prev))
-    }
+    const handleToggleFolder = useCallback(
+        (folderNode: FileNode, select: boolean) => {
+            selectFiles(toggleFolderUtil(folderNode, select, selectedFiles));
+        },
+        [selectFiles, selectedFiles]
+    );
 
+    // Scroll newly-focused items into view with smooth behavior
     useEffect(() => {
-        if (isFocused && ref && 'current' in ref && ref.current) {
-            ref.current.scrollIntoView({ block: 'nearest' })
-            ref.current.focus()
+        if (isFocused && ref && "current" in ref && ref.current) {
+            ref.current.scrollIntoView({
+                block: "nearest",
+                inline: "nearest",
+                behavior: "smooth",
+            });
+            // ref.current.focus(); // Usually safe to ensure focus is set
         }
-    }, [isFocused, ref])
+    }, [isFocused, ref]);
 
     const handleEnter = useCallback(() => {
         if (isFolder) {
-            onToggleOpen()
+            onToggleOpen();
         } else if (item.node.file && onViewFile) {
-            onViewFile(item.node.file)
+            onViewFile(item.node.file);
         }
-    }, [isFolder, onToggleOpen, onViewFile, item.node.file])
+    }, [isFolder, item.node.file, onToggleOpen, onViewFile]);
 
-    const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter') {
-            handleEnter()
-        } else if (e.key === 'Escape') {
-            e.currentTarget.blur();
-        } else if (e.key === ' ') {
-            e.preventDefault();
-            if (isFolder) {
-                handleToggleFolder(item.node, !folderChecked);
-            } else if (item.node.file?.id) {
-                handleToggleFile(item.node.file.id);
+    const handleKeyDown = useCallback(
+        (e: KeyboardEvent<HTMLDivElement>) => {
+            if (e.key === "Enter") {
+                handleEnter();
+            } else if (e.key === "Escape") {
+                e.currentTarget.blur();
+            } else if (e.key === " ") {
+                e.preventDefault();
+                if (isFolder) {
+                    handleToggleFolder(item.node, !folderChecked);
+                } else if (item.node.file?.id) {
+                    handleToggleFile(item.node.file.id);
+                }
             }
-        }
-    }, [handleEnter, isFolder, item.node, folderChecked, handleToggleFile, handleToggleFolder])
+        },
+        [isFolder, item.node, folderChecked, handleToggleFile, handleToggleFolder, handleEnter]
+    );
 
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
                 <div
                     ref={ref}
-                    className={cn(
-                        "flex flex-col outline-none",
-                        isFocused && "bg-accent"
-                    )}
+                    className={cn("flex flex-col outline-none", isFocused && "bg-accent")}
                     style={{
                         paddingLeft: item.depth > 0 ? `${Math.min(item.depth * 8, 64)}px` : undefined,
                     }}
@@ -180,8 +228,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                                 size="icon"
                                 className="h-6 w-6 p-0"
                                 onClick={(e) => {
-                                    e.stopPropagation()
-                                    onToggleOpen()
+                                    e.stopPropagation();
+                                    onToggleOpen();
                                 }}
                             >
                                 <ChevronRight
@@ -192,16 +240,16 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                             <div className="w-6" />
                         )}
                         <Checkbox
-                            checked={folderIndeterminate ? 'indeterminate' : folderChecked}
+                            checked={folderIndeterminate ? "indeterminate" : folderChecked}
                             onCheckedChange={(checked) => {
                                 if (isFolder) {
                                     if (folderIndeterminate) {
-                                        handleToggleFolder(item.node, false)
+                                        handleToggleFolder(item.node, false);
                                     } else {
-                                        handleToggleFolder(item.node, checked === true)
+                                        handleToggleFolder(item.node, checked === true);
                                     }
                                 } else if (item.node.file?.id) {
-                                    handleToggleFile(item.node.file.id)
+                                    handleToggleFile(item.node.file.id);
                                 }
                             }}
                         />
@@ -211,35 +259,42 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                             <FileIcon className="h-4 w-4" />
                         )}
                         <span className="font-mono text-sm truncate">{item.name}</span>
+
+                        {/* Token count display */}
                         {((!isFolder && item.node.file?.content) || isFolder) && (
                             <div className="flex items-center gap-2 ml-2">
                                 {isFolder ? (
-                                    <>
-                                        {(() => {
-                                            const { selectedTokens, totalTokens } = calculateFolderTokens(item.node, selectedFiles)
-
-                                            return (
-                                                <span className={clsx('text-xs text-muted-foreground', {
-                                                    'text-primary font-semibold': selectedTokens === totalTokens
-                                                })}>
-                                                    {formatTokenCount(selectedTokens)}/{formatTokenCount(totalTokens)}
-                                                </span>
-
-                                            )
-                                        })()}
-                                    </>
+                                    (() => {
+                                        const { selectedTokens, totalTokens } = calculateFolderTokens(
+                                            item.node,
+                                            selectedFiles
+                                        );
+                                        return (
+                                            <span
+                                                className={clsx("text-xs text-muted-foreground", {
+                                                    "text-primary font-semibold": selectedTokens === totalTokens,
+                                                })}
+                                            >
+                                                {formatTokenCount(selectedTokens)}/{formatTokenCount(totalTokens)}
+                                            </span>
+                                        );
+                                    })()
                                 ) : (
-                                    <span className={cn(
-                                        "text-xs",
-                                        selectedFiles.includes(item.node.file?.id ?? '')
-                                            ? "text-primary font-medium"
-                                            : "text-muted-foreground"
-                                    )}>
-                                        {formatTokenCount(item.node.file!.content || '')}
+                                    <span
+                                        className={cn(
+                                            "text-xs",
+                                            selectedFiles.includes(item.node.file?.id ?? "")
+                                                ? "text-primary font-medium"
+                                                : "text-muted-foreground"
+                                        )}
+                                    >
+                                        {formatTokenCount(item.node.file!.content || "")}
                                     </span>
                                 )}
                             </div>
                         )}
+
+                        {/* Inline icons: Eye, Open in Editor, Copy contents */}
                         {!isFolder && item.node.file && (
                             <>
                                 {onViewFile && (
@@ -248,8 +303,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                                         size="icon"
                                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                                         onClick={(e) => {
-                                            e.stopPropagation()
-                                            onViewFile(item.node.file!)
+                                            e.stopPropagation();
+                                            onViewFile(item.node.file!);
                                         }}
                                     >
                                         <Eye className="h-4 w-4" />
@@ -262,7 +317,10 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                                     asChild
                                 >
                                     <a
-                                        href={getEditorUrl(preferredEditor, `${projectRoot}/${item.node.file.path}`)}
+                                        href={getEditorUrl(
+                                            preferredEditor,
+                                            `${projectRoot}/${item.node.file.path}`
+                                        )}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={(e) => e.stopPropagation()}
@@ -275,19 +333,32 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
                                     size="icon"
                                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={async (e) => {
-                                        e.stopPropagation()
-                                        const content = buildNodeContent(item.node, fileMap, false)
+                                        e.stopPropagation();
+                                        const content = buildNodeContent(item.node, projectFileMap, false);
                                         try {
-                                            await navigator.clipboard.writeText(content)
-                                            toast.success('File contents copied to clipboard')
+                                            await navigator.clipboard.writeText(content);
+                                            toast.success("File contents copied to clipboard");
                                         } catch (err) {
-                                            toast.error('Failed to copy file contents')
-                                            console.error(err)
+                                            toast.error("Failed to copy file contents");
+                                            console.error(err);
                                         }
                                     }}
                                 >
                                     <Copy className="h-4 w-4" />
                                 </Button>
+                                {onRequestAIFileChange && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRequestAIFileChange(item.node.file!.path);
+                                        }}
+                                    >
+                                        <Wand2 className="h-4 w-4" />
+                                    </Button>
+                                )}
                             </>
                         )}
                     </div>
@@ -295,279 +366,350 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, {
             </ContextMenuTrigger>
 
             <ContextMenuContent>
+                {/* Copy relative path */}
                 <ContextMenuItem
                     onClick={() => {
                         if (item.node.file?.path) {
-                            void copyFilePath(item.node.file.path)
+                            void copyFilePath(item.node.file.path);
                         }
                     }}
                 >
                     Copy Relative Path
                 </ContextMenuItem>
+
+                {/* Copy absolute path */}
                 <ContextMenuItem
                     onClick={() => {
                         if (item.node.file?.path) {
-                            void copyFilePath(`${projectRoot}/${item.node.file.path}`)
+                            void copyFilePath(`${projectRoot}/${item.node.file.path}`);
                         }
                     }}
                 >
                     Copy Absolute Path
                 </ContextMenuItem>
+
+                {/* Copy entire contents (file or folder) */}
                 <ContextMenuItem
                     onClick={async () => {
-                        const content = buildNodeContent(item.node, fileMap, isFolder)
+                        const content = buildNodeContent(item.node, projectFileMap, isFolder);
                         try {
-                            await navigator.clipboard.writeText(content)
-                            toast.success(`${isFolder ? 'Folder' : 'File'} contents copied to clipboard`)
+                            await navigator.clipboard.writeText(content);
+                            toast.success(
+                                `${isFolder ? "Folder" : "File"} contents copied to clipboard`
+                            );
                         } catch (err) {
-                            toast.error(`Failed to copy ${isFolder ? 'folder' : 'file'} contents`)
-                            console.error(err)
+                            toast.error(`Failed to copy ${isFolder ? "folder" : "file"} contents`);
+                            console.error(err);
                         }
                     }}
                 >
-                    Copy {isFolder ? 'Folder' : 'File'} Contents
+                    Copy {isFolder ? "Folder" : "File"} Contents
                 </ContextMenuItem>
-                <ContextMenuItem
-                    onClick={async () => {
-                        const tree = buildTreeStructure(item.node)
-                        await navigator.clipboard.writeText(tree)
-                        toast.success("Folder tree copied to clipboard")
-                    }}
-                >
-                    Copy Folder Tree
-                </ContextMenuItem>
+
+                {/* Copy folder tree (only visible if isFolder) */}
+                {isFolder && (
+                    <ContextMenuItem
+                        onClick={async () => {
+                            const tree = buildTreeStructure(item.node);
+                            await navigator.clipboard.writeText(tree);
+                            toast.success("Folder tree copied to clipboard");
+                        }}
+                    >
+                        Copy Folder Tree
+                    </ContextMenuItem>
+                )}
+
+                {/* "Modify with AI..." (only if file) */}
+                {!isFolder && item.node.file?.path && onRequestAIFileChange && (
+                    <ContextMenuItem
+                        onClick={() => {
+                            onRequestAIFileChange(item.node.file!.path);
+                        }}
+                    >
+                        Modify with AI...
+                    </ContextMenuItem>
+                )}
             </ContextMenuContent>
         </ContextMenu>
-    )
-})
+    );
+});
 
+FileTreeNodeRow.displayName = "FileTreeNodeRow";
+
+/**
+ * Exposed ref API for focusing the file tree.
+ */
 export type FileTreeRef = {
-    focusTree: (index?: number) => void
-}
+    focusTree: (index?: number) => void;
+};
 
-export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
-    root,
-    setSelectedFiles,
-    fileMap,
-    onViewFile,
-    projectRoot,
-    resolveImports,
-    onNavigateRight,
-    onNavigateToSearch
-}, ref) => {
-    const totalFiles = countTotalFiles(root)
-    const autoExpand = totalFiles < 20
+/**
+ * Main FileTree component.
+ */
+export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree(
+    {
+        root,
+        onViewFile,
+        projectRoot,
+        resolveImports,
+        onNavigateRight,
+        onNavigateToSearch,
+        onRequestAIFileChange,
+    },
+    ref
+) {
+    const totalFiles = countTotalFiles(root);
+    const autoExpand = totalFiles < 20;
 
-    const [openPaths, setOpenPaths] = useState<Map<string, boolean>>(new Map())
-    const [visibleItems, setVisibleItems] = useState<VisibleItem[]>([])
-    const [focusedIndex, setFocusedIndex] = useState<number>(-1)
-    const rowRefs = useRef<(HTMLDivElement | null)[]>([])
-    const [lastFocusedIndex, setLastFocusedIndex] = useState<number>(-1)
+    const [openPaths, setOpenPaths] = useState<Map<string, boolean>>(new Map());
+    const [visibleItems, setVisibleItems] = useState<VisibleItem[]>([]);
 
-    // ------------------------------------
-    // 1) Local "isFocused" state to scope hotkeys
-    // ------------------------------------
+    const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+    const [lastFocusedIndex, setLastFocusedIndex] = useState<number>(-1);
+    const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+
+    // Track whether the container is "focused" to enable/disable certain hotkeys
     const [isFocused, setIsFocused] = useState(false);
 
-    useImperativeHandle(ref, () => ({
-        focusTree: (index?: number) => {
-            const targetIndex = index ?? lastFocusedIndex
-            if (targetIndex >= 0 && rowRefs.current[targetIndex]) {
-                rowRefs.current[targetIndex]?.focus()
-                setFocusedIndex(targetIndex)
-            } else if (rowRefs.current[0]) {
-                rowRefs.current[0]?.focus()
-                setFocusedIndex(0)
-            }
-        }
-    }), [lastFocusedIndex])
+    useImperativeHandle(
+        ref,
+        () => ({
+            focusTree: (index?: number) => {
+                if (index !== undefined && rowRefs.current[index]) {
+                    rowRefs.current[index]?.focus();
+                    setFocusedIndex(index);
+                }
+                // NOTE: If no index is provided, do nothing.
+                // This prevents auto-focusing the top item and resetting scroll.
+            },
+        }),
+        []
+    );
 
     useEffect(() => {
         if (focusedIndex >= 0) {
-            setLastFocusedIndex(focusedIndex)
+            setLastFocusedIndex(focusedIndex);
         }
-    }, [focusedIndex])
+    }, [focusedIndex]);
 
+    /**
+     * Ensure no duplicates are added to the visible list
+     * if the project has symlinks or other repeated paths.
+     */
     const buildVisibleItems = useCallback((): VisibleItem[] => {
-        const result: VisibleItem[] = []
+        const result: VisibleItem[] = [];
+        const visitedPaths = new Set<string>();
 
-        function traverse(obj: Record<string, FileNode>, parentPath: string | undefined, depth: number) {
-            // Sort entries to put folders first and sort alphabetically within each group
+        function traverse(
+            obj: Record<string, FileNode>,
+            parentPath: string | undefined,
+            depth: number
+        ) {
             const entries = Object.entries(obj).sort(([nameA, a], [nameB, b]) => {
-                // First, separate folders and files
                 if (a._folder && !b._folder) return -1;
                 if (!a._folder && b._folder) return 1;
-                // Then sort alphabetically within each group
                 return nameA.toLowerCase().localeCompare(nameB.toLowerCase());
             });
 
             entries.forEach(([name, node]) => {
-                const currentPath = parentPath ? `${parentPath}/${name}` : name
+                const currentPath = parentPath ? `${parentPath}/${name}` : name;
+                // Skip if we've seen this path already:
+                if (visitedPaths.has(currentPath)) return;
+                visitedPaths.add(currentPath);
+
                 result.push({
                     path: currentPath,
                     name,
                     node,
                     depth,
                     parentPath,
-                })
+                });
 
                 if (node._folder && node.children) {
-                    const isNodeOpen = openPaths.get(currentPath) ?? autoExpand
+                    const isNodeOpen = openPaths.get(currentPath) ?? autoExpand;
                     if (isNodeOpen) {
-                        traverse(node.children, currentPath, depth + 1)
+                        traverse(node.children, currentPath, depth + 1);
                     }
                 }
-            })
+            });
         }
 
-        traverse(root, undefined, 0)
-        return result
-    }, [root, openPaths, autoExpand])
+        traverse(root, undefined, 0);
+        return result;
+    }, [root, openPaths, autoExpand]);
 
     useEffect(() => {
-        const items = buildVisibleItems()
-        setVisibleItems(items)
+        const items = buildVisibleItems();
+        setVisibleItems(items);
         if (focusedIndex >= items.length) {
-            setFocusedIndex(items.length - 1)
+            setFocusedIndex(items.length - 1);
         }
-    }, [buildVisibleItems, focusedIndex])
+    }, [buildVisibleItems, focusedIndex]);
 
     const toggleOpen = useCallback((path: string) => {
         setOpenPaths((prev) => {
-            const next = new Map(prev)
-            const current = next.get(path)
-            next.set(path, !current)
-            return next
-        })
-    }, [])
+            const next = new Map(prev);
+            const current = next.get(path);
+            next.set(path, !current);
+            return next;
+        });
+    }, []);
 
     const focusParent = (item: VisibleItem) => {
-        if (!item.parentPath) return
-        const parentIndex = visibleItems.findIndex((i) => i.path === item.parentPath)
+        if (!item.parentPath) return;
+        const parentIndex = visibleItems.findIndex((i) => i.path === item.parentPath);
         if (parentIndex >= 0) {
-            setFocusedIndex(parentIndex)
+            setFocusedIndex(parentIndex);
         }
-    }
+    };
 
     const focusFirstChild = (folderPath: string) => {
-        const childIndex = visibleItems.findIndex(
-            (i) => i.parentPath === folderPath
-        )
+        const childIndex = visibleItems.findIndex((i) => i.parentPath === folderPath);
         if (childIndex !== -1) {
-            setFocusedIndex(childIndex)
+            setFocusedIndex(childIndex);
         }
-    }
+    };
 
-    const handleTreeKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
-        if (focusedIndex < 0) return;
+    const handleTreeKeyDown = useCallback(
+        (e: KeyboardEvent<HTMLDivElement>) => {
+            if (focusedIndex < 0) return;
 
-        switch (e.key) {
-            case 'ArrowUp':
-                e.preventDefault();
-                if (focusedIndex > 0) {
-                    setFocusedIndex((prev) => Math.max(prev - 1, 0));
-                } else if (onNavigateToSearch) {
-                    onNavigateToSearch();
-                }
-                break;
-            case 'ArrowDown':
-                e.preventDefault();
-                setFocusedIndex((prev) => Math.min(prev + 1, visibleItems.length - 1));
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                const leftItem = visibleItems[focusedIndex];
-                if (leftItem.node._folder) {
-                    const isOpen = openPaths.get(leftItem.path) ?? autoExpand;
-                    if (isOpen) {
-                        toggleOpen(leftItem.path);
-                        return;
+            switch (e.key) {
+                case "ArrowUp": {
+                    e.preventDefault();
+                    if (focusedIndex > 0) {
+                        setFocusedIndex((prev) => Math.max(prev - 1, 0));
+                    } else if (onNavigateToSearch) {
+                        onNavigateToSearch();
                     }
+                    break;
                 }
-                focusParent(leftItem);
-                break;
-        }
-    }, [focusedIndex, visibleItems, onNavigateToSearch, openPaths, autoExpand, toggleOpen])
-
-    // ------------------------------------------------
-    // 2) Pass "enabled: isFocused" to the arrow-key hotkeys
-    // ------------------------------------------------
-    useHotkeys(
-        'right',
-        (e) => {
-            e.preventDefault()
-            if (focusedIndex < 0) return
-            const item = visibleItems[focusedIndex]
-            if (item.node._folder) {
-                const isOpen = openPaths.get(item.path) ?? autoExpand
-                if (isOpen) {
-                    focusFirstChild(item.path)
-                } else {
-                    toggleOpen(item.path)
-                    setTimeout(() => {
-                        const newItems = buildVisibleItems()
-                        const childIndex = newItems.findIndex((i) => i.parentPath === item.path)
-                        if (childIndex !== -1) {
-                            setFocusedIndex(childIndex)
+                case "ArrowDown": {
+                    e.preventDefault();
+                    setFocusedIndex((prev) => Math.min(prev + 1, visibleItems.length - 1));
+                    break;
+                }
+                case "ArrowLeft": {
+                    e.preventDefault();
+                    const leftItem = visibleItems[focusedIndex];
+                    if (leftItem.node._folder) {
+                        const isOpen = openPaths.get(leftItem.path) ?? autoExpand;
+                        if (isOpen) {
+                            toggleOpen(leftItem.path);
+                            return;
                         }
-                    }, 0)
+                    }
+                    focusParent(leftItem);
+                    break;
+                }
+            }
+        },
+        [
+            focusedIndex,
+            visibleItems,
+            onNavigateToSearch,
+            openPaths,
+            autoExpand,
+            toggleOpen,
+        ]
+    );
+
+    // Handle right arrow with react-hotkeys
+    useHotkeys(
+        "right",
+        (e) => {
+            e.preventDefault();
+            if (focusedIndex < 0) return;
+            const item = visibleItems[focusedIndex];
+            if (item.node._folder) {
+                const isOpen = openPaths.get(item.path) ?? autoExpand;
+                if (isOpen) {
+                    focusFirstChild(item.path);
+                } else {
+                    toggleOpen(item.path);
+                    // After toggling open, re-check the new child index
+                    setTimeout(() => {
+                        const newItems = buildVisibleItems();
+                        const childIndex = newItems.findIndex((i) => i.parentPath === item.path);
+                        if (childIndex !== -1) {
+                            setFocusedIndex(childIndex);
+                        }
+                    }, 0);
                 }
             } else {
-                // If it's a file, move over to the selected files
-                onNavigateRight?.()
+                // If it's a file, user might want to navigate to next UI panel
+                onNavigateRight?.();
             }
         },
         { enabled: isFocused },
-        [visibleItems, focusedIndex, openPaths, autoExpand, isFocused, onNavigateRight]
-    )
+        [
+            visibleItems,
+            focusedIndex,
+            openPaths,
+            autoExpand,
+            isFocused,
+            onNavigateRight,
+            buildVisibleItems,
+            toggleOpen,
+        ]
+    );
 
+    // Handle space toggling the current file/folder
     useHotkeys(
-        'space',
+        "space",
         (e) => {
-            e.preventDefault()
-            if (focusedIndex < 0) return
-            const item = visibleItems[focusedIndex]
-            const { node } = item
+            e.preventDefault();
+            if (focusedIndex < 0) return;
+            const item = visibleItems[focusedIndex];
+            const { node } = item;
             if (node._folder) {
-                setSelectedFiles(prev => toggleFolderUtil(node, !areAllFolderFilesSelected(node, prev), prev))
+                selectFiles(
+                    toggleFolderUtil(node, !areAllFolderFilesSelected(node, selectedFiles), selectedFiles)
+                );
             } else if (node.file?.id) {
-                setSelectedFiles(prev => toggleFileUtil(
-                    node.file!.id,
-                    prev,
-                    resolveImports ?? false,
-                    fileMap,
-                    getRecursiveImports,
-                    buildTsconfigAliasMap
-                ))
+                selectFiles(
+                    toggleFileUtil(
+                        node.file!.id,
+                        selectedFiles,
+                        resolveImports ?? false,
+                        projectFileMap,
+                        getRecursiveImports,
+                        buildTsconfigAliasMap
+                    )
+                );
             }
         },
         { enabled: isFocused },
-        [visibleItems, focusedIndex, setSelectedFiles, isFocused]
-    )
+        [visibleItems, focusedIndex, selectFiles, isFocused]
+    );
 
+    /**
+     * Copy the entire root folder tree structure.
+     */
     function copyEntireTree() {
-        const lines: string[] = []
+        const lines: string[] = [];
         for (const [name, node] of Object.entries(root)) {
-            lines.push(name)
+            lines.push(name);
             if (node._folder) {
-                lines.push(buildTreeStructure(node, "  "))
+                lines.push(buildTreeStructure(node, "  "));
             }
         }
-        navigator.clipboard.writeText(lines.join("\n"))
-        toast.success("Full file tree copied to clipboard")
+        void navigator.clipboard.writeText(lines.join("\n"));
+        toast.success("Full file tree copied to clipboard");
     }
 
     return (
         <div
-            className='h-full overflow-y-auto'
+            className="h-full overflow-y-auto"
             tabIndex={0}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleTreeKeyDown}
             onClick={(e) => {
-                // Only focus the container if the user clicks the container itself
+                // Focus container if user clicks blank space in the container
                 if (e.target === e.currentTarget) {
-                    e.currentTarget.focus()
+                    e.currentTarget.focus();
                 }
             }}
         >
@@ -581,26 +723,26 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(({
                 {visibleItems.map((item, idx) => {
                     const isOpen = item.node._folder
                         ? openPaths.get(item.path) ?? autoExpand
-                        : false
+                        : false;
 
                     return (
                         <FileTreeNodeRow
                             key={item.path}
-                            // @ts-ignore
-                            ref={el => rowRefs.current[idx] = el}
+                            ref={(el) => {
+                                rowRefs.current[idx] = el;
+                            }}
                             item={item}
                             isOpen={isOpen}
                             isFocused={idx === focusedIndex}
                             onFocus={() => setFocusedIndex(idx)}
                             onToggleOpen={() => toggleOpen(item.path)}
-                            setSelectedFiles={setSelectedFiles}
-                            fileMap={fileMap}
                             onViewFile={onViewFile}
                             projectRoot={projectRoot}
+                            onRequestAIFileChange={onRequestAIFileChange}
                         />
-                    )
+                    );
                 })}
             </div>
         </div>
-    )
-})
+    );
+});

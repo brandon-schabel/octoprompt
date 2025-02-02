@@ -1,3 +1,4 @@
+import { DEFAULT_MODEL_CONFIGS } from 'shared';
 import { promptsMap } from '../utils/prompts-map';
 import { UnifiedProviderService } from './model-providers/providers/unified-provider-service';
 
@@ -39,15 +40,16 @@ ${promptsMap.contemplativePrompt}
         }
 
         try {
+            const cfg = DEFAULT_MODEL_CONFIGS['optimize-prompt']
             // Call the providerChatService to process the message
             const stream = await this.unifiedProviderService.processMessage({
                 chatId: 'promptimizer-chat',
                 userMessage,
                 provider: 'openrouter', // or whichever default you prefer
                 options: {
-                    model: 'qwen/qwen-plus',
+                    model: cfg.model,
                     max_tokens: 2048,
-                    temperature: 0.2,
+                    temperature: cfg.temperature,
                 },
                 systemMessage: systemPrompt,
             });

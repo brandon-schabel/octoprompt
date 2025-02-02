@@ -18,15 +18,6 @@
         "drizzle-orm": "^0.36.3"
     },
     "devDependencies": {
-        "@bnk/router": "^1.0.3",
-        "@bnk/backend-websocket-manager": "^1.0.0",
-        "@types/picomatch": "^3.0.1",
-        "@types/node": "^20.0.0",
-        "typescript": "^5.7.2",
-        "bun-types": "latest"
-    },
-    "dependencies": {
-        "picomatch": "^4.0.2",
-        "zod": "^3.23.8"
+        "drizzle-kit": "^0.28.1"
     }
 }

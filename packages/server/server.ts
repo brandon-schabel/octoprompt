@@ -15,6 +15,7 @@ import "@/routes/ticket-routes";
 import "@/routes/suggest-files-routes";
 import "@/routes/kv-routes";
 import "@/routes/structured-output-routes";
+import "@/routes/ai-file-change-routes";
 
 import { json } from "@bnk/router";
 import { WatchersManager } from "@/services/file-services/watchers-manager";

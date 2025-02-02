@@ -1,6 +1,5 @@
 import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ProjectFile } from "shared"
 import { cn } from "@/lib/utils"
 import { useHotkeys } from "react-hotkeys-hook"
 import { Badge } from "@/components/ui/badge"
@@ -25,18 +24,15 @@ import { toast } from "sonner"
 import { useUpdateProjectTabState } from "@/zustand/updaters"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
-import { type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useProjectTab } from "@/zustand/selectors"
 
 type SelectedFilesListProps = {
-  selectedFiles: string[]
-  fileMap: Map<string, ProjectFile>
   onRemoveFile: (fileId: string) => void
   onNavigateLeft?: () => void
   onNavigateRight?: () => void
   className?: string
   projectTabId: string
-  selectedFilesState: UseSelectedFileReturn
 }
 
 export type SelectedFilesListRef = {
@@ -44,15 +40,21 @@ export type SelectedFilesListRef = {
 }
 
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(({
-  selectedFiles,
-  fileMap,
   onRemoveFile,
   onNavigateLeft,
   onNavigateRight,
   className = '',
   projectTabId,
-  selectedFilesState
 }, ref) => {
+  const {
+    undo, redo, canUndo, canRedo,
+    clearSelectedFiles,
+    selectedFiles,
+    projectFileMap
+  } = useSelectedFiles({ tabId: projectTabId })
+
+
+
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
   const [sortOrder, setSortOrder] = useState<"default" | "alphabetical" | "size_asc" | "size_desc">("default")
@@ -60,10 +62,6 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
   const updateProjectTabState = useUpdateProjectTabState(projectTabId)
-  const {
-    undo, redo, canUndo, canRedo,
-    clearSelectedFiles
-  } = selectedFilesState
 
   const projectTab = useProjectTab(projectTabId)
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
@@ -72,7 +70,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     if (!selectedFiles.length) return
     let combined = ""
     selectedFiles.forEach((id) => {
-      const f = fileMap.get(id)
+      const f = projectFileMap.get(id)
       if (f) {
         combined += `/* ${f.name} */\n${f.content ?? ""}\n\n`
       }
@@ -98,20 +96,20 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   let displayFiles = [...selectedFiles]
   if (sortOrder === "alphabetical") {
     displayFiles.sort((a, b) => {
-      const fa = fileMap.get(a)?.name || ""
-      const fb = fileMap.get(b)?.name || ""
+      const fa = projectFileMap.get(a)?.name || ""
+      const fb = projectFileMap.get(b)?.name || ""
       return fa.localeCompare(fb)
     })
   } else if (sortOrder === "size_desc") {
     displayFiles.sort((a, b) => {
-      const fa = fileMap.get(a)?.content || ""
-      const fb = fileMap.get(b)?.content || ""
+      const fa = projectFileMap.get(a)?.content || ""
+      const fb = projectFileMap.get(b)?.content || ""
       return fb.length - fa.length // Sort by size descending
     })
   } else if (sortOrder === "size_asc") {
     displayFiles.sort((a, b) => {
-      const fa = fileMap.get(a)?.content || ""
-      const fb = fileMap.get(b)?.content || ""
+      const fa = projectFileMap.get(a)?.content || ""
+      const fb = projectFileMap.get(b)?.content || ""
       return fa.length - fb.length // Sort by size ascending
     })
   }
@@ -119,10 +117,10 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const filteredFileIds = useMemo(() => {
     if (!filterText.trim()) return displayFiles
     return displayFiles.filter((fid) => {
-      const f = fileMap.get(fid)
+      const f = projectFileMap.get(fid)
       return f && f.name.toLowerCase().includes(filterText.toLowerCase())
     })
-  }, [filterText, displayFiles, fileMap])
+  }, [filterText, displayFiles, projectFileMap])
 
   // Hotkeys for removing files with r + number
   useHotkeys('r+1', () => selectedFiles[0] && onRemoveFile(selectedFiles[0]))
@@ -392,7 +390,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         </div>
 
         {filteredFileIds.map((fileId, index) => {
-          const file = fileMap.get(fileId)
+          const file = projectFileMap.get(fileId)
           if (!file) return null
           const shortcutNumber = index + 1
           const showShortcut = shortcutNumber <= 9

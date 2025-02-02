@@ -23,6 +23,8 @@ import {
 import { ModelFetcherService, type ProviderKeysConfig } from "@bnk/ai";
 import type { UnifiedModel } from "@bnk/ai";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
+import { DEFAULT_MODEL_CONFIGS } from "shared";
+
 
 export class UnifiedProviderService {
     private providerKeyService: ProviderKeyService;
@@ -91,8 +93,9 @@ export class UnifiedProviderService {
                 const openaiClient = new OpenAI({
                     apiKey: this.getKey("openaiKey"),
                 });
+
                 // @ts-ignore
-                return new OpenAiLikePlugin(openaiClient, "gpt-4o");
+                return new OpenAiLikePlugin(openaiClient, DEFAULT_MODEL_CONFIGS.openai.model);
             },
             openrouter: async () => {
                 const openRouterKey = this.getKey("openRouterKey");
@@ -104,11 +107,11 @@ export class UnifiedProviderService {
                     apiKey: this.getKey("xaiKey"),
                 });
                 // @ts-ignore
-                return new OpenAiLikePlugin(xaiClient, options?.model || "grok-beta");
+                return new OpenAiLikePlugin(xaiClient, DEFAULT_MODEL_CONFIGS.xai.model);
             },
             google_gemini: async () => {
                 const apiKey = this.getKey("googleGeminiKey");
-                return new GeminiPlugin(apiKey, GEMINI_BASE_URL, options?.model || "models/gemini-1.5-pro");
+                return new GeminiPlugin(apiKey, GEMINI_BASE_URL, DEFAULT_MODEL_CONFIGS.google_gemini.model);
             },
             lmstudio: async () => {
                 const state = await websocketStateAdapter.getState()
@@ -118,7 +121,7 @@ export class UnifiedProviderService {
                     apiKey: "lm-studio",
                 });
                 // @ts-ignore
-                return new OpenAiLikePlugin(lmStudioClient, options?.model || "llama3");
+                return new OpenAiLikePlugin(lmStudioClient, DEFAULT_MODEL_CONFIGS.lmstudio.model);
             },
             anthropic: async () => {
                 const key = this.getKey("anthropicKey");

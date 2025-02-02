@@ -8,6 +8,7 @@ import { ticketsApiValidation } from "shared";
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { FileSuggestionsZodSchema, FileSuggestionsJsonSchema } from "@/routes/suggest-files-routes";
+import { DEFAULT_MODEL_CONFIGS } from "shared";
 
 // Create an instance of the TicketService
 const ticketService = new TicketService();
@@ -305,14 +306,16 @@ router.post(
       - Strictly follow the JSON schema, do not add any additional properties or comments
   `;
 
+        const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files-ticket']
+
         // 4) Use your structured-output-fetcher or direct parse
         const result = await fetchStructuredOutput(openRouter, {
             userMessage,
             systemMessage: systemPrompt,
             zodSchema: FileSuggestionsZodSchema,
             schemaName: "TicketFileSuggestions",
-            model: "qwen/qwen-plus",
-            temperature: 0.2,
+            model: cfg.model,
+            temperature: cfg.temperature,
             chatId: `ticket-${ticketId}-suggest-files`,
         });
 

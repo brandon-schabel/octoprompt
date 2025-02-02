@@ -5,6 +5,7 @@ import { z } from "zod";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
+import { DEFAULT_MODEL_CONFIGS } from "shared";
 
 const openRouterProviderService = new OpenRouterProviderService();
 
@@ -75,6 +76,7 @@ router.post(
     `;
 
         try {
+            const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files']
             // 1) Use our structured-output-fetcher to get guaranteed-JSON from the LLM
             const result = await fetchStructuredOutput(openRouterProviderService, {
                 userMessage,
@@ -83,10 +85,10 @@ router.post(
                 // @ts-ignore
                 jsonSchema: FileSuggestionsJsonSchema,
                 schemaName: "FileSuggestions",
-                model: "qwen/qwen-plus",
-                // model: "qwen/qvq-72b-preview",
-                temperature: 0.2,
+                model: cfg.model,
+                temperature: cfg.temperature,
                 chatId: `project-${projectId}-suggest-files`
+
             });
 
             // 2) Return structured response

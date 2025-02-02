@@ -22,11 +22,14 @@ import {
 import { useActiveChatTab, useAllProjectTabs } from "@/zustand/selectors";
 import { useForkChatHandler } from "./hooks/chat-hooks";
 import { ModelSettingsPopover } from "./components/model-settings-popover";
+import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared/index";
 
 interface ChatHeaderProps {
     chatId?: string;
     excludedMessageIds?: string[];
 }
+
+const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps) {
     const [showLinkSettings, setShowLinkSettings] = useState(false);
@@ -209,8 +212,8 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
                 {/* Model Selector */}
                 <ModelSelector
                     className="flex-row"
-                    provider={provider ?? 'openai'}
-                    currentModel={currentModel ?? 'gpt-4o'}
+                    provider={provider as APIProviders ?? defaultModelConfigs.provider as APIProviders}
+                    currentModel={currentModel ?? defaultModelConfigs.model}
                     onProviderChange={setProvider}
                     onModelChange={setCurrentModel}
                 />

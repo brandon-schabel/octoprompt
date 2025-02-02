@@ -11,6 +11,9 @@ import type {
 } from "shared"
 import { linkSettingsSchema } from "shared"
 import { useGlobalStateContext } from "./global-state-provider"
+import { DEFAULT_MODEL_CONFIGS } from "shared"
+
+const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 /**
  * Hook: update settings
@@ -69,7 +72,7 @@ export function useUpdateActiveProjectTabStateKey() {
         valueOrFn: ProjectTabState[K] | ((prev: ProjectTabState[K]) => ProjectTabState[K])
     ) => {
         updateActiveProjectTab((prevState: ProjectTabState) => {
-            const newValue = typeof valueOrFn === "function" 
+            const newValue = typeof valueOrFn === "function"
                 ? (valueOrFn as (prev: ProjectTabState[K]) => ProjectTabState[K])(prevState[key])
                 : valueOrFn
             return { [key]: newValue } as Partial<ProjectTabState>
@@ -257,8 +260,8 @@ export function useCreateChatTab() {
             type: "create_chat_tab",
             tabId: newTabId,
             data: {
-                provider: (options?.provider || "openai") as ChatTabState["provider"],
-                model: options?.model || "gpt-4o",
+                provider: (options?.provider || defaultModelConfigs.provider) as ChatTabState["provider"],
+                model: options?.model || defaultModelConfigs.model,
                 input: "",
                 messages: [],
                 excludedMessageIds: [],
@@ -268,7 +271,7 @@ export function useCreateChatTab() {
                 linkSettings: undefined,
                 ollamaUrl: undefined,
                 lmStudioUrl: undefined,
-                temperature: 0.7,
+                temperature: defaultModelConfigs.temperature,
                 max_tokens: 4000,
                 top_p: 1,
                 frequency_penalty: 0,
