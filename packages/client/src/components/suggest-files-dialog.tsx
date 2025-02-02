@@ -1,73 +1,72 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ProjectFile } from "shared";
-import { type UseSelectedFileReturn } from "@/hooks/utility-hooks/use-selected-files";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react"
+import { ProjectFile } from "shared"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
 
 type SuggestedFilesDialogProps = {
-    open: boolean;
-    onClose: () => void;
-    suggestedFiles: ProjectFile[];
-    selectedFilesState: UseSelectedFileReturn;
-};
+    open: boolean
+    onClose: () => void
+    suggestedFiles: ProjectFile[]
+}
 
 export function SuggestedFilesDialog({
     open,
     onClose,
     suggestedFiles,
-    selectedFilesState
 }: SuggestedFilesDialogProps) {
-    const { selectedFiles, selectFiles } = selectedFilesState;
-    
-    // Local state for dialog selections
-    const [localSelectedFiles, setLocalSelectedFiles] = useState<Set<string>>(new Set());
+    // Access the selectedFiles + ability to commit new selection
+    const { selectedFiles, selectFiles } = useSelectedFiles()
 
-    // Initialize local state when dialog opens
+    // Keep a local Set of IDs while this dialog is open
+    const [localSelectedFiles, setLocalSelectedFiles] = useState<Set<string>>(new Set())
+
+    // When the dialog *opens*, initialize local selection from the global store
     useEffect(() => {
         if (open) {
-            setLocalSelectedFiles(new Set(selectedFiles));
+            setLocalSelectedFiles(new Set(selectedFiles))
         }
-    }, [open, selectedFiles]);
+    }, [open, selectedFiles])
 
-    // Toggle a single file in local state
+    // Toggles a single file in local state
     const toggleLocalFile = (fileId: string) => {
-        setLocalSelectedFiles(prev => {
-            const next = new Set(prev);
+        setLocalSelectedFiles((prev) => {
+            const next = new Set(prev)
             if (next.has(fileId)) {
-                next.delete(fileId);
+                next.delete(fileId)
             } else {
-                next.add(fileId);
+                next.add(fileId)
             }
-            return next;
-        });
-    };
+            return next
+        })
+    }
 
-    // Toggle all suggested files in local state
+    // Toggle *all* suggested files in local state
     const handleSelectAll = () => {
-        setLocalSelectedFiles(prev => {
-            const next = new Set(prev);
-            const allSelected = suggestedFiles.every(file => next.has(file.id));
-            
-            if (allSelected) {
-                // Deselect all suggested files
-                suggestedFiles.forEach(file => next.delete(file.id));
-            } else {
-                // Select all suggested files
-                suggestedFiles.forEach(file => next.add(file.id));
-            }
-            
-            return next;
-        });
-    };
+        setLocalSelectedFiles((prev) => {
+            const next = new Set(prev)
+            // Check if all suggestions are already selected
+            const allSelected = suggestedFiles.every((f) => next.has(f.id))
 
-    // Commit changes and close dialog
-    const handleClose = () => {
-        selectFiles([...localSelectedFiles]);
-        onClose();
-    };
+            if (allSelected) {
+                // If all are selected, then deselect them
+                suggestedFiles.forEach((f) => next.delete(f.id))
+            } else {
+                // Otherwise select them all
+                suggestedFiles.forEach((f) => next.add(f.id))
+            }
+            return next
+        })
+    }
+
+    // Commit local selection => global store, then close
+    const handleDialogClose = () => {
+        selectFiles([...localSelectedFiles]) // commit
+        onClose()
+    }
 
     return (
-        <Dialog open={open} onOpenChange={handleClose}>
+        <Dialog open={open} onOpenChange={handleDialogClose}>
             <DialogContent className="max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Recommended Files</DialogTitle>
@@ -78,7 +77,7 @@ export function SuggestedFilesDialog({
 
                 <div className="mt-2 space-y-2 max-h-[300px] overflow-y-auto pr-2">
                     {suggestedFiles.map((file) => {
-                        const isSelected = localSelectedFiles.has(file.id);
+                        const isSelected = localSelectedFiles.has(file.id)
                         return (
                             <div key={file.id} className="flex items-center gap-2">
                                 <input
@@ -91,21 +90,21 @@ export function SuggestedFilesDialog({
                                     <div className="text-xs text-muted-foreground">{file.path}</div>
                                 </div>
                             </div>
-                        );
+                        )
                     })}
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={handleClose}>
+                    <Button variant="outline" onClick={handleDialogClose}>
                         Close
                     </Button>
                     <Button onClick={handleSelectAll}>
-                        {suggestedFiles.every(file => localSelectedFiles.has(file.id)) 
-                            ? "Deselect All" 
+                        {suggestedFiles.every((file) => localSelectedFiles.has(file.id))
+                            ? "Deselect All"
                             : "Select All"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    );
+    )
 }

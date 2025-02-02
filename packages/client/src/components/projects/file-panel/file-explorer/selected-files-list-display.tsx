@@ -5,31 +5,25 @@ import { ShortcutDisplay } from "@/components/app-shortcut-display"
 import { InfoTooltip } from "@/components/info-tooltip"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { UseSelectedFileReturn } from "@/hooks/utility-hooks/use-selected-files"
+import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
+import { useActiveProjectTab } from "@/zustand/selectors"
 
 type SelectedFilesSidebarProps = {
-    selectedFiles: string[]
     allFilesMap: Map<string, ProjectFile>
-    setSelectedFiles: (
-        valueOrFn: string[] | null | ((prev: string[] | null) => string[] | null)
-    ) => void
+
     selectedFilesListRef: React.RefObject<SelectedFilesListRef>
     onNavigateToFileTree: () => void
     onNavigateToPrompts?: () => void
-    selectedFilesState: UseSelectedFileReturn
-    activeProjectTabId: string
 }
 
-const SelectedFilesSidebar = function SelectedFilesSidebar({
-    selectedFiles,
-    allFilesMap,
-    setSelectedFiles,
+const SelectedFilesListDisplay = function SelectedFilesSidebar({
     selectedFilesListRef,
     onNavigateToFileTree,
     onNavigateToPrompts,
-    selectedFilesState,
-    activeProjectTabId,
 }: SelectedFilesSidebarProps) {
+    const { id: activeProjectTabId } = useActiveProjectTab()
+    const { selectedFiles, removeSelectedFile } = useSelectedFiles()
+
     return (
         <div className="flex flex-col w-full">
             <div className="flex justify-between items-center mb-2">
@@ -55,23 +49,20 @@ const SelectedFilesSidebar = function SelectedFilesSidebar({
                 className="flex-1 min-h-0 border rounded-md max-h-[50vh] items-center flex w-60"
                 type="auto"
             >
-                <SelectedFilesList
+                {activeProjectTabId && <SelectedFilesList
                     ref={selectedFilesListRef}
-                    selectedFiles={selectedFiles}
-                    fileMap={allFilesMap}
                     onRemoveFile={(fileId: string) => {
-                        setSelectedFiles((prev) => prev?.filter((id) => id !== fileId) ?? [])
+                        removeSelectedFile(fileId)
                     }}
                     onNavigateLeft={onNavigateToFileTree}
                     onNavigateRight={onNavigateToPrompts}
                     className="w-60"
                     projectTabId={activeProjectTabId}
-                    selectedFilesState={selectedFilesState}
-                />
+                />}
             </ScrollArea>
         </div>
     )
 }
 
-export { SelectedFilesSidebar }
+export { SelectedFilesListDisplay }
 
