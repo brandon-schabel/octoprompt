@@ -4,6 +4,7 @@ import { OpenRouterProviderService } from "@/services/model-providers/providers/
 import { ApiError } from "shared";
 import { zodToStructuredJsonSchema } from "shared/src/structured-outputs/structured-output-utils";
 import { z } from "zod";
+import { DEFAULT_MODEL_CONFIGS } from "shared";
 
 /**
  * Options for generating structured outputs.
@@ -36,12 +37,14 @@ export const structuredOutputsService = {
         params: GenerateStructuredOutputOptions<T>
     ): Promise<InferStructuredOutput<T>> {
 
+        const cfg = DEFAULT_MODEL_CONFIGS['generate-structured-output']
+
         const {
             outputType,
             userMessage,
             systemMessage,
-            model = "qwen/qwen-plus",
-            temperature = 0.2,
+            model = cfg.model,
+            temperature = cfg.temperature,
             chatId = "structured-output-generic",
             appendSchemaToPrompt = false,
         } = params;

@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
-import { mergeDeep } from "shared"
+import { DEFAULT_MODEL_CONFIGS, mergeDeep } from "shared"
 import { v4 as uuidv4 } from "uuid"
 
 // ---------------------------------------------------
@@ -13,11 +13,15 @@ import {
 } from "shared"
 
 import type {
+    APIProviders,
     AppSettings,
     ChatTabState,
     GlobalState,
     ProjectTabState,
 } from "shared"
+
+
+const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']    
 
 // ---------------------------------------------------
 // Define slices
@@ -189,8 +193,8 @@ function createChatTabsSlice(
             }
 
             const fallback: ChatTabState = {
-                provider: "openai",
-                model: "gpt-4o",
+                provider: defaultModelConfigs.provider as APIProviders,
+                model: defaultModelConfigs.model,
                 input: "",
                 messages: [],
                 excludedMessageIds: [],

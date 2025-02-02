@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { DEFAULT_MODEL_CONFIGS } from "../constants/model-default-configs";
+
+const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 export const EDITOR_OPTIONS = [
     { value: "vscode", label: "VS Code" },
@@ -85,8 +88,8 @@ export const chatModelSettingsSchema = z.object({
 export type ChatModelSettings = z.infer<typeof chatModelSettingsSchema>;
 
 export const chatTabStateSchema = z.object({
-    provider: providerSchema.optional().default("openai"),
-    model: z.string().optional().default("gpt-4o"),
+    provider: providerSchema.optional().default(defaultModelConfigs.provider as APIProviders),
+    model: z.string().optional().default(defaultModelConfigs.model),
     input: z.string().optional().default(""),
     messages: z
         .array(

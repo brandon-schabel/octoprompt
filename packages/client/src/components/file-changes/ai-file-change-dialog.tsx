@@ -15,7 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { LoaderPinwheel } from 'lucide-react'
+import { LoaderPinwheel } from "lucide-react";
+import { DiffViewer } from "./diff-viewer";
 
 interface AIFileChangeDialogProps {
   open: boolean;
@@ -83,6 +84,7 @@ export function AIFileChangeDialog({
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {/* Prompt Section */}
           <div className="grid gap-2">
             <label htmlFor="prompt">What changes would you like to make?</label>
             <Textarea
@@ -95,6 +97,7 @@ export function AIFileChangeDialog({
             />
           </div>
 
+          {/* Once we have a changeId, show the suggested changes */}
           {changeId && (
             <div className="grid gap-2">
               <h3 className="font-medium">Suggested Changes</h3>
@@ -103,11 +106,11 @@ export function AIFileChangeDialog({
                   <LoaderPinwheel />
                 </div>
               ) : change ? (
-                <div className="bg-muted rounded-md p-4 overflow-auto max-h-[300px]">
-                  <pre className="text-sm whitespace-pre-wrap">
-                    {change.suggestedDiff}
-                  </pre>
-                </div>
+                // Show a diff between originalContent and suggestedDiff
+                <DiffViewer
+                  oldValue={change.originalContent}
+                  newValue={change.suggestedDiff}
+                />
               ) : (
                 <Alert variant="destructive">
                   <AlertDescription>
@@ -138,11 +141,11 @@ export function AIFileChangeDialog({
               variant="default"
             >
               {isConfirming ? <LoaderPinwheel className="mr-2" /> : null}
-              Confirm & Apply Changes
+              Confirm &amp; Apply Changes
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

@@ -48,30 +48,31 @@ For most users, the easiest way to try out OctoPrompt is by downloading the **pr
 - **Customizable**  
   Extensible plugin-based design. Add or remove features, tweak watchers, or build your own modules.
 
-
-
 ## Screenshots
 
 ### Project View, select files, prompts, and provid instructions
+
 ![tickets-1](https://github.com/user-attachments/assets/43f08ccd-6ae7-4325-a531-1438c3cf214c)
 
 ### View all tickets for your project
+
 ![tickets-2](https://github.com/user-attachments/assets/784cb82b-44d9-40e5-8692-d7d814afa5e1)
 
 ### Auto Generate a list of tasks based on the overview provided
+
 ![tickets-3](https://github.com/user-attachments/assets/ecac1202-ffda-4456-94ad-bd04edbcde95)
 
 ### Copy the contents of the ticket to your clipboard, in various formats
+
 ![tickets-4](https://github.com/user-attachments/assets/2de8190b-ff4c-4712-91a3-5ca59a129fc7)
 
 ### Chat with LLMs
+
 ![Xnapper-2024-12-26-13 55 19](https://github.com/user-attachments/assets/c234a42a-336e-4b9e-82c8-bec7e88ab570)
 
 ## Videos
 
-
-https://github.com/user-attachments/assets/dcdc4d34-fb67-4ec8-9544-426f7fe95eec
-
+<https://github.com/user-attachments/assets/dcdc4d34-fb67-4ec8-9544-426f7fe95eec>
 
 ---
 
@@ -138,6 +139,10 @@ powershell -c "irm bun.sh/install.ps1 | iex"
 If you choose to enable AI features, click the **"Keys"** button in the navbar and configure each provider key.  
 For example:  
 ![Xnapper-2025-01-13-20 25 41](https://github.com/user-attachments/assets/3b87ca3e-3182-4271-8235-b98477f182ac)
+
+## Configure your model defaults for the OctoPrompt AI Features
+
+The default AI model configurations for various services are maintained in the file [shared/constants/model-default-configs.ts](./packages/shared/constants/model-default-configs.ts). This file centralizes settings such as the model to use, the response temperature, and the provider for each AI-related service, with more configurations to come.
 
 ---
 

@@ -1,5 +1,4 @@
 import { $ } from "bun";
-import { join } from "path";
 
 type SetupOptions = {
   force?: boolean;
@@ -10,20 +9,14 @@ async function setupDatabase(options: SetupOptions = {}) {
   const { force = false, verbose = false } = options;
   
   try {
-    const rootDir = process.cwd();
-    const sharedDir = join(rootDir, "packages", "shared");
-
     const log = verbose 
       ? console.log 
       : (..._: unknown[]) => {};
 
     log("📦 Setting up database...");
-    log(`🚀 Changing to directory: ${sharedDir}`);
-    
-    process.chdir(sharedDir);
 
     // Check if database already exists
-    const dbExists = await Bun.file("dev.db").exists();
+    const dbExists = await Bun.file("packages/shared/sqlite.db").exists();
     
     if (dbExists && !force) {
       console.log("⚠️ Database already exists. Use --force to recreate.");

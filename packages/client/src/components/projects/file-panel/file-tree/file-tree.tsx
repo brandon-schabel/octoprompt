@@ -7,7 +7,8 @@ import {
     ChevronRight,
     Eye,
     Code,
-    Copy
+    Copy,
+    Wand2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -84,7 +85,7 @@ type FileTreeProps = {
      */
     resolveImports?: boolean;
     /**
-     * The user’s chosen editor type (to build the "Open in Editor" link).
+     * The user's chosen editor type (to build the "Open in Editor" link).
      */
     preferredEditor: EditorType;
     /**
@@ -362,6 +363,19 @@ const FileTreeNodeRow = forwardRef<
                                     >
                                         <Copy className="h-4 w-4" />
                                     </Button>
+                                    {onRequestAIFileChange && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRequestAIFileChange(item.node.file!.path);
+                                            }}
+                                        >
+                                            <Wand2 className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </>
                             )}
                         </div>

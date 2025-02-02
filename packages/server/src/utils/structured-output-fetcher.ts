@@ -2,6 +2,9 @@
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { z } from "zod";
 import { zodToStructuredJsonSchema, toOpenRouterSchema } from "shared/src/structured-outputs/structured-output-utils";
+import { DEFAULT_MODEL_CONFIGS } from "shared";
+
+const structuredOutputModelDefaults = DEFAULT_MODEL_CONFIGS['fetch-structured-output']
 
 /**
  * Strips triple backticks and also removes JS/JSON-style comments & trailing commas.
@@ -124,8 +127,8 @@ export async function fetchStructuredOutput<T>(
         systemMessage,
         zodSchema,
         schemaName = "StructuredResponse",
-        model = "qwen/qwen-plus",
-        temperature = 0.7,
+        model = structuredOutputModelDefaults.model,
+        temperature = structuredOutputModelDefaults.temperature,
         chatId = "structured-chat",
         tempId,
     } = params;

@@ -4,6 +4,9 @@ import { z } from "zod";
 import { db } from "shared/database";
 import { fileChanges } from "shared/schema";
 import { eq } from "drizzle-orm";
+import { readFile } from 'fs/promises'
+import path from 'path'
+import { DEFAULT_MODEL_CONFIGS } from "shared";
 
 // Schema for AI's response
 const FileChangeResponseSchema = z.object({
@@ -72,13 +75,15 @@ User request: ${userPrompt}
 
 Return only the JSON response with updatedContent and explanation.`;
 
+    const cfg = DEFAULT_MODEL_CONFIGS['generate-file-change']
+
     const result = await fetchStructuredOutput(this.openRouter, {
       userMessage,
       systemMessage,
       zodSchema: FileChangeResponseSchema,
       schemaName: "FileChangeResponse",
-      model: "qwen/qwen-plus",
-      temperature: 0.2,
+      model: cfg.model,
+      temperature: cfg.temperature,
       chatId: `file-change-${Date.now()}`,
     });
 
@@ -140,5 +145,16 @@ Return only the JSON response with updatedContent and explanation.`;
       .limit(1);
 
     return record ?? null;
+  }
+
+  async getFileContent(filePath: string): Promise<string> {
+    try {
+      const absolutePath = path.resolve(process.cwd(), filePath)
+      const content = await readFile(absolutePath, 'utf-8')
+      return content
+    } catch (error) {
+      console.error('Failed to read file:', error)
+      throw new Error('Failed to read file content')
+    }
   }
 }
