@@ -1,7 +1,7 @@
 import React, { memo, useMemo, useState, useCallback, useRef } from "react"
 import { useDebounce } from "@/hooks/utility-hooks/use-debounce"
 import { useActiveProjectTab } from "@/zustand/selectors"
-import { useGetProjectFiles } from "@/hooks/api/use-projects-api"
+import { useGetProject, useGetProjectFiles } from "@/hooks/api/use-projects-api"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,7 @@ import { SelectedFilesListDisplay } from "./selected-files-list-display"
 import { NoResultsScreen } from "./no-results-screen"
 import { EmptyProjectScreen } from "./empty-project-screen"
 import { SelectedFilesDrawer } from "../../selected-files-drawer"
+import { AIFileChangeDialog } from "@/components/file-changes/ai-file-change-dialog"
 
 type ExplorerRefs = {
     searchInputRef: React.RefObject<HTMLInputElement>
@@ -37,13 +38,14 @@ type FileExplorerProps = {
     onFileViewerOpen?: (file: ProjectFile) => void
 }
 
-export const FileExplorer = memo(function FileExplorer({
+export function FileExplorer({
     ref,
     allowSpacebarToSelect,
     onFileViewerOpen,
 }: FileExplorerProps) {
     const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
-    const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId || '')
+    const { data: fileData, isLoading: filesLoading, refetch: refetchFiles } = useGetProjectFiles(selectedProjectId || '')
+    const { data: projectData } = useGetProject(selectedProjectId || '')
 
     // read from store
     const { data: searchByContent = false, mutate: setSearchByContent } =
@@ -62,6 +64,9 @@ export const FileExplorer = memo(function FileExplorer({
     // For autocomplete
     const [showAutocomplete, setShowAutocomplete] = useState(false)
     const [autocompleteIndex, setAutocompleteIndex] = useState(-1)
+
+    const [aiDialogOpen, setAiDialogOpen] = useState(false)
+    const [selectedFile, setSelectedFile] = useState<ProjectFile>()
 
     const handleSearchChange = useCallback((val: string) => {
         setLocalFileSearch(val)
@@ -146,6 +151,15 @@ export const FileExplorer = memo(function FileExplorer({
                 projectTabId={activeProjectTabId ?? ''}
             />
         )
+    }
+
+    // Add handler for AI file change requests
+    const handleRequestAIFileChange = (filePath: string) => {
+        const file = fileData?.files?.find(f => f.path === filePath)
+        if (file) {
+            setSelectedFile(file)
+            setAiDialogOpen(true)
+        }
     }
 
     // UI
@@ -320,7 +334,7 @@ export const FileExplorer = memo(function FileExplorer({
                                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                                 onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
                                 onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
-
+                                onRequestAIFileChange={handleRequestAIFileChange}
                             />
                         </ScrollArea>
                     </div>
@@ -334,6 +348,17 @@ export const FileExplorer = memo(function FileExplorer({
                     </div>
                 </div>
             )}
+            {projectData?.project && <AIFileChangeDialog
+                open={aiDialogOpen}
+                onOpenChange={setAiDialogOpen}
+                filePath={(projectData?.project?.path || '') + "/" + (selectedFile?.path || '')}
+                onSuccess={() => {
+                    // Refresh the file list after a successful change
+                    void refetchFiles()
+                    setAiDialogOpen(false)
+                    setSelectedFile(undefined)
+                }}
+            />}
         </div>
     )
-})
+}

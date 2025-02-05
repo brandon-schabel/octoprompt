@@ -29,6 +29,8 @@ For most users, the easiest way to try out OctoPrompt is by downloading the **pr
 
 > **Tip:** Even without setting up AI keys, you can still manage projects, create tickets, and explore OctoPrompt’s local file summarization functionality (if you skip AI usage, no external calls will be made).
 
+> If a file doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `file-sync-service` file.
+
 ---
 
 ## Key Features

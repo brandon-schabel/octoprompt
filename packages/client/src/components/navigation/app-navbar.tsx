@@ -14,7 +14,7 @@ import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useUpdateActiveProjectTab } from "@/zustand/updaters"
-import { useActiveProjectTab,  } from "@/zustand/selectors"
+import { useActiveProjectTab } from "@/zustand/selectors"
 import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 
 export function AppNavbar() {
@@ -43,7 +43,6 @@ export function AppNavbar() {
     const { mutate: deleteProject } = useDeleteProject()
     const { api } = useApi()
 
-
     const globalTheme = theme || 'dark'
 
     useEffect(() => {
@@ -58,14 +57,15 @@ export function AppNavbar() {
     useQuery<{ success: boolean }>({
         queryKey: ['health'],
         refetchInterval: 30000,
-        queryFn: () => api.request('/api/health', {
-            method: 'GET',
-        }).then(res => {
-            if (res.status === 200) {
-                return res.json()
-            }
-            throw new Error('Failed to fetch health')
-        })
+        queryFn: () =>
+            api.request('/api/health', {
+                method: 'GET',
+            }).then(res => {
+                if (res.status === 200) {
+                    return res.json()
+                }
+                throw new Error('Failed to fetch health')
+            })
     })
 
     // Hotkeys
@@ -106,12 +106,14 @@ export function AppNavbar() {
             <nav className="flex items-center w-full px-4 py-2 border-b">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-4">
-                        {/* Projects link is highlighted if user is on /projects, /tickets, or /project-summarization */}
+                        {/* Projects link */}
                         <Link
                             to="/projects"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnProjectsRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                px-3 py-2 rounded-md 
+                ${isOnProjectsRoute
+                                    ? "text-indigo-600 dark:text-blue-300 bg-indigo-50 dark:bg-primary/30"
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-blue-300 hover:bg-accent/50 dark:hover:bg-primary/20"
                                 }`}
                         >
                             <FolderIcon className="w-4 h-4" />
@@ -119,12 +121,15 @@ export function AppNavbar() {
                         </Link>
                         <div className="h-4 w-[1px] bg-border" />
 
+                        {/* Chat link */}
                         <Link
                             to="/chat"
                             search={{ prefill: false }}
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnChatRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                px-3 py-2 rounded-md 
+                ${isOnChatRoute
+                                    ? "text-indigo-600 dark:text-blue-300 bg-indigo-50 dark:bg-primary/30"
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-blue-300 hover:bg-accent/50 dark:hover:bg-primary/20"
                                 }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
@@ -132,11 +137,14 @@ export function AppNavbar() {
                         </Link>
                         <div className="h-4 w-[1px] bg-border" />
 
+                        {/* Keys link */}
                         <Link
                             to="/keys"
-                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors hover:bg-accent/50 px-3 py-2 rounded-md ${isOnKeysRoute
-                                ? "text-indigo-600 dark:text-indigo-400 bg-accent/80"
-                                : "text-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                px-3 py-2 rounded-md 
+                ${isOnKeysRoute
+                                    ? "text-indigo-600 dark:text-blue-300 bg-indigo-50 dark:bg-primary/30"
+                                    : "text-foreground hover:text-indigo-600 dark:hover:text-blue-300 hover:bg-accent/50 dark:hover:bg-primary/20"
                                 }`}
                         >
                             <KeyIcon className="w-4 h-4" />

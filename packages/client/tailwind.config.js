@@ -8,6 +8,19 @@ module.exports = {
   ],
   theme: {
   	extend: {
+		backgroundSize: {
+			'200': '200% 200%',
+		  },
+		  animation: {
+			gradient: 'gradientShift 10s ease infinite',
+		  },
+		  keyframes: {
+			gradientShift: {
+			  '0%': { backgroundPosition: '0% 50%' },
+			  '50%': { backgroundPosition: '100% 50%' },
+			  '100%': { backgroundPosition: '0% 50%' },
+			},
+		  },
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
