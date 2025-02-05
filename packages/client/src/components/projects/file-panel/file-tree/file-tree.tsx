@@ -1,5 +1,3 @@
-// file-tree.tsx
-
 import React, {
     useState,
     useRef,
@@ -133,6 +131,7 @@ const FileTreeNodeRow = forwardRef<
     },
     ref
 ) {
+ 
     const { tabData: projectTabState } = useActiveProjectTab();
     const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
     const resolveImports = projectTabState?.resolveImports ?? false;
@@ -419,8 +418,11 @@ const FileTreeNodeRow = forwardRef<
                     </ContextMenuItem>
                 )}
 
+     
+
                 {/* "Modify with AI..." (only if file) */}
                 {!isFolder && item.node.file?.path && onRequestAIFileChange && (
+
                     <ContextMenuItem
                         onClick={() => {
                             onRequestAIFileChange(item.node.file!.path);

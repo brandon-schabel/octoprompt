@@ -29,6 +29,8 @@ For most users, the easiest way to try out OctoPrompt is by downloading the **pr
 
 > **Tip:** Even without setting up AI keys, you can still manage projects, create tickets, and explore OctoPrompt’s local file summarization functionality (if you skip AI usage, no external calls will be made).
 
+> If a file doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `file-sync-service` file.
+
 ---
 
 ## Key Features
@@ -276,6 +278,7 @@ OctoPrompt consists of **TypeScript** modules on both the client and server side
 - **File Watchers**: Add patterns to ignore or allow certain files. Summaries update automatically.  
 - **Custom Prompts**: Create specialized prompts for your tasks. Share them with your teammates if you like.  
 - **Editor Links**: Use your favorite editor (VSCode, WebStorm, etc.) by configuring open-file links in the UI.
+- **Audio Input**: While OctoPrompt supports audio input, something like [SuperWhisper]("https://superwhisper.com/") works better since it can accessed anywhere.
 
 ---
 

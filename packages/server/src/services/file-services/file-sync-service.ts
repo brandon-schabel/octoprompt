@@ -5,43 +5,198 @@ import { type Project } from 'shared';
 import { files, eq, and, inArray } from 'shared';
 import { db } from "shared/database";
 
-const ALLOWED_EXTENSIONS = ['.md', '.txt', '.ts', '.tsx', '.js', '.jsx', '.json', '.py', '.python-version', '.toml', '.yaml', '.yml', ];
+const ALLOWED_EXTENSIONS = [
+  // Documentation & Config
+  '.md', '.txt', '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.conf', '.config',
+  
+  // Web Development
+  '.ts', '.tsx', '.js', '.jsx', '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue', '.svelte',
+  
+  // Backend Development
+  '.py', '.rb', '.php', '.java', '.go', '.rs', '.cs', '.cpp', '.c', '.h', '.hpp',
+  
+  // Shell & Scripts
+  '.sh', '.bash', '.zsh', '.fish', '.bat', '.ps1',
+  
+  // Database & Query
+  '.sql', '.prisma', '.graphql', '.gql',
+  
+  // Other Languages
+  '.zig', '.lua', '.r', '.kt', '.swift', '.m', '.mm', '.scala', '.clj', '.ex', '.exs',
+  
+  // Environment & Version Files
+  '.env', '.env.example', '.python-version', '.nvmrc', '.ruby-version',
+  
+  // Docker & Container
+  'Dockerfile', '.dockerignore', 'docker-compose.yml',
+  
+  // Git
+  '.gitignore', '.gitattributes',
+];
+
 const DEFAULT_EXCLUSIONS = [
+  // Node.js / JavaScript
   'node_modules',
   '.npm',
+  'npm-debug.log*',
+  'yarn-debug.log*',
+  'yarn-error.log*',
+  '.pnpm-debug.log*',
+  '.yarn',
+  '.pnpm',
+  
+  // Python
   '__pycache__',
+  '*.py[cod]',
+  '*$py.class',
   '.pytest_cache',
+  '.coverage',
   '.mypy_cache',
+  '.tox',
+  '.nox',
+  '*.egg-info',
+  'dist-python',
+  'build-python',
+  'develop-eggs',
+  '.eggs',
+  
+  // Java / Kotlin / Android
   '.gradle',
-  '.nuget',
+  'build',
+  'target',
+  '*.class',
+  '*.jar',
+  '*.war',
+  '.classpath',
+  '.project',
+  '.settings',
+  '.idea',
+  '*.iml',
+  '*.iws',
+  '.android',
+  
+  // Ruby
+  '.bundle',
+  'vendor/bundle',
+  '.ruby-version',
+  '*.gem',
+  
+  // Rust
   '.cargo',
-  '.stack-work',
-  '.ccache',
+  'target',
+  '**/*.rs.bk',
+  
+  // Go
+  'bin',
+  'pkg',
+  
+  // .NET
+  'bin',
+  'obj',
+  '.nuget',
+  '*.suo',
+  '*.user',
+  '*.userosscache',
+  '*.dbmdl',
+  
+  // Build outputs & dist
+  'dist',
+  'build',
+  'out',
+  'public',
+  'client-dist',
+  '.next',
+  '.nuxt',
+  '.output',
+  '.vitepress/dist',
+  '.docusaurus',
+  
+  // IDE & Editor
   '.idea',
   '.vscode',
+  '.vs',
   '*.swp',
   '*~',
   '*.tmp',
   '*.temp',
   '*.bak',
   '*.meta',
+  '.project',
+  '.settings',
+  '.tmproj',
+  '*.sublime-workspace',
+  '*.sublime-project',
+  '.netbeans',
+  'nbproject',
+  
+  // OS specific
+  '.DS_Store',
+  'Thumbs.db',
+  'desktop.ini',
+  '*.lnk',
+  
+  // Logs & debugging
+  'logs',
+  '*.log',
+  'npm-debug.log*',
+  'yarn-debug.log*',
+  'yarn-error.log*',
+  'debug.log',
+  
+  // Lock files
+  '*.lock',
+  '*.lockfile',
+  '*.lock.json',
+  '*.lock.yaml',
+  '*.lock.yml',
   'package-lock.json',
-  'dist',
-  'build',
-  'out',
-  'public',
-  'node_modules',
-  'package-lock.json',
-  'dist',
-  'build',
-  'out',
-  'public',
-  'client-dist',
-  "*.lock",
-  "*.lockfile",
-  "*.lock.json",
-  "*.lock.yaml",
-  "*.lock.yml",
+  'yarn.lock',
+  'poetry.lock',
+  'Gemfile.lock',
+  'Cargo.lock',
+  
+  // Coverage & Test
+  'coverage',
+  '.nyc_output',
+  '.coverage',
+  'htmlcov',
+  '.hypothesis',
+  
+  // Docker
+  '.docker',
+  'docker-compose.override.yml',
+  
+  // Environment & secrets
+  '.env.local',
+  '.env.*.local',
+  '.env.development.local',
+  '.env.test.local',
+  '.env.production.local',
+  '*.pem',
+  '*.key',
+  '*.cert',
+  
+  // Cache directories
+  '.cache',
+  '.parcel-cache',
+  '.eslintcache',
+  '.stylelintcache',
+  '.prettiercache',
+  '.sass-cache',
+  '.webpack',
+  '.rollup.cache',
+  '.turbo',
+  
+  // Temporary & backup
+  'temp',
+  'tmp',
+  '*.swp',
+  '*~',
+  '*.bak',
+  '*.orig',
+  '*.rej',
+  '.stack-work',
+  '.ccache',
 ];
 
 const customExclusions = process.env.EXCLUDE_PATTERNS
@@ -76,7 +231,7 @@ export class FileSyncService {
   ) { }
 
   /**
-   * Sync a single project’s file records with its on-disk files.
+   * Sync a single project's file records with its on-disk files.
    */
   public async syncProject(project: Project): Promise<void> {
     // Always resolve the path so we have a stable absolute path to the project folder.
@@ -142,7 +297,7 @@ export class FileSyncService {
       .from(files)
       .where(eq(files.projectId, project.id));
 
-    // If a DB file’s path is not in existingPaths, it means that file was deleted from disk
+    // If a DB file's path is not in existingPaths, it means that file was deleted from disk
     const filesToDelete = dbFiles.filter(file => !existingPaths.has(file.path));
 
     if (filesToDelete.length > 0) {

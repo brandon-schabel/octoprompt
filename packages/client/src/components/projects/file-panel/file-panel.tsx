@@ -8,6 +8,7 @@ import { useActiveProjectTab } from '@/zustand/selectors'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import type { Project } from 'shared'
 import type { ProjectFile } from 'shared/schema'
+import { useGetProject } from '@/hooks/api/use-projects-api'
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -16,18 +17,17 @@ export type FilePanelRef = {
 }
 
 type FilePanelProps = {
-    selectedProjectId?: string | null  // optional, we can detect it ourselves
-    projectData?: Project | null
     className?: string
     /** Called when user wants to open a file in the "global" viewer modal. */
     onFileViewerOpen?: (file: ProjectFile) => void
 }
 
+// TODO: invalidate project files when ai file editor is used (to refresh after it changes files)
 export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
-    function FilePanel({ selectedProjectId, projectData, className, onFileViewerOpen }, ref) {
+    function FilePanel({ className, onFileViewerOpen }, ref) {
         // If not passed in, get from store
-        const { selectedProjectId: storeProjId } = useActiveProjectTab()
-        const finalProjectId = selectedProjectId ?? storeProjId
+        const { selectedProjectId: projectId } = useActiveProjectTab()
+        const { data } = useGetProject(projectId ?? '')
 
         // We still keep references to let parent call `focusSearch`, etc.
         const searchInputRef = useRef<HTMLInputElement>(null)
@@ -77,7 +77,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
             },
         }))
 
-        if (!finalProjectId) {
+        if (!projectId) {
             return (
                 <div className={`flex flex-col items-center justify-center h-full p-8 text-center space-y-6 ${className}`}>
                     <NoProjectSelectedScreen />
@@ -89,7 +89,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
         return (
             <div id="outer-area" className={`flex flex-col ${className}`}>
                 <div className="flex-1 space-y-4 transition-all duration-300">
-                    {projectData && <ProjectHeader projectData={projectData} />}
+                    {data?.project && <ProjectHeader projectData={data.project} />}
                     <div className="flex-1 overflow-hidden space-y-4 p-4">
                         <FileExplorer
                             ref={{

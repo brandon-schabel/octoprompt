@@ -199,7 +199,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
 
     const handleSavePrompt = (newContent: string) => {
         if (!viewedPrompt) return
-        // In a real app, you'd call the update API here or update local state
+        // TODO: IMPLEMENT SAVE Prompt
         console.log('handleSavePrompt, new content = ', newContent)
     }
 

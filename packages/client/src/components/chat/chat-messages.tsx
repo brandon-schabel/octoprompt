@@ -1,4 +1,4 @@
-import { Copy, GitFork, Trash, FileText } from "lucide-react";
+import { Copy, GitFork, Trash } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { ScrollArea } from "../ui/scroll-area";
@@ -10,12 +10,15 @@ import { ChatMessage } from "shared/schema";
 import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-ai-api";
 import { useUpdateActiveChatTab } from "@/zustand/updaters";
 import { toast } from "sonner";
-import { useState } from "react";
-import { useSettingsField } from "@/zustand/zustand-utility-hooks";
+import { useState, useEffect, useRef } from "react";
+import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 
-// Helper function to parse out <think> blocks
+/**
+ * Helper function to parse out <think> blocks in the assistant message.
+ * - If there's an opening <think> but no closing </think>, we treat the block as "still thinking."
+ * - If the <think> is fully closed, we allow the user to expand it.
+ */
 function parseThinkBlock(content: string) {
-    // Only if the message starts with <think>
     if (!content.startsWith("<think>")) {
         return {
             hasThinkBlock: false,
@@ -25,10 +28,9 @@ function parseThinkBlock(content: string) {
         };
     }
 
-    // If we do have <think>, look for closing tag
     const endIndex = content.indexOf("</think>");
     if (endIndex === -1) {
-        // No closing tag -> we're still "thinking"
+        // No closing tag -> the assistant is "thinking," only partial content is shown
         const thinkContent = content.slice("<think>".length);
         return {
             hasThinkBlock: true,
@@ -38,7 +40,7 @@ function parseThinkBlock(content: string) {
         };
     }
 
-    // Found the closing tag
+    // Found a complete <think>...</think> block
     const thinkContent = content.slice("<think>".length, endIndex);
     const mainContent = content.slice(endIndex + "</think>".length);
 
@@ -52,7 +54,10 @@ function parseThinkBlock(content: string) {
 
 /**
  * ChatMessageItem
- * - Renders a single ChatMessage and handles any <think> logic if present.
+ * Renders a single message, including:
+ * - "Options" popover with Copy, Fork, Delete, Exclude, Raw View toggles
+ * - Handling for <think> blocks, shown or hidden
+ * - Raw vs. Markdown rendering
  */
 function ChatMessageItem(props: {
     msg: ChatMessage;
@@ -79,7 +84,7 @@ function ChatMessageItem(props: {
 
     const isUser = msg.role === "user";
 
-    // If rawView is on, just show raw content
+    // If "Raw View" is on, show raw text in a <pre> block and skip Markdown
     if (rawView) {
         return (
             <div
@@ -88,9 +93,7 @@ function ChatMessageItem(props: {
             >
                 {/* Heading row: "You" vs. "Assistant" */}
                 <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold">
-                        {isUser ? "You" : "Assistant"}
-                    </div>
+                    <div className="font-semibold">{isUser ? "You" : "Assistant"}</div>
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -135,24 +138,15 @@ function ChatMessageItem(props: {
                                         <Trash className="h-3 w-3" />
                                     </Button>
                                 </div>
+                                {/* Exclude / Raw View switches */}
                                 <div className="flex items-center justify-between gap-2 border-t pt-2">
                                     <div className="flex items-center gap-1">
-                                        <Switch
-                                            checked={excluded}
-                                            onCheckedChange={onToggleExclude}
-                                        />
-                                        <span className="text-xs text-muted-foreground">
-                                            Exclude
-                                        </span>
+                                        <Switch checked={excluded} onCheckedChange={onToggleExclude} />
+                                        <span className="text-xs text-muted-foreground">Exclude</span>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <Switch
-                                            checked={rawView}
-                                            onCheckedChange={onToggleRawView}
-                                        />
-                                        <span className="text-xs text-muted-foreground">
-                                            Raw View
-                                        </span>
+                                        <Switch checked={rawView} onCheckedChange={onToggleRawView} />
+                                        <span className="text-xs text-muted-foreground">Raw View</span>
                                     </div>
                                 </div>
                             </div>
@@ -160,7 +154,7 @@ function ChatMessageItem(props: {
                     </Popover>
                 </div>
 
-                {/* Raw content */}
+                {/* Raw content block */}
                 <pre className="whitespace-pre-wrap text-sm font-mono p-2 bg-background/50 rounded">
                     {msg.content}
                 </pre>
@@ -168,7 +162,7 @@ function ChatMessageItem(props: {
         );
     }
 
-    // Otherwise, parse for <think> logic
+    // Otherwise, parse the message for <think> blocks and render as Markdown
     const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(msg.content);
 
     return (
@@ -178,11 +172,8 @@ function ChatMessageItem(props: {
         >
             {/* Heading row: "You" vs. "Assistant" */}
             <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold">
-                    {isUser ? "You" : "Assistant"}
-                </div>
+                <div className="font-semibold">{isUser ? "You" : "Assistant"}</div>
 
-                {/* Popover with copy/fork/delete/exclude */}
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
@@ -227,24 +218,15 @@ function ChatMessageItem(props: {
                                     <Trash className="h-3 w-3" />
                                 </Button>
                             </div>
+                            {/* Exclude / Raw View switches */}
                             <div className="flex items-center justify-between gap-2 border-t pt-2">
                                 <div className="flex items-center gap-1">
-                                    <Switch
-                                        checked={excluded}
-                                        onCheckedChange={onToggleExclude}
-                                    />
-                                    <span className="text-xs text-muted-foreground">
-                                        Exclude
-                                    </span>
+                                    <Switch checked={excluded} onCheckedChange={onToggleExclude} />
+                                    <span className="text-xs text-muted-foreground">Exclude</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <Switch
-                                        checked={rawView}
-                                        onCheckedChange={onToggleRawView}
-                                    />
-                                    <span className="text-xs text-muted-foreground">
-                                        Raw View
-                                    </span>
+                                    <Switch checked={rawView} onCheckedChange={onToggleRawView} />
+                                    <span className="text-xs text-muted-foreground">Raw View</span>
                                 </div>
                             </div>
                         </div>
@@ -252,26 +234,21 @@ function ChatMessageItem(props: {
                 </Popover>
             </div>
 
-            {/* Handle a think block if present */}
+            {/* If a <think> block is present, handle it specially */}
             {hasThinkBlock ? (
                 <div className="text-sm space-y-2">
                     {isThinking ? (
-                        // If the block is not closed, treat as "in-progress" thinking
                         <div className="p-2 bg-secondary text-secondary-foreground rounded">
                             <div className="font-semibold mb-1">Thinking...</div>
-                            <div className="animate-pulse text-xs">
-                                {thinkContent}
-                            </div>
+                            <div className="animate-pulse text-xs">{thinkContent}</div>
                         </div>
                     ) : (
-                        // If the block is closed, show collapsible
                         <details className="bg-secondary/50 text-secondary-foreground rounded p-2">
                             <summary className="cursor-pointer text-sm font-semibold">
                                 View Hidden Reasoning
                             </summary>
                             <div className="mt-2 text-xs whitespace-pre-wrap break-words">
                                 {thinkContent}
-
                                 <div className="mt-2">
                                     <Button
                                         variant="ghost"
@@ -285,44 +262,54 @@ function ChatMessageItem(props: {
                             </div>
                         </details>
                     )}
-                    {/* Main content rendered as Markdown */}
-                    <MarkdownRenderer
-                        content={mainContent}
-                        copyToClipboard={copyToClipboard}
-                    />
+                    <MarkdownRenderer content={mainContent} copyToClipboard={copyToClipboard} />
                 </div>
             ) : (
-                // No <think> block, just normal
-                <MarkdownRenderer
-                    content={msg.content}
-                    copyToClipboard={copyToClipboard}
-                />
+                // No <think> block, render the entire message
+                <MarkdownRenderer content={msg.content} copyToClipboard={copyToClipboard} />
             )}
         </div>
     );
 }
 
 interface ChatMessagesProps {
-    messages: ChatMessage[];          // Already merged local + server messages
+    messages: ChatMessage[]; // Already merged local + server messages
     isFetching: boolean;
-    excludedMessageIds: string[];     // For marking "excluded" messages
+    excludedMessageIds: string[]; // For marking "excluded" messages
 }
 
+/**
+ * ChatMessages
+ * Renders all messages with the "raw view" toggle at the individual message level,
+ * plus a global "Auto Scroll" toggle (Ticket 1.3) at the top.
+ */
 export function ChatMessages(props: ChatMessagesProps) {
-    const {
-        messages,
-        isFetching,
-        excludedMessageIds = [],
-    } = props;
+    const { messages, isFetching, excludedMessageIds = [] } = props;
 
+    // For copying text to clipboard
     const { copyToClipboard } = useCopyClipboard();
+
+    // For toggling excluded messages in the global store
     const excludedSet = new Set(excludedMessageIds);
     const updateActiveChatTab = useUpdateActiveChatTab();
+
+    // For deleting/forking messages
     const deleteMessageMutation = useDeleteMessage();
     const forkChatMutation = useForkChatFromMessage();
 
-    // track which messages are in 'raw view'
+    // Each message can have "Raw View" enabled individually
     const [rawMessageIds, setRawMessageIds] = useState<Set<string>>(new Set());
+
+    // Use global auto-scroll setting
+    const { data: autoScrollEnabled = true } = useSettingsField('autoScrollEnabled')
+    const bottomRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to bottom when new messages arrive and autoScroll is enabled
+    useEffect(() => {
+        if (autoScrollEnabled) {
+            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages, autoScrollEnabled]);
 
     const handleToggleExclude = (messageId: string) => {
         const newExcludedMessageIds = new Set(excludedSet);
@@ -338,8 +325,10 @@ export function ChatMessages(props: ChatMessagesProps) {
 
     const handleForkFromMessage = async (messageId: string) => {
         try {
+            // We assume all messages share the same chatId
+            const chatId = messages[0]?.chatId ?? "";
             const result = await forkChatMutation.mutateAsync({
-                chatId: messages[0]?.chatId ?? "", // Get chatId from first message
+                chatId,
                 messageId,
                 excludedMessageIds,
             });
@@ -366,11 +355,8 @@ export function ChatMessages(props: ChatMessagesProps) {
             return;
         }
 
-        // Show confirmation dialog
         const confirmDelete = window.confirm("Are you sure you want to delete this message?");
-        if (!confirmDelete) {
-            return;
-        }
+        if (!confirmDelete) return;
 
         try {
             await deleteMessageMutation.mutateAsync(messageId);
@@ -393,6 +379,7 @@ export function ChatMessages(props: ChatMessagesProps) {
         });
     };
 
+    // If the chat is still loading or no messages yet
     if (isFetching && messages.length === 0) {
         return (
             <div className="flex-1 overflow-y-auto p-4">
@@ -400,7 +387,6 @@ export function ChatMessages(props: ChatMessagesProps) {
             </div>
         );
     }
-
     if (!messages.length) {
         return (
             <div className="flex-1 overflow-y-auto p-4">
@@ -417,28 +403,33 @@ export function ChatMessages(props: ChatMessagesProps) {
     }
 
     return (
-        <ScrollArea className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-4">
-                {messages.map((msg) => {
-                    const excluded = excludedSet.has(msg.id);
-                    const rawView = rawMessageIds.has(msg.id);
+        <div className="flex flex-col h-full">
+            {/* Remove the Auto Scroll Toggle since it's now in settings */}
+            <ScrollArea className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-4">
+                    {messages.map((msg) => {
+                        const excluded = excludedSet.has(msg.id);
+                        const rawView = rawMessageIds.has(msg.id);
 
-                    return (
-                        <ChatMessageItem
-                            key={msg.id}
-                            msg={msg}
-                            excluded={excluded}
-                            rawView={rawView}
-                            copyToClipboard={copyToClipboard}
-                            onCopyMessage={() => copyToClipboard(msg.content)}
-                            onForkMessage={() => handleForkFromMessage(msg.id)}
-                            onDeleteMessage={() => handleDeleteMessage(msg.id)}
-                            onToggleExclude={() => handleToggleExclude(msg.id)}
-                            onToggleRawView={() => handleToggleRawView(msg.id)}
-                        />
-                    );
-                })}
-            </div>
-        </ScrollArea>
+                        return (
+                            <ChatMessageItem
+                                key={msg.id}
+                                msg={msg}
+                                excluded={excluded}
+                                rawView={rawView}
+                                copyToClipboard={copyToClipboard}
+                                onCopyMessage={() => copyToClipboard(msg.content)}
+                                onForkMessage={() => handleForkFromMessage(msg.id)}
+                                onDeleteMessage={() => handleDeleteMessage(msg.id)}
+                                onToggleExclude={() => handleToggleExclude(msg.id)}
+                                onToggleRawView={() => handleToggleRawView(msg.id)}
+                            />
+                        );
+                    })}
+                </div>
+                {/* An invisible anchor we can scroll to when autoScroll is true */}
+                <div ref={bottomRef} />
+            </ScrollArea>
+        </div>
     );
 }
