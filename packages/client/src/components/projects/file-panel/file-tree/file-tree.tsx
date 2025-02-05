@@ -131,10 +131,7 @@ const FileTreeNodeRow = forwardRef<
     },
     ref
 ) {
-    console.log({
-        onRequestAIFileChange,
-
-    })
+ 
     const { tabData: projectTabState } = useActiveProjectTab();
     const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
     const resolveImports = projectTabState?.resolveImports ?? false;
@@ -421,13 +418,7 @@ const FileTreeNodeRow = forwardRef<
                     </ContextMenuItem>
                 )}
 
-                {
-                    console.log({
-                        isFolder,
-                        item: item.node.file?.path,
-                        onRequestAIFileChange,
-                    })
-                }
+     
 
                 {/* "Modify with AI..." (only if file) */}
                 {!isFolder && item.node.file?.path && onRequestAIFileChange && (

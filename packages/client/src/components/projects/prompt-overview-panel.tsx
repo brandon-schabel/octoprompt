@@ -72,7 +72,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const { selectedFiles, projectFileMap } = useSelectedFiles()
 
 
-        console.log('selectedFiles', selectedFiles)
 
         // calc tokens
         const totalTokens = useMemo(() => calculateTotalTokens(
@@ -95,7 +94,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 selectedPrompts,
                 userPrompt: localUserPrompt,
                 selectedFiles,
-                fileMap: new Map(), // or your real map
+                fileMap: projectFileMap,
             })
             copyToClipboard(finalPrompt, {
                 successMessage: 'All content copied',

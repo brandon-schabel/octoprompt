@@ -135,6 +135,7 @@ export const appSettingsSchema = z.object({
     summarizationEnabledProjectIds: z.array(z.string()).optional().default([]),
     useSpacebarToSelectAutocomplete: z.boolean().optional().default(true),
     hideInformationalTooltips: z.boolean().optional().default(false),
+    autoScrollEnabled: z.boolean().optional().default(true),
 });
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 
@@ -175,6 +176,7 @@ export const createInitialGlobalState = (): GlobalState => ({
         summarizationEnabledProjectIds: [],
         useSpacebarToSelectAutocomplete: true,
         hideInformationalTooltips: false,
+        autoScrollEnabled: true,
     },
     projectTabs: {
         defaultTab: {

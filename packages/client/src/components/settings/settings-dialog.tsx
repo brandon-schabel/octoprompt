@@ -40,11 +40,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
     const { data: spacebarToSelectAutocomplete = true } = useSettingsField('useSpacebarToSelectAutocomplete')
     const { data: hideInformationalTooltips } = useSettingsField('hideInformationalTooltips')
+    const { data: autoScrollEnabled = true } = useSettingsField('autoScrollEnabled')
     const { data: ollamaGlobalUrl = 'http://localhost:11434' } = useSettingsField('ollamaGlobalUrl')
     const { data: lmStudioGlobalUrl = 'http://localhost:1234' } = useSettingsField('lmStudioGlobalUrl')
     const { data: codeThemeLight = 'atomOneLight' } = useSettingsField('codeThemeLight')
     const { data: codeThemeDark = 'atomOneDark' } = useSettingsField('codeThemeDark')
-
 
     const updateSettings = useUpdateSettings()
 
@@ -91,6 +91,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             id="dark-mode"
                             checked={isDarkMode}
                             onCheckedChange={handleThemeToggle}
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="auto-scroll" className="text-sm font-medium">
+                            Auto-scroll Chat Messages
+                        </Label>
+                        <Switch
+                            id="auto-scroll"
+                            checked={autoScrollEnabled}
+                            onCheckedChange={(checked) => {
+                                updateSettings(prev => ({
+                                    ...prev,
+                                    autoScrollEnabled: checked,
+                                }))
+                            }}
                         />
                     </div>
 

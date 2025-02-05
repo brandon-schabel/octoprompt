@@ -278,6 +278,7 @@ OctoPrompt consists of **TypeScript** modules on both the client and server side
 - **File Watchers**: Add patterns to ignore or allow certain files. Summaries update automatically.  
 - **Custom Prompts**: Create specialized prompts for your tasks. Share them with your teammates if you like.  
 - **Editor Links**: Use your favorite editor (VSCode, WebStorm, etc.) by configuring open-file links in the UI.
+- **Audio Input**: While OctoPrompt supports audio input, something like [SuperWhisper]("https://superwhisper.com/") works better since it can accessed anywhere.
 
 ---
 

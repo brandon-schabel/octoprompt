@@ -94,7 +94,6 @@ const DEFAULT_EXCLUSIONS = [
   'bin',
   'obj',
   '.nuget',
-  'packages',
   '*.suo',
   '*.user',
   '*.userosscache',
