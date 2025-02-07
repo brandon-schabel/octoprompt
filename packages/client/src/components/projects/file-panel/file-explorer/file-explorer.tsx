@@ -25,6 +25,9 @@ import { NoResultsScreen } from "./no-results-screen"
 import { EmptyProjectScreen } from "./empty-project-screen"
 import { SelectedFilesDrawer } from "../../selected-files-drawer"
 import { AIFileChangeDialog } from "@/components/file-changes/ai-file-change-dialog"
+import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
+import { useQueryClient } from '@tanstack/react-query'
+import { PROJECT_FILES_KEYS } from '@/hooks/api/use-projects-api'
 
 type ExplorerRefs = {
     searchInputRef: React.RefObject<HTMLInputElement>
@@ -41,11 +44,16 @@ type FileExplorerProps = {
 export function FileExplorer({
     ref,
     allowSpacebarToSelect,
-    onFileViewerOpen,
+
 }: FileExplorerProps) {
     const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
     const { data: fileData, isLoading: filesLoading, refetch: refetchFiles } = useGetProjectFiles(selectedProjectId || '')
     const { data: projectData } = useGetProject(selectedProjectId || '')
+    const queryClient = useQueryClient()
+
+    // Example: ephemeral file viewer
+    const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
+    const closeFileViewer = () => setViewedFile(null)
 
     // read from store
     const { data: searchByContent = false, mutate: setSearchByContent } =
@@ -165,6 +173,11 @@ export function FileExplorer({
     // UI
     return (
         <div className="flex flex-col space-y-4 h-full">
+            <FileViewerDialog
+                open={!!viewedFile}
+                viewedFile={viewedFile}
+                onClose={closeFileViewer}
+            />
             {/* Top search row */}
             <div
                 ref={searchContainerRef}
@@ -199,7 +212,7 @@ export function FileExplorer({
                                     // preview highlighted file
                                     e.preventDefault()
                                     if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                                        onFileViewerOpen?.(suggestions[autocompleteIndex])
+                                        setViewedFile?.(suggestions[autocompleteIndex])
                                     }
                                 } else if (e.key === 'Enter' || (allowSpacebarToSelect && e.key === ' ')) {
                                     if (autocompleteIndex >= 0) {
@@ -328,7 +341,7 @@ export function FileExplorer({
                             <FileTree
                                 ref={ref.fileTreeRef}
                                 root={fileTree}
-                                onViewFile={onFileViewerOpen}
+                                onViewFile={setViewedFile}
                                 projectRoot={''} // if needed
                                 resolveImports={resolveImports}
                                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
@@ -343,7 +356,6 @@ export function FileExplorer({
                             allFilesMap={projectFileMap}
                             selectedFilesListRef={ref.selectedFilesListRef}
                             onNavigateToFileTree={() => ref.fileTreeRef.current?.focusTree()}
-
                         />
                     </div>
                 </div>
@@ -353,8 +365,8 @@ export function FileExplorer({
                 onOpenChange={setAiDialogOpen}
                 filePath={(projectData?.project?.path || '') + "/" + (selectedFile?.path || '')}
                 onSuccess={() => {
-                    // Refresh the file list after a successful change
-                    void refetchFiles()
+                    // Invalidate the project files query to trigger a refresh
+                    queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(selectedProjectId || '') })
                     setAiDialogOpen(false)
                     setSelectedFile(undefined)
                 }}

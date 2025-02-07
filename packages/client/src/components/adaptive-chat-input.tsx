@@ -45,11 +45,11 @@ export function AdaptiveChatInput({
     const [expandedValue, setExpandedValue] = useState(value)
     const [isMultiline, setIsMultiline] = useState(false)
 
+    // Input/textarea refs for direct value reads
     const inputRef = useRef<HTMLInputElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
-    const [selectionStart, setSelectionStart] = useState<number | null>(null)
-    const [selectionEnd, setSelectionEnd] = useState<number | null>(null)
 
+    // For handling partial transcripts if user is using Whisper
     const {
         transcript,
         isRecording,
@@ -57,43 +57,36 @@ export function AdaptiveChatInput({
         stopRecording,
     } = useWhisperTranscription({ debug: false })
 
+    // Debounced parent onChange
+    // (You can remove or reduce the delay if you want changes to be more instantaneous)
     const debouncedOnChange = useDebounce(onChange, 300)
 
-    useHotkeys('v', (evt) => {
-        if (evt.type === 'keydown' && !isRecording) {
-            startRecording()
-        }
-        if (evt.type === 'keyup' && isRecording) {
-            stopRecording()
-        }
-    }, { keydown: true, keyup: true }, [isRecording, startRecording, stopRecording])
-
+    // Keep track of the last transcript used
     const [isHandlingTranscript, setIsHandlingTranscript] = useState(false)
-    const latestValueRef = useRef(value)
-    useEffect(() => {
-        latestValueRef.current = value
-    }, [value])
-
     const lastTranscriptRef = useRef<string | null>(null)
 
+    // Always sync localValue when parent `value` changes
     useEffect(() => {
         if (value !== localValue) {
             setLocalValue(value)
         }
     }, [value])
 
-    const handleValueChange = (newValue: string) => {
-        setLocalValue(newValue)
-        debouncedOnChange(newValue)
-    }
-
+    // Check if text is long or multiline => switch to multi-line mode
     useEffect(() => {
-        if (!transcript ||
+        const shouldBeMultiline = value.length > 100 || value.includes('\n')
+        setIsMultiline(shouldBeMultiline)
+    }, [value])
+
+    // Transcription handling: insert transcript at cursor
+    useEffect(() => {
+        if (
+            !transcript ||
             isHandlingTranscript ||
-            transcript === lastTranscriptRef.current) {
+            transcript === lastTranscriptRef.current
+        ) {
             return
         }
-
         setIsHandlingTranscript(true)
         lastTranscriptRef.current = transcript
 
@@ -103,8 +96,10 @@ export function AdaptiveChatInput({
 
             const start = element?.selectionStart ?? currentValue.length
             const end = element?.selectionEnd ?? start
-
-            const newValue = currentValue.slice(0, start) + transcript + currentValue.slice(end)
+            const newValue =
+                currentValue.slice(0, start) +
+                transcript +
+                currentValue.slice(end)
 
             if (isExpanded) {
                 setExpandedValue(newValue)
@@ -119,105 +114,122 @@ export function AdaptiveChatInput({
                 }
             })
         } finally {
+            // small delay to let transcript settle
             setTimeout(() => {
                 setIsHandlingTranscript(false)
             }, 100)
         }
-    }, [transcript, isExpanded, isMultiline, handleValueChange, expandedValue, localValue])
+    }, [
+        transcript,
+        isExpanded,
+        isMultiline,
+        expandedValue,
+        localValue,
+    ])
 
-    useEffect(() => {
-        const shouldBeMultiline = value.length > 100 || value.includes('\n')
-        setIsMultiline(shouldBeMultiline)
-    }, [value])
-    const handlePaste =
-        (e: ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-            if (!preserveFormatting) {
-                return
-            }
+    // Force an immediate change to localValue + parent
+    const handleValueChange = (newValue: string) => {
+        setLocalValue(newValue)
+        debouncedOnChange(newValue)
+    }
 
-            e.preventDefault()
-
-            const pasteText = e.clipboardData?.getData("text/plain") ?? ""
-            const target = e.target as HTMLTextAreaElement | HTMLInputElement
-            let newValue = target.value
-
-            const start = target.selectionStart ?? newValue.length
-            const end = target.selectionEnd ?? newValue.length
-
-            newValue = newValue.slice(0, start) + pasteText + newValue.slice(end)
-
-            const html = e.clipboardData?.getData("text/html") ?? ""
-            if (!html.includes("```")) {
-                newValue = newValue
-                    .split("\n")
-                    .map((line) => line.trim())
-                    .join("\n")
-                    .replace(/\n{3,}/g, "\n\n")
-            }
-
-            handleValueChange(newValue)
-
-            if (newValue.includes("\n")) {
-                setIsMultiline(true)
-            }
-
-            requestAnimationFrame(() => {
-                target.setSelectionRange(start + pasteText.length, start + pasteText.length)
-                target.focus()
-            })
+    // Intercept paste if preserveFormatting is true
+    const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+        if (!preserveFormatting) {
+            return
         }
+        e.preventDefault()
 
+        const pasteText = e.clipboardData?.getData("text/plain") ?? ""
+        const target = e.target as HTMLTextAreaElement | HTMLInputElement
+        let newValue = target.value
+
+        const start = target.selectionStart ?? newValue.length
+        const end = target.selectionEnd ?? newValue.length
+
+        newValue = newValue.slice(0, start) + pasteText + newValue.slice(end)
+
+        const html = e.clipboardData?.getData("text/html") ?? ""
+        // If the paste doesn't contain code fences, lightly trim newlines
+        if (!html.includes("```")) {
+            newValue = newValue
+                .split("\n")
+                .map((line) => line.trim())
+                .join("\n")
+                .replace(/\n{3,}/g, "\n\n")
+        }
+        handleValueChange(newValue)
+
+        if (newValue.includes("\n")) {
+            setIsMultiline(true)
+        }
+        requestAnimationFrame(() => {
+            const cursorPos = start + pasteText.length
+            target.setSelectionRange(cursorPos, cursorPos)
+            target.focus()
+        })
+    }
+
+    // We do a direct read from the ref to ensure the latest typed text
+    const handleEnterPress = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+        e.preventDefault()
+        // whichever ref is actually in use
+        const element = isMultiline ? textareaRef.current : inputRef.current
+        const finalValue = element?.value ?? localValue
+
+        // Make sure parent sees the final typed text right away
+        onChange(finalValue)
+        setLocalValue(finalValue)
+
+        // Now we can call onSubmit. The parent has the latest text.
+        onSubmit?.()
+    }
+
+    // Decide if we trigger submit on Enter
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+        // If multiline is false, then hitting Enter means “submit”
         if (e.key === 'Enter' && !e.shiftKey && !isMultiline) {
-            e.preventDefault()
-            onSubmit?.()
+            handleEnterPress(e)
         }
+    }
+
+    // Expand/collapse large editor
+    const openDialog = () => {
+        setExpandedValue(value)
+        setIsExpanded(true)
+    }
+    const handleDialogClose = (open: boolean) => {
+        if (!open) {
+            // user closed the expanded dialog => ensure local + parent are updated
+            handleValueChange(expandedValue)
+        }
+        setIsExpanded(open)
     }
 
     const handleExpandedChange = (newValue: string) => {
         setExpandedValue(newValue)
     }
 
-    const handleDialogClose = (open: boolean) => {
-        if (!open) {
-            handleValueChange(expandedValue)
-        }
-        setIsExpanded(open)
+    // Common props for input or textarea
+    const baseProps = {
+        value: localValue,
+        onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+            handleValueChange(e.target.value)
+        },
+        onKeyDown: handleKeyDown,
+        onPaste: handlePaste,
+        placeholder,
+        disabled,
+        spellCheck: false,
     }
 
-    const openDialog = () => {
-        setExpandedValue(value)
-        setIsExpanded(true)
-    }
-
-    const renderMicrophoneButton = () => (
-        <Popover open={isRecording}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`h-6 w-6 hover:opacity-100 ${isRecording ? 'bg-red-100 opacity-100' : 'opacity-50'}`}
-                    onClick={isRecording ? stopRecording : startRecording}
-                    disabled={disabled}
-                >
-                    {isRecording ? <MicOff className="h-4 w-4 text-red-500" /> : <Mic className="h-4 w-4" />}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent
-                side="top"
-                align="start"
-                className="w-auto p-2"
-            >
-                <span className={`text-xs ${isRecording ? 'text-red-500 animate-pulse' : 'text-muted-foreground'}`}>
-                    {isRecording ? "Recording in progress... (release V to stop)" : "Press and hold V to record"}
-                </span>
-            </PopoverContent>
-        </Popover>
-    )
+    // For selection/focus tracking
+    const [selectionStart, setSelectionStart] = useState<number | null>(null)
+    const [selectionEnd, setSelectionEnd] = useState<number | null>(null)
+    const isUserFocus = useRef(false)
 
     const handleSelectionChange = () => {
         if (isHandlingTranscript) return
-
         const element = isMultiline ? textareaRef.current : inputRef.current
         if (element && document.activeElement === element) {
             setSelectionStart(element.selectionStart)
@@ -226,38 +238,62 @@ export function AdaptiveChatInput({
     }
 
     const handleFocus = () => {
-        const element = isMultiline ? textareaRef.current : inputRef.current
-        if (element) {
-            element.readOnly = false
-            handleSelectionChange()
-        }
+        isUserFocus.current = true
+        handleSelectionChange()
     }
-
-    const baseProps = {
-        value: localValue,
-        onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            handleValueChange(e.target.value)
-        },
-        onKeyDown: handleKeyDown,
-        onPaste: handlePaste,
-        onSelect: handleSelectionChange,
-        onFocus: handleFocus,
-        onClick: handleSelectionChange,
-        onBlur: handleSelectionChange,
-        placeholder,
-        disabled,
-        spellCheck: false,
-    }
-
-    const textareaProps = {
-        ...baseProps,
-        ref: textareaRef,
+    const handleBlur = () => {
+        isUserFocus.current = false
+        handleSelectionChange()
     }
 
     const inputProps = {
         ...baseProps,
         ref: inputRef,
+        onFocus: handleFocus,
+        onSelect: handleSelectionChange,
+        onClick: handleSelectionChange,
+        onBlur: handleBlur,
     }
+    const textareaProps = {
+        ...baseProps,
+        ref: textareaRef,
+        onFocus: handleFocus,
+        onSelect: handleSelectionChange,
+        onClick: handleSelectionChange,
+        onBlur: handleBlur,
+    }
+
+    // Microphone UI
+    const renderMicrophoneButton = () => (
+        <Popover open={isRecording}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-6 w-6 hover:opacity-100 ${isRecording ? 'bg-red-100 opacity-100' : 'opacity-50'
+                        }`}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={disabled}
+                >
+                    {isRecording ? (
+                        <MicOff className="h-4 w-4 text-red-500" />
+                    ) : (
+                        <Mic className="h-4 w-4" />
+                    )}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-auto p-2">
+                <span
+                    className={`text-xs ${isRecording ? 'text-red-500 animate-pulse' : 'text-muted-foreground'
+                        }`}
+                >
+                    {isRecording
+                        ? "Recording in progress... (release V to stop)"
+                        : "Press and hold V to record"}
+                </span>
+            </PopoverContent>
+        </Popover>
+    )
 
     return (
         <div className="relative w-full" id="adaptive-chat-input">
@@ -292,6 +328,7 @@ export function AdaptiveChatInput({
                 </div>
             )}
 
+            {/* Fullscreen Dialog for expanded view */}
             <Dialog open={isExpanded} onOpenChange={handleDialogClose}>
                 <DialogContent className="max-w-[90vw] w-full h-[90vh] max-h-[90vh] flex flex-col p-6">
                     <DialogHeader>
@@ -309,10 +346,7 @@ export function AdaptiveChatInput({
                         />
                     </div>
                     <DialogFooter className="mt-4">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsExpanded(false)}
-                        >
+                        <Button variant="outline" onClick={() => setIsExpanded(false)}>
                             Done
                         </Button>
                     </DialogFooter>

@@ -11,7 +11,7 @@ import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
 import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
-import { useFindSuggestedFiles, } from '@/hooks/api/use-projects-api'
+import { useFindSuggestedFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useUpdateActiveProjectTab } from '@/zustand/updaters'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
@@ -35,20 +35,22 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
         const updateActiveProjectTab = useUpdateActiveProjectTab()
 
-        // read selected prompts & user prompt from store (optional)
+        // Read selected prompts & user prompt from store
         const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId || '')
         const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId || '')
         const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId || '')
 
-        // local copy of user prompt
+        // Keep a local copy of userPrompt so that typing is instantly reflected in the textarea
         const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
+
+        // Update localUserPrompt if global changes externally
         useEffect(() => {
             if (globalUserPrompt !== localUserPrompt) {
                 setLocalUserPrompt(globalUserPrompt)
             }
         }, [globalUserPrompt])
 
-        // keep it in sync with the store (debounce or direct)
+        // Sync localUserPrompt back to the global store after a short delay
         useEffect(() => {
             const timer = setTimeout(() => {
                 if (localUserPrompt !== globalUserPrompt) {
@@ -58,44 +60,49 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             return () => clearTimeout(timer)
         }, [localUserPrompt, globalUserPrompt])
 
-        // ephemeral
+        // Prompt creation/editing dialog states
         const [promptDialogOpen, setPromptDialogOpen] = useState(false)
         const [editPromptId, setEditPromptId] = useState<string | null>(null)
 
-        // load the project's prompts
+        // Load the project's prompts
         const { data: promptData } = useGetProjectPrompts(selectedProjectId || '')
         const createPromptMutation = useCreatePrompt()
         const updatePromptMutation = useUpdatePrompt()
         const deletePromptMutation = useDeletePrompt()
 
-        // read selected files from our local undo/redo manager
+        // Read selected files
         const { selectedFiles, projectFileMap } = useSelectedFiles()
 
+        // Calculate total tokens
+        const totalTokens = useMemo(() => {
+            return calculateTotalTokens(
+                promptData,
+                selectedPrompts,
+                localUserPrompt,
+                selectedFiles,
+                projectFileMap
+            )
+        }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap])
 
+        const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
 
-        // calc tokens
-        const totalTokens = useMemo(() => calculateTotalTokens(
-            promptData,
-            selectedPrompts,
-            localUserPrompt,
-            selectedFiles,
-            projectFileMap
-        ), [promptData, selectedPrompts, localUserPrompt, selectedFiles])
-
-        const usagePercentage = contextLimit > 0
-            ? (totalTokens / contextLimit) * 100
-            : 0
-
-        // copy entire prompt
+        // For copying to clipboard
         const { copyToClipboard } = useCopyClipboard()
+
+        // IMPORTANT: We read from the textarea ref to guarantee we have the freshest user input.
+        const promptInputRef = useRef<HTMLTextAreaElement>(null)
         const handleCopyAll = () => {
+            // Fallback to localUserPrompt if the ref is unavailable for any reason
+            const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
+
             const finalPrompt = buildPromptContent({
                 promptData,
                 selectedPrompts,
-                userPrompt: localUserPrompt,
+                userPrompt: finalUserPrompt,
                 selectedFiles,
                 fileMap: projectFileMap,
             })
+
             copyToClipboard(finalPrompt, {
                 successMessage: 'All content copied',
                 errorMessage: 'Copy failed',
@@ -107,6 +114,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const [showSuggestions, setShowSuggestions] = useState(false)
 
         const handleFindSuggestions = () => {
+            // If localUserPrompt is empty, ask user to type something
             if (!localUserPrompt.trim()) {
                 alert('Please enter a prompt!')
                 return
@@ -121,7 +129,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             })
         }
 
-        // form for creating/editing prompts
+        // React Hook Form for creating/editing prompts
         const promptForm = useForm<z.infer<typeof promptSchema>>({
             resolver: zodResolver(promptSchema),
             defaultValues: { name: '', content: '' },
@@ -157,20 +165,18 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             setPromptDialogOpen(false)
         }
 
-        // hotkeys
+        // Hotkey for copy
         useHotkeys('mod+shift+c', (e) => {
             e.preventDefault()
             handleCopyAll()
         })
 
-        // expose focus
-        const promptInputRef = useRef<HTMLTextAreaElement>(null)
+        // Expose focus to parent
         const promptsListRef = useRef<PromptsListRef>(null)
-
         useImperativeHandle(ref, () => ({
             focusPrompt() {
                 promptInputRef.current?.focus()
-            }
+            },
         }))
 
         return (
@@ -178,8 +184,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 <SuggestedFilesDialog
                     open={showSuggestions}
                     onClose={() => setShowSuggestions(false)}
-                    suggestedFiles={[]} // pass your real suggested files
+                    suggestedFiles={[]} // pass the actual suggested files here if needed
                 />
+
                 <div className="bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4 border-l">
                     {/* 1) Token usage */}
                     <div className="space-y-2 mb-4 border-b">
@@ -202,7 +209,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
                     <hr className="my-2" />
 
-                    {/* 3) user input */}
+                    {/* 3) User input */}
                     <div className="h-1/2">
                         <div className="flex flex-col h-full">
                             <div className="flex items-center gap-2 mb-2">
@@ -211,7 +218,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                     <div className="space-y-2">
                                         <p>Shortcuts:</p>
                                         <ul>
-                                            <li>- <span className="font-medium">Copy All:</span> <ShortcutDisplay shortcut={['mod', 'shift', 'c']} /></li>
+                                            <li>
+                                                - <span className="font-medium">Copy All:</span>
+                                                {' '}<ShortcutDisplay shortcut={['mod', 'shift', 'c']} />
+                                            </li>
                                         </ul>
                                     </div>
                                 </InfoTooltip>
@@ -237,14 +247,15 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                         </div>
                     </div>
                 </div>
+
                 <PromptDialog
                     open={promptDialogOpen}
                     editPromptId={editPromptId}
                     promptForm={promptForm}
                     handleCreatePrompt={handleCreatePrompt}
                     handleUpdatePrompt={async (updates) => {
-                        if (!editPromptId) return Promise.resolve();
-                        return handleUpdatePromptContent(editPromptId, updates);
+                        if (!editPromptId) return
+                        return handleUpdatePromptContent(editPromptId, updates)
                     }}
                     createPromptPending={createPromptMutation.isPending}
                     updatePromptPending={updatePromptMutation.isPending}

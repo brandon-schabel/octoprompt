@@ -2,25 +2,25 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check, Edit2, MessageSquareIcon, Trash2, X } from "lucide-react";
+import { Check, Edit2, Icon, MessageSquareIcon, Trash2, X } from "lucide-react";
+import { tab as tabIcon } from '@lucide/lab';
+import { Badge } from '@/components/ui/badge';
 import {
     useGetChats,
-    useCreateChat,
     useDeleteChat,
     useUpdateChat,
 } from '@/hooks/api/use-chat-ai-api';
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
-import { useUpdateActiveChatTab } from '@/zustand/updaters';
-import { useActiveChatTab } from '@/zustand/selectors';
-
+import { useUpdateActiveChatTab, useSetActiveChatTab } from '@/zustand/updaters';
+import { useActiveChatTab, useAllChatTabs } from '@/zustand/selectors';
 
 export function ChatSidebar() {
     const updateActiveChatTab = useUpdateActiveChatTab();
-    
-    const { tabData: activeChatTabState } = useActiveChatTab()
-
+    const setActiveChatTab = useSetActiveChatTab();
+    const { tabData: activeChatTabState } = useActiveChatTab();
+    const allChatTabs = useAllChatTabs();
 
     const [newChatTitle, setNewChatTitle] = useState('');
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
@@ -31,8 +31,6 @@ export function ChatSidebar() {
     const updateChat = useUpdateChat();
 
     const chats = chatsData?.data ?? [];
-
-
 
     async function handleDeleteChat(chatId: string) {
         if (!window.confirm('Are you sure you want to delete this chat?')) return;
@@ -69,13 +67,12 @@ export function ChatSidebar() {
     }
 
     return (
-        <SlidingSidebar width={300}
+        <SlidingSidebar
+            width={340}
             icons={{
                 openIcon: MessageSquareIcon
             }}
         >
-
-
             {/* Chat List */}
             <ScrollArea className="flex-1 mt-2">
                 <div className="text-xl font-bold">
@@ -86,17 +83,26 @@ export function ChatSidebar() {
                 ) : (
                     chats.map((chat) => {
                         const isActive = activeChatTabState?.activeChatId === chat.id;
+
+                        // For the given chat, determine which chat tabs have this chat active.
+                        const chatTabEntries = Object.entries(allChatTabs).filter(
+                            ([, tabData]) => tabData.activeChatId === chat.id
+                        );
+                        // Sort by the optional sortOrder (defaulting to 0)
+                        const sortedChatTabs = chatTabEntries.sort(
+                            ([, aData], [, bData]) => (aData.sortOrder || 0) - (bData.sortOrder || 0)
+                        );
+
                         return (
                             <div
                                 key={chat.id}
                                 className={cn(
-                                    'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md group ',
+                                    'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md group',
                                     {
                                         'bg-gray-100 dark:bg-gray-800': isActive,
                                     }
                                 )}
                             >
-
                                 {editingChatId === chat.id ? (
                                     <div className="flex items-center gap-2 flex-1">
                                         <Input
@@ -125,18 +131,43 @@ export function ChatSidebar() {
                                     </div>
                                 ) : (
                                     <>
-                                        <button
-                                            className={cn(
-                                                'max-w-[180px] w-full text-left truncate',
-                                                isActive ? 'font-bold' : ''
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <button
+                                                className={cn(
+                                                    'max-w-[180px] w-full text-left truncate',
+                                                    isActive ? 'font-bold' : ''
+                                                )}
+                                                onClick={() => {
+                                                    updateActiveChatTab({ activeChatId: chat.id });
+                                                }}
+                                                title={chat.title ?? 'No Title'}
+                                            >
+                                                {chat.title}
+                                            </button>
+                                            {sortedChatTabs.length > 0 && (
+                                                <div className="flex gap-1">
+                                                    {sortedChatTabs.map(([tabId]) => {
+                                                        const indexOfTabData = Object.keys(allChatTabs).indexOf(tabId);
+                                                        const tabNumber = indexOfTabData + 1;
+
+                                                        return (
+                                                            <Badge
+                                                                key={tabId}
+                                                                // variant="secondary"
+                                                                className="flex items-center gap-1 px-2 py-0.5 cursor-pointer hover:bg-accent"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setActiveChatTab(tabId);
+                                                                }}
+                                                            >
+                                                                <Icon iconNode={tabIcon} className="w-3 h-3" />
+                                                                <span className="text-xs">{tabNumber}</span>
+                                                            </Badge>
+                                                        )
+                                                    })}
+                                                </div>
                                             )}
-                                            onClick={() => {
-                                                updateActiveChatTab({ activeChatId: chat.id });
-                                            }}
-                                            title={chat.title ?? 'No Title'}
-                                        >
-                                            {chat.title}
-                                        </button>
+                                        </div>
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Button
                                                 size="icon"

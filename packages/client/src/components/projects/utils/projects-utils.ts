@@ -33,10 +33,6 @@ export function buildPromptContent(
         }
     }
 
-    const trimmedUserPrompt = userPrompt.trim()
-    if (trimmedUserPrompt) {
-        contentToCopy += `<user_instructions>\n${trimmedUserPrompt}\n</user_instructions>\n\n`
-    }
 
     // Only add file_contents section if there are files to include
     const filesWithContent = selectedFiles
@@ -51,6 +47,12 @@ export function buildPromptContent(
         }
         contentToCopy += `</file_contents>\n`
     }
+
+    const trimmedUserPrompt = userPrompt.trim()
+    if (trimmedUserPrompt) {
+        contentToCopy += `<user_instructions>\n${trimmedUserPrompt}\n</user_instructions>\n\n`
+    }
+
     return contentToCopy
 }
 

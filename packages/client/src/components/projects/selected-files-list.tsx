@@ -1,4 +1,5 @@
-import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw } from "lucide-react"
+// packages/client/src/components/projects/selected-files-list.tsx
+import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useHotkeys } from "react-hotkeys-hook"
@@ -26,6 +27,8 @@ import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useProjectTab } from "@/zustand/selectors"
+import { FileViewerDialog } from "../navigation/file-viewer-dialog"
+import { ProjectFile } from "shared/schema"
 
 type SelectedFilesListProps = {
   onRemoveFile: (fileId: string) => void
@@ -42,7 +45,6 @@ export type SelectedFilesListRef = {
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(({
   onRemoveFile,
   onNavigateLeft,
-  onNavigateRight,
   className = '',
   projectTabId,
 }, ref) => {
@@ -53,8 +55,6 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     projectFileMap
   } = useSelectedFiles({ tabId: projectTabId })
 
-
-
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
   const [sortOrder, setSortOrder] = useState<"default" | "alphabetical" | "size_asc" | "size_desc">("default")
@@ -62,6 +62,8 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false)
   const [bookmarkName, setBookmarkName] = useState("")
   const updateProjectTabState = useUpdateProjectTabState(projectTabId)
+  const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
+  const closeFileViewer = () => setViewedFile(null)
 
   const projectTab = useProjectTab(projectTabId)
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
@@ -133,10 +135,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   useHotkeys('r+8', () => selectedFiles[7] && onRemoveFile(selectedFiles[7]))
   useHotkeys('r+9', () => selectedFiles[8] && onRemoveFile(selectedFiles[8]))
 
-  // If you want CMD/CTRL+Z hotkeys to trigger undo/redo automatically,
-  // you could add these:
-  // useHotkeys('ctrl+z,meta+z', () => { if (canUndo) undo() })
-  // useHotkeys('ctrl+shift+z,meta+shift+z', () => { if (canRedo) redo() })
+  // Optional: CMD/CTRL+Z hotkeys for undo/redo can be added here
 
   useImperativeHandle(ref, () => ({
     focusList: () => {
@@ -169,14 +168,18 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         break
       case 'ArrowRight':
         e.preventDefault()
-        onNavigateRight?.()
+        setViewedFile(projectFileMap.get(fileId) || null)
+
         break
       case 'Backspace':
-      case 'Delete':
+      case 'Delete': {
         e.preventDefault()
+        const file = projectFileMap.get(fileId)
+        const fileName = file?.name || ''
         const newIndex = Math.max(0, index - 1)
         setFocusedIndex(newIndex)
         onRemoveFile(fileId)
+        toast.success(`Removed file "${fileName}". Press ${formatShortcut('mod+z')} to undo.`)
         // Wait for the list to update before focusing
         setTimeout(() => {
           if (selectedFiles.length > 1) {
@@ -187,6 +190,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
           }
         }, 0)
         break
+      }
     }
   }
 
@@ -252,6 +256,13 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
   return (
     <>
+
+      <FileViewerDialog
+        open={!!viewedFile}
+        viewedFile={viewedFile}
+        onClose={closeFileViewer}
+      />
+
       <Dialog open={bookmarkDialogOpen} onOpenChange={setBookmarkDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -403,23 +414,36 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
               className={cn(
                 "w-full group relative",
                 "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-                "rounded-md"
+                "rounded-md",
+                "flex flex-col"
               )}
               tabIndex={0}
               onKeyDown={(e) => handleKeyDown(e, fileId, index)}
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onRemoveFile(fileId)}
-                className={cn(
-                  "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full",
-                  "opacity-0 group-hover:opacity-100 group-hover:translate-x-2",
-                  "transition-all duration-100 z-10 h-8 w-8"
-                )}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              {/* Action buttons container with equal spacing */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-100 z-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewedFile(projectFileMap.get(fileId) || null)}
+                  className="h-8 w-8"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    onRemoveFile(fileId)
+                    toast.success(`Removed file "${file.name}". Press ${formatShortcut('mod+z')} to undo.`)
+                  }}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <div
                 className={cn(
                   "flex flex-col p-2 rounded-md border bg-muted/50",

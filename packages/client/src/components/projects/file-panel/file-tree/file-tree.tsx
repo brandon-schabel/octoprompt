@@ -212,7 +212,7 @@ const FileTreeNodeRow = forwardRef<
             <ContextMenuTrigger asChild>
                 <div
                     ref={ref}
-                    className={cn("flex flex-col outline-none", isFocused && "bg-accent")}
+                    className={cn("flex flex-col outline-none", isFocused && "bg-accent rounded-md")}
                     style={{
                         paddingLeft: item.depth > 0 ? `${Math.min(item.depth * 8, 64)}px` : undefined,
                     }}

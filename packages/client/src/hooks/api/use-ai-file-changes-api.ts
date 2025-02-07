@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "../use-api";
 
 interface FileChangeRecord {
@@ -66,6 +66,7 @@ export function useGetFileChange(changeId: number | null) {
 
 export function useConfirmFileChange() {
   const { api } = useApi();
+  const queryClient = useQueryClient();
 
   return useMutation<boolean, Error, number>({
     mutationFn: async (changeId: number) => {
@@ -79,6 +80,10 @@ export function useConfirmFileChange() {
 
       const data = await res.json();
       return data.success;
+    },
+    onSuccess: () => {
+      // Invalidate all project files queries to trigger a refetch
+      queryClient.invalidateQueries({ queryKey: ['project-files'] });
     },
   });
 } 

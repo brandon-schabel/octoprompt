@@ -174,23 +174,31 @@ function ChatPage() {
         {/* Left Sidebar */}
         <ChatSidebar />
 
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Main Chat Area - Modified structure */}
+        <div className="flex-1 flex flex-col min-h-0"> {/* Added min-h-0 to ensure proper flex behavior */}
           {currentChat && (
             <>
-              <ChatHeader
-                chatId={chatId}
-                excludedMessageIds={currentChat?.excludedMessageIds ?? []}
-              />
-              <ChatMessages
-                messages={messages}
-                isFetching={isFetching}
-                excludedMessageIds={currentChat?.excludedMessageIds ?? []}
-              />
+              {/* Header is now outside the scrollable area */}
+              <div className="flex-shrink-0"> {/* Added flex-shrink-0 to prevent header from shrinking */}
+                <ChatHeader
+                  chatId={chatId}
+                  excludedMessageIds={currentChat?.excludedMessageIds ?? []}
+                />
+              </div>
+
+              {/* Messages container with flex-1 and overflow handling */}
+              <div className="flex-1 min-h-0 overflow-hidden"> {/* Added min-h-0 and overflow-hidden */}
+                <ChatMessages
+                  messages={messages}
+                  isFetching={isFetching}
+                  excludedMessageIds={currentChat?.excludedMessageIds ?? []}
+                />
+              </div>
             </>
           )}
 
-          <div className="relative mx-2 mb-2">
+          {/* Input area is also outside the scrollable region */}
+          <div className="flex-shrink-0 relative mx-2 mb-2"> {/* Added flex-shrink-0 */}
             <div className="flex gap-2 bg-background rounded-md">
               <AdaptiveChatInput
                 value={newMessage}

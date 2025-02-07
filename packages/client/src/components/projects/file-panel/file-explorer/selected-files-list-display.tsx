@@ -13,13 +13,11 @@ type SelectedFilesSidebarProps = {
 
     selectedFilesListRef: React.RefObject<SelectedFilesListRef>
     onNavigateToFileTree: () => void
-    onNavigateToPrompts?: () => void
 }
 
 const SelectedFilesListDisplay = function SelectedFilesSidebar({
     selectedFilesListRef,
     onNavigateToFileTree,
-    onNavigateToPrompts,
 }: SelectedFilesSidebarProps) {
     const { id: activeProjectTabId } = useActiveProjectTab()
     const { selectedFiles, removeSelectedFile } = useSelectedFiles()
@@ -55,7 +53,6 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
                         removeSelectedFile(fileId)
                     }}
                     onNavigateLeft={onNavigateToFileTree}
-                    onNavigateRight={onNavigateToPrompts}
                     className="w-60"
                     projectTabId={activeProjectTabId}
                 />}

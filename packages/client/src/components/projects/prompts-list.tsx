@@ -1,6 +1,6 @@
 import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
-import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ } from 'lucide-react'
+import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy } from 'lucide-react'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
@@ -359,6 +359,24 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {/* Add Copy button */}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    try {
+                                                        await navigator.clipboard.writeText(prompt.content || '');
+                                                        toast.success('Prompt content copied to clipboard');
+                                                    } catch (err) {
+                                                        console.error('Failed to copy prompt content', err);
+                                                        toast.error('Failed to copy prompt content');
+                                                    }
+                                                }}
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
 
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -383,6 +401,20 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                                     >
                                                         <Pencil className="mr-2 h-4 w-4" />
                                                         <span>Edit Prompt</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={async () => {
+                                                            try {
+                                                                await navigator.clipboard.writeText(prompt.content || '');
+                                                                toast.success('Prompt content copied to clipboard');
+                                                            } catch (err) {
+                                                                console.error('Failed to copy prompt content', err);
+                                                                toast.error('Failed to copy prompt content');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Copy className="mr-2 h-4 w-4" />
+                                                        <span>Copy Content</span>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <AlertDialog>

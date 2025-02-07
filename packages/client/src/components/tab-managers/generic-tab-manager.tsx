@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { InfoTooltip } from '../info-tooltip'
-import { LinkIcon, Plus, Pencil, Trash2, Settings } from 'lucide-react'
+import { LinkIcon, Plus, Pencil, Trash2, Settings, Icon } from 'lucide-react'
+import { tabPlus } from '@lucide/lab'
 import { useState, ReactNode } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
@@ -115,7 +116,7 @@ export function GenericTabManager<T = any>({
     const [dialogEditingTab, setDialogEditingTab] = useState<string | null>(null);
     const [dialogEditingName, setDialogEditingName] = useState('');
 
-    // If parent doesn’t provide a tabOrder, we just use the keys
+    // If parent doesn't provide a tabOrder, we just use the keys
     const fallbackOrder = tabs ? Object.keys(tabs) : [];
     const initialTabOrderProps = tabOrder && tabOrder.length > 0 ? tabOrder : fallbackOrder;
     const finalTabOrder = localOrder ?? initialTabOrderProps;
@@ -247,9 +248,9 @@ export function GenericTabManager<T = any>({
                     </DndContext>
 
                     {/* + button to create new tab */}
-                    <div>
-                        <Button onClick={onCreateTab} size="icon" className="w-6 h-6 ml-2">
-                            <Plus />
+                    <div className='ml-2'>
+                        <Button onClick={onCreateTab} size="icon" className="w-6 h-6 bg-accent/20" variant="link">
+                            <Icon iconNode={tabPlus} />
                         </Button>
                     </div>
                 </TabsList>
@@ -396,8 +397,8 @@ function SortableTab(props: {
             <TabsTrigger
                 value={tabId}
                 className={cn(
-                    'flex items-center gap-2 px-2 data-[state=active]:bg-indigo-100 dark:data-[state=active]:bg-indigo-950/50',
-                    'data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400'
+                    'flex items-center gap-2 px-2 data-[state=active]:bg-accent/20',
+                    'data-[state=active]:text-accent-foreground'
                 )}
                 onDoubleClick={() => setEditingTabName({ id: tabId, name: displayName })}
             >

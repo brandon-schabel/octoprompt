@@ -2,15 +2,14 @@
   "name": "octoprompt",
   "module": "server.ts",
   "type": "module",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "scripts": {
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
     "start": "bun server.ts",
     "dev": "DEV=true bun --watch server.ts",
     "start:prod": "cd dist && ./start.sh",
-    "check-process-id": "sudo lsof -i :3000",
-    "kill-process-id": "sudo kill -9 $(sudo lsof -i :3000 | awk 'NR==2{print $2}')"
+    "check-process-id": "sudo lsof -i :3000"
   },
   "devDependencies": {
     "bun-types": "latest",

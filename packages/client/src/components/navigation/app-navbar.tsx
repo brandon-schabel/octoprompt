@@ -112,8 +112,8 @@ export function AppNavbar() {
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
                 px-3 py-2 rounded-md 
                 ${isOnProjectsRoute
-                                    ? "text-indigo-600 dark:text-blue-300 bg-indigo-50 dark:bg-primary/30"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-blue-300 hover:bg-accent/50 dark:hover:bg-primary/20"
+                                    ? "text-accent-foreground bg-accent/20"
+                                    : "text-foreground hover:text-accent-foreground hover:bg-accent/10"
                                 }`}
                         >
                             <FolderIcon className="w-4 h-4" />
@@ -128,8 +128,8 @@ export function AppNavbar() {
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
                 px-3 py-2 rounded-md 
                 ${isOnChatRoute
-                                    ? "text-indigo-600 dark:text-blue-300 bg-indigo-50 dark:bg-primary/30"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-blue-300 hover:bg-accent/50 dark:hover:bg-primary/20"
+                                    ? "text-accent-foreground bg-accent/20"
+                                    : "text-foreground hover:text-accent-foreground hover:bg-accent/10"
                                 }`}
                         >
                             <MessageSquareIcon className="w-4 h-4" />
@@ -143,8 +143,8 @@ export function AppNavbar() {
                             className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
                 px-3 py-2 rounded-md 
                 ${isOnKeysRoute
-                                    ? "text-indigo-600 dark:text-blue-300 bg-indigo-50 dark:bg-primary/30"
-                                    : "text-foreground hover:text-indigo-600 dark:hover:text-blue-300 hover:bg-accent/50 dark:hover:bg-primary/20"
+                                    ? "text-accent-foreground bg-accent/20"
+                                    : "text-foreground hover:text-accent-foreground hover:bg-accent/10"
                                 }`}
                         >
                             <KeyIcon className="w-4 h-4" />

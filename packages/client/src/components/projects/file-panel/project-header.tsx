@@ -9,9 +9,13 @@ import { Button } from "@/components/ui/button"
 import { ProjectSettingsDialog } from "../project-settings-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Link, useMatches } from "@tanstack/react-router"
-import { useImperativeHandle } from "react"
+import { useState, useEffect } from "react"
+import { Pencil, Trash2, Icon } from "lucide-react"
+import { tab } from '@lucide/lab'
+import { useProjectTabActions } from "@/hooks/use-project-tab-actions"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
 import { useActiveProjectTab } from "@/zustand/selectors"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 
 type ProjectHeaderProps = {
     projectData: Project | null
@@ -31,74 +35,150 @@ const ProjectHeader = function ProjectHeader({
     const openTicketsCount =
         ticketsData?.ticketsWithTasks?.filter((t) => t.status === 'open').length ?? 0
 
-
     if (!projectData) return null
 
+    // NEW: Use our shared hook for project tab actions
+    const { activeProjectTabData, renameTab, deleteTab } = useProjectTabActions()
+    const [isEditing, setIsEditing] = useState(false)
+    const [newTabName, setNewTabName] = useState(activeProjectTabData?.displayName || '')
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+    useEffect(() => {
+        setNewTabName(activeProjectTabData?.displayName || '')
+    }, [activeProjectTabData?.displayName])
+
     return (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 pt-4">
-            <div>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <h2 className="text-lg font-semibold hover:cursor-help">
-                                {projectData?.name}
-                            </h2>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="flex items-center gap-2 max-w-md">
-                            <span className="break-all">{projectData?.path}</span>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-4 w-4 hover:bg-accent hover:text-accent-foreground"
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    navigator.clipboard.writeText(projectData?.path || '')
-                                    toast.success('Project path copied to clipboard')
-                                }}
-                            >
-                                <Copy className="h-3 w-3" />
-                            </Button>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                <span className="hidden md:block text-sm text-muted-foreground">
-                    {projectData?.path.slice(0, 100)}
-                </span>
-            </div>
+        <>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 pt-4">
+                <div>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <h2 className="text-lg font-semibold hover:cursor-help">
+                                    {projectData?.name}
+                                </h2>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="flex items-center gap-2 max-w-md">
+                                <span className="break-all">{projectData?.path}</span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-4 w-4 hover:bg-accent hover:text-accent-foreground"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        navigator.clipboard.writeText(projectData?.path || '')
+                                        toast.success('Project path copied to clipboard')
+                                    }}
+                                >
+                                    <Copy className="h-3 w-3" />
+                                </Button>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <span className="hidden md:block text-sm text-muted-foreground">
+                        {projectData?.path.slice(0, 100)}
+                    </span>
 
-            <div className="flex items-center space-x-4">
-                <ProjectSettingsDialog />
-
-                <Link
-                    to="/tickets"
-                    className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
-                        hover:bg-accent/50 px-3 py-2 rounded-md ${isOnTicketsRoute
-                            ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
-                            : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
-                        }`}
-                >
-                    <TicketIcon className="w-4 h-4" />
-                    Tickets
-                    {openTicketsCount > 0 && (
-                        <Badge variant="count" className="ml-1">
-                            {openTicketsCount}
-                        </Badge>
+                    {/* NEW: Display active tab name with inline editing and delete actions */}
+                    {activeProjectTabData && (
+                        <div className="mt-1 text-[0.8rem] text-muted-foreground group inline-block">
+                            {isEditing ? (
+                                <input
+                                    type="text"
+                                    value={newTabName}
+                                    onChange={(e) => setNewTabName(e.target.value)}
+                                    onBlur={() => {
+                                        renameTab(newTabName)
+                                        setIsEditing(false)
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            renameTab(newTabName)
+                                            setIsEditing(false)
+                                        }
+                                        if (e.key === "Escape") {
+                                            setNewTabName(activeProjectTabData.displayName || '')
+                                            setIsEditing(false)
+                                        }
+                                    }}
+                                    className="text-[0.8rem] border-b border-dotted bg-transparent focus:outline-none"
+                                />
+                            ) : (
+                                <div className="flex items-center space-x-1">
+                                    <Icon iconNode={tab} className="w-3 h-3 text-gray-500" aria-label="Tab Name" />
+                                    <span
+                                        onClick={() => setIsEditing(true)}
+                                        className="cursor-pointer"
+                                        title="Click to rename tab"
+                                    >
+                                        {activeProjectTabData.displayName || "Unnamed Tab"}
+                                    </span>
+                                    <Pencil
+                                        className="invisible group-hover:visible w-3 h-3 text-gray-500 cursor-pointer"
+                                        onClick={() => setIsEditing(true)}
+                                    //   title="Rename tab"
+                                    />
+                                    <button
+                                        onClick={() => setIsDeleteDialogOpen(true)}
+                                        className="invisible group-hover:visible text-red-500"
+                                        title="Delete tab"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     )}
-                </Link>
+                </div>
 
-                <Link
-                    to="/project-summarization"
-                    className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
-                        hover:bg-accent/50 px-3 py-2 rounded-md ${isOnSummarizationRoute
-                            ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
-                            : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
-                        }`}
-                >
-                    <ScanEye className="w-4 h-4" />
-                    Summarization
-                </Link>
+                <div className="flex items-center space-x-4">
+                    <ProjectSettingsDialog />
+
+                    <Link
+                        to="/tickets"
+                        className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                    hover:bg-accent/50 px-3 py-2 rounded-md ${isOnTicketsRoute
+                                ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
+                                : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
+                            }`}
+                    >
+                        <TicketIcon className="w-4 h-4" />
+                        Tickets
+                        {openTicketsCount > 0 && (
+                            <Badge variant="count" className="ml-1">
+                                {openTicketsCount}
+                            </Badge>
+                        )}
+                    </Link>
+
+                    <Link
+                        to="/project-summarization"
+                        className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                    hover:bg-accent/50 px-3 py-2 rounded-md ${isOnSummarizationRoute
+                                ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
+                                : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
+                            }`}
+                    >
+                        <ScanEye className="w-4 h-4" />
+                        Summarization
+                    </Link>
+                </div>
             </div>
-        </div>
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Tab Deletion</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                        Are you sure you want to delete this tab? This action cannot be undone.
+                    </DialogDescription>
+                    <div className="mt-4 flex justify-end space-x-2">
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={() => { deleteTab(); setIsDeleteDialogOpen(false); }}>Delete</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
 

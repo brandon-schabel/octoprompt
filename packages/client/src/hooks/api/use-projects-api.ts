@@ -51,7 +51,7 @@ const PROJECT_KEYS = {
         [...PROJECT_KEYS.all, 'file-summaries', projectId] as const,
 } as const;
 
-const PROJECT_FILES_KEYS = {
+export const PROJECT_FILES_KEYS = {
     all: ['project-files'] as const,
     lists: () => [...PROJECT_FILES_KEYS.all, 'list'] as const,
     list: (projectId: string) => [...PROJECT_FILES_KEYS.lists(), { projectId }] as const,

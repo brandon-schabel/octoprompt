@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Edit, Save, XCircle } from 'lucide-react'
+import { Edit, Save, XCircle, Copy, FileText, FileCode } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { Textarea } from '@/components/ui/textarea'
@@ -9,7 +9,8 @@ import { ProjectFile } from 'shared/schema'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
-import { useSettingsField, useThemeSettings } from '@/zustand/zustand-utility-hooks'
+import { useThemeSettings } from '@/zustand/zustand-utility-hooks'
+import { toast } from 'sonner'
 
 type FileViewerDialogProps = {
     open: boolean
@@ -70,6 +71,28 @@ export function FileViewerDialog({
         setIsEditingFile(false)
     }
 
+    const copyContent = async () => {
+        const content = viewedFile?.content || markdownText || ''
+        try {
+            await navigator.clipboard.writeText(content)
+            toast.success('Content copied to clipboard')
+        } catch (err) {
+            console.error('Failed to copy content', err)
+            toast.error('Failed to copy content')
+        }
+    }
+
+    const copyPath = async (fullPath: boolean = false) => {
+        if (!viewedFile?.path) return
+        try {
+            const path = fullPath ? `${window.location.origin}/${viewedFile.path}` : viewedFile.path
+            await navigator.clipboard.writeText(path)
+            toast.success(`${fullPath ? 'Full' : 'Relative'} path copied to clipboard`)
+        } catch (err) {
+            console.error('Failed to copy path', err)
+            toast.error('Failed to copy path')
+        }
+    }
 
     if (!viewedFile && !markdownText) return null
 
@@ -77,7 +100,42 @@ export function FileViewerDialog({
         <Dialog open={open} onOpenChange={(o) => { if (!o) closeFileViewer() }}>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>{viewedFile?.path || 'Text View'}</DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <DialogTitle>{viewedFile?.path || 'Text View'}</DialogTitle>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => copyContent()}
+                                className="flex items-center gap-2"
+                            >
+                                <FileText className="h-4 w-4" />
+                                Copy Content
+                            </Button>
+                            {viewedFile?.path && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyPath(false)}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <FileCode className="h-4 w-4" />
+                                        Copy Path
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyPath(true)}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                        Copy Full Path
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
                     <DialogDescription className="flex items-center justify-between">
                         <span>{isEditingFile ? 'Editing mode' : 'View mode'}</span>
                         {markdownText && !isEditingFile && (

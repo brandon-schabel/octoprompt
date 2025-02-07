@@ -21,9 +21,9 @@
     /* Muted content: a gentle tone */
     --muted: 0 0% 90%;
     --muted-foreground: 0 0% 45%;
-    /* Accent: a soft purple for highlights */
-    --accent: 260 70% 50%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent: a soft teal that complements the primary blue */
+    --accent: 185 45% 55%;
+    --accent-foreground: 0 0% 15%;
     /* Destructive: a clear red */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -65,9 +65,9 @@
     /* Muted content: even lower contrast */
     --muted: 0 0% 10%;
     --muted-foreground: 0 0% 70%;
-    /* Accent: a lighter purple for highlights in dark mode */
-    --accent: 260 70% 65%;
-    --accent-foreground: 0 0% 10%;
+    /* Accent: adjusted for better tab visibility in dark mode */
+    --accent: 230 60% 50%;
+    --accent-foreground: 0 0% 100%;
     /* Destructive: a deeper red */
     --destructive: 0 84% 40%;
     --destructive-foreground: 0 0% 100%;

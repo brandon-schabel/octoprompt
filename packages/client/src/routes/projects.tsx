@@ -80,9 +80,7 @@ function MainProjectsLayout({
         setShowWelcomeDialog(false)
     }
 
-    // Example: ephemeral file viewer
-    const [viewedFile, setViewedFile] = useState<any | null>(null)
-    const closeFileViewer = () => setViewedFile(null)
+
 
     return (
         <div className="flex-1 flex flex-row overflow-hidden">
@@ -90,7 +88,7 @@ function MainProjectsLayout({
             <FilePanel
                 ref={filePanelRef}
                 className="w-3/5"
-                onFileViewerOpen={setViewedFile}
+
             />
 
             {/* Right: PromptOverviewPanel (pulls data & selectedFiles from hooks) */}
@@ -106,11 +104,7 @@ function MainProjectsLayout({
             />
 
             {/* Global file viewer modal */}
-            <FileViewerDialog
-                open={!!viewedFile}
-                viewedFile={viewedFile}
-                onClose={closeFileViewer}
-            />
+         
         </div>
     )
 }

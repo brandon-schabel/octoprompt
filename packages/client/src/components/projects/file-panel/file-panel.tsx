@@ -19,12 +19,12 @@ export type FilePanelRef = {
 type FilePanelProps = {
     className?: string
     /** Called when user wants to open a file in the "global" viewer modal. */
-    onFileViewerOpen?: (file: ProjectFile) => void
+    
 }
 
 // TODO: invalidate project files when ai file editor is used (to refresh after it changes files)
 export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
-    function FilePanel({ className, onFileViewerOpen }, ref) {
+    function FilePanel({ className }, ref) {
         // If not passed in, get from store
         const { selectedProjectId: projectId } = useActiveProjectTab()
         const { data } = useGetProject(projectId ?? '')
@@ -98,7 +98,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
                                 selectedFilesListRef,
                             }}
                             allowSpacebarToSelect={allowSpacebarToSelect}
-                            onFileViewerOpen={onFileViewerOpen}
+                            
                         />
                     </div>
                 </div>
