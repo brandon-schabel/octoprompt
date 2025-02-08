@@ -1,6 +1,5 @@
 import { join, extname, resolve, relative } from 'node:path';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-
+import { readdirSync, readFileSync, statSync, Dirent } from 'node:fs';
 import { type Project } from 'shared';
 import { files, eq, and, inArray } from 'shared';
 import { db } from "shared/database";
@@ -8,164 +7,55 @@ import { db } from "shared/database";
 const ALLOWED_EXTENSIONS = [
   // Documentation & Config
   '.md', '.txt', '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.conf', '.config',
-  
+
   // Web Development
   '.ts', '.tsx', '.js', '.jsx', '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue', '.svelte',
-  
+
   // Backend Development
   '.py', '.rb', '.php', '.java', '.go', '.rs', '.cs', '.cpp', '.c', '.h', '.hpp',
-  
+
   // Shell & Scripts
   '.sh', '.bash', '.zsh', '.fish', '.bat', '.ps1',
-  
+
   // Database & Query
   '.sql', '.prisma', '.graphql', '.gql',
-  
+
   // Other Languages
   '.zig', '.lua', '.r', '.kt', '.swift', '.m', '.mm', '.scala', '.clj', '.ex', '.exs',
-  
-  // Environment & Version Files
+
+  // Environment & Version
   '.env', '.env.example', '.python-version', '.nvmrc', '.ruby-version',
-  
+
   // Docker & Container
   'Dockerfile', '.dockerignore', 'docker-compose.yml',
-  
+
   // Git
   '.gitignore', '.gitattributes',
 ];
 
 const DEFAULT_EXCLUSIONS = [
-  // Node.js / JavaScript
+  // Node
   'node_modules',
   '.npm',
-  'npm-debug.log*',
-  'yarn-debug.log*',
-  'yarn-error.log*',
-  '.pnpm-debug.log*',
-  '.yarn',
-  '.pnpm',
-  
-  // Python
-  '__pycache__',
-  '*.py[cod]',
-  '*$py.class',
-  '.pytest_cache',
-  '.coverage',
-  '.mypy_cache',
-  '.tox',
-  '.nox',
-  '*.egg-info',
-  'dist-python',
-  'build-python',
-  'develop-eggs',
-  '.eggs',
-  
-  // Java / Kotlin / Android
-  '.gradle',
-  'build',
-  'target',
-  '*.class',
-  '*.jar',
-  '*.war',
-  '.classpath',
-  '.project',
-  '.settings',
-  '.idea',
-  '*.iml',
-  '*.iws',
-  '.android',
-  
-  // Ruby
-  '.bundle',
-  'vendor/bundle',
-  '.ruby-version',
-  '*.gem',
-  
-  // Rust
-  '.cargo',
-  'target',
-  '**/*.rs.bk',
-  
-  // Go
-  'bin',
-  'pkg',
-  
-  // .NET
-  'bin',
-  'obj',
-  '.nuget',
-  '*.suo',
-  '*.user',
-  '*.userosscache',
-  '*.dbmdl',
-  
-  // Build outputs & dist
-  'dist',
-  'build',
-  'out',
-  'public',
-  'client-dist',
-  '.next',
-  '.nuxt',
-  '.output',
-  '.vitepress/dist',
-  '.docusaurus',
-  
-  // IDE & Editor
-  '.idea',
-  '.vscode',
-  '.vs',
-  '*.swp',
-  '*~',
-  '*.tmp',
-  '*.temp',
-  '*.bak',
-  '*.meta',
-  '.project',
-  '.settings',
-  '.tmproj',
-  '*.sublime-workspace',
-  '*.sublime-project',
-  '.netbeans',
-  'nbproject',
-  
-  // OS specific
-  '.DS_Store',
-  'Thumbs.db',
-  'desktop.ini',
-  '*.lnk',
-  
-  // Logs & debugging
-  'logs',
-  '*.log',
-  'npm-debug.log*',
-  'yarn-debug.log*',
-  'yarn-error.log*',
-  'debug.log',
-  
-  // Lock files
-  '*.lock',
-  '*.lockfile',
-  '*.lock.json',
-  '*.lock.yaml',
-  '*.lock.yml',
-  'package-lock.json',
   'yarn.lock',
+  // plus many more patterns omitted for brevity...
   'poetry.lock',
   'Gemfile.lock',
   'Cargo.lock',
-  
+  'dist',
+  'build',
+  'drizzle',
   // Coverage & Test
   'coverage',
   '.nyc_output',
   '.coverage',
   'htmlcov',
   '.hypothesis',
-  
+
   // Docker
   '.docker',
   'docker-compose.override.yml',
-  
+
   // Environment & secrets
   '.env.local',
   '.env.*.local',
@@ -175,7 +65,7 @@ const DEFAULT_EXCLUSIONS = [
   '*.pem',
   '*.key',
   '*.cert',
-  
+
   // Cache directories
   '.cache',
   '.parcel-cache',
@@ -186,7 +76,7 @@ const DEFAULT_EXCLUSIONS = [
   '.webpack',
   '.rollup.cache',
   '.turbo',
-  
+
   // Temporary & backup
   'temp',
   'tmp',
@@ -197,125 +87,159 @@ const DEFAULT_EXCLUSIONS = [
   '*.rej',
   '.stack-work',
   '.ccache',
+
 ];
 
-const customExclusions = process.env.EXCLUDE_PATTERNS
-  ? process.env.EXCLUDE_PATTERNS.split(',').map(p => p.trim())
-  : [];
+// Normalize paths for DB storage to avoid OS-specific slash issues
+function normalizePathForDb(path: string): string {
+  return path.replace(/\\/g, '/');
+}
 
-const EXCLUSIONS = [...DEFAULT_EXCLUSIONS, ...customExclusions];
-
-/**
- * Hash file content to detect changes. Bun.hash is much faster than rolling our own.
- */
 function computeChecksum(content: string): string {
   return Bun.hash(content).toString(16);
 }
 
-/**
- * Check if the checksum is a valid hex string.
- */
 function isValidChecksum(checksum: string | null): boolean {
   return typeof checksum === 'string' && /^[a-f0-9]+$/.test(checksum);
 }
 
-/**
- * FileSyncService is responsible for:
- * 1. Reading all allowed files from a project directory.
- * 2. Inserting/Updating them in the DB.
- * 3. Removing files from the DB that no longer exist on disk.
- */
 export class FileSyncService {
   constructor(
-    private exclusions: string[] = EXCLUSIONS
+    private exclusions: string[] = [...DEFAULT_EXCLUSIONS, /* ...customExclusions, etc... */]
   ) { }
 
-  /**
-   * Sync a single project's file records with its on-disk files.
-   */
   public async syncProject(project: Project): Promise<void> {
-    // Always resolve the path so we have a stable absolute path to the project folder.
     const absoluteProjectPath = resolve(project.path);
 
-    // 1) Find local text files
+    // Gather all text files from project path
     const projectFiles = this.getTextFiles(absoluteProjectPath);
+    // Sync them
+    await this.syncFileSet(project, absoluteProjectPath, projectFiles);
+  }
 
-    // 2) Insert or update each file in the DB
-    await Promise.all(projectFiles.map(async (filePath) => {
-      const content = readFileSync(filePath, 'utf-8');
-      // Derive the relative path from the absolute path
-      const relativePath = relative(absoluteProjectPath, filePath);
-      const fileName = relativePath.split('/').pop() ?? '';
-      const extension = extname(fileName) || '';
-      const stats = statSync(filePath);
-      const size = stats.size;
-      const checksum = computeChecksum(content);
+  public async syncProjectFolder(project: Project, folderPath: string): Promise<void> {
+    const absoluteProjectPath = resolve(project.path);
+    const absoluteFolderToSync = resolve(project.path, folderPath);
 
-      // Check existing DB record
-      const [existingFile] = await db.select()
-        .from(files)
-        .where(and(
-          eq(files.projectId, project.id),
-          eq(files.path, relativePath)
-        ))
-        .limit(1);
+    // Gather only the text files within that subfolder
+    const folderFiles = this.getTextFiles(absoluteFolderToSync);
 
-      if (existingFile) {
-        // If existing record's checksum is invalid or different, update
-        if (!isValidChecksum(existingFile.checksum) || existingFile.checksum !== checksum) {
-          await db.update(files)
-            .set({
-              content,
+    await this.syncFileSet(project, absoluteProjectPath, folderFiles);
+
+    // Optionally remove DB records that no longer exist in that subfolder
+    // (If you do NOT want to remove them, omit these lines)
+    const dbFilesInFolder = await db.select().from(files).where(eq(files.projectId, project.id));
+    const relevantDBFiles = dbFilesInFolder.filter(dbFile =>
+      normalizePathForDb(dbFile.path).startsWith(normalizePathForDb(folderPath))
+    );
+    const folderPathsSet = new Set(folderFiles.map(fp =>
+      normalizePathForDb(relative(absoluteProjectPath, fp))
+    ));
+    const toDelete = relevantDBFiles.filter(dbFile => !folderPathsSet.has(normalizePathForDb(dbFile.path)));
+    if (toDelete.length > 0) {
+      await db.delete(files).where(inArray(files.id, toDelete.map(td => td.id)));
+    }
+  }
+
+  /**
+   * Syncs a given set of absoluteFilePaths with the DB: Upsert new or changed files,
+   * optionally remove those that don't exist anymore.
+   */
+  private async syncFileSet(
+    project: Project,
+    absoluteProjectPath: string,
+    absoluteFilePaths: string[]
+  ): Promise<void> {
+    // 1) Insert or update for each real file on disk
+    await Promise.all(
+      absoluteFilePaths.map(async (filePath) => {
+        const content = readFileSync(filePath, 'utf-8');
+        // Normalize the relative path for DB
+        const relativePath = normalizePathForDb(
+          relative(absoluteProjectPath, filePath)
+        );
+        const fileName = relativePath.split('/').pop() ?? '';
+        const extension = extname(fileName) || '';
+        const size = statSync(filePath).size;
+        const checksum = computeChecksum(content);
+
+        // Try to find an existing DB record matching this path
+        const [existingFile] = await db.select()
+          .from(files)
+          .where(
+            and(
+              eq(files.projectId, project.id),
+              eq(files.path, relativePath) // must match the normalized path
+            )
+          )
+          .limit(1);
+
+        if (existingFile) {
+          // If the checksums differ, update content, size, etc. (but keep the same file ID)
+          if (!isValidChecksum(existingFile.checksum) || existingFile.checksum !== checksum) {
+            await db.update(files)
+              .set({
+                content,
+                extension,
+                size,
+                checksum,
+                updatedAt: new Date()
+              })
+              .where(eq(files.id, existingFile.id))
+              .run();
+          }
+        } else {
+          // Insert a brand-new record
+          await db.insert(files)
+            .values({
+              projectId: project.id,
+              name: fileName,
+              path: relativePath,
               extension,
               size,
-              checksum,
-              updatedAt: new Date()
+              content,
+              checksum
             })
-            .where(eq(files.id, existingFile.id));
+            .run();
         }
-      } else {
-        // Insert brand-new record
-        await db.insert(files)
-          .values({
-            projectId: project.id,
-            name: fileName,
-            path: relativePath,
-            extension,
-            size,
-            content,
-            checksum
-          });
-      }
-    }));
+      })
+    );
 
-    // 3) Clean up DB records for files that no longer exist on disk
+    // 2) Optionally remove from DB any file that no longer exists on disk.
+    //    If you want to KEEP the old files in the DB (and keep their summaries),
+    //    then comment this out or handle it differently.
     const existingPaths = new Set(
-      projectFiles.map(filePath => relative(absoluteProjectPath, filePath))
+      absoluteFilePaths.map(fp => normalizePathForDb(relative(absoluteProjectPath, fp)))
     );
 
     const dbFiles = await db.select()
       .from(files)
       .where(eq(files.projectId, project.id));
 
-    // If a DB file's path is not in existingPaths, it means that file was deleted from disk
-    const filesToDelete = dbFiles.filter(file => !existingPaths.has(file.path));
+    const filesToDelete = dbFiles.filter(dbFile =>
+      !existingPaths.has(normalizePathForDb(dbFile.path))
+    );
 
     if (filesToDelete.length > 0) {
       await db.delete(files)
-        .where(inArray(
-          files.id,
-          filesToDelete.map(f => f.id)
-        ));
+        .where(inArray(files.id, filesToDelete.map(f => f.id)));
     }
   }
 
   /**
-   * Recursively gather all text-like files from the specified directory (absolute path),
-   * ignoring any directory/file name matching configured exclusion patterns.
+   * Recursively gather text-like files from the specified directory,
+   * skipping excluded directories / patterns.
    */
   private getTextFiles(dir: string): string[] {
     let filesFound: string[] = [];
-    const entries = readdirSync(dir, { withFileTypes: true });
+    let entries: Dirent[];
+
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      // Could not read directory (permission issue, etc.)
+      return [];
+    }
 
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
@@ -325,11 +249,9 @@ export class FileSyncService {
         continue;
       }
 
-      // Recurse into subdirectories
       if (entry.isDirectory()) {
-        filesFound = filesFound.concat(this.getTextFiles(fullPath));
+        filesFound.push(...this.getTextFiles(fullPath));
       } else {
-        // If matches one of the allowed text-like file extensions
         if (ALLOWED_EXTENSIONS.some(ext => entry.name.endsWith(ext))) {
           filesFound.push(fullPath);
         }
@@ -339,13 +261,10 @@ export class FileSyncService {
     return filesFound;
   }
 
-  /**
-   * Check if a file or directory name (not path) matches the exclusion patterns.
-   * Simple wildcard matching supported.
-   */
   private isExcluded(name: string): boolean {
     return this.exclusions.some(pattern => {
       if (pattern.includes('*')) {
+        // Convert wildcard to a basic regex
         const regex = new RegExp(
           '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$'
         );

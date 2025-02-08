@@ -1,3 +1,4 @@
+
 import {
     projects,
     type Project,
@@ -14,6 +15,9 @@ import { FileSummaryService } from './file-services/file-summary-service';
 import { db } from "shared/database";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 
+/**
+ * We add a new method `syncProjectFolder(...)` to handle partial syncing (a subdir).
+ */
 
 const fileSyncService = new FileSyncService();
 const fileSummaryService = new FileSummaryService();
@@ -71,15 +75,6 @@ export class ProjectService {
 
         await fileSyncService.syncProject(project);
 
-        const allFiles = await this.getProjectFiles(projectId);
-        if (!allFiles) {
-            return {
-                success: false,
-                message: 'Failed to retrieve project files',
-            };
-        }
-
-        // Optionally auto-summarize here if desired.
         return {
             success: true,
             message: 'Project synchronized successfully',
@@ -87,22 +82,21 @@ export class ProjectService {
     }
 
     /**
-     * Force re-summarize every file in the project.
+     * NEW: sync just a specific subfolder. We do a quick partial sync, ignoring other directories.
      */
-    async resummarizeAllFiles(projectId: string) {
+    async syncProjectFolder(
+        projectId: string,
+        folderPath: string
+    ): Promise<{ success: boolean; message?: string } | null> {
         const project = await this.getProjectById(projectId);
-        if (!project) {
-            throw new Error('Project not found');
-        }
-        await fileSyncService.syncProject(project);
+        if (!project) return null;
 
-        const allFiles = await this.getProjectFiles(projectId);
-        if (!allFiles) {
-            throw new Error('No files found for project');
-        }
+        await fileSyncService.syncProjectFolder(project, folderPath);
 
-        const globalState = await websocketStateAdapter.getState()
-        await fileSummaryService.forceSummarizeFiles(projectId, allFiles, globalState);
+        return {
+            success: true,
+            message: `Partial sync for folder "${folderPath}" complete`,
+        };
     }
 
     async getProjectFiles(projectId: string): Promise<ProjectFile[] | null> {
@@ -133,9 +127,22 @@ export class ProjectService {
         return updatedFile;
     }
 
-    /**
-     * Force re-summarize a selected set of files by ID, ignoring last update checks.
-     */
+    async resummarizeAllFiles(projectId: string) {
+        const project = await this.getProjectById(projectId);
+        if (!project) {
+            throw new Error('Project not found');
+        }
+        await fileSyncService.syncProject(project);
+
+        const allFiles = await this.getProjectFiles(projectId);
+        if (!allFiles) {
+            throw new Error('No files found for project');
+        }
+
+        const globalState = await websocketStateAdapter.getState();
+        await fileSummaryService.forceSummarizeFiles(projectId, allFiles, globalState);
+    }
+
     async forceResummarizeSelectedFiles(projectId: string, fileIds: string[]) {
         const selectedFiles = await db.select()
             .from(files)
@@ -162,9 +169,6 @@ export class ProjectService {
         };
     }
 
-    /**
-     * Summarize a selected set of files by ID.
-     */
     async summarizeSelectedFiles(projectId: string, fileIds: string[]) {
         const selectedFiles = await db.select()
             .from(files)
@@ -180,7 +184,6 @@ export class ProjectService {
         }
 
         const globalState = await websocketStateAdapter.getState();
-        console.log(`[ProjectService] Global state: ${JSON.stringify(globalState, null, 2)}`);
         const result = await fileSummaryService.summarizeFiles(
             projectId,
             selectedFiles,
@@ -192,9 +195,6 @@ export class ProjectService {
         };
     }
 
-    /**
-     * Remove summaries from selected files by ID.
-     */
     async removeSummariesFromFiles(projectId: string, fileIds: string[]) {
         const result = await db.update(files)
             .set({

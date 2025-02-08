@@ -1,3 +1,4 @@
+
 import { router } from "server-router";
 import { ProjectService } from "@/services/project-service";
 import { json } from '@bnk/router';
@@ -5,6 +6,14 @@ import { json } from '@bnk/router';
 import { projectsApiValidation, ApiError, buildCombinedFileSummaries } from "shared";
 import { z } from "zod";
 import { FileSummaryService } from "@/services/file-services/file-summary-service";
+
+/**
+ *  NEW: Add an optional param 'folder' to let clients partially refresh a subfolder
+ *       or the entire project if `folder` is not provided.
+ */
+const refreshQuerySchema = z.object({
+    folder: z.string().optional()
+});
 
 const projectService = new ProjectService();
 const fileSummaryService = new FileSummaryService();
@@ -61,9 +70,17 @@ router.post("/api/projects/:projectId/sync", {
     return json(result);
 });
 
+/**
+ * IMPORTANT: We call syncProject before returning the DB’s file list.
+ * So on every page load, you’ll get an up-to-date list (based on file checksums).
+ */
 router.get("/api/projects/:projectId/files", {
     validation: projectsApiValidation.getFiles
 }, async (_, { params }) => {
+    // 1) Force a check of all files for that project
+    await projectService.syncProject(params.projectId);
+
+    // 2) Then return the fresh DB records
     const files = await projectService.getProjectFiles(params.projectId);
     if (!files) {
         throw new ApiError("Project not found", 404, "NOT_FOUND");
@@ -72,8 +89,37 @@ router.get("/api/projects/:projectId/files", {
 });
 
 /**
- * Updated: no longer referencing fileSummaries table. Now uses combined fields in `files`.
+ *  Refresh route. If ?folder=/someSubDir is given, do partial sync.
+ *  Otherwise sync entire project. Then return updated file list.
  */
+router.post("/api/projects/:projectId/refresh", {
+    validation: {
+        params: projectsApiValidation.sync.params,
+        query: refreshQuerySchema
+    }
+}, async (_, { params, query }) => {
+    const { projectId } = params;
+    const { folder } = query;
+
+    // If folder is provided, do partial sync. Otherwise full sync.
+    const refreshResult = folder
+        ? await projectService.syncProjectFolder(projectId, folder)
+        : await projectService.syncProject(projectId);
+
+    if (!refreshResult) {
+        throw new ApiError("Project not found or folder invalid", 404, "NOT_FOUND");
+    }
+
+    // Re-fetch updated DB records
+    const files = await projectService.getProjectFiles(projectId);
+    if (!files) {
+        throw new ApiError("Project not found", 404, "NOT_FOUND");
+    }
+
+    return json({ success: true, files });
+});
+
+// Summaries
 router.get("/api/projects/:projectId/file-summaries", {
     validation: {
         params: projectsApiValidation.getFiles.params,
@@ -155,7 +201,6 @@ router.post("/api/projects/:projectId/remove-summaries", {
 router.get('/api/projects/:projectId/summary', {
     validation: projectsApiValidation.getOrDelete
 }, async (_, { params }) => {
-
     try {
         // const summary = await projectSummaryService.generateProjectSummaryMemory(params.projectId)
         const projectFiles = await projectService.getProjectFiles(params.projectId)

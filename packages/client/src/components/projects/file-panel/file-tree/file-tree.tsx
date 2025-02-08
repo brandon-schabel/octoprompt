@@ -18,6 +18,7 @@ import {
     Code,
     Copy,
     Wand2,
+    RefreshCw,
 } from "lucide-react";
 import clsx from "clsx";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ import {
     ContextMenu,
     ContextMenuContent,
     ContextMenuItem,
+    ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 
@@ -47,7 +49,9 @@ import { getEditorUrl } from "@/lib/editor-urls";
 import { useActiveProjectTab } from "@/zustand/selectors";
 import { ProjectFile } from "shared/schema";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
-
+import { useApi } from "@/hooks/use-api";
+import { useQueryClient } from "@tanstack/react-query";
+import { PROJECT_FILES_KEYS, useRefreshProject } from "@/hooks/api/use-projects-api";
 
 /**
  * The user's preferred external editor.
@@ -56,7 +60,7 @@ export type EditorType = "vscode" | "webstorm" | "cursor" | "other";
 
 type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 
-type VisibleItem = {
+export type VisibleItem = {
     path: string;
     name: string;
     node: FileNode;
@@ -64,7 +68,7 @@ type VisibleItem = {
     parentPath?: string;
 };
 
-type FileTreeProps = {
+export type FileTreeProps = {
     root: Record<string, FileNode>;
     onViewFile?: (file: ProjectFile) => void;
     projectRoot: string;
@@ -102,23 +106,22 @@ export function buildTreeStructure(node: FileNode, indent = ""): string {
     return lines.join("\n");
 }
 
+interface FileTreeNodeRowProps {
+    item: VisibleItem;
+    isOpen: boolean;
+    isFocused: boolean;
+    onFocus: () => void;
+    onToggleOpen: () => void;
+    onViewFile?: (file: ProjectFile) => void;
+    projectRoot: string;
+    onRequestAIFileChange?: (filePath: string) => void;
+}
+
 /**
  * Single row in the file tree (folder or file).
  * ForwardRef so we can focus DOM nodes from parent.
  */
-const FileTreeNodeRow = forwardRef<
-    HTMLDivElement,
-    {
-        item: VisibleItem;
-        isOpen: boolean;
-        isFocused: boolean;
-        onFocus: () => void;
-        onToggleOpen: () => void;
-        onViewFile?: (file: ProjectFile) => void;
-        projectRoot: string;
-        onRequestAIFileChange?: (filePath: string) => void;
-    }
->(function FileTreeNodeRow(
+const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(function FileTreeNodeRow(
     {
         item,
         isOpen,
@@ -131,11 +134,13 @@ const FileTreeNodeRow = forwardRef<
     },
     ref
 ) {
- 
-    const { tabData: projectTabState } = useActiveProjectTab();
-    const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+    const { tabData: projectTabState, selectedProjectId } = useActiveProjectTab();
+    const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
     const resolveImports = projectTabState?.resolveImports ?? false;
     const preferredEditor = projectTabState?.preferredEditor ?? "vscode";
+
+    // New refresh functionality
+    const { mutate: refreshProject } = useRefreshProject(selectedProjectId ?? "");
 
     const isFolder = item.node._folder === true;
 
@@ -143,8 +148,7 @@ const FileTreeNodeRow = forwardRef<
         ? areAllFolderFilesSelected(item.node, selectedFiles)
         : selectedFiles.includes(item.node.file?.id ?? "");
 
-    const folderIndeterminate =
-        isFolder && isFolderPartiallySelected(item.node, selectedFiles);
+    const folderIndeterminate = isFolder && isFolderPartiallySelected(item.node, selectedFiles);
 
     const handleToggleFile = useCallback(
         (fileId: string) => {
@@ -159,7 +163,7 @@ const FileTreeNodeRow = forwardRef<
                 )
             );
         },
-        [selectFiles, resolveImports, projectFileMap]
+        [selectFiles, resolveImports, projectFileMap, selectedFiles]
     );
 
     const handleToggleFolder = useCallback(
@@ -169,15 +173,9 @@ const FileTreeNodeRow = forwardRef<
         [selectFiles, selectedFiles]
     );
 
-    // Scroll newly-focused items into view with smooth behavior
     useEffect(() => {
         if (isFocused && ref && "current" in ref && ref.current) {
-            ref.current.scrollIntoView({
-                block: "nearest",
-                inline: "nearest",
-                behavior: "smooth",
-            });
-            // ref.current.focus(); // Usually safe to ensure focus is set
+            ref.current.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
         }
     }, [isFocused, ref]);
 
@@ -221,7 +219,7 @@ const FileTreeNodeRow = forwardRef<
                     onKeyDown={handleKeyDown}
                 >
                     <div className="flex items-center hover:bg-muted/50 rounded-sm gap-1 group">
-                        {item.node._folder ? (
+                        {isFolder ? (
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -293,7 +291,7 @@ const FileTreeNodeRow = forwardRef<
                             </div>
                         )}
 
-                        {/* Inline icons: Eye, Open in Editor, Copy contents */}
+                        {/* Inline icons for single file */}
                         {!isFolder && item.node.file && (
                             <>
                                 {onViewFile && (
@@ -365,29 +363,27 @@ const FileTreeNodeRow = forwardRef<
             </ContextMenuTrigger>
 
             <ContextMenuContent>
-                {/* Copy relative path */}
-                <ContextMenuItem
-                    onClick={() => {
-                        if (item.node.file?.path) {
-                            void copyFilePath(item.node.file.path);
-                        }
-                    }}
-                >
-                    Copy Relative Path
-                </ContextMenuItem>
+                {/* File-specific context menu items */}
+                {!isFolder && item.node.file?.path && (
+                    <>
+                        <ContextMenuItem
+                            onClick={async () => {
+                                await copyFilePath(item.node.file!.path);
+                            }}
+                        >
+                            Copy Relative Path
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                            onClick={async () => {
+                                await copyFilePath(`${projectRoot}/${item.node.file!.path}`);
+                            }}
+                        >
+                            Copy Absolute Path
+                        </ContextMenuItem>
+                    </>
+                )}
 
-                {/* Copy absolute path */}
-                <ContextMenuItem
-                    onClick={() => {
-                        if (item.node.file?.path) {
-                            void copyFilePath(`${projectRoot}/${item.node.file.path}`);
-                        }
-                    }}
-                >
-                    Copy Absolute Path
-                </ContextMenuItem>
-
-                {/* Copy entire contents (file or folder) */}
+                {/* Copy contents for both files and folders */}
                 <ContextMenuItem
                     onClick={async () => {
                         const content = buildNodeContent(item.node, projectFileMap, isFolder);
@@ -397,7 +393,9 @@ const FileTreeNodeRow = forwardRef<
                                 `${isFolder ? "Folder" : "File"} contents copied to clipboard`
                             );
                         } catch (err) {
-                            toast.error(`Failed to copy ${isFolder ? "folder" : "file"} contents`);
+                            toast.error(
+                                `Failed to copy ${isFolder ? "folder" : "file"} contents`
+                            );
                             console.error(err);
                         }
                     }}
@@ -405,7 +403,7 @@ const FileTreeNodeRow = forwardRef<
                     Copy {isFolder ? "Folder" : "File"} Contents
                 </ContextMenuItem>
 
-                {/* Copy folder tree (only visible if isFolder) */}
+                {/* Folder-specific context menu items */}
                 {isFolder && (
                     <ContextMenuItem
                         onClick={async () => {
@@ -418,11 +416,8 @@ const FileTreeNodeRow = forwardRef<
                     </ContextMenuItem>
                 )}
 
-     
-
-                {/* "Modify with AI..." (only if file) */}
+                {/* "Modify with AI..." for files */}
                 {!isFolder && item.node.file?.path && onRequestAIFileChange && (
-
                     <ContextMenuItem
                         onClick={() => {
                             onRequestAIFileChange(item.node.file!.path);
@@ -430,6 +425,21 @@ const FileTreeNodeRow = forwardRef<
                     >
                         Modify with AI...
                     </ContextMenuItem>
+                )}
+
+                {/* Refresh options for folders */}
+                {isFolder && (
+                    <>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={() => refreshProject({ folder: item.path })}>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Refresh This Folder
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => refreshProject({})}>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Refresh Entire Project
+                        </ContextMenuItem>
+                    </>
                 )}
             </ContextMenuContent>
         </ContextMenu>
@@ -469,7 +479,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
     const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [focusedIndex, setFocusedIndex] = useState<number>(-1);
     const [lastFocusedIndex, setLastFocusedIndex] = useState<number>(-1);
-    const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+    const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
 
     // Track whether the container is "focused" to enable/disable certain hotkeys
     const [isFocused, setIsFocused] = useState(false);
@@ -483,7 +493,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                     setFocusedIndex(index);
                 }
                 // NOTE: If no index is provided, do nothing.
-                // This prevents auto-focusing the top item and resetting scroll.
             },
         }),
         []
@@ -516,7 +525,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
 
             entries.forEach(([name, node]) => {
                 const currentPath = parentPath ? `${parentPath}/${name}` : name;
-                // Skip if we've seen this path already:
                 if (visitedPaths.has(currentPath)) return;
                 visitedPaths.add(currentPath);
 
@@ -630,7 +638,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                     focusFirstChild(item.path);
                 } else {
                     toggleOpen(item.path);
-                    // After toggling open, re-check the new child index
                     setTimeout(() => {
                         const newItems = buildVisibleItems();
                         const childIndex = newItems.findIndex((i) => i.parentPath === item.path);
@@ -640,7 +647,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                     }, 0);
                 }
             } else {
-                // If it's a file, user might want to navigate to next UI panel
                 onNavigateRight?.();
             }
         },
@@ -709,7 +715,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleTreeKeyDown}
             onClick={(e) => {
-                // Focus container if user clicks blank space in the container
                 if (e.target === e.currentTarget) {
                     e.currentTarget.focus();
                 }

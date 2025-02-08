@@ -221,6 +221,9 @@ export const useGetProjectFiles = (projectId: string) => {
         queryKey: PROJECT_FILES_KEYS.list(projectId),
         queryFn: () => getProjectFiles(api, projectId),
         enabled: !!projectId,
+        // NEW: re-fetch whenever window regains focus
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
     });
 };
 
@@ -249,7 +252,7 @@ export const useSummarizeProjectFiles = (projectId: string) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ fileIds, force }: { fileIds: string[], force?: boolean }) => {            
+        mutationFn: ({ fileIds, force }: { fileIds: string[], force?: boolean }) => {
             return summarizeProjectFiles(api, projectId, fileIds, force);
         },
         onSuccess: () => {
@@ -317,3 +320,30 @@ export const useRemoveSummariesFromFiles = (projectId: string) => {
         onError: commonErrorHandler
     });
 };
+
+
+
+export type RefreshProjectResponse = {
+    success: boolean;
+    files?: ProjectFile[];
+    message?: string;
+};
+
+
+export function useRefreshProject(projectId: string) {
+    const { api } = useApi();
+    const queryClient = useQueryClient();
+
+    return useMutation<RefreshProjectResponse, Error, { folder?: string }>({
+        mutationFn: async ({ folder }) => {
+            const url = folder
+                ? `/api/projects/${projectId}/refresh?folder=${encodeURIComponent(folder)}`
+                : `/api/projects/${projectId}/refresh`;
+            const response = await api.request(url, { method: "POST" });
+            return response.json() as Promise<RefreshProjectResponse>;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
+        },
+    });
+}

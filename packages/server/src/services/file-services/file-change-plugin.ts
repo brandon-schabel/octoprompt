@@ -27,28 +27,19 @@ export class FileChangePlugin {
         this.watcher.registerListener({
             onFileChanged: async (event: FileChangeEvent, changedFilePath: string) => {
                 try {
-                    // 1) Always call syncProject, which handles insert/update/remove from DB
+                    // Always re-sync from disk so DB is updated with new content
                     await this.fileSyncService.syncProject(project);
 
-                    // 2) Re-fetch updated list of files from DB
+                    // Summaries
                     const allFiles = await this.projectService.getProjectFiles(project.id);
-                    if (!allFiles) {
-                        console.warn(`[FileChangePlugin] No files returned for project: ${project.id}`);
-                        return;
-                    }
+                    if (!allFiles) return;
 
-                    // 3) Convert the absolute changedFilePath to a relative path
                     const absoluteProjectPath = resolve(project.path);
                     const relativePath = relative(absoluteProjectPath, changedFilePath);
-
-                    // 4) Lookup the DB record for that file’s path
                     const updatedFile = allFiles.find((f) => f.path === relativePath);
                     if (!updatedFile) {
                         return;
                     }
-
-
-                    // 5) Re-run summarization for this single file
                     const globalState = await websocketStateAdapter.getState();
                     await this.summaryService.summarizeFiles(
                         project.id,
@@ -61,7 +52,6 @@ export class FileChangePlugin {
             },
         });
 
-        // Start the actual directory watch
         this.watcher.startWatching({
             directory: project.path,
             ignorePatterns,

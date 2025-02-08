@@ -44,32 +44,29 @@ type FileExplorerProps = {
 export function FileExplorer({
     ref,
     allowSpacebarToSelect,
-
 }: FileExplorerProps) {
     const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
-    const { data: fileData, isLoading: filesLoading, refetch: refetchFiles } = useGetProjectFiles(selectedProjectId || '')
+    /**
+     * The server will do a fresh sync (via "GET /api/projects/:id/files") 
+     * then we store them in React Query's cache.
+     */
+    const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId || '')
     const { data: projectData } = useGetProject(selectedProjectId || '')
     const queryClient = useQueryClient()
 
-    // Example: ephemeral file viewer
     const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
     const closeFileViewer = () => setViewedFile(null)
 
-    // read from store
     const { data: searchByContent = false, mutate: setSearchByContent } =
         useProjectTabField('searchByContent', activeProjectTabId || '')
-
     const { data: preferredEditor = 'vscode' } =
         useProjectTabField('preferredEditor', activeProjectTabId || '')
-
     const { data: resolveImports = false } =
         useProjectTabField('resolveImports', activeProjectTabId || '')
 
-    // local ephemeral search
     const [localFileSearch, setLocalFileSearch] = useState('')
     const debouncedSetFileSearch = useDebounce(setLocalFileSearch, 300)
 
-    // For autocomplete
     const [showAutocomplete, setShowAutocomplete] = useState(false)
     const [autocompleteIndex, setAutocompleteIndex] = useState(-1)
 
@@ -83,33 +80,29 @@ export function FileExplorer({
         setAutocompleteIndex(-1)
     }, [debouncedSetFileSearch])
 
-    // Hook into our local undo/redo manager + global store:
     const {
         selectedFiles,
         selectFiles,
         projectFileMap,
     } = useSelectedFiles()
 
-    // Filter files based on localFileSearch
     const filteredFiles = useMemo(() => {
         if (!fileData?.files) return []
         const trimmed = localFileSearch.trim().toLowerCase()
         if (!trimmed) return fileData.files
-        return fileData.files.filter(f => {
-            if (searchByContent && f.content) {
-                return f.path.toLowerCase().includes(trimmed) || f.content.toLowerCase().includes(trimmed)
-            }
-            return f.path.toLowerCase().includes(trimmed)
-        })
+        if (searchByContent) {
+            return fileData.files.filter(f => {
+                return f.path.toLowerCase().includes(trimmed) ||
+                    f.content?.toLowerCase().includes(trimmed)
+            })
+        }
+        return fileData.files.filter(f => f.path.toLowerCase().includes(trimmed))
     }, [fileData?.files, localFileSearch, searchByContent])
 
-    // Build the actual tree
     const fileTree = useMemo(() => {
         if (!filteredFiles.length) return {}
         return buildFileTree(filteredFiles)
     }, [filteredFiles])
-
-    // Maps for quick lookups
 
     const filteredFilesMap = useMemo(() => {
         const m = new Map<string, ProjectFile>()
@@ -117,12 +110,10 @@ export function FileExplorer({
         return m
     }, [filteredFiles])
 
-    // Autocomplete suggestions
     const suggestions = useMemo(() => filteredFiles.slice(0, 10), [filteredFiles])
 
-    // unify toggling files
     const toggleFileInSelection = useCallback((file: ProjectFile) => {
-        selectFiles((prev) => {
+        selectFiles(prev => {
             if (prev.includes(file.id)) {
                 return prev.filter(id => id !== file.id)
             }
@@ -130,13 +121,11 @@ export function FileExplorer({
         })
     }, [selectFiles])
 
-    // References for click-away logic
     const searchContainerRef = useRef<HTMLDivElement>(null)
     useClickAway(searchContainerRef, () => {
         setShowAutocomplete(false)
         setAutocompleteIndex(-1)
     })
-
 
     const renderMobileSelectedFilesDrawerButton = () => {
         const trigger = (
@@ -147,21 +136,17 @@ export function FileExplorer({
                 </Badge>
             </Button>
         )
-
         return (
             <SelectedFilesDrawer
                 selectedFiles={selectedFiles}
                 fileMap={projectFileMap}
-                onRemoveFile={() => {
-                    // We'll handle removal inside the drawer
-                }}
+                onRemoveFile={() => { }}
                 trigger={trigger}
                 projectTabId={activeProjectTabId ?? ''}
             />
         )
     }
 
-    // Add handler for AI file change requests
     const handleRequestAIFileChange = (filePath: string) => {
         const file = fileData?.files?.find(f => f.path === filePath)
         if (file) {
@@ -170,7 +155,6 @@ export function FileExplorer({
         }
     }
 
-    // UI
     return (
         <div className="flex flex-col space-y-4 h-full">
             <FileViewerDialog
@@ -178,7 +162,6 @@ export function FileExplorer({
                 viewedFile={viewedFile}
                 onClose={closeFileViewer}
             />
-            {/* Top search row */}
             <div
                 ref={searchContainerRef}
                 className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start"
@@ -209,7 +192,6 @@ export function FileExplorer({
                                         setAutocompleteIndex((prev) => Math.max(0, prev - 1))
                                     }
                                 } else if (e.key === 'ArrowRight') {
-                                    // preview highlighted file
                                     e.preventDefault()
                                     if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
                                         setViewedFile?.(suggestions[autocompleteIndex])
@@ -281,7 +263,6 @@ export function FileExplorer({
                     </div>
                 </InfoTooltip>
 
-                {/* Mobile-only button: show "Selected Files" in a drawer */}
                 <div className="flex lg:hidden items-center justify-between">
                     {renderMobileSelectedFilesDrawerButton()}
                 </div>
@@ -315,7 +296,6 @@ export function FileExplorer({
                 )}
             </div>
 
-            {/* Main area: either skeleton, empty, or the file tree */}
             {filesLoading ? (
                 <div>
                     <Skeleton className="h-8 w-1/2" />
@@ -342,7 +322,7 @@ export function FileExplorer({
                                 ref={ref.fileTreeRef}
                                 root={fileTree}
                                 onViewFile={setViewedFile}
-                                projectRoot={''} // if needed
+                                projectRoot={''}
                                 resolveImports={resolveImports}
                                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                                 onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
@@ -365,7 +345,6 @@ export function FileExplorer({
                 onOpenChange={setAiDialogOpen}
                 filePath={(projectData?.project?.path || '') + "/" + (selectedFile?.path || '')}
                 onSuccess={() => {
-                    // Invalidate the project files query to trigger a refresh
                     queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(selectedProjectId || '') })
                     setAiDialogOpen(false)
                     setSelectedFile(undefined)
