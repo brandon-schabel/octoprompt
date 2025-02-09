@@ -1,0 +1,68 @@
+---
+description: Rules for server-side TypeScript code (Bun + Drizzle + Zod) in packages/server/src.
+globs: packages/server/src/**/*.ts, server/src/**/*.ts,
+---
+# Backend Architecture & File Building Guide
+
+This document describes how our backend is built and organized, including our router setup, extensive use of Zod validations, AI tools for structured outputs, and the overall process for building project features. Use this as a reference when creating or updating backend files.
+
+---
+
+## 1. Overall Architecture
+
+Our backend follows a layered, service-oriented architecture with clear separation of concerns. The main layers are:
+
+- **Database Layer:**  
+  All database schemas are defined in the shared package (e.g. `packages/shared/src/schema.ts`) using Drizzle ORM. Any change in business data (like projects, files, prompts, etc.) starts by updating these schemas.  
+- **Service Layer:**  
+  Business logic is encapsulated in services (e.g. `ProjectService`, `FileSyncService`, `FileSummaryService`). These services perform database operations, file synchronization, summarization, and other domain-specific tasks.
+- **Route Layer:**  
+  API endpoints are defined in our routes (e.g. in `packages/server/src/routes/`) using the `@bnk/router` package. Every route includes Zod validations for parameters, body, and query data to ensure type safety and runtime validation.
+- **WebSocket Integration:**  
+  For real-time state updates, our backend integrates with BNK WebSocket. Global state is managed via an adapter (in `packages/server/src/utils/websocket/websocket-state-adapter.ts`) that loads and broadcasts state changes over WebSocket.
+- **AI & Structured Outputs:**  
+  AI tools are integrated to generate structured outputs. On the server side, the structured output fetcher (found in `packages/server/src/utils/structured-output-fetcher.ts`) converts Zod schemas to JSON schemas, streams responses from the AI model, and validates them with Zod. On the client, the `useGenerateStructuredOutput` hook leverages these capabilities to return strongly typed structured data.
+
+---
+
+## 2. The Router & Zod Validations
+
+### Router Setup
+
+- **@bnk/router Integration:**  
+  All routes are registered via our router (from `server-router` or directly from `@bnk/router`). Each API route (for example, project routes, chat routes, and structured output routes) is configured with:
+  - A path (e.g. `/api/projects/:projectId/refresh`)
+  - An optional set of middleware
+  - Zod validation schemas that enforce the structure of request parameters, queries, and bodies
+
+- **Validation Everywhere:**  
+  We rely on [Zod](mdc:https:/github.com/colinhacks/zod) to validate inputs at every endpoint. For instance:
+  - **Projects API Validation:**  
+    Routes in `packages/server/src/routes/project-routes.ts` use validation objects from `packages/shared/src/validation/projects-api-validation.ts` to validate create, update, get, or sync requests.
+  - **Structured Outputs & Other Routes:**  
+    Similar patterns are used in routes like `/api/structured-outputs`, where the request body is validated with a Zod schema before processing.
+
+- **Error Handling:**  
+  When validation fails, the router automatically responds with a 400 error and detailed issues. This helps ensure that only correctly structured data reaches our service layer.
+
+### Example
+
+```ts
+router.post("/api/projects/:projectId/refresh", {
+    validation: {
+        params: projectsApiValidation.sync.params,
+        query: refreshQuerySchema,
+    },
+}, async (_, { params, query }) => {
+    // If the "folder" query parameter is provided, perform a partial sync.
+    const refreshResult = query.folder
+        ? await projectService.syncProjectFolder(params.projectId, query.folder)
+        : await projectService.syncProject(params.projectId);
+
+    // Return the updated file list after sync
+    const files = await projectService.getProjectFiles(params.projectId);
+    if (!files) {
+        throw new ApiError("Project not found", 404, "NOT_FOUND");
+    }
+    return json({ success: true, files });
+});

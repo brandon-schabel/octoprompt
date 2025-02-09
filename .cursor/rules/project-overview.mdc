@@ -1,0 +1,115 @@
+---
+description:   This rule file provides a broad overview of the project’s architecture,   detailing how the client, server, and shared folders interconnect.   It explains how global state and validations are managed via Zod,   how the router handles API routes, and how AI tools are used for   structured outputs. It also describes the feature-building workflow,   including database schema updates, WebSocket schema adjustments,   and state management with Zustand.
+globs: **/*
+---
+# Project Architecture Overview
+
+This document explains the overall structure of the project and provides guidance on how various parts interact. It is intended to help both new and experienced developers understand the core principles, from shared code and validations to client-server communication and AI integration.
+
+---
+
+## 1. Shared Folder
+
+The **shared** folder is the backbone of the project, providing:
+
+- **Global State Definitions & Validations:**
+  - **Global State Schema:**  
+    All global state is defined in files like `global-state-schema.ts`. These Zod schemas ensure that the application's state (settings, project tabs, chat tabs, etc.) remains consistent and type-safe across both client and server.
+  - **Validation Schemas:**  
+    API request validations (e.g., in `projects-api-validation.ts`) use Zod to enforce strict input criteria. Every API endpoint is guarded by these validations, ensuring that incoming data conforms to the expected structure.
+
+- **Database Schema & Type Inference:**
+  - The `schema.ts` file defines the database schema using Drizzle ORM.  
+  - Types for entities (e.g., projects, files, chats) are automatically inferred, allowing seamless type safety from the database layer to the service and API layers.
+
+- **Structured Output Tools:**
+  - The shared folder contains structured output schemas and utilities (e.g., `structured-output-schema.ts` and `structured-output-fetcher.ts`).
+  - These tools convert Zod schemas to JSON schemas and enable AI-driven structured output. The client hook (`useGenerateStructuredOutput`) and the server’s fetcher function work together to obtain and validate structured data from AI providers.
+
+---
+
+## 2. Server Connections
+
+The **server** is built with Bun and features a clear, service-oriented architecture:
+
+- **Router & API Endpoints:**
+  - The server uses `@bnk/router` to define API routes.  
+  - Each route (found in files such as `project-routes.ts` and others) includes Zod validations for request body, query, and URL parameters.  
+  - Responses are standardized using helper functions (like `json`), ensuring consistent error handling and output formatting.
+
+- **WebSocket Integration:**
+  - A dedicated WebSocket endpoint (e.g., `/ws`) is provided by the server.
+  - The connection is managed by BNK’s backend WebSocket manager, which uses adapters (e.g., `websocket-state-adapter.ts`) to load, maintain, and broadcast the global state.
+  - Incoming messages are validated against Zod schemas (defined in the shared folder) and processed by specific message handlers (located in `websocket-handlers.ts`).
+
+- **AI Tools for Structured Outputs:**
+  - The server offers AI-powered tools for generating structured outputs.  
+  - The `structured-output-service.ts` leverages the `fetchStructuredOutput` utility to interact with AI providers (like OpenRouter), ensuring the responses match the expected JSON schema through Zod validation.
+  - This enables features such as generating structured data for dynamic content or automated data extraction.
+
+---
+
+## 3. Client Connections
+
+The **client** is responsible for maintaining and displaying the application’s state using modern React and Zustand:
+
+- **Global State Management with Zustand:**
+  - The Zustand store (defined in `global-state-store.ts`) is central to managing the client’s global state.
+  - State slices are separated into:
+    - **Project Tabs:** Handling project-specific data.
+    - **Chat Tabs:** Managing chat-specific interactions.
+  - This division allows independent updating and management based on unique identifiers like project ID or chat ID.
+
+- **WebSocket Client Integration:**
+  - The client connects to the server’s WebSocket endpoint using BNK’s client WebSocket manager (`@bnk/client-websocket-manager`).
+  - The `GlobalStateProvider` (in `global-state-provider.tsx`) sets up the WebSocket connection and propagates state changes to the Zustand store.
+  - Incoming WebSocket messages trigger updates in the client’s global state (via handlers in `websocket-subscription.ts`).
+
+- **AI Structured Output on the Client:**
+  - The client leverages hooks like `useGenerateStructuredOutput` to request structured data from the server.
+  - These hooks use the structured output schemas (defined in the shared folder) and ensure that the received data is validated against Zod schemas before being used in the UI.
+
+---
+
+## 4. Feature Development Workflow
+
+When building new project features, follow these key steps:
+
+- **Step 1: Update the Database Schema**
+  - Start by modifying the database schema in `shared/schema.ts` if new tables, columns, or relationships are required.
+  - Drizzle ORM and Zod automatically infer TypeScript types, ensuring that changes propagate throughout the system.
+
+- **Step 2: Global State and WebSocket Schema Adjustments**
+  - If your new feature requires additional global state or needs to communicate between client and server, update the global state schemas in the shared folder (e.g., `global-state-schema.ts`).
+  - Modify or extend the WebSocket schema (see `websocket-global-schema.ts`) to include any new message types or state properties.
+  - This ensures that any changes are validated and propagated correctly in real time.
+
+- **Step 3: Implement Server-Side Logic and API Routes**
+  - Add new service methods in the appropriate service files (e.g., `project-service.ts`) to handle the business logic.
+  - Define corresponding API routes using `@bnk/router` with Zod validations to guarantee correct input formats.
+  - Ensure error handling is robust and that responses conform to the standardized JSON output.
+
+- **Step 4: Update Client-Side State Management**
+  - If the feature affects the client state, update the Zustand store slices accordingly (e.g., add new fields in project or chat tabs).
+  - Ensure that any new state changes are integrated with the existing WebSocket message handlers, so the UI updates seamlessly based on new identifiers (like chat ID or project ID).
+
+- **Step 5: Leverage AI Tools for Structured Outputs**
+  - For features requiring AI-generated structured data, use the structured output service on the server and the corresponding client hook.
+  - These tools help in fetching structured responses that are validated against your Zod schemas, ensuring consistency and reliability in data output.
+
+---
+
+## 5. Zod Validations Everywhere
+
+Zod is a core part of this project’s architecture:
+
+- **Route Validations:**
+  - Every API route is protected by Zod schemas (as seen in `projects-api-validation.ts` and route files). This ensures that inputs are strictly validated before processing.
+  
+- **Global State & WebSocket Validations:**
+  - The global state, defined in `global-state-schema.ts`, uses Zod to enforce the correct shape of state data.
+  - Incoming WebSocket messages are parsed and validated using Zod (see `validateIncomingMessage` in `websocket-global-schema.ts`), ensuring that real-time updates are type-safe.
+
+- **Structured Output Validations:**
+  - The conversion of Zod schemas to JSON schemas (using utilities in `structured-output-utils.ts`) allows the project to enforce strict output formats for AI responses.
+  - Both the `fetchStructuredOutput` function on the server and the `useGenerateStructuredOutput` hook on the client rely on these validations to guarantee that the received structured data conforms to expectations.
