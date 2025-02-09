@@ -121,7 +121,7 @@ Please return a JSON object with this shape:
 
   // 4) Insert a record of this suggestion into the DB
   const [row] = await db
-    .insert(fileChanges as any)
+    .insert(fileChanges)
     .values({
       filePath,
       originalContent,
@@ -129,7 +129,7 @@ Please return a JSON object with this shape:
       status: "pending",
       timestamp: Date.now(),
     })
-    .returning({ id: fileChanges.id as any });
+    .returning({ id: fileChanges.id });
 
   // 5) Return the info needed by the caller
   return {
@@ -183,8 +183,8 @@ export async function getFileChange(
 ) {
   const [record] = await db
     .select()
-    .from(fileChanges as any)  // cast table to any
-    .where(eq(fileChanges.id as any, changeId)) // cast fileChanges.id to any
+    .from(fileChanges)  // cast table to any
+    .where(eq(fileChanges.id, changeId)) // cast fileChanges.id to any
     .limit(1) as Array<{
       id: number;
       filePath: string;

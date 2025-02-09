@@ -1,9 +1,7 @@
 import { router } from 'server-router';
-import { PromptimizerService } from '@/services/promptimizer-service';
 import { json } from '@bnk/router';
 import { z } from 'zod';
-
-const promptimizerService = new PromptimizerService();
+import { optimizePrompt } from '@/services/promptimizer-service';
 
 router.post('/api/prompt/optimize', {
     validation: {
@@ -15,7 +13,7 @@ router.post('/api/prompt/optimize', {
 }, async (_, { body }) => {
     const { userContext } = body;
     try {
-        const optimized = await promptimizerService.optimizePrompt(userContext);
+        const optimized = await optimizePrompt(userContext);
         return json({ success: true, optimizedPrompt: optimized });
     } catch (error) {
         console.error('Prompt optimize route error:', error);

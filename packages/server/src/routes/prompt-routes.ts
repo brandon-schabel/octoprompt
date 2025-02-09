@@ -1,28 +1,27 @@
 import { router } from "server-router";
-import { PromptService } from "@/services/prompt-service";
 import { json } from '@bnk/router';
 import { ApiError } from 'shared';
 import { promptApiValidation } from "shared";
 import { z } from "zod";
+import { addPromptToProject, createPrompt, deletePrompt, getPromptById, listAllPrompts, listPromptsByProject, removePromptFromProject, updatePrompt } from "@/services/prompt-service";
 
-const promptService = new PromptService();
 
 router.post("/api/prompts", {
     validation: promptApiValidation.create,
 }, async (_, { body }) => {
     // 1) Create the prompt
-    const createdPrompt = await promptService.createPrompt(body);
+    const createdPrompt = await createPrompt(body);
 
     // 2) If projectId was given, link it to the project:
     if (body.projectId) {
-        await promptService.addPromptToProject(createdPrompt.id, body.projectId);
+        await addPromptToProject(createdPrompt.id, body.projectId);
     }
 
     return json({ success: true, prompt: createdPrompt }, { status: 201 });
 });
 
 router.get("/api/prompts", {}, async (_, __) => {
-    const all = await promptService.listAllPrompts();
+    const all = await listAllPrompts();
     return json({ success: true, prompts: all });
 });
 
@@ -30,7 +29,7 @@ router.get("/api/prompts", {}, async (_, __) => {
 router.get("/api/projects/:projectId/prompts", {
     validation: promptApiValidation.list,
 }, async (_, { params }) => {
-    const projectPrompts = await promptService.listPromptsByProject(params.projectId);
+    const projectPrompts = await listPromptsByProject(params.projectId);
     return json({ success: true, prompts: projectPrompts });
 });
 
@@ -44,7 +43,7 @@ router.post("/api/projects/:projectId/prompts/:promptId", {
     }
 },
     async (_, { params }) => {
-        await promptService.addPromptToProject(params.promptId, params.projectId);
+        await addPromptToProject(params.promptId, params.projectId);
         return json({ success: true });
     });
 
@@ -59,15 +58,14 @@ router.delete("/api/projects/:projectId/prompts/:promptId", {
     }
 },
     async (_, { params }) => {
-        await promptService.removePromptFromProject(params.promptId, params.projectId);
+        await removePromptFromProject(params.promptId, params.projectId);
         return json({ success: true });
     });
-
 
 router.get("/api/prompts/:promptId", {
     validation: promptApiValidation.getOrDelete,
 }, async (_, { params }) => {
-    const prompt = await promptService.getPromptById(params.promptId);
+    const prompt = await getPromptById(params.promptId);
     if (!prompt) {
         throw new ApiError("Prompt not found", 404, "NOT_FOUND");
     }
@@ -77,7 +75,7 @@ router.get("/api/prompts/:promptId", {
 router.patch("/api/prompts/:promptId", {
     validation: promptApiValidation.update,
 }, async (_, { params, body }) => {
-    const updatedPrompt = await promptService.updatePrompt(params.promptId, body);
+    const updatedPrompt = await updatePrompt(params.promptId, body);
     if (!updatedPrompt) {
         throw new ApiError("Prompt not found", 404, "NOT_FOUND");
     }
@@ -87,7 +85,7 @@ router.patch("/api/prompts/:promptId", {
 router.delete("/api/prompts/:promptId", {
     validation: promptApiValidation.getOrDelete,
 }, async (_, { params }) => {
-    const deleted = await promptService.deletePrompt(params.promptId);
+    const deleted = await deletePrompt(params.promptId);
     if (!deleted) {
         throw new ApiError("Prompt not found", 404, "NOT_FOUND");
     }

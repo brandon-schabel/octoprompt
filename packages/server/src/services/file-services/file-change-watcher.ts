@@ -14,11 +14,8 @@ export interface WatchOptions {
 
 /**
  * On macOS, Node’s fs.watch does not reliably support `recursive: true`.
- * If you need robust cross-platform recursion, consider:
- *  - `chokidar` (npm package) 
- *  - or `Bun.watch` if you’re running in Bun environment.
+ * For robust cross-platform recursion, consider chokidar or Bun.watch.
  */
-
 export function isIgnored(filePath: string, ignorePatterns: string[]): boolean {
   for (const pattern of ignorePatterns) {
     const regexSafe = pattern.replace(/\./g, "\\.").replace(/\*/g, ".*");
@@ -41,19 +38,25 @@ export function inferChangeType(eventType: string, fullPath: string): FileChange
   }
 }
 
-export class FileChangeWatcher {
-  private listeners: FileChangeListener[] = [];
-  private watchers: FSWatcher[] = [];
+/**
+ * Creates a functional file-change watcher that can manage multiple watchers/listeners.
+ */
+export function createFileChangeWatcher() {
+  const listeners: FileChangeListener[] = [];
+  const watchers: FSWatcher[] = [];
 
-  public registerListener(listener: FileChangeListener): void {
-    this.listeners.push(listener);
+  function registerListener(listener: FileChangeListener): void {
+    listeners.push(listener);
   }
 
-  public unregisterListener(listener: FileChangeListener): void {
-    this.listeners = this.listeners.filter((l) => l !== listener);
+  function unregisterListener(listener: FileChangeListener): void {
+    const idx = listeners.indexOf(listener);
+    if (idx !== -1) {
+      listeners.splice(idx, 1);
+    }
   }
 
-  public startWatching(options: WatchOptions): void {
+  function startWatching(options: WatchOptions): void {
     const { directory, ignorePatterns = [], recursive = true } = options;
 
     if (!existsSync(directory)) {
@@ -61,8 +64,6 @@ export class FileChangeWatcher {
       return;
     }
 
-    // On non-Windows platforms, `recursive: true` is basically not supported with fs.watch. 
-    // For real cross-platform watchers, consider chokidar or Bun.watch
     const watcher = watch(directory, { recursive }, (eventType, filename) => {
       if (!filename) return;
       const fullPath = `${directory}/${filename}`;
@@ -72,7 +73,7 @@ export class FileChangeWatcher {
       const changeType = inferChangeType(eventType, fullPath);
       if (!changeType) return;
 
-      for (const listener of this.listeners) {
+      for (const listener of listeners) {
         listener.onFileChanged(changeType, fullPath);
       }
     });
@@ -85,14 +86,21 @@ export class FileChangeWatcher {
       }
     });
 
-    this.watchers.push(watcher);
+    watchers.push(watcher);
     console.log(`[FileChangeWatcher] Now watching: ${directory}`);
   }
 
-  public stopAll(): void {
-    for (const watcher of this.watchers) {
-      watcher.close();
+  function stopAll(): void {
+    for (const w of watchers) {
+      w.close();
     }
-    this.watchers = [];
+    watchers.length = 0;
   }
+
+  return {
+    registerListener,
+    unregisterListener,
+    startWatching,
+    stopAll,
+  };
 }

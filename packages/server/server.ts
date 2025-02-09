@@ -5,10 +5,7 @@ import { router } from "server-router";
 import "@/routes/chat-routes";
 import "@/routes/project-routes";
 import "@/routes/prompt-routes";
-import "@/routes/flags-routes";
 import "@/routes/provider-key-routes";
-import "@/routes/gemini-routes";
-import "@/routes/code-editor-routes";
 import "@/routes/promptimizer-routes";
 import "@/routes/ticket-routes";
 import "@/routes/suggest-files-routes";
@@ -17,18 +14,22 @@ import "@/routes/structured-output-routes";
 import "@/routes/ai-file-change-routes";
 
 import { json } from "@bnk/router";
-import { WatchersManager } from "@/services/file-services/watchers-manager";
-import { FileSyncService } from "@/services/file-services/file-sync-service";
-import { FileSummaryService } from "@/services/file-services/file-summary-service";
-import { ProjectService } from "@/services/project-service";
-import { CleanupService } from "@/services/file-services/cleanup-service";
 import { initKvStore } from "@/services/kv-service";
 
 import {
   globalStateSchema,
 } from "shared";
 
-import { websocketStateAdapter, initialGlobalState } from "./src/utils/websocket/websocket-state-adapter";
+import { websocketStateAdapter } from "./src/utils/websocket/websocket-state-adapter";
+import { listProjects } from "@/services/project-service";
+import { createWatchersManager } from "@/services/file-services/watchers-manager";
+import { createCleanupService } from "@/services/file-services/cleanup-service";
+
+
+const watchersManager = createWatchersManager();
+const cleanupService = createCleanupService({
+  intervalMs: 5 * 60 * 1000,
+});
 
 
 
@@ -47,14 +48,6 @@ const DEV_PORT = 3000;
 const PROD_PORT = 3579;
 const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
 
-const fileSyncService = new FileSyncService();
-const fileSummaryService = new FileSummaryService();
-const projectService = new ProjectService();
-const watchersManager = new WatchersManager(
-  fileSummaryService,
-  fileSyncService,
-  projectService
-);
 
 export async function instantiateServer({ port = PORT }: ServerConfig = {}): Promise<Server> {
 
@@ -155,7 +148,7 @@ export async function instantiateServer({ port = PORT }: ServerConfig = {}): Pro
 
   // Start watchers for existing projects
   (async () => {
-    const allProjects = await projectService.listProjects();
+    const allProjects = await listProjects();
     for (const project of allProjects) {
       watchersManager.startWatchingProject(project, [
         "node_modules",
@@ -164,12 +157,9 @@ export async function instantiateServer({ port = PORT }: ServerConfig = {}): Pro
         "*.tmp",
         "*.db-journal",
       ]);
-
-      const cleanupService = new CleanupService(fileSyncService, projectService, {
-        intervalMs: 5 * 60 * 1000,
-      });
-      cleanupService.start();
     }
+    
+    cleanupService.start();
   })();
 
   console.log(`Server running at http://localhost:${server.port}`);
