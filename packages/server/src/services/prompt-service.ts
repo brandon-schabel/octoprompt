@@ -1,6 +1,12 @@
-import { db } from "shared/database";
-import { prompts, promptProjects, projects, type Prompt, eq, and, CreatePromptBody, UpdatePromptBody } from "shared";
+import { db } from "@/utils/database";
+import { eq, and, } from "@db";
+import { schema } from "shared";
+import { CreatePromptBody, UpdatePromptBody } from "shared";
 import { sql } from "drizzle-orm";
+
+const { prompts, promptProjects } = schema;
+
+type Prompt = schema.Prompt;
 
 export class PromptService {
     async createPrompt(data: CreatePromptBody): Promise<Prompt> {

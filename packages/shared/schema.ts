@@ -154,40 +154,6 @@ export const promptProjects = sqliteTable("prompt_projects", {
         .references(() => projects.id, { onDelete: "cascade" }),
 });
 
-
-
-// TODO: store book marks in a more structured way in the DB
-// export const bookmarks = sqliteTable("bookmarks", {
-//     id: text("id")
-//         .primaryKey()
-//         .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
-//     // e.g. a JSON string of file ids
-//     fileIds: text("file_ids").notNull().default("[]"),
-//     // e.g. name for the bookmark group
-//     name: text("name").default(""),
-//     createdAt: integer("created_at", { mode: "timestamp" })
-//         .default(sql`CURRENT_TIMESTAMP`)
-//         .notNull(),
-//     updatedAt: integer("updated_at", { mode: "timestamp" })
-//         .default(sql`CURRENT_TIMESTAMP`)
-//         .notNull(),
-// });
-
-// export type Bookmark = InferSelectModel<typeof bookmarks>;
-
-
-export const flags = sqliteTable("flags", {
-    id: text("id")
-        .primaryKey()
-        .$defaultFn(() => sql`lower(hex(randomblob(16)))`),
-    key: text("key").notNull(),
-    enabled: integer("enabled", { mode: 'boolean' }).notNull().default(false),
-    description: text("description").default(""),
-    data: text("data").default(""),
-});
-
-export type FlagModel = InferSelectModel<typeof flags>;
-
 export const providerKeys = sqliteTable("provider_keys", {
     id: text("id")
         .primaryKey()

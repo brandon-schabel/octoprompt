@@ -36,7 +36,7 @@ export { ApiError } from './src/error/api-error';
 export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher';
 // export type { ChatAppState, ChatClientMessage, IncomingServerMessage, InitialStateServerMessage, OutgoingClientMessage, StateUpdateServerMessage } from './src/types/chat-types'
 
-export * from './schema'
+
 // export * from './src/types/global-websocket-types';
 
 export { buildCombinedFileSummaries } from './src/utils/summary-formatter';
@@ -47,3 +47,4 @@ export * from './src/utils/merge-deep'
 export * from './src/structured-outputs/structured-output-schema';
 export * from './src/structured-outputs/structured-output-utils';
 export * from './src/constants/model-default-configs';
+export * as schema from './schema'

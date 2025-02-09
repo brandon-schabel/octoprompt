@@ -1,10 +1,11 @@
 import { UnifiedProviderService } from '@/services/model-providers/providers/unified-provider-service';
-import { json } from '@bnk/router';
 import { ApiError } from 'shared';
 import { router } from "server-router";
 
-import { files, projects, eq } from "shared";
-import { db } from "shared/database";
+import { schema } from "shared";
+import { db, eq } from "@db";
+
+const { files, projects, } = schema;
 
 const unifiedProviderService = new UnifiedProviderService();
 const AI_BASE_PATH = '/api/ai';

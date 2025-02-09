@@ -7,10 +7,6 @@ import { projectsApiValidation, ApiError, buildCombinedFileSummaries } from "sha
 import { z } from "zod";
 import { FileSummaryService } from "@/services/file-services/file-summary-service";
 
-/**
- *  NEW: Add an optional param 'folder' to let clients partially refresh a subfolder
- *       or the entire project if `folder` is not provided.
- */
 const refreshQuerySchema = z.object({
     folder: z.string().optional()
 });
@@ -70,10 +66,6 @@ router.post("/api/projects/:projectId/sync", {
     return json(result);
 });
 
-/**
- * IMPORTANT: We call syncProject before returning the DB’s file list.
- * So on every page load, you’ll get an up-to-date list (based on file checksums).
- */
 router.get("/api/projects/:projectId/files", {
     validation: projectsApiValidation.getFiles
 }, async (_, { params }) => {
@@ -88,10 +80,6 @@ router.get("/api/projects/:projectId/files", {
     return json({ success: true, files });
 });
 
-/**
- *  Refresh route. If ?folder=/someSubDir is given, do partial sync.
- *  Otherwise sync entire project. Then return updated file list.
- */
 router.post("/api/projects/:projectId/refresh", {
     validation: {
         params: projectsApiValidation.sync.params,
@@ -119,7 +107,6 @@ router.post("/api/projects/:projectId/refresh", {
     return json({ success: true, files });
 });
 
-// Summaries
 router.get("/api/projects/:projectId/file-summaries", {
     validation: {
         params: projectsApiValidation.getFiles.params,

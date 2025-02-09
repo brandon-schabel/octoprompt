@@ -8,25 +8,6 @@
     "test:watch": "bun test --watch src/",
     "start": "bun server.ts",
     "dev": "DEV=true bun --watch server.ts",
-    "start:prod": "cd dist && ./start.sh",
-    "check-process-id": "sudo lsof -i :3000"
-  },
-  "devDependencies": {
-    "bun-types": "latest",
-    "typescript": "^5.7.3"
-  },
-  "peerDependencies": {
-    "drizzle-orm": "^0.36.3"
-  },
-  "dependencies": {
-    "@bnk/ai": "^1.0.14",
-    "@bnk/backend-websocket-manager": "1.0.3",
-    "@bnk/kv-store": "1.0.1",
-    "@bnk/router": "^1.0.8",
-    "@types/archiver": "^6.0.3",
-    "archiver": "^7.0.1",
-    "openai": "^4.78.1",
-    "shared": "workspace:*",
-    "zod": "^3.24.1"
+    "start:prod": "cd dist && ./start.sh"
   }
 }

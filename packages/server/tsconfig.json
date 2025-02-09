@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
@@ -21,9 +23,20 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "shared/*": ["../shared/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@db": [
+        "./src/utils/database.ts"
+      ],
     }
   },
-  "include": ["src", "server-router.ts", "server.ts", "build.ts", "drizzle.config.ts", "../shared/database.ts", "../websocket-manager/generic-websocket-manager.ts", "../websocket-manager/project-tab-handlers.ts", "../websocket-manager/usage-example.ts", "../websocket-manager/websocket-types.ts", "../shared/src/constants"]
+  "include": [
+    "src",
+    "server-router.ts",
+    "server.ts",
+    "build.ts",
+    "drizzle.config.ts",
+    "src/utils/database.ts"
+  ]
 }

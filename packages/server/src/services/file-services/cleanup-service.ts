@@ -1,6 +1,5 @@
 import { FileSyncService } from "./file-sync-service";
 import { ProjectService } from "../project-service";
-import { Project } from "shared";
 
 export type CleanupResult =
     | ({ status: "success"; removedCount: number } & { projectId: string })

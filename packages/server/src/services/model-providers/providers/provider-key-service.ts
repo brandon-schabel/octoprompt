@@ -1,5 +1,9 @@
-import { providerKeys, type ProviderKey, eq } from "shared";
-import { db } from "shared/database";
+import { schema } from "shared";
+import { eq, db } from "@db";
+const { providerKeys, } = schema;
+
+type ProviderKey = schema.ProviderKey;
+
 
 type CreateProviderKeyInput = {
   provider: string;

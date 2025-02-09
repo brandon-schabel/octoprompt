@@ -19,17 +19,6 @@ type WebSocketMessageHandler<T extends InboundMessage["type"]> = {
   ) => Promise<void>;
 };
 
-function isMessageHandler<T extends InboundMessage["type"]>(
-  handler: WebSocketMessageHandler<any>,
-  type: T
-): handler is WebSocketMessageHandler<T> {
-  return handler.type === type;
-}
-
-// ---------------------------------------------------
-// Example handlers
-// ---------------------------------------------------
-
 export const stateUpdateHandler: WebSocketMessageHandler<"state_update"> = {
   type: "state_update",
   handle: async (ws, message, getState, setState) => {

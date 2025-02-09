@@ -9,17 +9,11 @@ import { DEFAULT_MODEL_CONFIGS } from "shared";
 
 const openRouterProviderService = new OpenRouterProviderService();
 
-/**
- * Zod schema for our final structured response:
- * { fileIds: string[] }
- */
+
 export const FileSuggestionsZodSchema = z.object({
     fileIds: z.array(z.string())
 });
 
-/**
- * JSON Schema counterpart, passed to the model to enforce valid JSON output.
- */
 export const FileSuggestionsJsonSchema = {
     type: "object",
     properties: {

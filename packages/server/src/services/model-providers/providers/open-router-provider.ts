@@ -78,7 +78,7 @@ export class OpenRouterProviderService {
 
             return this.streamMessage({
                 chatId,
-                assistantMessageId,
+                assistantMessageId: assistantMessageId ?? "",
                 userMessage,
                 options,
                 tempId,

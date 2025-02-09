@@ -1,10 +1,14 @@
-import { db } from "shared/database";
-import { files } from "shared/schema";
+import { db } from "@/utils/database";
 import { eq, and, inArray } from "drizzle-orm";
-import { ProjectFile as ProjectFileType, GlobalState, DEFAULT_MODEL_CONFIGS } from "shared";
+import { GlobalState, DEFAULT_MODEL_CONFIGS, schema } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { UnifiedProviderService } from "../model-providers/providers/unified-provider-service";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
+import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+
+const { files } = schema;
+
+type ProjectFileType = schema.ProjectFile;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
     const chunks: T[][] = [];
@@ -40,6 +44,26 @@ const shouldSummarizeFile = async (
 
     return true;
 };
+
+
+
+export async function getFileSummaries(
+    db: BunSQLiteDatabase,
+    projectId: string,
+    fileIds?: string[],
+): Promise<ProjectFileType[]> {
+    const conditions = [eq(files.projectId, projectId)];
+    if (fileIds && fileIds.length > 0) {
+        conditions.push(inArray(files.id, fileIds));
+    }
+
+
+    return db
+        .select()
+        .from(files)
+        .where(and(...conditions))
+        .all();
+}
 
 /**
  * This service now reads/writes file summaries directly in the `files` table.
@@ -251,7 +275,7 @@ Specifically, cover the following:
                     model: cfg.model,
                     max_tokens: cfg.max_tokens,
                     temperature: cfg.temperature,
-                    
+
                 },
                 systemMessage: systemPrompt,
             });

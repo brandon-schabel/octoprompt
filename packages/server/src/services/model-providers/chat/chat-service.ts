@@ -1,13 +1,15 @@
 import {
-    chats,
-    chatMessages,
-    type Chat,
-    type ChatMessage,
-    type ExtendedChatMessage,
-    type NewChatMessage,
+    db,
     eq,
-} from "shared";
-import { db } from "shared/database";
+} from "@db";
+import { schema } from "shared";
+
+const { chats, chatMessages, } = schema;
+
+type Chat = schema.Chat;
+type ChatMessage = schema.ChatMessage;
+type ExtendedChatMessage = schema.ExtendedChatMessage;
+type NewChatMessage = schema.NewChatMessage;
 
 type CreateChatOptions = {
     copyExisting?: boolean;

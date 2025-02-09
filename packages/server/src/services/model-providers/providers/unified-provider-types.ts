@@ -1,5 +1,4 @@
 import { APIProviders } from "shared";
-import { } from "@bnk/ai"
 
 /** Options used by certain completion endpoints */
 export type ChatCompletionOptions = Partial<{

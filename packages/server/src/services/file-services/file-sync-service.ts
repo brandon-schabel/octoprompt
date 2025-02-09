@@ -1,8 +1,11 @@
 import { join, extname, resolve, relative } from 'node:path';
 import { readdirSync, readFileSync, statSync, Dirent } from 'node:fs';
-import { type Project } from 'shared';
-import { files, eq, and, inArray } from 'shared';
-import { db } from "shared/database";
+import { schema } from 'shared';
+import { db, eq, and, inArray } from "@db";
+
+const { files } = schema;
+
+type Project = schema.Project;
 
 const ALLOWED_EXTENSIONS = [
   // Documentation & Config
@@ -125,6 +128,7 @@ export class FileSyncService {
     const folderFiles = this.getTextFiles(absoluteFolderToSync);
 
     await this.syncFileSet(project, absoluteProjectPath, folderFiles);
+
 
     // Optionally remove DB records that no longer exist in that subfolder
     // (If you do NOT want to remove them, omit these lines)

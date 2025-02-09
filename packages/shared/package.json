@@ -10,14 +10,5 @@
         "migrate": "drizzle-kit generate",
         "push": "drizzle-kit push",
         "test": "bun test"
-    },
-    "files": [
-        "src"
-    ],
-    "peerDependencies": {
-        "drizzle-orm": "^0.36.3"
-    },
-    "devDependencies": {
-        "drizzle-kit": "^0.28.1"
     }
 }

@@ -16,12 +16,6 @@ const buildProjectSummary = (includedFiles: ProjectFile[]) => {
     return buildCombinedFileSummaries(includedFiles, {
         // We can override the header style to show the file path
         headerStyle: (file) => `File: ${file.name}, File ID: ${file.id}`,
-        // footerStyle: (file) => {
-        //     if (file.summaryLastUpdatedAt) {
-        //         return `Last Summarized: ${new Date(file.summaryLastUpdatedAt).toLocaleString()}`;
-        //     }
-        //     return "";
-        // },
         sectionDelimiter: "---",
         includeEmptySummaries: false
     });

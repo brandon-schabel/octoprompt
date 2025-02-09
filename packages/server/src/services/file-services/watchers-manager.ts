@@ -1,14 +1,16 @@
 import { FileChangePlugin } from './file-change-plugin';
 import { FileSummaryService } from './file-summary-service';
 import { FileSyncService } from './file-sync-service';
-import { Project } from 'shared';
 import { ProjectService } from '../project-service';
 
-// DRIZZLE IMPORTS FOR DB CLEANUP:
-import { db } from 'shared/database';
-import { files, eq } from 'shared';
+import { db } from '@/utils/database';
+import { eq } from '@db';
+import { schema } from 'shared'
 
 import { existsSync } from 'node:fs';
+
+
+const { files } = schema;
 
 /**
  * The WatchersManager ensures each project has a FileChangePlugin
@@ -27,7 +29,7 @@ export class WatchersManager {
         private projectService: ProjectService,
     ) { }
 
-    public async startWatchingProject(project: Project, ignorePatterns: string[] = []): Promise<void> {
+    public async startWatchingProject(project: schema.Project, ignorePatterns: string[] = []): Promise<void> {
         if (this.watchers.has(project.id)) {
             console.warn(`[WatchersManager] Already watching project: ${project.id}`);
             return;

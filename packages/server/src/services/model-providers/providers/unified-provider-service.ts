@@ -185,7 +185,7 @@ export class UnifiedProviderService {
             // 3) Now stream the final assistant response
             return this.streamMessage({
                 chatId,
-                assistantMessageId,
+                assistantMessageId: assistantMessageId ?? "",
                 userMessage,
                 options,
                 tempId,

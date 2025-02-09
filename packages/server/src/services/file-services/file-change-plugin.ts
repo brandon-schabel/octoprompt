@@ -2,9 +2,11 @@ import { FileChangeWatcher, FileChangeEvent } from './file-change-watcher';
 import { FileSummaryService } from './file-summary-service';
 import { FileSyncService } from './file-sync-service';
 import { ProjectService } from '../project-service';
-import { Project } from 'shared';
+import { schema } from 'shared';
 import { resolve, relative } from 'node:path';
 import { websocketStateAdapter } from '@/utils/websocket/websocket-state-adapter';
+
+type Project = schema.Project;
 
 export class FileChangePlugin {
     private watcher: FileChangeWatcher;

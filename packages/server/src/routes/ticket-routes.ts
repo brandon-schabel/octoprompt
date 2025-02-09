@@ -7,7 +7,7 @@ import { ApiError } from "shared";
 import { ticketsApiValidation } from "shared";
 import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { FileSuggestionsZodSchema, FileSuggestionsJsonSchema } from "@/routes/suggest-files-routes";
+import { FileSuggestionsZodSchema } from "@/routes/suggest-files-routes";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
 
 // Create an instance of the TicketService
@@ -15,10 +15,6 @@ const ticketService = new TicketService();
 const openRouter = new OpenRouterProviderService();
 
 
-/**
- * POST /api/tickets
- * Create a new ticket.
- */
 router.post("/api/tickets", {
     validation: ticketsApiValidation.create,
 }, async (_, { body }) => {
@@ -26,10 +22,6 @@ router.post("/api/tickets", {
     return json({ success: true, ticket }, { status: 201 });
 });
 
-/**
- * GET /api/tickets/:ticketId
- * Fetch a single ticket by ID.
- */
 router.get("/api/tickets/:ticketId", {
     validation: ticketsApiValidation.getOrDelete,
 }, async (_, { params }) => {
@@ -41,10 +33,6 @@ router.get("/api/tickets/:ticketId", {
     return json({ success: true, ticket });
 });
 
-/**
- * PATCH /api/tickets/:ticketId
- * Update a ticket (title, overview, status, priority).
- */
 router.patch("/api/tickets/:ticketId", {
     validation: ticketsApiValidation.update,
 }, async (_, { params, body }) => {
@@ -56,10 +44,6 @@ router.patch("/api/tickets/:ticketId", {
     return json({ success: true, ticket: updatedTicket });
 });
 
-/**
- * DELETE /api/tickets/:ticketId
- * Delete a ticket by ID.
- */
 router.delete("/api/tickets/:ticketId", {
     validation: ticketsApiValidation.getOrDelete,
 }, async (_, { params }) => {
@@ -71,10 +55,6 @@ router.delete("/api/tickets/:ticketId", {
     return json({ success: true });
 });
 
-/**
- * POST /api/tickets/:ticketId/link-files
- * Attach one or more files to a ticket.
- */
 router.post("/api/tickets/:ticketId/link-files", {
     validation: ticketsApiValidation.linkFiles,
 }, async (_, { params, body }) => {
@@ -84,10 +64,7 @@ router.post("/api/tickets/:ticketId/link-files", {
     return json({ success: true, linkedFiles: result });
 });
 
-/**
- * POST /api/tickets/:ticketId/suggest-tasks
- * Example endpoint that uses an AI to suggest tasks for a ticket.
- */
+
 router.post("/api/tickets/:ticketId/suggest-tasks", {
     validation: ticketsApiValidation.suggestTasks,
 }, async (_, { params, body }) => {
@@ -100,11 +77,6 @@ router.post("/api/tickets/:ticketId/suggest-tasks", {
     return json({ success: true, suggestedTasks: tasks });
 });
 
-/**
- * GET /api/projects/:projectId/tickets
- * In many cases you'll want a route to list tickets by project. 
- * This is outside the base /api/tickets, so implement as needed:
- */
 router.get("/api/projects/:projectId/tickets", {
     validation: {
         params: z.object({ projectId: z.string() }),
@@ -119,10 +91,6 @@ router.get("/api/projects/:projectId/tickets", {
     return json({ success: true, tickets });
 });
 
-/**
- * GET /api/projects/:projectId/tickets-with-count
- * Get tickets with task counts.
- */
 router.get("/api/projects/:projectId/tickets-with-count", {
     validation: {
         params: z.object({ projectId: z.string() }),
@@ -140,12 +108,6 @@ router.get("/api/projects/:projectId/tickets-with-count", {
     return json({ success: true, ticketsWithCount: results });
 });
 
-/** --- TASKS --- **/
-
-/**
- * POST /api/tickets/:ticketId/tasks
- * Create a new task for a ticket.
- */
 router.post("/api/tickets/:ticketId/tasks", {
     validation: ticketsApiValidation.createTask,
 }, async (_, { params, body }) => {
@@ -155,10 +117,6 @@ router.post("/api/tickets/:ticketId/tasks", {
     return json({ success: true, task });
 });
 
-/**
- * GET /api/tickets/:ticketId/tasks
- * List tasks for a ticket.
- */
 router.get("/api/tickets/:ticketId/tasks", {
     validation: {
         params: z.object({ ticketId: z.string() }),
@@ -168,10 +126,6 @@ router.get("/api/tickets/:ticketId/tasks", {
     return json({ success: true, tasks });
 });
 
-/**
- * PATCH /api/tickets/:ticketId/tasks/:taskId
- * Update a single task.
- */
 router.patch("/api/tickets/:ticketId/tasks/:taskId", {
     validation: ticketsApiValidation.updateTask,
 }, async (_, { params, body }) => {
@@ -182,10 +136,6 @@ router.patch("/api/tickets/:ticketId/tasks/:taskId", {
     return json({ success: true, task: updated });
 });
 
-/**
- * DELETE /api/tickets/:ticketId/tasks/:taskId
- * Delete a task.
- */
 router.delete("/api/tickets/:ticketId/tasks/:taskId", {
     validation: ticketsApiValidation.deleteTask,
 }, async (_, { params }) => {
@@ -196,10 +146,6 @@ router.delete("/api/tickets/:ticketId/tasks/:taskId", {
     return json({ success: true });
 });
 
-/**
- * PATCH /api/tickets/:ticketId/tasks/reorder
- * Reorder tasks.
- */
 router.patch("/api/tickets/:ticketId/tasks/reorder", {
     validation: ticketsApiValidation.reorderTasks,
 }, async (_, { params, body }) => {
@@ -207,10 +153,6 @@ router.patch("/api/tickets/:ticketId/tasks/reorder", {
     return json({ success: true, tasks: updated });
 });
 
-/**
- * POST /api/tickets/:ticketId/auto-generate-tasks
- * Auto-generate tasks from ticket overview.
- */
 router.post("/api/tickets/:ticketId/auto-generate-tasks", {
     validation: {
         params: z.object({ ticketId: z.string(), }),
@@ -220,10 +162,6 @@ router.post("/api/tickets/:ticketId/auto-generate-tasks", {
     return json({ success: true, tasks: newTasks });
 });
 
-/**
- * GET /api/tickets/bulk-tasks
- * Get tasks for multiple tickets in a single request.
- */
 router.get("/api/tickets/bulk-tasks", {
     validation: {
         query: z.object({
@@ -257,10 +195,6 @@ router.get("/api/projects/:projectId/tickets-with-tasks", {
 });
 
 
-/**
- * POST /api/tickets/:ticketId/suggest-files
- * Suggest relevant files based on this ticket’s overview and tasks.
- */
 router.post(
     "/api/tickets/:ticketId/suggest-files",
     {

@@ -1,19 +1,23 @@
 
 import {
-    projects,
-    type Project,
-    files,
-    type ProjectFile,
     eq,
     and,
+    db,
+    inArray,
+} from "@db";
+import {
     CreateProjectBody,
     UpdateProjectBody,
-    inArray,
+    schema
 } from "shared";
 import { FileSyncService } from './file-services/file-sync-service';
 import { FileSummaryService } from './file-services/file-summary-service';
-import { db } from "shared/database";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
+
+const { projects, files, } = schema;
+
+type Project = schema.Project;
+type ProjectFile = schema.ProjectFile;
 
 /**
  * We add a new method `syncProjectFolder(...)` to handle partial syncing (a subdir).

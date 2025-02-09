@@ -1,21 +1,14 @@
-import { db } from "shared/database";
 import {
-    tickets,
-    ticketFiles,
-    ticketTasks,
-    files,
-    type Ticket,
-    type TicketFile,
-    type NewTicket,
-    type TicketTask,
-    type NewTicketTask,
     eq,
     and,
     inArray,
     sql,
-    desc
-} from "shared";
-import { CreateTicketBody, UpdateTicketBody } from "shared";
+    desc,
+
+    db
+} from "@db"
+
+import { CreateTicketBody, UpdateTicketBody, schema } from "shared";
 import { ApiError } from "shared";
 import type { InferSelectModel } from "drizzle-orm";
 import { OpenRouterProviderService } from "./model-providers/providers/open-router-provider";
@@ -25,7 +18,13 @@ import { z } from "zod";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
 
+const { tickets, ticketFiles, ticketTasks, files, } = schema;
 
+type Ticket = schema.Ticket;
+type TicketFile = schema.TicketFile;
+type NewTicket = schema.NewTicket;
+type TicketTask = schema.TicketTask;
+type NewTicketTask = schema.NewTicketTask;
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {

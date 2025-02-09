@@ -25,12 +25,21 @@
     "@types/picomatch": "^3.0.1",
     "bun-types": "latest",
     "prettier": "^3.0.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "drizzle-kit": "^0.28.1"
+    
   },
   "dependencies": {
-    "@bnk/router": "1.0.5",
-    "@bnk/backend-websocket-manager": "^1.0.0",
+    "@bnk/ai": "^1.0.14",
+    "@bnk/backend-websocket-manager": "1.0.3",
+    "@bnk/kv-store": "1.0.1",
+    "@bnk/router": "^1.0.8",
+    "@types/archiver": "^6.0.3",
+    "archiver": "^7.0.1",
+    "openai": "^4.78.1",
+    "zod": "^3.24.1",
     "picomatch": "^4.0.2",
-    "zod": "^3.23.8"
+    "drizzle-orm": "^0.36.3",
+    "shared": "workspace:*"
   }
 }
