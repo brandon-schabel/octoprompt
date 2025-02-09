@@ -1,10 +1,10 @@
 import { structuredOutputSchemas, StructuredOutputType, InferStructuredOutput } from "shared/src/structured-outputs/structured-output-schema";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { ApiError } from "shared";
 import { zodToStructuredJsonSchema } from "shared/src/structured-outputs/structured-output-utils";
 import { z } from "zod";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
+import { openRouterProvider } from "./model-providers/providers/open-router-provider";
 
 interface GenerateStructuredOutputOptions<T extends StructuredOutputType> {
     outputType: T;
@@ -59,9 +59,8 @@ Return **only** valid JSON matching the above schema.
     }
 
     try {
-        const providerService = new OpenRouterProviderService();
 
-        const validatedResult = await fetchStructuredOutput(providerService, {
+        const validatedResult = await fetchStructuredOutput(openRouterProvider, {
             userMessage,
             systemMessage: finalSystemMessage,
             zodSchema: zodSchema as z.ZodType<InferStructuredOutput<T>>,

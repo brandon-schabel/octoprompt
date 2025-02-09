@@ -4,14 +4,11 @@ import { z } from "zod";
 
 import { ApiError } from "shared";
 import { ticketsApiValidation } from "shared";
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { FileSuggestionsZodSchema } from "@/routes/suggest-files-routes";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
 import { createTicket, getTicketById, updateTicket, deleteTicket, linkFilesToTicket, suggestTasksForTicket, listTicketsByProject, listTicketsWithTaskCount, createTask, getTasks, updateTask, deleteTask, reorderTasks, autoGenerateTasksFromOverview, getTasksForTickets, listTicketsWithTasks } from "@/services/ticket-service";
-
-// Create an instance of the TicketService
-const openRouter = new OpenRouterProviderService();
+import { openRouterProvider } from "@/services/model-providers/providers/open-router-provider";
 
 
 router.post("/api/tickets", {
@@ -242,7 +239,7 @@ router.post(
         const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files-ticket']
 
         // 4) Use your structured-output-fetcher or direct parse
-        const result = await fetchStructuredOutput(openRouter, {
+        const result = await fetchStructuredOutput(openRouterProvider, {
             userMessage,
             systemMessage: systemPrompt,
             zodSchema: FileSuggestionsZodSchema,

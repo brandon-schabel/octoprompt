@@ -1,28 +1,26 @@
-import {
-    db,
-    eq,
-} from "@db";
+import { db, eq } from "@db";
 import { schema } from "shared";
 
-const { chats, chatMessages, } = schema;
+const { chats, chatMessages } = schema;
 
-type Chat = schema.Chat;
-type ChatMessage = schema.ChatMessage;
-type ExtendedChatMessage = schema.ExtendedChatMessage;
-type NewChatMessage = schema.NewChatMessage;
+export type Chat = schema.Chat;
+export type ChatMessage = schema.ChatMessage;
+export type ExtendedChatMessage = schema.ExtendedChatMessage;
+export type NewChatMessage = schema.NewChatMessage;
 
-type CreateChatOptions = {
+export type CreateChatOptions = {
     copyExisting?: boolean;
     currentChatId?: string;
 };
 
-export class ChatService {
-    /** Creates a new chat session */
-    async createChat(title: string, options?: CreateChatOptions): Promise<Chat> {
+/**
+ * Returns an object of functions handling chat logic in a functional style.
+ */
+export function createChatService() {
+    async function createChat(title: string, options?: CreateChatOptions): Promise<Chat> {
         const [chat] = await db.insert(chats).values({ title }).returning();
         if (!chat) throw new Error("Failed to create chat");
 
-        // Only copy messages if explicitly requested and we have a source chat
         if (options?.copyExisting && options?.currentChatId) {
             const sourceMessages = await db
                 .select()
@@ -44,42 +42,41 @@ export class ChatService {
         return chat;
     }
 
-    /** Updates the chat's last activity timestamp */
-    async updateChatTimestamp(chatId: string): Promise<void> {
+    async function updateChatTimestamp(chatId: string): Promise<void> {
         await db
             .update(chats)
             .set({ updatedAt: new Date() })
             .where(eq(chats.id, chatId));
     }
 
-    /** Save a new message to the database */
-    async saveMessage(message: NewChatMessage & { tempId?: string }): Promise<ExtendedChatMessage> {
+    async function saveMessage(message: NewChatMessage & { tempId?: string }): Promise<ExtendedChatMessage> {
         const [savedMessage] = await db.insert(chatMessages).values(message).returning();
         if (!savedMessage) throw new Error("Failed to save message");
         return { ...savedMessage, tempId: message.tempId };
     }
 
-    /** Update an existing message (e.g. during streaming) */
-    async updateMessageContent(messageId: string, content: string): Promise<void> {
-        await db.update(chatMessages).set({ content }).where(eq(chatMessages.id, messageId));
+    async function updateMessageContent(messageId: string, content: string): Promise<void> {
+        await db
+            .update(chatMessages)
+            .set({ content })
+            .where(eq(chatMessages.id, messageId));
     }
 
-    /** Get all chats */
-    async getAllChats(): Promise<Chat[]> {
+    async function getAllChats(): Promise<Chat[]> {
         return db.select().from(chats).orderBy(chats.updatedAt);
     }
 
-    /** Get all messages for a specific chat */
-    async getChatMessages(chatId: string): Promise<ExtendedChatMessage[]> {
+    async function getChatMessages(chatId: string): Promise<ExtendedChatMessage[]> {
         const messages = await db
             .select()
             .from(chatMessages)
             .where(eq(chatMessages.chatId, chatId))
             .orderBy(chatMessages.createdAt);
+
         return messages.map((msg: ChatMessage) => ({ ...msg }));
     }
 
-    async updateChat(chatId: string, title: string): Promise<Chat> {
+    async function updateChat(chatId: string, title: string): Promise<Chat> {
         const [updatedChat] = await db
             .update(chats)
             .set({ title })
@@ -89,12 +86,10 @@ export class ChatService {
         if (!updatedChat) {
             throw new Error("Chat not found");
         }
-
         return updatedChat;
     }
 
-    /** Delete an entire chat and all its messages */
-    async deleteChat(chatId: string): Promise<void> {
+    async function deleteChat(chatId: string): Promise<void> {
         await db.delete(chatMessages).where(eq(chatMessages.chatId, chatId));
         const result = await db.delete(chats).where(eq(chats.id, chatId)).returning();
         if (result.length === 0) {
@@ -102,16 +97,14 @@ export class ChatService {
         }
     }
 
-    /** Delete a single message */
-    async deleteMessage(messageId: string): Promise<void> {
+    async function deleteMessage(messageId: string): Promise<void> {
         const result = await db.delete(chatMessages).where(eq(chatMessages.id, messageId)).returning();
         if (result.length === 0) {
             throw new Error("Message not found");
         }
     }
 
-    /** Fork an entire chat */
-    async forkChat(sourceChatId: string, excludedMessageIds: string[] = []): Promise<Chat> {
+    async function forkChat(sourceChatId: string, excludedMessageIds: string[] = []): Promise<Chat> {
         const sourceChat = await db.select().from(chats).where(eq(chats.id, sourceChatId)).get();
         if (!sourceChat) {
             throw new Error("Source chat not found");
@@ -134,7 +127,6 @@ export class ChatService {
             .orderBy(chatMessages.createdAt)
             .all();
 
-        // Filter out excluded messages
         const messagesToCopy = sourceMessages.filter((m: ChatMessage) => !excludedMessageIds.includes(m.id));
 
         if (messagesToCopy.length > 0) {
@@ -149,8 +141,7 @@ export class ChatService {
         return newChat;
     }
 
-    /** Fork a chat starting from a specific message */
-    async forkChatFromMessage(
+    async function forkChatFromMessage(
         sourceChatId: string,
         messageId: string,
         excludedMessageIds: string[] = []
@@ -191,9 +182,7 @@ export class ChatService {
             throw new Error("Could not find the starting message in the chat sequence");
         }
 
-        // Include all messages up to and including the chosen message
         let messagesToCopy = sourceMessages.slice(0, indexOfStart + 1);
-        // Filter out excluded messages
         messagesToCopy = messagesToCopy.filter((m: ChatMessage) => !excludedMessageIds.includes(m.id));
 
         if (messagesToCopy.length > 0) {
@@ -207,4 +196,21 @@ export class ChatService {
 
         return newChat;
     }
+
+    return {
+        createChat,
+        updateChatTimestamp,
+        saveMessage,
+        updateMessageContent,
+        getAllChats,
+        getChatMessages,
+        updateChat,
+        deleteChat,
+        deleteMessage,
+        forkChat,
+        forkChatFromMessage,
+    };
 }
+
+
+export const chatService = createChatService();

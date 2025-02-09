@@ -3,12 +3,9 @@ import { json } from "@bnk/router";
 import { ApiError } from "shared";
 import { z } from "zod";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
-
-const openRouterProviderService = new OpenRouterProviderService();
-
+import { openRouterProvider } from "@/services/model-providers/providers/open-router-provider";
 
 export const FileSuggestionsZodSchema = z.object({
     fileIds: z.array(z.string())
@@ -72,7 +69,7 @@ router.post(
         try {
             const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files']
             // 1) Use our structured-output-fetcher to get guaranteed-JSON from the LLM
-            const result = await fetchStructuredOutput(openRouterProviderService, {
+            const result = await fetchStructuredOutput(openRouterProvider, {
                 userMessage,
                 systemMessage: systemPrompt,
                 zodSchema: FileSuggestionsZodSchema,

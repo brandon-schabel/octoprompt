@@ -1,8 +1,7 @@
-// packages/server/src/utils/structured-output-fetcher.ts
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 import { z } from "zod";
 import { zodToStructuredJsonSchema, toOpenRouterSchema } from "shared/src/structured-outputs/structured-output-utils";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
+import { createOpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
 
 const structuredOutputModelDefaults = DEFAULT_MODEL_CONFIGS['fetch-structured-output']
 
@@ -119,7 +118,7 @@ export interface StructuredOutputRequest<T> {
 }
 
 export async function fetchStructuredOutput<T>(
-    openRouterService: OpenRouterProviderService,
+    openRouterProvider: ReturnType<typeof createOpenRouterProviderService>,
     params: StructuredOutputRequest<T>
 ): Promise<T> {
     const {
@@ -138,7 +137,7 @@ export async function fetchStructuredOutput<T>(
     const openRouterSchema = toOpenRouterSchema(jsonSchema);
 
     // 2) Begin SSE request
-    const stream = await openRouterService.processMessage({
+    const stream = await openRouterProvider.processMessage({
         chatId,
         userMessage,
         provider: "openrouter",

@@ -2,26 +2,25 @@ import { router } from "server-router";
 import { json } from '@bnk/router';
 import { ApiError } from 'shared';
 import { providerKeyApiValidation } from "shared";
-import { ProviderKeyService } from "@/services/model-providers/providers/provider-key-service";
+import { providerKeyService } from "@/services/model-providers/providers/provider-key-service";
 
-const keyService = new ProviderKeyService();
 
 router.post("/api/keys", {
     validation: providerKeyApiValidation.create,
 }, async (_, { body }) => {
-    const newKey = await keyService.createKey(body);
+    const newKey = await providerKeyService.createKey(body);
     return json({ success: true, key: newKey }, { status: 201 });
 });
 
 router.get("/api/keys", {}, async () => {
-    const keys = await keyService.listKeys();
+    const keys = await providerKeyService.listKeys();
     return json({ success: true, keys });
 });
 
 router.get("/api/keys/:keyId", {
     validation: providerKeyApiValidation.getOrDelete,
 }, async (_, { params }) => {
-    const k = await keyService.getKeyById(params.keyId);
+    const k = await providerKeyService.getKeyById(params.keyId);
     if (!k) {
         throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
     }
@@ -31,7 +30,7 @@ router.get("/api/keys/:keyId", {
 router.patch("/api/keys/:keyId", {
     validation: providerKeyApiValidation.update,
 }, async (_, { params, body }) => {
-    const updated = await keyService.updateKey(params.keyId, body);
+    const updated = await providerKeyService.updateKey(params.keyId, body);
     if (!updated) {
         throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
     }
@@ -41,7 +40,7 @@ router.patch("/api/keys/:keyId", {
 router.delete("/api/keys/:keyId", {
     validation: providerKeyApiValidation.getOrDelete,
 }, async (_, { params }) => {
-    const deleted = await keyService.deleteKey(params.keyId);
+    const deleted = await providerKeyService.deleteKey(params.keyId);
     if (!deleted) {
         throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
     }

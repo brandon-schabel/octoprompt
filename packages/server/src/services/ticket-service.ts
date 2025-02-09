@@ -10,12 +10,12 @@ import {
 import { CreateTicketBody, UpdateTicketBody, schema } from "shared";
 import { ApiError } from "shared";
 import type { InferSelectModel } from "drizzle-orm";
-import { OpenRouterProviderService } from "./model-providers/providers/open-router-provider";
 import { promptsMap } from "@/utils/prompts-map";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 import { z } from "zod";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
+import { createOpenRouterProviderService, openRouterProvider } from "./model-providers/providers/open-router-provider";
 
 const { tickets, ticketFiles, ticketTasks, files } = schema;
 
@@ -66,7 +66,6 @@ export const TaskSuggestionsZodSchema = z.object({
 });
 export type TaskSuggestions = z.infer<typeof TaskSuggestionsZodSchema>;
 
-const openRouterProvider = new OpenRouterProviderService();
 
 export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
     const newItem: NewTicket = {

@@ -1,19 +1,17 @@
-import { UnifiedProviderService } from '@/services/model-providers/providers/unified-provider-service';
 import { json } from '@bnk/router';
 import { ApiError } from 'shared';
 import { router } from "server-router";
 import { chatApiValidation } from 'shared/src/validation/chat-api-validation';
-import { ChatService } from '@/services/model-providers/chat/chat-service';
+import { unifiedProvider } from '@/services/model-providers/providers/unified-provider-service';
+import { chatService } from '@/services/model-providers/chat/chat-service';
 
-const unifiedProviderService = new UnifiedProviderService();
-const chatService = new ChatService();
 
 const AI_BASE_PATH = '/api/ai';
 
 router.post(`${AI_BASE_PATH}/chat`, {
     validation: chatApiValidation.create,
 }, async (_, { body }) => {
-    const stream = await unifiedProviderService.processMessage({
+    const stream = await unifiedProvider.processMessage({
         chatId: body.chatId,
         userMessage: body.message,
         provider: body.provider,
@@ -101,6 +99,6 @@ router.get('/api/models', {}, async (req) => {
         throw new ApiError("Provider is required", 400, "BAD_REQUEST");
     }
 
-    const data = await unifiedProviderService.listModels(provider as any);
+    const data = await unifiedProvider.listModels(provider as any);
     return json({ data });
 });

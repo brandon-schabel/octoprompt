@@ -1,8 +1,7 @@
 import { DEFAULT_MODEL_CONFIGS } from 'shared';
 import { promptsMap } from '../utils/prompts-map';
-import { UnifiedProviderService } from './model-providers/providers/unified-provider-service';
+import { openRouterProvider } from './model-providers/providers/open-router-provider';
 
-const unifiedProviderService = new UnifiedProviderService();
 
 /**
  * Takes the user's original context/intent/prompt and uses a model
@@ -30,7 +29,7 @@ ${promptsMap.contemplativePrompt}
 
     try {
         const cfg = DEFAULT_MODEL_CONFIGS['optimize-prompt'];
-        const stream = await unifiedProviderService.processMessage({
+        const stream = await openRouterProvider.processMessage({
             chatId: 'promptimizer-chat',
             userMessage,
             provider: 'openrouter',

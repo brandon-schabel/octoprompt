@@ -7,7 +7,7 @@ import {
     deleteKvKey,
 } from '@/services/kv-service';
 
-import { KVKeyEnum, kvKeyEnumSchema, KvSchemas } from 'shared/src/kv-validators';
+import { kvKeyEnumSchema, KvSchemas } from 'shared/src/kv-validators';
 import { router } from 'server-router';
 import { ApiError } from 'shared/index';
 

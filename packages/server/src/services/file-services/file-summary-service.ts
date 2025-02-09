@@ -2,8 +2,9 @@ import { db } from "@/utils/database";
 import { eq, and, inArray } from "drizzle-orm";
 import { GlobalState, DEFAULT_MODEL_CONFIGS, schema } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
-import { UnifiedProviderService } from "../model-providers/providers/unified-provider-service";
+
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
+import { unifiedProvider } from "../model-providers/providers/unified-provider-service";
 
 const { files } = schema;
 
@@ -14,10 +15,6 @@ type ProjectFileType = schema.ProjectFile;
  */
 let concurrency = 5;
 
-/**
- * The shared provider service that was previously stored in the class.
- */
-const unifiedProviderService = new UnifiedProviderService();
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
     const chunks: T[][] = [];
@@ -106,7 +103,7 @@ Specifically, cover the following:
 
         const cfg = DEFAULT_MODEL_CONFIGS['summarize-file'];
 
-        const stream = await unifiedProviderService.processMessage({
+        const stream = await unifiedProvider.processMessage({
             chatId: "fileSummaryChat",
             userMessage,
             provider: "openrouter",

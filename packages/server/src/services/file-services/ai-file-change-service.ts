@@ -7,8 +7,8 @@ import { eq } from "drizzle-orm";
 
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { fileChanges } from "shared/schema";
-import { OpenRouterProviderService } from "../model-providers/providers/open-router-provider";
 import { AppDB } from "@db";
+import { createOpenRouterProviderService, openRouterProvider } from "../model-providers/providers/open-router-provider";
 
 /**
  * Zod schema describing AI's JSON output structure
@@ -35,7 +35,7 @@ export interface GenerateFileChangeParams {
   /** The user's request/prompt describing desired changes. */
   prompt: string;
   /** An instance of your OpenRouter provider. */
-  openRouter?: OpenRouterProviderService;
+  openRouter?: ReturnType<typeof createOpenRouterProviderService>;
   /** The Drizzle DB connection. */
   db: AppDB;
   /** ID for a new conversation or correlation, if desired. */
@@ -59,31 +59,12 @@ export async function generateFileChange(
   {
     filePath,
     prompt,
-    openRouter = new OpenRouterProviderService(),
+    openRouter = openRouterProvider,
     db,
     chatId = `file-change-${Date.now()}`, // fallback
     model = "openai/gpt-4",
     temperature = 0.7,
-  }: {
-    /** Path to the file to be updated. */
-    filePath: string;
-    /** The user's request/prompt describing desired changes. */
-    prompt: string;
-    /** An instance of your OpenRouter provider. */
-    openRouter?: OpenRouterProviderService;
-    /** The Drizzle DB connection. */
-    db: AppDB;
-    /** ID for a new conversation or correlation, if desired. */
-    chatId?: string;
-    /**
-     * Optional model config for the request,
-     * if not using a default from your code.
-     */
-    model?: string;
-    temperature?: number;
-  }
-
-
+  }: GenerateFileChangeParams
 ): Promise<{ changeId: number; diff: string }> {
 
   // 1) Read the current file content from disk
