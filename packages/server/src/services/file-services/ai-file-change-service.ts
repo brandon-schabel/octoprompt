@@ -130,11 +130,11 @@ export async function confirmFileChange(
   changeId: number
 ): Promise<boolean> {
   // 1) Fetch the file change record (explicitly type the selected row)
-  const [record] = await db
+  const record = await db
     .select()
-    .from(fileChanges as any) // cast to any due to module mismatch issues
-    .where(eq(fileChanges.id as any, changeId)) // cast fileChanges.id to any within eq
-    .limit(1) as Array<{ filePath: string; suggestedDiff: string }>;
+    .from(fileChanges)
+    .where(eq(fileChanges.id, changeId))
+    .get();
 
   if (!record) {
     // No record => can't confirm
@@ -146,9 +146,9 @@ export async function confirmFileChange(
 
   // 3) Update DB status
   await db
-    .update(fileChanges as any) // cast to any here as well
+    .update(fileChanges)
     .set({ status: "confirmed" })
-    .where(eq(fileChanges.id as any, changeId)); // cast fileChanges.id to any
+    .where(eq(fileChanges.id, changeId));
 
   // Could trigger additional logic (sync with project or re-summarize, etc.)
   return true;
@@ -162,18 +162,11 @@ export async function getFileChange(
   db: AppDB,
   changeId: number
 ) {
-  const [record] = await db
+  const record = await db
     .select()
-    .from(fileChanges)  // cast table to any
-    .where(eq(fileChanges.id, changeId)) // cast fileChanges.id to any
-    .limit(1) as Array<{
-      id: number;
-      filePath: string;
-      originalContent: string;
-      suggestedDiff: string;
-      status: string;
-      timestamp: number;
-    }>;
+    .from(fileChanges)
+    .where(eq(fileChanges.id, changeId))
+    .get();
 
   return record ?? null;
 }

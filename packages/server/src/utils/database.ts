@@ -1,15 +1,22 @@
+// packages/server/src/utils/database.ts
 import { BunSQLiteDatabase, drizzle } from 'drizzle-orm/bun-sqlite';
 import { Database } from 'bun:sqlite';
-import { sqliteDBPath } from './db-config';
-import { schema } from "shared";
+import { sqliteDBPath, migrationsDir as migrationsDirPath } from './db-config';
+import { schema } from 'shared';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 
-const isDev = process.env.DEV === 'true';
+let db: BunSQLiteDatabase<typeof schema>;
 
-const sqlite = new Database(isDev ? sqliteDBPath : 'sqlite.db');
-export const db = drizzle({ client: sqlite, schema });
-
-export default db;
-
+if (process.env.NODE_ENV === 'test') {
+    // Use an in-memory database for tests and run migrations
+    const sqlite = new Database(":memory:");
+    db = drizzle(sqlite, { schema });
+    await migrate(db, { migrationsFolder: migrationsDirPath });
+} else {
+    const isDev = process.env.DEV === 'true';
+    const sqlite = new Database(isDev ? sqliteDBPath : 'sqlite.db');
+    db = drizzle(sqlite, { schema });
+}
 
 export type {
     InferSelectModel,
@@ -28,7 +35,10 @@ export {
     not,
     sql,
     inArray,
-    desc
+    desc,
 } from 'drizzle-orm';
 
-export type AppDB = BunSQLiteDatabase<typeof schema> 
+export type AppDB = BunSQLiteDatabase<typeof schema>;
+
+export { db };
+export default db;

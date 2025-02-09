@@ -1,3 +1,5 @@
+// packages/server/src/services/ticket-service.ts
+
 import {
     eq,
     and,
@@ -15,7 +17,7 @@ import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 import { z } from "zod";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
-import { createOpenRouterProviderService, openRouterProvider } from "./model-providers/providers/open-router-provider";
+import {  openRouterProvider } from "./model-providers/providers/open-router-provider";
 
 const { tickets, ticketFiles, ticketTasks, files } = schema;
 
@@ -66,6 +68,39 @@ export const TaskSuggestionsZodSchema = z.object({
 });
 export type TaskSuggestions = z.infer<typeof TaskSuggestionsZodSchema>;
 
+/**
+ * Function extracted to fetch tasks from AI. 
+ * This is purely to allow simpler unit tests of the "structured-output-fetcher" usage.
+ */
+export async function fetchTaskSuggestionsForTicket(
+    ticket: Ticket,
+    userContext: string | undefined
+): Promise<TaskSuggestions> {
+    const projectSummary = await getFullProjectSummary(ticket.projectId);
+
+    const userMessage = `Please suggest tasks for this ticket:
+Title: ${ticket.title}
+Overview: ${ticket.overview}
+
+UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
+
+Below is a combined summary of project files:
+${projectSummary}
+`;
+
+    const cfg = DEFAULT_MODEL_CONFIGS['suggest-ticket-tasks'];
+
+    const result = await fetchStructuredOutput(openRouterProvider, {
+        userMessage,
+        systemMessage: octopromptPlanningPrompt,
+        zodSchema: TaskSuggestionsZodSchema,
+        schemaName: "TaskSuggestions",
+        model: cfg.model,
+        temperature: cfg.temperature,
+        chatId: `ticket-${ticket.id}-suggest-tasks`,
+    });
+    return result;
+}
 
 export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
     const newItem: NewTicket = {
@@ -179,6 +214,9 @@ export async function getTicketFiles(ticketId: string): Promise<TicketFile[]> {
         .where(eq(ticketFiles.ticketId, ticketId));
 }
 
+/**
+ * Original function, still used externally. It delegates to `fetchTaskSuggestionsForTicket`.
+ */
 export async function suggestTasksForTicket(ticketId: string, userContext?: string): Promise<string[]> {
     console.log("[TicketService] Starting task suggestion for ticket:", ticketId);
 
@@ -188,33 +226,10 @@ export async function suggestTasksForTicket(ticketId: string, userContext?: stri
         throw new Error(`Ticket ${ticketId} not found`);
     }
 
-    const projectId = ticket.projectId;
-    const projectSummary = await getFullProjectSummary(projectId);
-
-    const userMessage = `Please suggest tasks for this ticket:
-Title: ${ticket.title}
-Overview: ${ticket.overview}
-
-UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
-
-Below is a combined summary of project files:
-${projectSummary}
-`;
-
     try {
-        const cfg = DEFAULT_MODEL_CONFIGS['suggest-ticket-tasks'];
-
-        const result = await fetchStructuredOutput(openRouterProvider, {
-            userMessage,
-            systemMessage: octopromptPlanningPrompt,
-            zodSchema: TaskSuggestionsZodSchema,
-            schemaName: "TaskSuggestions",
-            model: cfg.model,
-            temperature: cfg.temperature,
-            chatId: `ticket-${ticketId}-suggest-tasks`,
-        });
-
-        return result.tasks.map(task => task.title);
+        const suggestions = await fetchTaskSuggestionsForTicket(ticket, userContext);
+        // Return only the titles
+        return suggestions.tasks.map(task => task.title);
     } catch (error) {
         console.error("[TicketService] Error in task suggestion:", error);
         if (error instanceof Error) {
@@ -346,9 +361,9 @@ export async function autoGenerateTasksFromOverview(ticketId: string): Promise<T
     if (!ticket) {
         throw new ApiError(`Ticket ${ticketId} not found`, 404, "NOT_FOUND");
     }
-    const suggestions = await suggestTasksForTicket(ticketId, ticket.overview ?? "");
+    const titles = await suggestTasksForTicket(ticketId, ticket.overview ?? "");
     const inserted: TicketTask[] = [];
-    for (const [idx, content] of suggestions.entries()) {
+    for (const [idx, content] of titles.entries()) {
         const newRow: NewTicketTask = {
             ticketId,
             content,

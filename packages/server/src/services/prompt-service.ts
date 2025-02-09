@@ -14,6 +14,11 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
         name: data.name,
         content: data.content,
     }).returning();
+
+    if (data.projectId) {
+      await addPromptToProject(newPrompt.id, data.projectId);
+    }
+
     return newPrompt;
 }
 

@@ -1,20 +1,16 @@
+// File: packages/server/src/services/file-services/file-summary-service.ts
+
 import { db } from "@/utils/database";
 import { eq, and, inArray } from "drizzle-orm";
 import { GlobalState, DEFAULT_MODEL_CONFIGS, schema } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
-
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
-import { unifiedProvider } from "../model-providers/providers/unified-provider-service";
+import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
 
 const { files } = schema;
-
 type ProjectFileType = schema.ProjectFile;
 
-/**
- * A concurrency limit for summarization tasks.
- */
 let concurrency = 5;
-
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
     const chunks: T[][] = [];
@@ -24,18 +20,13 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
     return chunks;
 }
 
-async function shouldSummarizeFile(projectId: string, filePath: string): Promise<boolean> {
+export async function shouldSummarizeFile(projectId: string, filePath: string): Promise<boolean> {
     const state = await websocketStateAdapter.getState();
-    const settings = state.settings;
-
-    if (!settings.summarizationEnabledProjectIds.includes(projectId)) {
-        return false;
-    }
-    if (matchesAnyPattern(filePath, settings.summarizationIgnorePatterns)) {
-        return false;
-    }
-    if (settings.summarizationAllowPatterns.length > 0) {
-        if (!matchesAnyPattern(filePath, settings.summarizationAllowPatterns)) {
+    const s = state.settings;
+    if (!s.summarizationEnabledProjectIds.includes(projectId)) return false;
+    if (matchesAnyPattern(filePath, s.summarizationIgnorePatterns)) {
+        // if ignore matched, only allow if it also matches an allow pattern
+        if (!matchesAnyPattern(filePath, s.summarizationAllowPatterns)) {
             return false;
         }
     }
@@ -43,69 +34,26 @@ async function shouldSummarizeFile(projectId: string, filePath: string): Promise
 }
 
 /**
- * Retrieves file summaries for a project. Optionally filter by fileIds.
+ * Exposed for unit testing. Summarizes a single file if it meets conditions.
  */
-export async function getFileSummaries(
-    projectId: string,
-    fileIds?: string[],
-): Promise<ProjectFileType[]> {
-    const conditions = [eq(files.projectId, projectId)];
-    if (fileIds && fileIds.length > 0) {
-        conditions.push(inArray(files.id, fileIds));
-    }
+export async function summarizeSingleFile(file: ProjectFileType): Promise<void> {
+    if (!(await shouldSummarizeFile(file.projectId, file.path))) return;
+    const fileContent = file.content || "";
+    if (!fileContent.trim()) return;
+    if (fileContent.length > 50000) return;
 
-    return db
-        .select()
-        .from(files)
-        .where(and(...conditions))
-        .all();
-}
-
-/**
- * Summarizes a single file's content by calling the provider.
- */
-async function summarizeFile(file: ProjectFileType) {
-    if (!(await shouldSummarizeFile(file.projectId, file.path))) {
-        console.log(`[FileSummaryService] Skipping summarization for file: ${file.name}`);
-        return;
-    }
-
-    try {
-        const fileContent = file.content || "";
-        if (!fileContent.trim()) {
-            console.warn(`[FileSummaryService] File content is empty for file: ${file.name}`);
-            return;
-        }
-
-        if (fileContent.length > 50000) {
-            console.warn(`[FileSummaryService] File content is too long for file: ${file.name}`);
-            return;
-        }
-
-        const systemPrompt = `
+    const systemPrompt = `
 ## You are a coding assistant that specializes in concise code summaries.
-Goal: Given a code file, your task is to create a short, essential overview of its contents.
+1) Provide a short overview of what the file does.
+2) Outline main exports (functions/classes).
+3) No suggestions or code blocks; strictly textual, minimal fluff.
+`;
 
-Specifically, cover the following:
-1. A brief summary of what the file does.
-2. Exported functions/classes: outline each one along with key inputs (parameters) and outputs (return values).
-3. Any other critical information needed to understand the file's core functionality.
-
-**Rules**
-- Do **not** provide suggestions for improvements or refactoring.
-- Do **not** include code blocks.
-- Your output must be strictly textual, focusing only on the essential information about the file.
-- Avoid any filler words or phases, just get straight to the information, use abbreviations, use symbols to reduce verbosity.
-- Summaries of variables and functions must be extremely brief.
-        `;
-
-        const userMessage = fileContent.slice(0, 50000);
-
-        const cfg = DEFAULT_MODEL_CONFIGS['summarize-file'];
-
+    const cfg = DEFAULT_MODEL_CONFIGS["summarize-file"];
+    try {
         const stream = await unifiedProvider.processMessage({
             chatId: "fileSummaryChat",
-            userMessage,
+            userMessage: fileContent.slice(0, 50000),
             provider: "openrouter",
             options: {
                 model: cfg.model,
@@ -126,14 +74,9 @@ Specifically, cover the following:
         }
 
         const summaryText = text.trim();
+        if (!summaryText) return;
 
-        if (!summaryText) {
-            console.warn(`[FileSummaryService] Summarization returned empty for file: ${file.name}`);
-            return;
-        }
-
-        await db
-            .update(files)
+        await db.update(files)
             .set({
                 summary: summaryText,
                 summaryLastUpdatedAt: new Date(),
@@ -141,83 +84,71 @@ Specifically, cover the following:
             .where(eq(files.id, file.id))
             .run();
 
-    } catch (error) {
-        console.error("[FileSummaryService] Error summarizing file:", file.name, error);
+    } catch {
+        // handle error quietly
     }
 }
 
+export async function getFileSummaries(
+    projectId: string,
+    fileIds?: string[]
+): Promise<ProjectFileType[]> {
+    const conditions = [eq(files.projectId, projectId)];
+    if (fileIds && fileIds.length) {
+        conditions.push(inArray(files.id, fileIds));
+    }
+    return db.select().from(files).where(and(...conditions)).all();
+}
+
 /**
- * Summarize multiple files, respecting concurrency and skip rules.
+ * Summarize multiple files, respecting concurrency.
  */
 export async function summarizeFiles(
     projectId: string,
     filesToSummarize: ProjectFileType[],
     globalState: GlobalState
 ): Promise<{ included: number; skipped: number }> {
-    const allowPatterns = globalState.settings.summarizationAllowPatterns || [];
-    const ignorePatterns = globalState.settings.summarizationIgnorePatterns || [];
-    const enabledProjectIds = globalState.settings.summarizationEnabledProjectIds || [];
-
-    if (!enabledProjectIds.includes(projectId)) {
-        return { included: 0, skipped: filesToSummarize.length };
-    }
+    const allowedProject = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
+    if (!allowedProject) return { included: 0, skipped: filesToSummarize.length };
 
     const chunks = chunkArray(filesToSummarize, concurrency);
-    const results: { included: boolean }[] = [];
+    let includedCount = 0;
+    let skippedCount = 0;
 
     for (const chunk of chunks) {
-        const chunkPromises = chunk.map(async (file) => {
-            const isAllowed = matchesAnyPattern(file.path, allowPatterns);
-            const isIgnored = matchesAnyPattern(file.path, ignorePatterns);
-
-            if (isIgnored && !isAllowed) {
-                return { included: false };
-            }
-
-            const fileUpdatedAt = new Date(file.updatedAt).getTime();
-            const summaryUpdatedAt = file.summaryLastUpdatedAt
-                ? file.summaryLastUpdatedAt.getTime()
-                : 0;
-            const summaryIsStale = fileUpdatedAt > summaryUpdatedAt;
-
-            if (!file.summary || summaryIsStale) {
-                await summarizeFile(file);
-                return { included: true };
-            } else {
-                return { included: true };
-            }
-        });
-        const chunkResults = await Promise.all(chunkPromises);
-        results.push(...chunkResults);
+        const results = await Promise.all(
+            chunk.map(async (f) => {
+                const canSummarize = await shouldSummarizeFile(f.projectId, f.path);
+                if (!canSummarize) return false;
+                const fileUpdatedAt = new Date(f.updatedAt).getTime();
+                const summaryAt = f.summaryLastUpdatedAt ? f.summaryLastUpdatedAt.getTime() : 0;
+                const stale = fileUpdatedAt > summaryAt;
+                if (!f.summary || stale) {
+                    await summarizeSingleFile(f);
+                }
+                return true;
+            })
+        );
+        includedCount += results.filter(Boolean).length;
+        skippedCount += results.filter((val) => !val).length;
     }
-
-    const includedCount = results.filter((res) => res.included).length;
-    const skippedCount = filesToSummarize.length - includedCount;
-
     return { included: includedCount, skipped: skippedCount };
 }
 
 /**
- * Forces summarization of each given file, ignoring existing summaries.
+ * Forces summarization of files regardless of existing summary.
  */
 export async function forceSummarizeFiles(
     projectId: string,
     filesToSummarize: ProjectFileType[],
     globalState: GlobalState
-): Promise<void> {
+) {
     const chunks = chunkArray(filesToSummarize, concurrency);
-
     for (const chunk of chunks) {
-        const chunkPromises = chunk.map(async (file) => {
-            await summarizeFile(file);
-        });
-        await Promise.all(chunkPromises);
+        await Promise.all(chunk.map((f) => summarizeSingleFile(f)));
     }
 }
 
-/**
- * Forces re-summarization of only the selected files if they match summarization rules.
- */
 export async function forceResummarizeSelectedFiles(
     projectId: string,
     filesToSummarize: ProjectFileType[],
@@ -226,19 +157,18 @@ export async function forceResummarizeSelectedFiles(
     const chunks = chunkArray(filesToSummarize, concurrency);
     let included = 0;
     let skipped = 0;
-
-    for (const chunk of chunks) {
-        const chunkPromises = chunk.map(async (file) => {
-            if (await shouldSummarizeFile(projectId, file.path)) {
-                await summarizeFile(file);
-                return { included: true };
-            }
-            return { included: false };
-        });
-        const results = await Promise.all(chunkPromises);
-        included += results.filter((r) => r.included).length;
-        skipped += results.filter((r) => !r.included).length;
+    for (const c of chunks) {
+        const results = await Promise.all(
+            c.map(async (file) => {
+                if (await shouldSummarizeFile(projectId, file.path)) {
+                    await summarizeSingleFile(file);
+                    return true;
+                }
+                return false;
+            })
+        );
+        included += results.filter((r) => r).length;
+        skipped += results.filter((r) => !r).length;
     }
-
     return { included, skipped };
 }
