@@ -32,7 +32,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="mt-6 max-w-lg mx-auto text-sm text-gray-500 dark:text-gray-400">
-            Want advanced features like file summarization or voice input?
+            Want advanced features like file summarization?
             Configure your provider keys under the{" "}
             <Link to="/keys" className="underline hover:text-indigo-600 dark:hover:text-indigo-400">
               Keys

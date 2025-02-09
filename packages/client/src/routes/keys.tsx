@@ -44,7 +44,7 @@ function KeysPage() {
                     <div className="flex items-center gap-2">
                         <CardTitle>Provider Keys</CardTitle>
                         <InfoTooltip>
-                            {`Provider keys let you tap into external AI services (e.g. OpenAI, OpenRouter). Adding these keys unlocks extra features like file suggestions, summarizations, and voice input with Whisper. If no key is added, you can still use local LLMs in the chat.`}
+                            {`Provider keys let you tap into external AI services (e.g. OpenAI, OpenRouter). Adding these keys unlocks extra features like file suggestions, summarizations, generating ticket tasks. If no key is added, you can still use local LLMs in the chat.`}
                         </InfoTooltip>
                     </div>
                     <CardDescription>
@@ -136,8 +136,7 @@ function KeysPage() {
                                 <p>
                                     You can still chat with local LLMs without any keys. However, by adding
                                     <strong> OpenAI </strong> or <strong> OpenRouter </strong> keys, you’ll unlock advanced
-                                    features like file summarizations, file suggestions, voice commands
-                                    (via Whisper), and the ability to create tasks on tickets from chat.
+                                    features like file summarizations, file suggestions, and the ability to create tasks on tickets from chat.
                                     <br /><br />
                                     Simply select a provider above, enter your key, and click <em>Add</em>.
                                 </p>

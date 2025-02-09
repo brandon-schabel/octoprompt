@@ -19,8 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useWhisperTranscription } from "@/hooks/api/use-whisper-transcription"
-import { useEffect, useState, useRef, forwardRef, useMemo } from "react"
+import { useEffect, useState, useRef, forwardRef } from "react"
 import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from "sonner"
@@ -80,12 +79,6 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     }
   }
 
-  const {
-    transcript,
-    isRecording,
-    startRecording,
-    stopRecording,
-  } = useWhisperTranscription({ debug: false })
 
   // Whenever transcript updates (new transcription completed),
   // insert it at the current selection.

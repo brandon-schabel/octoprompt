@@ -40,7 +40,6 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         <p><AppShortcutDisplay shortcut="focus-file-tree" />: Focus file tree</p>
                         <p><AppShortcutDisplay shortcut="focus-prompts" />: Focus prompts</p>
                         <p><AppShortcutDisplay shortcut="focus-prompt-input" />: Focus prompt input</p>
-                        <p><AppShortcutDisplay shortcut="toggle-voice-input" />: Toggle voice input</p>
 
                         <h3 className="font-semibold mt-4 mb-2">File Search & Autocomplete</h3>
                         <p><ShortcutDisplay shortcut={['up', 'down']} delimiter=" / "></ShortcutDisplay>: Navigate through suggestions</p>

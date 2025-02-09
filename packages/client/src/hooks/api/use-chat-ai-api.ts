@@ -30,7 +30,6 @@ const CHAT_KEYS = {
     chats: () => [...CHAT_KEYS.all, 'chats'] as const,
     chat: (id: string) => [...CHAT_KEYS.chats(), id] as const,
     messages: (chatId: string) => [...CHAT_KEYS.chat(chatId), 'messages'] as const,
-    whisperTranscription: () => [...CHAT_KEYS.all, 'whisper-transcription'] as const,
     models: (provider: APIProviders) => [...CHAT_KEYS.all, 'models', provider] as const,
 };
 
@@ -87,54 +86,6 @@ async function deleteMessage(api: ReturnType<typeof useApi>['api'], messageId: s
         const error = await response.json();
         throw new Error(error.message || 'Failed to delete message');
     }
-}
-
-
-// Add these types near the other type definitions
-type WhisperTranscriptionResponse = {
-    transcript: string;
-    error?: string;
-}
-
-type WhisperTranscriptionOptions = {
-    prompt?: string;
-    language?: string;
-    temperature?: number;
-    response_format?: 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt';
-}
-
-// Update the transcribeAudio function
-async function transcribeAudio(
-    api: ReturnType<typeof useApi>['api'],
-    formData: FormData,
-    options?: WhisperTranscriptionOptions
-): Promise<WhisperTranscriptionResponse> {
-    // Add options to formData if provided
-    if (options) {
-        Object.entries(options).forEach(([key, value]) => {
-            if (value !== undefined) {
-                formData.append(key, value.toString());
-            }
-        });
-    }
-
-    const response = await api.request('/api/ai/whisper-stream', {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to transcribe audio');
-    }
-
-    const result = await response.json();
-
-    if (!result.transcript) {
-        throw new Error('No transcript found in response');
-    }
-
-    return result;
 }
 
 // Hooks
@@ -278,28 +229,6 @@ export const useDeleteMessage = () => {
             queryClient.invalidateQueries({ 
                 queryKey: CHAT_KEYS.all,
             });
-        },
-        onError: commonErrorHandler
-    });
-};
-
-// Update the useWhisperTranscribe hook
-export const useWhisperTranscribe = () => {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
-
-    return useMutation<
-        WhisperTranscriptionResponse,
-        Error,
-        { audio: File | Blob; options?: WhisperTranscriptionOptions }
-    >({
-        mutationFn: async ({ audio, options }) => {
-            const formData = new FormData();
-            formData.append('audio', audio);
-            return transcribeAudio(api, formData, options);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.whisperTranscription() });
         },
         onError: commonErrorHandler
     });
