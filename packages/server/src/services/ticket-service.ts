@@ -106,8 +106,8 @@ function mapTicket(row: any): Ticket {
     status: row.status,
     priority: row.priority,
     suggestedFileIds: row.suggested_file_ids,
-    createdAt: new Date(row.created_at).getTime(),
-    updatedAt: new Date(row.updated_at).getTime()
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at)
   };
   const validated = TicketReadSchema.parse(mapped);
   return {
@@ -124,8 +124,8 @@ function mapTicketTask(row: any): TicketTask {
     content: row.content,
     done: row.done === 1,
     orderIndex: row.order_index,
-    createdAt: new Date(row.created_at).getTime(),
-    updatedAt: new Date(row.updated_at).getTime()
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at)
   };
   const validated = TicketTaskReadSchema.parse(mapped);
   return {
@@ -226,15 +226,15 @@ export async function updateTicket(ticketId: string, data: UpdateTicketBody): Pr
     } catch (error) {
       fileIds = [];
     }
-    // if (fileIds.length > 0) {
-    //   const stmtFile = db.prepare(`SELECT 1 as present FROM files WHERE id = ? AND project_id = ? LIMIT 1`);
-    //   for (const fileId of fileIds) {
-    //     const file = stmtFile.get(fileId, existing.projectId);
-    //     if (!file) {
-    //       throw new ApiError("Some fileIds no longer exist on disk", 400, "FILE_NOT_FOUND");
-    //     }
-    //   }
-    // }
+    if (fileIds.length > 0) {
+      const stmtFile = db.prepare(`SELECT 1 as present FROM files WHERE id = ? AND project_id = ? LIMIT 1`);
+      for (const fileId of fileIds) {
+        const file = stmtFile.get(fileId, existing.projectId);
+        if (!file) {
+          throw new ApiError("Some fileIds no longer exist on disk", 400, "FILE_NOT_FOUND");
+        }
+      }
+    }
   }
 
   const updates: string[] = [];

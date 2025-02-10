@@ -5,21 +5,22 @@ import { PromptReadSchema, PromptProjectReadSchema } from "shared/src/utils/data
 
 
 export type RawPrompt = {
-  id: string;
-  name: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
+    id: string;
+    name: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
 };
 
 export type RawPromptProject = {
-  prompt_id: string;
-  project_id: string;
+    prompt_id: string;
+    project_id: string;
 };
 
 export function mapPrompt(row: RawPrompt): Prompt {
-    const parsedCreatedAt = !isNaN(Number(row.created_at)) ? Number(row.created_at) : new Date(row.created_at).getTime();
-    const parsedUpdatedAt = !isNaN(Number(row.updated_at)) ? Number(row.updated_at) : new Date(row.updated_at).getTime();
+    const parsedCreatedAt = !isNaN(Number(row.created_at)) ? Number(row.created_at) : new Date(row.created_at)
+    const parsedUpdatedAt = !isNaN(Number(row.updated_at)) ? Number(row.updated_at) : new Date(row.updated_at)
+
     const mapped = {
         id: row.id,
         name: row.name,
@@ -63,7 +64,7 @@ export async function addPromptToProject(promptId: string, projectId: string): P
     // Remove any existing association for the prompt
     const deleteStmt = db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ?");
     deleteStmt.run(promptId);
-    
+
     // Insert the new association
     const insertStmt = db.prepare("INSERT INTO prompt_projects (prompt_id, project_id) VALUES (?, ?)");
     insertStmt.run(promptId, projectId);

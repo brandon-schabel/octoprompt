@@ -26,8 +26,8 @@ function mapChat(row: RawChat): Chat {
     const mapped = {
         id: row.id,
         title: row.title,
-        createdAt: new Date(row.created_at).getTime(),
-        updatedAt: new Date(row.updated_at).getTime()
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at)
     };
     const chat = ChatReadSchema.parse(mapped);
     return {
@@ -43,7 +43,7 @@ function mapChatMessage(row: RawChatMessage): ChatMessage {
         chatId: row.chat_id,
         role: row.role,
         content: row.content,
-        createdAt: new Date(row.created_at).getTime()
+        createdAt: new Date(row.created_at)
     };
     const message = ChatMessageReadSchema.parse(mapped);
     return {

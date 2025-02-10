@@ -96,13 +96,11 @@ describe("Ticket Service", () => {
         });
         // Insert file to reference in suggestedFileIds
         db.run(
-            `INSERT INTO files (project_id, name, path, extension, size)
-       VALUES (?, ?, ?, ?, ?)`,
-            ["testproj", "somefile", "somefile.txt", ".txt", 100]
+            `INSERT INTO files (id, project_id, name, path, extension, size)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            ["test-file-1", "testproj", "somefile", "somefile.txt", ".txt", 100]
         );
-        const fId = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
-
-
+        const fId = "test-file-1";
 
         const updated = await updateTicket(ticket.id, {
             title: "NewTitle",

@@ -17,8 +17,8 @@ function mapProviderKey(row: any): ProviderKey {
     id: row.id,
     provider: row.provider,
     key: row.key,
-    createdAt: new Date(row.created_at).getTime(),
-    updatedAt: new Date(row.updated_at).getTime()
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at)
   };
   const validated = ProviderKeyReadSchema.parse(mapped);
   return {

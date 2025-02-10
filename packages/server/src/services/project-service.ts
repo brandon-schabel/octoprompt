@@ -42,8 +42,8 @@ export function mapProject(row: RawProject): Project {
         name: row.name,
         description: row.description,
         path: row.path,
-        createdAt: new Date(row.created_at).getTime(),
-        updatedAt: new Date(row.updated_at).getTime()
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at)
     };
     const project = ProjectReadSchema.parse(mapped);
     return {
@@ -71,11 +71,11 @@ export function mapFile(row: RawFile): ProjectFile {
         size: withDefaults.size,
         content: withDefaults.content,
         summary: withDefaults.summary,
-        summaryLastUpdatedAt: new Date(withDefaults.summary_last_updated_at).getTime(),
+        summaryLastUpdatedAt: new Date(withDefaults.summary_last_updated_at),
         meta: withDefaults.meta,
         checksum: withDefaults.checksum,
-        createdAt: new Date(withDefaults.created_at).getTime(),
-        updatedAt: new Date(withDefaults.updated_at).getTime()
+        createdAt: new Date(withDefaults.created_at),
+        updatedAt: new Date(withDefaults.updated_at)
     } as const;
 
     const validated = FileReadSchema.parse(mapped);
