@@ -1,20 +1,15 @@
 // File: packages/server/src/tests/file-sync-server.test.ts
-import { describe, test, expect, spyOn, beforeEach, afterEach } from "bun:test";
-import { db } from "@db";
+import { describe, test, expect, spyOn, beforeEach } from "bun:test";
+import { db, resetDatabase } from "@db";
 import { syncProject, getTextFiles, computeChecksum } from "@/services/file-services/file-sync-service";
 import * as fs from "node:fs";
+import type { PathOrFileDescriptor } from "node:fs";
 
 describe("file-sync-service", () => {
     let projectId: string;
 
     beforeEach(() => {
-        // Start a transaction for each test
-        db.prepare('BEGIN TRANSACTION').run();
-    });
-
-    afterEach(() => {
-        // Rollback after each test for clean state
-        db.prepare('ROLLBACK').run();
+        resetDatabase();
     });
 
     test("computeChecksum returns a hex string", () => {
@@ -29,7 +24,7 @@ describe("file-sync-service", () => {
             { name: "folder", isDirectory: () => true }
         ];
 
-        spyOn(fs, "readdirSync").mockImplementation(((path, options) => {
+        spyOn(fs, "readdirSync").mockImplementation(((path: string, options?: { withFileTypes?: boolean }) => {
             if (path === '/fakeDir') {
                 return options?.withFileTypes ? mockFiles : mockFiles.map(f => f.name);
             } else {
@@ -65,7 +60,7 @@ describe("file-sync-service", () => {
             { name: "update.ts", isDirectory: () => false }
         ];
 
-        spyOn(fs, "readdirSync").mockImplementation(((path, options) => {
+        spyOn(fs, "readdirSync").mockImplementation(((path: string, options?: { withFileTypes?: boolean }) => {
             if (typeof path === 'string' && path === '/tmp/test-sync') {
                 return options?.withFileTypes ? mockFiles : mockFiles.map(f => f.name);
             } else {
@@ -74,15 +69,15 @@ describe("file-sync-service", () => {
             }
         }) as any);
 
-        const fileContents = {
+        const fileContents: Record<string, string> = {
             "keep.ts": "keep content",
             "update.ts": "update content"
         };
 
-        spyOn(fs, "readFileSync").mockImplementation((filePath: string) => {
-            const fileName = String(filePath).split('/').pop();
-            return fileName ? fileContents[fileName] || "" : "";
-        });
+        spyOn(fs, "readFileSync").mockImplementation(((path: PathOrFileDescriptor) => {
+            const fileName = String(path).split('/').pop();
+            return fileName && fileName in fileContents ? fileContents[fileName] : "";
+        }) as any);
 
         spyOn(fs, "statSync").mockImplementation(() => ({ size: 99n } as any));
 

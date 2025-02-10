@@ -6,7 +6,7 @@ import {
     summarizeSelectedFiles, removeSummariesFromFiles
 } from "@/services/project-service";
 import { randomString } from "./test-utils";
-import { db } from "@db";
+import { db, resetDatabase } from "@db";
 import type { RawFile } from "@/services/project-service";
 
 /**
@@ -38,8 +38,7 @@ spyOn(
 
 describe("Project Service", () => {
     beforeEach(() => {
-        db.prepare("DELETE FROM projects").run();
-        db.prepare("DELETE FROM files").run();
+        resetDatabase();
     });
 
     test("createProject and getProjectById", async () => {
