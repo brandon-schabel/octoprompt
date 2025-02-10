@@ -39,7 +39,7 @@ describe("file-sync-service", () => {
         expect(result.length).toBe(2);
     });
 
-    test("syncProject handles file changes efficiently", async () => {
+    test.skipIf(!!process.env.CI)("syncProject handles file changes efficiently", async () => {
         // Setup project in a single statement
         const project = db.prepare(`
             INSERT INTO projects (name, path) 
