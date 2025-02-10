@@ -18,8 +18,8 @@ export type RawPromptProject = {
 };
 
 export function mapPrompt(row: RawPrompt): Prompt {
-    const parsedCreatedAt = !isNaN(Number(row.created_at)) ? Number(row.created_at) : new Date(row.created_at)
-    const parsedUpdatedAt = !isNaN(Number(row.updated_at)) ? Number(row.updated_at) : new Date(row.updated_at)
+    const parsedCreatedAt = new Date(row.created_at)
+    const parsedUpdatedAt = new Date(row.updated_at)
 
     const mapped = {
         id: row.id,
