@@ -2,17 +2,14 @@ import { db } from "@/utils/database";
 import {
     CreateProjectBody,
     UpdateProjectBody,
-    schema
 } from "shared";
 import { ProjectReadSchema, FileReadSchema } from "shared/src/utils/database/db-schemas";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 import { forceSummarizeFiles } from "./file-services/file-summary-service";
 import { summarizeFiles } from "./file-services/file-summary-service";
 import { syncProject } from "./file-services/file-sync-service";
+import { Project, ProjectFile } from "shared/schema";
 
-
-export type Project = schema.Project;
-export type ProjectFile = schema.ProjectFile;
 
 export type RawProject = {
     id: string;
@@ -164,14 +161,22 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[] 
     return rows.map(mapFile);
 }
 
-export async function updateFileContent(fileId: string, content: string): Promise<ProjectFile> {
+export async function updateFileContent(
+    fileId: string,
+    content: string,
+    options?: { updatedAt?: Date }
+): Promise<ProjectFile> {
     const stmt = db.prepare(`
         UPDATE files 
-        SET content = ?, updated_at = CURRENT_TIMESTAMP 
+        SET content = ?, 
+            updated_at = ${options?.updatedAt ? '?' : 'CURRENT_TIMESTAMP'}
         WHERE id = ?
         RETURNING *
     `);
-    const updated = stmt.get(content, fileId) as RawFile | undefined;
+    const params = options?.updatedAt
+        ? [content, options.updatedAt.valueOf(), fileId]
+        : [content, fileId];
+    const updated = stmt.get(...params) as RawFile | undefined;
     if (!updated) {
         throw new Error('File not found');
     }

@@ -32,7 +32,6 @@ server/
 │   ├── schema/          # Database schema definitions
 │   └── env.ts           # Environment configuration
 ├── e2e/                # End-to-end tests
-└── drizzle/            # Database migrations
 ```
 
 ### Key Components
@@ -49,9 +48,8 @@ server/
    - Routes are grouped by feature
 
 3. **Database Layer**
-   - Uses Drizzle ORM
-   - Migrations in `/drizzle`
-   - Schema definitions in `/src/schema`
+   - Raw Sqlite
+   - Schema definitions in `/src/database.ts`
 
 ## Testing
 
@@ -358,119 +356,6 @@ router.post<typeof quizValidation.createQuiz>({
      ]
    }
    ```
-
-## Type Safety and Schema Inference
-
-The server uses Drizzle ORM with TypeScript for full type safety from database to API. Here's how it works:
-
-### Schema Definition and Type Inference
-
-. **Service Layer** (`quiz-service.ts`):
-
-```typescript
-import { questions, questionCategories } from "shared";
-
-// Inferred types from schema
-type Question = InferSelectModel<typeof questions>;
-type QuestionCategory = InferSelectModel<typeof questionCategories>;
-
-export class QuizService {
-    async createQuestion(data: CreateQuestionInput): Promise<Question> {
-        const [question] = await db
-            .insert(questions)
-            .values(data)
-            .returning();
-
-        return question; // Fully typed return value
-    }
-}
-```
-
-### Type Safety Benefits
-
-1. **Automatic Type Updates**
-   - Schema changes automatically update all dependent types
-   - TypeScript errors catch mismatches immediately
-
-2. **Input/Output Type Safety**
-
-   ```typescript
-   // Input types can extend schema types
-   type CreateQuestionInput = Pick<Question, 
-       'type' | 'categoryId' | 'questionText'
-   > & {
-       options: string[];
-       correctAnswer: string;
-   };
-   ```
-
-3. **Query Type Safety**
-
-   ```typescript
-   // Drizzle provides type-safe query building
-   const result = await db
-       .select()
-       .from(questions)
-       .where(eq(questions.categoryId, categoryId));
-   // result is typed as Question[]
-   ```
-
-### Service Pattern Example
-
-Here's a complete example showing the flow from schema to API:
-
-```typescript
-// 1. Schema Definition
-const questionCategories = pgTable('question_categories', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    name: varchar('name', { length: 100 }).notNull().unique(),
-    description: text('description'),
-});
-
-// 2. Type Inference
-type QuestionCategory = InferSelectModel<typeof questionCategories>;
-
-// 3. Service Implementation
-class QuizService {
-    async createCategory(data: {
-        name: string;
-        description?: string;
-    }): Promise<QuestionCategory> {
-        const [category] = await db
-            .insert(questionCategories)
-            .values(data)
-            .returning();
-        return category;
-    }
-}
-
-// 4. Route Handler
-const validation = {
-    createCategory: {
-        body: z.object({
-            name: z.string().min(1).max(100),
-            description: z.string().optional(),
-        })
-    }
-} as const;
-
-router.post<typeof validation.createCategory>({
-    path: '/api/categories',
-    validation: validation.createCategory,
-    auth: true,
-}, async (req, { body }) => {
-    const category = await quizService.createCategory(body);
-    return json(category);
-});
-```
-
-This pattern ensures:
-
-- Full type safety from database to API
-- Runtime validation of all inputs
-- Automatic type updates when schema changes
-- Clear separation of concerns
-- Easy testing and maintenance
 
 ## Testing Architecture
 

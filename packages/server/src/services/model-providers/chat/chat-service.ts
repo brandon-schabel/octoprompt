@@ -1,11 +1,6 @@
 import { db } from "@/utils/database";
-import { schema } from "shared";
+import type { Chat, ChatMessage, ExtendedChatMessage } from "shared/schema";
 import { ChatReadSchema, ChatMessageReadSchema } from "shared/src/utils/database/db-schemas";
-
-export type Chat = schema.Chat;
-export type ChatMessage = schema.ChatMessage;
-export type ExtendedChatMessage = schema.ExtendedChatMessage;
-export type NewChatMessage = schema.NewChatMessage;
 
 export type CreateChatOptions = {
     copyExisting?: boolean;
@@ -101,7 +96,7 @@ export function createChatService() {
         stmt.run(chatId);
     }
 
-    async function saveMessage(message: NewChatMessage & { tempId?: string }): Promise<ExtendedChatMessage> {
+    async function saveMessage(message: ExtendedChatMessage): Promise<ExtendedChatMessage> {
         const stmt = db.prepare(`
             INSERT INTO chat_messages (chat_id, role, content)
             VALUES (?, ?, ?)

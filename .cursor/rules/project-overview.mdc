@@ -1,5 +1,5 @@
 ---
-description:   This rule file provides a broad overview of the project’s architecture,   detailing how the client, server, and shared folders interconnect.   It explains how global state and validations are managed via Zod,   how the router handles API routes, and how AI tools are used for   structured outputs. It also describes the feature-building workflow,   including database schema updates, WebSocket schema adjustments,   and state management with Zustand.
+description: This rule file provides a broad overview of the project’s architecture,   detailing how the client, server, and shared folders interconnect.   It explains how global state and validations are managed via Zod,   how the router handles API routes, and how AI tools are used for   structured outputs. It also describes the feature-building workflow,   including database schema updates, WebSocket schema adjustments,   and state management with Zustand.
 globs: **/*
 ---
 # Project Architecture Overview
@@ -19,7 +19,7 @@ The **shared** folder is the backbone of the project, providing:
     API request validations (e.g., in `projects-api-validation.ts`) use Zod to enforce strict input criteria. Every API endpoint is guarded by these validations, ensuring that incoming data conforms to the expected structure.
 
 - **Database Schema & Type Inference:**
-  - The `schema.ts` file defines the database schema using Drizzle ORM.  
+  - The `db-schemas.ts` file defines the database schema.  
   - Types for entities (e.g., projects, files, chats) are automatically inferred, allowing seamless type safety from the database layer to the service and API layers.
 
 - **Structured Output Tools:**

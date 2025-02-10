@@ -1,18 +1,6 @@
-/** 
- * File: packages/server/src/services/model-providers/providers/provider-key-service.ts
- * 
- * Converted from a class-based service to a more functional approach.
- * 
- * This service manages provider API keys in the database.
- */
-
 import { db } from "@/utils/database";
-import { schema } from "shared";
+import { ProviderKey } from "shared/schema";
 import { ProviderKeyReadSchema } from "shared/src/utils/database/db-schemas";
-
-const { providerKeys } = schema;
-
-export type ProviderKey = schema.ProviderKey;
 
 export type CreateProviderKeyInput = {
   provider: string;

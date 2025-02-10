@@ -22,8 +22,6 @@ import {
     listTicketsWithTasks,
     getTicketWithSuggestedFiles
 } from "@/services/ticket-service";
-import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 
 describe("Ticket Service", () => {
     let fetchMock: ReturnType<typeof mock>;
@@ -455,7 +453,7 @@ describe("Ticket Service", () => {
         const f2 = found.find(x => x.id === t2.id);
         expect(f2?.tasks.length).toBe(0);
     });
-
+    
     test("getTicketWithSuggestedFiles returns parsed array of file IDs", async () => {
         const t = await createTicket({
             projectId: "gsf",
@@ -464,8 +462,22 @@ describe("Ticket Service", () => {
             status: "open",
             priority: "normal",
         });
-        // Insert some suggestedFileIds
+
+        // Insert files with id="abc" and id="def"
+        db.run(
+            `INSERT INTO files (id, project_id, name, path, extension, size)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+            ["abc", "gsf", "FileABC", "abc.txt", ".txt", 123]
+        );
+        db.run(
+            `INSERT INTO files (id, project_id, name, path, extension, size)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+            ["def", "gsf", "FileDEF", "def.txt", ".txt", 456]
+        );
+
+        // Now this won't throw the 'FILE_NOT_FOUND' error
         await updateTicket(t.id, { suggestedFileIds: ["abc", "def"] });
+
         const withFiles = await getTicketWithSuggestedFiles(t.id);
         expect(withFiles?.parsedSuggestedFileIds).toEqual(["abc", "def"]);
     });

@@ -1,10 +1,9 @@
 import { createFileChangePlugin } from './file-change-plugin';
 
 import { db } from '@/utils/database';
-import { schema } from 'shared';
 import { existsSync } from 'node:fs';
+import { Project } from 'shared/schema';
 
-const { files } = schema;
 
 export function createWatchersManager(
 ) {
@@ -13,7 +12,7 @@ export function createWatchersManager(
     /**
      * Start watching a project's directory.
      */
-    async function startWatchingProject(project: schema.Project, ignorePatterns: string[] = []): Promise<void> {
+    async function startWatchingProject(project: Project, ignorePatterns: string[] = []): Promise<void> {
         if (watchers.has(project.id)) {
             console.warn(`[WatchersManager] Already watching project: ${project.id}`);
             return;

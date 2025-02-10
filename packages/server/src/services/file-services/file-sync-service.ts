@@ -1,8 +1,8 @@
 import { join, extname, resolve, relative } from 'node:path';
 import { readdirSync, readFileSync, statSync, Dirent } from 'node:fs';
-import { schema } from 'shared';
 import { db } from "@/utils/database";
 import { mapFile, RawFile } from '../project-service';
+import { Project } from 'shared/schema';
 
 export const ALLOWED_EXTENSIONS = [
   // Documentation & Config
@@ -44,7 +44,6 @@ export const DEFAULT_EXCLUSIONS = [
   'Cargo.lock',
   'dist',
   'build',
-  'drizzle',
 
   // Coverage & Test
   'coverage',
@@ -89,9 +88,6 @@ export const DEFAULT_EXCLUSIONS = [
   '.stack-work',
   '.ccache',
 ];
-
-type Project = schema.Project;
-
 
 
 export function normalizePathForDb(pathStr: string): string {
@@ -188,12 +184,12 @@ export async function syncFileSet(project: Project, absoluteProjectPath: string,
           content,
           checksum
         ) as RawFile;
-        mapFile(created); // Validate the insert was successful
+        mapFile(created);
       }
     })
   );
 
-  // 2) Remove from DB any file that no longer exists on disk
+  // Handle deletions in a single batch operation
   const existingPaths = new Set(
     absoluteFilePaths.map(fp => normalizePathForDb(relative(absoluteProjectPath, fp)))
   );
@@ -215,7 +211,7 @@ export async function syncFileSet(project: Project, absoluteProjectPath: string,
       RETURNING *
     `);
     const deleted = deleteStmt.all(...filesToDelete.map(f => f.id)) as RawFile[];
-    deleted.forEach(mapFile); // Validate the deletes were successful
+    deleted.forEach(mapFile);
   }
 }
 

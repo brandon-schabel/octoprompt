@@ -1,13 +1,8 @@
 import { db } from "@/utils/database";
-import { schema } from "shared";
 import { CreatePromptBody, UpdatePromptBody } from "shared";
+import { Prompt, PromptProject } from "shared/schema";
 import { PromptReadSchema, PromptProjectReadSchema } from "shared/src/utils/database/db-schemas";
 
-type Prompt = schema.Prompt;
-type PromptProject = {
-    promptId: string;
-    projectId: string;
-};
 
 export type RawPrompt = {
   id: string;
@@ -65,6 +60,11 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
 }
 
 export async function addPromptToProject(promptId: string, projectId: string): Promise<void> {
+    // Remove any existing association for the prompt
+    const deleteStmt = db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ?");
+    deleteStmt.run(promptId);
+    
+    // Insert the new association
     const insertStmt = db.prepare("INSERT INTO prompt_projects (prompt_id, project_id) VALUES (?, ?)");
     insertStmt.run(promptId, projectId);
 }

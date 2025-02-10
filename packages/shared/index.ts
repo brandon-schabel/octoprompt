@@ -1,24 +1,3 @@
-export type {
-    InferSelectModel,
-    InferInsertModel,
-} from 'drizzle-orm';
-
-export type {
-    SQL,
-    SQLWrapper,
-} from 'drizzle-orm/sql';
-
-export {
-    eq,
-    and,
-    or,
-    not,
-    sql,
-    inArray,
-    desc
-} from 'drizzle-orm';
-
-
 export type { CreateChatBody, CreateMessageBody, DeleteChatParams, DeleteMessageParams, ForkChatBody, ForkChatFromMessageBody, ForkChatFromMessageParams, GetMessagesParams, UpdateChatBody, UpdateChatParams, FileSearchValidationBody, ForkChatParams, CreateMessageBodyGeneric } from './src/validation/chat-api-validation';
 export type { CreateProjectBody, UpdateProjectParams, UpdateProjectBody, GetOrDeleteProjectParams, GetProjectFilesParams, SyncProjectParams } from './src/validation/projects-api-validation';
 export type { CreatePromptBody, UpdatePromptParams, UpdatePromptBody, GetOrDeletePromptParams, ListPromptsParams } from './src/validation/prompt-api-validation';
@@ -47,4 +26,4 @@ export * from './src/utils/merge-deep'
 export * from './src/structured-outputs/structured-output-schema';
 export * from './src/structured-outputs/structured-output-utils';
 export * from './src/constants/model-default-configs';
-export * as schema from './schema'
+export * from './schema'

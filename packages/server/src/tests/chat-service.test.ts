@@ -1,6 +1,6 @@
 // tests/chat-service.test.ts
 import { describe, test, expect, beforeEach } from "bun:test";
-import { db, resetDatabase } from "@db";  // remove eq, remove drizzle references
+import { db, resetDatabase } from "@db";
 import { createChatService } from "@/services/model-providers/chat/chat-service";
 import { randomString } from "./test-utils";
 
@@ -108,7 +108,7 @@ describe("Chat Service", () => {
     const chatRow = db
       .query("SELECT * FROM chats WHERE id = ? LIMIT 1")
       .get(chat.id) as any;
-    expect(chatRow).toBeUndefined();
+    expect(chatRow).toBeNull();
 
     // Ensure messages are gone
     const messages = db

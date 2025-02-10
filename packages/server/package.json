@@ -8,9 +8,6 @@
     "test:watch": "bun test --watch src/",
     "start": "bun server.ts",
     "dev": "DEV=true bun --watch server.ts",
-    "start:prod": "cd dist && ./start.sh",
-    "studio": "drizzle-kit studio",
-    "migrate": "drizzle-kit generate",
-    "push": "drizzle-kit push"
+    "start:prod": "cd dist && ./start.sh"
   }
 }

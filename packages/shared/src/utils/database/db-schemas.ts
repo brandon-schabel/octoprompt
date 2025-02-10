@@ -8,8 +8,8 @@ export const ChatCreateSchema = z.object({
 export const ChatReadSchema = z.object({
   id: z.string(),
   title: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const ChatUpdateSchema = z.object({
@@ -32,7 +32,7 @@ export const ChatMessageReadSchema = z.object({
   chatId: z.string(),
   role: z.string(),
   content: z.string(),
-  createdAt: z.number(),
+  createdAt: z.date(),
 });
 
 export const ChatMessageUpdateSchema = z.object({
@@ -56,8 +56,8 @@ export const ProjectReadSchema = z.object({
   name: z.string(),
   description: z.string(),
   path: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const ProjectUpdateSchema = z.object({
@@ -92,11 +92,11 @@ export const FileReadSchema = z.object({
   size: z.number(),
   content: z.string().nullable().optional(),
   summary: z.string(),
-  summaryLastUpdatedAt: z.number(),
+  summaryLastUpdatedAt: z.date(),
   meta: z.string(),
   checksum: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const FileUpdateSchema = z.object({
@@ -124,8 +124,8 @@ export const PromptReadSchema = z.object({
   id: z.string(),
   name: z.string(),
   content: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const PromptUpdateSchema = z.object({
@@ -168,8 +168,8 @@ export const ProviderKeyReadSchema = z.object({
   id: z.string(),
   provider: z.string(),
   key: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const ProviderKeyUpdateSchema = z.object({
@@ -199,8 +199,8 @@ export const TicketReadSchema = z.object({
   status: z.string(),
   priority: z.string(),
   suggestedFileIds: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const TicketUpdateSchema = z.object({
@@ -249,8 +249,8 @@ export const TicketTaskReadSchema = z.object({
     return false;
   }, z.boolean()),
   orderIndex: z.number(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const TicketTaskUpdateSchema = z.object({

@@ -36,7 +36,6 @@
     "server-router.ts",
     "server.ts",
     "build.ts",
-    "drizzle.config.ts",
     "src/utils/database.ts"
   ]
 }

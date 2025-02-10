@@ -5,12 +5,15 @@ import {
   updatePrompt, deletePrompt
 } from "@/services/prompt-service";
 import { randomString } from "./test-utils";
-import { db } from "@db";
+import { db, resetDatabase } from "@db";
 
 describe("Prompt Service", () => {
   let defaultProjectId: string;
 
   beforeEach(async () => {
+    // Re-initialize or reset DB
+    await resetDatabase();
+
     // Insert a default project
     db.run(
       `INSERT INTO projects (name, path) VALUES (?, ?)`,
@@ -57,7 +60,7 @@ describe("Prompt Service", () => {
       .query("SELECT * FROM prompt_projects WHERE prompt_id = ?")
       .all(prompt.id);
     expect(rows.length).toBe(1);
-    expect(rows[0].project_id).toBe(projectId);
+    expect(Number(rows[0].project_id)).toBe(projectId);
 
     // Remove association
     await removePromptFromProject(prompt.id, projectId);

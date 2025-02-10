@@ -1,5 +1,3 @@
-// packages/server/src/services/file-services/ai-file-change-service.ts
-
 import { z } from "zod";
 import path from "path";
 import { readFile } from "fs/promises";
@@ -33,7 +31,6 @@ export interface GenerateFileChangeParams {
   prompt: string;
   /** An instance of your OpenRouter provider. */
   openRouter?: ReturnType<typeof createOpenRouterProviderService>;
-  /** The Drizzle DB connection. */
   db: Database;
   /** ID for a new conversation or correlation, if desired. */
   chatId?: string;

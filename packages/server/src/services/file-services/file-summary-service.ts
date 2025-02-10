@@ -1,14 +1,9 @@
-// File: packages/server/src/services/file-services/file-summary-service.ts
-
 import { db } from "@/utils/database";
-import { eq, and, inArray } from "drizzle-orm";
-import { GlobalState, DEFAULT_MODEL_CONFIGS, schema } from "shared";
+import { GlobalState, DEFAULT_MODEL_CONFIGS } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
-
-const { files } = schema;
-type ProjectFileType = schema.ProjectFile;
+import { ProjectFile } from "shared/schema";
 
 let concurrency = 5;
 
@@ -36,7 +31,7 @@ export async function shouldSummarizeFile(projectId: string, filePath: string): 
 /**
  * Exposed for unit testing. Summarizes a single file if it meets conditions.
  */
-export async function summarizeSingleFile(file: ProjectFileType): Promise<void> {
+export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
     if (!(await shouldSummarizeFile(file.projectId, file.path))) return;
     const fileContent = file.content || "";
     if (!fileContent.trim()) return;
@@ -87,7 +82,7 @@ export async function summarizeSingleFile(file: ProjectFileType): Promise<void> 
 export async function getFileSummaries(
     projectId: string,
     fileIds?: string[]
-): Promise<ProjectFileType[]> {
+): Promise<ProjectFile[]> {
     let query = "SELECT * FROM files WHERE project_id = ?";
     const params: any[] = [projectId];
     if (fileIds && fileIds.length > 0) {
@@ -96,7 +91,7 @@ export async function getFileSummaries(
         params.push(...fileIds);
     }
     const stmt = db.prepare(query);
-    return stmt.all(...params) as ProjectFileType[];
+    return stmt.all(...params) as ProjectFile[];
 }
 
 /**
@@ -104,7 +99,7 @@ export async function getFileSummaries(
  */
 export async function summarizeFiles(
     projectId: string,
-    filesToSummarize: ProjectFileType[],
+    filesToSummarize: ProjectFile[],
     globalState: GlobalState
 ): Promise<{ included: number; skipped: number }> {
     const allowedProject = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
@@ -139,7 +134,7 @@ export async function summarizeFiles(
  */
 export async function forceSummarizeFiles(
     projectId: string,
-    filesToSummarize: ProjectFileType[],
+    filesToSummarize: ProjectFile[],
     globalState: GlobalState
 ) {
     const chunks = chunkArray(filesToSummarize, concurrency);
@@ -150,7 +145,7 @@ export async function forceSummarizeFiles(
 
 export async function forceResummarizeSelectedFiles(
     projectId: string,
-    filesToSummarize: ProjectFileType[],
+    filesToSummarize: ProjectFile[],
     globalState: GlobalState
 ): Promise<{ included: number; skipped: number }> {
     const chunks = chunkArray(filesToSummarize, concurrency);

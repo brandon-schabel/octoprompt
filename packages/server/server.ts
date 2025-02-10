@@ -12,6 +12,7 @@ import "@/routes/suggest-files-routes";
 import "@/routes/kv-routes";
 import "@/routes/structured-output-routes";
 import "@/routes/ai-file-change-routes";
+import "@/routes/summarize-files-routes";
 
 import { json } from "@bnk/router";
 import { initKvStore } from "@/services/kv-service";
