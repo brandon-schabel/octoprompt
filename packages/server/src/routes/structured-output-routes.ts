@@ -1,13 +1,9 @@
-/**
- * packages/server/src/routes/structured-output-routes.ts
- */
 import { json } from '@bnk/router';
 import { z } from 'zod';
 import { ApiError, structuredOutputSchemas, StructuredOutputType } from 'shared/index';
-import { structuredOutputsService } from '../services/structured-output-service';
 import { router } from 'server-router';
+import { generateStructuredOutput } from '@/services/structured-output-service';
 
-// Define the request schema using Zod
 const structuredOutputRequestSchema = z.object({
     outputType: z.string(),
     userMessage: z.string(),
@@ -19,10 +15,6 @@ const structuredOutputRequestSchema = z.object({
 
 type StructuredOutputRequest = z.infer<typeof structuredOutputRequestSchema>;
 
-/**
- * POST /api/structured-outputs
- * Generate structured output based on the provided type and message
- */
 router.post(
     '/api/structured-outputs',
     {
@@ -39,12 +31,12 @@ router.post(
         }
 
         try {
-            const result = await structuredOutputsService.generate({
+            const result = await generateStructuredOutput({
                 outputType: outputType as StructuredOutputType,
                 userMessage,
                 ...rest
             });
-            
+
             return json({ success: true, data: result });
         } catch (error) {
             if (error instanceof ApiError) {

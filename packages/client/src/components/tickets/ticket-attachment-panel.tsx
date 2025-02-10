@@ -1,10 +1,10 @@
 import React from "react";
-import { ProjectFileInferredSchema } from "shared/schema";
 import { useLinkFilesToTicket } from "../../hooks/api/use-tickets-api";
+import { ProjectFile } from "shared/schema";
 
 interface TicketAttachmentsPanelProps {
     ticketId: string;
-    projectFiles: ProjectFileInferredSchema[];
+    projectFiles: ProjectFile[];
 }
 
 export function TicketAttachmentsPanel({ ticketId, projectFiles }: TicketAttachmentsPanelProps) {

@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "setup": "bun run scripts/setup.ts",
@@ -12,25 +12,28 @@
     "build": "bun run scripts/build.ts",
     "format": "prettier --write .",
     "test": "bun test",
-    "studio": "cd packages/shared && bun run studio",
-    "migrate": "cd packages/shared && bun run migrate",
-    "push": "cd packages/shared && bun run push"
+    "pretest": "DB_FILENAME=test.db bun run src/utils/migrate-db.ts"
   },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/node": "^20.0.0",
     "@types/picomatch": "^3.0.1",
     "bun-types": "latest",
     "prettier": "^3.0.0",
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@bnk/router": "1.0.5",
-    "@bnk/backend-websocket-manager": "^1.0.0",
+    "@bnk/ai": "^1.0.14",
+    "@bnk/backend-websocket-manager": "1.0.3",
+    "@bnk/kv-store": "1.0.1",
+    "@bnk/router": "^1.0.8",
+    "@types/archiver": "^6.0.3",
+    "archiver": "^7.0.1",
+    "openai": "^4.78.1",
     "picomatch": "^4.0.2",
-    "zod": "^3.23.8"
+    "shared": "workspace:*",
+    "zod": "^3.24.1"
   }
 }

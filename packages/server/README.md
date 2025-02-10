@@ -32,7 +32,6 @@ server/
 │   ├── schema/          # Database schema definitions
 │   └── env.ts           # Environment configuration
 ├── e2e/                # End-to-end tests
-└── drizzle/            # Database migrations
 ```
 
 ### Key Components
@@ -49,9 +48,8 @@ server/
    - Routes are grouped by feature
 
 3. **Database Layer**
-   - Uses Drizzle ORM
-   - Migrations in `/drizzle`
-   - Schema definitions in `/src/schema`
+   - Raw Sqlite
+   - Schema definitions in `/src/database.ts`
 
 ## Testing
 
@@ -76,122 +74,18 @@ Key testing principles:
 - Helpers for common operations (e.g., `ensureLoggedOut`)
 - Comprehensive coverage of error cases
 
-## Stripe Integration
-
-### Setting Up Stripe Webhooks
-
-1. **Get Webhook Secret**
-
-   ```bash
-   # Install Stripe CLI
-   brew install stripe/stripe-cli/stripe
-
-   # Login to Stripe
-   stripe login
-
-   # Start webhook forwarding
-   stripe listen --forward-to localhost:3000/api/webhook/stripe
-   ```
-
-2. **Configure Environment**
-
-   ```env
-   STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-   ```
-
-3. **Webhook Events**
-   The server handles these Stripe events:
-   - `customer.subscription.created`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-   - `invoice.payment_failed`
-   - `payment_method.attached`
-   - `payment_method.detached`
-
-### Local Development with Stripe
-
-1. **Forward Webhooks**
-
-   ```bash
-   # Start webhook forwarding
-   stripe listen --forward-to localhost:3000/api/webhook/stripe
-
-   # The CLI will display a webhook signing secret
-   # Use this secret in your .env file
-   ```
-
-2. **Test Webhooks**
-
-   ```bash
-   # Trigger test events
-   stripe trigger payment_intent.succeeded
-   ```
-
-3. **Monitor Webhook Events**
-
-   ```bash
-   # View webhook logs
-   stripe webhooks logs
-   ```
-
-### Webhook Implementation
-
-The webhook handler (`/src/routes/subscription/webhook-routes.ts`):
-
-1. Verifies Stripe signature
-2. Routes events to appropriate handlers
-3. Updates database accordingly
-4. Handles errors gracefully
-
-Example webhook flow:
-
-```typescript
-router.post({
-    path: '/api/webhook/stripe',
-    auth: false,
-}, async (req) => {
-    // Verify webhook signature
-    const event = stripe.webhooks.constructEvent(
-        await req.text(),
-        req.headers.get('stripe-signature')!,
-        webhookSecret
-    );
-
-    // Handle the event
-    await webhookService.handleWebhook(event);
-});
-```
-
-## Environment Variables
-
-Required environment variables:
-
-```env
-DATABASE_URL=
-JWT_SECRET=
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-```
-
 ## Development Workflow
 
 1. **Start the Server**
 
    ```bash
-   bun run server.ts
+   bun run dev
    ```
 
 2. **Run Tests**
 
    ```bash
    bun test          # Run all tests
-   bun test e2e     # Run e2e tests only
-   ```
-
-3. **Database Migrations**
-
-   ```bash
-   bun run migrate
    ```
 
 ## API Documentation
@@ -462,138 +356,6 @@ router.post<typeof quizValidation.createQuiz>({
      ]
    }
    ```
-
-## Type Safety and Schema Inference
-
-The server uses Drizzle ORM with TypeScript for full type safety from database to API. Here's how it works:
-
-### Schema Definition and Type Inference
-
-1. **Database Schema** (`schema.ts`):
-
-```typescript
-export const questions = pgTable('questions', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    type: varchar('type', { length: 50 }).notNull(),
-    categoryId: uuid('category_id')
-        .notNull()
-        .references(() => questionCategories.id),
-    questionText: text('question_text').notNull(),
-    options: text('options').array().notNull(),
-    // ... other fields
-});
-
-// Infer the type from the schema
-type Question = InferSelectModel<typeof questions>;
-```
-
-2. **Service Layer** (`quiz-service.ts`):
-
-```typescript
-import { questions, questionCategories } from "shared";
-import type { InferSelectModel } from "drizzle-orm";
-
-// Inferred types from schema
-type Question = InferSelectModel<typeof questions>;
-type QuestionCategory = InferSelectModel<typeof questionCategories>;
-
-export class QuizService {
-    async createQuestion(data: CreateQuestionInput): Promise<Question> {
-        const [question] = await db
-            .insert(questions)
-            .values(data)
-            .returning();
-
-        return question; // Fully typed return value
-    }
-}
-```
-
-### Type Safety Benefits
-
-1. **Automatic Type Updates**
-   - Schema changes automatically update all dependent types
-   - TypeScript errors catch mismatches immediately
-
-2. **Input/Output Type Safety**
-
-   ```typescript
-   // Input types can extend schema types
-   type CreateQuestionInput = Pick<Question, 
-       'type' | 'categoryId' | 'questionText'
-   > & {
-       options: string[];
-       correctAnswer: string;
-   };
-   ```
-
-3. **Query Type Safety**
-
-   ```typescript
-   // Drizzle provides type-safe query building
-   const result = await db
-       .select()
-       .from(questions)
-       .where(eq(questions.categoryId, categoryId));
-   // result is typed as Question[]
-   ```
-
-### Service Pattern Example
-
-Here's a complete example showing the flow from schema to API:
-
-```typescript
-// 1. Schema Definition
-const questionCategories = pgTable('question_categories', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    name: varchar('name', { length: 100 }).notNull().unique(),
-    description: text('description'),
-});
-
-// 2. Type Inference
-type QuestionCategory = InferSelectModel<typeof questionCategories>;
-
-// 3. Service Implementation
-class QuizService {
-    async createCategory(data: {
-        name: string;
-        description?: string;
-    }): Promise<QuestionCategory> {
-        const [category] = await db
-            .insert(questionCategories)
-            .values(data)
-            .returning();
-        return category;
-    }
-}
-
-// 4. Route Handler
-const validation = {
-    createCategory: {
-        body: z.object({
-            name: z.string().min(1).max(100),
-            description: z.string().optional(),
-        })
-    }
-} as const;
-
-router.post<typeof validation.createCategory>({
-    path: '/api/categories',
-    validation: validation.createCategory,
-    auth: true,
-}, async (req, { body }) => {
-    const category = await quizService.createCategory(body);
-    return json(category);
-});
-```
-
-This pattern ensures:
-
-- Full type safety from database to API
-- Runtime validation of all inputs
-- Automatic type updates when schema changes
-- Clear separation of concerns
-- Easy testing and maintenance
 
 ## Testing Architecture
 

@@ -1,6 +1,5 @@
-import { FileSyncService } from "./file-sync-service";
-import { ProjectService } from "../project-service";
-import { Project } from "shared";
+import { listProjects } from "../project-service";
+import { syncProject } from "./file-sync-service";
 
 export type CleanupResult =
     | ({ status: "success"; removedCount: number } & { projectId: string })
@@ -15,52 +14,31 @@ export type MinimalProject = {
     path: string;
 };
 
-export class CleanupService {
-    private intervalId: ReturnType<typeof setInterval> | null = null;
+/**
+ * Creates a "cleanup service" that can be started/stopped
+ * and can run a periodic cleanupAllProjects task.
+ */
+export function createCleanupService(
+    options: CleanupOptions
+) {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    constructor(
-        private readonly fileSyncService: FileSyncService,
-        private readonly projectService: ProjectService,
-        private readonly options: CleanupOptions
-    ) { }
-
-    public start(): void {
-        if (this.intervalId) {
-            console.warn("[CleanupService] Cleanup already started.");
-            return;
-        }
-
-        this.intervalId = setInterval(() => {
-            this.cleanupAllProjects().catch((err) => {
-                console.error("[CleanupService] Error during cleanupAllProjects:", err);
-            });
-        }, this.options.intervalMs);
-
-        console.log(`[CleanupService] Started periodic cleanup every ${this.options.intervalMs}ms`);
-    }
-
-    public stop(): void {
-        if (!this.intervalId) {
-            console.warn("[CleanupService] Cleanup is not running.");
-            return;
-        }
-        clearInterval(this.intervalId);
-        this.intervalId = null;
-        console.log("[CleanupService] Stopped periodic cleanup.");
-    }
-
-    public async cleanupAllProjects(): Promise<CleanupResult[]> {
+    /**
+     * Runs cleanup on all projects by synchronizing them.
+     */
+    async function cleanupAllProjects(): Promise<CleanupResult[]> {
         try {
-            const projects = await this.projectService.listProjects();
+            const projects = await listProjects();
             const results: CleanupResult[] = [];
 
             for (const project of projects) {
                 try {
-                    await this.fileSyncService.syncProject(project);
+                    // This line uses fileSyncService to ensure the project's files are up to date
+                    await syncProject(project);
                     results.push({
                         projectId: project.id,
                         status: "success",
-                        removedCount: 0 // Could detect how many we removed if needed
+                        removedCount: 0
                     });
                 } catch (error) {
                     results.push({
@@ -76,4 +54,41 @@ export class CleanupService {
             return [];
         }
     }
+
+    /**
+     * Starts the periodic cleanup with the provided interval.
+     */
+    function start(): void {
+        if (intervalId) {
+            console.warn("[CleanupService] Cleanup already started.");
+            return;
+        }
+
+        intervalId = setInterval(() => {
+            cleanupAllProjects().catch((err) => {
+                console.error("[CleanupService] Error during cleanupAllProjects:", err);
+            });
+        }, options.intervalMs);
+
+        console.log(`[CleanupService] Started periodic cleanup every ${options.intervalMs}ms`);
+    }
+
+    /**
+     * Stops the periodic cleanup.
+     */
+    function stop(): void {
+        if (!intervalId) {
+            console.warn("[CleanupService] Cleanup is not running.");
+            return;
+        }
+        clearInterval(intervalId);
+        intervalId = null;
+        console.log("[CleanupService] Stopped periodic cleanup.");
+    }
+
+    return {
+        start,
+        stop,
+        cleanupAllProjects,
+    };
 }

@@ -2,10 +2,7 @@ import { mkdirSync, copyFileSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { createWriteStream } from "node:fs";
 import archiver from "archiver";
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import * as schema from "../packages/shared/schema";
+import { setupDatabase } from "../packages/server/src/utils/database";
 import { $ } from "bun";
 
 async function buildProject() {
@@ -38,26 +35,18 @@ async function buildProject() {
     console.log("Copying required files to dist...");
     mkdirSync(join(distDir, "client-dist"), { recursive: true });
 
-    // Modify the database creation and migration section
-    console.log("Creating and migrating database...");
+    // Updated database creation section using @database.ts
+    console.log("Creating database using @database.ts...");
     try {
         await $`rm -f ${join(distDir, "sqlite.db")}`;
     } catch (error) {
         console.log("No existing database to remove");
     }
-
-    // Create and migrate the database directly
-    const sqlite = new Database(join(distDir, "sqlite.db"));
-    const db = drizzle(sqlite, { schema });
-
-    // Apply migrations programmatically
-    console.log("Applying migrations...");
-    await migrate(db, {
-        migrationsFolder: join(sharedDir, "drizzle")
-    });
-
-    // Close the database connection
-    sqlite.close();
+    // Set the DB path for the database creation
+    process.env.DB_PATH = join(distDir, "sqlite.db");
+    // Create the database using the custom setupDatabase function with explicit path
+    const db = setupDatabase(join(distDir, "sqlite.db"));
+    db.close();
 
     // Write modified package.json to dist
     const pkg = require(join(serverDir, "package.json"));

@@ -2,15 +2,9 @@ import { router } from "server-router";
 import { ApiError, json } from "@bnk/router";
 import { z } from "zod";
 
+import { db } from "@db";
+import { confirmFileChange, generateFileChange, getFileChange } from "@/services/file-services/ai-file-change-service";
 
-import { AIFileChangeService } from "@/services/file-services/ai-file-change-service";
-import { OpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
-
-// Create service instances
-const openRouter = new OpenRouterProviderService();
-const aiFileChangeService = new AIFileChangeService(
-  openRouter,
-);
 
 // Validation schemas
 const generateChangeSchema = z.object({
@@ -18,14 +12,7 @@ const generateChangeSchema = z.object({
   prompt: z.string().min(1),
 });
 
-const confirmChangeSchema = z.object({
-  changeId: z.number(),
-});
 
-/**
- * POST /api/file/ai-change
- * Generate an AI-suggested change for a file
- */
 router.post(
   "/api/file/ai-change",
   {
@@ -37,7 +24,10 @@ router.post(
     try {
       const { filePath, prompt } = body;
 
-      const result = await aiFileChangeService.generateFileChange(filePath, prompt);
+      const result = await generateFileChange({
+        filePath, prompt,
+        db,
+      });
 
       return json({
         success: true,
@@ -55,10 +45,6 @@ router.post(
   }
 );
 
-/**
- * GET /api/file/ai-change/:changeId
- * Get details about a specific change
- */
 router.get(
   "/api/file/ai-change/:changeId",
   {
@@ -69,7 +55,7 @@ router.get(
     },
   },
   async (_, { params }) => {
-    const change = await aiFileChangeService.getChange(params.changeId);
+    const change = await getFileChange(db, params.changeId);
     if (!change) {
       throw new ApiError("Change not found", 404, "NOT_FOUND");
     }
@@ -77,10 +63,6 @@ router.get(
   }
 );
 
-/**
- * POST /api/file/ai-change/:changeId/confirm
- * Confirm and apply an AI-suggested change
- */
 router.post(
   "/api/file/ai-change/:changeId/confirm",
   {
@@ -91,7 +73,7 @@ router.post(
     },
   },
   async (_, { params }) => {
-    const success = await aiFileChangeService.confirmChange(params.changeId);
+    const success = await confirmFileChange(db, params.changeId);
     if (!success) {
       throw new ApiError("Change not found", 404, "NOT_FOUND");
     }

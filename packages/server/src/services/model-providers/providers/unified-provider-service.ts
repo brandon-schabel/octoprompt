@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { ProviderKeyService } from "./provider-key-service";
-import { APIProviders } from "shared";
+import { createProviderKeyService } from "./provider-key-service";
+import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared";
 import { StreamParams, ProcessMessageParams } from "./unified-provider-types";
 import {
     OllamaPlugin,
@@ -13,23 +13,26 @@ import {
     TOGETHER_BASE_URL,
     GROQ_BASE_URL,
     createSSEStream,
+    type UnifiedModel,
+    ModelFetcherService,
+    type ProviderKeysConfig,
 } from "@bnk/ai";
-import { ChatService } from "../chat/chat-service";
+import { createChatService } from "../chat/chat-service";
 import {
     GEMINI_BASE_URL,
     LMSTUDIO_BASE_URL,
     OLLAMA_BASE_URL,
 } from "@bnk/ai";
-import { ModelFetcherService, type ProviderKeysConfig } from "@bnk/ai";
-import type { UnifiedModel } from "@bnk/ai";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
-import { DEFAULT_MODEL_CONFIGS } from "shared";
 
+export function createUnifiedProviderService(debugParam = false) {
+    const debug = debugParam;
 
-export class UnifiedProviderService {
-    private providerKeyService: ProviderKeyService;
-    private chatService: ChatService;
-    private providerConfig: ProviderKeysConfig = {
+    // Internal references
+    const providerKeyService = createProviderKeyService();
+    const chatService = createChatService();
+
+    let providerConfig: ProviderKeysConfig = {
         openaiKey: undefined,
         anthropicKey: undefined,
         googleGeminiKey: undefined,
@@ -38,23 +41,15 @@ export class UnifiedProviderService {
         xaiKey: undefined,
         openRouterKey: undefined,
     };
-    private modelFetcherService: ModelFetcherService | null = null;
-    private debug: boolean = false;
 
-    constructor() {
-        this.providerKeyService = new ProviderKeyService();
-        this.chatService = new ChatService();
-        this.debug = false;
-    }
+    let modelFetcherService: ModelFetcherService | null = null;
 
-    /**
-     * Ensure modelFetcherService is created once and config is loaded.
-     */
-    private async initModelFetcherService(): Promise<void> {
-        if (this.modelFetcherService) return;
+    async function initModelFetcherService(): Promise<void> {
+        if (modelFetcherService) return;
 
-        const keys = await this.providerKeyService.listKeys();
-        this.providerConfig = {
+        const keys = await providerKeyService.listKeys();
+
+        providerConfig = {
             openaiKey: keys.find(k => k.provider === "openai")?.key,
             anthropicKey: keys.find(k => k.provider === "anthropic")?.key,
             googleGeminiKey: keys.find(k => k.provider === "google_gemini")?.key,
@@ -63,14 +58,12 @@ export class UnifiedProviderService {
             xaiKey: keys.find(k => k.provider === "xai")?.key,
             openRouterKey: keys.find(k => k.provider === "openrouter")?.key,
         };
-        this.modelFetcherService = new ModelFetcherService(this.providerConfig);
+
+        modelFetcherService = new ModelFetcherService(providerConfig);
     }
 
-    /**
-     * Helper to get a provider key or throw if missing
-     */
-    private getKey(provider: keyof ProviderKeysConfig): string {
-        const key = this.providerConfig[provider];
+    function getKey(provider: keyof ProviderKeysConfig): string {
+        const key = providerConfig[provider];
         if (!key) {
             console.error(`${provider} API key not found`);
             return "";
@@ -78,153 +71,78 @@ export class UnifiedProviderService {
         return key;
     }
 
-    /**
-     * Return plugin function mapped to each provider
-     */
-    private async getProviderPlugin(
+    async function getProviderPlugin(
         provider: APIProviders,
         options: StreamParams["options"]
     ) {
-        await this.initModelFetcherService();
+        await initModelFetcherService();
 
         const pluginMap: Record<APIProviders, () => Promise<any>> = {
-            // @ts-ignore
             openai: async () => {
                 const openaiClient = new OpenAI({
-                    apiKey: this.getKey("openaiKey"),
+                    apiKey: getKey("openaiKey"),
                 });
-
-                // @ts-ignore
                 return new OpenAiLikePlugin(openaiClient, DEFAULT_MODEL_CONFIGS.openai.model);
             },
             openrouter: async () => {
-                const openRouterKey = this.getKey("openRouterKey");
+                const openRouterKey = getKey("openRouterKey");
                 return new OpenRouterPlugin(openRouterKey ?? "");
             },
             xai: async () => {
                 const xaiClient = new OpenAI({
                     baseURL: "https://api.x.ai/v1",
-                    apiKey: this.getKey("xaiKey"),
+                    apiKey: getKey("xaiKey"),
                 });
-                // @ts-ignore
                 return new OpenAiLikePlugin(xaiClient, DEFAULT_MODEL_CONFIGS.xai.model);
             },
             google_gemini: async () => {
-                const apiKey = this.getKey("googleGeminiKey");
+                const apiKey = getKey("googleGeminiKey");
                 return new GeminiPlugin(apiKey, GEMINI_BASE_URL, DEFAULT_MODEL_CONFIGS.google_gemini.model);
             },
             lmstudio: async () => {
-                const state = await websocketStateAdapter.getState()
-                const lmStudioUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL
+                const state = await websocketStateAdapter.getState();
+                const lmStudioUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL;
                 const lmStudioClient = new OpenAI({
                     baseURL: lmStudioUrl,
                     apiKey: "lm-studio",
                 });
-                // @ts-ignore
                 return new OpenAiLikePlugin(lmStudioClient, DEFAULT_MODEL_CONFIGS.lmstudio.model);
             },
             anthropic: async () => {
-                const key = this.getKey("anthropicKey");
+                const key = getKey("anthropicKey");
                 return new AnthropicPlugin(key, "2023-06-01");
             },
             groq: async () => {
-                const groqKey = this.getKey("groqKey");
+                const groqKey = getKey("groqKey");
                 return new GroqPlugin(groqKey, GROQ_BASE_URL);
             },
             together: async () => {
-                const tKey = this.getKey("togetherKey");
+                const tKey = getKey("togetherKey");
                 return new TogetherPlugin(tKey, TOGETHER_BASE_URL);
             },
             ollama: async () => {
-                const state = await websocketStateAdapter.getState()
-                const ollamaUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL
+                const state = await websocketStateAdapter.getState();
+                const ollamaUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL;
                 return new OllamaPlugin(ollamaUrl);
             },
         };
 
-        // Default to openai if the provider isn't found
         const pluginFunc = pluginMap[provider] || pluginMap["openai"];
         return pluginFunc();
     }
 
-    /**
-     * Process a message (moved from provider-chat-service):
-     *  1) Save user message
-     *  2) Create placeholder assistant message
-     *  3) Invoke streaming
-     */
-    public async processMessage({
-        chatId,
-        userMessage,
-        provider = "openai",
-        options = {},
-        tempId,
-        systemMessage,
-    }: ProcessMessageParams): Promise<ReadableStream<Uint8Array>> {
-        let assistantMessageId: string | undefined;
-
+    function tryParseStructuredResponse(text: string): any {
         try {
-            // 1) Save user message
-            await this.chatService.saveMessage({
-                chatId,
-                role: "user",
-                content: userMessage,
-            });
-            await this.chatService.updateChatTimestamp(chatId);
-
-            // 2) Create a placeholder assistant message
-            const initialAssistantMessage = await this.chatService.saveMessage({
-                chatId,
-                role: "assistant",
-                // content: "You are a helpful assistant, helping a user within an app called OctoPrompt.",
-                content: "...",
-                tempId,
-            });
-            assistantMessageId = initialAssistantMessage.id;
-
-            // 3) Now stream the final assistant response
-            return this.streamMessage({
-                chatId,
-                assistantMessageId,
-                userMessage,
-                options,
-                tempId,
-                provider,
-                systemMessage,
-            });
-        } catch (error) {
-            console.error("Error in processMessage:", error);
-            if (assistantMessageId) {
-                await this.chatService.updateMessageContent(
-                    assistantMessageId,
-                    "Error: Failed to process message. Please try again."
-                );
-            }
-            throw error;
-        }
-    }
-
-    /**
-     * Helper to parse potentially structured responses from the model
-     */
-    private tryParseStructuredResponse(text: string): any {
-        try {
-            // Clean up any markdown code fences if present
             const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/;
             const matched = text.match(tripleBacktickRegex);
             const cleanedText = matched ? matched[1].trim() : text.trim();
-
             return JSON.parse(cleanedText);
         } catch (error) {
             return null;
         }
     }
 
-    /**
-     * Stream messages using SSE
-     * (Simplified: we remove creation of user/assistant messages since that's done in processMessage.)
-     */
-    async streamMessage(
+    async function streamMessage(
         streamConfig: StreamParams & {
             provider: APIProviders;
             systemMessage?: string;
@@ -240,18 +158,13 @@ export class UnifiedProviderService {
             provider,
         } = streamConfig;
 
-        // 1) Pick the right plugin
-        const plugin = await this.getProviderPlugin(provider, options);
+        const plugin = await getProviderPlugin(provider, options);
 
-        // 2) Accumulate partial text and structured data
         let fullResponse = "";
         let structuredResponse: any = null;
         const isStructuredOutput = options?.response_format?.type === "json_schema";
 
-
-        // 3) Stream SSE
         return createSSEStream({
-
             userMessage,
             systemMessage,
             plugin,
@@ -262,64 +175,47 @@ export class UnifiedProviderService {
             },
             handlers: {
                 onSystemMessage: async (msg) => {
-                    if (this.debug) {
-                        console.log("[ProviderService] systemMessage:", msg.content);
+                    if (debug) {
+                        console.log("[UnifiedProviderService] systemMessage:", msg.content);
                     }
                 },
                 onUserMessage: async (msg) => {
-                    if (this.debug) {
-                        console.log("[ProviderService] user:", msg.content);
+                    if (debug) {
+                        console.log("[UnifiedProviderService] user:", msg.content);
                     }
                 },
                 onPartial: async (partial) => {
                     fullResponse += partial.content;
-
-                    // For structured output, try to parse each chunk
                     if (isStructuredOutput) {
-                        const parsed = this.tryParseStructuredResponse(fullResponse);
+                        const parsed = tryParseStructuredResponse(fullResponse);
                         if (parsed) {
                             structuredResponse = parsed;
-                            // Update with the stringified structured response
-                            await this.chatService.updateMessageContent(
+                            await chatService.updateMessageContent(
                                 assistantMessageId,
                                 JSON.stringify(structuredResponse, null, 2)
                             );
                         }
                     } else {
-                        // Regular text response
-                        await this.chatService.updateMessageContent(
-                            assistantMessageId,
-                            fullResponse
-                        );
+                        await chatService.updateMessageContent(assistantMessageId, fullResponse);
                     }
                 },
                 onDone: async (final) => {
                     fullResponse = final.content;
-
-                    // For structured output, ensure we have valid JSON at the end
                     if (isStructuredOutput) {
-                        const parsed = this.tryParseStructuredResponse(fullResponse);
+                        const parsed = tryParseStructuredResponse(fullResponse);
                         if (parsed) {
                             structuredResponse = parsed;
                             fullResponse = JSON.stringify(structuredResponse, null, 2);
                         }
                     }
-
-                    // Update one last time with the final content
-                    await this.chatService.updateMessageContent(
-                        assistantMessageId,
-                        fullResponse
-                    );
-                    console.log("[ProviderService] final assistant text:", fullResponse);
+                    await chatService.updateMessageContent(assistantMessageId, fullResponse);
+                    console.log("[UnifiedProviderService] final assistant text:", fullResponse);
                 },
                 onError: async (err, partialSoFar) => {
-                    console.error("[ProviderService] SSE error:", err);
+                    console.error("[UnifiedProviderService] SSE error:", err);
                     if (partialSoFar.content) {
                         fullResponse = partialSoFar.content;
-                        await this.chatService.updateMessageContent(
-                            assistantMessageId,
-                            fullResponse
-                        );
+                        await chatService.updateMessageContent(assistantMessageId, fullResponse);
                     }
                 },
             },
@@ -327,24 +223,87 @@ export class UnifiedProviderService {
     }
 
     /**
-     * A unified method to list models for a given provider
+     * Main entry point for processing a user’s message:
+     *  1) Save the user message
+     *  2) Create a placeholder assistant message
+     *  3) Start streaming the final assistant response
      */
-    async listModels(provider: APIProviders): Promise<UnifiedModel[]> {
-        await this.initModelFetcherService();
-        const state = await websocketStateAdapter.getState()
+    async function processMessage({
+        chatId,
+        userMessage,
+        provider = "openai",
+        options = {},
+        tempId,
+        systemMessage,
+    }: ProcessMessageParams): Promise<ReadableStream<Uint8Array>> {
+        let assistantMessageId: string | undefined;
 
-        const ollamaBaseUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL
-        const lmstudioBaseUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL
+        try {
+            await chatService.saveMessage({
+                chatId,
+                role: "user",
+                content: userMessage,
+            });
 
+            await chatService.updateChatTimestamp(chatId);
 
-        if (this.debug) {
-            console.log("[ProviderService] ollamaBaseUrl:", ollamaBaseUrl);
-            console.log("[ProviderService] lmstudioBaseUrl:", lmstudioBaseUrl);
+            const initialAssistantMessage = await chatService.saveMessage({
+                chatId,
+                role: "assistant",
+                content: "...",
+                tempId,
+            });
+
+            assistantMessageId = initialAssistantMessage.id;
+
+            return streamMessage({
+                chatId,
+                assistantMessageId: assistantMessageId ?? "",
+                userMessage,
+                options,
+                tempId,
+                provider,
+                systemMessage,
+            });
+        } catch (error) {
+            console.error("Error in processMessage:", error);
+            if (assistantMessageId) {
+                await chatService.updateMessageContent(
+                    assistantMessageId,
+                    "Error: Failed to process message. Please try again."
+                );
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * List available models from the specified provider (or default).
+     */
+    async function listModels(provider: APIProviders): Promise<UnifiedModel[]> {
+        await initModelFetcherService();
+        const state = await websocketStateAdapter.getState();
+
+        const ollamaBaseUrl = state.settings.ollamaGlobalUrl ?? OLLAMA_BASE_URL;
+        const lmstudioBaseUrl = state.settings.lmStudioGlobalUrl ?? LMSTUDIO_BASE_URL;
+
+        if (debug) {
+            console.log("[UnifiedProviderService] ollamaBaseUrl:", ollamaBaseUrl);
+            console.log("[UnifiedProviderService] lmstudioBaseUrl:", lmstudioBaseUrl);
         }
 
-        return this.modelFetcherService!.listModels(provider, {
+        return modelFetcherService!.listModels(provider, {
             ollamaBaseUrl,
             lmstudioBaseUrl,
         });
     }
+
+    return {
+        processMessage,
+        listModels,
+        streamMessage,
+    };
 }
+
+
+export const unifiedProvider = createUnifiedProviderService();

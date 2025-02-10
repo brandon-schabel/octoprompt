@@ -1,13 +1,3 @@
-/**
- * Unit tests for the merge-deep module.
- * Expected behavior (assumptions):
- *  - Merges two or more objects deeply.
- *  - Later object properties override earlier ones.
- *  - Nested objects are merged recursively.
- *  - Array values are overwritten rather than merged.
- *  - Original inputs are not mutated.
- *  - Non-object values (e.g. null) are skipped.
- */
 import { describe, it, expect } from "bun:test";
 import { mergeDeep } from "./merge-deep";
 

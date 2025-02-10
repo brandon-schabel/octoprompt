@@ -1,10 +1,6 @@
 import { test, expect } from "bun:test";
 import { buildCombinedFileSummaries, type SummaryFormatOptions } from "./summary-formatter";
 
-/**
- * Define a minimal interface matching the expected ProjectFile shape.
- * In production, ProjectFile is imported from "../../schema".
- */
 interface TestProjectFile {
     name: string;
     summary?: string;

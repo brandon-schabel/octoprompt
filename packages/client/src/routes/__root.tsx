@@ -82,10 +82,6 @@ function GlobalCommandPalette() {
             Open File
             <CommandShortcut>⌘/Ctrl P</CommandShortcut>
           </CommandItem>
-          <CommandItem>
-            Toggle Voice Input
-            <CommandShortcut>V</CommandShortcut>
-          </CommandItem>
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Global Actions">

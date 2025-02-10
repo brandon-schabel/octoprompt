@@ -13,7 +13,7 @@ This document describes how our backend is built and organized, including our ro
 Our backend follows a layered, service-oriented architecture with clear separation of concerns. The main layers are:
 
 - **Database Layer:**  
-  All database schemas are defined in the shared package (e.g. `packages/shared/src/schema.ts`) using Drizzle ORM. Any change in business data (like projects, files, prompts, etc.) starts by updating these schemas.  
+  All database schemas are defined in the shared package (e.g. `packages/shared/src/utilts/database/db-schemas.ts`). Any change in business data (like projects, files, prompts, etc.) starts by updating these schemas.  
 - **Service Layer:**  
   Business logic is encapsulated in services (e.g. `ProjectService`, `FileSyncService`, `FileSummaryService`). These services perform database operations, file synchronization, summarization, and other domain-specific tasks.
 - **Route Layer:**  

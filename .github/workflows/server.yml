@@ -25,6 +25,14 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install shared dependencies
+        run: cd packages/shared && bun install
+
+      - name: Run shared tests
+        run: |
+          echo "🧪 Running Shared Package Tests..."
+          cd packages/shared && bun run test
+
       - name: Install server dependencies
         run: cd packages/server && bun install
         

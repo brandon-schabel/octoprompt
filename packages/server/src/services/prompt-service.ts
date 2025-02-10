@@ -1,95 +1,130 @@
-import { db } from "shared/database";
-import { prompts, promptProjects, projects, type Prompt, eq, and, CreatePromptBody, UpdatePromptBody } from "shared";
-import { sql } from "drizzle-orm";
+import { db } from "@/utils/database";
+import { CreatePromptBody, UpdatePromptBody } from "shared";
+import { Prompt, PromptProject } from "shared/schema";
+import { PromptReadSchema, PromptProjectReadSchema } from "shared/src/utils/database/db-schemas";
 
-export class PromptService {
-    async createPrompt(data: CreatePromptBody): Promise<Prompt> {
-        // "data.projectId" is no longer mandatory. 
-        // If you want to handle it for backward-compatibility, do so:
-        const [newPrompt] = await db.insert(prompts).values({
-            name: data.name,
-            content: data.content,
-        }).returning();
-        return newPrompt;
+
+export type RawPrompt = {
+    id: string;
+    name: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+};
+
+export type RawPromptProject = {
+    prompt_id: string;
+    project_id: string;
+};
+
+export function mapPrompt(row: RawPrompt): Prompt {
+    const parsedCreatedAt = new Date(row.created_at)
+    const parsedUpdatedAt = new Date(row.updated_at)
+
+    const mapped = {
+        id: row.id,
+        name: row.name,
+        content: row.content,
+        createdAt: parsedCreatedAt,
+        updatedAt: parsedUpdatedAt
+    };
+    const prompt = PromptReadSchema.parse(mapped);
+    return {
+        ...prompt,
+        createdAt: new Date(prompt.createdAt),
+        updatedAt: new Date(prompt.updatedAt)
+    };
+}
+
+export function mapPromptProject(row: RawPromptProject): PromptProject {
+    const mapped = {
+        promptId: row.prompt_id,
+        projectId: row.project_id
+    };
+    return PromptProjectReadSchema.parse(mapped);
+}
+
+export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
+    const insertStmt = db.prepare(`
+    INSERT INTO prompts (name, content, created_at, updated_at) 
+    VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    RETURNING *
+  `);
+    const created = insertStmt.get(data.name, data.content) as RawPrompt;
+    const newPrompt = mapPrompt(created);
+
+    if (data.projectId) {
+        await addPromptToProject(newPrompt.id, data.projectId);
     }
 
-    /** 
-     * Associate an existing prompt with a project. 
-     */
-    async addPromptToProject(promptId: string, projectId: string): Promise<void> {
-        await db.insert(promptProjects).values({
-            promptId,
-            projectId,
-        });
-    }
+    return newPrompt;
+}
 
-    /**
-     * Disassociate a prompt from a project. 
-     */
-    async removePromptFromProject(promptId: string, projectId: string): Promise<void> {
-        await db.delete(promptProjects)
-            .where(and(eq(promptProjects.promptId, promptId), eq(promptProjects.projectId, projectId)));
-    }
+export async function addPromptToProject(promptId: string, projectId: string): Promise<void> {
+    // Remove any existing association for the prompt
+    const deleteStmt = db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ?");
+    deleteStmt.run(promptId);
 
-    /**
-     * Return a prompt by ID.
-     */
-    async getPromptById(promptId: string): Promise<Prompt | null> {
-        const [row] = await db.select().from(prompts).where(eq(prompts.id, promptId)).limit(1);
-        return row || null;
-    }
+    // Insert the new association
+    const insertStmt = db.prepare("INSERT INTO prompt_projects (prompt_id, project_id) VALUES (?, ?)");
+    insertStmt.run(promptId, projectId);
+}
 
-    /**
-     * List all prompts in the system (regardless of project).
-     * Potentially filter or search if you like.
-     */
-    async listAllPrompts(): Promise<Prompt[]> {
-        const rows = await db.select().from(prompts);
-        return rows;
-    }
+export async function removePromptFromProject(promptId: string, projectId: string): Promise<void> {
+    const deleteStmt = db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ? AND project_id = ?");
+    deleteStmt.run(promptId, projectId);
+}
 
-    /**
-     * List all prompts that are associated with a given project.
-     */
-    async listPromptsByProject(projectId: string): Promise<Prompt[]> {
-        return await db.select()
-            .from(prompts)
-            .innerJoin(promptProjects, eq(prompts.id, promptProjects.promptId))
-            .where(eq(promptProjects.projectId, projectId))
-            .then(rows => rows.map(row => ({
-                id: row.prompts.id,
-                name: row.prompts.name,
-                content: row.prompts.content,
-                createdAt: row.prompts.createdAt,
-                updatedAt: row.prompts.updatedAt
-            })));
-    }
+export async function getPromptById(promptId: string): Promise<Prompt | null> {
+    const stmt = db.prepare("SELECT * FROM prompts WHERE id = ? LIMIT 1");
+    const found = stmt.get(promptId) as RawPrompt | undefined;
+    if (!found) return null;
+    return mapPrompt(found);
+}
 
-    /**
-     * Update a prompt's name or content.
-     */
-    async updatePrompt(promptId: string, data: UpdatePromptBody): Promise<Prompt | null> {
-        const existing = await this.getPromptById(promptId);
-        if (!existing) return null;
+export async function listAllPrompts(): Promise<Prompt[]> {
+    const stmt = db.prepare("SELECT * FROM prompts");
+    const rows = stmt.all() as RawPrompt[];
+    return rows.map(mapPrompt);
+}
 
-        const updates: Partial<Prompt> = {
-            ...(data.name && { name: data.name }),
-            ...(data.content && { content: data.content }),
-        };
-        const [updated] = await db.update(prompts)
-            .set({
-                ...updates,
-                updatedAt: sql`CURRENT_TIMESTAMP`,
-            })
-            .where(eq(prompts.id, promptId))
-            .returning();
-        return updated || null;
-    }
+export async function listPromptsByProject(projectId: string): Promise<Prompt[]> {
+    const stmt = db.prepare(`
+    SELECT p.* 
+    FROM prompts p 
+    INNER JOIN prompt_projects pp ON p.id = pp.prompt_id 
+    WHERE pp.project_id = ?
+  `);
+    const rows = stmt.all(projectId) as RawPrompt[];
+    return rows.map(mapPrompt);
+}
 
-    async deletePrompt(promptId: string): Promise<boolean> {
-        const [deleted] = await db.delete(prompts)
-            .where(eq(prompts.id, promptId))
-            .returning();
-        return !!deleted;
-    }
+export async function updatePrompt(promptId: string, data: UpdatePromptBody): Promise<Prompt | null> {
+    const existing = await getPromptById(promptId);
+    if (!existing) return null;
+
+    const updateStmt = db.prepare(`
+    UPDATE prompts 
+    SET name = ?, content = ?, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = ?
+    RETURNING *
+  `);
+    const updated = updateStmt.get(
+        data.name ?? existing.name,
+        data.content ?? existing.content,
+        promptId
+    ) as RawPrompt;
+    return mapPrompt(updated);
+}
+
+export async function deletePrompt(promptId: string): Promise<boolean> {
+    const deleteStmt = db.prepare("DELETE FROM prompts WHERE id = ? RETURNING *");
+    const deleted = deleteStmt.get(promptId) as RawPrompt | undefined;
+    return !!deleted;
+}
+
+export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {
+    const stmt = db.prepare("SELECT * FROM prompt_projects WHERE prompt_id = ?");
+    const rows = stmt.all(promptId) as RawPromptProject[];
+    return rows.map(mapPromptProject);
 }

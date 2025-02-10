@@ -1,10 +1,10 @@
 import { join, extname, resolve, relative } from 'node:path';
 import { readdirSync, readFileSync, statSync, Dirent } from 'node:fs';
-import { type Project } from 'shared';
-import { files, eq, and, inArray } from 'shared';
-import { db } from "shared/database";
+import { db } from "@/utils/database";
+import { mapFile, RawFile } from '../project-service';
+import { Project } from 'shared/schema';
 
-const ALLOWED_EXTENSIONS = [
+export const ALLOWED_EXTENSIONS = [
   // Documentation & Config
   '.md', '.txt', '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.conf', '.config',
 
@@ -33,7 +33,7 @@ const ALLOWED_EXTENSIONS = [
   '.gitignore', '.gitattributes',
 ];
 
-const DEFAULT_EXCLUSIONS = [
+export const DEFAULT_EXCLUSIONS = [
   // Node
   'node_modules',
   '.npm',
@@ -44,7 +44,7 @@ const DEFAULT_EXCLUSIONS = [
   'Cargo.lock',
   'dist',
   'build',
-  'drizzle',
+
   // Coverage & Test
   'coverage',
   '.nyc_output',
@@ -87,191 +87,170 @@ const DEFAULT_EXCLUSIONS = [
   '*.rej',
   '.stack-work',
   '.ccache',
-
 ];
 
-// Normalize paths for DB storage to avoid OS-specific slash issues
-function normalizePathForDb(path: string): string {
-  return path.replace(/\\/g, '/');
+
+export function normalizePathForDb(pathStr: string): string {
+  return pathStr.replace(/\\/g, '/');
 }
 
-function computeChecksum(content: string): string {
+export function computeChecksum(content: string): string {
   return Bun.hash(content).toString(16);
 }
 
-function isValidChecksum(checksum: string | null): boolean {
+export function isValidChecksum(checksum: string | null): boolean {
   return typeof checksum === 'string' && /^[a-f0-9]+$/.test(checksum);
 }
 
-export class FileSyncService {
-  constructor(
-    private exclusions: string[] = [...DEFAULT_EXCLUSIONS, /* ...customExclusions, etc... */]
-  ) { }
+export function isExcluded(name: string, exclusions: string[]): boolean {
+  return exclusions.some(pattern => {
+    if (pattern.includes('*')) {
+      const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+      return regex.test(name);
+    } else {
+      return name === pattern;
+    }
+  });
+}
 
-  public async syncProject(project: Project): Promise<void> {
-    const absoluteProjectPath = resolve(project.path);
+export function getTextFiles(dir: string, exclusions: string[], allowedExtensions: string[] = ALLOWED_EXTENSIONS): string[] {
+  let filesFound: string[] = [];
+  let entries: Dirent[];
 
-    // Gather all text files from project path
-    const projectFiles = this.getTextFiles(absoluteProjectPath);
-    // Sync them
-    await this.syncFileSet(project, absoluteProjectPath, projectFiles);
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
   }
 
-  public async syncProjectFolder(project: Project, folderPath: string): Promise<void> {
-    const absoluteProjectPath = resolve(project.path);
-    const absoluteFolderToSync = resolve(project.path, folderPath);
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
 
-    // Gather only the text files within that subfolder
-    const folderFiles = this.getTextFiles(absoluteFolderToSync);
+    if (isExcluded(entry.name, exclusions)) {
+      continue;
+    }
 
-    await this.syncFileSet(project, absoluteProjectPath, folderFiles);
-
-    // Optionally remove DB records that no longer exist in that subfolder
-    // (If you do NOT want to remove them, omit these lines)
-    const dbFilesInFolder = await db.select().from(files).where(eq(files.projectId, project.id));
-    const relevantDBFiles = dbFilesInFolder.filter(dbFile =>
-      normalizePathForDb(dbFile.path).startsWith(normalizePathForDb(folderPath))
-    );
-    const folderPathsSet = new Set(folderFiles.map(fp =>
-      normalizePathForDb(relative(absoluteProjectPath, fp))
-    ));
-    const toDelete = relevantDBFiles.filter(dbFile => !folderPathsSet.has(normalizePathForDb(dbFile.path)));
-    if (toDelete.length > 0) {
-      await db.delete(files).where(inArray(files.id, toDelete.map(td => td.id)));
+    if (entry.isDirectory()) {
+      filesFound.push(...getTextFiles(fullPath, exclusions, allowedExtensions));
+    } else {
+      if (allowedExtensions.some(ext => entry.name.endsWith(ext))) {
+        filesFound.push(fullPath);
+      }
     }
   }
+  return filesFound;
+}
 
-  /**
-   * Syncs a given set of absoluteFilePaths with the DB: Upsert new or changed files,
-   * optionally remove those that don't exist anymore.
-   */
-  private async syncFileSet(
-    project: Project,
-    absoluteProjectPath: string,
-    absoluteFilePaths: string[]
-  ): Promise<void> {
-    // 1) Insert or update for each real file on disk
-    await Promise.all(
-      absoluteFilePaths.map(async (filePath) => {
-        const content = readFileSync(filePath, 'utf-8');
-        // Normalize the relative path for DB
-        const relativePath = normalizePathForDb(
-          relative(absoluteProjectPath, filePath)
-        );
-        const fileName = relativePath.split('/').pop() ?? '';
-        const extension = extname(fileName) || '';
-        const size = statSync(filePath).size;
-        const checksum = computeChecksum(content);
+export async function syncFileSet(project: Project, absoluteProjectPath: string, absoluteFilePaths: string[]): Promise<void> {
+  // 1) Insert or update for each real file on disk
+  await Promise.all(
+    absoluteFilePaths.map(async (filePath) => {
+      const content = readFileSync(filePath, 'utf-8');
+      const relativePath = normalizePathForDb(relative(absoluteProjectPath, filePath));
+      const fileName = relativePath.split('/').pop() ?? '';
+      const extension = extname(fileName) || '';
+      const size = statSync(filePath).size;
+      const checksum = computeChecksum(content);
 
-        // Try to find an existing DB record matching this path
-        const [existingFile] = await db.select()
-          .from(files)
-          .where(
-            and(
-              eq(files.projectId, project.id),
-              eq(files.path, relativePath) // must match the normalized path
-            )
-          )
-          .limit(1);
+      const existingFile = db.prepare(`
+        SELECT * FROM files 
+        WHERE project_id = ? AND path = ? 
+        LIMIT 1
+      `).get(project.id, relativePath) as RawFile | undefined;
 
-        if (existingFile) {
-          // If the checksums differ, update content, size, etc. (but keep the same file ID)
-          if (!isValidChecksum(existingFile.checksum) || existingFile.checksum !== checksum) {
-            await db.update(files)
-              .set({
-                content,
-                extension,
-                size,
-                checksum,
-                updatedAt: new Date()
-              })
-              .where(eq(files.id, existingFile.id))
-              .run();
-          }
-        } else {
-          // Insert a brand-new record
-          await db.insert(files)
-            .values({
-              projectId: project.id,
-              name: fileName,
-              path: relativePath,
-              extension,
-              size,
-              content,
-              checksum
-            })
-            .run();
+      if (existingFile) {
+        if (!isValidChecksum(existingFile.checksum) || existingFile.checksum !== checksum) {
+          const updateStmt = db.prepare(`
+            UPDATE files 
+            SET content = ?, extension = ?, size = ?, checksum = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+            RETURNING *
+          `);
+          const updated = updateStmt.get(content, extension, size, checksum, existingFile.id) as RawFile;
+          mapFile(updated); // Validate the update was successful
         }
-      })
-    );
-
-    // 2) Optionally remove from DB any file that no longer exists on disk.
-    //    If you want to KEEP the old files in the DB (and keep their summaries),
-    //    then comment this out or handle it differently.
-    const existingPaths = new Set(
-      absoluteFilePaths.map(fp => normalizePathForDb(relative(absoluteProjectPath, fp)))
-    );
-
-    const dbFiles = await db.select()
-      .from(files)
-      .where(eq(files.projectId, project.id));
-
-    const filesToDelete = dbFiles.filter(dbFile =>
-      !existingPaths.has(normalizePathForDb(dbFile.path))
-    );
-
-    if (filesToDelete.length > 0) {
-      await db.delete(files)
-        .where(inArray(files.id, filesToDelete.map(f => f.id)));
-    }
-  }
-
-  /**
-   * Recursively gather text-like files from the specified directory,
-   * skipping excluded directories / patterns.
-   */
-  private getTextFiles(dir: string): string[] {
-    let filesFound: string[] = [];
-    let entries: Dirent[];
-
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      // Could not read directory (permission issue, etc.)
-      return [];
-    }
-
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name);
-
-      // If excluded, skip
-      if (this.isExcluded(entry.name)) {
-        continue;
-      }
-
-      if (entry.isDirectory()) {
-        filesFound.push(...this.getTextFiles(fullPath));
       } else {
-        if (ALLOWED_EXTENSIONS.some(ext => entry.name.endsWith(ext))) {
-          filesFound.push(fullPath);
-        }
+        const insertStmt = db.prepare(`
+          INSERT INTO files (project_id, name, path, extension, size, content, checksum) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          RETURNING *
+        `);
+        const created = insertStmt.get(
+          project.id,
+          fileName,
+          relativePath,
+          extension,
+          size,
+          content,
+          checksum
+        ) as RawFile;
+        mapFile(created);
       }
-    }
+    })
+  );
 
-    return filesFound;
+  // Handle deletions in a single batch operation
+  const existingPaths = new Set(
+    absoluteFilePaths.map(fp => normalizePathForDb(relative(absoluteProjectPath, fp)))
+  );
+
+  const dbFiles = db.prepare(`
+    SELECT * FROM files 
+    WHERE project_id = ?
+  `).all(project.id) as RawFile[];
+
+  const filesToDelete = dbFiles.filter(dbFile =>
+    !existingPaths.has(normalizePathForDb(dbFile.path))
+  );
+
+  if (filesToDelete.length > 0) {
+    const placeholders = filesToDelete.map(() => '?').join(', ');
+    const deleteStmt = db.prepare(`
+      DELETE FROM files 
+      WHERE id IN (${placeholders})
+      RETURNING *
+    `);
+    const deleted = deleteStmt.all(...filesToDelete.map(f => f.id)) as RawFile[];
+    deleted.forEach(mapFile);
   }
+}
 
-  private isExcluded(name: string): boolean {
-    return this.exclusions.some(pattern => {
-      if (pattern.includes('*')) {
-        // Convert wildcard to a basic regex
-        const regex = new RegExp(
-          '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$'
-        );
-        return regex.test(name);
-      } else {
-        return name === pattern;
-      }
-    });
+export async function syncProject(project: Project, exclusions: string[] = DEFAULT_EXCLUSIONS): Promise<void> {
+  const absoluteProjectPath = resolve(project.path);
+  const projectFiles = getTextFiles(absoluteProjectPath, exclusions);
+  await syncFileSet(project, absoluteProjectPath, projectFiles);
+}
+
+export async function syncProjectFolder(project: Project, folderPath: string, exclusions: string[] = DEFAULT_EXCLUSIONS): Promise<void> {
+  const absoluteProjectPath = resolve(project.path);
+  const absoluteFolderToSync = resolve(project.path, folderPath);
+  const folderFiles = getTextFiles(absoluteFolderToSync, exclusions);
+
+  await syncFileSet(project, absoluteProjectPath, folderFiles);
+
+  // Remove DB records for files no longer in this subfolder
+  const dbFilesInFolder = db.prepare(`
+    SELECT * FROM files 
+    WHERE project_id = ?
+  `).all(project.id) as RawFile[];
+
+  const folderPathsSet = new Set(folderFiles.map(fp =>
+    normalizePathForDb(relative(absoluteProjectPath, fp))
+  ));
+
+  const toDelete = dbFilesInFolder.filter(dbFile =>
+    normalizePathForDb(dbFile.path).startsWith(normalizePathForDb(folderPath)) &&
+    !folderPathsSet.has(normalizePathForDb(dbFile.path))
+  );
+
+  if (toDelete.length > 0) {
+    const placeholders = toDelete.map(() => '?').join(', ');
+    const deleteStmt = db.prepare(`
+      DELETE FROM files 
+      WHERE id IN (${placeholders})
+      RETURNING *
+    `);
+    const deleted = deleteStmt.all(...toDelete.map(td => td.id)) as RawFile[];
+    deleted.forEach(mapFile); // Validate the deletes were successful
   }
 }

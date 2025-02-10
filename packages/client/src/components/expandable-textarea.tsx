@@ -19,8 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useWhisperTranscription } from "@/hooks/api/use-whisper-transcription"
-import { useEffect, useState, useRef, forwardRef, useMemo } from "react"
+import { useEffect, useState, useRef, forwardRef } from "react"
 import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from "sonner"
@@ -80,27 +79,6 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     }
   }
 
-  const {
-    transcript,
-    isRecording,
-    startRecording,
-    stopRecording,
-  } = useWhisperTranscription({ debug: false })
-
-  // Whenever transcript updates (new transcription completed),
-  // insert it at the current selection.
-  useEffect(() => {
-    if (transcript) {
-      const currentValue = expandedValue
-      const start = selectionStart !== null ? selectionStart : currentValue.length
-      const end = selectionEnd !== null ? selectionEnd : start
-      const newValue = currentValue.slice(0, start) + transcript + currentValue.slice(end)
-      setExpandedValue(newValue)
-      onChange(newValue)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcript])
-
   useEffect(() => {
     setExpandedValue(value)
   }, [value])
@@ -125,35 +103,6 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
   }
 
   const placeholderWithShortcut = `${placeholder} (${formatShortcut('mod+i')})`
-
-  const renderMicrophoneButton = () => (
-    <Popover open={isRecording}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          className={`h-6 w-6 hover:opacity-100 ${isRecording ? 'bg-red-100 opacity-100' : 'opacity-50'}`}
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            isRecording ? stopRecording() : startRecording()
-          }}
-        >
-          {isRecording ? <MicOff className="h-4 w-4 text-red-500" /> : <Mic className="h-4 w-4" />}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="start"
-        className="w-auto p-2"
-      >
-        <span className={`text-xs ${isRecording ? 'text-red-500 animate-pulse' : 'text-muted-foreground'}`}>
-          {isRecording ? "Recording in progress..." : "Click to start recording"}
-        </span>
-      </PopoverContent>
-    </Popover>
-  )
 
   return (
     <div className="relative h-full">
@@ -210,7 +159,6 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
         >
           <Expand className="h-4 w-4" />
         </Button>
-        {renderMicrophoneButton()}
       </div>
 
       <Dialog open={isExpanded} onOpenChange={handleDialogClose}>
@@ -256,7 +204,6 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {renderMicrophoneButton()}
             </div>
           </div>
           <DialogFooter className="mt-4">

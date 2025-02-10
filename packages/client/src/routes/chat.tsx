@@ -81,8 +81,7 @@ function ChatPage() {
             You haven't started any chat sessions yet. You can chat with local
             LLMs immediately, but if you add OpenAI or OpenRouter keys on the{" "}
             <strong>Keys</strong> page, you'll unlock extra features like
-            summarization, advanced file suggestions, and voice input (using
-            Whisper).
+            summarization, advanced file suggestions, and generated ticket task creation.
           </p>
           <InfoTooltip>
             <div className="space-y-2 text-sm">
@@ -92,7 +91,6 @@ function ChatPage() {
               <ul className="list-disc list-inside">
                 <li>Advanced AI completions</li>
                 <li>Project summarizations and ticket creation from chat</li>
-                <li>Voice interactions with Whisper</li>
               </ul>
             </div>
           </InfoTooltip>
@@ -125,7 +123,6 @@ function ChatPage() {
                 <li>Start chatting right away using the input below</li>
                 <li>Create new tabs for different conversations</li>
                 <li>Link chats to your projects for context-aware assistance</li>
-                <li>Use voice input with Whisper (requires OpenAI key)</li>
               </ul>
               <div className="flex justify-center mt-4">
                 <Button onClick={() => createChatTab({ cleanTab: true })} variant="outline">

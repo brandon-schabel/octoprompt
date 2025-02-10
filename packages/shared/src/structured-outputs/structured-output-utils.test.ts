@@ -49,28 +49,6 @@ describe("structured-output-utils", () => {
     });
   });
 
-//   it("creates an OpenRouter function spec", () => {
-//     const schema = z.object({
-//       name: z.string().min(1),
-//     });
-//     const fnSpec = zodToOpenRouterFunctionSpec(
-//       "createUser",
-//       "Creates a user with basic info",
-//       schema
-//     );
-//     expect(fnSpec.name).toBe("createUser");
-//     expect(fnSpec.description).toBe("Creates a user with basic info");
-//     expect(fnSpec.parameters).toMatchObject({
-//       type: "object",
-//       properties: {
-//         name: { type: "string" },
-//       },
-//       required: ["name"],
-//     });
-//   });
-
-  // ----- New tests for broader coverage -----
-
   it("handles enum correctly", () => {
     const enumSchema = z.enum(["red", "green", "blue"]);
     const jsonSchema = zodToStructuredJsonSchema(enumSchema);

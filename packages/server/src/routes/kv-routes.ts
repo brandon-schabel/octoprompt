@@ -7,26 +7,16 @@ import {
     deleteKvKey,
 } from '@/services/kv-service';
 
-import { KVKeyEnum, kvKeyEnumSchema, KvSchemas } from 'shared/src/kv-validators';
+import { kvKeyEnumSchema, KvSchemas } from 'shared/src/kv-validators';
 import { router } from 'server-router';
 import { ApiError } from 'shared/index';
 
-/**
- * Query param or request body might have an object like:
- * {
- *   key: "userProfile",
- *   value: { name: "Bob", age: 28 }
- * }
- */
 const kvSetSchema = z.object({
     key: kvKeyEnumSchema,
     value: z.any(), // We'll re-validate with the correct schema in our route
 });
 
-/**
- * GET /api/kv?key=userProfile
- * Retrieve the typed value for that key from the store.
- */
+
 router.get(
     '/api/kv',
     {
@@ -44,11 +34,6 @@ router.get(
     }
 );
 
-/**
- * POST /api/kv
- * Body: { key, value }
- * Sets the typed value for that key.
- */
 router.post(
     '/api/kv',
     {
@@ -74,10 +59,6 @@ router.post(
     }
 );
 
-/**
- * DELETE /api/kv/:key
- * Removes the given key from the store.
- */
 router.delete(
     '/api/kv/:key',
     {

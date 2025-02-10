@@ -1,47 +1,39 @@
-import { FileChangeWatcher, FileChangeEvent } from './file-change-watcher';
-import { FileSummaryService } from './file-summary-service';
-import { FileSyncService } from './file-sync-service';
-import { ProjectService } from '../project-service';
-import { Project } from 'shared';
+import { createFileChangeWatcher, FileChangeEvent } from './file-change-watcher';
+import { getProjectFiles } from '../project-service';
+import { schema } from 'shared';
 import { resolve, relative } from 'node:path';
 import { websocketStateAdapter } from '@/utils/websocket/websocket-state-adapter';
+import { summarizeFiles } from './file-summary-service';
+import { syncProject } from './file-sync-service';
 
-export class FileChangePlugin {
-    private watcher: FileChangeWatcher;
-    private summaryService: FileSummaryService;
-    private fileSyncService: FileSyncService;
-    private projectService: ProjectService;
+type Project = schema.Project;
 
-    constructor(
-        summaryService: FileSummaryService,
-        fileSyncService: FileSyncService,
-        projectService: ProjectService
-    ) {
-        this.watcher = new FileChangeWatcher();
-        this.summaryService = summaryService;
-        this.fileSyncService = fileSyncService;
-        this.projectService = projectService;
-    }
+export function createFileChangePlugin(
+) {
+    const watcher = createFileChangeWatcher();
 
-    public start(project: Project, ignorePatterns: string[] = []): void {
-        this.watcher.registerListener({
+    /**
+     * Starts watching a project directory and re-summarizes on changes.
+     */
+    async function start(project: Project, ignorePatterns: string[] = []): Promise<void> {
+        watcher.registerListener({
             onFileChanged: async (event: FileChangeEvent, changedFilePath: string) => {
                 try {
-                    // Always re-sync from disk so DB is updated with new content
-                    await this.fileSyncService.syncProject(project);
+                    // Re-sync from disk so DB is updated
+                    await syncProject(project);
 
                     // Summaries
-                    const allFiles = await this.projectService.getProjectFiles(project.id);
+                    const allFiles = await getProjectFiles(project.id);
                     if (!allFiles) return;
 
                     const absoluteProjectPath = resolve(project.path);
-                    const relativePath = relative(absoluteProjectPath, changedFilePath);
-                    const updatedFile = allFiles.find((f) => f.path === relativePath);
+                    const relPath = relative(absoluteProjectPath, changedFilePath);
+                    const updatedFile = allFiles.find((f) => f.path === relPath);
                     if (!updatedFile) {
                         return;
                     }
                     const globalState = await websocketStateAdapter.getState();
-                    await this.summaryService.summarizeFiles(
+                    await summarizeFiles(
                         project.id,
                         [updatedFile],
                         globalState
@@ -52,13 +44,21 @@ export class FileChangePlugin {
             },
         });
 
-        this.watcher.startWatching({
+        watcher.startWatching({
             directory: project.path,
             ignorePatterns,
         });
     }
 
-    public stop(): void {
-        this.watcher.stopAll();
+    /**
+     * Stops the file watcher.
+     */
+    function stop(): void {
+        watcher.stopAll();
     }
+
+    return {
+        start,
+        stop,
+    };
 }

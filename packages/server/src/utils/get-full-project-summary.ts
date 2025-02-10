@@ -1,41 +1,30 @@
-import { ProjectService } from "@/services/project-service";
 import { json } from "@bnk/router";
 import { ApiError } from "shared";
-import { FileSummaryService } from "@/services/file-services/file-summary-service";
 import { ProjectFile } from "shared/schema";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter";
 import { websocketStateAdapter } from "./websocket/websocket-state-adapter";
-
-const projectService = new ProjectService();
-const fileSummaryService = new FileSummaryService();
-
+import { getProjectById } from "@/services/project-service";
+import { getFileSummaries } from "@/services/file-services/file-summary-service";
 
 const buildProjectSummary = (includedFiles: ProjectFile[]) => {
     // Build the combined summaries using your summary-formatter
     return buildCombinedFileSummaries(includedFiles, {
         // We can override the header style to show the file path
         headerStyle: (file) => `File: ${file.name}, File ID: ${file.id}`,
-        // footerStyle: (file) => {
-        //     if (file.summaryLastUpdatedAt) {
-        //         return `Last Summarized: ${new Date(file.summaryLastUpdatedAt).toLocaleString()}`;
-        //     }
-        //     return "";
-        // },
         sectionDelimiter: "---",
         includeEmptySummaries: false
     });
 }
 
-
 export const getFullProjectSummary = async (projectId: string) => {
-    const project = await projectService.getProjectById(projectId);
+    const project = await getProjectById(projectId);
     if (!project) {
         throw new ApiError("Project not found", 404, "NOT_FOUND");
     }
 
     // Fetch all file summaries from the database
-    const allFiles = await fileSummaryService.getFileSummaries(projectId);
+    const allFiles = await getFileSummaries(projectId);
     if (!allFiles.length) {
         return json({
             success: false,

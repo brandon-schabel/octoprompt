@@ -3,7 +3,6 @@ import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
-import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
@@ -104,7 +103,7 @@ function MainProjectsLayout({
             />
 
             {/* Global file viewer modal */}
-         
+
         </div>
     )
 }
