@@ -106,8 +106,8 @@ function mapTicket(row: any): Ticket {
     status: row.status,
     priority: row.priority,
     suggestedFileIds: row.suggested_file_ids,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    createdAt: Number(row.created_at),
+    updatedAt: Number(row.updated_at)
   };
   const validated = TicketReadSchema.parse(mapped);
   return {
@@ -186,7 +186,7 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
       validatedData.status ?? "open",
       validatedData.priority ?? "normal",
       validatedData.suggestedFileIds ?? "[]"
-    );
+    ) as any;
     if (!created) {
       throw new ApiError("Failed to create ticket", 500, "CREATE_FAILED");
     }
@@ -195,7 +195,7 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
 
 export async function getTicketById(ticketId: string): Promise<Ticket | null> {
     const stmt = db.prepare(`SELECT * FROM tickets WHERE id = ? LIMIT 1`);
-    const found = stmt.get(ticketId);
+    const found = stmt.get(ticketId) as any;
     if (!found) return null;
     return mapTicket(found);
 }
@@ -204,11 +204,11 @@ export async function listTicketsByProject(projectId: string, statusFilter?: str
     let stmt;
     if (statusFilter) {
       stmt = db.prepare(`SELECT * FROM tickets WHERE project_id = ? AND status = ? ORDER BY created_at DESC`);
-      const rows = stmt.all(projectId, statusFilter);
+      const rows = stmt.all(projectId, statusFilter) as any[];
       return rows.map(mapTicket);
     } else {
       stmt = db.prepare(`SELECT * FROM tickets WHERE project_id = ? ORDER BY created_at DESC`);
-      const rows = stmt.all(projectId);
+      const rows = stmt.all(projectId) as any[];
       return rows.map(mapTicket);
     }
 }
@@ -255,7 +255,7 @@ export async function updateTicket(ticketId: string, data: UpdateTicketBody): Pr
     
     values.push(ticketId);
     const stmt = db.prepare(updateQuery);
-    const updated = stmt.get(...values);
+    const updated = stmt.get(...values) as any;
     
     if (!updated) return null;
     return mapTicket(updated);
@@ -263,7 +263,7 @@ export async function updateTicket(ticketId: string, data: UpdateTicketBody): Pr
 
 export async function deleteTicket(ticketId: string): Promise<boolean> {
     const stmt = db.prepare(`DELETE FROM tickets WHERE id = ? RETURNING *`);
-    const deleted = stmt.get(ticketId);
+    const deleted = stmt.get(ticketId) as any;
     return !!deleted;
 }
 
@@ -279,7 +279,7 @@ export async function linkFilesToTicket(ticketId: string, fileIds: string[]): Pr
 
 export async function getTicketFiles(ticketId: string): Promise<TicketFile[]> {
     const stmt = db.prepare(`SELECT * FROM ticket_files WHERE ticket_id = ?`);
-    const rows = stmt.all(ticketId);
+    const rows = stmt.all(ticketId) as any[];
     return rows.map(mapTicketFile);
 }
 
@@ -304,7 +304,7 @@ export async function suggestTasksForTicket(ticketId: string, userContext?: stri
 
 export async function getTicketsWithFiles(projectId: string): Promise<(Ticket & { fileIds: string[] })[]> {
     const stmtTickets = db.prepare(`SELECT * FROM tickets WHERE project_id = ?`);
-    const allTickets = stmtTickets.all(projectId);
+    const allTickets = stmtTickets.all(projectId) as any[];
     if (allTickets.length === 0) return [];
     const ticketIds = allTickets.map((t: any) => t.id);
     const placeholders = ticketIds.map(() => '?').join(', ');
@@ -324,6 +324,10 @@ export async function getTicketsWithFiles(projectId: string): Promise<(Ticket & 
 }
 
 export async function createTask(ticketId: string, content: string): Promise<TicketTask> {
+    const ticket = await getTicketById(ticketId);
+    if (!ticket) {
+        throw new ApiError(`Ticket ${ticketId} not found`, 404, "NOT_FOUND");
+    }
     const validatedData = validateCreateTask(ticketId, content);
     const stmtMax = db.prepare(`SELECT MAX(order_index) as max FROM ticket_tasks WHERE ticket_id = ?`);
     const row = stmtMax.get(ticketId) as { max: number | null };
@@ -342,23 +346,23 @@ export async function createTask(ticketId: string, content: string): Promise<Tic
       nextIndex
     ];
     
-    const created = stmt.get(...params);
-    if (!created) {
+    const createdTaskRaw = stmt.get(...params) as any;
+    if (!createdTaskRaw) {
       throw new ApiError("Failed to create task", 500, "CREATE_FAILED");
     }
-    return mapTicketTask(created);
+    return mapTicketTask(createdTaskRaw);
 }
 
 export async function getTasks(ticketId: string): Promise<TicketTask[]> {
     const stmt = db.prepare(`SELECT * FROM ticket_tasks WHERE ticket_id = ? ORDER BY order_index`);
-    const rows = stmt.all(ticketId);
-    return rows.map(mapTicketTask);
+    const taskRows = stmt.all(ticketId) as any[];
+    return taskRows.map(mapTicketTask);
 }
 
 export async function deleteTask(ticketId: string, taskId: string): Promise<boolean> {
     const stmt = db.prepare(`DELETE FROM ticket_tasks WHERE id = ? AND ticket_id = ? RETURNING *`);
-    const deleted = stmt.get(taskId, ticketId);
-    return !!deleted;
+    const deletedTask = stmt.get(taskId, ticketId) as any;
+    return !!deletedTask;
 }
 
 export async function reorderTasks(
@@ -385,7 +389,7 @@ export async function autoGenerateTasksFromOverview(ticketId: string): Promise<T
           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           RETURNING *
         `);
-        const createdRaw = stmt.get(ticketId, content, 0, idx);
+        const createdRaw = stmt.get(ticketId, content, 0, idx) as any;
         if (!createdRaw) {
             throw new ApiError("Failed to create task", 500, "CREATE_FAILED");
         }
@@ -419,8 +423,8 @@ export async function listTicketsWithTaskCount(
         params = [projectId];
     }
     const stmt = db.prepare(query);
-    const rows = stmt.all(...params);
-    return rows.map((r: any) => ({
+    const rowsCount = stmt.all(...params) as any[];
+    return rowsCount.map((r: any) => ({
         ...r,
         taskCount: Number(r.taskCount || 0),
     }));
@@ -430,7 +434,7 @@ export async function getTasksForTickets(ticketIds: string[]): Promise<Record<st
     if (!ticketIds.length) return {};
     const placeholders = ticketIds.map(() => '?').join(', ');
     const stmt = db.prepare(`SELECT * FROM ticket_tasks WHERE ticket_id IN (${placeholders}) ORDER BY order_index`);
-    const tasks = stmt.all(...ticketIds) as Array<any>;
+    const tasks = stmt.all(...ticketIds) as any[];
     const tasksByTicket: Record<string, TicketTask[]> = {};
     for (const task of tasks) {
         if (!tasksByTicket[task.ticket_id]) {
@@ -480,11 +484,11 @@ export async function updateTask(ticketId: string, taskId: string, updates: { co
     WHERE ticket_id = ? AND id = ?
     RETURNING *
   `);
-  const updated = stmt.get(
+  const updatedTask = stmt.get(
     updates.content === undefined ? null : updates.content,
     updates.done === undefined ? null : updates.done,
     ticketId,
     taskId
-  );
-  return updated ?? null;
+  ) as any;
+  return updatedTask ?? null;
 }

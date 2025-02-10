@@ -17,7 +17,7 @@ describe("provider-key-service", () => {
 
         const row = db
             .query("SELECT * FROM provider_keys WHERE id = ?")
-            .get(pk.id);
+            .get(pk.id) as { provider: string } | undefined;
         expect(row?.provider).toBe("openai");
     });
 

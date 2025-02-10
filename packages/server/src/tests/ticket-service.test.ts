@@ -59,7 +59,7 @@ describe("Ticket Service", () => {
 
         const found = db
             .query("SELECT * FROM tickets WHERE id = ?")
-            .get(newT.id);
+            .get(newT.id) as { title: string } | undefined;
         expect(found?.title).toBe("TestTicket");
     });
 
@@ -71,10 +71,10 @@ describe("Ticket Service", () => {
     test("listTicketsByProject returns only those tickets", async () => {
         // Insert two projects
         db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["PA", "/pA"]);
-        const pA = db.query("SELECT last_insert_rowid() as id").get().id;
+        const pA = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["PB", "/pB"]);
-        const pB = db.query("SELECT last_insert_rowid() as id").get().id;
+        const pB = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         // Insert tickets
         await createTicket({ projectId: pA, title: "TicketA1", overview: "Overview A1", status: "open", priority: "normal" });
@@ -102,7 +102,7 @@ describe("Ticket Service", () => {
        VALUES (?, ?, ?, ?, ?)`,
             ["testproj", "somefile", "somefile.txt", ".txt", 100]
         );
-        const fId = db.query("SELECT last_insert_rowid() as id").get().id;
+        const fId = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
 
 
@@ -158,13 +158,13 @@ describe("Ticket Service", () => {
             `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?);`,
             ["pLink", "f1", "f1.txt", ".txt", 111]
         );
-        const f1 = db.query("SELECT last_insert_rowid() as id").get().id;
+        const f1 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         db.run(
             `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?);`,
             ["pLink", "f2", "f2.txt", ".txt", 222]
         );
-        const f2 = db.query("SELECT last_insert_rowid() as id").get().id;
+        const f2 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         const linked = await linkFilesToTicket(ticket.id, [f1, f2]);
         expect(linked.length).toBe(2);
@@ -231,7 +231,7 @@ describe("Ticket Service", () => {
     test("getTicketsWithFiles merges file IDs", async () => {
         // Insert a project
         db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["WF", "/WF"]);
-        const projId = db.query("SELECT last_insert_rowid() as id").get().id;
+        const projId = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         // Two tickets
         const t1 = await createTicket({
@@ -254,13 +254,13 @@ describe("Ticket Service", () => {
             `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?)`,
             [projId, "f1", "f1.txt", ".txt", 111]
         );
-        const f1 = db.query("SELECT last_insert_rowid() as id").get().id;
+        const f1 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         db.run(
             `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?)`,
             [projId, "f2", "f2.txt", ".txt", 222]
         );
-        const f2 = db.query("SELECT last_insert_rowid() as id").get().id;
+        const f2 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         await linkFilesToTicket(t1.id, [f1, f2]);
         await linkFilesToTicket(t2.id, [f2]);
@@ -384,7 +384,7 @@ describe("Ticket Service", () => {
 
     test("listTicketsWithTaskCount returns array with aggregated taskCount", async () => {
         db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["TaskCountProj", "/tcp"]);
-        const projId = db.query("SELECT last_insert_rowid() as id").get().id;
+        const projId = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         const tk1 = await createTicket({ projectId: projId, title: "TC1", overview: "TC1 overview", status: "open", priority: "normal" });
         const tk2 = await createTicket({ projectId: projId, title: "TC2", overview: "TC2 overview", status: "open", priority: "normal" });

@@ -34,7 +34,7 @@ describe("file-sync-service", () => {
             `INSERT INTO projects (name, path) VALUES (?, ?)`,
             ["SyncProject", "/tmp/test-sync"]
         );
-        const projId = db.query("SELECT last_insert_rowid() AS id").get().id;
+        const projId = ((db.query("SELECT last_insert_rowid() AS id").get() as { id: number }).id).toString();
 
         // Pre-insert a file that will later be removed
         db.run(
@@ -44,7 +44,7 @@ describe("file-sync-service", () => {
       `,
             [projId, "old.ts", "old.ts", ".ts", 100, "old content"]
         );
-        const oldFileId = db.query("SELECT last_insert_rowid() AS id").get().id;
+        const oldFileId = ((db.query("SELECT last_insert_rowid() AS id").get() as { id: number }).id).toString();
 
         // Mock readdirSync so only "keep.ts" and "update.ts" appear
         spyOn(fs, "readdirSync").mockImplementation((path, options) => {
