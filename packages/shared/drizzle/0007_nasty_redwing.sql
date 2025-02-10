@@ -1,1 +1,0 @@
-ALTER TABLE `tickets` ADD `suggested_file_ids` text DEFAULT '[]';

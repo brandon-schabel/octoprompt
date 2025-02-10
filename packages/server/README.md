@@ -76,122 +76,18 @@ Key testing principles:
 - Helpers for common operations (e.g., `ensureLoggedOut`)
 - Comprehensive coverage of error cases
 
-## Stripe Integration
-
-### Setting Up Stripe Webhooks
-
-1. **Get Webhook Secret**
-
-   ```bash
-   # Install Stripe CLI
-   brew install stripe/stripe-cli/stripe
-
-   # Login to Stripe
-   stripe login
-
-   # Start webhook forwarding
-   stripe listen --forward-to localhost:3000/api/webhook/stripe
-   ```
-
-2. **Configure Environment**
-
-   ```env
-   STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-   ```
-
-3. **Webhook Events**
-   The server handles these Stripe events:
-   - `customer.subscription.created`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-   - `invoice.payment_failed`
-   - `payment_method.attached`
-   - `payment_method.detached`
-
-### Local Development with Stripe
-
-1. **Forward Webhooks**
-
-   ```bash
-   # Start webhook forwarding
-   stripe listen --forward-to localhost:3000/api/webhook/stripe
-
-   # The CLI will display a webhook signing secret
-   # Use this secret in your .env file
-   ```
-
-2. **Test Webhooks**
-
-   ```bash
-   # Trigger test events
-   stripe trigger payment_intent.succeeded
-   ```
-
-3. **Monitor Webhook Events**
-
-   ```bash
-   # View webhook logs
-   stripe webhooks logs
-   ```
-
-### Webhook Implementation
-
-The webhook handler (`/src/routes/subscription/webhook-routes.ts`):
-
-1. Verifies Stripe signature
-2. Routes events to appropriate handlers
-3. Updates database accordingly
-4. Handles errors gracefully
-
-Example webhook flow:
-
-```typescript
-router.post({
-    path: '/api/webhook/stripe',
-    auth: false,
-}, async (req) => {
-    // Verify webhook signature
-    const event = stripe.webhooks.constructEvent(
-        await req.text(),
-        req.headers.get('stripe-signature')!,
-        webhookSecret
-    );
-
-    // Handle the event
-    await webhookService.handleWebhook(event);
-});
-```
-
-## Environment Variables
-
-Required environment variables:
-
-```env
-DATABASE_URL=
-JWT_SECRET=
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-```
-
 ## Development Workflow
 
 1. **Start the Server**
 
    ```bash
-   bun run server.ts
+   bun run dev
    ```
 
 2. **Run Tests**
 
    ```bash
    bun test          # Run all tests
-   bun test e2e     # Run e2e tests only
-   ```
-
-3. **Database Migrations**
-
-   ```bash
-   bun run migrate
    ```
 
 ## API Documentation
@@ -469,29 +365,10 @@ The server uses Drizzle ORM with TypeScript for full type safety from database t
 
 ### Schema Definition and Type Inference
 
-1. **Database Schema** (`schema.ts`):
-
-```typescript
-export const questions = pgTable('questions', {
-    id: uuid('id').defaultRandom().primaryKey(),
-    type: varchar('type', { length: 50 }).notNull(),
-    categoryId: uuid('category_id')
-        .notNull()
-        .references(() => questionCategories.id),
-    questionText: text('question_text').notNull(),
-    options: text('options').array().notNull(),
-    // ... other fields
-});
-
-// Infer the type from the schema
-type Question = InferSelectModel<typeof questions>;
-```
-
-2. **Service Layer** (`quiz-service.ts`):
+. **Service Layer** (`quiz-service.ts`):
 
 ```typescript
 import { questions, questionCategories } from "shared";
-import type { InferSelectModel } from "drizzle-orm";
 
 // Inferred types from schema
 type Question = InferSelectModel<typeof questions>;

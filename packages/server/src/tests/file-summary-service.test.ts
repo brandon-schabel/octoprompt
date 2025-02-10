@@ -1,6 +1,5 @@
 import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
-import { db, eq } from "@db";
-import { schema, GlobalState } from "shared";
+import { db, resetDatabase } from "@db"; // no eq, no schema
 import {
     summarizeSingleFile,
     summarizeFiles,
@@ -9,35 +8,13 @@ import {
     shouldSummarizeFile
 } from "@/services/file-services/file-summary-service";
 import { randomString } from "./test-utils";
-import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
-
-const { files } = schema;
-
-const mockProcessMessage = mock(async () => {
-    // returning a mock ReadableStream that yields "Mock summary"
-    let done = false;
-    return new ReadableStream<Uint8Array>({
-        pull(controller) {
-            if (!done) {
-                controller.enqueue(new TextEncoder().encode("Mock summary"));
-                done = true;
-            }
-            controller.close();
-        },
-    });
-});
-
-mock.module("@/services/model-providers/providers/unified-provider-service", () => ({
-    unifiedProvider: {
-      processMessage: mockProcessMessage,
-    },
-}));
 
 describe("file-summary-service", () => {
     let projectId: string;
-    let globalState: GlobalState;
+    let globalState: any; // simplified
 
     beforeEach(async () => {
+        await resetDatabase();
         projectId = randomString();
         globalState = {
             settings: {
@@ -45,8 +22,7 @@ describe("file-summary-service", () => {
                 summarizationIgnorePatterns: [],
                 summarizationAllowPatterns: [],
             },
-            // other fields omitted
-        } as any;
+        };
     });
 
     test("shouldSummarizeFile returns false if project not in enabled list", async () => {
@@ -55,53 +31,67 @@ describe("file-summary-service", () => {
     });
 
     test("summarizeSingleFile does nothing if file is empty", async () => {
-        const file = await db.insert(files).values({
-            projectId,
-            name: "EmptyFile",
-            path: "empty.ts",
-            extension: ".ts",
-            size: 0,
-            content: "",
-        }).returning().then(r => r[0]);
+        // Insert a file row
+        db.run(
+            `
+      INSERT INTO files (project_id, name, path, extension, size, content)
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+            [projectId, "EmptyFile", "empty.ts", ".ts", 0, ""]
+        );
+        const fileId = db.query("SELECT last_insert_rowid() as id").get().id;
 
-        await summarizeSingleFile(file);
-        const fetched = await db.select().from(files).where((f) => eq(f.id, file.id)).then(r => r[0] ?? null);
-        expect(fetched?.summary).toBe(null);
+        // Now fetch that row as an object if needed
+        const fileRow = db
+            .query("SELECT * FROM files WHERE id = ?")
+            .get(fileId);
+
+        await summarizeSingleFile(fileRow);
+
+        // Re-fetch
+        const fetched = db
+            .query("SELECT * FROM files WHERE id = ?")
+            .get(fileId);
+        expect(fetched.summary).toBe(null); // remains null or not updated
     });
 
     test("summarizeSingleFile calls provider if file not empty", async () => {
-        const file = await db.insert(files).values({
-            projectId,
-            name: "NonEmptyFile",
-            path: "nonempty.ts",
-            extension: ".ts",
-            size: 10,
-            content: "function test() {}",
-        }).returning().then(r => r[0]);
+        db.run(
+            `
+      INSERT INTO files (project_id, name, path, extension, size, content)
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+            [projectId, "NonEmptyFile", "nonempty.ts", ".ts", 10, "function test() {}"]
+        );
+        const fileId = db.query("SELECT last_insert_rowid() as id").get().id;
+        const fileRow = db.query("SELECT * FROM files WHERE id = ?").get(fileId);
 
-        await summarizeSingleFile(file);
-        const updated = await db.select().from(files).where((f) => eq(f.id, file.id)).then(r => r[0] ?? null);
-        expect(updated?.summary).toBe("Mock summary");
+        await summarizeSingleFile(fileRow);
+
+        const updated = db
+            .query("SELECT * FROM files WHERE id = ?")
+            .get(fileId);
+        expect(updated.summary).toBe("Mock summary");
     });
 
     test("summarizeFiles includes only files from the same project if project is enabled", async () => {
-        const f1 = await db.insert(files).values({
-            projectId,
-            name: "F1",
-            path: "f1.ts",
-            extension: ".ts",
-            size: 200,
-            content: "f1 content",
-        }).returning().then(r => r[0]);
+        // Insert f1 in the desired project
+        db.run(
+            `INSERT INTO files (project_id, name, path, extension, size, content)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+            [projectId, "F1", "f1.ts", ".ts", 200, "f1 content"]
+        );
+        const f1Id = db.query("SELECT last_insert_rowid() as id").get().id;
+        const f1 = db.query("SELECT * FROM files WHERE id = ?").get(f1Id);
 
-        const f2 = await db.insert(files).values({
-            projectId: "other",
-            name: "F2",
-            path: "f2.ts",
-            extension: ".ts",
-            size: 300,
-            content: "f2 content",
-        }).returning().then(r => r[0]);
+        // Insert f2 in a different project
+        db.run(
+            `INSERT INTO files (project_id, name, path, extension, size, content)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+            ["other", "F2", "f2.ts", ".ts", 300, "f2 content"]
+        );
+        const f2Id = db.query("SELECT last_insert_rowid() as id").get().id;
+        const f2 = db.query("SELECT * FROM files WHERE id = ?").get(f2Id);
 
         const result = await summarizeFiles(projectId, [f1, f2], globalState);
         expect(result.included).toBe(1);
@@ -109,41 +99,39 @@ describe("file-summary-service", () => {
     });
 
     test("forceSummarizeFiles ignores existing summary", async () => {
-        const file = await db.insert(files).values({
-            projectId,
-            name: "AlreadyHasSummary",
-            path: "hasSummary.ts",
-            extension: ".ts",
-            size: 10,
-            content: "existing content",
-            summary: "existing summary",
-            summaryLastUpdatedAt: new Date(),
-        }).returning().then(r => r[0]);
+        db.run(
+            `INSERT INTO files (project_id, name, path, extension, size, content, summary, summary_last_updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [projectId, "AlreadyHasSummary", "hasSummary.ts", ".ts", 10, "existing content", "existing summary", Date.now()]
+        );
+        const fileId = db.query("SELECT last_insert_rowid() as id").get().id;
+        const fileRow = db.query("SELECT * FROM files WHERE id = ?").get(fileId);
 
-        await forceSummarizeFiles(projectId, [file], globalState);
-        const updated = await db.select().from(files).where((f) => eq(f.id, file.id)).then(r => r[0] ?? null);
-        expect(updated?.summary).toBe("Mock summary");
+        await forceSummarizeFiles(projectId, [fileRow], globalState);
+
+        const updated = db
+            .query("SELECT * FROM files WHERE id = ?")
+            .get(fileId);
+        expect(updated.summary).toBe("Mock summary");
     });
 
     test("forceResummarizeSelectedFiles returns how many were actually summarized", async () => {
-        const fileA = await db.insert(files).values({
-            projectId,
-            name: "A",
-            path: "a.ts",
-            extension: ".ts",
-            size: 10,
-            content: "file A",
-        }).returning().then(r => r[0]);
+        db.run(
+            `INSERT INTO files (project_id, name, path, extension, size, content)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+            [projectId, "A", "a.ts", ".ts", 10, "file A"]
+        );
+        const fileAId = db.query("SELECT last_insert_rowid() as id").get().id;
+        const fileA = db.query("SELECT * FROM files WHERE id = ?").get(fileAId);
 
-        // not in the same project => skip
-        const fileB = await db.insert(files).values({
-            projectId: "otherProj",
-            name: "B",
-            path: "b.ts",
-            extension: ".ts",
-            size: 10,
-            content: "file B",
-        }).returning().then(r => r[0]);
+        // Different project => should be skipped
+        db.run(
+            `INSERT INTO files (project_id, name, path, extension, size, content)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+            ["otherProj", "B", "b.ts", ".ts", 10, "file B"]
+        );
+        const fileBId = db.query("SELECT last_insert_rowid() as id").get().id;
+        const fileB = db.query("SELECT * FROM files WHERE id = ?").get(fileBId);
 
         const result = await forceResummarizeSelectedFiles(projectId, [fileA, fileB], globalState);
         expect(result.included).toBe(1);

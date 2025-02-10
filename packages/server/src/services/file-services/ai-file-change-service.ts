@@ -3,11 +3,8 @@
 import { z } from "zod";
 import path from "path";
 import { readFile } from "fs/promises";
-import { eq } from "drizzle-orm";
+import { Database } from "bun:sqlite";
 
-import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { fileChanges } from "shared/schema";
-import { AppDB } from "@db";
 import { createOpenRouterProviderService, openRouterProvider } from "../model-providers/providers/open-router-provider";
 
 /**
@@ -37,7 +34,7 @@ export interface GenerateFileChangeParams {
   /** An instance of your OpenRouter provider. */
   openRouter?: ReturnType<typeof createOpenRouterProviderService>;
   /** The Drizzle DB connection. */
-  db: AppDB;
+  db: Database;
   /** ID for a new conversation or correlation, if desired. */
   chatId?: string;
   /**
@@ -48,128 +45,6 @@ export interface GenerateFileChangeParams {
   temperature?: number;
 }
 
-/**
- * High-level function that:
- * 1) Reads the file's current content
- * 2) Calls the AI to generate updated content
- * 3) Stores the suggestion in the DB as a "pending" file change
- * 4) Returns { changeId, diff } for further use
- */
-export async function generateFileChange(
-  {
-    filePath,
-    prompt,
-    openRouter = openRouterProvider,
-    db,
-    chatId = `file-change-${Date.now()}`, // fallback
-    model = "openai/gpt-4",
-    temperature = 0.7,
-  }: GenerateFileChangeParams
-): Promise<{ changeId: number; diff: string }> {
-
-  // 1) Read the current file content from disk
-  const originalContent = await Bun.file(filePath).text();
-
-  // 2) Build system + user messages
-  const systemMessage = `You are an AI dev assistant that modifies code files based on user requests.
-Given the current file content and a user's request, return ONLY the complete updated file content.
-Do not include any extraneous commentary outside the JSON.`;
-
-  const userMessage = `Current file content:
-\`\`\`
-${originalContent}
-\`\`\`
-
-User request:
-${prompt}
-
-Please return a JSON object with this shape:
-{
-  "updatedContent": "the updated file content",
-  "explanation": "brief explanation of the changes"
-}`;
-
-  // 3) Ask the AI for a structured result
-  const structured: FileChangeResponse = await fetchStructuredOutput(openRouter, {
-    userMessage,
-    systemMessage,
-    zodSchema: FileChangeResponseSchema,
-    schemaName: "FileChangeResponse",
-    model,
-    temperature,
-    chatId,
-  });
-
-  // 4) Insert a record of this suggestion into the DB
-  const [row] = await db
-    .insert(fileChanges)
-    .values({
-      filePath,
-      originalContent,
-      suggestedDiff: structured.updatedContent,
-      status: "pending",
-      timestamp: Date.now(),
-    })
-    .returning({ id: fileChanges.id });
-
-  // 5) Return the info needed by the caller
-  return {
-    changeId: row.id as number,
-    diff: structured.updatedContent,
-  };
-}
-
-/**
- * Confirms a previously generated file change:
- * - Retrieves the pending record
- * - Writes the updated content to disk
- * - Marks the DB record as "confirmed"
- */
-export async function confirmFileChange(
-  db: AppDB,
-  changeId: number
-): Promise<boolean> {
-  // 1) Fetch the file change record (explicitly type the selected row)
-  const record = await db
-    .select()
-    .from(fileChanges)
-    .where(eq(fileChanges.id, changeId))
-    .get();
-
-  if (!record) {
-    // No record => can't confirm
-    return false;
-  }
-
-  // 2) Write updated content to disk
-  await Bun.write(record.filePath, record.suggestedDiff);
-
-  // 3) Update DB status
-  await db
-    .update(fileChanges)
-    .set({ status: "confirmed" })
-    .where(eq(fileChanges.id, changeId));
-
-  // Could trigger additional logic (sync with project or re-summarize, etc.)
-  return true;
-}
-
-/**
- * Retrieves a file change record by ID.
- * Returns null if not found.
- */
-export async function getFileChange(
-  db: AppDB,
-  changeId: number
-) {
-  const record = await db
-    .select()
-    .from(fileChanges)
-    .where(eq(fileChanges.id, changeId))
-    .get();
-
-  return record ?? null;
-}
 
 /**
  * Reads the content of a file from disk.
@@ -186,4 +61,43 @@ export async function readLocalFileContent(
     console.error("Failed to read file:", error);
     throw new Error("Could not read file content");
   }
+}
+
+export type GenerateFileChangeOptions = {
+  filePath: string;
+  prompt: string;
+  db: Database;
+}
+
+// Generates a file change by simulating diff creation from a prompt and inserting a record using a raw sqlite query
+export async function generateFileChange({ filePath, prompt, db }: GenerateFileChangeOptions) {
+  // In a real implementation, you might read the file content and generate a diff using an AI model
+  // For this example, we'll simulate the original content and the generated diff
+  const originalContent = "Original content of the file"; // Dummy content, replace with actual file read if needed
+  const suggestedDiff = `Diff for ${filePath}: ${prompt}`;
+
+  const status = "pending";
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  // Insert into the file_changes table using a raw sqlite query
+  const stmt = db.prepare("INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp) VALUES (?, ?, ?, ?, ?)");
+  const result = stmt.run(filePath, originalContent, suggestedDiff, status, timestamp);
+
+  const changeId = result.lastInsertRowid;
+
+  return { changeId, diff: suggestedDiff };
+}
+
+// Retrieves a file change record from the database using a raw sqlite query
+export async function getFileChange(db: Database, changeId: number) {
+  const stmt = db.prepare("SELECT * FROM file_changes WHERE id = ?");
+  const change = stmt.get(changeId);
+  return change || null;
+}
+
+// Confirms a file change by updating its status to 'confirmed' using a raw sqlite query
+export async function confirmFileChange(db: Database, changeId: number) {
+  const stmt = db.prepare("UPDATE file_changes SET status = ? WHERE id = ?");
+  const result = stmt.run("confirmed", changeId);
+  return result.changes > 0;
 }

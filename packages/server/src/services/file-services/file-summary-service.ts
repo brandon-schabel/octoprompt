@@ -76,13 +76,8 @@ export async function summarizeSingleFile(file: ProjectFileType): Promise<void> 
         const summaryText = text.trim();
         if (!summaryText) return;
 
-        await db.update(files)
-            .set({
-                summary: summaryText,
-                summaryLastUpdatedAt: new Date(),
-            })
-            .where(eq(files.id, file.id))
-            .run();
+        const updateStmt = db.prepare("UPDATE files SET summary = ?, summary_last_updated_at = ? WHERE id = ?");
+        updateStmt.run(summaryText, new Date().toISOString(), file.id);
 
     } catch {
         // handle error quietly
@@ -93,11 +88,15 @@ export async function getFileSummaries(
     projectId: string,
     fileIds?: string[]
 ): Promise<ProjectFileType[]> {
-    const conditions = [eq(files.projectId, projectId)];
-    if (fileIds && fileIds.length) {
-        conditions.push(inArray(files.id, fileIds));
+    let query = "SELECT * FROM files WHERE project_id = ?";
+    const params: any[] = [projectId];
+    if (fileIds && fileIds.length > 0) {
+        const placeholders = fileIds.map(() => '?').join(', ');
+        query += ` AND id IN (${placeholders})`;
+        params.push(...fileIds);
     }
-    return db.select().from(files).where(and(...conditions)).all();
+    const stmt = db.prepare(query);
+    return stmt.all(...params) as ProjectFileType[];
 }
 
 /**

@@ -1,12 +1,8 @@
 // File: packages/server/src/tests/file-sync-server.test.ts
 import { describe, test, expect, spyOn } from "bun:test";
-import { db, eq } from "@db";
-import { schema } from "shared";
+import { db } from "@db";
 import { syncProject, getTextFiles, computeChecksum } from "@/services/file-services/file-sync-service";
 import * as fs from "node:fs";
-import { join } from "node:path";
-
-const { files, projects } = schema;
 
 describe("file-sync-service", () => {
     test("computeChecksum returns a hex string", () => {
@@ -15,18 +11,17 @@ describe("file-sync-service", () => {
     });
 
     test("getTextFiles returns only matching extension files", () => {
-        // @ts-ignore
-        spyOn(fs, "readdirSync").mockImplementation((path: fs.PathLike, options?: fs.ObjectEncodingOptions & { withFileTypes?: boolean }) => {
+        spyOn(fs, "readdirSync").mockImplementation((path, options) => {
             if (options && options.withFileTypes) {
                 return [
-                    { name: "file1.ts", isDirectory: () => false } as fs.Dirent,
-                    { name: "file2.txt", isDirectory: () => false } as fs.Dirent,
-                    { name: "folder", isDirectory: () => true } as fs.Dirent,
+                    { name: "file1.ts", isDirectory: () => false },
+                    { name: "file2.txt", isDirectory: () => false },
+                    { name: "folder", isDirectory: () => true },
                 ];
             } else {
-                return ["file1.ts", "file2.txt", "folder"] as fs.Dirent[] | string[];
+                return ["file1.ts", "file2.txt", "folder"];
             }
-        });
+        } as any);
         spyOn(fs, "statSync").mockImplementation(() => ({ size: 12n } as any));
 
         const result = getTextFiles("/fakeDir", []);
@@ -34,56 +29,57 @@ describe("file-sync-service", () => {
     });
 
     test("syncProject inserts or updates DB records, removes missing", async () => {
-        const project = await db.insert(projects).values({
-            name: "SyncProject",
-            path: "/tmp/test-sync",
-        }).returning().then(r => r[0]);
+        // Insert a project row
+        db.run(
+            `INSERT INTO projects (name, path) VALUES (?, ?)`,
+            ["SyncProject", "/tmp/test-sync"]
+        );
+        const projId = db.query("SELECT last_insert_rowid() AS id").get().id;
 
         // Pre-insert a file that will later be removed
-        const oldFile = await db.insert(files).values({
-            projectId: project.id,
-            name: "old.ts",
-            path: "old.ts",
-            extension: ".ts",
-            size: 100,
-            content: "old content",
-        }).returning().then(r => r[0]);
+        db.run(
+            `
+      INSERT INTO files (project_id, name, path, extension, size, content)
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+            [projId, "old.ts", "old.ts", ".ts", 100, "old content"]
+        );
+        const oldFileId = db.query("SELECT last_insert_rowid() AS id").get().id;
 
-        // @ts-ignore
-        spyOn(fs, "readdirSync").mockImplementation((path: fs.PathLike, options?: fs.ObjectEncodingOptions & { withFileTypes?: boolean }) => {
+        // Mock readdirSync so only "keep.ts" and "update.ts" appear
+        spyOn(fs, "readdirSync").mockImplementation((path, options) => {
             if (options && options.withFileTypes) {
                 return [
-                    { name: "keep.ts", isDirectory: () => false } as fs.Dirent,
-                    { name: "update.ts", isDirectory: () => false } as fs.Dirent,
+                    { name: "keep.ts", isDirectory: () => false },
+                    { name: "update.ts", isDirectory: () => false },
                 ];
-            } else {
-                return ["keep.ts", "update.ts"] as fs.Dirent[] | string[];
             }
-        });
+            return ["keep.ts", "update.ts"];
+        } as any);
 
-        spyOn(fs, "readFileSync").mockImplementation(
-            // @ts-ignore
-            (path: fs.PathOrFileDescriptor, options?: { encoding: BufferEncoding | null; flag?: string | undefined; } | BufferEncoding | null) => {
-                const filePath = path as string;
-                if (filePath.endsWith("keep.ts")) return "keep content";
-                if (filePath.endsWith("update.ts")) return "update content";
-                return "";
-            }
-        );
+        // Mock readFileSync
+        spyOn(fs, "readFileSync").mockImplementation((filePath: string) => {
+            if (filePath.endsWith("keep.ts")) return "keep content";
+            if (filePath.endsWith("update.ts")) return "update content";
+            return "";
+        });
 
         spyOn(fs, "statSync").mockImplementation(() => ({ size: 99n } as any));
 
-        await syncProject(project);
+        // Let the function run
+        const projectRow = db.query("SELECT * FROM projects WHERE id = ?").get(projId);
+        await syncProject(projectRow);
 
-        // Verify that the old file has been removed
-        const maybeOld = await db.select().from(files)
-            .where(eq(files.id, oldFile.id))
-            .get();
+        // oldFile should be removed
+        const maybeOld = db
+            .query("SELECT * FROM files WHERE id = ?")
+            .get(oldFileId);
         expect(maybeOld).toBeUndefined();
 
-        // Verify that keep.ts and update.ts are present in the DB
-        const all = await db.select().from(files)
-            .where(eq(files.projectId, project.id));
+        // keep.ts and update.ts should be in DB
+        const all = db
+            .query("SELECT * FROM files WHERE project_id = ?")
+            .all(projId);
         expect(all.length).toBe(2);
         expect(all.find(x => x.path === "keep.ts")).toBeTruthy();
         expect(all.find(x => x.path === "update.ts")).toBeTruthy();

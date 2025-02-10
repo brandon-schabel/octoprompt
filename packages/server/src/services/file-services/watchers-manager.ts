@@ -1,7 +1,6 @@
 import { createFileChangePlugin } from './file-change-plugin';
 
 import { db } from '@/utils/database';
-import { eq } from '@db';
 import { schema } from 'shared';
 import { existsSync } from 'node:fs';
 
@@ -22,7 +21,8 @@ export function createWatchersManager(
 
         if (!existsSync(project.path)) {
             console.warn(`[WatchersManager] Directory does not exist for project: ${project.id} at ${project.path}.`);
-            await db.delete(files).where(eq(files.projectId, project.id));
+            const deleteStmt = db.prepare("DELETE FROM files WHERE project_id = ?");
+            deleteStmt.run(project.id);
             console.log(`[WatchersManager] Removed DB entries for project ${project.id} because directory is missing.`);
             return;
         }

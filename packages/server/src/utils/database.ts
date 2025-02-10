@@ -1,44 +1,183 @@
 // packages/server/src/utils/database.ts
-import { BunSQLiteDatabase, drizzle } from 'drizzle-orm/bun-sqlite';
+// Removed drizzle imports since we're using raw sqlite queries
 import { Database } from 'bun:sqlite';
-import { sqliteDBPath, migrationsDir as migrationsDirPath } from './db-config';
-import { schema } from 'shared';
-import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
+import { sqliteDBPath } from './db-config';
 
-let db: BunSQLiteDatabase<typeof schema>;
+let db: Database;
 
-if (process.env.NODE_ENV === 'test') {
-    // Use an in-memory database for tests and run migrations
-    const sqlite = new Database(":memory:");
-    db = drizzle(sqlite, { schema });
-    await migrate(db, { migrationsFolder: migrationsDirPath });
-} else {
-    const isDev = process.env.DEV === 'true';
-    const sqlite = new Database(isDev ? sqliteDBPath : 'sqlite.db');
-    db = drizzle(sqlite, { schema });
+function createTables(db: Database): void {
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS chats (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      title TEXT,
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      chat_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      name TEXT NOT NULL,
+      description TEXT DEFAULT "",
+      path TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS files (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      project_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      path TEXT NOT NULL,
+      extension TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      content TEXT,
+      summary TEXT DEFAULT "",
+      summary_last_updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      meta TEXT DEFAULT "",
+      checksum TEXT DEFAULT "",
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS prompts (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      name TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS prompt_projects (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      prompt_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      FOREIGN KEY(prompt_id) REFERENCES prompts(id) ON DELETE CASCADE,
+      FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS provider_keys (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      provider TEXT NOT NULL,
+      key TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS tickets (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      project_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      overview TEXT DEFAULT "",
+      status TEXT DEFAULT "open",
+      priority TEXT DEFAULT "normal",
+      suggested_file_ids TEXT DEFAULT "[]",
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS ticket_files (
+      ticket_id TEXT NOT NULL,
+      file_id TEXT NOT NULL,
+      PRIMARY KEY (ticket_id, file_id),
+      FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+      FOREIGN KEY(file_id) REFERENCES files(id) ON DELETE CASCADE
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS ticket_tasks (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      ticket_id TEXT NOT NULL,
+      content TEXT NOT NULL,
+      done INTEGER NOT NULL DEFAULT 0,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+      FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+    );
+  `);
+
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS file_changes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_path TEXT NOT NULL,
+      original_content TEXT NOT NULL,
+      suggested_diff TEXT NOT NULL,
+      status TEXT NOT NULL,
+      timestamp INTEGER NOT NULL
+    );
+  `);
 }
 
-export type {
-    InferSelectModel,
-    InferInsertModel,
-} from 'drizzle-orm';
+export function setupDatabase(): Database {
+    if (process.env.NODE_ENV === 'test') {
+        db = new Database(':memory:');
+    } else {
+        const isDev = process.env.DEV === 'true';
+        db = new Database(isDev ? sqliteDBPath : 'sqlite.db');
+    }
+    createTables(db);
+    console.log('All tables created successfully.');
+    return db;
+}
 
-export type {
-    SQL,
-    SQLWrapper,
-} from 'drizzle-orm/sql';
+// Call the setup function to initialize the database
+setupDatabase();
 
-export {
-    eq,
-    and,
-    or,
-    not,
-    sql,
-    inArray,
-    desc,
-} from 'drizzle-orm';
-
-export type AppDB = BunSQLiteDatabase<typeof schema>;
+// Added resetDatabase function that resets the in-memory test database
+export function resetDatabase(): void {
+    if (process.env.NODE_ENV !== 'test') {
+        console.log("resetDatabase: Not in test environment. No reset performed.");
+        return;
+    }
+    try {
+        // Drop tables in order considering dependencies
+        db.exec("DROP TABLE IF EXISTS ticket_tasks;");
+        db.exec("DROP TABLE IF EXISTS ticket_files;");
+        db.exec("DROP TABLE IF EXISTS tickets;");
+        db.exec("DROP TABLE IF EXISTS prompt_projects;");
+        db.exec("DROP TABLE IF EXISTS chat_messages;");
+        db.exec("DROP TABLE IF EXISTS chats;");
+        db.exec("DROP TABLE IF EXISTS files;");
+        db.exec("DROP TABLE IF EXISTS projects;");
+        db.exec("DROP TABLE IF EXISTS prompts;");
+        db.exec("DROP TABLE IF EXISTS provider_keys;");
+        db.exec("DROP TABLE IF EXISTS file_changes;");
+        
+        // Recreate tables after dropping
+        createTables(db);
+        console.log("resetDatabase: In-memory test database reset successfully.");
+    } catch (error) {
+        console.error("resetDatabase: Error resetting the database.", error);
+        throw error;
+    }
+}
 
 export { db };
-export default db;

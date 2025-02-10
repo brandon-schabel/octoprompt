@@ -1,23 +1,23 @@
 // File: packages/server/src/tests/provider-key-service.test.ts
 import { describe, test, expect, beforeEach } from "bun:test";
-import { db } from "@db";
+import { db, resetDatabase } from "@db";
 import { createProviderKeyService } from "@/services/model-providers/providers/provider-key-service";
-import { randomString } from "./test-utils";
-import { schema } from "shared";
-import { InferSelectModel, eq } from "drizzle-orm";
 
-const { providerKeys } = schema;
 let svc: ReturnType<typeof createProviderKeyService>;
 
 describe("provider-key-service", () => {
     beforeEach(async () => {
+        await resetDatabase();
         svc = createProviderKeyService();
     });
 
     test("createKey inserts new provider key", async () => {
         const pk = await svc.createKey({ provider: "openai", key: "test-api-key" });
         expect(pk.id).toBeDefined();
-        const row = await db.select().from(providerKeys).where(eq(providerKeys.id, pk.id)).get() as InferSelectModel<typeof providerKeys> | undefined;
+
+        const row = db
+            .query("SELECT * FROM provider_keys WHERE id = ?")
+            .get(pk.id);
         expect(row?.provider).toBe("openai");
     });
 

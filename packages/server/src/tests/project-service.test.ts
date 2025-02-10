@@ -7,7 +7,7 @@ import {
 } from "@/services/project-service";
 import { randomString } from "./test-utils";
 import { db } from "@db";
-import { schema } from "shared";
+import type { RawFile } from "@/services/project-service";
 
 /**
  * Mocks/stubs for external calls we don't want to execute in real tests.
@@ -36,8 +36,11 @@ spyOn(
     "summarizeFiles"
 ).mockImplementation(summarizeFilesMock);
 
-
 describe("Project Service", () => {
+    beforeEach(() => {
+        db.prepare("DELETE FROM projects").run();
+        db.prepare("DELETE FROM files").run();
+    });
 
     test("createProject and getProjectById", async () => {
         const name = `TestProj_${randomString()}`;
@@ -119,21 +122,17 @@ describe("Project Service", () => {
     test("updateFileContent updates the file", async () => {
         // We can directly insert a file in DB for test setup
         const project = await createProject({ name: "F1", path: "/f1" });
-        const [insertedFile] = await db
-            .insert(schema.files)
-            .values({
-                projectId: project.id,
-                name: "TestFile",
-                path: "src/TestFile.ts",
-                extension: ".ts",
-                size: 123,
-                content: "initial content",
-            })
-            .returning();
+        const stmt = db.prepare(`
+            INSERT INTO files 
+            (project_id, name, path, extension, size, content, summary, summary_last_updated_at, meta, checksum, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING *
+        `);
+        const insertedFile = stmt.get(project.id, "TestFile", "src/TestFile.ts", ".ts", 123, "initial content") as RawFile;
 
         const updatedFile = await updateFileContent(insertedFile.id, "new content");
         expect(updatedFile.content).toBe("new content");
-        expect(updatedFile.updatedAt.valueOf()).toBeGreaterThan(insertedFile.updatedAt.valueOf());
+        expect(updatedFile.updatedAt.valueOf()).toBeGreaterThan(new Date(insertedFile.updated_at).valueOf());
     });
 
     test("resummarizeAllFiles calls syncProject and forceSummarizeFiles", async () => {
@@ -152,22 +151,16 @@ describe("Project Service", () => {
 
     test("forceResummarizeSelectedFiles calls forceSummarizeFiles with correct file subset", async () => {
         const project = await createProject({ name: "ForceSubset", path: "/force" });
-        // Insert two files
-        const [f1] = await db.insert(schema.files).values({
-            projectId: project.id,
-            name: "file1",
-            path: "file1.ts",
-            extension: ".ts",
-            size: 111,
-        }).returning();
-        const [f2] = await db.insert(schema.files).values({
-            projectId: project.id,
-            name: "file2",
-            path: "file2.ts",
-            extension: ".ts",
-            size: 222,
-        }).returning();
+        const stmt = db.prepare(`
+            INSERT INTO files 
+            (project_id, name, path, extension, size, content, summary, summary_last_updated_at, meta, checksum, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING *
+        `);
+        const f1 = stmt.get(project.id, "file1", "file1.ts", ".ts", 111) as RawFile;
+        const f2 = stmt.get(project.id, "file2", "file2.ts", ".ts", 222) as RawFile;
 
+        forceSummarizeFilesMock.mockClear();
         // Only re-summarize f1
         const result = await forceResummarizeSelectedFiles(project.id, [f1.id]);
         expect(result.included).toBe(1);
@@ -176,21 +169,14 @@ describe("Project Service", () => {
 
     test("summarizeSelectedFiles returns included/skipped", async () => {
         const project = await createProject({ name: "SummarizeSel", path: "/sel" });
-        // Insert some files
-        const [f1] = await db.insert(schema.files).values({
-            projectId: project.id,
-            name: "f1",
-            path: "f1.ts",
-            extension: ".ts",
-            size: 100,
-        }).returning();
-        const [f2] = await db.insert(schema.files).values({
-            projectId: project.id,
-            name: "f2",
-            path: "f2.ts",
-            extension: ".ts",
-            size: 200,
-        }).returning();
+        const stmt = db.prepare(`
+            INSERT INTO files 
+            (project_id, name, path, extension, size, content, summary, summary_last_updated_at, meta, checksum, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING *
+        `);
+        const f1 = stmt.get(project.id, "f1", "f1.ts", ".ts", 100) as RawFile;
+        const f2 = stmt.get(project.id, "f2", "f2.ts", ".ts", 200) as RawFile;
 
         const result = await summarizeSelectedFiles(project.id, [f1.id, f2.id]);
         expect(result.included).toBe(2);
@@ -200,24 +186,21 @@ describe("Project Service", () => {
 
     test("removeSummariesFromFiles updates summary fields to null", async () => {
         const project = await createProject({ name: "RemoveSumm", path: "/rem" });
-        // Insert file with summary
-        const [fileWithSummary] = await db.insert(schema.files).values({
-            projectId: project.id,
-            name: "HasSummary",
-            path: "sum.ts",
-            extension: ".ts",
-            size: 50,
-            summary: "Existing summary text",
-        }).returning();
+        const stmt = db.prepare(`
+            INSERT INTO files 
+            (project_id, name, path, extension, size, content, summary, summary_last_updated_at, meta, checksum, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, NULL, ?, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING *
+        `);
+        const fileWithSummary = stmt.get(project.id, "HasSummary", "sum.ts", ".ts", 50, "Existing summary text") as RawFile;
 
         const result = await removeSummariesFromFiles(project.id, [fileWithSummary.id]);
         expect(result.success).toBe(true);
         expect(result.removedCount).toBe(1);
 
-        // Check directly in DB
-        const fetched = await db.query.files.findFirst({
-            where: (f, { eq }) => eq(f.id, fileWithSummary.id),
-        });
-        expect(fetched?.summary).toBeNull();
+        const fetchStmt = db.prepare("SELECT * FROM files WHERE id = ?");
+        const fetched = fetchStmt.get(fileWithSummary.id) as RawFile;
+        expect(fetched.summary).toBeNull();
     });
+
 });

@@ -1,7 +1,6 @@
-import { db, eq } from "@db";
+import { db } from "@/utils/database";
 import { schema } from "shared";
-
-const { chats, chatMessages } = schema;
+import { ChatReadSchema, ChatMessageReadSchema } from "shared/src/utils/database/db-schemas";
 
 export type Chat = schema.Chat;
 export type ChatMessage = schema.ChatMessage;
@@ -13,29 +12,80 @@ export type CreateChatOptions = {
     currentChatId?: string;
 };
 
+type RawChat = {
+    id: string;
+    title: string;
+    created_at: number;
+    updated_at: number;
+};
+
+type RawChatMessage = {
+    id: string;
+    chat_id: string;
+    role: string;
+    content: string;
+    created_at: number;
+};
+
+function mapChat(row: RawChat): Chat {
+    const mapped = {
+        id: row.id,
+        title: row.title,
+        createdAt: new Date(row.created_at).getTime(),
+        updatedAt: new Date(row.updated_at).getTime()
+    };
+    const chat = ChatReadSchema.parse(mapped);
+    return {
+        ...chat,
+        createdAt: new Date(chat.createdAt),
+        updatedAt: new Date(chat.updatedAt)
+    };
+}
+
+function mapChatMessage(row: RawChatMessage): ChatMessage {
+    const mapped = {
+        id: row.id,
+        chatId: row.chat_id,
+        role: row.role,
+        content: row.content,
+        createdAt: new Date(row.created_at).getTime()
+    };
+    const message = ChatMessageReadSchema.parse(mapped);
+    return {
+        ...message,
+        createdAt: new Date(message.createdAt)
+    };
+}
+
 /**
  * Returns an object of functions handling chat logic in a functional style.
  */
 export function createChatService() {
     async function createChat(title: string, options?: CreateChatOptions): Promise<Chat> {
-        const [chat] = await db.insert(chats).values({ title }).returning();
-        if (!chat) throw new Error("Failed to create chat");
+        const stmt = db.prepare(`
+            INSERT INTO chats (title) 
+            VALUES (?)
+            RETURNING *
+        `);
+        const created = stmt.get(title) as RawChat;
+        const chat = mapChat(created);
 
         if (options?.copyExisting && options?.currentChatId) {
-            const sourceMessages = await db
-                .select()
-                .from(chatMessages)
-                .where(eq(chatMessages.chatId, options.currentChatId))
-                .orderBy(chatMessages.createdAt)
-                .all();
+            const sourceStmt = db.prepare(`
+                SELECT * FROM chat_messages 
+                WHERE chat_id = ? 
+                ORDER BY created_at
+            `);
+            const sourceMessages = sourceStmt.all(options.currentChatId) as RawChatMessage[];
 
             if (sourceMessages.length > 0) {
-                const newMessages = sourceMessages.map((m: ChatMessage) => ({
-                    chatId: chat.id,
-                    role: m.role,
-                    content: m.content,
-                }));
-                await db.insert(chatMessages).values(newMessages).run();
+                const insertStmt = db.prepare(`
+                    INSERT INTO chat_messages (chat_id, role, content)
+                    VALUES (?, ?, ?)
+                `);
+                for (const msg of sourceMessages) {
+                    insertStmt.run(chat.id, msg.role, msg.content);
+                }
             }
         }
 
@@ -43,99 +93,131 @@ export function createChatService() {
     }
 
     async function updateChatTimestamp(chatId: string): Promise<void> {
-        await db
-            .update(chats)
-            .set({ updatedAt: new Date() })
-            .where(eq(chats.id, chatId));
+        const stmt = db.prepare(`
+            UPDATE chats 
+            SET updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        `);
+        stmt.run(chatId);
     }
 
     async function saveMessage(message: NewChatMessage & { tempId?: string }): Promise<ExtendedChatMessage> {
-        const [savedMessage] = await db.insert(chatMessages).values(message).returning();
-        if (!savedMessage) throw new Error("Failed to save message");
-        return { ...savedMessage, tempId: message.tempId };
+        const stmt = db.prepare(`
+            INSERT INTO chat_messages (chat_id, role, content)
+            VALUES (?, ?, ?)
+            RETURNING *
+        `);
+        const saved = stmt.get(message.chatId, message.role, message.content) as RawChatMessage;
+        const mappedMessage = mapChatMessage(saved);
+        return { ...mappedMessage, tempId: message.tempId };
     }
 
     async function updateMessageContent(messageId: string, content: string): Promise<void> {
-        await db
-            .update(chatMessages)
-            .set({ content })
-            .where(eq(chatMessages.id, messageId));
+        const stmt = db.prepare(`
+            UPDATE chat_messages 
+            SET content = ? 
+            WHERE id = ?
+        `);
+        stmt.run(content, messageId);
     }
 
     async function getAllChats(): Promise<Chat[]> {
-        return db.select().from(chats).orderBy(chats.updatedAt);
+        const stmt = db.prepare(`
+            SELECT * FROM chats 
+            ORDER BY updated_at
+        `);
+        const rows = stmt.all() as RawChat[];
+        return rows.map(mapChat);
     }
 
     async function getChatMessages(chatId: string): Promise<ExtendedChatMessage[]> {
-        const messages = await db
-            .select()
-            .from(chatMessages)
-            .where(eq(chatMessages.chatId, chatId))
-            .orderBy(chatMessages.createdAt);
-
-        return messages.map((msg: ChatMessage) => ({ ...msg }));
+        const stmt = db.prepare(`
+            SELECT * FROM chat_messages 
+            WHERE chat_id = ? 
+            ORDER BY created_at
+        `);
+        const messages = stmt.all(chatId) as RawChatMessage[];
+        return messages.map(msg => ({ ...mapChatMessage(msg) }));
     }
 
     async function updateChat(chatId: string, title: string): Promise<Chat> {
-        const [updatedChat] = await db
-            .update(chats)
-            .set({ title })
-            .where(eq(chats.id, chatId))
-            .returning();
-
-        if (!updatedChat) {
+        const stmt = db.prepare(`
+            UPDATE chats 
+            SET title = ? 
+            WHERE id = ?
+            RETURNING *
+        `);
+        const updated = stmt.get(title, chatId) as RawChat;
+        if (!updated) {
             throw new Error("Chat not found");
         }
-        return updatedChat;
+        return mapChat(updated);
     }
 
     async function deleteChat(chatId: string): Promise<void> {
-        await db.delete(chatMessages).where(eq(chatMessages.chatId, chatId));
-        const result = await db.delete(chats).where(eq(chats.id, chatId)).returning();
-        if (result.length === 0) {
+        const deleteMessagesStmt = db.prepare(`
+            DELETE FROM chat_messages 
+            WHERE chat_id = ?
+        `);
+        deleteMessagesStmt.run(chatId);
+
+        const deleteChatStmt = db.prepare(`
+            DELETE FROM chats 
+            WHERE id = ?
+            RETURNING *
+        `);
+        const result = deleteChatStmt.get(chatId) as RawChat | undefined;
+        if (!result) {
             throw new Error("Chat not found");
         }
     }
 
     async function deleteMessage(messageId: string): Promise<void> {
-        const result = await db.delete(chatMessages).where(eq(chatMessages.id, messageId)).returning();
-        if (result.length === 0) {
+        const stmt = db.prepare(`
+            DELETE FROM chat_messages 
+            WHERE id = ?
+            RETURNING *
+        `);
+        const result = stmt.get(messageId) as RawChatMessage | undefined;
+        if (!result) {
             throw new Error("Message not found");
         }
     }
 
     async function forkChat(sourceChatId: string, excludedMessageIds: string[] = []): Promise<Chat> {
-        const sourceChat = await db.select().from(chats).where(eq(chats.id, sourceChatId)).get();
+        const sourceChatStmt = db.prepare(`
+            SELECT * FROM chats 
+            WHERE id = ?
+        `);
+        const sourceChat = sourceChatStmt.get(sourceChatId) as RawChat;
         if (!sourceChat) {
             throw new Error("Source chat not found");
         }
 
         const newTitle = `Fork of ${sourceChat.title} (${new Date().toLocaleTimeString()})`;
-        const [newChat] = await db
-            .insert(chats)
-            .values({ title: newTitle })
-            .returning();
+        const createStmt = db.prepare(`
+            INSERT INTO chats (title)
+            VALUES (?)
+            RETURNING *
+        `);
+        const newChat = mapChat(createStmt.get(newTitle) as RawChat);
 
-        if (!newChat) {
-            throw new Error("Failed to fork chat");
-        }
-
-        const sourceMessages = await db
-            .select()
-            .from(chatMessages)
-            .where(eq(chatMessages.chatId, sourceChatId))
-            .orderBy(chatMessages.createdAt)
-            .all();
-
-        const messagesToCopy = sourceMessages.filter((m: ChatMessage) => !excludedMessageIds.includes(m.id));
+        const sourceMessagesStmt = db.prepare(`
+            SELECT * FROM chat_messages 
+            WHERE chat_id = ? 
+            ORDER BY created_at
+        `);
+        const sourceMessages = sourceMessagesStmt.all(sourceChatId) as RawChatMessage[];
+        const messagesToCopy = sourceMessages.filter(m => !excludedMessageIds.includes(m.id));
 
         if (messagesToCopy.length > 0) {
-            const newMessages = messagesToCopy.map((m: ChatMessage) => ({
-                chatId: newChat.id,
-                role: m.role,
-                content: m.content,
-            }));
-            await db.insert(chatMessages).values(newMessages).run();
+            const insertStmt = db.prepare(`
+                INSERT INTO chat_messages (chat_id, role, content)
+                VALUES (?, ?, ?)
+            `);
+            for (const msg of messagesToCopy) {
+                insertStmt.run(newChat.id, msg.role, msg.content);
+            }
         }
 
         return newChat;
@@ -146,52 +228,58 @@ export function createChatService() {
         messageId: string,
         excludedMessageIds: string[] = []
     ): Promise<Chat> {
-        const sourceChat = await db.select().from(chats).where(eq(chats.id, sourceChatId)).get();
+        const sourceChatStmt = db.prepare(`
+            SELECT * FROM chats 
+            WHERE id = ?
+        `);
+        const sourceChat = sourceChatStmt.get(sourceChatId) as RawChat;
         if (!sourceChat) {
             throw new Error("Source chat not found");
         }
 
-        const startMessage = await db.select().from(chatMessages).where(eq(chatMessages.id, messageId)).get();
+        const startMessageStmt = db.prepare(`
+            SELECT * FROM chat_messages 
+            WHERE id = ?
+        `);
+        const startMessage = startMessageStmt.get(messageId) as RawChatMessage;
         if (!startMessage) {
             throw new Error("Starting message not found");
         }
 
-        if (startMessage.chatId !== sourceChatId) {
+        if (startMessage.chat_id !== sourceChatId) {
             throw new Error("Message does not belong to the specified chat");
         }
 
         const newTitle = `Fork from ${sourceChat.title} at ${new Date().toLocaleTimeString()}`;
-        const [newChat] = await db
-            .insert(chats)
-            .values({ title: newTitle })
-            .returning();
+        const createStmt = db.prepare(`
+            INSERT INTO chats (title)
+            VALUES (?)
+            RETURNING *
+        `);
+        const newChat = mapChat(createStmt.get(newTitle) as RawChat);
 
-        if (!newChat) {
-            throw new Error("Failed to fork chat");
-        }
-
-        const sourceMessages = await db
-            .select()
-            .from(chatMessages)
-            .where(eq(chatMessages.chatId, sourceChatId))
-            .orderBy(chatMessages.createdAt)
-            .all();
-
-        const indexOfStart = sourceMessages.findIndex((m: ChatMessage) => m.id === messageId);
+        const sourceMessagesStmt = db.prepare(`
+            SELECT * FROM chat_messages 
+            WHERE chat_id = ? 
+            ORDER BY created_at
+        `);
+        const sourceMessages = sourceMessagesStmt.all(sourceChatId) as RawChatMessage[];
+        const indexOfStart = sourceMessages.findIndex(m => m.id === messageId);
         if (indexOfStart === -1) {
             throw new Error("Could not find the starting message in the chat sequence");
         }
 
-        let messagesToCopy = sourceMessages.slice(0, indexOfStart + 1);
-        messagesToCopy = messagesToCopy.filter((m: ChatMessage) => !excludedMessageIds.includes(m.id));
+        let messagesToCopy = sourceMessages.slice(0, indexOfStart + 1)
+            .filter(m => !excludedMessageIds.includes(m.id));
 
         if (messagesToCopy.length > 0) {
-            const newMessages = messagesToCopy.map((m: ChatMessage) => ({
-                chatId: newChat.id,
-                role: m.role,
-                content: m.content,
-            }));
-            await db.insert(chatMessages).values(newMessages).run();
+            const insertStmt = db.prepare(`
+                INSERT INTO chat_messages (chat_id, role, content)
+                VALUES (?, ?, ?)
+            `);
+            for (const msg of messagesToCopy) {
+                insertStmt.run(newChat.id, msg.role, msg.content);
+            }
         }
 
         return newChat;
@@ -211,6 +299,5 @@ export function createChatService() {
         forkChatFromMessage,
     };
 }
-
 
 export const chatService = createChatService();

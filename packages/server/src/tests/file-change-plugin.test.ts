@@ -7,7 +7,7 @@ spyOn(
     "syncProject"
 ).mockImplementation(syncProjectMock);
 
-const summarizeFilesMock = mock(async (projectId: string, filesToSummarize: any[], globalState: any) => {
+const summarizeFilesMock = mock(async () => {
     return { included: 1, skipped: 0 };
 });
 spyOn(
@@ -39,7 +39,7 @@ const createFileChangeWatcherMock = mock(() => ({
     registerListener: () => { },
     startWatching: () => { },
     stopAll: () => { },
-    unregisterListener: () => {},
+    unregisterListener: () => { },
 }));
 
 spyOn(
@@ -58,7 +58,6 @@ describe("file-change-plugin", () => {
     test("stop() calls watcher.stopAll", async () => {
         const plugin = createFileChangePlugin();
         plugin.stop();
-        // no real easy way to confirm except counting calls if we had a spy
-        // but we know it calls stopAll above
+        // We don't have a separate assertion except verifying the call count if we wanted
     });
 });

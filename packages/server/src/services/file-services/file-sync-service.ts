@@ -1,33 +1,34 @@
 import { join, extname, resolve, relative } from 'node:path';
 import { readdirSync, readFileSync, statSync, Dirent } from 'node:fs';
 import { schema } from 'shared';
-import { db, eq, and, inArray } from "@db";
+import { db } from "@/utils/database";
+import { mapFile, RawFile } from '../project-service';
 
 export const ALLOWED_EXTENSIONS = [
   // Documentation & Config
   '.md', '.txt', '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.conf', '.config',
-  
+
   // Web Development
   '.ts', '.tsx', '.js', '.jsx', '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue', '.svelte',
-  
+
   // Backend Development
   '.py', '.rb', '.php', '.java', '.go', '.rs', '.cs', '.cpp', '.c', '.h', '.hpp',
-  
+
   // Shell & Scripts
   '.sh', '.bash', '.zsh', '.fish', '.bat', '.ps1',
-  
+
   // Database & Query
   '.sql', '.prisma', '.graphql', '.gql',
-  
+
   // Other Languages
   '.zig', '.lua', '.r', '.kt', '.swift', '.m', '.mm', '.scala', '.clj', '.ex', '.exs',
-  
+
   // Environment & Version
   '.env', '.env.example', '.python-version', '.nvmrc', '.ruby-version',
-  
+
   // Docker & Container
   'Dockerfile', '.dockerignore', 'docker-compose.yml',
-  
+
   // Git
   '.gitignore', '.gitattributes',
 ];
@@ -44,18 +45,18 @@ export const DEFAULT_EXCLUSIONS = [
   'dist',
   'build',
   'drizzle',
-  
+
   // Coverage & Test
   'coverage',
   '.nyc_output',
   '.coverage',
   'htmlcov',
   '.hypothesis',
-  
+
   // Docker
   '.docker',
   'docker-compose.override.yml',
-  
+
   // Environment & secrets
   '.env.local',
   '.env.*.local',
@@ -65,7 +66,7 @@ export const DEFAULT_EXCLUSIONS = [
   '*.pem',
   '*.key',
   '*.cert',
-  
+
   // Cache directories
   '.cache',
   '.parcel-cache',
@@ -76,7 +77,7 @@ export const DEFAULT_EXCLUSIONS = [
   '.webpack',
   '.rollup.cache',
   '.turbo',
-  
+
   // Temporary & backup
   'temp',
   'tmp',
@@ -89,8 +90,9 @@ export const DEFAULT_EXCLUSIONS = [
   '.ccache',
 ];
 
-const { files } = schema;
 type Project = schema.Project;
+
+
 
 export function normalizePathForDb(pathStr: string): string {
   return pathStr.replace(/\\/g, '/');
@@ -154,61 +156,66 @@ export async function syncFileSet(project: Project, absoluteProjectPath: string,
       const size = statSync(filePath).size;
       const checksum = computeChecksum(content);
 
-      const [existingFile] = await db.select()
-        .from(files)
-        .where(
-          and(
-            eq(files.projectId, project.id),
-            eq(files.path, relativePath)
-          )
-        )
-        .limit(1);
+      const existingFile = db.prepare(`
+        SELECT * FROM files 
+        WHERE project_id = ? AND path = ? 
+        LIMIT 1
+      `).get(project.id, relativePath) as RawFile | undefined;
 
       if (existingFile) {
         if (!isValidChecksum(existingFile.checksum) || existingFile.checksum !== checksum) {
-          await db.update(files)
-            .set({
-              content,
-              extension,
-              size,
-              checksum,
-              updatedAt: new Date()
-            })
-            .where(eq(files.id, existingFile.id))
-            .run();
+          const updateStmt = db.prepare(`
+            UPDATE files 
+            SET content = ?, extension = ?, size = ?, checksum = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+            RETURNING *
+          `);
+          const updated = updateStmt.get(content, extension, size, checksum, existingFile.id) as RawFile;
+          mapFile(updated); // Validate the update was successful
         }
       } else {
-        await db.insert(files)
-          .values({
-            projectId: project.id,
-            name: fileName,
-            path: relativePath,
-            extension,
-            size,
-            content,
-            checksum
-          })
-          .run();
+        const insertStmt = db.prepare(`
+          INSERT INTO files (project_id, name, path, extension, size, content, checksum) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          RETURNING *
+        `);
+        const created = insertStmt.get(
+          project.id,
+          fileName,
+          relativePath,
+          extension,
+          size,
+          content,
+          checksum
+        ) as RawFile;
+        mapFile(created); // Validate the insert was successful
       }
     })
   );
 
-  // 2) Optionally remove from DB any file that no longer exists on disk
+  // 2) Remove from DB any file that no longer exists on disk
   const existingPaths = new Set(
     absoluteFilePaths.map(fp => normalizePathForDb(relative(absoluteProjectPath, fp)))
   );
 
-  const dbFiles = await db.select()
-    .from(files)
-    .where(eq(files.projectId, project.id));
+  const dbFiles = db.prepare(`
+    SELECT * FROM files 
+    WHERE project_id = ?
+  `).all(project.id) as RawFile[];
 
   const filesToDelete = dbFiles.filter(dbFile =>
     !existingPaths.has(normalizePathForDb(dbFile.path))
   );
 
   if (filesToDelete.length > 0) {
-    await db.delete(files)
-      .where(inArray(files.id, filesToDelete.map(f => f.id)));
+    const placeholders = filesToDelete.map(() => '?').join(', ');
+    const deleteStmt = db.prepare(`
+      DELETE FROM files 
+      WHERE id IN (${placeholders})
+      RETURNING *
+    `);
+    const deleted = deleteStmt.all(...filesToDelete.map(f => f.id)) as RawFile[];
+    deleted.forEach(mapFile); // Validate the deletes were successful
   }
 }
 
@@ -225,16 +232,29 @@ export async function syncProjectFolder(project: Project, folderPath: string, ex
 
   await syncFileSet(project, absoluteProjectPath, folderFiles);
 
-  // Optionally remove DB records for files no longer in this subfolder
-  const dbFilesInFolder = await db.select().from(files).where(eq(files.projectId, project.id));
+  // Remove DB records for files no longer in this subfolder
+  const dbFilesInFolder = db.prepare(`
+    SELECT * FROM files 
+    WHERE project_id = ?
+  `).all(project.id) as RawFile[];
+
   const folderPathsSet = new Set(folderFiles.map(fp =>
     normalizePathForDb(relative(absoluteProjectPath, fp))
   ));
+
   const toDelete = dbFilesInFolder.filter(dbFile =>
     normalizePathForDb(dbFile.path).startsWith(normalizePathForDb(folderPath)) &&
     !folderPathsSet.has(normalizePathForDb(dbFile.path))
   );
+
   if (toDelete.length > 0) {
-    await db.delete(files).where(inArray(files.id, toDelete.map(td => td.id)));
+    const placeholders = toDelete.map(() => '?').join(', ');
+    const deleteStmt = db.prepare(`
+      DELETE FROM files 
+      WHERE id IN (${placeholders})
+      RETURNING *
+    `);
+    const deleted = deleteStmt.all(...toDelete.map(td => td.id)) as RawFile[];
+    deleted.forEach(mapFile); // Validate the deletes were successful
   }
 }

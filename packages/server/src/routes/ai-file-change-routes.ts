@@ -2,7 +2,7 @@ import { router } from "server-router";
 import { ApiError, json } from "@bnk/router";
 import { z } from "zod";
 
-import db from "@db";
+import { db } from "@db";
 import { confirmFileChange, generateFileChange, getFileChange } from "@/services/file-services/ai-file-change-service";
 
 

@@ -12,6 +12,7 @@
     "build": "bun run scripts/build.ts",
     "format": "prettier --write .",
     "test": "bun test",
+    "pretest": "DB_FILENAME=test.db bun run src/utils/migrate-db.ts",
     "studio": "cd packages/shared && bun run studio",
     "migrate": "cd packages/shared && bun run migrate",
     "push": "cd packages/shared && bun run push"

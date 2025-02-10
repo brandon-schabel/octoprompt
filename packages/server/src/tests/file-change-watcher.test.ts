@@ -1,8 +1,11 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, beforeEach, mock } from "bun:test";
 import { isIgnored, inferChangeType } from "@/services/file-services/file-change-watcher";
-import { existsSync } from "fs";
 
 describe("file-change-watcher", () => {
+    beforeEach(() => {
+        mock.restore();
+    });
+
     test("isIgnored matches wildcard patterns", () => {
         const patterns = ["*.log", "dist", "*.tmp"];
         expect(isIgnored("/project/app.log", patterns)).toBe(true);
@@ -10,13 +13,17 @@ describe("file-change-watcher", () => {
     });
 
     test("inferChangeType returns created if file now exists", () => {
-        (existsSync as any) = () => true;
+        mock.module("fs", () => ({
+            existsSync: () => true,
+        }));
         const result = inferChangeType("rename", "/some/newFile.ts");
         expect(result).toBe("created");
     });
 
     test("inferChangeType returns deleted if file no longer exists", () => {
-        (existsSync as any) = () => false;
+        mock.module("fs", () => ({
+            existsSync: () => false,
+        }));
         const result = inferChangeType("rename", "/some/removed.ts");
         expect(result).toBe("deleted");
     });

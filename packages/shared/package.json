@@ -6,9 +6,7 @@
     "main": "index.ts",
     "module": "index.ts",
     "scripts": {
-        "studio": "drizzle-kit studio",
-        "migrate": "drizzle-kit generate",
-        "push": "drizzle-kit push",
+        
         "test": "bun test"
     }
 }

@@ -1,117 +1,126 @@
 // File: packages/server/src/tests/ai-file-change-service.test.ts
 import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
-import { db, eq } from "@db";
-import { schema } from "shared";
+import { db } from "@db";  // <-- only db, no eq, no schema
 import {
-    generateFileChange,
-    confirmFileChange,
-    getFileChange,
-    readLocalFileContent,
+  generateFileChange,
+  confirmFileChange,
+  getFileChange,
+  readLocalFileContent,
 } from "@/services/file-services/ai-file-change-service";
 import { randomString } from "./test-utils";
 import { join } from "node:path";
 import fs from "fs/promises";
 
-const { fileChanges } = schema;
-
 const mockFetchStructuredOutput = mock(async () => {
-    return {
-        updatedContent: "Updated file content",
-        explanation: "We changed some code here",
-    };
+  return {
+    updatedContent: "Updated file content",
+    explanation: "We changed some code here",
+  };
 });
 
 spyOn(
-    await import("@/utils/structured-output-fetcher"),
-    "fetchStructuredOutput"
+  await import("@/utils/structured-output-fetcher"),
+  "fetchStructuredOutput"
 ).mockImplementation(mockFetchStructuredOutput);
 
 describe("ai-file-change-service", () => {
-    beforeEach(async () => {
-        // no special DB re-init needed if your global test setup does that
+  beforeEach(async () => {
+    // If you have a global test setup that re-initializes or clears the DB, rely on that.
+  });
+
+  test("generateFileChange inserts a pending record", async () => {
+    const tempFileName = `${randomString()}.ts`;
+    await Bun.write(tempFileName, "Original content");
+
+    const { changeId, diff } = await generateFileChange({
+      filePath: tempFileName,
+      prompt: "Refactor the code",
+      db,
     });
+    expect(changeId).toBeDefined();
+    expect(diff).toBe("Updated file content");
 
-    test("generateFileChange inserts a pending record", async () => {
-        const tempFileName = `${randomString()}.ts`;
-        await Bun.write(tempFileName, "Original content");
+    // Raw query to find the new row
+    const record = db
+      .query("SELECT * FROM file_changes WHERE id = ?")
+      .get(changeId);
+    expect(record).not.toBeUndefined();
+    if (record) {
+      expect(record.file_path).toContain(tempFileName);
+    }
 
-        const { changeId, diff } = await generateFileChange({
-            filePath: tempFileName,
-            prompt: "Refactor the code",
-            db,
-        });
-        expect(changeId).toBeDefined();
-        expect(diff).toBe("Updated file content");
+    // Cleanup the file
+    await fs.rm(tempFileName);
+  });
 
-        const record = await db.select().from(fileChanges).where((fc) => eq(fc.id, changeId)).get();
-        expect(record).not.toBeUndefined();
-        if (record) {
-            expect(record.filePath).toContain(tempFileName);
-        }
+  test("confirmFileChange writes the new content to disk and marks as confirmed", async () => {
+    const tempFileName = `${randomString()}.ts`;
+    await Bun.write(tempFileName, "Old content");
 
-        // Cleanup the file
-        await fs.rm(tempFileName);
-    });
+    // Insert a pending row manually via raw query
+    db.run(
+      `
+      INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp)
+      VALUES (?, ?, ?, ?, ?)
+      `,
+      [tempFileName, "Old content", "Better content", "pending", Date.now()]
+    );
+    const rowIdObj = db.query("SELECT last_insert_rowid() as id").get();
+    const createdId = rowIdObj.id;
 
-    test("confirmFileChange writes the new content to disk and marks as confirmed", async () => {
-        const tempFileName = `${randomString()}.ts`;
-        await Bun.write(tempFileName, "Old content");
+    const success = await confirmFileChange(db, createdId);
+    expect(success).toBe(true);
 
-        const [row] = await db.insert(fileChanges).values({
-            filePath: tempFileName,
-            originalContent: "Old content",
-            suggestedDiff: "Better content",
-            status: "pending",
-            timestamp: Date.now(),
-        }).returning();
+    const newContent = await Bun.file(tempFileName).text();
+    expect(newContent).toBe("Better content");
 
-        const success = await confirmFileChange(db, row.id);
-        expect(success).toBe(true);
+    const updated = db
+      .query("SELECT * FROM file_changes WHERE id = ?")
+      .get(createdId);
+    if (updated) {
+      expect(updated.status).toBe("confirmed");
+    }
 
-        const newContent = await Bun.file(tempFileName).text();
-        expect(newContent).toBe("Better content");
+    // Cleanup
+    await fs.rm(tempFileName);
+  });
 
-        const updated = await db.select().from(fileChanges).where((fc) => eq(fc.id, row.id)).get();
-        if (updated) {
-            expect(updated.status).toBe("confirmed");
-        }
+  test("confirmFileChange returns false if no record found", async () => {
+    const result = await confirmFileChange(db, 999999);
+    expect(result).toBe(false);
+  });
 
-        // Cleanup
-        await fs.rm(tempFileName);
-    });
+  test("getFileChange retrieves correct record or null if missing", async () => {
+    // Manually insert a row
+    db.run(
+      `
+      INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp)
+      VALUES (?, ?, ?, ?, ?)
+      `,
+      ["somefile.ts", "content", "diff", "pending", 123]
+    );
+    const newId = db.query("SELECT last_insert_rowid() as id").get().id;
 
-    test("confirmFileChange returns false if no record found", async () => {
-        const result = await confirmFileChange(db, 999999);
-        expect(result).toBe(false);
-    });
+    const found = await getFileChange(db, newId);
+    expect(found).not.toBeNull();
+    expect(found?.filePath).toBe("somefile.ts");
 
-    test("getFileChange retrieves correct record or null if missing", async () => {
-        const [row] = await db.insert(fileChanges).values({
-            filePath: "somefile.ts",
-            originalContent: "content",
-            suggestedDiff: "diff",
-            status: "pending",
-            timestamp: 123,
-        }).returning();
+    const missing = await getFileChange(db, 999999);
+    expect(missing).toBeNull();
+  });
 
-        const found = await getFileChange(db, row.id);
-        expect(found).not.toBeNull();
-        expect(found?.filePath).toBe("somefile.ts");
+  test("readLocalFileContent returns file content", async () => {
+    const tempFileName = `${randomString()}.txt`;
+    await Bun.write(tempFileName, "Hello world");
+    const data = await readLocalFileContent(tempFileName);
+    expect(data).toBe("Hello world");
+    await fs.rm(tempFileName);
+  });
 
-        const missing = await getFileChange(db, 999999);
-        expect(missing).toBeNull();
-    });
-
-    test("readLocalFileContent returns file content", async () => {
-        const tempFileName = `${randomString()}.txt`;
-        await Bun.write(tempFileName, "Hello world");
-        const data = await readLocalFileContent(tempFileName);
-        expect(data).toBe("Hello world");
-        await fs.rm(tempFileName);
-    });
-
-    test("readLocalFileContent throws if file missing", async () => {
-        const tempFileName = join("fakePath", `${randomString()}.ts`);
-        await expect(readLocalFileContent(tempFileName)).rejects.toThrow("Could not read file content");
-    });
+  test("readLocalFileContent throws if file missing", async () => {
+    const tempFileName = join("fakePath", `${randomString()}.ts`);
+    await expect(readLocalFileContent(tempFileName)).rejects.toThrow(
+      "Could not read file content"
+    );
+  });
 });
