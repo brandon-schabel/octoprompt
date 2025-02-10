@@ -11,17 +11,17 @@ describe("file-sync-service", () => {
     });
 
     test("getTextFiles returns only matching extension files", () => {
-        spyOn(fs, "readdirSync").mockImplementation((path, options) => {
+        spyOn(fs, "readdirSync").mockImplementation(((path, options) => {
             if (options && options.withFileTypes) {
                 return [
                     { name: "file1.ts", isDirectory: () => false },
                     { name: "file2.txt", isDirectory: () => false },
-                    { name: "folder", isDirectory: () => true },
+                    { name: "folder", isDirectory: () => true }
                 ];
             } else {
                 return ["file1.ts", "file2.txt", "folder"];
             }
-        } as any);
+        }) as any);
         spyOn(fs, "statSync").mockImplementation(() => ({ size: 12n } as any));
 
         const result = getTextFiles("/fakeDir", []);
@@ -47,15 +47,15 @@ describe("file-sync-service", () => {
         const oldFileId = ((db.query("SELECT last_insert_rowid() AS id").get() as { id: number }).id).toString();
 
         // Mock readdirSync so only "keep.ts" and "update.ts" appear
-        spyOn(fs, "readdirSync").mockImplementation((path, options) => {
+        spyOn(fs, "readdirSync").mockImplementation(((path, options) => {
             if (options && options.withFileTypes) {
                 return [
                     { name: "keep.ts", isDirectory: () => false },
-                    { name: "update.ts", isDirectory: () => false },
+                    { name: "update.ts", isDirectory: () => false }
                 ];
             }
             return ["keep.ts", "update.ts"];
-        } as any);
+        }) as any);
 
         // Mock readFileSync
         spyOn(fs, "readFileSync").mockImplementation((filePath: string) => {

@@ -106,8 +106,8 @@ function mapTicket(row: any): Ticket {
     status: row.status,
     priority: row.priority,
     suggestedFileIds: row.suggested_file_ids,
-    createdAt: Number(row.created_at),
-    updatedAt: Number(row.updated_at)
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime()
   };
   const validated = TicketReadSchema.parse(mapped);
   return {
@@ -124,8 +124,8 @@ function mapTicketTask(row: any): TicketTask {
     content: row.content,
     done: row.done === 1,
     orderIndex: row.order_index,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime()
   };
   const validated = TicketTaskReadSchema.parse(mapped);
   return {
