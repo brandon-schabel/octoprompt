@@ -11,6 +11,7 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as UiGenImport } from './routes/ui-gen'
 import { Route as TicketsImport } from './routes/tickets'
 import { Route as StructuredOutputDemoImport } from './routes/structured-output-demo'
 import { Route as ProjectsImport } from './routes/projects'
@@ -22,6 +23,12 @@ import { Route as ChatImport } from './routes/chat'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
+
+const UiGenRoute = UiGenImport.update({
+  id: '/ui-gen',
+  path: '/ui-gen',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const TicketsRoute = TicketsImport.update({
   id: '/tickets',
@@ -144,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TicketsImport
       parentRoute: typeof rootRoute
     }
+    '/ui-gen': {
+      id: '/ui-gen'
+      path: '/ui-gen'
+      fullPath: '/ui-gen'
+      preLoaderRoute: typeof UiGenImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -159,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ProjectsRoute
   '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
+  '/ui-gen': typeof UiGenRoute
 }
 
 export interface FileRoutesByTo {
@@ -171,6 +186,7 @@ export interface FileRoutesByTo {
   '/projects': typeof ProjectsRoute
   '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
+  '/ui-gen': typeof UiGenRoute
 }
 
 export interface FileRoutesById {
@@ -184,6 +200,7 @@ export interface FileRoutesById {
   '/projects': typeof ProjectsRoute
   '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
+  '/ui-gen': typeof UiGenRoute
 }
 
 export interface FileRouteTypes {
@@ -198,6 +215,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/structured-output-demo'
     | '/tickets'
+    | '/ui-gen'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -209,6 +227,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/structured-output-demo'
     | '/tickets'
+    | '/ui-gen'
   id:
     | '__root__'
     | '/'
@@ -220,6 +239,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/structured-output-demo'
     | '/tickets'
+    | '/ui-gen'
   fileRoutesById: FileRoutesById
 }
 
@@ -233,6 +253,7 @@ export interface RootRouteChildren {
   ProjectsRoute: typeof ProjectsRoute
   StructuredOutputDemoRoute: typeof StructuredOutputDemoRoute
   TicketsRoute: typeof TicketsRoute
+  UiGenRoute: typeof UiGenRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -245,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsRoute: ProjectsRoute,
   StructuredOutputDemoRoute: StructuredOutputDemoRoute,
   TicketsRoute: TicketsRoute,
+  UiGenRoute: UiGenRoute,
 }
 
 export const routeTree = rootRoute
@@ -265,7 +287,8 @@ export const routeTree = rootRoute
         "/project-summarization",
         "/projects",
         "/structured-output-demo",
-        "/tickets"
+        "/tickets",
+        "/ui-gen"
       ]
     },
     "/": {
@@ -294,6 +317,9 @@ export const routeTree = rootRoute
     },
     "/tickets": {
       "filePath": "tickets.tsx"
+    },
+    "/ui-gen": {
+      "filePath": "ui-gen.tsx"
     }
   }
 }
