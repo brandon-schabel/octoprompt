@@ -46,8 +46,8 @@ export function mapPromptProject(row: RawPromptProject): PromptProject {
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
     const insertStmt = db.prepare(`
-    INSERT INTO prompts (name, content, created_at, updated_at) 
-    VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO prompts (id, name, content, created_at, updated_at) 
+    VALUES (lower(hex(randomblob(16))), ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     RETURNING *
   `);
     const created = insertStmt.get(data.name, data.content) as RawPrompt;
@@ -66,7 +66,7 @@ export async function addPromptToProject(promptId: string, projectId: string): P
     deleteStmt.run(promptId);
 
     // Insert the new association
-    const insertStmt = db.prepare("INSERT INTO prompt_projects (prompt_id, project_id) VALUES (?, ?)");
+    const insertStmt = db.prepare("INSERT INTO prompt_projects (id, prompt_id, project_id) VALUES (lower(hex(randomblob(16))), ?, ?)");
     insertStmt.run(promptId, projectId);
 }
 

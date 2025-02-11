@@ -1,6 +1,7 @@
 import { db } from "@/utils/database";
 import type { Chat, ChatMessage, ExtendedChatMessage } from "shared/schema";
 import { ChatReadSchema, ChatMessageReadSchema } from "shared/src/utils/database/db-schemas";
+import { randomUUID } from "crypto";
 
 export type CreateChatOptions = {
     copyExisting?: boolean;
@@ -75,11 +76,11 @@ export function createChatService() {
 
             if (sourceMessages.length > 0) {
                 const insertStmt = db.prepare(`
-                    INSERT INTO chat_messages (chat_id, role, content)
-                    VALUES (?, ?, ?)
+                    INSERT INTO chat_messages (id, chat_id, role, content)
+                    VALUES (?, ?, ?, ?)
                 `);
                 for (const msg of sourceMessages) {
-                    insertStmt.run(chat.id, msg.role, msg.content);
+                    insertStmt.run(randomUUID(), chat.id, msg.role, msg.content);
                 }
             }
         }
@@ -98,11 +99,11 @@ export function createChatService() {
 
     async function saveMessage(message: ExtendedChatMessage): Promise<ExtendedChatMessage> {
         const stmt = db.prepare(`
-            INSERT INTO chat_messages (chat_id, role, content)
-            VALUES (?, ?, ?)
+            INSERT INTO chat_messages (id, chat_id, role, content)
+            VALUES (?, ?, ?, ?)
             RETURNING *
         `);
-        const saved = stmt.get(message.chatId, message.role, message.content) as RawChatMessage;
+        const saved = stmt.get(randomUUID(), message.chatId, message.role, message.content) as RawChatMessage;
         const mappedMessage = mapChatMessage(saved);
         return { ...mappedMessage, tempId: message.tempId };
     }
@@ -207,11 +208,11 @@ export function createChatService() {
 
         if (messagesToCopy.length > 0) {
             const insertStmt = db.prepare(`
-                INSERT INTO chat_messages (chat_id, role, content)
-                VALUES (?, ?, ?)
+                INSERT INTO chat_messages (id, chat_id, role, content)
+                VALUES (?, ?, ?, ?)
             `);
             for (const msg of messagesToCopy) {
-                insertStmt.run(newChat.id, msg.role, msg.content);
+                insertStmt.run(randomUUID(), newChat.id, msg.role, msg.content);
             }
         }
 
@@ -269,11 +270,11 @@ export function createChatService() {
 
         if (messagesToCopy.length > 0) {
             const insertStmt = db.prepare(`
-                INSERT INTO chat_messages (chat_id, role, content)
-                VALUES (?, ?, ?)
+                INSERT INTO chat_messages (id, chat_id, role, content)
+                VALUES (?, ?, ?, ?)
             `);
             for (const msg of messagesToCopy) {
-                insertStmt.run(newChat.id, msg.role, msg.content);
+                insertStmt.run(randomUUID(), newChat.id, msg.role, msg.content);
             }
         }
 

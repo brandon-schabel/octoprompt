@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "scripts": {
     "setup": "bun run scripts/setup.ts",
@@ -18,8 +18,10 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@types/archiver": "^6.0.3",
     "@types/bun": "latest",
     "@types/picomatch": "^3.0.1",
+    "archiver": "^7.0.1",
     "bun-types": "latest",
     "prettier": "^3.0.0",
     "typescript": "^5.7.2"
@@ -29,8 +31,6 @@
     "@bnk/backend-websocket-manager": "1.0.3",
     "@bnk/kv-store": "1.0.1",
     "@bnk/router": "^1.0.8",
-    "@types/archiver": "^6.0.3",
-    "archiver": "^7.0.1",
     "openai": "^4.78.1",
     "picomatch": "^4.0.2",
     "shared": "workspace:*",
