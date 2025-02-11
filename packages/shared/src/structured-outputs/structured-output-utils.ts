@@ -6,7 +6,7 @@ export type JsonSchema = {
     type: "object";
     properties: Record<string, any>;
     required?: string[];
-    additionalProperties?: boolean;
+    additionalProperties?: boolean | JSONSchema;
 };
 
 
@@ -28,7 +28,7 @@ interface JSONSchemaObject {
     description?: string;
     properties: Record<string, JSONSchema>;
     required?: string[];
-    additionalProperties?: boolean;
+    additionalProperties?: boolean | JSONSchema;
 }
 
 interface JSONSchemaArray {
@@ -61,6 +61,10 @@ export function zodToStructuredJsonSchema<T extends z.ZodTypeAny>(
 ): JSONSchema {
     const def = zodSchema._def;
 
+    console.log("def", def)
+
+    console.log({ zodSchema })
+
     switch (def.typeName) {
         case z.ZodFirstPartyTypeKind.ZodOptional: {
             const unwrapped = def.innerType;
@@ -87,7 +91,7 @@ export function zodToStructuredJsonSchema<T extends z.ZodTypeAny>(
                 properties,
                 additionalProperties: false,
                 ...(required.length > 0 ? { required } : {}),
-            };
+            } as JSONSchemaObject;
         }
         case z.ZodFirstPartyTypeKind.ZodString:
             return { type: "string" } as JSONSchemaString;
@@ -104,6 +108,28 @@ export function zodToStructuredJsonSchema<T extends z.ZodTypeAny>(
                 type: "array",
                 items: zodToStructuredJsonSchema(arrayDef.type),
             } as JSONSchemaArray;
+        }
+
+        case z.ZodFirstPartyTypeKind.ZodRecord: {
+            const valueSchema = def.valueType;
+            // If the record's value is z.any(), force additionalProperties to be false
+            if (valueSchema._def.typeName === z.ZodFirstPartyTypeKind.ZodAny) {
+                return {
+                    type: "object",
+                    properties: {},
+                    additionalProperties: false,
+                } as JSONSchemaObject;
+            }
+            return {
+                type: "object",
+                properties: {},
+                additionalProperties: zodToStructuredJsonSchema(valueSchema),
+            } as JSONSchemaObject;
+        }
+
+        case z.ZodFirstPartyTypeKind.ZodAny: {
+            // z.any() means no validation constraints – translate to an empty schema.
+            return {} as JSONSchema;
         }
 
         case z.ZodFirstPartyTypeKind.ZodEnum: {
