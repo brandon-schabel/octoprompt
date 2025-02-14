@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@bnk/ai": "^1.0.14",
-    "@bnk/backend-websocket-manager": "1.0.3",
+    "@bnk/sync-engine": "1.0.0",
     "@bnk/kv-store": "1.0.1",
     "@bnk/router": "^1.0.8",
     "openai": "^4.78.1",

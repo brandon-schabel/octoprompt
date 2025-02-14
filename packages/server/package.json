@@ -9,5 +9,8 @@
     "start": "bun server.ts",
     "dev": "DEV=true bun --watch server.ts",
     "start:prod": "cd dist && ./start.sh"
+  },
+  "dependencies": {
+    "@bnk/sync-engine": "^1.0.0"
   }
 }

@@ -1,5 +1,5 @@
 ---
-description: Rules for server-side TypeScript code (Bun + Drizzle + Zod) in packages/server/src.
+description: Rules for server-side TypeScript code (Bun + Zod) in packages/server/src.
 globs: packages/server/src/**/*.ts, server/src/**/*.ts,
 ---
 # Backend Architecture & File Building Guide

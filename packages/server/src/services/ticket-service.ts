@@ -17,6 +17,7 @@ import {
   TicketTaskCreateSchema,
 } from "shared/src/utils/database/db-schemas";
 import { Ticket, TicketTask, TicketFile } from "shared/schema";
+import { randomUUID } from "crypto";
 
 // const { tickets, ticketFiles, ticketTasks, files } = schema;
 
@@ -174,12 +175,15 @@ function validateCreateTask(ticketId: string, content: string) {
 
 export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
   const validatedData = validateCreateTicket(data);
+  const newTicketId = randomUUID();
+
   const stmt = db.prepare(`
-      INSERT INTO tickets (project_id, title, overview, status, priority, suggested_file_ids, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO tickets (id, project_id, title, overview, status, priority, suggested_file_ids, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *
     `);
   const created = stmt.get(
+    newTicketId,
     validatedData.projectId,
     validatedData.title,
     validatedData.overview ?? "",
@@ -350,13 +354,16 @@ export async function createTask(ticketId: string, content: string): Promise<Tic
   const row = stmtMax.get(ticketId) as { max: number | null };
   const nextIndex = (row?.max ?? 0) + 1;
 
+  const newTaskId = randomUUID();
+
   const stmt = db.prepare(`
-      INSERT INTO ticket_tasks (ticket_id, content, done, order_index, created_at, updated_at)
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO ticket_tasks (id, ticket_id, content, done, order_index, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *
     `);
 
-  const params: [string, string, number, number] = [
+  const params: [string, string, string, number, number] = [
+    newTaskId,
     validatedData.ticketId,
     validatedData.content,
     validatedData.done ? 1 : 0,

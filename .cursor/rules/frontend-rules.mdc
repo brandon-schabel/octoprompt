@@ -114,7 +114,7 @@ Below is a comprehensive guide to writing maintainable, modern, and real-time-ca
 
 ## 7. BNK WebSocket Manager Usage
 
-We utilize **BNK WebSocket** libraries (`@bnk/client-websocket-manager` and `@bnk/react-websocket-manager`) to handle real-time state synchronization. Below are key guidelines:
+We utilize **BNK WebSocket** libraries (`@bnk/client-sync` and `@bnk/react-websocket-manager`) to handle real-time state synchronization. Below are key guidelines:
 
 1. **Single WebSocket Connection**  
    - Our code typically sets up **one** WebSocket in `main.tsx` or a dedicated provider (e.g., `GlobalStateProvider`) so we have a shared real-time channel.  

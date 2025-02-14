@@ -61,7 +61,7 @@ The **client** is responsible for maintaining and displaying the application’s
   - This division allows independent updating and management based on unique identifiers like project ID or chat ID.
 
 - **WebSocket Client Integration:**
-  - The client connects to the server’s WebSocket endpoint using BNK’s client WebSocket manager (`@bnk/client-websocket-manager`).
+  - The client connects to the server’s WebSocket endpoint using BNK’s client WebSocket manager (`@bnk/sync-client`).
   - The `GlobalStateProvider` (in `global-state-provider.tsx`) sets up the WebSocket connection and propagates state changes to the Zustand store.
   - Incoming WebSocket messages trigger updates in the client’s global state (via handlers in `websocket-subscription.ts`).
 

@@ -93,8 +93,8 @@ export function mapFile(row: RawFile): ProjectFile {
 
 export async function createProject(data: CreateProjectBody): Promise<Project> {
     const stmt = db.prepare(`
-        INSERT INTO projects (name, path, description, created_at, updated_at) 
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO projects (id, name, path, description, created_at, updated_at) 
+        VALUES (lower(hex(randomblob(16))), ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING *
     `);
     const created = stmt.get(data.name, data.path, data.description || '') as RawProject;

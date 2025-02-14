@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactNode, useState } from "react";
-import { useClientWebSocket } from "@bnk/react-websocket-manager";
-import type { ClientWebSocketManager } from "@bnk/client-websocket-manager";
+import { useSyncClient } from "@bnk/sync-react";
+import type { SyncClientManager } from "@bnk/sync-client";
 import { SERVER_WS_ENDPOINT } from "@/constants/server-constants";
 import { validateIncomingMessage, InboundMessage, OutboundMessage } from "shared";
 
@@ -12,7 +12,7 @@ import { handleIncomingWebsocketMessage } from "./websocket-subscription";
  *  - hasReceivedInitialState: have we received the initial_state message?
  */
 interface GlobalStateContextValue {
-    manager: ClientWebSocketManager<InboundMessage, OutboundMessage>;
+    manager: SyncClientManager<InboundMessage, OutboundMessage>;
     isOpen: boolean;
     hasReceivedInitialState: boolean;
 }
@@ -32,7 +32,7 @@ export function GlobalStateProvider({ children }: { children: ReactNode }) {
     const [hasReceivedInitialState, setHasReceivedInitialState] = useState(false);
 
     // BNK’s manager
-    const { isOpen, manager } = useClientWebSocket<InboundMessage, OutboundMessage>({
+    const { isOpen, manager } = useSyncClient<InboundMessage, OutboundMessage>({
         config: {
             url: SERVER_WS_ENDPOINT,
             validateIncomingMessage,
