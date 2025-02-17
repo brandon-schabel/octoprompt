@@ -45,7 +45,7 @@ async function buildProject() {
     // Set the DB path for the database creation
     process.env.DB_PATH = join(distDir, "sqlite.db");
     // Create the database using the custom setupDatabase function with explicit path
-    const db = setupDatabase(join(distDir, "sqlite.db"));
+    const db = setupDatabase({ dbPath: join(distDir, "sqlite.db") });
     db.close();
 
     // Write modified package.json to dist
