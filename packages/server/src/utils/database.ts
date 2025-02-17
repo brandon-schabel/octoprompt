@@ -1,6 +1,8 @@
 import { Database } from 'bun:sqlite';
+import path from 'path';
 
 let db: Database;
+const defaultDbPath = 'sqlite.db';
 
 function createTables(db: Database): void {
   db.exec(`
@@ -133,22 +135,36 @@ function createTables(db: Database): void {
   `);
 }
 
-export function setupDatabase(dbPath?: string): Database {
+type SetupDatabaseOptions = {
+  dbPath?: string;
+};
+
+export function setupDatabase(options: SetupDatabaseOptions = {}): Database {
+  let dbPath = options.dbPath ?? defaultDbPath;
+
+  // Resolve dbPath relative to the current module's directory
+  if (!options.dbPath) {
+    const moduleDir = path.dirname(import.meta.dir); // Get directory of current module
+    dbPath = path.resolve(moduleDir, dbPath); // Resolve path relative to module directory
+  }
+
   if (process.env.NODE_ENV === 'test') {
     db = new Database(':memory:');
   } else {
-    db = new Database(dbPath ?? 'sqlite.db');
+    db = new Database(dbPath);
   }
+
+  // Check if tables already exist before creating them - simplified logic, tables are created with IF NOT EXISTS
   createTables(db);
-  console.log(`All tables created successfully at ${dbPath ?? 'sqlite.db'}.`);
+  console.log(`All tables created or verified at ${dbPath}.`);
   return db;
 }
 
 
-
-// Call the setup function to initialize the database
-setupDatabase();
-
+// Initialize database on module load with default path if not already initialized
+if (!db) {
+  setupDatabase(); // Initialize with default path on server start
+}
 
 
 // Added resetDatabase function that resets the in-memory test database
