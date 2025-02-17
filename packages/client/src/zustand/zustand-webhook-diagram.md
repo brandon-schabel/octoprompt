@@ -5,11 +5,11 @@ flowchart TB
     subgraph "Front-End (Browser)"
         A["User Interacts with UI\n(Click, Input, etc.)"]
         B["Zustand Store\n(Local State Management)"]
-        C["BNK Client WebSocket Manager\n(Sends/Receives Messages)"]
+        C["BNK Client Sync Manager\n(Sends/Receives Messages)"]
     end
 
     subgraph "Back-End"
-        D["BNK Backend WebSocket Manager"]
+        D["BNK Backend Sync Engine"]
         E["Persisted State\n(File, SQLite, etc.)"]
     end
 

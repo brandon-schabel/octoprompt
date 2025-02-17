@@ -60,7 +60,7 @@ The **client** is responsible for maintaining and displaying the application’s
     - **Chat Tabs:** Managing chat-specific interactions.
   - This division allows independent updating and management based on unique identifiers like project ID or chat ID.
 
-- **WebSocket Client Integration:**
+- **WebSocket Sync Client Integration:**
   - The client connects to the server’s WebSocket endpoint using BNK’s client WebSocket manager (`@bnk/sync-client`).
   - The `GlobalStateProvider` (in `global-state-provider.tsx`) sets up the WebSocket connection and propagates state changes to the Zustand store.
   - Incoming WebSocket messages trigger updates in the client’s global state (via handlers in `websocket-subscription.ts`).
@@ -77,7 +77,7 @@ When building new project features, follow these key steps:
 
 - **Step 1: Update the Database Schema**
   - Start by modifying the database schema in `shared/schema.ts` if new tables, columns, or relationships are required.
-  - Drizzle ORM and Zod automatically infer TypeScript types, ensuring that changes propagate throughout the system.
+  - Zod automatically infer TypeScript types, ensuring that changes propagate throughout the system.
 
 - **Step 2: Global State and WebSocket Schema Adjustments**
   - If your new feature requires additional global state or needs to communicate between client and server, update the global state schemas in the shared folder (e.g., `global-state-schema.ts`).

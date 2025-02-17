@@ -21,7 +21,7 @@ You are always in control of your data. By default, everything runs locally, and
 
 ## Quick Start
 
-For most users, the easiest way to try out OctoPrompt is by downloading the **prebuilt binaries** from our [**latest tags**](https://github.com/brandon-schabel/octoprompt/tags) (substitute the actual repository URL).
+For most users, the easiest way to try out OctoPrompt is by downloading the **prebuilt binaries** from our [**latest tags**](https://github.com/brandon-schabel/octoprompt/tags).
 
 1. **Download** the appropriate binary for your platform (Windows, Linux, or macOS).
 2. **Unzip** (if needed) and run the executable.
@@ -237,7 +237,7 @@ OctoPrompt consists of **TypeScript** modules on both the client and server side
 2. **Service Layer** (e.g., `project-service.ts`, `file-sync-service.ts`, etc.)  
    - Encapsulates logic for project management, file watching, summarization, and prompt optimization.
 
-3. **WebSocket Manager**  
+3. **Sync Engine based on WebSockets**  
    - Provides real-time updates for file changes or chat messages.
 
 4. **Model Providers**  

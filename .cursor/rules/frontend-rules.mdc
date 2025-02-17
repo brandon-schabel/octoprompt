@@ -4,7 +4,7 @@ globs: packages/client/src/**/*.tsx, client/src/**/*.tsx
 ---
 # Frontend Cursor Rules: Extended Guidelines
 
-This document expands upon our **React + TypeScript** ruleset, adding details on **TanStack Router**, **TanStack Query**, and **BNK WebSocket Manager** usage. It also references our existing frontend code structure (e.g., `main.tsx`, `projects.tsx`, etc.).  
+This document expands upon our **React + TypeScript** ruleset, adding details on **TanStack Router**, **TanStack Query**, and **BNK Sync Engine** usage. It also references our existing frontend code structure (e.g., `main.tsx`, `projects.tsx`, etc.).  
 
 Below is a comprehensive guide to writing maintainable, modern, and real-time-capable React code in our client application.
 
