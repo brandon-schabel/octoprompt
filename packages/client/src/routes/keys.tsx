@@ -11,9 +11,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { ExternalLinkIcon } from '@radix-ui/react-icons'
+import { ExternalLinkIcon, Copy } from 'lucide-react'
 import { PROVIDERS } from '@/constants/providers-constants'
 import { InfoTooltip } from '@/components/info-tooltip'
+import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 export const Route = createFileRoute('/keys')({
     component: KeysPage
@@ -23,6 +24,7 @@ function KeysPage() {
     const { data: keys, isLoading } = useGetKeys();
     const createKeyMutation = useCreateKey();
     const deleteKeyMutation = useDeleteKey();
+    const { copyToClipboard } = useCopyClipboard();
 
     const [selectedProvider, setSelectedProvider] = useState<string>('');
     const [newKeyVal, setNewKeyVal] = useState('');
@@ -108,15 +110,28 @@ function KeysPage() {
                                 {keys.map(k => (
                                     <li
                                         key={k.id}
-                                        className="flex items-center justify-between border p-2 rounded"
+                                        className="flex items-center justify-between border p-2 rounded group"
                                     >
-                                        <div>
-                                            <div className="font-medium">
-                                                {PROVIDERS.find(p => p.id === k.provider)?.name || k.provider}
+                                        <div className="flex items-center gap-2">
+                                            <div>
+                                                <div className="font-medium">
+                                                    {PROVIDERS.find(p => p.id === k.provider)?.name || k.provider}
+                                                </div>
+                                                <div className="text-sm text-muted-foreground font-mono">
+                                                    ••••••••{k.key.slice(-4)}
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-muted-foreground font-mono">
-                                                ••••••••{k.key.slice(-4)}
-                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                                                onClick={() => copyToClipboard(k.key, {
+                                                    successMessage: "API key copied to clipboard",
+                                                    errorMessage: "Failed to copy API key"
+                                                })}
+                                            >
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                         <Button
                                             variant="destructive"
@@ -135,7 +150,7 @@ function KeysPage() {
                                 </p>
                                 <p>
                                     You can still chat with local LLMs without any keys. However, by adding
-                                    <strong> OpenAI </strong> or <strong> OpenRouter </strong> keys, you’ll unlock advanced
+                                    <strong> OpenAI </strong> or <strong> OpenRouter </strong> keys, you'll unlock advanced
                                     features like file summarizations, file suggestions, and the ability to create tasks on tickets from chat.
                                     <br /><br />
                                     Simply select a provider above, enter your key, and click <em>Add</em>.

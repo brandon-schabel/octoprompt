@@ -58,12 +58,13 @@ function mapChatMessage(row: RawChatMessage): ChatMessage {
  */
 export function createChatService() {
     async function createChat(title: string, options?: CreateChatOptions): Promise<Chat> {
+        const chatId = randomUUID();
         const stmt = db.prepare(`
-            INSERT INTO chats (title) 
-            VALUES (?)
+            INSERT INTO chats (id, title) 
+            VALUES (?, ?)
             RETURNING *
         `);
-        const created = stmt.get(title) as RawChat;
+        const created = stmt.get(chatId, title) as RawChat;
         const chat = mapChat(created);
 
         if (options?.copyExisting && options?.currentChatId) {
