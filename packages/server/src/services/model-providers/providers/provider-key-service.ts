@@ -34,8 +34,8 @@ function mapProviderKey(row: any): ProviderKey {
 export function createProviderKeyService() {
   async function createKey(data: CreateProviderKeyInput): Promise<ProviderKey> {
     const stmt = db.prepare(`
-      INSERT INTO provider_keys (provider, key, created_at, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO provider_keys (provider, key, created_at, updated_at, id)
+      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, lower(hex(randomblob(16))))
       RETURNING *
     `);
     const created = stmt.get(data.provider, data.key);
