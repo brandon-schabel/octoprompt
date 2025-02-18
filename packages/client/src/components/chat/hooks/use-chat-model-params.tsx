@@ -1,5 +1,5 @@
 import { useChatTabField } from "@/zustand/zustand-utility-hooks";
-import { ChatModelSettings, chatModelSettingsSchema } from "shared/index";
+import { ChatModelSettings, chatModelSettingsSchema, modelsTempNotAllowed } from "shared/index";
 
 type ModelParamMutationFn = (value: number) => void;
 type StreamMutationFn = (value: boolean) => void;
@@ -10,7 +10,14 @@ type StreamMutationFn = (value: boolean) => void;
  * Similarly, `mutateX` sets the new value in the global chat tab state.
  */
 export function useChatModelParams() {
+    // Get the current model
+    const { data: modelId = "" } = useChatTabField("model");
+    
+    // Check if temperature is allowed for this model
+    const isTempDisabled = modelsTempNotAllowed.includes(modelId);
+
     // Each param. If not set yet in global state, use Zod's default.
+    // For temperature, if the model doesn't allow it, force it to 1
     const { data: temperatureData = chatModelSettingsSchema.shape.temperature._def.defaultValue() } =
         useChatTabField("temperature");
 
@@ -38,7 +45,14 @@ export function useChatModelParams() {
     const { mutate: setStreamRaw } = useChatTabField("stream");
 
     // Wrap the raw mutate functions with proper types
-    const setTemperature: ModelParamMutationFn = (value) => setTemperatureRaw(value);
+    const setTemperature: ModelParamMutationFn = (value) => {
+        // If temperature is not allowed, always set to 1
+        if (isTempDisabled) {
+            setTemperatureRaw(1);
+        } else {
+            setTemperatureRaw(value);
+        }
+    };
     const setMaxTokens: ModelParamMutationFn = (value) => setMaxTokensRaw(value);
     const setTopP: ModelParamMutationFn = (value) => setTopPRaw(value);
     const setFreqPenalty: ModelParamMutationFn = (value) => setFreqPenaltyRaw(value);
@@ -47,7 +61,7 @@ export function useChatModelParams() {
 
     // For convenience, return them as a single object.
     const settings: ChatModelSettings = {
-        temperature: temperatureData,
+        temperature: isTempDisabled ? 1 : temperatureData,
         max_tokens: maxTokensData,
         top_p: topPData,
         frequency_penalty: freqPenaltyData,
@@ -63,5 +77,6 @@ export function useChatModelParams() {
         setFreqPenalty,
         setPresPenalty,
         setStream,
+        isTempDisabled,
     };
 }

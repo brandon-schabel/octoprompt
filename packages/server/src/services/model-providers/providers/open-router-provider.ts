@@ -20,6 +20,7 @@ export function createOpenRouterProviderService(debugParam = false) {
 
         if (!openRouterKey) {
             console.error('[OpenRouterProviderService] initKey:', 'OpenRouter API key not found');
+            
             throw new Error("OpenRouter API key not found");
         }
     }

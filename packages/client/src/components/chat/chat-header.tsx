@@ -34,6 +34,10 @@ interface ChatHeaderProps {
 const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps) {
+    if (!chatId) {
+        return null;
+    }
+
     const [showLinkSettings, setShowLinkSettings] = useState(false);
     const [projectSearch, setProjectSearch] = useState("");
     const [isEditing, setIsEditing] = useState(false);

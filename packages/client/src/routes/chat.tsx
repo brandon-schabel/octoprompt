@@ -72,6 +72,9 @@ function ChatPage() {
   // The id of the linked project tab (if any)
   const linkedProjectTabId = currentChat?.linkedProjectTabId || "";
 
+  // Check if we have an active chat
+  const hasActiveChat = Boolean(chatId);
+
   if (noChatTabsYet) {
     return (
       <div className="p-4">
@@ -171,20 +174,20 @@ function ChatPage() {
         {/* Left Sidebar */}
         <ChatSidebar />
 
-        {/* Main Chat Area - Modified structure */}
-        <div className="flex-1 flex flex-col min-h-0"> {/* Added min-h-0 to ensure proper flex behavior */}
-          {currentChat && (
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {hasActiveChat ? (
             <>
-              {/* Header is now outside the scrollable area */}
-              <div className="flex-shrink-0"> {/* Added flex-shrink-0 to prevent header from shrinking */}
+              {/* Header */}
+              <div className="flex-shrink-0">
                 <ChatHeader
                   chatId={chatId}
                   excludedMessageIds={currentChat?.excludedMessageIds ?? []}
                 />
               </div>
 
-              {/* Messages container with flex-1 and overflow handling */}
-              <div className="flex-1 min-h-0 overflow-hidden"> {/* Added min-h-0 and overflow-hidden */}
+              {/* Messages container */}
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <ChatMessages
                   messages={messages}
                   isFetching={isFetching}
@@ -192,29 +195,42 @@ function ChatPage() {
                 />
               </div>
             </>
+          ) : (
+            // No chat selected state
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <h2 className="text-2xl font-semibold text-muted-foreground">No Chat Selected</h2>
+                <p className="text-sm text-muted-foreground">
+                  Select an existing chat from the sidebar or create a new one to get started.
+                </p>
+              </div>
+            </div>
           )}
 
-          {/* Input area is also outside the scrollable region */}
-          <div className="flex-shrink-0 relative mx-2 mb-2"> {/* Added flex-shrink-0 */}
+          {/* Input area */}
+          <div className="flex-shrink-0 relative mx-2 mb-2">
             <div className="flex gap-2 bg-background rounded-md">
               <AdaptiveChatInput
                 value={newMessage}
                 onChange={(val) => updateActiveChatTab({ input: val })}
                 onSubmit={handleSendWithDebug}
-                placeholder="Type your message..."
-                disabled={!currentChat}
+                placeholder={hasActiveChat ? "Type your message..." : "Select a chat to start messaging"}
+                disabled={!hasActiveChat}
                 className="w-full"
                 preserveFormatting
               />
-              <Button onClick={handleSendWithDebug} disabled={!currentChat}>
+              <Button 
+                onClick={handleSendWithDebug} 
+                disabled={!hasActiveChat || !newMessage.trim()}
+              >
                 Send
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar - only if there's a linked project */}
-        {linkedProjectTabId && (
+        {/* Right Sidebar - only show if there's both a chat and linked project */}
+        {hasActiveChat && linkedProjectTabId && (
           <ChatProjectSidebar linkedProjectTabId={linkedProjectTabId} />
         )}
       </div>

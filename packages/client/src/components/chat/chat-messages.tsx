@@ -379,6 +379,22 @@ export function ChatMessages(props: ChatMessagesProps) {
         });
     };
 
+    // If no chat is selected, show a different message
+    if (!messages) {
+        return (
+            <div className="flex-1 overflow-y-auto p-4">
+                <div className="h-full flex items-center justify-center">
+                    <Card className="p-6 max-w-md text-center">
+                        <h3 className="text-lg font-semibold mb-2">No Chat Selected</h3>
+                        <p className="text-muted-foreground">
+                            Select a chat from the sidebar or create a new one to start messaging.
+                        </p>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
     // If the chat is still loading or no messages yet
     if (isFetching && messages.length === 0) {
         return (

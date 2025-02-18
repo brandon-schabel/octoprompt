@@ -9,6 +9,7 @@ type EditableNumberDisplayProps = {
     step?: number;
     className?: string;
     formatValue?: (value: number) => string;
+    isDisabled?: boolean;
 };
 
 export function EditableNumberDisplay({
@@ -18,7 +19,8 @@ export function EditableNumberDisplay({
     max,
     step = 1,
     className,
-    formatValue = (val) => val.toString()
+    formatValue = (val) => val.toString(),
+    isDisabled = false,
 }: EditableNumberDisplayProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [inputValue, setInputValue] = useState(value.toString());
@@ -42,13 +44,13 @@ export function EditableNumberDisplay({
     const handleBlur = () => {
         setIsEditing(false);
         const newValue = parseFloat(inputValue);
-        
+
         if (!isNaN(newValue)) {
             let validValue = newValue;
             if (min !== undefined) validValue = Math.max(min, validValue);
             if (max !== undefined) validValue = Math.min(max, validValue);
             if (step) validValue = Math.round(validValue / step) * step;
-            
+
             onChange(validValue);
         } else {
             setInputValue(value.toString());
@@ -69,7 +71,7 @@ export function EditableNumberDisplay({
     };
 
     return (
-        <div 
+        <div
             className={cn(
                 "ml-2 w-16 text-right text-xs tabular-nums",
                 className
@@ -87,9 +89,10 @@ export function EditableNumberDisplay({
                     max={max}
                     step={step}
                     className="w-full rounded border border-input bg-background px-1 py-0.5 text-right text-xs"
+                    disabled={isDisabled}
                 />
             ) : (
-                <span 
+                <span
                     onDoubleClick={handleDoubleClick}
                     className="cursor-text"
                 >

@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import path from 'path';
 
 let db: Database;
-const defaultDbPath = 'sqlite.db';
+const defaultDbPath = '../sqlite.db';
 
 function createTables(db: Database): void {
   db.exec(`

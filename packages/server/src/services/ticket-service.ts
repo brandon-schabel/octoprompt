@@ -37,18 +37,12 @@ const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this s
   ]
 }`;
 
-export const defeaultTaskPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
+export const defaultTaskPrompt = `You are a technical project manager helping break down tickets into actionable tasks.
 Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
 Focus on technical implementation tasks, testing, and validation steps.
 Each task should be clear and actionable.
 
 ${validTaskFormatPrompt}
-`;
-
-export const octopromptPlanningPrompt = `
-${promptsMap.octopromptPlanningMetaPrompt}
-
-${defeaultTaskPrompt}
 `;
 
 export function stripTripleBackticks(text: string): string {
@@ -88,7 +82,7 @@ ${projectSummary}
 
   const result = await fetchStructuredOutput(openRouterProvider, {
     userMessage,
-    systemMessage: octopromptPlanningPrompt,
+    systemMessage: defaultTaskPrompt,
     zodSchema: TaskSuggestionsZodSchema,
     schemaName: "TaskSuggestions",
     model: cfg.model,
@@ -409,8 +403,8 @@ export async function autoGenerateTasksFromOverview(ticketId: string): Promise<T
   const inserted: TicketTask[] = [];
   for (const [idx, content] of titles.entries()) {
     const stmt = db.prepare(`
-          INSERT INTO ticket_tasks (ticket_id, content, done, order_index, created_at, updated_at)
-          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO ticket_tasks (id, ticket_id, content, done, order_index, created_at, updated_at)
+          VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           RETURNING *
         `);
     const createdRaw = stmt.get(ticketId, content, 0, idx) as any;

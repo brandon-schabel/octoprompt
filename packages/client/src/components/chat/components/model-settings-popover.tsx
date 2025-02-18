@@ -8,6 +8,7 @@ import { Settings } from "lucide-react";
 import { useChatModelParams } from "../hooks/use-chat-model-params";
 import { useDebounce } from "@/hooks/utility-hooks/use-debounce";
 import { EditableNumberDisplay } from "./editable-number-display";
+import { modelsTempNotAllowed } from "shared";
 
 /**
  * A popover for adjusting advanced model parameters (temperature, max_tokens, etc.)
@@ -16,7 +17,7 @@ import { EditableNumberDisplay } from "./editable-number-display";
 export function ModelSettingsPopover() {
     const [open, setOpen] = useState(false);
 
-    // 1) Load global settings from the chat tab
+    // Get the isTempDisabled flag from the hook
     const {
         settings,
         setTemperature,
@@ -25,6 +26,7 @@ export function ModelSettingsPopover() {
         setFreqPenalty,
         setPresPenalty,
         setStream,
+        isTempDisabled,
     } = useChatModelParams();
 
     /**
@@ -132,8 +134,16 @@ export function ModelSettingsPopover() {
 
                     {/* Temperature */}
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="temp" className="text-sm w-24">
+                        <Label 
+                            htmlFor="temp" 
+                            className={`text-sm w-24 ${isTempDisabled ? 'text-muted-foreground' : ''}`}
+                        >
                             Temperature
+                            {isTempDisabled && (
+                                <span className="block text-xs text-muted-foreground">
+                                    Not configurable
+                                </span>
+                            )}
                         </Label>
                         <div className="flex-1 ml-2">
                             <div className="flex items-center">
@@ -144,6 +154,8 @@ export function ModelSettingsPopover() {
                                     min={0}
                                     max={1}
                                     step={0.01}
+                                    disabled={isTempDisabled}
+                                    className={isTempDisabled ? 'opacity-50' : ''}
                                 />
                                 <EditableNumberDisplay
                                     value={localTemperature}
@@ -152,6 +164,7 @@ export function ModelSettingsPopover() {
                                     max={1}
                                     step={0.01}
                                     formatValue={(val) => val.toFixed(2)}
+                                    isDisabled={isTempDisabled}
                                 />
                             </div>
                         </div>

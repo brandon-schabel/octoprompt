@@ -26,4 +26,5 @@ export * from './src/utils/merge-deep'
 export * from './src/structured-outputs/structured-output-schema';
 export * from './src/structured-outputs/structured-output-utils';
 export * from './src/constants/model-default-configs';
+export * from './src/constants/models-temp-not-allowed';
 export * from './schema'

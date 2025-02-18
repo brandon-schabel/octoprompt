@@ -49,6 +49,7 @@ export function createUnifiedProviderService(debugParam = false) {
 
         const keys = await providerKeyService.listKeys();
 
+
         providerConfig = {
             openaiKey: keys.find(k => k.provider === "openai")?.key,
             anthropicKey: keys.find(k => k.provider === "anthropic")?.key,
@@ -59,11 +60,13 @@ export function createUnifiedProviderService(debugParam = false) {
             openRouterKey: keys.find(k => k.provider === "openrouter")?.key,
         };
 
+
         modelFetcherService = new ModelFetcherService(providerConfig);
     }
 
     function getKey(provider: keyof ProviderKeysConfig): string {
         const key = providerConfig[provider];
+
         if (!key) {
             console.error(`${provider} API key not found`);
             return "";
@@ -157,6 +160,8 @@ export function createUnifiedProviderService(debugParam = false) {
             options,
             provider,
         } = streamConfig;
+
+        console.log({ options, provider })
 
         const plugin = await getProviderPlugin(provider, options);
 
@@ -255,6 +260,12 @@ export function createUnifiedProviderService(debugParam = false) {
             });
 
             assistantMessageId = initialAssistantMessage.id;
+
+            console.log({ options })
+
+            if(provider === 'openai') {
+                delete options.max_tokens
+            }
 
             return streamMessage({
                 chatId,
