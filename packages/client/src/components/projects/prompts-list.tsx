@@ -117,8 +117,8 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const handleUpdatePrompt = async (updates: { name: string; content: string }) => {
         if (!editPromptId) return
         await updatePromptMutation.mutateAsync({
-            id: editPromptId,
-            updates,
+            promptId: editPromptId,
+            data: updates,
         })
         toast.success('Prompt updated successfully')
         setPromptDialogOpen(false)

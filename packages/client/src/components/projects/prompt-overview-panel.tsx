@@ -160,7 +160,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }
 
         async function handleUpdatePromptContent(promptId: string, updates: { name: string; content: string }) {
-            await updatePromptMutation.mutateAsync({ id: promptId, updates })
+            await updatePromptMutation.mutateAsync({ promptId, data: updates })
             toast.success('Prompt updated')
             setPromptDialogOpen(false)
         }

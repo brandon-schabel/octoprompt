@@ -410,7 +410,9 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
             return (
               <div
                 key={fileId}
-                ref={el => itemRefs.current[index] = el}
+                ref={el => {
+                  itemRefs.current[index] = el;
+                }}
                 className={cn(
                   "shrink-0 w-full group relative mb-2 last:mb-0",
                   "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
