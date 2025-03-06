@@ -8,6 +8,7 @@ import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/f
 import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
 import { useCreateProjectTab } from '@/zustand/updaters'
 import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors'
+import { ResizablePanel } from '@/components/ui/resizable-panel'
 import type { Project } from 'shared'
 
 export function ProjectsPage() {
@@ -43,8 +44,10 @@ export function ProjectsPage() {
     }
 
     return (
-        <div className="flex-col h-full w-full overflow-hidden flex">
-            <ProjectsTabManager />
+        <div className="flex flex-col h-full w-full overflow-hidden">
+            <div className="flex-none">
+                <ProjectsTabManager />
+            </div>
             <MainProjectsLayout
                 filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
                 promptPanelRef={promptPanelRef as React.RefObject<PromptOverviewPanelRef>}
@@ -79,21 +82,25 @@ function MainProjectsLayout({
         setShowWelcomeDialog(false)
     }
 
-
-
     return (
-        <div className="flex-1 flex flex-row overflow-hidden">
-            {/* Left: FilePanel (pulls data & selectedFiles from hooks) */}
-            <FilePanel
-                ref={filePanelRef}
-                className="w-3/5"
-
-            />
-
-            {/* Right: PromptOverviewPanel (pulls data & selectedFiles from hooks) */}
-            <PromptOverviewPanel
-                ref={promptPanelRef}
-                className="w-2/5"
+        <div className="flex-1 min-h-0 overflow-hidden">
+            <ResizablePanel
+                leftPanel={
+                    <FilePanel
+                        ref={filePanelRef}
+                        className="h-full w-full"
+                    />
+                }
+                rightPanel={
+                    <PromptOverviewPanel
+                        ref={promptPanelRef}
+                        className="h-full w-full"
+                    />
+                }
+                initialLeftPanelWidth={40}
+                minLeftPanelWidth={100}
+                storageKey="projects-panel-width"
+                className="h-full w-full"
             />
 
             {/* Show welcome once */}
@@ -101,9 +108,6 @@ function MainProjectsLayout({
                 showWelcomeDialog={showWelcomeDialog}
                 setShowWelcomeDialog={handleCloseWelcomeDialog}
             />
-
-            {/* Global file viewer modal */}
-
         </div>
     )
 }

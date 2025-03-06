@@ -1,12 +1,11 @@
 import { createFileChangeWatcher, FileChangeEvent } from './file-change-watcher';
 import { getProjectFiles } from '../project-service';
-import { schema } from 'shared';
+import { Project } from 'shared/schema';
 import { resolve, relative } from 'node:path';
 import { websocketStateAdapter } from '@/utils/websocket/websocket-state-adapter';
 import { summarizeFiles } from './file-summary-service';
 import { syncProject } from './file-sync-service';
-
-type Project = schema.Project;
+import { resolvePath } from '@/utils/path-utils';
 
 export function createFileChangePlugin(
 ) {
@@ -26,7 +25,7 @@ export function createFileChangePlugin(
                     const allFiles = await getProjectFiles(project.id);
                     if (!allFiles) return;
 
-                    const absoluteProjectPath = resolve(project.path);
+                    const absoluteProjectPath = resolvePath(project.path);
                     const relPath = relative(absoluteProjectPath, changedFilePath);
                     const updatedFile = allFiles.find((f) => f.path === relPath);
                     if (!updatedFile) {
@@ -39,14 +38,16 @@ export function createFileChangePlugin(
                         globalState
                     );
                 } catch (err) {
-                    console.error('[FileChangePlugin] Error handling file change:', err);
+                    console.error('[FileChangePlugin] Error handling change:', err);
                 }
-            },
+            }
         });
 
+        const absoluteProjectPath = resolvePath(project.path);
         watcher.startWatching({
-            directory: project.path,
+            directory: absoluteProjectPath,
             ignorePatterns,
+            recursive: true,
         });
     }
 

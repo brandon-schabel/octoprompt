@@ -4,6 +4,7 @@ import { readFile } from "fs/promises";
 import { Database } from "bun:sqlite";
 
 import { createOpenRouterProviderService, openRouterProvider } from "../model-providers/providers/open-router-provider";
+import { resolvePath } from "@/utils/path-utils";
 
 /**
  * Zod schema describing AI's JSON output structure
@@ -51,8 +52,9 @@ export async function readLocalFileContent(
   filePath: string
 ): Promise<string> {
   try {
-    const absolutePath = path.resolve(process.cwd(), filePath);
-    const content = await readFile(absolutePath, "utf-8");
+    // Expand tilde in the filepath if present
+    const resolvedPath = resolvePath(filePath);
+    const content = await readFile(resolvedPath, "utf-8");
     return content;
   } catch (error) {
     console.error("Failed to read file:", error);

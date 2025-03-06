@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, statSync, Dirent, existsSync } from 'node:fs
 import { db } from "@/utils/database";
 import { mapFile, RawFile } from '../project-service';
 import { Project } from 'shared/schema';
+import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '@/utils/path-utils';
 
 export const ALLOWED_EXTENSIONS = [
   // Documentation & Config
@@ -91,7 +92,7 @@ export const DEFAULT_EXCLUSIONS = [
 
 
 export function normalizePathForDb(pathStr: string): string {
-  return pathStr.replace(/\\/g, '/');
+  return normalizePathForDbUtil(pathStr);
 }
 
 export function computeChecksum(content: string): string {
@@ -216,14 +217,14 @@ export async function syncFileSet(project: Project, absoluteProjectPath: string,
 }
 
 export async function syncProject(project: Project, exclusions: string[] = DEFAULT_EXCLUSIONS): Promise<void> {
-  const absoluteProjectPath = resolve(project.path);
+  const absoluteProjectPath = resolvePath(project.path);
   const projectFiles = getTextFiles(absoluteProjectPath, exclusions);
   await syncFileSet(project, absoluteProjectPath, projectFiles);
 }
 
 export async function syncProjectFolder(project: Project, folderPath: string, exclusions: string[] = DEFAULT_EXCLUSIONS): Promise<void> {
-  const absoluteProjectPath = resolve(project.path);
-  const absoluteFolderToSync = resolve(project.path, folderPath);
+  const absoluteProjectPath = resolvePath(project.path);
+  const absoluteFolderToSync = resolve(absoluteProjectPath, folderPath);
   const folderFiles = getTextFiles(absoluteFolderToSync, exclusions);
 
   await syncFileSet(project, absoluteProjectPath, folderFiles);

@@ -90,7 +90,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
             <div id="outer-area" className={`flex flex-col h-full overflow-hidden ${className}`}>
                 <div className="flex flex-col flex-1 min-h-0">
                     {data?.project && <ProjectHeader projectData={data.project} />}
-                    <div className="flex-1 overflow-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-auto p-4 space-y-6">
                         <FileExplorer
                             ref={{
                                 searchInputRef: searchInputRef as RefObject<HTMLInputElement>,
@@ -98,7 +98,6 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
                                 selectedFilesListRef,
                             }}
                             allowSpacebarToSelect={allowSpacebarToSelect}
-                            
                         />
                     </div>
                 </div>
