@@ -17,6 +17,13 @@ import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
 import { useGlobalStateContext } from '@/zustand/global-state-provider'
+import { useGetProjects } from '@/hooks/api/use-projects-api'
+import { useAllChatTabs } from '@/zustand/selectors'
+import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
+import { useNavigate } from '@tanstack/react-router'
+import { useWindowFocus } from '@/hooks/utility-hooks/use-window-focus'
+import { useQueryClient } from '@tanstack/react-query'
+import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 
 type RouterContext = {
   api: APIInterface
@@ -62,28 +69,142 @@ function LoadingScreen() {
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
+  const navigate = useNavigate()
+
+  // Get data from various sources
+  const { data: projectsData } = useGetProjects()
+  const chatTabs = useAllChatTabs()
 
   useHotkeys("mod+k", (evt) => {
     evt.preventDefault()
     setOpen((o) => !o)
   })
 
+  // Filter chats based on search
+  const filteredChats = Object.entries(chatTabs ?? {})
+    .filter(([_, tab]) => {
+      const searchLower = debouncedSearch.toLowerCase()
+      return (
+        tab.activeChatId?.toLowerCase().includes(searchLower) ||
+        tab.messages?.some(msg => 
+          msg.content.toLowerCase().includes(searchLower)
+        )
+      )
+    })
+    .slice(0, 5) // Limit to 5 results
+
+  // Filter projects based on search
+  const filteredProjects = (projectsData?.projects ?? [])
+    .filter(project => {
+      const searchLower = debouncedSearch.toLowerCase()
+      return (
+        project.name.toLowerCase().includes(searchLower) ||
+        project.description?.toLowerCase().includes(searchLower)
+      )
+    })
+    .slice(0, 5) // Limit to 5 results
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Type a command or search..." />
+      <CommandInput 
+        placeholder="Type a command or search..." 
+        value={search}
+        onValueChange={setSearch}
+      />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
+
+        {/* Navigation Commands */}
         <CommandGroup heading="Navigation">
           <NavigationCommands onSelect={() => setOpen(false)} />
         </CommandGroup>
         <CommandSeparator />
+
+        {/* Chat Results */}
+        {filteredChats.length > 0 && (
+          <>
+            <CommandGroup heading="Chats">
+              {filteredChats.map(([id, chat]) => (
+                <CommandItem
+                  key={id}
+                  onSelect={() => {
+                    navigate({ to: '/chat', search: { prefill: false } })
+                    setOpen(false)
+                  }}
+                >
+                  <span>Chat: {chat.activeChatId || 'Untitled'}</span>
+                  {chat.messages && chat.messages.length > 0 && (
+                    <span className="text-muted-foreground text-sm ml-2">
+                      ({chat.messages.length} messages)
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+
+        {/* Project Results */}
+        {filteredProjects.length > 0 && (
+          <>
+            <CommandGroup heading="Projects">
+              {filteredProjects.map(project => (
+                <CommandItem
+                  key={project.id}
+                  onSelect={() => {
+                    navigate({ to: '/projects', search: { projectId: project.id } })
+                    setOpen(false)
+                  }}
+                >
+                  <span>{project.name}</span>
+                  {project.description && (
+                    <span className="text-muted-foreground text-sm ml-2">
+                      {project.description}
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+
+        {/* Quick Actions */}
+        <CommandGroup heading="Quick Actions">
+          <CommandItem onSelect={() => {
+            navigate({ to: '/chat', search: { prefill: false } })
+            setOpen(false)
+          }}>
+            New Chat
+            <CommandShortcut>⌘ N</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={() => {
+            navigate({ to: '/projects' })
+            setOpen(false)
+          }}>
+            New Project
+            <CommandShortcut>⌘ P</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={() => {
+            navigate({ to: '/prompts' })
+            setOpen(false)
+          }}>
+            Manage Prompts
+          </CommandItem>
+        </CommandGroup>
+
+        {/* File Navigation */}
         <CommandGroup heading="File Navigation">
           <CommandItem>
             Open File
             <CommandShortcut>⌘/Ctrl P</CommandShortcut>
           </CommandItem>
         </CommandGroup>
-        <CommandSeparator />
+
+        {/* Global Actions */}
         <CommandGroup heading="Global Actions">
           <CommandItem>Undo <CommandShortcut>⌘/Ctrl Z</CommandShortcut></CommandItem>
           <CommandItem>Redo <CommandShortcut>⌘/Ctrl ⇧ Z</CommandShortcut></CommandItem>
@@ -99,6 +220,21 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootComponent() {
   const { isOpen, hasReceivedInitialState } = useGlobalStateContext()
+  const queryClient = useQueryClient()
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useLocalStorage('autoRefreshEnabled', true)
+
+  // Handle window focus events
+  useWindowFocus({
+    enabled: autoRefreshEnabled,
+    onFocus: async () => {
+      // Invalidate critical queries to trigger a refresh
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['prompts'] }),
+        // Add other critical queries that need refreshing
+      ])
+    },
+  })
 
   // Show loading screen until both WebSocket is connected AND initial state is received
   if (!isOpen || !hasReceivedInitialState) {
@@ -126,17 +262,6 @@ function RootComponent() {
           <GlobalCommandPalette />
         </ComponentErrorBoundary>
 
-        {/* {process.env.NODE_ENV === 'development' && (
-            <TanStackRouterDevtools
-              position="bottom-left"
-              toggleButtonProps={{
-                style: {
-                  marginLeft: '60px',
-                  marginBottom: "15px"
-                }
-              }}
-            />
-          )} */}
         <ComponentErrorBoundary componentName="Development Tools">
           {/* <ReactQueryDevtools /> */}
         </ComponentErrorBoundary>

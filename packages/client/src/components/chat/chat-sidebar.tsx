@@ -29,8 +29,7 @@ export function ChatSidebar() {
     const { data: chatsData, isLoading: isLoadingChats } = useGetChats();
     const deleteChat = useDeleteChat();
     const updateChat = useUpdateChat();
-
-    const chats = chatsData?.data ?? [];
+    const chats = chatsData?.chats ?? [];
 
     async function handleDeleteChat(chatId: string) {
         if (!window.confirm('Are you sure you want to delete this chat?')) return;
@@ -65,6 +64,7 @@ export function ChatSidebar() {
         setEditingChatId(null);
         setEditingTitle('');
     }
+
 
     return (
         <SlidingSidebar

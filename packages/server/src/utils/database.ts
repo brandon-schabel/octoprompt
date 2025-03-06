@@ -1,7 +1,8 @@
 import { Database } from 'bun:sqlite';
 import path from 'path';
 
-let db: Database;
+// Define our database instance with correct typing
+export let db: Database;
 const defaultDbPath = '../sqlite.db';
 
 function createTables(db: Database): void {
@@ -160,12 +161,8 @@ export function setupDatabase(options: SetupDatabaseOptions = {}): Database {
   return db;
 }
 
-
-// Initialize database on module load with default path if not already initialized
-if (!db) {
-  setupDatabase(); // Initialize with default path on server start
-}
-
+// Initialize database at module load time
+setupDatabase();
 
 // Added resetDatabase function that resets the in-memory test database
 export function resetDatabase(): void {
@@ -195,5 +192,3 @@ export function resetDatabase(): void {
     throw error;
   }
 }
-
-export { db };

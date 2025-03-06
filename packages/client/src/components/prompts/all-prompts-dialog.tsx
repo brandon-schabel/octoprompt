@@ -33,8 +33,8 @@ export function PromptsDialogAll({
 
     const [searchTerm, setSearchTerm] = useState("")
 
-    const allPrompts: Prompt[] = data?.prompts || []
-    const projectPrompts = projectPromptData?.prompts || []
+    const allPrompts = data?.prompts ?? []
+    const projectPrompts = projectPromptData?.prompts ?? []
 
     // Filter & sort
     const filteredPrompts = useMemo(() => {

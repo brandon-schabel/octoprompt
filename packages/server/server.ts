@@ -13,6 +13,7 @@ import "@/routes/kv-routes";
 import "@/routes/structured-output-routes";
 import "@/routes/ai-file-change-routes";
 import "@/routes/summarize-files-routes";
+import "@/routes/admin-routes";
 
 import { globalStateSchema } from "shared";
 

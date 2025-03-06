@@ -141,15 +141,46 @@ function ChatPage() {
               value={newMessage}
               onChange={(val) => updateActiveChatTab({ input: val })}
               onSubmit={() => {
-                // Example call to a direct "send message" approach:
-                console.log("[DefaultTab] Send message: ", newMessage);
+                if (newMessage.trim() && chatId) {
+                  handleSendMessage({
+                    userInput: newMessage,
+                    modelSettings: modelSettings
+                  });
+                }
               }}
               placeholder="Type your message..."
               disabled={!currentChat}
               className="w-full"
               preserveFormatting
             />
-            <Button onClick={() => console.log("Sending message...")} disabled={!currentChat}>
+            <Button 
+              onClick={() => {
+                try {
+                  console.log("[Send Button] Clicked with:", {
+                    chatId,
+                    hasInput: !!newMessage.trim(),
+                    modelSettings
+                  });
+                  
+                  if (!newMessage.trim()) {
+                    console.warn("[Send Button] Empty message, not sending");
+                    return;
+                  }
+                  
+                  if (!chatId) {
+                    console.error("[Send Button] No chatId available");
+                    return;
+                  }
+                  
+                  handleSendMessage({
+                    userInput: newMessage,
+                    modelSettings: modelSettings
+                  });
+                } catch (error) {
+                  console.error("[Send Button] Error:", error);
+                }
+              }} 
+              disabled={!currentChat || !newMessage.trim()}>
               Send
             </Button>
           </div>
@@ -159,11 +190,26 @@ function ChatPage() {
   }
 
   async function handleSendWithDebug() {
-    // If you had your `handleSendMessage` from `useSendMessageHook`, you could call it here:
-    await handleSendMessage({
-      userInput: newMessage,
-      modelSettings,
-    });
+    try {
+      console.log("[handleSendWithDebug] Sending message with:", {
+        chatId,
+        message: newMessage,
+        modelSettings
+      });
+      
+      if (!chatId) {
+        console.error("[handleSendWithDebug] No chatId available");
+        return;
+      }
+      
+      // Call the handleSendMessage from the hook
+      await handleSendMessage({
+        userInput: newMessage,
+        modelSettings,
+      });
+    } catch (error) {
+      console.error("[handleSendWithDebug] Error:", error);
+    }
   }
 
   return (
@@ -213,16 +259,47 @@ function ChatPage() {
               <AdaptiveChatInput
                 value={newMessage}
                 onChange={(val) => updateActiveChatTab({ input: val })}
-                onSubmit={handleSendWithDebug}
-                placeholder={hasActiveChat ? "Type your message..." : "Select a chat to start messaging"}
-                disabled={!hasActiveChat}
+                onSubmit={() => {
+                  if (newMessage.trim() && chatId) {
+                    handleSendMessage({
+                      userInput: newMessage,
+                      modelSettings: modelSettings
+                    });
+                  }
+                }}
+                placeholder="Type your message..."
+                disabled={!currentChat}
                 className="w-full"
                 preserveFormatting
               />
               <Button 
-                onClick={handleSendWithDebug} 
-                disabled={!hasActiveChat || !newMessage.trim()}
-              >
+                onClick={() => {
+                  try {
+                    console.log("[Send Button] Clicked with:", {
+                      chatId,
+                      hasInput: !!newMessage.trim(),
+                      modelSettings
+                    });
+                    
+                    if (!newMessage.trim()) {
+                      console.warn("[Send Button] Empty message, not sending");
+                      return;
+                    }
+                    
+                    if (!chatId) {
+                      console.error("[Send Button] No chatId available");
+                      return;
+                    }
+                    
+                    handleSendMessage({
+                      userInput: newMessage,
+                      modelSettings: modelSettings
+                    });
+                  } catch (error) {
+                    console.error("[Send Button] Error:", error);
+                  }
+                }} 
+                disabled={!currentChat || !newMessage.trim()}>
                 Send
               </Button>
             </div>

@@ -1,3 +1,16 @@
+/*
+ * File: use-local-storage.ts
+ * Purpose: Provides a hook for syncing state with localStorage
+ * Key Features:
+ * - Persists state in localStorage
+ * - Type-safe storage and retrieval
+ * - Syncs across tabs/windows
+ * 
+ * Most Recent Changes:
+ * - Initial implementation
+ * - Added cross-tab synchronization
+ */
+
 import { useState, useEffect, useCallback } from 'react';
 
 type SetValueFunction<T> = (value: T | ((prev: T) => T)) => void;
@@ -51,6 +64,12 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, SetValueFu
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
+
+      // Dispatch storage event for cross-tab sync
+      window.dispatchEvent(new StorageEvent('storage', {
+        key,
+        newValue: JSON.stringify(valueToStore),
+      }));
     } catch (error) {
       console.error(`Error setting localStorage key "${key}":`, error);
     }

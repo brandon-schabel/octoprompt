@@ -1,110 +1,13 @@
 import app from '@/server-router';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { db } from '@db';
+import { db } from '@/utils/database';
 import { createChatService } from '@/services/model-providers/chat/chat-service';
+import { ApiError } from 'shared';
+import { unifiedProvider } from '@/services/model-providers/providers/unified-provider-service';
 
 // Initialize the chat service
 const chatService = createChatService();
-
-// Debug endpoint to test JSON parsing
-app.post('/api/debug-json', async (c) => {
-    let bodyText = '';
-    try {
-        bodyText = await c.req.text();
-        console.log('Received raw body:', bodyText);
-        const parsed = JSON.parse(bodyText);
-        console.log('Successfully parsed JSON:', parsed);
-        return c.json({
-            success: true,
-            received: parsed
-        });
-    } catch (e) {
-        console.error('Failed to parse JSON:', e);
-        return c.json({
-            error: 'JSON parse error',
-            rawBody: bodyText,
-            errorMessage: e instanceof Error ? e.message : String(e)
-        }, 400);
-    }
-});
-
-// More comprehensive debugging endpoint
-app.post('/api/debug-request', async (c) => {
-    try {
-        // Log request method and URL
-        console.log('Debug request method:', c.req.method);
-        console.log('Debug request URL:', c.req.url);
-
-        // Log headers
-        const headerEntries: [string, string][] = [];
-        for (const key of Object.keys(c.req.header())) {
-            const value = c.req.header(key);
-            if (value) headerEntries.push([key, value]);
-        }
-        const headers = Object.fromEntries(headerEntries);
-        console.log('Debug request headers:', headers);
-
-        // Try to read different body formats
-        let bodyText = '';
-        let body = null;
-        let formData: { [key: string]: string } = {};
-
-        try {
-            // Try to read as text
-            bodyText = await c.req.text();
-            console.log('Debug request body as text:', bodyText);
-
-            // If content type is JSON, try to parse
-            const contentType = c.req.header('content-type');
-            if (contentType?.includes('application/json')) {
-                try {
-                    body = JSON.parse(bodyText);
-                    console.log('Debug request body parsed as JSON:', body);
-                } catch (jsonError) {
-                    console.error('Failed to parse request body as JSON:',
-                        jsonError instanceof Error ? jsonError.message : String(jsonError));
-                }
-            }
-
-            // Check if it might be form data
-            if (contentType?.includes('application/x-www-form-urlencoded')) {
-                try {
-                    const params = new URLSearchParams(bodyText);
-                    for (const [key, value] of params.entries()) {
-                        formData[key] = value;
-                    }
-                    console.log('Debug request body parsed as form data:', formData);
-                } catch (formError) {
-                    console.error('Failed to parse request body as form data:',
-                        formError instanceof Error ? formError.message : String(formError));
-                }
-            }
-        } catch (e) {
-            console.error('Error reading request body:', e);
-        }
-
-        return c.json({
-            success: true,
-            debugInfo: {
-                method: c.req.method,
-                url: c.req.url,
-                headers,
-                bodyText,
-                parsedJson: body,
-                parsedForm: formData
-            }
-        });
-    } catch (error) {
-        console.error('Error handling debug request:', error);
-        return c.json({
-            error: 'Request debug error',
-            message: error instanceof Error ? error.message : String(error)
-        }, 500);
-    }
-});
-
-// Chat endpoints
 
 // Create a new chat
 app.post('/api/chats',
@@ -144,6 +47,26 @@ app.get('/api/chats', async (c) => {
         }, 500);
     }
 });
+
+// Get chat messages by chat ID
+app.get('/api/chats/:chatId/messages', 
+    zValidator('param', z.object({
+        chatId: z.string()
+    })),
+    async (c) => {
+        try {
+            const { chatId } = c.req.valid('param');
+            const messages = await chatService.getChatMessages(chatId);
+            return c.json({ success: true, data: messages });
+        } catch (error) {
+            console.error(`Failed to get messages for chat ${c.req.param('chatId')}:`, error);
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+            }, 500);
+        }
+    }
+);
 
 // Get chat by ID
 app.get('/api/chats/:chatId',
@@ -338,45 +261,27 @@ app.post('/api/chats/:chatId/fork-from-message/:messageId',
     }
 );
 
-// Environment diagnostic endpoint
-app.get('/api/env-info', async (c) => {
-    try {
-        // Import os only when needed
-        const os = require('os');
-
-        const envInfo = {
-            // Basic info about the runtime
-            nodeVersion: process.version,
-            platform: process.platform,
-            arch: process.arch,
-            env: process.env.NODE_ENV || 'unknown',
-
-            // Bun-specific info if available
-            bunVersion: typeof Bun !== 'undefined' ? Bun.version : 'not running on Bun',
-
-            // Process memory usage
-            memoryUsage: process.memoryUsage(),
-
-            // CPU info
-            cpuCount: os.cpus().length,
-
-            // Current time
-            timestamp: new Date().toISOString(),
-
-            // Some environment variables that are safe to expose
-            safeEnvVars: {
-                PORT: process.env.PORT,
-                HOST: process.env.HOST,
-                DEV: process.env.DEV,
-            }
-        };
-
-        return c.json(envInfo);
-    } catch (error) {
-        console.error('Error getting environment info:', error);
-        return c.json({
-            error: 'Server error',
-            details: error instanceof Error ? error.message : String(error)
-        }, 500);
+// Get available models for a provider
+app.get('/api/models',
+    zValidator('query', z.object({
+        provider: z.string()
+    })),
+    async (c) => {
+        try {
+            const { provider } = c.req.valid('query');
+            
+            console.log(`[/api/models] Request for models from provider: ${provider}`);
+            
+            // Use the unifiedProvider to get the models for the requested provider
+            const data = await unifiedProvider.listModels(provider as any);
+            
+            return c.json({ success: true, models: data });
+        } catch (error) {
+            console.error(`Failed to get models for provider:`, error);
+            return c.json({
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+            }, 500);
+        }
     }
-});
+);

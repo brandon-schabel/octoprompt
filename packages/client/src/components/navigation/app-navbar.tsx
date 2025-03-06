@@ -8,7 +8,7 @@ import { ChatDialog } from "@/components/chat/chat-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
-import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle } from "lucide-react"
+import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
@@ -32,6 +32,8 @@ export function AppNavbar() {
     )
     const isOnChatRoute = matches.some(match => match.routeId === "/chat")
     const isOnKeysRoute = matches.some(match => match.routeId === "/keys")
+    const isOnPromptsRoute = matches.some(match => match.routeId === "/prompts")
+    const isOnAdminRoute = matches.some(match => match.routeId === "/admin")
 
     const { data: theme = 'dark' } = useSettingsField('theme')
 
@@ -149,6 +151,36 @@ export function AppNavbar() {
                         >
                             <KeyIcon className="w-4 h-4" />
                             Keys
+                        </Link>
+                        <div className="h-4 w-[1px] bg-border" />
+
+                        {/* Prompts link */}
+                        <Link
+                            to="/prompts"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                px-3 py-2 rounded-md 
+                ${isOnPromptsRoute
+                                    ? "text-accent-foreground bg-accent/20"
+                                    : "text-foreground hover:text-accent-foreground hover:bg-accent/10"
+                                }`}
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Prompts
+                        </Link>
+                        <div className="h-4 w-[1px] bg-border" />
+
+                        {/* Admin link */}
+                        <Link
+                            to="/admin"
+                            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+                px-3 py-2 rounded-md 
+                ${isOnAdminRoute
+                                    ? "text-accent-foreground bg-accent/20"
+                                    : "text-foreground hover:text-accent-foreground hover:bg-accent/10"
+                                }`}
+                        >
+                            <LayoutDashboardIcon className="w-4 h-4" />
+                            Admin
                         </Link>
                     </div>
 

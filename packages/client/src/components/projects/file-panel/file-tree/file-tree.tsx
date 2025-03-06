@@ -709,7 +709,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
 
     return (
         <div
-            className="h-full overflow-y-auto"
+            className="flex flex-col"
             tabIndex={0}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
@@ -720,26 +720,22 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                 }
             }}
         >
-            <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground shrink-0">
                 <span>Files</span>
                 <Button variant="ghost" size="sm" onClick={copyEntireTree}>
                     Copy Full Tree
                 </Button>
             </div>
-            <div className="p-1">
-                {visibleItems.map((item, idx) => {
-                    const isOpen = item.node._folder
-                        ? openPaths.get(item.path) ?? autoExpand
-                        : false;
-
-                    return (
+            <div className="flex-1 min-h-0">
+                <div className="space-y-0.5 p-1">
+                    {visibleItems.map((item, idx) => (
                         <FileTreeNodeRow
                             key={item.path}
                             ref={(el) => {
                                 rowRefs.current[idx] = el;
                             }}
                             item={item}
-                            isOpen={isOpen}
+                            isOpen={openPaths.get(item.path) ?? autoExpand}
                             isFocused={idx === focusedIndex}
                             onFocus={() => setFocusedIndex(idx)}
                             onToggleOpen={() => toggleOpen(item.path)}
@@ -747,8 +743,8 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                             projectRoot={projectRoot}
                             onRequestAIFileChange={onRequestAIFileChange}
                         />
-                    );
-                })}
+                    ))}
+                </div>
             </div>
         </div>
     );
