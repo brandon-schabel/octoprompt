@@ -399,7 +399,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         />
       )}
 
-      {viewedFile && <FileViewerDialog file={viewedFile} onClose={closeFileViewer} />}
+      {viewedFile && <FileViewerDialog viewedFile={viewedFile} open={!!viewedFile} onClose={closeFileViewer} />}
     </div>
   )
 }
