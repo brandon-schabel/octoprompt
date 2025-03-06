@@ -1,4 +1,3 @@
-import { json } from "@bnk/router";
 import { ApiError } from "shared";
 import { ProjectFile } from "shared/schema";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
@@ -26,10 +25,10 @@ export const getFullProjectSummary = async (projectId: string) => {
     // Fetch all file summaries from the database
     const allFiles = await getFileSummaries(projectId);
     if (!allFiles.length) {
-        return json({
+        return {
             success: false,
             message: "No summaries available. Please summarize files first."
-        });
+        };
     }
 
     // Retrieve global state to get ignore patterns (or other filtering preferences)
