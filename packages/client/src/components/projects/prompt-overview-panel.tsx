@@ -160,7 +160,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }
 
         async function handleUpdatePromptContent(promptId: string, updates: { name: string; content: string }) {
-            await updatePromptMutation.mutateAsync({ id: promptId, updates })
+            await updatePromptMutation.mutateAsync({ promptId, data: updates })
             toast.success('Prompt updated')
             setPromptDialogOpen(false)
         }
@@ -180,16 +180,16 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }))
 
         return (
-            <div className={`flex flex-col overflow-y-auto ${className}`}>
+            <div className="flex flex-col h-full">
                 <SuggestedFilesDialog
                     open={showSuggestions}
                     onClose={() => setShowSuggestions(false)}
                     suggestedFiles={[]} // pass the actual suggested files here if needed
                 />
 
-                <div className="bg-background flex-1 flex flex-col overflow-hidden transition-all duration-300 p-4 border-l">
+                <div className="flex-1 flex flex-col min-h-0 p-4 border-l">
                     {/* 1) Token usage */}
-                    <div className="space-y-2 mb-4 border-b">
+                    <div className="shrink-0 space-y-2 mb-4 border-b">
                         <div className="space-y-1">
                             <div className="text-xs text-muted-foreground">
                                 {totalTokens} of {contextLimit} tokens used ({usagePercentage.toFixed(0)}%)
@@ -199,7 +199,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     </div>
 
                     {/* 2) Prompts list */}
-                    <div className="flex-1 min-h-0">
+                    <div className="flex-1 min-h-0 overflow-hidden">
                         <PromptsList
                             ref={promptsListRef}
                             projectTabId={activeProjectTabId || 'default'}
@@ -207,33 +207,33 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                         />
                     </div>
 
-                    <hr className="my-2" />
+                    <hr className="my-2 shrink-0" />
 
                     {/* 3) User input */}
-                    <div className="h-1/2">
-                        <div className="flex flex-col h-full">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm font-medium">User Input</span>
-                                <InfoTooltip>
-                                    <div className="space-y-2">
-                                        <p>Shortcuts:</p>
-                                        <ul>
-                                            <li>
-                                                - <span className="font-medium">Copy All:</span>
-                                                {' '}<ShortcutDisplay shortcut={['mod', 'shift', 'c']} />
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </InfoTooltip>
-                            </div>
+                    <div className="flex flex-col h-[40%] min-h-0">
+                        <div className="flex items-center gap-2 mb-2 shrink-0">
+                            <span className="text-sm font-medium">User Input</span>
+                            <InfoTooltip>
+                                <div className="space-y-2">
+                                    <p>Shortcuts:</p>
+                                    <ul>
+                                        <li>
+                                            - <span className="font-medium">Copy All:</span>
+                                            {' '}<ShortcutDisplay shortcut={['mod', 'shift', 'c']} />
+                                        </li>
+                                    </ul>
+                                </div>
+                            </InfoTooltip>
+                        </div>
+                        <div className="flex-1 min-h-0 flex flex-col">
                             <ExpandableTextarea
                                 ref={promptInputRef}
                                 placeholder="Type your user prompt here..."
                                 value={localUserPrompt}
                                 onChange={(val) => setLocalUserPrompt(val)}
-                                className="flex-1 bg-background"
+                                className="flex-1 min-h-0 bg-background"
                             />
-                            <div className="flex gap-2 mt-2">
+                            <div className="flex gap-2 mt-2 shrink-0">
                                 <Button onClick={handleCopyAll}>
                                     Copy All
                                 </Button>

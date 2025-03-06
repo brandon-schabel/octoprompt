@@ -256,7 +256,6 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
   return (
     <>
-
       <FileViewerDialog
         open={!!viewedFile}
         viewedFile={viewedFile}
@@ -291,12 +290,13 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         </DialogContent>
       </Dialog>
 
-      <div className={`space-y-2 p-2 items-center flex flex-col ${className}`}>
-        <div className="flex items-center gap-2 mb-2 w-full">
+      <div className={`flex flex-col min-h-0 ${className}`}>
+        <div className="flex items-center gap-2 mb-2 shrink-0">
           <Input
             placeholder="Filter files"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
+            className="flex-1"
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -400,84 +400,87 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
           </DropdownMenu>
         </div>
 
-        {filteredFileIds.map((fileId, index) => {
-          const file = projectFileMap.get(fileId)
-          if (!file) return null
-          const shortcutNumber = index + 1
-          const showShortcut = shortcutNumber <= 9
+        <div className="flex-1 min-h-0">
+          {filteredFileIds.map((fileId, index) => {
+            const file = projectFileMap.get(fileId)
+            if (!file) return null
+            const shortcutNumber = index + 1
+            const showShortcut = shortcutNumber <= 9
 
-          return (
-            <div
-              key={fileId}
-              // @ts-ignore
-              ref={el => itemRefs.current[index] = el}
-              className={cn(
-                "w-full group relative",
-                "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-                "rounded-md",
-                "flex flex-col"
-              )}
-              tabIndex={0}
-              onKeyDown={(e) => handleKeyDown(e, fileId, index)}
-            >
-              {/* Action buttons container with equal spacing */}
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-100 z-10">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setViewedFile(projectFileMap.get(fileId) || null)}
-                  className="h-8 w-8"
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    onRemoveFile(fileId)
-                    toast.success(`Removed file "${file.name}". Press ${formatShortcut('mod+z')} to undo.`)
-                  }}
-                  className="h-8 w-8"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              
+            return (
               <div
+                key={fileId}
+                ref={el => {
+                  itemRefs.current[index] = el;
+                }}
                 className={cn(
-                  "flex flex-col p-2 rounded-md border bg-muted/50",
-                  "transform transition-all duration-100",
-                  "group-hover:translate-x-12",
-                  "group-hover:bg-muted group-hover:border-muted-foreground/20",
-                  "dark:group-hover:bg-muted/70 dark:group-hover:border-muted-foreground/30",
-                  index === focusedIndex && "bg-muted border-muted-foreground/20"
+                  "shrink-0 w-full group relative mb-2 last:mb-0",
+                  "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+                  "rounded-md",
+                  "flex flex-col"
                 )}
+                tabIndex={0}
+                onKeyDown={(e) => handleKeyDown(e, fileId, index)}
               >
-                <div className="flex items-center">
-                  {showShortcut && (
-                    <span className="text-xs text-muted-foreground mr-2 whitespace-nowrap">
-                      {shortcutNumber}
-                    </span>
-                  )}
-                  <span className="text-sm truncate">{file.name}</span>
-                  {file.content && (
-                    <div className="ml-auto">
-                      <Badge className="ml-2">
-                        <FormatTokenCount tokenContent={file.content} />
-                      </Badge>
-                    </div>
-                  )}
+                {/* Action buttons container with equal spacing */}
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-100 z-10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setViewedFile(projectFileMap.get(fileId) || null)}
+                    className="h-8 w-8"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      onRemoveFile(fileId)
+                      toast.success(`Removed file "${file.name}". Press ${formatShortcut('mod+z')} to undo.`)
+                    }}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div>
-                  <span className="text-xs text-muted-foreground truncate">
-                    {file.path.split('/').slice(-3).join('/').slice(-30)}
-                  </span>
+                
+                <div
+                  className={cn(
+                    "flex flex-col p-2 rounded-md border bg-muted/50",
+                    "transform transition-all duration-100",
+                    "group-hover:translate-x-12",
+                    "group-hover:bg-muted group-hover:border-muted-foreground/20",
+                    "dark:group-hover:bg-muted/70 dark:group-hover:border-muted-foreground/30",
+                    index === focusedIndex && "bg-muted border-muted-foreground/20"
+                  )}
+                >
+                  <div className="flex items-center">
+                    {showShortcut && (
+                      <span className="text-xs text-muted-foreground mr-2 whitespace-nowrap">
+                        {shortcutNumber}
+                      </span>
+                    )}
+                    <span className="text-sm truncate">{file.name}</span>
+                    {file.content && (
+                      <div className="ml-auto">
+                        <Badge className="ml-2">
+                          <FormatTokenCount tokenContent={file.content} />
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {file.path.split('/').slice(-3).join('/').slice(-30)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </>
   )

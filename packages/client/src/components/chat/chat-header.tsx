@@ -55,7 +55,7 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
         "displayName",
     );
     const { data: chats } = useGetChats();
-    const activeChatData = chats?.data?.find((c) => c.id === chatId);
+    const activeChatData = chats?.chats?.find((c) => c.id === chatId);
     const linkChatTabToProjectTab = useLinkChatTabToProjectTab();
     const modelControl = useChatModelControl();
     const { provider, setProvider, currentModel, setCurrentModel } = modelControl;
@@ -120,15 +120,15 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
         if (chatActiveTabId) {
             // Get all tab IDs except the one being deleted
             const remainingTabIds = Object.keys(allChatTabs).filter(id => id !== chatActiveTabId);
-            
+
             // Delete the current tab
             deleteChatTab(chatActiveTabId);
-            
+
             // If there are remaining tabs, switch to the first one
             if (remainingTabIds.length > 0) {
                 setActiveChatTab(remainingTabIds[0]);
             }
-            
+
             toast.success("Tab deleted successfully");
         }
         setIsDeleteDialogOpen(false);

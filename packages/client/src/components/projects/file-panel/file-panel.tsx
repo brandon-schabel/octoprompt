@@ -87,10 +87,10 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
 
         // We pass only references + onFileViewerOpen to the Explorer
         return (
-            <div id="outer-area" className={`flex flex-col ${className}`}>
-                <div className="flex-1 space-y-4 transition-all duration-300">
+            <div id="outer-area" className={`flex flex-col h-full overflow-hidden ${className}`}>
+                <div className="flex flex-col flex-1 min-h-0">
                     {data?.project && <ProjectHeader projectData={data.project} />}
-                    <div className="flex-1 overflow-hidden space-y-4 p-4">
+                    <div className="flex-1 overflow-auto p-4 space-y-4">
                         <FileExplorer
                             ref={{
                                 searchInputRef: searchInputRef as RefObject<HTMLInputElement>,

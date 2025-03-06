@@ -1,22 +1,20 @@
-import { router } from 'server-router';
-import { json } from '@bnk/router';
+import app from '@/server-router';
+import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { optimizePrompt } from '@/services/promptimizer-service';
 
-router.post('/api/prompt/optimize', {
-    validation: {
-        // Example: user must provide a "userContext" string
-        body: z.object({
-            userContext: z.string().min(1),
-        }),
-    },
-}, async (_, { body }) => {
-    const { userContext } = body;
-    try {
-        const optimized = await optimizePrompt(userContext);
-        return json({ success: true, optimizedPrompt: optimized });
-    } catch (error) {
-        console.error('Prompt optimize route error:', error);
-        return json({ success: false, error: 'Failed to optimize prompt' }, { status: 500 });
+app.post('/api/prompt/optimize',
+    zValidator('json', z.object({
+        userContext: z.string().min(1),
+    })),
+    async (c) => {
+        const { userContext } = await c.req.valid('json');
+        try {
+            const optimized = await optimizePrompt(userContext);
+            return c.json({ success: true, optimizedPrompt: optimized });
+        } catch (error) {
+            console.error('Prompt optimize route error:', error);
+            return c.json({ success: false, error: 'Failed to optimize prompt' }, 500);
+        }
     }
-});
+);

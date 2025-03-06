@@ -13,12 +13,14 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as TicketsImport } from './routes/tickets'
 import { Route as StructuredOutputDemoImport } from './routes/structured-output-demo'
+import { Route as PromptsImport } from './routes/prompts'
 import { Route as ProjectsImport } from './routes/projects'
 import { Route as ProjectSummarizationImport } from './routes/project-summarization'
 import { Route as KeysImport } from './routes/keys'
 import { Route as FileSearchInterfaceImport } from './routes/file-search-interface'
 import { Route as CounterImport } from './routes/counter'
 import { Route as ChatImport } from './routes/chat'
+import { Route as AdminImport } from './routes/admin'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
@@ -32,6 +34,12 @@ const TicketsRoute = TicketsImport.update({
 const StructuredOutputDemoRoute = StructuredOutputDemoImport.update({
   id: '/structured-output-demo',
   path: '/structured-output-demo',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const PromptsRoute = PromptsImport.update({
+  id: '/prompts',
+  path: '/prompts',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -71,6 +79,12 @@ const ChatRoute = ChatImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const AdminRoute = AdminImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
@@ -86,6 +100,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminImport
       parentRoute: typeof rootRoute
     }
     '/chat': {
@@ -130,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsImport
       parentRoute: typeof rootRoute
     }
+    '/prompts': {
+      id: '/prompts'
+      path: '/prompts'
+      fullPath: '/prompts'
+      preLoaderRoute: typeof PromptsImport
+      parentRoute: typeof rootRoute
+    }
     '/structured-output-demo': {
       id: '/structured-output-demo'
       path: '/structured-output-demo'
@@ -151,24 +179,28 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/counter': typeof CounterRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
+  '/prompts': typeof PromptsRoute
   '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/counter': typeof CounterRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
+  '/prompts': typeof PromptsRoute
   '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
 }
@@ -176,12 +208,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/counter': typeof CounterRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
+  '/prompts': typeof PromptsRoute
   '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
 }
@@ -190,34 +224,40 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/chat'
     | '/counter'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
     | '/projects'
+    | '/prompts'
     | '/structured-output-demo'
     | '/tickets'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/chat'
     | '/counter'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
     | '/projects'
+    | '/prompts'
     | '/structured-output-demo'
     | '/tickets'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/chat'
     | '/counter'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
     | '/projects'
+    | '/prompts'
     | '/structured-output-demo'
     | '/tickets'
   fileRoutesById: FileRoutesById
@@ -225,24 +265,28 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   ChatRoute: typeof ChatRoute
   CounterRoute: typeof CounterRoute
   FileSearchInterfaceRoute: typeof FileSearchInterfaceRoute
   KeysRoute: typeof KeysRoute
   ProjectSummarizationRoute: typeof ProjectSummarizationRoute
   ProjectsRoute: typeof ProjectsRoute
+  PromptsRoute: typeof PromptsRoute
   StructuredOutputDemoRoute: typeof StructuredOutputDemoRoute
   TicketsRoute: typeof TicketsRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   ChatRoute: ChatRoute,
   CounterRoute: CounterRoute,
   FileSearchInterfaceRoute: FileSearchInterfaceRoute,
   KeysRoute: KeysRoute,
   ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
+  PromptsRoute: PromptsRoute,
   StructuredOutputDemoRoute: StructuredOutputDemoRoute,
   TicketsRoute: TicketsRoute,
 }
@@ -258,18 +302,23 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/admin",
         "/chat",
         "/counter",
         "/file-search-interface",
         "/keys",
         "/project-summarization",
         "/projects",
+        "/prompts",
         "/structured-output-demo",
         "/tickets"
       ]
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/admin": {
+      "filePath": "admin.tsx"
     },
     "/chat": {
       "filePath": "chat.tsx"
@@ -288,6 +337,9 @@ export const routeTree = rootRoute
     },
     "/projects": {
       "filePath": "projects.tsx"
+    },
+    "/prompts": {
+      "filePath": "prompts.tsx"
     },
     "/structured-output-demo": {
       "filePath": "structured-output-demo.tsx"

@@ -1,5 +1,6 @@
-import { json } from '@bnk/router';
+import app from '@/server-router';
 import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 
 import {
     getKvValue,
@@ -8,69 +9,63 @@ import {
 } from '@/services/kv-service';
 
 import { kvKeyEnumSchema, KvSchemas } from 'shared/src/kv-validators';
-import { router } from 'server-router';
 import { ApiError } from 'shared/index';
 
 const kvSetSchema = z.object({
     key: kvKeyEnumSchema,
-    value: z.any(), // We'll re-validate with the correct schema in our route
+    value: z.any(), // We'll re-validate with the correct schema in the route
 });
 
-
-router.get(
-    '/api/kv',
-    {
-        validation: {
-            query: z.object({
-                key: kvKeyEnumSchema,
-            }),
-        },
-    },
-    async (_, { query }) => {
-        const { key } = query;
+// Get a KV value
+app.get('/api/kv', 
+    zValidator('query', z.object({
+        key: kvKeyEnumSchema,
+    })),
+    async (c) => {
+        const { key } = c.req.valid('query');
         const value = await getKvValue(key);
-        console.log('value', value);
-        return json({ success: true, key, value });
+        return c.json({ success: true, key, value });
     }
 );
 
-router.post(
-    '/api/kv',
-    {
-        validation: {
-            body: kvSetSchema,
-        },
-    },
-    async (req, { body }) => {
-        const { key, value } = body;
-
+// Set a KV value
+app.post('/api/kv',
+    zValidator('json', kvSetSchema),
+    async (c) => {
+        const { key, value } = c.req.valid('json');
+        
+        // Get the specific schema for this key
+        const schema = KvSchemas[key];
+        if (!schema) {
+            throw new ApiError(`No schema defined for key: ${key}`, 400, 'VALIDATION_ERROR');
+        }
+        
+        // Validate value against its schema
         try {
-            // Validate the "value" with the correct Zod schema for that key
-            const validatedValue = KvSchemas[key].parse(value);
-
+            const validatedValue = schema.parse(value);
             await setKvValue(key, validatedValue);
-            return json({ success: true });
+            return c.json({ success: true, key, value: validatedValue });
         } catch (error) {
             if (error instanceof z.ZodError) {
-                throw new ApiError('Invalid value for key: ' + error.message, 400);
+                return c.json({
+                    success: false,
+                    error: 'Validation Error',
+                    details: error.errors
+                }, 400);
             }
             throw error;
         }
     }
 );
 
-router.delete(
-    '/api/kv/:key',
-    {
-        validation: {
-            params: z.object({
-                key: kvKeyEnumSchema,
-            }),
-        },
-    },
-    async (_, { params }) => {
-        const { key } = params;
+// Delete a KV key
+app.delete('/api/kv',
+    zValidator('query', z.object({
+        key: kvKeyEnumSchema,
+    })),
+    async (c) => {
+        const { key } = c.req.valid('query');
         await deleteKvKey(key);
-        return json({ success: true, key });
+        return c.json({ success: true, key });
     }
 ); 

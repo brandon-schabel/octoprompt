@@ -1,7 +1,7 @@
-import { json } from '@bnk/router';
+import app from '@/server-router';
+import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { ApiError, structuredOutputSchemas, StructuredOutputType } from 'shared/index';
-import { router } from 'server-router';
 import { generateStructuredOutput } from '@/services/structured-output-service';
 
 const structuredOutputRequestSchema = z.object({
@@ -15,14 +15,11 @@ const structuredOutputRequestSchema = z.object({
 
 type StructuredOutputRequest = z.infer<typeof structuredOutputRequestSchema>;
 
-router.post(
+app.post(
     '/api/structured-outputs',
-    {
-        validation: {
-            body: structuredOutputRequestSchema,
-        },
-    },
-    async (_, { body }) => {
+    zValidator('json', structuredOutputRequestSchema),
+    async (c) => {
+        const body = await c.req.valid('json');
         const { outputType, userMessage, ...rest } = body as StructuredOutputRequest;
 
         // Type-check the outputType to ensure it's a valid StructuredOutputType
@@ -37,7 +34,7 @@ router.post(
                 ...rest
             });
 
-            return json({ success: true, data: result });
+            return c.json({ success: true, data: result });
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error;

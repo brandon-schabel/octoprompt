@@ -23,8 +23,8 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
     const { selectedFiles, removeSelectedFile } = useSelectedFiles()
 
     return (
-        <div className="flex flex-col w-full">
-            <div className="flex justify-between items-center mb-2">
+        <div className="flex flex-col h-full min-h-0">
+            <div className="flex justify-between items-center mb-2 shrink-0">
                 <div className="flex text-sm font-medium items-center space-x-2">
                     <Badge variant="secondary">{selectedFiles.length}</Badge>
                     <span>Selected Files</span>
@@ -44,18 +44,20 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
                 </div>
             </div>
             <ScrollArea
-                className="flex-1 min-h-0 border rounded-md max-h-[50vh] items-center flex w-60"
+                className="flex-1 min-h-0 border rounded-md"
                 type="auto"
             >
-                {activeProjectTabId && <SelectedFilesList
-                    ref={selectedFilesListRef}
-                    onRemoveFile={(fileId: string) => {
-                        removeSelectedFile(fileId)
-                    }}
-                    onNavigateLeft={onNavigateToFileTree}
-                    className="w-60"
-                    projectTabId={activeProjectTabId}
-                />}
+                <div className="p-2">
+                    {activeProjectTabId && <SelectedFilesList
+                        ref={selectedFilesListRef}
+                        onRemoveFile={(fileId: string) => {
+                            removeSelectedFile(fileId)
+                        }}
+                        onNavigateLeft={onNavigateToFileTree}
+                        className="w-full"
+                        projectTabId={activeProjectTabId}
+                    />}
+                </div>
             </ScrollArea>
         </div>
     )

@@ -76,7 +76,7 @@ export function FileExplorer({
     const handleSearchChange = useCallback((val: string) => {
         setLocalFileSearch(val)
         debouncedSetFileSearch(val)
-        setShowAutocomplete(!!val.trim())
+        setShowAutocomplete(!!(val || '').trim())
         setAutocompleteIndex(-1)
     }, [debouncedSetFileSearch])
 
@@ -88,7 +88,7 @@ export function FileExplorer({
 
     const filteredFiles = useMemo(() => {
         if (!fileData?.files) return []
-        const trimmed = localFileSearch.trim().toLowerCase()
+        const trimmed = (localFileSearch || '').trim().toLowerCase()
         if (!trimmed) return fileData.files
         if (searchByContent) {
             return fileData.files.filter(f => {
@@ -171,24 +171,24 @@ export function FileExplorer({
                         <Input
                             ref={ref.searchInputRef}
                             placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatShortcut('mod+f')})`}
-                            value={localFileSearch}
+                            value={localFileSearch || ''}
                             onChange={(e) => handleSearchChange(e.target.value)}
                             className="pr-8 w-full"
-                            onFocus={() => setShowAutocomplete(!!localFileSearch.trim())}
+                            onFocus={() => setShowAutocomplete(!!(localFileSearch || '').trim())}
                             onKeyDown={(e) => {
                                 if (e.key === 'Escape') {
                                     ref.searchInputRef.current?.blur()
                                     setShowAutocomplete(false)
                                 } else if (e.key === 'ArrowDown') {
                                     e.preventDefault()
-                                    if (showAutocomplete && localFileSearch.trim()) {
+                                    if (showAutocomplete && (localFileSearch || '').trim()) {
                                         setAutocompleteIndex((prev) => Math.min(suggestions.length - 1, prev + 1))
                                     } else {
                                         ref.fileTreeRef.current?.focusTree()
                                     }
                                 } else if (e.key === 'ArrowUp') {
                                     e.preventDefault()
-                                    if (showAutocomplete && localFileSearch.trim()) {
+                                    if (showAutocomplete && (localFileSearch || '').trim()) {
                                         setAutocompleteIndex((prev) => Math.max(0, prev - 1))
                                     }
                                 } else if (e.key === 'ArrowRight') {
@@ -267,7 +267,7 @@ export function FileExplorer({
                     {renderMobileSelectedFilesDrawerButton()}
                 </div>
 
-                {showAutocomplete && localFileSearch.trim() && suggestions.length > 0 && (
+                {showAutocomplete && (localFileSearch || '').trim() && suggestions.length > 0 && (
                     <ul className="absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto">
                         <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border">
                             Press Enter{allowSpacebarToSelect && ' or Spacebar'} to add highlighted file; Right arrow to preview
@@ -315,9 +315,9 @@ export function FileExplorer({
                     setSearchByContent={setSearchByContent}
                 />
             ) : (
-                <div className="flex-1 lg:flex min-h-0 overflow-hidden">
+                <div className="flex-1 lg:flex min-h-0">
                     <div className="flex flex-col flex-1 min-h-0">
-                        <ScrollArea className="flex-1 min-h-0 border rounded-md max-h-[62vh]">
+                        <ScrollArea className="flex-1 min-h-0 border rounded-md">
                             <FileTree
                                 ref={ref.fileTreeRef}
                                 root={fileTree}
