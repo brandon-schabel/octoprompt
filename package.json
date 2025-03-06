@@ -30,7 +30,7 @@
     "@bnk/ai": "^1.0.14",
     "@bnk/sync-engine": "1.0.0",
     "@bnk/kv-store": "1.0.1",
-    "@bnk/router": "^1.0.8",
+    "": "^1.0.8",
     "@hono/zod-validator": "^0.4.3",
     "hono": "^4.7.4",
     "openai": "^4.78.1",
