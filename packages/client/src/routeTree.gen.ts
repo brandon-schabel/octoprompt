@@ -18,6 +18,7 @@ import { Route as ProjectsImport } from './routes/projects'
 import { Route as ProjectSummarizationImport } from './routes/project-summarization'
 import { Route as KeysImport } from './routes/keys'
 import { Route as FileSearchInterfaceImport } from './routes/file-search-interface'
+import { Route as FileGraphImport } from './routes/file-graph'
 import { Route as CounterImport } from './routes/counter'
 import { Route as ChatImport } from './routes/chat'
 import { Route as AdminImport } from './routes/admin'
@@ -64,6 +65,12 @@ const KeysRoute = KeysImport.update({
 const FileSearchInterfaceRoute = FileSearchInterfaceImport.update({
   id: '/file-search-interface',
   path: '/file-search-interface',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const FileGraphRoute = FileGraphImport.update({
+  id: '/file-graph',
+  path: '/file-graph',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -121,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/counter'
       fullPath: '/counter'
       preLoaderRoute: typeof CounterImport
+      parentRoute: typeof rootRoute
+    }
+    '/file-graph': {
+      id: '/file-graph'
+      path: '/file-graph'
+      fullPath: '/file-graph'
+      preLoaderRoute: typeof FileGraphImport
       parentRoute: typeof rootRoute
     }
     '/file-search-interface': {
@@ -182,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/counter': typeof CounterRoute
+  '/file-graph': typeof FileGraphRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
@@ -196,6 +211,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/counter': typeof CounterRoute
+  '/file-graph': typeof FileGraphRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
@@ -211,6 +227,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/counter': typeof CounterRoute
+  '/file-graph': typeof FileGraphRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
@@ -227,6 +244,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/chat'
     | '/counter'
+    | '/file-graph'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
@@ -240,6 +258,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/chat'
     | '/counter'
+    | '/file-graph'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
@@ -253,6 +272,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/chat'
     | '/counter'
+    | '/file-graph'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
@@ -268,6 +288,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ChatRoute: typeof ChatRoute
   CounterRoute: typeof CounterRoute
+  FileGraphRoute: typeof FileGraphRoute
   FileSearchInterfaceRoute: typeof FileSearchInterfaceRoute
   KeysRoute: typeof KeysRoute
   ProjectSummarizationRoute: typeof ProjectSummarizationRoute
@@ -282,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ChatRoute: ChatRoute,
   CounterRoute: CounterRoute,
+  FileGraphRoute: FileGraphRoute,
   FileSearchInterfaceRoute: FileSearchInterfaceRoute,
   KeysRoute: KeysRoute,
   ProjectSummarizationRoute: ProjectSummarizationRoute,
@@ -305,6 +327,7 @@ export const routeTree = rootRoute
         "/admin",
         "/chat",
         "/counter",
+        "/file-graph",
         "/file-search-interface",
         "/keys",
         "/project-summarization",
@@ -325,6 +348,9 @@ export const routeTree = rootRoute
     },
     "/counter": {
       "filePath": "counter.tsx"
+    },
+    "/file-graph": {
+      "filePath": "file-graph.tsx"
     },
     "/file-search-interface": {
       "filePath": "file-search-interface.tsx"

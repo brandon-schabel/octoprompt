@@ -9,10 +9,12 @@ import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import type { Project } from 'shared'
 import type { ProjectFile } from 'shared/schema'
 import { useGetProject } from '@/hooks/api/use-projects-api'
+import { FileGraphRef } from './file-graph/file-graph'
 
 export type FilePanelRef = {
     focusSearch: () => void
     focusFileTree: () => void
+    focusFileGraph: () => void
     focusPrompts: () => void
 }
 
@@ -32,6 +34,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
         // We still keep references to let parent call `focusSearch`, etc.
         const searchInputRef = useRef<HTMLInputElement>(null)
         const fileTreeRef = useRef<any>(null) // or FileTreeRef
+        const fileGraphRef = useRef<any>(null) // FileGraphRef
         const selectedFilesListRef = useRef<any>(null)
 
         const settings = useSettings()
@@ -48,6 +51,10 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
         useHotkeys('mod+g', (e) => {
             e.preventDefault()
             fileTreeRef.current?.focusTree()
+        })
+        useHotkeys('mod+shift+g', (e) => {
+            e.preventDefault()
+            fileGraphRef.current?.focusGraph()
         })
         useHotkeys('mod+z', (e) => {
             e.preventDefault()
@@ -72,6 +79,9 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
             focusFileTree: () => {
                 fileTreeRef.current?.focusTree()
             },
+            focusFileGraph: () => {
+                fileGraphRef.current?.focusGraph()
+            },
             focusPrompts: () => {
                 // Let the parent handle focusing the prompts panel
             },
@@ -95,6 +105,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
                             ref={{
                                 searchInputRef: searchInputRef as RefObject<HTMLInputElement>,
                                 fileTreeRef,
+                                fileGraphRef,
                                 selectedFilesListRef,
                             }}
                             allowSpacebarToSelect={allowSpacebarToSelect}

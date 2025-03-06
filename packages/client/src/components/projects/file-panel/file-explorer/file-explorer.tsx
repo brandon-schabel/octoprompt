@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { InfoTooltip } from "@/components/info-tooltip"
 import { ShortcutDisplay } from "@/components/app-shortcut-display"
 import { formatShortcut } from "@/lib/shortcuts"
-import { X } from "lucide-react"
+import { X, ListTree, Network, Maximize2 } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
 
 import { useProjectTabField } from "@/zustand/zustand-utility-hooks"
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
@@ -20,6 +21,7 @@ import { useClickAway } from "@/hooks/use-click-away"
 import { SelectedFilesListRef } from "../../selected-files-list"
 import { buildFileTree } from "../../utils/projects-utils"
 import { FileTreeRef, FileTree } from "../file-tree/file-tree"
+import { FileGraphRef, FileGraph } from "../file-graph/file-graph"
 import { SelectedFilesListDisplay } from "./selected-files-list-display"
 import { NoResultsScreen } from "./no-results-screen"
 import { EmptyProjectScreen } from "./empty-project-screen"
@@ -28,10 +30,15 @@ import { AIFileChangeDialog } from "@/components/file-changes/ai-file-change-dia
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { useQueryClient } from '@tanstack/react-query'
 import { PROJECT_FILES_KEYS } from '@/hooks/api/use-projects-api'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+
+// View mode for file representation
+type ViewMode = "tree" | "graph";
 
 type ExplorerRefs = {
     searchInputRef: React.RefObject<HTMLInputElement>
     fileTreeRef: React.RefObject<FileTreeRef>
+    fileGraphRef?: React.RefObject<FileGraphRef>
     selectedFilesListRef: React.RefObject<SelectedFilesListRef>
 }
 
@@ -46,6 +53,7 @@ export function FileExplorer({
     allowSpacebarToSelect,
 }: FileExplorerProps) {
     const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
+    const navigate = useNavigate();
     /**
      * The server will do a fresh sync (via "GET /api/projects/:id/files") 
      * then we store them in React Query's cache.
@@ -53,6 +61,10 @@ export function FileExplorer({
     const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId || '')
     const { data: projectData } = useGetProject(selectedProjectId || '')
     const queryClient = useQueryClient()
+
+    // View mode state
+    const [viewMode, setViewMode] = useState<ViewMode>("tree");
+    const fileGraphRef = useRef<FileGraphRef>(null);
 
     const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
     const closeFileViewer = () => setViewedFile(null)
@@ -148,208 +160,166 @@ export function FileExplorer({
     }
 
     const handleRequestAIFileChange = (filePath: string) => {
-        const file = fileData?.files?.find(f => f.path === filePath)
+        const file = fileData?.files.find(f => f.path === filePath);
         if (file) {
-            setSelectedFile(file)
-            setAiDialogOpen(true)
+            setSelectedFile(file);
+            setAiDialogOpen(true);
         }
+    };
+
+    // View file handler
+    const handleViewFile = (file: ProjectFile) => {
+        setViewedFile(file);
+    };
+
+    // Handle Tab Change
+    const handleViewModeChange = (value: string) => {
+        setViewMode(value as ViewMode);
+    };
+
+    const handleNavigateToFullGraph = () => {
+        navigate({ to: '/file-graph' });
+    };
+
+    if (!fileData || filesLoading) {
+        return (
+            <div className="p-4 space-y-4">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-[300px] w-full" />
+            </div>
+        );
+    }
+
+    if (fileData.files.length === 0) {
+        return (
+            <EmptyProjectScreen 
+                fileSearch={localFileSearch}
+                setFileSearch={setLocalFileSearch} 
+                setSearchByContent={setSearchByContent}
+            />
+        );
+    }
+
+    const totalFilteredFiles = filteredFiles.length;
+    if (localFileSearch && totalFilteredFiles === 0) {
+        return (
+            <NoResultsScreen 
+                fileSearch={localFileSearch}
+                searchByContent={searchByContent}
+                setFileSearch={setLocalFileSearch}
+                setSearchByContent={setSearchByContent}
+            />
+        );
     }
 
     return (
-        <div className="flex flex-col space-y-4 h-full">
-            <FileViewerDialog
-                open={!!viewedFile}
-                viewedFile={viewedFile}
-                onClose={closeFileViewer}
-            />
-            <div
-                ref={searchContainerRef}
-                className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start"
-            >
-                <div className="relative max-w-64 w-full">
-                    <div className="flex items-center gap-2">
-                        <Input
-                            ref={ref.searchInputRef}
-                            placeholder={`Search file ${searchByContent ? 'content' : 'name'}... (${formatShortcut('mod+f')})`}
-                            value={localFileSearch || ''}
-                            onChange={(e) => handleSearchChange(e.target.value)}
-                            className="pr-8 w-full"
-                            onFocus={() => setShowAutocomplete(!!(localFileSearch || '').trim())}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
-                                    ref.searchInputRef.current?.blur()
-                                    setShowAutocomplete(false)
-                                } else if (e.key === 'ArrowDown') {
-                                    e.preventDefault()
-                                    if (showAutocomplete && (localFileSearch || '').trim()) {
-                                        setAutocompleteIndex((prev) => Math.min(suggestions.length - 1, prev + 1))
-                                    } else {
-                                        ref.fileTreeRef.current?.focusTree()
-                                    }
-                                } else if (e.key === 'ArrowUp') {
-                                    e.preventDefault()
-                                    if (showAutocomplete && (localFileSearch || '').trim()) {
-                                        setAutocompleteIndex((prev) => Math.max(0, prev - 1))
-                                    }
-                                } else if (e.key === 'ArrowRight') {
-                                    e.preventDefault()
-                                    if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                                        setViewedFile?.(suggestions[autocompleteIndex])
-                                    }
-                                } else if (e.key === 'Enter' || (allowSpacebarToSelect && e.key === ' ')) {
-                                    if (autocompleteIndex >= 0) {
-                                        e.preventDefault()
-                                    }
-                                    if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                                        toggleFileInSelection(suggestions[autocompleteIndex])
-                                        if (autocompleteIndex < suggestions.length - 1) {
-                                            setAutocompleteIndex((prev) => prev + 1)
-                                        }
-                                    }
-                                }
-                            }}
-                        />
-                    </div>
+        <>
+            <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                    <Input
+                        ref={ref.searchInputRef}
+                        type="text"
+                        className="flex-1"
+                        placeholder="Search files... (Cmd+F)"
+                        value={localFileSearch}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                    />
                     {localFileSearch && (
                         <Button
-                            type="button"
+                            size="icon"
                             variant="ghost"
-                            size="sm"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-accent hover:text-accent-foreground"
-                            onClick={() => {
-                                handleSearchChange('')
-                                setShowAutocomplete(false)
-                                setAutocompleteIndex(-1)
-                                ref.searchInputRef.current?.focus()
-                            }}
-                            aria-label="Clear search"
+                            onClick={() => handleSearchChange("")}
                         >
-                            <X className="h-3 w-3" />
+                            <X className="h-4 w-4" />
                         </Button>
                     )}
                 </div>
 
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSearchByContent((prev) => !prev)}
+                <Tabs
+                    defaultValue="tree"
+                    value={viewMode}
+                    onValueChange={handleViewModeChange}
+                    className="w-full"
                 >
-                    {searchByContent ? 'Search Content' : 'Search Names'}
-                </Button>
+                    <TabsList className="w-full mb-4">
+                        <TabsTrigger value="tree" className="flex-1">
+                            <ListTree className="h-4 w-4 mr-2" />
+                            Tree View
+                        </TabsTrigger>
+                        <TabsTrigger value="graph" className="flex-1">
+                            <Network className="h-4 w-4 mr-2" />
+                            Graph View
+                        </TabsTrigger>
+                    </TabsList>
 
-                <InfoTooltip>
-                    <div className="space-y-2">
-                        <p>File Search Keyboard Shortcuts:</p>
-                        <ul>
-                            <li>
-                                <ShortcutDisplay shortcut={['up', 'down']} /> Navigate suggestions
-                            </li>
-                            <li>
-                                <ShortcutDisplay shortcut={['enter']} /> or {allowSpacebarToSelect && <ShortcutDisplay shortcut={['space']} />} to add highlighted file
-                            </li>
-                            <li>
-                                <ShortcutDisplay shortcut={['right']} /> Preview highlighted file
-                            </li>
-                            <li>
-                                <ShortcutDisplay shortcut={['escape']} /> Close suggestions
-                            </li>
-                            <li>
-                                <ShortcutDisplay shortcut={['mod', 'f']} /> Focus search
-                            </li>
-                            <li>
-                                <ShortcutDisplay shortcut={['mod', 'g']} /> Focus file tree
-                            </li>
-                        </ul>
-                    </div>
-                </InfoTooltip>
+                    {viewMode === 'graph' && (
+                        <div className="flex justify-end mb-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleNavigateToFullGraph}
+                                className="text-xs"
+                            >
+                                <Maximize2 className="h-3.5 w-3.5 mr-1.5" />
+                                Full Page View
+                            </Button>
+                        </div>
+                    )}
 
-                <div className="flex lg:hidden items-center justify-between">
-                    {renderMobileSelectedFilesDrawerButton()}
-                </div>
-
-                {showAutocomplete && (localFileSearch || '').trim() && suggestions.length > 0 && (
-                    <ul className="absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto">
-                        <li className="px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border">
-                            Press Enter{allowSpacebarToSelect && ' or Spacebar'} to add highlighted file; Right arrow to preview
-                        </li>
-                        {suggestions.map((file, index) => {
-                            const isHighlighted = index === autocompleteIndex
-                            const isSelected = selectedFiles.includes(file.id)
-                            return (
-                                <li
-                                    key={file.id}
-                                    className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
-                                        }`}
-                                    onMouseDown={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        toggleFileInSelection(file)
-                                    }}
-                                    onMouseEnter={() => setAutocompleteIndex(index)}
-                                >
-                                    <span>{file.path}</span>
-                                    {isSelected && <Badge variant="secondary">Selected</Badge>}
-                                </li>
-                            )
-                        })}
-                    </ul>
-                )}
-            </div>
-
-            {filesLoading ? (
-                <div>
-                    <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-8 w-2/3" />
-                </div>
-            ) : !fileData?.files?.length ? (
-                <EmptyProjectScreen
-                    fileSearch={localFileSearch}
-                    setFileSearch={setLocalFileSearch}
-                    setSearchByContent={setSearchByContent}
-                />
-            ) : !filteredFiles.length ? (
-                <NoResultsScreen
-                    fileSearch={localFileSearch}
-                    searchByContent={searchByContent}
-                    setFileSearch={setLocalFileSearch}
-                    setSearchByContent={setSearchByContent}
-                />
-            ) : (
-                <div className="flex-1 lg:flex min-h-0">
-                    <div className="flex flex-col flex-1 min-h-0">
-                        <ScrollArea className="flex-1 min-h-0 border rounded-md">
+                    <TabsContent value="tree" className="mt-0">
+                        <div className="h-[500px]">
                             <FileTree
                                 ref={ref.fileTreeRef}
                                 root={fileTree}
-                                onViewFile={setViewedFile}
-                                projectRoot={''}
+                                onViewFile={handleViewFile}
+                                projectRoot={projectData?.project?.path || ""}
                                 resolveImports={resolveImports}
-                                preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
-                                onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
-                                onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
+                                preferredEditor={preferredEditor}
                                 onRequestAIFileChange={handleRequestAIFileChange}
                             />
-                        </ScrollArea>
-                    </div>
-                    <div className="hidden lg:flex lg:flex-col w-64 pl-4 min-h-0">
-                        <SelectedFilesListDisplay
-                            allFilesMap={projectFileMap}
-                            selectedFilesListRef={ref.selectedFilesListRef}
-                            onNavigateToFileTree={() => ref.fileTreeRef.current?.focusTree()}
-                        />
-                    </div>
-                </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="graph" className="mt-0">
+                        <div className="h-[500px]">
+                            <FileGraph
+                                ref={fileGraphRef}
+                                root={fileTree}
+                                onViewFile={handleViewFile}
+                                projectRoot={projectData?.project?.path || ""}
+                                onRequestAIFileChange={handleRequestAIFileChange}
+                            />
+                        </div>
+                    </TabsContent>
+                </Tabs>
+
+                <SelectedFilesListDisplay
+                    allFilesMap={projectFileMap}
+                    selectedFilesListRef={ref.selectedFilesListRef}
+                    onNavigateToFileTree={() => ref.fileTreeRef.current?.focusTree()}
+                />
+            </div>
+
+            {viewedFile && (
+                <FileViewerDialog
+                    key={viewedFile.path}
+                    open={!!viewedFile}
+                    viewedFile={viewedFile}
+                    onClose={closeFileViewer}
+                />
             )}
-            {projectData?.project && <AIFileChangeDialog
+
+            <AIFileChangeDialog
                 open={aiDialogOpen}
                 onOpenChange={setAiDialogOpen}
                 filePath={(projectData?.project?.path || '') + "/" + (selectedFile?.path || '')}
                 onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(selectedProjectId || '') })
-                    setAiDialogOpen(false)
-                    setSelectedFile(undefined)
+                    // Refresh file list after successful AI edit
+                    queryClient.invalidateQueries({
+                        queryKey: PROJECT_FILES_KEYS.list(selectedProjectId || ""),
+                    });
                 }}
-            />}
-        </div>
-    )
+            />
+        </>
+    );
 }
