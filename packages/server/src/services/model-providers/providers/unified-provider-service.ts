@@ -261,8 +261,6 @@ export function createUnifiedProviderService(debugParam = false) {
 
             assistantMessageId = initialAssistantMessage.id;
 
-            console.log({ options })
-
             if(provider === 'openai') {
                 delete options.max_tokens
             }

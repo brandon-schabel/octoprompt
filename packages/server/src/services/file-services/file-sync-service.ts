@@ -9,7 +9,7 @@ export const ALLOWED_EXTENSIONS = [
   '.md', '.txt', '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.conf', '.config',
 
   // Web Development
-  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.mts', '.cjs', '.cts', '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue', '.svelte',
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.mts', '.cjs', '.cts', '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue', '.svelte', '.svg',
 
   // Backend Development
   '.py', '.rb', '.php', '.java', '.go', '.rs', '.cs', '.cpp', '.c', '.h', '.hpp',
