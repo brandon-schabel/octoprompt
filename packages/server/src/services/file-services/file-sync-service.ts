@@ -1,5 +1,5 @@
 import { join, extname, resolve, relative } from 'node:path';
-import { readdirSync, readFileSync, statSync, Dirent } from 'node:fs';
+import { readdirSync, readFileSync, statSync, Dirent, existsSync } from 'node:fs';
 import { db } from "@/utils/database";
 import { mapFile, RawFile } from '../project-service';
 import { Project } from 'shared/schema';

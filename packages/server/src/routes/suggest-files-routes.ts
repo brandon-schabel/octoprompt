@@ -1,5 +1,5 @@
-import { router } from "server-router";
-import { json } from "@bnk/router";
+import app from "@/server-router";
+import { zValidator } from "@hono/zod-validator";
 import { ApiError } from "shared";
 import { z } from "zod";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
@@ -24,24 +24,19 @@ export const FileSuggestionsJsonSchema = {
     additionalProperties: false
 };
 
-router.post(
+app.post(
     "/api/projects/:projectId/suggest-files",
-    {
-        validation: {
-            body: z.object({
-                userInput: z.string().min(1)
-            }),
-            params: z.object({
-                projectId: z.string()
-            })
-        }
-    },
-    async (_, { params, body }) => {
-        const { projectId } = params;
-        const { userInput } = body;
+    zValidator('param', z.object({
+        projectId: z.string()
+    })),
+    zValidator('json', z.object({
+        userInput: z.string().min(1)
+    })),
+    async (c) => {
+        const { projectId } = c.req.valid('param');
+        const { userInput } = await c.req.valid('json');
 
-        const projectSummary = await getFullProjectSummary(projectId)
-
+        const projectSummary = await getFullProjectSummary(projectId);
 
         // The system prompt instructs the model to recommend relevant files
         const systemPrompt = `
@@ -67,7 +62,7 @@ router.post(
     `;
 
         try {
-            const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files']
+            const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files'];
             // 1) Use our structured-output-fetcher to get guaranteed-JSON from the LLM
             const result = await fetchStructuredOutput(openRouterProvider, {
                 userMessage,
@@ -79,11 +74,10 @@ router.post(
                 model: cfg.model,
                 temperature: cfg.temperature,
                 chatId: `project-${projectId}-suggest-files`
-
             });
 
             // 2) Return structured response
-            return json({
+            return c.json({
                 success: true,
                 recommendedFileIds: result.fileIds,
                 // Optionally, you could include the final combined summaries in your response if desired:

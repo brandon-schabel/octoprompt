@@ -33,7 +33,7 @@
   },
   "include": [
     "src",
-    "server-router.ts",
+    "src/server-router.ts",
     "server.ts",
     "build.ts",
     "src/utils/database.ts"

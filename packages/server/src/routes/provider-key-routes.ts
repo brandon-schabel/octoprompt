@@ -1,48 +1,62 @@
-import { router } from "server-router";
-import { json } from '@bnk/router';
+import app from "@/server-router";
+import { zValidator } from '@hono/zod-validator';
 import { ApiError } from 'shared';
 import { providerKeyApiValidation } from "shared";
 import { providerKeyService } from "@/services/model-providers/providers/provider-key-service";
 
+// Create a new key
+app.post("/api/keys",
+    zValidator('json', providerKeyApiValidation.create.body),
+    async (c) => {
+        const body = await c.req.valid('json');
+        const newKey = await providerKeyService.createKey(body);
+        return c.json({ success: true, key: newKey }, 201);
+    }
+);
 
-router.post("/api/keys", {
-    validation: providerKeyApiValidation.create,
-}, async (_, { body }) => {
-    const newKey = await providerKeyService.createKey(body);
-    return json({ success: true, key: newKey }, { status: 201 });
-});
-
-router.get("/api/keys", {}, async () => {
+// List all keys
+app.get("/api/keys", async (c) => {
     const keys = await providerKeyService.listKeys();
-    return json({ success: true, keys });
+    return c.json({ success: true, keys });
 });
 
-router.get("/api/keys/:keyId", {
-    validation: providerKeyApiValidation.getOrDelete,
-}, async (_, { params }) => {
-    const k = await providerKeyService.getKeyById(params.keyId);
-    if (!k) {
-        throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
+// Get a key by ID
+app.get("/api/keys/:keyId",
+    zValidator('param', providerKeyApiValidation.getOrDelete.params),
+    async (c) => {
+        const { keyId } = c.req.valid('param');
+        const k = await providerKeyService.getKeyById(keyId);
+        if (!k) {
+            throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
+        }
+        return c.json({ success: true, key: k });
     }
-    return json({ success: true, key: k });
-});
+);
 
-router.patch("/api/keys/:keyId", {
-    validation: providerKeyApiValidation.update,
-}, async (_, { params, body }) => {
-    const updated = await providerKeyService.updateKey(params.keyId, body);
-    if (!updated) {
-        throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
+// Update a key
+app.patch("/api/keys/:keyId",
+    zValidator('param', providerKeyApiValidation.update.params),
+    zValidator('json', providerKeyApiValidation.update.body),
+    async (c) => {
+        const { keyId } = c.req.valid('param');
+        const body = await c.req.valid('json');
+        const updated = await providerKeyService.updateKey(keyId, body);
+        if (!updated) {
+            throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
+        }
+        return c.json({ success: true, key: updated });
     }
-    return json({ success: true, key: updated });
-});
+);
 
-router.delete("/api/keys/:keyId", {
-    validation: providerKeyApiValidation.getOrDelete,
-}, async (_, { params }) => {
-    const deleted = await providerKeyService.deleteKey(params.keyId);
-    if (!deleted) {
-        throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
+// Delete a key
+app.delete("/api/keys/:keyId",
+    zValidator('param', providerKeyApiValidation.getOrDelete.params),
+    async (c) => {
+        const { keyId } = c.req.valid('param');
+        const deleted = await providerKeyService.deleteKey(keyId);
+        if (!deleted) {
+            throw new ApiError("Key not found", 404, "KEY_NOT_FOUND");
+        }
+        return c.json({ success: true });
     }
-    return json({ success: true });
-});
+);

@@ -1,7 +1,7 @@
 import { serve } from "bun";
 import { join } from "node:path";
 import { statSync } from "node:fs";
-import { router } from "server-router";
+import app from "@/server-router";
 import "@/routes/chat-routes";
 import "@/routes/project-routes";
 import "@/routes/prompt-routes";
@@ -14,25 +14,19 @@ import "@/routes/structured-output-routes";
 import "@/routes/ai-file-change-routes";
 import "@/routes/summarize-files-routes";
 
-import { json } from "@bnk/router";
-import { initKvStore } from "@/services/kv-service";
-
-import {
-  globalStateSchema,
-} from "shared";
+import { globalStateSchema } from "shared";
 
 import { websocketStateAdapter } from "./src/utils/websocket/websocket-state-adapter";
 import { listProjects } from "@/services/project-service";
-import { createWatchersManager } from "@/services/file-services/watchers-manager";
+import { watchersManager } from "@/services/shared-services";
 import { createCleanupService } from "@/services/file-services/cleanup-service";
+import { initKvStore } from "@/services/kv-service";
 
-
-const watchersManager = createWatchersManager();
+// Use the imported watchersManager, remove the local creation
+// export const watchersManager = createWatchersManager();
 const cleanupService = createCleanupService({
   intervalMs: 5 * 60 * 1000,
 });
-
-
 
 const isDevEnv = process.env.DEV === "true";
 const CLIENT_PATH = isDevEnv
@@ -49,9 +43,41 @@ const DEV_PORT = 3000;
 const PROD_PORT = 3579;
 const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
 
+// Register simple health check route
+app.get("/api/health", (c) => c.json({ success: true }));
+
+// Register API state endpoint
+app.get("/api/state", async (c) => {
+  try {
+    const currentState = websocketStateAdapter.getState();
+    return c.json(currentState);
+  } catch (error) {
+    console.error("Error fetching state:", error);
+    return c.json({ error: "Failed to fetch state" }, 500);
+  }
+});
+
+app.post("/api/state", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { key, value } = body as { key: string; value: unknown };
+    const currentState = websocketStateAdapter.getState();
+
+    // Shallow update
+    const newState = { ...currentState, [key]: value };
+    const validated = globalStateSchema.parse(newState);
+
+    // Set & broadcast
+    await websocketStateAdapter.setState(validated, true);
+
+    return c.json(validated);
+  } catch (error) {
+    console.error("Error updating state:", error);
+    return c.json({ error: String(error) }, 400);
+  }
+});
 
 export async function instantiateServer({ port = PORT }: ServerConfig = {}): Promise<Server> {
-
   const server: Server = serve<{ clientId: string }>({
     idleTimeout: 255,
     port,
@@ -68,42 +94,12 @@ export async function instantiateServer({ port = PORT }: ServerConfig = {}): Pro
         return upgraded ? undefined : new Response("WebSocket upgrade failed", { status: 400 });
       }
 
-      router.get("/api/health", {}, async () => json({ success: true }));
-
-      if (url.pathname === "/api/state") {
-        if (req.method === "GET") {
-          try {
-            const currentState = websocketStateAdapter.getState();
-            return Response.json(currentState);
-          } catch (error) {
-            console.error("Error fetching state:", error);
-            return new Response(JSON.stringify({ error: "Failed to fetch state" }), { status: 500 });
-          }
-        }
-        if (req.method === "POST") {
-          try {
-            const body = await req.json();
-            const { key, value } = body as { key: string; value: unknown };
-            const currentState = websocketStateAdapter.getState();
-
-            // Shallow update
-            const newState = { ...currentState, [key]: value };
-            const validated = globalStateSchema.parse(newState);
-
-            // Set & broadcast
-            await websocketStateAdapter.setState(validated, true);
-
-            return Response.json(validated);
-          } catch (error) {
-            console.error("Error updating state:", error);
-            return new Response(JSON.stringify({ error: String(error) }), { status: 400 });
-          }
-        }
-      }
-
       if (url.pathname.startsWith("/api") || url.pathname.startsWith("/auth")) {
-        const routerResponse = await router.handle(req);
-        if (routerResponse) return routerResponse;
+        // Handle the request using Hono
+        const honoResponse = await app.fetch(req);
+        if (honoResponse && honoResponse.status !== 404) {
+          return honoResponse;
+        }
       }
 
       const isStaticFile =
@@ -112,13 +108,14 @@ export async function instantiateServer({ port = PORT }: ServerConfig = {}): Pro
         return serveStatic(url.pathname);
       }
 
-      const routerResponse = await router.handle(req);
-      if (routerResponse && routerResponse?.status !== 404) {
-        return routerResponse;
+      // Handle all other routes with Hono
+      const honoResponse = await app.fetch(req);
+      if (honoResponse && honoResponse.status !== 404) {
+        return honoResponse;
       }
 
       const frontendEnpoints = ["/projects", "/chat"];
-      if (routerResponse?.status === 404 && frontendEnpoints.includes(url.pathname)) {
+      if (honoResponse?.status === 404 && frontendEnpoints.includes(url.pathname)) {
         return serveStatic("index.html");
       }
 
