@@ -1,6 +1,6 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 import { APIInterface } from '@/utils/api/api-interface'
-import { AppNavbar } from "@/components/navigation/app-navbar"
+import { AppNavbar } from '@/components/navigation/app-navbar'
 import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
@@ -11,8 +11,8 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
-} from "@/components/ui/command"
+  CommandShortcut
+} from '@/components/ui/command'
 import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
@@ -21,7 +21,6 @@ import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useAllChatTabs } from '@/zustand/selectors'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
-import { useWindowFocus } from '@/hooks/utility-hooks/use-window-focus'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 
@@ -30,35 +29,33 @@ type RouterContext = {
 }
 
 function LoadingScreen() {
-  const [showError, setShowError] = useState(false);
+  const [showError, setShowError] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setShowError(true);
-    }, 5000); // Show error message after 5 seconds
+      setShowError(true)
+    }, 5000) // Show error message after 5 seconds
 
-    return () => clearTimeout(timer);
-  }, []);
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-background">
-      <div className="relative">
-        <img
-          src="/android-chrome-512x512.png"
-          alt="Logo"
-          className="w-24 h-24 animate-pulse"
-        />
-        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
-          <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
-            <div className="h-full w-1/2 bg-primary animate-[move_1s_ease-in-out_infinite]" />
+    <div className='h-screen w-screen flex flex-col items-center justify-center bg-background'>
+      <div className='relative'>
+        <img src='/android-chrome-512x512.png' alt='Logo' className='w-24 h-24 animate-pulse' />
+        <div className='absolute -bottom-8 left-1/2 -translate-x-1/2'>
+          <div className='h-2 w-24 bg-muted rounded-full overflow-hidden'>
+            <div className='h-full w-1/2 bg-primary animate-[move_1s_ease-in-out_infinite]' />
           </div>
         </div>
-        <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 whitespace-nowrap">
-          <p className="text-muted-foreground text-sm">
+        <div className='absolute -bottom-20 left-1/2 -translate-x-1/2 whitespace-nowrap'>
+          <p className='text-muted-foreground text-sm'>
             {!showError ? (
-              <span className="animate-pulse">Establishing websocket connection</span>
+              <span className='animate-pulse'>Establishing websocket connection</span>
             ) : (
-              <span className="text-destructive">Having trouble connecting. Please check if the server is running.</span>
+              <span className='text-destructive'>
+                Having trouble connecting. Please check if the server is running.
+              </span>
             )}
           </p>
         </div>
@@ -77,7 +74,7 @@ function GlobalCommandPalette() {
   const { data: projectsData } = useGetProjects()
   const chatTabs = useAllChatTabs()
 
-  useHotkeys("mod+k", (evt) => {
+  useHotkeys('mod+k', (evt) => {
     evt.preventDefault()
     setOpen((o) => !o)
   })
@@ -88,36 +85,29 @@ function GlobalCommandPalette() {
       const searchLower = debouncedSearch.toLowerCase()
       return (
         tab.activeChatId?.toLowerCase().includes(searchLower) ||
-        tab.messages?.some(msg => 
-          msg.content.toLowerCase().includes(searchLower)
-        )
+        tab.messages?.some((msg) => msg.content.toLowerCase().includes(searchLower))
       )
     })
     .slice(0, 5) // Limit to 5 results
 
   // Filter projects based on search
   const filteredProjects = (projectsData?.projects ?? [])
-    .filter(project => {
+    .filter((project) => {
       const searchLower = debouncedSearch.toLowerCase()
       return (
-        project.name.toLowerCase().includes(searchLower) ||
-        project.description?.toLowerCase().includes(searchLower)
+        project.name.toLowerCase().includes(searchLower) || project.description?.toLowerCase().includes(searchLower)
       )
     })
     .slice(0, 5) // Limit to 5 results
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput 
-        placeholder="Type a command or search..." 
-        value={search}
-        onValueChange={setSearch}
-      />
+      <CommandInput placeholder='Type a command or search...' value={search} onValueChange={setSearch} />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
         {/* Navigation Commands */}
-        <CommandGroup heading="Navigation">
+        <CommandGroup heading='Navigation'>
           <NavigationCommands onSelect={() => setOpen(false)} />
         </CommandGroup>
         <CommandSeparator />
@@ -125,7 +115,7 @@ function GlobalCommandPalette() {
         {/* Chat Results */}
         {filteredChats.length > 0 && (
           <>
-            <CommandGroup heading="Chats">
+            <CommandGroup heading='Chats'>
               {filteredChats.map(([id, chat]) => (
                 <CommandItem
                   key={id}
@@ -136,9 +126,7 @@ function GlobalCommandPalette() {
                 >
                   <span>Chat: {chat.activeChatId || 'Untitled'}</span>
                   {chat.messages && chat.messages.length > 0 && (
-                    <span className="text-muted-foreground text-sm ml-2">
-                      ({chat.messages.length} messages)
-                    </span>
+                    <span className='text-muted-foreground text-sm ml-2'>({chat.messages.length} messages)</span>
                   )}
                 </CommandItem>
               ))}
@@ -150,8 +138,8 @@ function GlobalCommandPalette() {
         {/* Project Results */}
         {filteredProjects.length > 0 && (
           <>
-            <CommandGroup heading="Projects">
-              {filteredProjects.map(project => (
+            <CommandGroup heading='Projects'>
+              {filteredProjects.map((project) => (
                 <CommandItem
                   key={project.id}
                   onSelect={() => {
@@ -161,9 +149,7 @@ function GlobalCommandPalette() {
                 >
                   <span>{project.name}</span>
                   {project.description && (
-                    <span className="text-muted-foreground text-sm ml-2">
-                      {project.description}
-                    </span>
+                    <span className='text-muted-foreground text-sm ml-2'>{project.description}</span>
                   )}
                 </CommandItem>
               ))}
@@ -173,31 +159,37 @@ function GlobalCommandPalette() {
         )}
 
         {/* Quick Actions */}
-        <CommandGroup heading="Quick Actions">
-          <CommandItem onSelect={() => {
-            navigate({ to: '/chat', search: { prefill: false } })
-            setOpen(false)
-          }}>
+        <CommandGroup heading='Quick Actions'>
+          <CommandItem
+            onSelect={() => {
+              navigate({ to: '/chat', search: { prefill: false } })
+              setOpen(false)
+            }}
+          >
             New Chat
             <CommandShortcut>⌘ N</CommandShortcut>
           </CommandItem>
-          <CommandItem onSelect={() => {
-            navigate({ to: '/projects' })
-            setOpen(false)
-          }}>
+          <CommandItem
+            onSelect={() => {
+              navigate({ to: '/projects' })
+              setOpen(false)
+            }}
+          >
             New Project
             <CommandShortcut>⌘ P</CommandShortcut>
           </CommandItem>
-          <CommandItem onSelect={() => {
-            navigate({ to: '/prompts' })
-            setOpen(false)
-          }}>
+          <CommandItem
+            onSelect={() => {
+              navigate({ to: '/prompts' })
+              setOpen(false)
+            }}
+          >
             Manage Prompts
           </CommandItem>
         </CommandGroup>
 
         {/* File Navigation */}
-        <CommandGroup heading="File Navigation">
+        <CommandGroup heading='File Navigation'>
           <CommandItem>
             Open File
             <CommandShortcut>⌘/Ctrl P</CommandShortcut>
@@ -205,9 +197,13 @@ function GlobalCommandPalette() {
         </CommandGroup>
 
         {/* Global Actions */}
-        <CommandGroup heading="Global Actions">
-          <CommandItem>Undo <CommandShortcut>⌘/Ctrl Z</CommandShortcut></CommandItem>
-          <CommandItem>Redo <CommandShortcut>⌘/Ctrl ⇧ Z</CommandShortcut></CommandItem>
+        <CommandGroup heading='Global Actions'>
+          <CommandItem>
+            Undo <CommandShortcut>⌘/Ctrl Z</CommandShortcut>
+          </CommandItem>
+          <CommandItem>
+            Redo <CommandShortcut>⌘/Ctrl ⇧ Z</CommandShortcut>
+          </CommandItem>
         </CommandGroup>
       </CommandList>
     </CommandDialog>
@@ -215,26 +211,13 @@ function GlobalCommandPalette() {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  component: RootComponent,
+  component: RootComponent
 })
 
 function RootComponent() {
   const { isOpen, hasReceivedInitialState } = useGlobalStateContext()
   const queryClient = useQueryClient()
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useLocalStorage('autoRefreshEnabled', true)
-
-  // Handle window focus events
-  useWindowFocus({
-    enabled: autoRefreshEnabled,
-    onFocus: async () => {
-      // Invalidate critical queries to trigger a refresh
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['projects'] }),
-        queryClient.invalidateQueries({ queryKey: ['prompts'] }),
-        // Add other critical queries that need refreshing
-      ])
-    },
-  })
 
   // Show loading screen until both WebSocket is connected AND initial state is received
   if (!isOpen || !hasReceivedInitialState) {
@@ -243,26 +226,26 @@ function RootComponent() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen w-screen flex flex-col">
-        <header className="flex-none">
-          <ComponentErrorBoundary componentName="Navigation">
+      <div className='h-screen w-screen flex flex-col'>
+        <header className='flex-none'>
+          <ComponentErrorBoundary componentName='Navigation'>
             <AppNavbar />
           </ComponentErrorBoundary>
         </header>
 
         {/* Main content area with proper overflow handling */}
-        <main className="flex-1 min-h-0 overflow-auto">
-          <ComponentErrorBoundary componentName="Main Content">
+        <main className='flex-1 min-h-0 overflow-auto'>
+          <ComponentErrorBoundary componentName='Main Content'>
             <Outlet />
           </ComponentErrorBoundary>
         </main>
 
         {/* Global keyboard-driven UI components */}
-        <ComponentErrorBoundary componentName="Command Palette">
+        <ComponentErrorBoundary componentName='Command Palette'>
           <GlobalCommandPalette />
         </ComponentErrorBoundary>
 
-        <ComponentErrorBoundary componentName="Development Tools">
+        <ComponentErrorBoundary componentName='Development Tools'>
           {/* <ReactQueryDevtools /> */}
         </ComponentErrorBoundary>
       </div>

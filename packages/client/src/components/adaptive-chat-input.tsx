@@ -59,18 +59,25 @@ export function AdaptiveChatInput({
     useEffect(() => {
         if (value !== localValue) {
             setLocalValue(value)
+            console.log("[AdaptiveChatInput] Value changed from parent:", { value, localValue })
         }
     }, [value])
 
     // Check if text is long or multiline => switch to multi-line mode
     useEffect(() => {
-        const shouldBeMultiline = value.length > 100 || value.includes('\n')
+        const shouldBeMultiline = value?.length > 100 || value?.includes('\n')
         setIsMultiline(shouldBeMultiline)
     }, [value])
 
     // Force an immediate change to localValue + parent
     const handleValueChange = (newValue: string) => {
+        console.log("[AdaptiveChatInput] handleValueChange:", { newValue, oldValue: localValue })
         setLocalValue(newValue)
+        
+        // Call parent's onChange immediately for more responsive UI
+        onChange(newValue)
+        
+        // Also keep the debounced version for performance with rapid typing
         debouncedOnChange(newValue)
     }
 
@@ -85,8 +92,8 @@ export function AdaptiveChatInput({
         const target = e.target as HTMLTextAreaElement | HTMLInputElement
         let newValue = target.value
 
-        const start = target.selectionStart ?? newValue.length
-        const end = target.selectionEnd ?? newValue.length
+        const start = target.selectionStart ?? newValue?.length
+        const end = target.selectionEnd ?? newValue?.length
 
         newValue = newValue.slice(0, start) + pasteText + newValue.slice(end)
 
@@ -118,6 +125,8 @@ export function AdaptiveChatInput({
         const element = isMultiline ? textareaRef.current : inputRef.current
         const finalValue = element?.value ?? localValue
 
+        console.log("[AdaptiveChatInput] handleEnterPress with finalValue:", finalValue);
+
         // Make sure parent sees the final typed text right away
         onChange(finalValue)
         setLocalValue(finalValue)
@@ -128,7 +137,7 @@ export function AdaptiveChatInput({
 
     // Decide if we trigger submit on Enter
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-        // If multiline is false, then hitting Enter means “submit”
+        // If multiline is false, then hitting Enter means "submit"
         if (e.key === 'Enter' && !e.shiftKey && !isMultiline) {
             handleEnterPress(e)
         }
@@ -155,7 +164,13 @@ export function AdaptiveChatInput({
     const baseProps = {
         value: localValue,
         onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            handleValueChange(e.target.value)
+            const newValue = e.target.value;
+            // Update local state
+            setLocalValue(newValue);
+            // Call parent immediately for responsive UI
+            onChange(newValue);
+            // Also keep debounced version for performance
+            debouncedOnChange(newValue);
         },
         onKeyDown: handleKeyDown,
         onPaste: handlePaste,

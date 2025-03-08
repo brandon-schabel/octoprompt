@@ -1,11 +1,11 @@
 // File: packages/client/src/components/chat/hooks/chat-hooks.tsx
-import { useForkChat } from "@/hooks/api/use-chat-ai-api";
+import { useForkChat } from "@/hooks/api/use-chat-api";
 import { useCallback, useState } from "react";
-import { useGetMessages } from "@/hooks/api/use-chat-ai-api";
+import { useGetMessages } from "@/hooks/api/use-chat-api";
 import { ChatMessage } from "shared/schema";
-import { useSendMessage } from "@/hooks/api/use-chat-ai-api";
+import { useSendMessage } from "@/hooks/api/use-chat-api";
 import { APIProviders, ChatModelSettings } from "shared";
-import { useCreateChat } from "@/hooks/api/use-chat-ai-api";
+import { useCreateChat } from "@/hooks/api/use-chat-api";
 import { useChatTabField } from "@/zustand/zustand-utility-hooks";
 import { useChatModelParams } from "./use-chat-model-params";
 

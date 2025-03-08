@@ -1,14 +1,12 @@
-import { useState, useEffect } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Settings } from "lucide-react";
-import { useChatModelParams } from "../hooks/use-chat-model-params";
-import { useDebounce } from "@/hooks/utility-hooks/use-debounce";
-import { EditableNumberDisplay } from "./editable-number-display";
-import { modelsTempNotAllowed } from "shared";
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Settings2Icon } from 'lucide-react';
+import { useChatModelParams } from '../hooks/use-chat-model-params';
+import { useSynchronizedState } from '@/zustand/zustand-utility-hooks';
 
 /**
  * A popover for adjusting advanced model parameters (temperature, max_tokens, etc.)
@@ -17,7 +15,7 @@ import { modelsTempNotAllowed } from "shared";
 export function ModelSettingsPopover() {
     const [open, setOpen] = useState(false);
 
-    // Get the isTempDisabled flag from the hook
+    // Get the model parameters and setter functions from the hook
     const {
         settings,
         setTemperature,
@@ -29,264 +27,152 @@ export function ModelSettingsPopover() {
         isTempDisabled,
     } = useChatModelParams();
 
-    /**
-     * 2) Local states that reflect slider positions.
-     *    We initialize them from the global settings, then
-     *    only update the global state after a short debounce.
-     */
-    const [localTemperature, setLocalTemperature] = useState(settings.temperature);
-    const [localMaxTokens, setLocalMaxTokens] = useState(settings.max_tokens);
-    const [localTopP, setLocalTopP] = useState(settings.top_p);
-    const [localFreqPenalty, setLocalFreqPenalty] = useState(settings.frequency_penalty);
-    const [localPresPenalty, setLocalPresPenalty] = useState(settings.presence_penalty);
-    const [localStream, setLocalStream] = useState(settings.stream);
+    // Use synchronized state hooks for each parameter with proper debouncing
+    const [temperature, updateTemperature] = useSynchronizedState(
+        settings.temperature,
+        setTemperature,
+        300,
+        isTempDisabled
+    );
 
-    /**
-     * 3) Keep local states in sync with global changes (in case
-     *    something else updates them externally).
-     */
-    useEffect(() => {
-        setLocalTemperature(settings.temperature);
-    }, [settings.temperature]);
+    const [maxTokens, updateMaxTokens] = useSynchronizedState(
+        settings.max_tokens,
+        setMaxTokens
+    );
 
-    useEffect(() => {
-        setLocalMaxTokens(settings.max_tokens);
-    }, [settings.max_tokens]);
+    const [topP, updateTopP] = useSynchronizedState(
+        settings.top_p,
+        setTopP
+    );
 
-    useEffect(() => {
-        setLocalTopP(settings.top_p);
-    }, [settings.top_p]);
+    const [freqPenalty, updateFreqPenalty] = useSynchronizedState(
+        settings.frequency_penalty,
+        setFreqPenalty
+    );
 
-    useEffect(() => {
-        setLocalFreqPenalty(settings.frequency_penalty);
-    }, [settings.frequency_penalty]);
+    const [presPenalty, updatePresPenalty] = useSynchronizedState(
+        settings.presence_penalty,
+        setPresPenalty
+    );
 
-    useEffect(() => {
-        setLocalPresPenalty(settings.presence_penalty);
-    }, [settings.presence_penalty]);
+    const [stream, updateStream] = useSynchronizedState(
+        settings.stream,
+        setStream
+    );
 
-    useEffect(() => {
-        setLocalStream(settings.stream);
-    }, [settings.stream]);
-
-    /**
-     * 4) Debounce the global set* calls
-     */
-    const debouncedUpdateTemperature = useDebounce((val: number) => setTemperature(val), 500);
-    const debouncedUpdateMaxTokens = useDebounce((val: number) => setMaxTokens(val), 500);
-    const debouncedUpdateTopP = useDebounce((val: number) => setTopP(val), 500);
-    const debouncedUpdateFreqPenalty = useDebounce((val: number) => setFreqPenalty(val), 500);
-    const debouncedUpdatePresPenalty = useDebounce((val: number) => setPresPenalty(val), 500);
-    const debouncedUpdateStream = useDebounce((val: boolean) => setStream(val), 500);
-
-    /**
-     * 5) Handle slider/toggle changes:
-     *    - Update local state immediately so the UI is responsive
-     *    - Debounce the global state update to limit re-renders
-     */
     function handleTempChange(value: number[]) {
-        const next = value[0];
-        setLocalTemperature(next);
-        debouncedUpdateTemperature(next);
+        updateTemperature(value[0]);
     }
 
     function handleMaxTokensChange(value: number[]) {
-        const next = value[0];
-        setLocalMaxTokens(next);
-        debouncedUpdateMaxTokens(next);
+        updateMaxTokens(value[0]);
     }
 
     function handleTopPChange(value: number[]) {
-        const next = value[0];
-        setLocalTopP(next);
-        debouncedUpdateTopP(next);
+        updateTopP(value[0]);
     }
 
     function handleFreqPenaltyChange(value: number[]) {
-        const next = value[0];
-        setLocalFreqPenalty(next);
-        debouncedUpdateFreqPenalty(next);
+        updateFreqPenalty(value[0]);
     }
 
     function handlePresPenaltyChange(value: number[]) {
-        const next = value[0];
-        setLocalPresPenalty(next);
-        debouncedUpdatePresPenalty(next);
+        updatePresPenalty(value[0]);
     }
 
     function handleStreamToggle(checked: boolean) {
-        setLocalStream(checked);
-        debouncedUpdateStream(checked);
+        updateStream(checked);
     }
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1">
-                    <Settings className="h-4 w-4" />
-                    Model Settings
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                    <Settings2Icon className="h-4 w-4" />
                 </Button>
             </PopoverTrigger>
+            <PopoverContent className="w-80">
+                <div className="space-y-4">
+                    <h4 className="font-medium leading-none mb-3">Model Settings</h4>
 
-            <PopoverContent className="p-4 w-[320px] space-y-4">
-                <div className="flex flex-col gap-3">
-                    <h3 className="font-semibold text-sm">Model Parameters</h3>
-
-                    {/* Temperature */}
-                    <div className="flex items-center justify-between">
-                        <Label 
-                            htmlFor="temp" 
-                            className={`text-sm w-24 ${isTempDisabled ? 'text-muted-foreground' : ''}`}
-                        >
-                            Temperature
-                            {isTempDisabled && (
-                                <span className="block text-xs text-muted-foreground">
-                                    Not configurable
-                                </span>
-                            )}
-                        </Label>
-                        <div className="flex-1 ml-2">
-                            <div className="flex items-center">
-                                <Slider
-                                    id="temp"
-                                    value={[localTemperature]}
-                                    onValueChange={handleTempChange}
-                                    min={0}
-                                    max={1}
-                                    step={0.01}
-                                    disabled={isTempDisabled}
-                                    className={isTempDisabled ? 'opacity-50' : ''}
-                                />
-                                <EditableNumberDisplay
-                                    value={localTemperature}
-                                    onChange={(value) => handleTempChange([value])}
-                                    min={0}
-                                    max={1}
-                                    step={0.01}
-                                    formatValue={(val) => val.toFixed(2)}
-                                    isDisabled={isTempDisabled}
-                                />
-                            </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="temperature">Temperature: {temperature.toFixed(2)}</Label>
                         </div>
+                        <Slider
+                            id="temperature"
+                            disabled={isTempDisabled}
+                            min={0}
+                            max={2}
+                            step={0.01}
+                            value={[temperature]}
+                            onValueChange={handleTempChange}
+                        />
                     </div>
 
-                    {/* Max Tokens */}
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="maxTokens" className="text-sm w-24">
-                            Max Tokens
-                        </Label>
-                        <div className="flex-1 ml-2">
-                            <div className="flex items-center">
-                                <Slider
-                                    id="maxTokens"
-                                    value={[localMaxTokens]}
-                                    onValueChange={handleMaxTokensChange}
-                                    min={1}
-                                    max={196000}
-                                    step={1000}
-                                />
-                                <EditableNumberDisplay
-                                    value={localMaxTokens}
-                                    onChange={(value) => handleMaxTokensChange([value])}
-                                    min={1}
-                                    max={196000}
-                                    step={1000}
-                                />
-                            </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="max_tokens">Max Tokens: {maxTokens}</Label>
                         </div>
+                        <Slider
+                            id="max_tokens"
+                            min={256}
+                            max={4096}
+                            step={1}
+                            value={[maxTokens]}
+                            onValueChange={handleMaxTokensChange}
+                        />
                     </div>
 
-                    {/* Top P */}
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="topP" className="text-sm w-24">
-                            Top P
-                        </Label>
-                        <div className="flex-1 ml-2">
-                            <div className="flex items-center">
-                                <Slider
-                                    id="topP"
-                                    value={[localTopP]}
-                                    onValueChange={handleTopPChange}
-                                    min={0}
-                                    max={1}
-                                    step={0.01}
-                                />
-                                <EditableNumberDisplay
-                                    value={localTopP}
-                                    onChange={(value) => handleTopPChange([value])}
-                                    min={0}
-                                    max={1}
-                                    step={0.01}
-                                    formatValue={(val) => val.toFixed(2)}
-                                />
-                            </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="top_p">Top P: {topP.toFixed(2)}</Label>
                         </div>
+                        <Slider
+                            id="top_p"
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={[topP]}
+                            onValueChange={handleTopPChange}
+                        />
                     </div>
 
-                    {/* Frequency Penalty */}
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="freqPenalty" className="text-sm w-24">
-                            Freq. Penalty
-                        </Label>
-                        <div className="flex-1 ml-2">
-                            <div className="flex items-center">
-                                <Slider
-                                    id="freqPenalty"
-                                    value={[localFreqPenalty]}
-                                    onValueChange={handleFreqPenaltyChange}
-                                    min={-2}
-                                    max={2}
-                                    step={0.01}
-                                />
-                                <EditableNumberDisplay
-                                    value={localFreqPenalty}
-                                    onChange={(value) => handleFreqPenaltyChange([value])}
-                                    min={-2}
-                                    max={2}
-                                    step={0.01}
-                                    formatValue={(val) => val.toFixed(2)}
-                                />
-                            </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="frequency_penalty">Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
                         </div>
+                        <Slider
+                            id="frequency_penalty"
+                            min={-2}
+                            max={2}
+                            step={0.01}
+                            value={[freqPenalty]}
+                            onValueChange={handleFreqPenaltyChange}
+                        />
                     </div>
 
-                    {/* Presence Penalty */}
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="presPenalty" className="text-sm w-24">
-                            Pres. Penalty
-                        </Label>
-                        <div className="flex-1 ml-2">
-                            <div className="flex items-center">
-                                <Slider
-                                    id="presPenalty"
-                                    value={[localPresPenalty]}
-                                    onValueChange={handlePresPenaltyChange}
-                                    min={-2}
-                                    max={2}
-                                    step={0.01}
-                                />
-                                <EditableNumberDisplay
-                                    value={localPresPenalty}
-                                    onChange={(value) => handlePresPenaltyChange([value])}
-                                    min={-2}
-                                    max={2}
-                                    step={0.01}
-                                    formatValue={(val) => val.toFixed(2)}
-                                />
-                            </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="presence_penalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
                         </div>
+                        <Slider
+                            id="presence_penalty"
+                            min={-2}
+                            max={2}
+                            step={0.01}
+                            value={[presPenalty]}
+                            onValueChange={handlePresPenaltyChange}
+                        />
                     </div>
 
-                    {/* Stream Toggle */}
-                    <div className="flex items-center justify-between pt-2 border-t border-muted/30">
-                        <Label htmlFor="stream" className="text-sm">
-                            Stream
-                        </Label>
+                    <div className="flex items-center space-x-2">
                         <Switch
                             id="stream"
-                            checked={localStream}
+                            checked={stream}
                             onCheckedChange={handleStreamToggle}
                         />
+                        <Label htmlFor="stream">Enable Streaming</Label>
                     </div>
                 </div>
             </PopoverContent>
