@@ -1,5 +1,5 @@
 import { db } from "@/utils/database";
-import { GlobalState, DEFAULT_MODEL_CONFIGS } from "shared";
+import { GlobalState, DEFAULT_MODEL_CONFIGS, APIProviders } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
@@ -28,56 +28,6 @@ export async function shouldSummarizeFile(projectId: string, filePath: string): 
     return true;
 }
 
-/**
- * Exposed for unit testing. Summarizes a single file if it meets conditions.
- */
-export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
-    if (!(await shouldSummarizeFile(file.projectId, file.path))) return;
-    const fileContent = file.content || "";
-    if (!fileContent.trim()) return;
-    if (fileContent.length > 50000) return;
-
-    const systemPrompt = `
-## You are a coding assistant that specializes in concise code summaries.
-1) Provide a short overview of what the file does.
-2) Outline main exports (functions/classes).
-3) No suggestions or code blocks; strictly textual, minimal fluff.
-`;
-
-    const cfg = DEFAULT_MODEL_CONFIGS["summarize-file"];
-    try {
-        const stream = await unifiedProvider.processMessage({
-            chatId: "fileSummaryChat",
-            userMessage: fileContent.slice(0, 50000),
-            provider: "openrouter",
-            options: {
-                model: cfg.model,
-                max_tokens: cfg.max_tokens,
-                temperature: cfg.temperature,
-            },
-            systemMessage: systemPrompt,
-        });
-
-        const reader = stream.getReader();
-        let text = "";
-        const decoder = new TextDecoder();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            text += decoder.decode(value);
-        }
-
-        const summaryText = text.trim();
-        if (!summaryText) return;
-
-        const updateStmt = db.prepare("UPDATE files SET summary = ?, summary_last_updated_at = ? WHERE id = ?");
-        updateStmt.run(summaryText, new Date().toISOString(), file.id);
-
-    } catch {
-        // handle error quietly
-    }
-}
 
 export async function getFileSummaries(
     projectId: string,
@@ -93,6 +43,71 @@ export async function getFileSummaries(
     const stmt = db.prepare(query);
     return stmt.all(...params) as ProjectFile[];
 }
+
+/**
+ * Exposed for unit testing. Summarizes a single file if it meets conditions.
+ */
+export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
+    if (!(await shouldSummarizeFile(file.projectId, file.path))) return;
+    const fileContent = file.content || "";
+    if (!fileContent.trim()) return;
+    // Consider adjusting max length based on model context window
+    const maxContentLength = 50000; // Example limit
+    if (fileContent.length > maxContentLength) {
+        console.warn(`File ${file.path} too long (${fileContent.length} chars), skipping summarization.`);
+        return;
+    }
+
+    const systemPrompt = `
+  ## You are a coding assistant specializing in concise code summaries.
+  1. Provide a short overview of what the file does.
+  2. Outline main exports (functions/classes).
+  3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
+  `;
+
+    // Determine provider and model from config (ensure config keys match APIProviders enum)
+    const cfg = DEFAULT_MODEL_CONFIGS["summarize-file"]; // e.g., { provider: 'openai', model: 'gpt-3.5-turbo', temperature: 0.2, max_tokens: 256 }
+    const provider = cfg.provider as APIProviders || 'openai'; // Default if not specified
+    const modelId = cfg.model;
+
+    if (!modelId) {
+        console.error(`Model not configured for summarize-file task.`);
+        return;
+    }
+
+    try {
+        // Use generateSingleText for non-streaming summarization
+        const summaryText = await unifiedProvider.generateSingleText({
+            provider: provider,
+            systemMessage: systemPrompt,
+            // Use prompt for single input, or messages if more complex context needed
+            prompt: fileContent.slice(0, maxContentLength),
+            options: {
+                model: modelId,
+                // Use maxTokens from Vercel AI SDK options type
+                maxTokens: cfg.max_tokens, // Map max_tokens to maxTokens
+                temperature: cfg.temperature,
+            }
+        });
+
+        const trimmedSummary = summaryText.trim();
+        if (!trimmedSummary) {
+            console.warn(`Summarization resulted in empty output for ${file.path}`);
+            return;
+        }
+
+        // Database update logic remains the same
+        const updateStmt = db.prepare("UPDATE files SET summary = ?, summary_last_updated_at = ? WHERE id = ?");
+        updateStmt.run(trimmedSummary, new Date().toISOString(), file.id);
+        console.log(`Successfully summarized file: ${file.path}`);
+
+    } catch (error) {
+        console.error(`Error summarizing file ${file.path} using ${provider}/${modelId}:`, error);
+        // handle error quietly or rethrow/log based on desired behavior
+    }
+}
+
+// getFileSummaries remains the same
 
 /**
  * Summarize multiple files, respecting concurrency.
@@ -112,23 +127,38 @@ export async function summarizeFiles(
     for (const chunk of chunks) {
         const results = await Promise.all(
             chunk.map(async (f) => {
-                const canSummarize = await shouldSummarizeFile(f.projectId, f.path);
-                if (!canSummarize) return false;
-                const fileUpdatedAt = new Date(f.updatedAt).getTime();
-                const summaryAt = f.summaryLastUpdatedAt ? f.summaryLastUpdatedAt.getTime() : 0;
-                const stale = fileUpdatedAt > summaryAt;
-                if (!f.summary || stale) {
-                    await summarizeSingleFile(f);
+                try {
+                    const canSummarize = await shouldSummarizeFile(f.projectId, f.path);
+                    if (!canSummarize) return { success: false, skipped: true }; // Skipped by filter
+
+                    const fileUpdatedAt = new Date(f.updatedAt).getTime();
+                    const summaryAt = f.summaryLastUpdatedAt ? new Date(f.summaryLastUpdatedAt).getTime() : 0;
+                    const stale = fileUpdatedAt > summaryAt;
+
+                    if (!f.summary || stale) {
+                        // Check content length *before* calling summarizeSingleFile
+                        if ((f.content || "").length > 50000) { // Use same limit as single file
+                            console.warn(`Skipping summarization for long file in batch: ${f.path}`);
+                            return { success: false, skipped: true };
+                        }
+                        await summarizeSingleFile(f); // This now handles errors internally
+                        return { success: true, skipped: false }; // Assume success if no error thrown, or modify summarizeSingleFile to return status
+                    } else {
+                        return { success: false, skipped: true }; // Skipped because summary is fresh
+                    }
+                } catch (error) {
+                    console.error(`Error in batch summarization for file ${f.path}:`, error);
+                    return { success: false, skipped: false }; // Count as attempt but failed
                 }
-                return true;
             })
         );
-        includedCount += results.filter(Boolean).length;
-        skippedCount += results.filter((val) => !val).length;
+        // Adjust counting based on return object
+        includedCount += results.filter(r => r.success).length;
+        skippedCount += results.filter(r => r.skipped).length;
     }
+    console.log(`File summarization batch complete for project ${projectId}. Included: ${includedCount}, Skipped: ${skippedCount}`);
     return { included: includedCount, skipped: skippedCount };
 }
-
 /**
  * Forces summarization of files regardless of existing summary.
  */

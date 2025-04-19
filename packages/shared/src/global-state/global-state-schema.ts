@@ -11,10 +11,8 @@ export const EDITOR_OPTIONS = [
 
 export type EditorType = typeof EDITOR_OPTIONS[number]["value"];
 
-// ------------------------------------------------------------------
-// Provider enum
-// ------------------------------------------------------------------
-export const providerSchema = z.enum([
+
+export const AI_API_PROVIDERS = [
     "openai",
     "openrouter",
     "lmstudio",
@@ -24,7 +22,12 @@ export const providerSchema = z.enum([
     "anthropic",
     "groq",
     "together",
-]);
+] as const;
+
+// ------------------------------------------------------------------
+// Provider enum
+// ------------------------------------------------------------------
+export const providerSchema = z.enum(AI_API_PROVIDERS);
 export type APIProviders = z.infer<typeof providerSchema>;
 export const apiProviders = providerSchema.options;
 

@@ -14,33 +14,33 @@ const generateChangeSchema = z.object({
 app.post("/api/file/ai-change", async (c) => {
   try {
     const body = await c.req.json();
-    
+
     // Validate the request body
     const result = generateChangeSchema.safeParse(body);
     if (!result.success) {
-      return c.json({ 
-        success: false, 
+      return c.json({
+        success: false,
         error: "Invalid request body",
         details: result.error.issues
       }, 400);
     }
-    
+
     const validatedBody = result.data;
-    const changeResult = await generateFileChange({ 
-      filePath: validatedBody.filePath, 
+    const changeResult = await generateFileChange({
+      filePath: validatedBody.filePath,
       prompt: validatedBody.prompt,
-      db 
+      db
     });
-    
-    return c.json({ 
-      success: true, 
-      result: changeResult 
+
+    return c.json({
+      success: true,
+      result: changeResult
     });
   } catch (error) {
     console.error("Error generating file change:", error);
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : String(error) 
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
     }, 500);
   }
 });
@@ -50,32 +50,32 @@ app.get("/api/file/ai-change/:fileChangeId", async (c) => {
   try {
     const fileChangeId = c.req.param('fileChangeId');
     const changeId = parseInt(fileChangeId, 10);
-    
+
     if (isNaN(changeId)) {
-      return c.json({ 
-        success: false, 
-        error: "Invalid file change ID" 
+      return c.json({
+        success: false,
+        error: "Invalid file change ID"
       }, 400);
     }
-    
+
     const fileChange = await getFileChange(db, changeId);
-    
-    if (!fileChange) {
-      return c.json({ 
-        success: false, 
-        error: "File change not found" 
+
+    if (fileChange === null) {
+      return c.json({
+        success: false,
+        error: "File change not found"
       }, 404);
     }
-    
-    return c.json({ 
-      success: true, 
-      fileChange 
+
+    return c.json({
+      success: true,
+      fileChange
     });
   } catch (error) {
     console.error("Error retrieving file change:", error);
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : String(error) 
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
     }, 500);
   }
 });
@@ -85,25 +85,25 @@ app.post("/api/file/ai-change/:fileChangeId/confirm", async (c) => {
   try {
     const fileChangeId = c.req.param('fileChangeId');
     const changeId = parseInt(fileChangeId, 10);
-    
+
     if (isNaN(changeId)) {
-      return c.json({ 
-        success: false, 
-        error: "Invalid file change ID" 
+      return c.json({
+        success: false,
+        error: "Invalid file change ID"
       }, 400);
     }
-    
+
     const result = await confirmFileChange(db, changeId);
-    
-    return c.json({ 
-      success: true, 
-      result 
+
+    return c.json({
+      success: true,
+      result
     });
   } catch (error) {
     console.error("Error confirming file change:", error);
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : String(error) 
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
     }, 500);
   }
-}); 
+});

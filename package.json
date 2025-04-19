@@ -27,7 +27,6 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@bnk/ai": "^1.0.14",
     "@bnk/sync-engine": "1.0.0",
     "@bnk/kv-store": "1.0.1",
     "@hono/zod-validator": "^0.4.3",
@@ -36,5 +35,6 @@
     "picomatch": "^4.0.2",
     "shared": "workspace:*",
     "zod": "^3.24.1"
-  }
+  },
+  "private": true
 }

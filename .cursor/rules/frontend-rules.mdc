@@ -1,6 +1,7 @@
 ---
 description: It's helpful for building features on the client.
 globs: packages/client/src/**/*.tsx, client/src/**/*.tsx
+alwaysApply: false
 ---
 # Frontend Cursor Rules: Extended Guidelines
 
@@ -196,7 +197,7 @@ const router = createRouter({
 // 3. BNK config for client messages
 // (We can also define message shapes in a separate file)
 const bnkConfig = {
-  url: "ws://localhost:3000/ws",
+  url: "ws://localhost:3147/ws",
   debug: true,
   messageHandlers: {
     state_update: (msg) => {

@@ -40,7 +40,7 @@ type ServerConfig = {
 
 type Server = ReturnType<typeof serve>;
 
-const DEV_PORT = 3000;
+const DEV_PORT = 3147;
 const PROD_PORT = 3579;
 const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
 

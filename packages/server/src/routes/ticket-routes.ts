@@ -8,7 +8,6 @@ import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { FileSuggestionsZodSchema } from "@/routes/suggest-files-routes";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
 import { createTicket, getTicketById, updateTicket, deleteTicket, linkFilesToTicket, suggestTasksForTicket, listTicketsByProject, listTicketsWithTaskCount, createTask, getTasks, updateTask, deleteTask, reorderTasks, autoGenerateTasksFromOverview, getTasksForTickets, listTicketsWithTasks } from "@/services/ticket-service";
-import { openRouterProvider } from "@/services/model-providers/providers/open-router-provider";
 
 // Create a ticket
 app.post("/api/tickets",
@@ -272,8 +271,8 @@ app.post(
 
         const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files-ticket']
 
-        // 4) Use your structured-output-fetcher or direct parse
-        const result = await fetchStructuredOutput(openRouterProvider, {
+        // 4) Use structured-output-fetcher with our imported provider
+        const result = await fetchStructuredOutput({
             userMessage,
             systemMessage: systemPrompt,
             zodSchema: FileSuggestionsZodSchema,

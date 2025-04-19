@@ -8,6 +8,7 @@ import { APIProviders, ChatModelSettings } from "shared";
 import { useCreateChat } from "@/hooks/api/use-chat-ai-api";
 import { useChatTabField } from "@/zustand/zustand-utility-hooks";
 import { useChatModelParams } from "./use-chat-model-params";
+import { useAIChat } from "@/hooks/use-ai-chat";
 
 export type TempChatMessage = ChatMessage & { tempId?: string };
 
@@ -59,8 +60,8 @@ interface UseSendMessageArgs {
 }
 
 /**
- * Hook to handle sending chat messages, with streaming updates.
- * We incorporate the new model settings from `useChatModelParams`.
+ * Legacy hook to handle sending chat messages, with streaming updates.
+ * Consider using the new useChatWithAI hook for enhanced streaming capabilities.
  */
 export function useSendChatMessage(args: UseSendMessageArgs) {
     const {
@@ -72,8 +73,6 @@ export function useSendChatMessage(args: UseSendMessageArgs) {
         setPendingMessages,
         refetchMessages,
     } = args;
-
-
 
     const sendMessageMutation = useSendMessage();
 
@@ -199,6 +198,66 @@ export function useSendChatMessage(args: UseSendMessageArgs) {
     return { handleSendMessage };
 }
 
+/**
+ * New hook that combines the AI SDK's useChat with your existing chat logic
+ */
+export function useChatWithAI({
+    chatId,
+    provider,
+    model,
+    excludedMessageIds,
+    clearUserInput,
+    systemMessage,
+}: {
+    chatId: string;
+    provider: APIProviders;
+    model: string;
+    excludedMessageIds: string[];
+    clearUserInput: () => void;
+    systemMessage?: string;
+}) {
+    // Use the enhanced AI chat hook
+    const {
+        messages,
+        handleSubmit,
+        isLoading,
+        error,
+        pendingMessages,
+        setPendingMessages,
+        refetchMessages,
+        isFetching,
+        setInput,
+    } = useAIChat({
+        chatId,
+        provider,
+        model,
+        excludedMessageIds,
+        systemMessage,
+    });
+
+    // Wrap the handleSubmit to also clear user input in parent component
+    const handleSendMessage = useCallback(
+        ({ userInput, modelSettings }: { userInput: string; modelSettings: ChatModelSettings }) => {
+            if (!userInput.trim()) return;
+
+            handleSubmit({ userInput, modelSettings });
+            clearUserInput();
+        },
+        [handleSubmit, clearUserInput]
+    );
+
+    return {
+        messages,
+        isLoading,
+        error,
+        pendingMessages,
+        setPendingMessages,
+        refetchMessages,
+        isFetching,
+        handleSendMessage,
+    };
+}
+
 export function useChatMessages(chatId: string) {
     const [pendingMessages, setPendingMessages] = useState<TempChatMessage[]>([]);
 
@@ -219,7 +278,7 @@ export function useChatMessages(chatId: string) {
         serverMsgs: TempChatMessage[],
         pending: TempChatMessage[]
     ): TempChatMessage[] {
-        // Filter out any “temp-*” IDs from the server
+        // Filter out any "temp-*" IDs from the server
         const filteredServer = serverMsgs.filter(
             (msg) => !msg.id.startsWith("temp-")
         );

@@ -22,7 +22,7 @@ export const ALLOWED_EXTENSIONS = [
   '.sql', '.prisma', '.graphql', '.gql',
 
   // Other Languages
-  '.zig', '.lua', '.r', '.kt', '.swift', '.m', '.mm', '.scala', '.clj', '.ex', '.exs',
+  '.zig', '.lua', '.r', '.kt', '.swift', '.m', '.mm', '.scala', '.clj', '.ex', '.exs', 'ino',
 
   // Environment & Version
   '.env', '.env.example', '.python-version', '.nvmrc', '.ruby-version',

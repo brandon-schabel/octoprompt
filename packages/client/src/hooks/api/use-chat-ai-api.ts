@@ -25,7 +25,7 @@ type ModelsResponse = {
 };
 
 // Add to your existing CHAT_KEYS
-const CHAT_KEYS = {
+export const CHAT_KEYS = {
     all: ['chat'] as const,
     chats: () => [...CHAT_KEYS.all, 'chats'] as const,
     chat: (id: string) => [...CHAT_KEYS.chats(), id] as const,

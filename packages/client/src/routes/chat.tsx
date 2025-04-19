@@ -17,7 +17,7 @@ import {
   useActiveChatTab,
   useAllChatTabs,
 } from "@/zustand/selectors";
-import { useSendChatMessage, useChatMessages } from "@/components/chat/hooks/chat-hooks";
+import { useChatWithAI } from "@/components/chat/hooks/chat-hooks";
 import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared/index";
 import { useChatModelParams } from "@/components/chat/hooks/use-chat-model-params";
 
@@ -46,25 +46,23 @@ function ChatPage() {
 
   const { settings: modelSettings } = useChatModelParams();
 
-  // Get messages and pending state management
+  // Use our enhanced AI chat hook
   const {
     messages,
     pendingMessages,
     setPendingMessages,
+    handleSendMessage,
     refetchMessages,
     isFetching,
-  } = useChatMessages(chatId);
-
-  // Initialize send message hook with proper state management
-  const { handleSendMessage } = useSendChatMessage({
+    isLoading,
+  } = useChatWithAI({
     chatId,
     provider: activeChatTabState?.provider as APIProviders ?? defaultModelConfigs.provider,
     model: activeChatTabState?.model ?? defaultModelConfigs.model,
     excludedMessageIds: activeChatTabState?.excludedMessageIds ?? [],
     clearUserInput: () => updateActiveChatTab({ input: "" }),
-    pendingMessages,
-    setPendingMessages,
-    refetchMessages,
+    // TODO: Add system message
+    // systemMessage: activeChatTabState?.systemMessage,
   });
 
   const updateActiveChatTab = useUpdateActiveChatTab();
@@ -153,7 +151,7 @@ function ChatPage() {
               className="w-full"
               preserveFormatting
             />
-            <Button 
+            <Button
               onClick={() => {
                 try {
                   console.log("[Send Button] Clicked with:", {
@@ -161,17 +159,17 @@ function ChatPage() {
                     hasInput: !!newMessage.trim(),
                     modelSettings
                   });
-                  
+
                   if (!newMessage.trim()) {
                     console.warn("[Send Button] Empty message, not sending");
                     return;
                   }
-                  
+
                   if (!chatId) {
                     console.error("[Send Button] No chatId available");
                     return;
                   }
-                  
+
                   handleSendMessage({
                     userInput: newMessage,
                     modelSettings: modelSettings
@@ -179,37 +177,14 @@ function ChatPage() {
                 } catch (error) {
                   console.error("[Send Button] Error:", error);
                 }
-              }} 
-              disabled={!currentChat || !newMessage.trim()}>
-              Send
+              }}
+              disabled={!currentChat || !newMessage.trim() || isLoading}>
+              {isLoading ? "Sending..." : "Send"}
             </Button>
           </div>
         </div>
       </div>
     );
-  }
-
-  async function handleSendWithDebug() {
-    try {
-      console.log("[handleSendWithDebug] Sending message with:", {
-        chatId,
-        message: newMessage,
-        modelSettings
-      });
-      
-      if (!chatId) {
-        console.error("[handleSendWithDebug] No chatId available");
-        return;
-      }
-      
-      // Call the handleSendMessage from the hook
-      await handleSendMessage({
-        userInput: newMessage,
-        modelSettings,
-      });
-    } catch (error) {
-      console.error("[handleSendWithDebug] Error:", error);
-    }
   }
 
   return (
@@ -268,11 +243,11 @@ function ChatPage() {
                   }
                 }}
                 placeholder="Type your message..."
-                disabled={!currentChat}
+                disabled={!currentChat || isLoading}
                 className="w-full"
                 preserveFormatting
               />
-              <Button 
+              <Button
                 onClick={() => {
                   try {
                     console.log("[Send Button] Clicked with:", {
@@ -280,17 +255,17 @@ function ChatPage() {
                       hasInput: !!newMessage.trim(),
                       modelSettings
                     });
-                    
+
                     if (!newMessage.trim()) {
                       console.warn("[Send Button] Empty message, not sending");
                       return;
                     }
-                    
+
                     if (!chatId) {
                       console.error("[Send Button] No chatId available");
                       return;
                     }
-                    
+
                     handleSendMessage({
                       userInput: newMessage,
                       modelSettings: modelSettings
@@ -298,9 +273,9 @@ function ChatPage() {
                   } catch (error) {
                     console.error("[Send Button] Error:", error);
                   }
-                }} 
-                disabled={!currentChat || !newMessage.trim()}>
-                Send
+                }}
+                disabled={!currentChat || !newMessage.trim() || isLoading}>
+                {isLoading ? "Sending..." : "Send"}
               </Button>
             </div>
           </div>

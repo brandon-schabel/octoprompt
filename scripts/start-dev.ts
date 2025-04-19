@@ -19,7 +19,7 @@ async function startServices() {
     });
     processes.push(clientProcess);
 
-    // Start server (runs on 3000)
+    // Start server (runs on 3147)
     console.log("🚀 Starting server...");
     const serverProcess = Bun.spawn(["bun", "run", "dev"], {
       cwd: join(rootDir, "packages", "server"),

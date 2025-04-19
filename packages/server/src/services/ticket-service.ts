@@ -1,13 +1,12 @@
 // packages/server/src/services/ticket-service.ts
 
 import { db } from "@/utils/database";
-import { CreateTicketBody, UpdateTicketBody, ApiError } from "shared";
+import { CreateTicketBody, UpdateTicketBody, ApiError, APIProviders } from "shared";
 import { promptsMap } from "@/utils/prompts-map";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 import { z } from "zod";
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
-import { openRouterProvider } from "./model-providers/providers/open-router-provider";
 import {
   TicketReadSchema,
   TicketTaskReadSchema,
@@ -18,6 +17,7 @@ import {
 } from "shared/src/utils/database/db-schemas";
 import { Ticket, TicketTask, TicketFile } from "shared/schema";
 import { randomUUID } from "crypto";
+import { unifiedProvider } from "./model-providers/providers/unified-provider-service";
 
 // const { tickets, ticketFiles, ticketTasks, files } = schema;
 
@@ -79,16 +79,21 @@ ${projectSummary}
 `;
 
   const cfg = DEFAULT_MODEL_CONFIGS['suggest-ticket-tasks'];
+  if (!cfg.model) {
+    throw new ApiError(`Model not configured for 'suggest-ticket-tasks'`, 500, "CONFIG_ERROR");
+  }
 
-  const result = await fetchStructuredOutput(openRouterProvider, {
-    userMessage,
+  const result = await unifiedProvider.generateStructuredData({
+    provider: cfg.provider as APIProviders || 'openai',
+    prompt: userMessage,
     systemMessage: defaultTaskPrompt,
-    zodSchema: TaskSuggestionsZodSchema,
-    schemaName: "TaskSuggestions",
-    model: cfg.model,
-    temperature: cfg.temperature,
-    chatId: `ticket-${ticket.id}-suggest-tasks`,
+    schema: TaskSuggestionsZodSchema,
+    options: {
+      model: cfg.model,
+      temperature: cfg.temperature,
+    },
   });
+
   return result;
 }
 

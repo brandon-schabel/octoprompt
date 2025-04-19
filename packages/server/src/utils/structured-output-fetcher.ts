@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { zodToStructuredJsonSchema, toOpenRouterSchema } from "shared/src/structured-outputs/structured-output-utils";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
-import { createOpenRouterProviderService } from "@/services/model-providers/providers/open-router-provider";
+import { createUnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
 
-const structuredOutputModelDefaults = DEFAULT_MODEL_CONFIGS['fetch-structured-output']
+// Create a singleton instance of the provider service
+const unifiedProvider = createUnifiedProviderService(process.env.NODE_ENV !== 'production');
 
 /**
  * Strips triple backticks and also removes JS/JSON-style comments & trailing commas.
@@ -79,7 +80,7 @@ export function extractJsonObjects(text: string): string[] {
 /**
  * Attempts to parse the structured JSON from the raw output.
  * First, it tries to parse the cleaned text.
- * If that fails or doesn’t yield an object/array, it falls back to extracting
+ * If that fails or doesn't yield an object/array, it falls back to extracting
  * the last valid JSON substring from the raw output.
  */
 export function parseStructuredJson(rawOutput: string): unknown {
@@ -115,29 +116,29 @@ export interface StructuredOutputRequest<T> {
     temperature?: number;
     chatId?: string;
     tempId?: string;
+    jsonSchema?: any; // For OpenRouter compatibility
 }
 
 export async function fetchStructuredOutput<T>(
-    openRouterProvider: ReturnType<typeof createOpenRouterProviderService>,
     params: StructuredOutputRequest<T>
 ): Promise<T> {
     const {
         userMessage,
         systemMessage,
         zodSchema,
+        jsonSchema,
         schemaName = "StructuredResponse",
-        model = structuredOutputModelDefaults.model,
-        temperature = structuredOutputModelDefaults.temperature,
+        model = DEFAULT_MODEL_CONFIGS['fetch-structured-output'].model,
+        temperature = DEFAULT_MODEL_CONFIGS['fetch-structured-output'].temperature,
         chatId = "structured-chat",
         tempId,
     } = params;
 
     // 1) Convert Zod schema -> JSON schema -> OpenRouter schema
-    const jsonSchema = zodToStructuredJsonSchema(zodSchema);
-    const openRouterSchema = toOpenRouterSchema(jsonSchema);
+    const openRouterSchema = jsonSchema || toOpenRouterSchema(zodToStructuredJsonSchema(zodSchema));
 
-    // 2) Begin SSE request
-    const stream = await openRouterProvider.processMessage({
+    // 2) Begin streaming request
+    const streamResult = await unifiedProvider.processMessage({
         chatId,
         userMessage,
         provider: "openrouter",
@@ -157,8 +158,8 @@ export async function fetchStructuredOutput<T>(
         },
     });
 
-    // 3) Accumulate SSE lines into `rawOutput`, removing SSE prefix
-    const reader = stream.getReader();
+    // 3) Process the stream to get the full response
+    const reader = streamResult.getReader();
     const decoder = new TextDecoder();
     let rawOutput = "";
 
@@ -199,3 +200,6 @@ export async function fetchStructuredOutput<T>(
 
     return parsed.data;
 }
+
+// Export the singleton instance for use in other files
+export const provider = unifiedProvider;
