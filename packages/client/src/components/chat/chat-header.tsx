@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { FolderOpen, Copy, LinkIcon, Pencil, Trash2, Icon } from "lucide-react";
+import { FolderOpen, Copy, LinkIcon, Pencil, Trash2, Icon, PlusIcon } from "lucide-react";
 import { tab } from '@lucide/lab';
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Chat } from 'shared/index';
 
 import { useGetChats } from "@/hooks/api/use-chat-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
@@ -37,7 +38,7 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
     if (!chatId) {
         return null;
     }
-
+    
     const [showLinkSettings, setShowLinkSettings] = useState(false);
     const [projectSearch, setProjectSearch] = useState("");
     const [isEditing, setIsEditing] = useState(false);
@@ -55,7 +56,7 @@ export function ChatHeader({ chatId, excludedMessageIds = [], }: ChatHeaderProps
         "displayName",
     );
     const { data: chats } = useGetChats();
-    const activeChatData = chats?.chats?.find((c) => c.id === chatId);
+    const activeChatData = chats?.find((c: Chat) => c.id === chatId);
     const linkChatTabToProjectTab = useLinkChatTabToProjectTab();
     const modelControl = useChatModelControl();
     const { provider, setProvider, currentModel, setCurrentModel } = modelControl;

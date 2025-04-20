@@ -1,16 +1,11 @@
-// File: packages/client/src/components/chat/hooks/chat-hooks.tsx
 import { useForkChat } from "@/hooks/api/use-chat-api";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useGetMessages } from "@/hooks/api/use-chat-api";
-import { ChatMessage } from "shared/schema";
-import { useSendMessage } from "@/hooks/api/use-chat-api";
 import { APIProviders, ChatModelSettings } from "shared";
 import { useCreateChat } from "@/hooks/api/use-chat-api";
 import { useChatTabField } from "@/zustand/zustand-utility-hooks";
 import { useChatModelParams } from "./use-chat-model-params";
 import { useAIChat } from "@/hooks/use-ai-chat";
-
-export type TempChatMessage = ChatMessage & { tempId?: string };
 
 export function useClearExcludedMessages(tabId: string) {
     const { mutate: setExcludedMessageIds } = useChatTabField(
@@ -48,165 +43,17 @@ export function useCreateChatHandler() {
     return { handleCreateChat };
 }
 
-interface UseSendMessageArgs {
-    chatId: string;
-    provider: APIProviders;
-    model: string;
-    excludedMessageIds: string[];     // For partial context
-    clearUserInput: () => void;       // A function to reset input in global state
-    pendingMessages: TempChatMessage[];
-    setPendingMessages: React.Dispatch<React.SetStateAction<TempChatMessage[]>>;
-    refetchMessages: () => Promise<any>;
-}
-
 /**
- * Legacy hook to handle sending chat messages, with streaming updates.
- * Consider using the new useChatWithAI hook for enhanced streaming capabilities.
- */
-export function useSendChatMessage(args: UseSendMessageArgs) {
-    const {
-        chatId,
-        provider,
-        model,
-        excludedMessageIds,
-        clearUserInput,
-        setPendingMessages,
-        refetchMessages,
-    } = args;
-
-    const sendMessageMutation = useSendMessage();
-
-    const handleSendMessage = useCallback(async ({
-        userInput,
-        modelSettings,
-    }: {
-        userInput: string;
-        modelSettings: ChatModelSettings
-    }) => {
-        const {
-            temperature,
-            max_tokens,
-            top_p,
-            frequency_penalty,
-            presence_penalty,
-            stream,
-        } = modelSettings;
-
-        if (!userInput.trim()) {
-            console.log("[handleSendMessage] Aborting - no input");
-            return;
-        }
-
-        // Clear input from global state
-        clearUserInput();
-
-        // Create local pending user + assistant messages
-        const userTempId = `temp-user-${Date.now()}`;
-        const assistantTempId = `temp-assistant-${Date.now()}`;
-
-        const userMessage: TempChatMessage = {
-            id: userTempId,
-            role: "user",
-            content: userInput.trim(),
-            chatId,
-            createdAt: new Date(),
-            tempId: userTempId,
-        };
-
-        const assistantMessage: TempChatMessage = {
-            id: assistantTempId,
-            role: "assistant",
-            content: "",
-            chatId,
-            createdAt: new Date(),
-            tempId: assistantTempId,
-        };
-
-        // Push them to local pending
-        setPendingMessages((prev) => [...prev, userMessage, assistantMessage]);
-
-        try {
-            // Pass the new settings into `options`
-            const streamResponse = await sendMessageMutation.mutateAsync({
-                message: userInput.trim(),
-                chatId,
-                provider,
-                tempId: assistantTempId,
-                options: {
-                    model,
-                    stream,
-                    temperature,
-                    max_tokens,
-                    top_p,
-                    frequency_penalty,
-                    presence_penalty,
-                },
-                excludedMessageIds,
-            });
-
-            // Stream the response and update assistant message content
-            const reader = streamResponse.getReader();
-            let assistantContent = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const text = new TextDecoder().decode(value);
-                if (text) {
-                    assistantContent += text;
-                    setPendingMessages((prev) =>
-                        prev.map((m) =>
-                            m.id === assistantTempId
-                                ? { ...m, content: assistantContent }
-                                : m
-                        )
-                    );
-                }
-            }
-
-            // Once streaming finishes, re-fetch from server + clear local pending
-            await refetchMessages();
-            setPendingMessages([]);
-        } catch (error) {
-            console.error("[handleSendMessage] Streaming error:", error);
-            setPendingMessages((prev) =>
-                prev.map((m) =>
-                    m.id === assistantTempId
-                        ? {
-                            ...m,
-                            content:
-                                error instanceof Error
-                                    ? `Error: ${error.message}`
-                                    : "Error: Failed to get response.",
-                        }
-                        : m
-                )
-            );
-        }
-    }, [
-        chatId,
-        provider,
-        model,
-        excludedMessageIds,
-        clearUserInput,
-        setPendingMessages,
-        sendMessageMutation,
-        refetchMessages,
-    ]);
-
-    return { handleSendMessage };
-}
-
-/**
- * New hook that combines the AI SDK's useChat with your existing chat logic
+ * Simplified hook for AI chat interaction using Vercel AI SDK and React Query.
+ * Assumes useAIChat is updated to handle sending only new messages via `append`
+ * and triggers `refetchMessages` in its `onFinish` callback.
  */
 export function useChatWithAI({
     chatId,
     provider,
     model,
     excludedMessageIds,
-    clearUserInput,
+    clearUserInput, // Keep this to clear input from the parent component (ChatPage)
     systemMessage,
 }: {
     chatId: string;
@@ -216,51 +63,96 @@ export function useChatWithAI({
     clearUserInput: () => void;
     systemMessage?: string;
 }) {
-    // Use the enhanced AI chat hook
+    // Fetch canonical messages using React Query
     const {
-        messages,
-        handleSubmit,
-        isLoading,
-        error,
-        pendingMessages,
-        setPendingMessages,
-        refetchMessages,
+        data: messagesData,
+        refetch: refetchMessages,
         isFetching,
-        setInput,
+        isError: isMessagesError,
+    } = useGetMessages(chatId);
+
+    // Use the underlying AI chat hook for API interaction and stream handling
+    const {
+        // messages: aiMessages, // We no longer rely on the SDK's internal message state for display
+        // handleSubmit, // We use append directly
+        append,
+        isLoading, // This reflects the Vercel SDK's loading state (during streaming)
+        error: aiError,
+        stop,
+        // input, handleInputChange, setInput // Not needed if input is managed by Zustand
     } = useAIChat({
+        // Pass necessary config to the underlying hook
         chatId,
         provider,
         model,
         excludedMessageIds,
         systemMessage,
+        // Ensure useAIChat's internal onFinish calls refetchMessages()
+        // TODO: Uncomment this once useAIChat is updated to accept onFinish
+        /*
+        onFinish: () => {
+            console.log("[useChatWithAI -> useAIChat.onFinish] Streaming finished, refetching messages.");
+            refetchMessages();
+        }
+        */
     });
 
-    // Wrap the handleSubmit to also clear user input in parent component
+    // Prepare the message sending function
     const handleSendMessage = useCallback(
-        ({ userInput, modelSettings }: { userInput: string; modelSettings: ChatModelSettings }) => {
-            if (!userInput.trim()) return;
+        async ({ userInput, modelSettings }: { userInput: string; modelSettings: ChatModelSettings }) => {
+            if (!userInput.trim() || !chatId) return;
 
-            handleSubmit({ userInput, modelSettings });
+            // Clear input immediately in the parent component's state
             clearUserInput();
+
+            try {
+                console.log('[useChatWithAI] Calling append with:', { chatId, provider, model, systemMessage, userInput: userInput.trim() });
+                await append(
+                    {
+                        // Message content for Vercel SDK append structure
+                        role: 'user',
+                        content: userInput.trim(),
+                    },
+                    {
+                        // Body data for the backend API call (/api/ai/chat)
+                        body: {
+                            chatId: chatId,
+                            provider: provider,
+                            options: { model, ...modelSettings }, // Pass model settings
+                            excludedMessageIds: excludedMessageIds,
+                            systemMessage: systemMessage,
+                            userMessageContent: userInput.trim(), // Explicitly send content
+                        },
+                    }
+                );
+                console.log('[useChatWithAI] Append call finished.');
+            } catch (err) {
+                console.error('[useChatWithAI] Error calling append:', err);
+                // Handle error appropriately, maybe show a toast notification
+            }
         },
-        [handleSubmit, clearUserInput]
+        [append, chatId, provider, model, excludedMessageIds, systemMessage, clearUserInput]
     );
 
+    // Combine errors if necessary
+    const error = aiError || (isMessagesError ? new Error("Failed to fetch messages") : null);
+
     return {
-        messages,
-        isLoading,
+        messages: messagesData?.data || [], // Return messages directly from React Query
+        isLoading, // Loading state during stream
+        isFetching, // Fetching state from React Query
         error,
-        pendingMessages,
-        setPendingMessages,
         refetchMessages,
-        isFetching,
-        handleSendMessage,
+        handleSendMessage, // Use this function to send messages
+        stop, // Allow stopping the stream
     };
 }
 
+/**
+ * Simplified hook to fetch chat messages using React Query.
+ * No longer manages pending messages.
+ */
 export function useChatMessages(chatId: string) {
-    const [pendingMessages, setPendingMessages] = useState<TempChatMessage[]>([]);
-
     const {
         data: messagesData,
         refetch: refetchMessages,
@@ -268,31 +160,8 @@ export function useChatMessages(chatId: string) {
         isError,
     } = useGetMessages(chatId);
 
-    // Merge server and pending
-    const messages = mergeServerAndPendingMessages(
-        messagesData?.data || [],
-        pendingMessages
-    );
-
-    function mergeServerAndPendingMessages(
-        serverMsgs: TempChatMessage[],
-        pending: TempChatMessage[]
-    ): TempChatMessage[] {
-        // Filter out any "temp-*" IDs from the server
-        const filteredServer = serverMsgs.filter(
-            (msg) => !msg.id.startsWith("temp-")
-        );
-        // Exclude duplicates from local pending
-        const pendingWithoutDupes = pending.filter(
-            (p) => !filteredServer.some((s) => s.tempId === p.tempId)
-        );
-        return [...filteredServer, ...pendingWithoutDupes];
-    }
-
     return {
-        messages,
-        pendingMessages,
-        setPendingMessages,
+        messages: messagesData?.data || [], // Directly return fetched data
         refetchMessages,
         isFetching,
         isError,
@@ -302,13 +171,12 @@ export function useChatMessages(chatId: string) {
 interface UseForkChatArgs {
     chatId: string;
     excludedMessageIds: string[];
-    setPendingMessages?: React.Dispatch<React.SetStateAction<any>>;
+    // setPendingMessages is removed as pending state is gone
 }
 
 export function useForkChatHandler({
     chatId,
     excludedMessageIds,
-    setPendingMessages,
 }: UseForkChatArgs) {
     const forkChatMutation = useForkChat();
 
@@ -319,14 +187,11 @@ export function useForkChatHandler({
                 chatId,
                 excludedMessageIds,
             });
-            // Optionally reset pending messages if desired
-            if (setPendingMessages) {
-                setPendingMessages([]);
-            }
+            // No need to clear pending messages anymore
         } catch (error) {
             console.error("[handleForkChat] Error:", error);
         }
-    }, [chatId, excludedMessageIds, forkChatMutation, setPendingMessages]);
+    }, [chatId, excludedMessageIds, forkChatMutation]);
 
     return { handleForkChat };
 }

@@ -33,7 +33,7 @@ export const CHAT_KEYS = {
     models: (provider: APIProviders) => [...CHAT_KEYS.all, 'models', provider] as const,
 };
 
-async function getChats(api: ReturnType<typeof useApi>['api']): Promise<{ chats: Chat[] }> {
+async function getChats(api: ReturnType<typeof useApi>['api']): Promise<Chat[]> {
     const response = await api.request('/api/chats');
     return response.json();
 }
@@ -48,28 +48,28 @@ async function sendMessage<T extends APIProviders>(
     input: SendMessageInput<T>
 ): Promise<ReadableStream<Uint8Array>> {
     try {
-        console.log(`[sendMessage] Sending message to chatId: ${input.chatId}`);
+        console.log(`[sendMessage] Sending message to chatId: ${input.chatId} via /api/ai/chat`);
 
-        const response = await api.request('/api/chat', {
+        const response = await api.request('/api/ai/chat', {
             method: 'POST',
             body: input
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.error(`[sendMessage] Server error:`, errorData);
+            console.error(`[sendMessage /api/ai/chat] Server error:`, errorData);
             throw new Error(errorData.error || `Failed to send message (${response.status})`);
         }
 
         // Check if the response has a body stream
         if (!response.body) {
-            console.error(`[sendMessage] No response body stream available`);
+            console.error(`[sendMessage /api/ai/chat] No response body stream available`);
             throw new Error('No response stream available');
         }
 
         return response.body as ReadableStream<Uint8Array>;
     } catch (error) {
-        console.error(`[sendMessage] Exception:`, error);
+        console.error(`[sendMessage /api/ai/chat] Exception:`, error);
         throw error;
     }
 }
@@ -278,51 +278,50 @@ export const useDeleteMessage = () => {
     });
 };
 
-// Add new function to fetch models using unified endpoint
+// Update the getModels function
 async function getModels(
     api: ReturnType<typeof useApi>['api'],
     provider: APIProviders
-): Promise<ModelsResponse> {
+): Promise<ModelsResponse> { // Return type expects { data: UnifiedModel[] }
     try {
         console.log(`[getModels] Fetching models for provider: ${provider}`);
+        // The query parameter is correctly appended here
         const response = await api.request(`/api/models?provider=${provider}`);
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error(`[getModels] Error fetching models:`, errorData);
-            throw new Error(errorData.error || `Failed to fetch ${provider} models (${response.status})`);
+        const responseData = await response.json(); // Always parse JSON first
+
+        if (!response.ok || !responseData.success) {
+            // Use the error message from the backend response if available
+            const errorMessage = responseData.error || `Failed to fetch ${provider} models (${response.status})`;
+            console.error(`[getModels] Error fetching models:`, responseData);
+            throw new Error(errorMessage);
         }
 
-        const data = await response.json();
-        console.log(`[getModels] Received models data:`, data);
-
-        // Handle different response formats:
-        // 1. New Hono format: { success: true, models: [...] }
-        // 2. Original format: { data: [...] }
-        // 3. Direct array: [...]
-
-        if (data.success && Array.isArray(data.models)) {
-            return { data: data.models };
-        } else if (data.data && Array.isArray(data.data)) {
-            return { data: data.data };
-        } else if (Array.isArray(data)) {
-            return { data };
+        // Check if data is an array as expected
+        if (!Array.isArray(responseData.data)) {
+            console.warn(`[getModels] Unexpected data format received:`, responseData);
+            throw new Error(`Received unexpected data format for ${provider} models.`);
         }
 
-        console.warn(`[getModels] Unexpected response format:`, data);
-        return { data: [] };
+        console.log(`[getModels] Received models data for ${provider}:`, responseData.data);
+        // The structure now directly matches ModelsResponse
+        return { data: responseData.data };
+
     } catch (error) {
         console.error(`[getModels] Exception:`, error);
+        // Re-throw the error for React Query to handle
         throw error;
     }
 }
 
-// Add new hook to fetch models
+// The useGetModels hook remains the same, it uses the updated getModels function
 export const useGetModels = (provider: APIProviders) => {
     const { api } = useApi();
-    return useQuery({
+    return useQuery<ModelsResponse, Error>({ // Explicitly type the hook
         queryKey: CHAT_KEYS.models(provider),
         queryFn: () => getModels(api, provider),
         enabled: !!provider,
+        staleTime: 5 * 60 * 1000, // Add staleTime to cache models for 5 mins
+        refetchOnWindowFocus: false, // Optional: prevent refetch on focus
     });
 };

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectList } from "@/components/projects/project-list"
 import { ProjectDialog } from "@/components/projects/project-dialog"
-import { ChatDialog } from "@/components/chat/chat-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -20,7 +19,6 @@ import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
     const [projectDialogOpen, setProjectDialogOpen] = useState(false)
-    const [chatDialogOpen, setChatDialogOpen] = useState(false)
     const [editProjectId, setEditProjectId] = useState<string | null>(null)
     const [helpOpen, setHelpOpen] = useState(false)
     const [settingsOpen, setSettingsOpen] = useState(false)
@@ -195,16 +193,6 @@ export function AppNavbar() {
                             </Button>
                         )}
 
-                        {isOnChatRoute && (
-                            <Button
-                                variant="outline"
-                                onClick={() => setChatDialogOpen(true)}
-                                className="ml-auto"
-                            >
-                                <MessageSquareIcon className="mr-2 h-4 w-4" /> New Chat
-                            </Button>
-                        )}
-
                         {/* Settings button */}
                         <Button
                             variant="ghost"
@@ -258,10 +246,6 @@ export function AppNavbar() {
                 open={projectDialogOpen}
                 projectId={editProjectId}
                 onOpenChange={setProjectDialogOpen}
-            />
-            <ChatDialog
-                open={chatDialogOpen}
-                onOpenChange={setChatDialogOpen}
             />
             <HelpDialog
                 open={helpOpen}

@@ -36,6 +36,7 @@ const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 // Define the component first before exporting it
 function ChatPage() {
+
   // Global state
   const { id: activeTabId, tabData: activeChatTabState } = useActiveChatTab()
   const createChatTab = useCreateChatTab()
@@ -47,13 +48,31 @@ function ChatPage() {
   const newMessage = activeChatTabState?.input ?? ''
   const chatId = currentChat?.activeChatId ?? ''
 
-  const updateActiveChatTab = useUpdateActiveChatTab()
-
   // Add local state to ensure input changes are tracked immediately
   const [localMessage, setLocalMessage] = useState(newMessage)
-  
+
   // Use a ref to track if local changes are in progress to avoid circular updates
   const isLocalUpdateRef = useRef(false)
+
+  // Use our enhanced AI chat hook
+  const {
+    messages,
+    handleSendMessage,
+    refetchMessages,
+    isFetching,
+    isLoading,
+  } = useChatWithAI({
+    chatId,
+    provider: (activeChatTabState?.provider as APIProviders) ?? defaultModelConfigs.provider,
+    model: activeChatTabState?.model ?? defaultModelConfigs.model,
+    excludedMessageIds: activeChatTabState?.excludedMessageIds ?? [],
+    clearUserInput: () => updateActiveChatTab({ input: "" }),
+    // TODO: Add system message
+    // systemMessage: activeChatTabState?.systemMessage,
+  });
+
+  const updateActiveChatTab = useUpdateActiveChatTab();
+
 
   // Sync global -> local, but only when not in the middle of a local update
   useEffect(() => {
@@ -79,26 +98,6 @@ function ChatPage() {
 
   const { settings: modelSettings } = useChatModelParams()
 
-  // Use our enhanced AI chat hook
-  const {
-    messages,
-    pendingMessages,
-    setPendingMessages,
-    handleSendMessage,
-    refetchMessages,
-    isFetching,
-    isLoading,
-  } = useChatWithAI({
-    chatId,
-    provider: (activeChatTabState?.provider as APIProviders) ?? defaultModelConfigs.provider,
-    model: activeChatTabState?.model ?? defaultModelConfigs.model,
-    excludedMessageIds: activeChatTabState?.excludedMessageIds ?? [],
-    clearUserInput: () => updateActiveChatTab({ input: "" }),
-    // TODO: Add system message
-    // systemMessage: activeChatTabState?.systemMessage,
-  });
-
-  const updateActiveChatTab = useUpdateActiveChatTab();
 
   // The id of the linked project tab (if any)
   const linkedProjectTabId = currentChat?.linkedProjectTabId || ''
@@ -118,17 +117,17 @@ function ChatPage() {
   // Handle submit - this is where we update the global state
   const handleSubmit = async () => {
     if (!chatId || !localMessage?.trim()) return;
-    
+
     try {
       // Update global state with current local state
       updateActiveChatTab({ input: localMessage })
-      
+
       // Send the message
       await handleSendMessage({
         userInput: localMessage,
         modelSettings
       })
-      
+
       // Clear local message state after sending
       setLocalMessage('')
     } catch (error) {
@@ -331,10 +330,3 @@ function ChatPage() {
   )
 }
 
-// Now export the route with the component
-export const Route = createFileRoute('/chat')({
-  component: ChatPage,
-  validateSearch: (search) => ({
-    prefill: Boolean(search.prefill)
-  })
-})

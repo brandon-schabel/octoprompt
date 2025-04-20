@@ -1,35 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check, Edit2, Icon, MessageSquareIcon, Trash2, X } from "lucide-react";
+import { Check, Edit2, Icon, MessageSquareIcon, Trash2, X, PlusIcon } from "lucide-react";
 import { tab as tabIcon } from '@lucide/lab';
 import { Badge } from '@/components/ui/badge';
 import {
     useGetChats,
     useDeleteChat,
     useUpdateChat,
+    useCreateChat,
 } from '@/hooks/api/use-chat-api';
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
 import { useUpdateActiveChatTab, useSetActiveChatTab } from '@/zustand/updaters';
 import { useActiveChatTab, useAllChatTabs } from '@/zustand/selectors';
+import { toast } from 'sonner';
 
 export function ChatSidebar() {
     const updateActiveChatTab = useUpdateActiveChatTab();
     const setActiveChatTab = useSetActiveChatTab();
-    const { tabData: activeChatTabState } = useActiveChatTab();
+    const { tabData: activeChatTabState, id: activeChatTabId } = useActiveChatTab();
     const allChatTabs = useAllChatTabs();
 
-    const [newChatTitle, setNewChatTitle] = useState('');
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState('');
+    const [visibleCount, setVisibleCount] = useState(50);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const activeChatRef = useRef<HTMLDivElement>(null);
 
     const { data: chatsData, isLoading: isLoadingChats } = useGetChats();
     const deleteChat = useDeleteChat();
     const updateChat = useUpdateChat();
-    const chats = chatsData?.chats ?? [];
+    const createChat = useCreateChat();
+
+    const sortedChats = useMemo(() => {
+        const chats: Chat[] = chatsData ?? [];
+        return [...chats].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }, [chatsData]);
+
+    const visibleChats = useMemo(() => {
+        return sortedChats.slice(0, visibleCount);
+    }, [sortedChats, visibleCount]);
+
+    async function handleCreateNewChat() {
+        const defaultTitle = `Chat ${new Date().toLocaleTimeString()}`;
+        try {
+            const newChat = await createChat.mutateAsync({
+                title: defaultTitle,
+                copyExisting: false,
+            });
+            updateActiveChatTab({ activeChatId: newChat.id });
+            toast.success('New chat created');
+        } catch (error) {
+            console.error('Error creating chat:', error);
+            toast.error('Failed to create chat');
+        }
+        setEditingTitle('');
+    }
 
     async function handleDeleteChat(chatId: string) {
         if (!window.confirm('Are you sure you want to delete this chat?')) return;
@@ -65,6 +94,17 @@ export function ChatSidebar() {
         setEditingTitle('');
     }
 
+    useEffect(() => {
+        const viewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]');
+        if (activeChatRef.current && viewport) {
+            activeChatRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+            });
+        }
+    }, [activeChatTabState?.activeChatId, visibleChats]);
+
+    console.log('chats', sortedChats);
 
     return (
         <SlidingSidebar
@@ -73,22 +113,29 @@ export function ChatSidebar() {
                 openIcon: MessageSquareIcon
             }}
         >
-            {/* Chat List */}
-            <ScrollArea className="flex-1 mt-2">
-                <div className="text-xl font-bold">
+            <div className="p-2 border-b mb-2">
+                <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={handleCreateNewChat}
+                >
+                    <PlusIcon className="h-4 w-4" /> New Chat
+                </Button>
+            </div>
+
+            <ScrollArea className="flex-1 mt-2" ref={scrollAreaRef}>
+                <div className="text-xl font-bold px-2 mb-2">
                     Chat History
                 </div>
                 {isLoadingChats ? (
                     <div>Loading chats...</div>
                 ) : (
-                    chats.map((chat) => {
+                    visibleChats.map((chat) => {
                         const isActive = activeChatTabState?.activeChatId === chat.id;
 
-                        // For the given chat, determine which chat tabs have this chat active.
                         const chatTabEntries = Object.entries(allChatTabs).filter(
                             ([, tabData]) => tabData.activeChatId === chat.id
                         );
-                        // Sort by the optional sortOrder (defaulting to 0)
                         const sortedChatTabs = chatTabEntries.sort(
                             ([, aData], [, bData]) => (aData.sortOrder || 0) - (bData.sortOrder || 0)
                         );
@@ -96,6 +143,7 @@ export function ChatSidebar() {
                         return (
                             <div
                                 key={chat.id}
+                                ref={isActive ? activeChatRef : null}
                                 className={cn(
                                     'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md group',
                                     {
@@ -153,7 +201,6 @@ export function ChatSidebar() {
                                                         return (
                                                             <Badge
                                                                 key={tabId}
-                                                                // variant="secondary"
                                                                 className="flex items-center gap-1 px-2 py-0.5 cursor-pointer hover:bg-accent"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -189,6 +236,17 @@ export function ChatSidebar() {
                             </div>
                         );
                     })
+                )}
+                {sortedChats.length > visibleCount && (
+                    <div className="p-2 text-center">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVisibleCount(prev => prev + 50)}
+                        >
+                            Show More
+                        </Button>
+                    </div>
                 )}
             </ScrollArea>
         </SlidingSidebar>
