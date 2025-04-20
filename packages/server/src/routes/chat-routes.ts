@@ -1,4 +1,3 @@
-import app from '@/server-router';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { db } from '@/utils/database';
@@ -7,30 +6,87 @@ import { AI_API_PROVIDERS, ApiError, APIProviders } from 'shared';
 import { unifiedProvider } from '@/services/model-providers/providers/unified-provider-service';
 import { streamSSE, SSEStreamingApi } from 'hono/streaming';
 
-// Initialize the chat service
-const chatService = createChatService();
+// Helper function to handle errors with appropriate status codes
+function handleError(error: unknown) {
+    console.error('API Error:', error);
+
+    // Handle ApiError instances with their specific status codes
+    if (error instanceof ApiError) {
+        return {
+            success: false,
+            error: error.message,
+            code: error.code
+        };
+    }
+
+    // Handle "not found" errors
+    if (error instanceof Error &&
+        (error.message.includes('not found') ||
+            error.message.toLowerCase().includes('cannot find') ||
+            error.message.toLowerCase().includes('does not exist'))) {
+        return {
+            success: false,
+            error: error.message,
+            code: 'NOT_FOUND'
+        };
+    }
+
+    // Default error response
+    return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        code: 'INTERNAL_ERROR'
+    };
+}
+
+// Process a chat message (streaming)
+app.post('/api/chat',
+    zValidator('json', chatApiValidation.create.body),
+    async (c) => {
+        try {
+            const body = await c.req.valid('json');
+
+            const stream = await unifiedProvider.processMessage({
+                chatId: body.chatId,
+                userMessage: body.message,
+                provider: body.provider,
+                options: body.options as any,
+                tempId: body.tempId,
+            });
+
+            const headers = {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-Provider': body.provider
+            };
+
+            return c.body(stream, { headers });
+        } catch (error) {
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
+        }
+    }
+);
 
 // Create a new chat
 app.post('/api/chats',
-    zValidator('json', z.object({
-        title: z.string(),
-        copyExisting: z.boolean().optional(),
-        currentChatId: z.string().optional()
-    })),
+    zValidator('json', chatApiValidation.createChat.body),
     async (c) => {
         try {
-            const { title, copyExisting, currentChatId } = await c.req.valid('json');
-            const chat = await chatService.createChat(title, {
-                copyExisting,
-                currentChatId
+            const body = await c.req.valid('json');
+            const chat = await chatService.createChat(body.title, {
+                copyExisting: body.copyExisting,
+                currentChatId: body.currentChatId
             });
-            return c.json({ success: true, chat }, 201);
+            return c.json({ data: chat });
         } catch (error) {
-            console.error('Failed to create chat:', error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
         }
     }
 );
@@ -38,14 +94,11 @@ app.post('/api/chats',
 // Get all chats
 app.get('/api/chats', async (c) => {
     try {
-        const chats = await chatService.getAllChats();
-        return c.json({ success: true, chats });
+        const userChats = await chatService.getAllChats();
+        return c.json({ data: userChats });
     } catch (error) {
-        console.error('Failed to list chats:', error);
-        return c.json({
-            success: false,
-            error: error instanceof Error ? error.message : String(error)
-        }, 500);
+        const errorResponse = handleError(error);
+        return c.json(errorResponse, 500 as any);
     }
 });
 
@@ -58,184 +111,117 @@ app.get('/api/chats/:chatId/messages',
         try {
             const { chatId } = c.req.valid('param');
             const messages = await chatService.getChatMessages(chatId);
-            return c.json({ success: true, data: messages });
+            return c.json({ data: messages });
         } catch (error) {
-            console.error(`Failed to get messages for chat ${c.req.param('chatId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
         }
     }
 );
 
-// Get chat by ID
-app.get('/api/chats/:chatId',
-    zValidator('param', z.object({
-        chatId: z.string()
-    })),
+// Fork a chat
+app.post('/api/chats/:chatId/fork',
+    zValidator('param', chatApiValidation.forkChat.params),
+    zValidator('json', chatApiValidation.forkChat.body),
     async (c) => {
         try {
             const { chatId } = c.req.valid('param');
-            const messages = await chatService.getChatMessages(chatId);
-            return c.json({ success: true, messages });
+            const { excludedMessageIds } = await c.req.valid('json');
+            const newChat = await chatService.forkChat(chatId, excludedMessageIds);
+            return c.json({ data: newChat });
         } catch (error) {
-            console.error(`Failed to get chat ${c.req.param('chatId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
         }
     }
 );
 
-// Update chat title
+// Fork chat from a specific message
+app.post('/api/chats/:chatId/fork/:messageId',
+    zValidator('param', chatApiValidation.forkChatFromMessage.params),
+    zValidator('json', chatApiValidation.forkChatFromMessage.body),
+    async (c) => {
+        try {
+            const { chatId, messageId } = c.req.valid('param');
+            const { excludedMessageIds } = await c.req.valid('json');
+            const newChat = await chatService.forkChatFromMessage(
+                chatId,
+                messageId,
+                excludedMessageIds
+            );
+            return c.json({ data: newChat });
+        } catch (error) {
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
+        }
+    }
+);
+
+// Update a chat
 app.patch('/api/chats/:chatId',
-    zValidator('param', z.object({
-        chatId: z.string()
-    })),
-    zValidator('json', z.object({
-        title: z.string()
-    })),
+    zValidator('param', chatApiValidation.updateChat.params),
+    zValidator('json', chatApiValidation.updateChat.body),
     async (c) => {
         try {
             const { chatId } = c.req.valid('param');
             const { title } = await c.req.valid('json');
             const updatedChat = await chatService.updateChat(chatId, title);
-            return c.json({ success: true, chat: updatedChat });
+            return c.json({ data: updatedChat });
         } catch (error) {
-            console.error(`Failed to update chat ${c.req.param('chatId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
         }
     }
 );
 
-// Delete chat
+// Delete a chat
 app.delete('/api/chats/:chatId',
-    zValidator('param', z.object({
-        chatId: z.string()
-    })),
+    zValidator('param', chatApiValidation.deleteChat.params),
     async (c) => {
         try {
             const { chatId } = c.req.valid('param');
             await chatService.deleteChat(chatId);
             return c.json({ success: true });
         } catch (error) {
-            console.error(`Failed to delete chat ${c.req.param('chatId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
         }
     }
 );
 
-// Save message
-app.post('/api/chats/:chatId/messages',
-    zValidator('param', z.object({
-        chatId: z.string()
-    })),
-    zValidator('json', z.object({
-        role: z.string(),
-        content: z.string(),
-        id: z.string().optional()
-    })),
-    async (c) => {
-        try {
-            const { chatId } = c.req.valid('param');
-            const message = await c.req.valid('json');
-
-            // Update chat timestamp
-            await chatService.updateChatTimestamp(chatId);
-
-            const savedMessage = await chatService.saveMessage({
-                ...message,
-                chatId: chatId,
-                id: message.id || crypto.randomUUID(),
-                createdAt: new Date()
-            });
-
-            return c.json({ success: true, message: savedMessage });
-        } catch (error) {
-            console.error(`Failed to save message for chat ${c.req.param('chatId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
-        }
-    }
-);
-
-// Update message content
-app.patch('/api/messages/:messageId',
-    zValidator('param', z.object({
-        messageId: z.string()
-    })),
-    zValidator('json', z.object({
-        content: z.string()
-    })),
-    async (c) => {
-        try {
-            const { messageId } = c.req.valid('param');
-            const { content } = await c.req.valid('json');
-            await chatService.updateMessageContent(messageId, content);
-            return c.json({ success: true });
-        } catch (error) {
-            console.error(`Failed to update message ${c.req.param('messageId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
-        }
-    }
-);
-
-// Delete message
+// Delete a message
 app.delete('/api/messages/:messageId',
-    zValidator('param', z.object({
-        messageId: z.string()
-    })),
+    zValidator('param', chatApiValidation.deleteMessage.params),
     async (c) => {
         try {
             const { messageId } = c.req.valid('param');
             await chatService.deleteMessage(messageId);
             return c.json({ success: true });
         } catch (error) {
-            console.error(`Failed to delete message ${c.req.param('messageId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
+            const errorResponse = handleError(error);
+            const statusCode = errorResponse.code === 'NOT_FOUND' ? 404 :
+                (errorResponse.code === 'BAD_REQUEST' ? 400 : 500);
+            return c.json(errorResponse, statusCode as any);
         }
     }
 );
 
-// Fork chat
-app.post('/api/chats/:chatId/fork',
-    zValidator('param', z.object({
-        chatId: z.string()
-    })),
-    zValidator('json', z.object({
-        excludedMessageIds: z.array(z.string()).optional()
-    })),
-    async (c) => {
-        try {
-            const { chatId } = c.req.valid('param');
-            const { excludedMessageIds = [] } = await c.req.valid('json');
-            const forkedChat = await chatService.forkChat(chatId, excludedMessageIds);
-            return c.json({ success: true, chat: forkedChat });
-        } catch (error) {
-            console.error(`Failed to fork chat ${c.req.param('chatId')}:`, error);
-            return c.json({
-                success: false,
-                error: error instanceof Error ? error.message : String(error)
-            }, 500);
-        }
-    }
-);
+// Get models for a provider
+const modelsValidator = z.object({
+    provider: z.string().refine(val => apiProviders.includes(val as any), {
+        message: "Invalid provider"
+    })
+});
 
 // Fork chat from a specific message
 app.post('/api/chats/:chatId/fork-from-message/:messageId',

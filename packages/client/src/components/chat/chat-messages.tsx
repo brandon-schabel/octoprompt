@@ -7,7 +7,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { ChatMessage } from "shared/schema";
-import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-ai-api";
+import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-api";
 import { useUpdateActiveChatTab } from "@/zustand/updaters";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";

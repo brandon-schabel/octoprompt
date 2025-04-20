@@ -9,7 +9,7 @@ import {
     useGetChats,
     useDeleteChat,
     useUpdateChat,
-} from '@/hooks/api/use-chat-ai-api';
+} from '@/hooks/api/use-chat-api';
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';

@@ -345,8 +345,12 @@ export function useUpdateActiveChatTab() {
     const updateChatTab = useUpdateChatTab()
 
     return (partialOrFn: PartialOrFn<ChatTabState>) => {
-        if (!activeChatTabId || !activeChatTab) return
+        if (!activeChatTabId || !activeChatTab) {
+            console.error("[useUpdateActiveChatTab] No active chat tab to update!", { activeChatTabId, activeChatTab });
+            return;
+        }
         const finalPartial = getPartial(activeChatTab, partialOrFn)
+        console.log("[useUpdateActiveChatTab] Updating chat tab:", { activeChatTabId, finalPartial });
         updateChatTab(activeChatTabId, finalPartial)
         // Send WebSocket message
         manager.sendMessage({

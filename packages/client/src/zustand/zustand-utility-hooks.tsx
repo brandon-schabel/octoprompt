@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState, useRef, useEffect, useMemo } from "react";
 import { useGlobalStateContext } from "./global-state-provider";
 import { useGlobalStateStore } from "./global-state-store";
 import {
@@ -20,6 +20,38 @@ import type {
 } from "shared";
 import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
 
+/**
+ * Debounce function that limits how often a function can be called
+ */
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait = 300
+): {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+} {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  const debounced = (...args: Parameters<T>) => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    
+    timeout = setTimeout(() => {
+      timeout = null;
+      func(...args);
+    }, wait);
+  };
+  
+  debounced.cancel = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  };
+  
+  return debounced;
+}
 
 export function useZustandGenericField<T extends object, K extends keyof T>(
     record: T | undefined,
@@ -78,10 +110,10 @@ export function useProjectTabField<T extends keyof ProjectTabState>(
     const { id: activeTabId, tabData: activeTabData } = useActiveProjectTab();
     const updateTab = useUpdateProjectTab();
 
-    // Decide which tab ID we’re operating on
+    // Decide which tab ID we're operating on
     const targetTabId = projectTabId ?? activeTabId ?? "";
 
-    // If a specific ID was provided, read from that tab’s data; else read active tab data
+    // If a specific ID was provided, read from that tab's data; else read active tab data
     const record = projectTabId
         ? useGlobalStateStore((s) => s.projectTabs[projectTabId])
         : activeTabData;
@@ -201,7 +233,7 @@ export function useChatTabField<K extends keyof ChatTabState>(
     // Decide which chat tab ID we're operating on
     const targetTabId = chatTabId ?? activeChatTabId ?? "";
 
-    // If a specific ID was provided, read from that tab’s data; else read active chat tab data
+    // If a specific ID was provided, read from that tab's data; else read active chat tab data
     const record = chatTabId
         ? useGlobalStateStore((s) => s.chatTabs[chatTabId])
         : activeChatTab;
@@ -235,4 +267,98 @@ export function useChatTabField<K extends keyof ChatTabState>(
             sendWsMessage,
         }
     );
+}
+
+/**
+ * A hook for maintaining synchronized state between local component state and 
+ * global Zustand state with debouncing to prevent excessive re-renders.
+ * 
+ * @param globalValue The current value from global state
+ * @param setGlobalValue Function to update the global state
+ * @param debounceMs Optional debounce time in ms (default: 300ms)
+ * @param isDisabled Optional flag to disable synchronization
+ * @returns [localValue, setLocalValue, isPending]
+ */
+export function useSynchronizedState<T>(
+  globalValue: T,
+  setGlobalValue: (value: T) => void,
+  debounceMs = 300,
+  isDisabled = false
+): [T, (value: T) => void, boolean] {
+  // Local state that reflects the UI control state
+  const [localValue, setLocalValue] = useState<T>(globalValue);
+  
+  // Track whether an update is pending to be sent to global state
+  const [isPending, setIsPending] = useState(false);
+  
+  // Reference to the latest value to use in debounced functions
+  const latestValueRef = useRef(localValue);
+  
+  // Keep the ref updated with the latest value
+  useEffect(() => {
+    latestValueRef.current = localValue;
+  }, [localValue]);
+
+  // Update local value when global value changes, but only if not pending
+  // This prevents circular updates where our own change causes an update
+  useEffect(() => {
+    if (!isPending && !isEqual(globalValue, localValue)) {
+      setLocalValue(globalValue);
+    }
+  }, [globalValue]);
+
+  // Debounced function to update global state
+  const debouncedSetGlobal = useMemo(() => {
+    return debounce(() => {
+      setIsPending(false);
+      if (!isEqual(latestValueRef.current, globalValue)) {
+        setGlobalValue(latestValueRef.current);
+      }
+    }, debounceMs);
+  }, [setGlobalValue, globalValue, debounceMs]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSetGlobal.cancel();
+    };
+  }, [debouncedSetGlobal]);
+
+  // Function to set local state and trigger debounced global update
+  const setLocalValueAndSync = useCallback((value: T) => {
+    setLocalValue(value);
+    if (!isDisabled) {
+      setIsPending(true);
+      debouncedSetGlobal();
+    }
+  }, [debouncedSetGlobal, isDisabled]);
+
+  return [localValue, setLocalValueAndSync, isPending];
+}
+
+// Helper function to compare values
+function isEqual(a: any, b: any): boolean {
+  if (a === b) return true;
+  
+  // Handle primitive types
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
+    return a === b;
+  }
+  
+  // Handle arrays
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((val, idx) => isEqual(val, b[idx]));
+  }
+  
+  // Handle objects
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  
+  if (keysA.length !== keysB.length) return false;
+  
+  return keysA.every(key => 
+    Object.prototype.hasOwnProperty.call(b, key) && 
+    isEqual(a[key], b[key])
+  );
 }

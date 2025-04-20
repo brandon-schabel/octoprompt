@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 
-import { useCreateChat } from "@/hooks/api/use-chat-ai-api"
+import { useCreateChat } from "@/hooks/api/use-chat-api"
 import { useUpdateActiveChatTab } from "@/zustand/updaters"
 
 type ChatDialogProps = {
