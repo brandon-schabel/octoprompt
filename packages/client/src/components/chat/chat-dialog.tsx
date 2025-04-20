@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { useCreateChat } from "@/hooks/api/use-chat-api"
-import { useUpdateActiveChatTab } from "@/zustand/updaters"
 
 type ChatDialogProps = {
     open: boolean
@@ -22,7 +21,6 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
     const [title, setTitle] = useState("")
     const [copyExisting, setCopyExisting] = useState(false)
     const createChatMutation = useCreateChat();
-    const updateActiveChatTab = useUpdateActiveChatTab()
     const [activeChatId, setActiveChatId] = useState<string | undefined>(undefined);
 
     const generateDefaultTitle = () => `Chat ${new Date().toLocaleTimeString()}`;
@@ -30,13 +28,12 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
         e.preventDefault();
         const chatTitle = title.trim() || generateDefaultTitle();
         try {
-            const newChat = await createChatMutation.mutateAsync({ 
+            const newChat = await createChatMutation.mutateAsync({
                 title: chatTitle,
                 copyExisting,
-                currentChatId: copyExisting ? activeChatId : undefined 
+                currentChatId: copyExisting ? activeChatId : undefined
             });
             setTitle('');
-            updateActiveChatTab({ activeChatId: newChat.id });
             onOpenChange(false);
             return newChat;
         } catch (error) {

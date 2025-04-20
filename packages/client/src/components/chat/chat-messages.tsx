@@ -8,7 +8,6 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { ChatMessage } from "shared/schema";
 import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-api";
-import { useUpdateActiveChatTab } from "@/zustand/updaters";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useSettingsField } from "@/zustand/zustand-utility-hooks"
@@ -291,7 +290,6 @@ export function ChatMessages(props: ChatMessagesProps) {
 
     // For toggling excluded messages in the global store
     const excludedSet = new Set(excludedMessageIds);
-    const updateActiveChatTab = useUpdateActiveChatTab();
 
     // For deleting/forking messages
     const deleteMessageMutation = useDeleteMessage();
@@ -318,9 +316,6 @@ export function ChatMessages(props: ChatMessagesProps) {
         } else {
             newExcludedMessageIds.add(messageId);
         }
-        updateActiveChatTab({
-            excludedMessageIds: Array.from(newExcludedMessageIds),
-        });
     };
 
     const handleForkFromMessage = async (messageId: string) => {
@@ -331,10 +326,6 @@ export function ChatMessages(props: ChatMessagesProps) {
                 chatId,
                 messageId,
                 excludedMessageIds,
-            });
-            updateActiveChatTab({
-                activeChatId: result.id,
-                excludedMessageIds: [],
             });
             toast.success("Chat forked successfully");
         } catch (error) {

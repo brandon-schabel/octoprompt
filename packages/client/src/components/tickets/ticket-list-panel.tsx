@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { TicketWithTasks, useListTicketsWithTasks, useDeleteTicket } from "@/hooks/api/use-tickets-api";
-import { useUpdateProjectTabState, useCreateProjectTabFromTicket } from "@/zustand/updaters";
+import { useUpdateProjectTabState, } from "@/zustand/updaters";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -51,7 +51,6 @@ const PRIORITY_COLORS = {
 export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
     const navigate = useNavigate();
     const updateProjectTabState = useUpdateProjectTabState(projectTabId);
-    const createProjectTabFromTicket = useCreateProjectTabFromTicket();
     const tabState = useProjectTab(projectTabId)
     const projectId = tabState?.selectedProjectId || "";
 
@@ -291,7 +290,6 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                                             size="sm"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                createProjectTabFromTicket(ticket);
                                                 navigate({ to: '/projects' });
                                             }}
                                         >

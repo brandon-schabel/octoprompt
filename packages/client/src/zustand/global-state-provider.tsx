@@ -4,7 +4,7 @@ import type { SyncClientManager } from "@bnk/sync-client";
 import { SERVER_WS_ENDPOINT } from "@/constants/server-constants";
 import { validateIncomingMessage, InboundMessage, OutboundMessage } from "shared";
 
-import { handleIncomingWebsocketMessage } from "./websocket-subscription"; 
+import { handleIncomingWebsocketMessage } from "./websocket-subscription";
 
 /**
  * Minimal context so components can know:
@@ -28,113 +28,115 @@ export function useGlobalStateContext(): GlobalStateContextValue {
 }
 
 // Time between processing batches of messages (in ms)
-const BATCH_PROCESS_INTERVAL = 50; 
+const BATCH_PROCESS_INTERVAL = 50; // Keep or adjust as needed
 
 export function GlobalStateProvider({ children }: { children: ReactNode }) {
-    // This tracks if we've received the server's initial_state event
     const [hasReceivedInitialState, setHasReceivedInitialState] = useState(false);
-    
-    // Queue for batching messages
     const messageQueueRef = useRef<InboundMessage[]>([]);
-    
-    // Flag to track if we're currently processing a batch
     const isProcessingRef = useRef(false);
-    
-    // Throttled message processor
+
+    // processBatchedMessages - Updated to reflect potential changes in handleIncomingWebsocketMessage
     const processBatchedMessages = () => {
         if (isProcessingRef.current || messageQueueRef.current.length === 0) return;
-        
+
         isProcessingRef.current = true;
-        
-        // Process all messages in the queue
         const messagesToProcess = [...messageQueueRef.current];
         messageQueueRef.current = [];
-        
-        // Find the initial_state message if it exists (priority handling)
+
         const initialStateIndex = messagesToProcess.findIndex(msg => msg.type === 'initial_state');
-        
+
         if (initialStateIndex >= 0) {
-            // Process initial_state first and mark that we've received it
             const initialStateMsg = messagesToProcess[initialStateIndex];
-            handleIncomingWebsocketMessage(initialStateMsg);
-            setHasReceivedInitialState(true);
-            
-            // Process all other messages
-            messagesToProcess
-                .filter((_, index) => index !== initialStateIndex)
-                .forEach(handleIncomingWebsocketMessage);
+            try {
+                handleIncomingWebsocketMessage(initialStateMsg); // Process initial state first
+                setHasReceivedInitialState(true);
+                // Process others after initial state
+                messagesToProcess
+                    .filter((_, index) => index !== initialStateIndex)
+                    .forEach(msg => {
+                        try { handleIncomingWebsocketMessage(msg); }
+                        catch (error) { console.error("Error processing batched message:", msg, error); }
+                    });
+            } catch (error) {
+                console.error("Error processing initial state message:", initialStateMsg, error);
+                // Decide how to handle initial state failure (e.g., retry, show error)
+            }
         } else {
-            // Just process all messages in order
-            messagesToProcess.forEach(handleIncomingWebsocketMessage);
+            // Process all messages if no initial state found in this batch
+            messagesToProcess.forEach(msg => {
+                try { handleIncomingWebsocketMessage(msg); }
+                catch (error) { console.error("Error processing batched message:", msg, error); }
+            });
         }
-        
+
         isProcessingRef.current = false;
-        
-        // If more messages arrived during processing, schedule another batch
+
         if (messageQueueRef.current.length > 0) {
             setTimeout(processBatchedMessages, BATCH_PROCESS_INTERVAL);
         }
     };
-    
-    // Queue a message for batched processing
+
+    // queueMessage - Updated to handle potential errors from immediate processing
     const queueMessage = (msg: InboundMessage) => {
-        // For critical messages like initial_state, process immediately
+        // Immediate processing only for initial_state if not yet received
         if (msg.type === 'initial_state' && !hasReceivedInitialState) {
-            handleIncomingWebsocketMessage(msg);
-            setHasReceivedInitialState(true);
+            try {
+                handleIncomingWebsocketMessage(msg);
+                setHasReceivedInitialState(true);
+            } catch (error) {
+                console.error("Error immediately processing initial state message:", msg, error);
+                // Queue it anyway or handle differently? Queueing might be safer.
+                messageQueueRef.current.push(msg);
+                if (!isProcessingRef.current) {
+                    setTimeout(processBatchedMessages, BATCH_PROCESS_INTERVAL);
+                }
+            }
             return;
         }
-        
-        // Otherwise queue up the message
+
         messageQueueRef.current.push(msg);
-        
-        // If we're not already processing, schedule a batch process
         if (!isProcessingRef.current) {
             setTimeout(processBatchedMessages, BATCH_PROCESS_INTERVAL);
         }
     };
-    
-    // Set up the batch processor timer
+
+
     useEffect(() => {
         const intervalId = setInterval(() => {
-            if (messageQueueRef.current.length > 0) {
+            if (messageQueueRef.current.length > 0 && !isProcessingRef.current) { // Ensure not already processing
                 processBatchedMessages();
             }
         }, BATCH_PROCESS_INTERVAL);
-        
         return () => clearInterval(intervalId);
-    }, []);
+    }, []); // Empty dependency array is correct here
 
-    // BNK's manager
+    // BNK Manager - Update messageHandlers
     const { isOpen, manager } = useSyncClient<InboundMessage, OutboundMessage>({
         config: {
             url: SERVER_WS_ENDPOINT,
-            validateIncomingMessage,
+            validateIncomingMessage, // Uses updated validator
             autoReconnect: true,
             reconnectIntervalMs: 500,
-            maxReconnectAttempts: 500,
+            maxReconnectAttempts: 500, // Consider making this Infinity or a large number
             messageHandlers: {
-                // Use a single handler for all message types
-                // to route them through our batching system
+                // Route all valid message types through the queueing system
+                // List only the types defined in the updated inboundMessageSchema
                 initial_state: (msg) => queueMessage(msg),
                 state_update: (msg) => queueMessage(msg),
+                // Project Tab Messages (if kept)
                 create_project_tab: (msg) => queueMessage(msg),
                 update_project_tab: (msg) => queueMessage(msg),
                 update_project_tab_partial: (msg) => queueMessage(msg),
                 delete_project_tab: (msg) => queueMessage(msg),
                 set_active_project_tab: (msg) => queueMessage(msg),
                 create_project_tab_from_ticket: (msg) => queueMessage(msg),
-                create_chat_tab: (msg) => queueMessage(msg),
-                update_chat_tab: (msg) => queueMessage(msg),
-                update_chat_tab_partial: (msg) => queueMessage(msg),
-                delete_chat_tab: (msg) => queueMessage(msg),
-                set_active_chat_tab: (msg) => queueMessage(msg),
+                // Settings/Global Messages
+                update_global_state_key: (msg) => queueMessage(msg),
                 update_settings: (msg) => queueMessage(msg),
                 update_settings_partial: (msg) => queueMessage(msg),
                 update_theme: (msg) => queueMessage(msg),
-                update_provider: (msg) => queueMessage(msg),
-                update_link_settings: (msg) => queueMessage(msg),
-                update_global_state_key: (msg) => queueMessage(msg),
+                // REMOVED: create_chat_tab, update_chat_tab, update_chat_tab_partial,
+                // REMOVED: delete_chat_tab, set_active_chat_tab, update_link_settings, update_provider
             },
         },
     });

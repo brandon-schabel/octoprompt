@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check, Edit2, Icon, MessageSquareIcon, Trash2, X, PlusIcon } from "lucide-react";
-import { tab as tabIcon } from '@lucide/lab';
+import { Check, Edit2, MessageSquareIcon, Trash2, X, PlusIcon } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import {
     useGetChats,
@@ -14,15 +13,22 @@ import {
 import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
-import { useUpdateActiveChatTab, useSetActiveChatTab } from '@/zustand/updaters';
-import { useActiveChatTab, useAllChatTabs } from '@/zustand/selectors';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export function ChatSidebar() {
-    const updateActiveChatTab = useUpdateActiveChatTab();
-    const setActiveChatTab = useSetActiveChatTab();
-    const { tabData: activeChatTabState, id: activeChatTabId } = useActiveChatTab();
-    const allChatTabs = useAllChatTabs();
+    // Get active chat from global state or query
+    const { data: activeChatId } = useQuery({
+        queryKey: ["activeChat"],
+        select: (state: any) => state?.activeChatId ?? null,
+    });
+    
+    const queryClient = useQueryClient();
+    
+    // Function to set active chat
+    const setActiveChat = (chatId: string) => {
+        queryClient.setQueryData(["activeChat"], { activeChatId: chatId });
+    };
 
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState('');
@@ -51,8 +57,8 @@ export function ChatSidebar() {
                 title: defaultTitle,
                 copyExisting: false,
             });
-            updateActiveChatTab({ activeChatId: newChat.id });
             toast.success('New chat created');
+            setActiveChat(newChat.id);
         } catch (error) {
             console.error('Error creating chat:', error);
             toast.error('Failed to create chat');
@@ -64,8 +70,9 @@ export function ChatSidebar() {
         if (!window.confirm('Are you sure you want to delete this chat?')) return;
         try {
             await deleteChat.mutateAsync(chatId);
-            if (activeChatTabState?.activeChatId === chatId) {
-                updateActiveChatTab({ activeChatId: undefined });
+            // If deleted chat was active, clear active chat
+            if (activeChatId === chatId) {
+                setActiveChat('');
             }
         } catch (error) {
             console.error('Error deleting chat:', error);
@@ -102,9 +109,7 @@ export function ChatSidebar() {
                 block: 'nearest',
             });
         }
-    }, [activeChatTabState?.activeChatId, visibleChats]);
-
-    console.log('chats', sortedChats);
+    }, [activeChatId, visibleChats]);
 
     return (
         <SlidingSidebar
@@ -131,14 +136,7 @@ export function ChatSidebar() {
                     <div>Loading chats...</div>
                 ) : (
                     visibleChats.map((chat) => {
-                        const isActive = activeChatTabState?.activeChatId === chat.id;
-
-                        const chatTabEntries = Object.entries(allChatTabs).filter(
-                            ([, tabData]) => tabData.activeChatId === chat.id
-                        );
-                        const sortedChatTabs = chatTabEntries.sort(
-                            ([, aData], [, bData]) => (aData.sortOrder || 0) - (bData.sortOrder || 0)
-                        );
+                        const isActive = activeChatId === chat.id;
 
                         return (
                             <div
@@ -185,36 +183,13 @@ export function ChatSidebar() {
                                                     'max-w-[180px] w-full text-left truncate',
                                                     isActive ? 'font-bold' : ''
                                                 )}
-                                                onClick={() => {
-                                                    updateActiveChatTab({ activeChatId: chat.id });
-                                                }}
+                                                onClick={() => setActiveChat(chat.id)}
                                                 title={chat.title ?? 'No Title'}
                                             >
                                                 {chat.title}
                                             </button>
-                                            {sortedChatTabs.length > 0 && (
-                                                <div className="flex gap-1">
-                                                    {sortedChatTabs.map(([tabId]) => {
-                                                        const indexOfTabData = Object.keys(allChatTabs).indexOf(tabId);
-                                                        const tabNumber = indexOfTabData + 1;
-
-                                                        return (
-                                                            <Badge
-                                                                key={tabId}
-                                                                className="flex items-center gap-1 px-2 py-0.5 cursor-pointer hover:bg-accent"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setActiveChatTab(tabId);
-                                                                }}
-                                                            >
-                                                                <Icon iconNode={tabIcon} className="w-3 h-3" />
-                                                                <span className="text-xs">{tabNumber}</span>
-                                                            </Badge>
-                                                        )
-                                                    })}
-                                                </div>
-                                            )}
                                         </div>
+
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Button
                                                 size="icon"

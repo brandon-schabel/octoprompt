@@ -1,7 +1,6 @@
 import { useGlobalStateStore } from "./global-state-store"
 import type {
     ProjectTabState,
-    ChatTabState,
     AppSettings,
 } from "shared"
 
@@ -47,34 +46,3 @@ export function useProjectTab(tabId: string | null): ProjectTabState | undefined
     return projectTabs[tabId]
 }
 
-/**
- * Return all chat tabs
- */
-export function useAllChatTabs(): Record<string, ChatTabState> {
-    return useGlobalStateStore((s) => s.chatTabs)
-}
-
-/**
- * Return the currently active chat tab ID + data
- */
-export function useActiveChatTab(): {
-    id: string | null
-    tabData: ChatTabState | undefined
-} {
-    const activeChatTabId = useGlobalStateStore((s) => s.chatActiveTabId)
-    const chatTabs = useGlobalStateStore((s) => s.chatTabs)
-    const tabData = activeChatTabId ? chatTabs[activeChatTabId] : undefined
-    return {
-        id: activeChatTabId,
-        tabData,
-    }
-}
-
-/**
- * For a specific chat tab ID, return that ChatTabState
- */
-export function useChatTabById(tabId: string | null): ChatTabState | undefined {
-    const chatTabs = useGlobalStateStore((s) => s.chatTabs)
-    if (!tabId) return undefined
-    return chatTabs[tabId]
-}

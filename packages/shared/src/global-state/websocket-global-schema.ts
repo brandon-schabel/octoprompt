@@ -2,8 +2,6 @@ import { z } from "zod";
 import {
     globalStateSchema,
     projectTabStateSchema,
-    chatTabStateSchema,
-    linkSettingsSchema,
     providerSchema,
     themeSchema,
     appSettingsSchema,
@@ -67,38 +65,6 @@ export const setActiveProjectTabMessageSchema = baseInboundMessageSchema.extend(
     tabId: z.string(),
 });
 
-// 8) Create chat tab
-export const createChatTabMessageSchema = baseInboundMessageSchema.extend({
-    type: z.literal("create_chat_tab"),
-    tabId: z.string(),
-    data: chatTabStateSchema,
-});
-
-// 9) Update chat tab
-export const updateChatTabMessageSchema = baseInboundMessageSchema.extend({
-    type: z.literal("update_chat_tab"),
-    tabId: z.string(),
-    data: chatTabStateSchema,
-});
-
-// 10) Update chat tab partial
-export const updateChatTabPartialMessageSchema = baseInboundMessageSchema.extend({
-    type: z.literal("update_chat_tab_partial"),
-    tabId: z.string(),
-    partial: chatTabStateSchema.partial().default({}),
-});
-
-// 11) Delete chat tab
-export const deleteChatTabMessageSchema = baseInboundMessageSchema.extend({
-    type: z.literal("delete_chat_tab"),
-    tabId: z.string(),
-});
-
-// 12) Set active chat tab
-export const setActiveChatTabMessageSchema = baseInboundMessageSchema.extend({
-    type: z.literal("set_active_chat_tab"),
-    tabId: z.string(),
-});
 
 // 13) Create project tab from ticket
 export const createProjectTabFromTicketSchema = baseInboundMessageSchema.extend({
@@ -136,20 +102,6 @@ export const updateThemeMessageSchema = baseInboundMessageSchema.extend({
     theme: themeSchema,
 });
 
-// 18) Update provider
-export const updateProviderMessageSchema = baseInboundMessageSchema.extend({
-    type: z.literal("update_provider"),
-    provider: providerSchema,
-    tabId: z.string(),
-});
-
-// 19) Update link settings
-export const updateLinkSettingsMessageSchema = baseInboundMessageSchema.extend({
-    type: z.literal("update_link_settings"),
-    tabId: z.string(),
-    settings: linkSettingsSchema,
-});
-
 /**
  * Combine all into a single discriminated union on "type".
  */
@@ -161,18 +113,11 @@ export const inboundMessageSchema = z.discriminatedUnion("type", [
     updateProjectTabPartialMessageSchema,
     deleteProjectTabMessageSchema,
     setActiveProjectTabMessageSchema,
-    createChatTabMessageSchema,
-    updateChatTabMessageSchema,
-    updateChatTabPartialMessageSchema,
-    deleteChatTabMessageSchema,
-    setActiveChatTabMessageSchema,
     createProjectTabFromTicketSchema,
     updateGlobalStateKeyMessageSchema,
     updateSettingsMessageSchema,
     updateSettingsPartialMessageSchema,
     updateThemeMessageSchema,
-    updateProviderMessageSchema,
-    updateLinkSettingsMessageSchema,
 ]);
 
 export type InboundMessage = z.infer<typeof inboundMessageSchema>;

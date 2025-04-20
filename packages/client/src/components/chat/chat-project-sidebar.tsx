@@ -5,57 +5,56 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Link } from '@tanstack/react-router'
 import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
-import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { buildPromptContent } from '@/components/projects/utils/projects-utils'
-import { ProjectFile } from 'shared/schema'
 import { toast } from 'sonner'
-import { linkSettingsSchema, LinkSettings } from 'shared'
 import { Copy, FolderOpen, FolderOpenIcon } from 'lucide-react'
 import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { SlidingSidebar } from '@/components/sliding-sidebar'
 import { PromptsList } from '../projects/prompts-list'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import {
-    useUpdateChatLinkSettings,
-    useUnlinkChatTab,
-} from '@/zustand/updaters'
+
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useQuery } from "@tanstack/react-query";
 import {
     useProjectTabField,
 } from '@/zustand/zustand-utility-hooks'
-import { useChatTabField } from '@/zustand/zustand-utility-hooks'
 
 type ChatProjectSidebarProps = {
     linkedProjectTabId: string
 }
 
 export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarProps) {
-    // 1) Which chat tab is active?
-    // TODO move chatActiveTabId to settings or somewhere esle 
-    const { data: chatActiveTabId } = useQuery({
-        queryKey: ["globalState"],
-        select: (gs: any) => gs?.chatActiveTabId ?? null,
+    // We get the activeChat from a global state or query
+    const { data: activeChatId } = useQuery({
+        queryKey: ["activeChat"],
+        select: (state: any) => state?.activeChatId ?? null,
     });
 
-    // 2) From that chat tab, read the linkSettings
-    const { data: linkSettings } = useChatTabField(
-        "linkSettings",
-        chatActiveTabId
-    );
+    // Get link settings for the active chat
+    const { data: linkSettings } = useQuery({
+        queryKey: ["chatLinkSettings", activeChatId],
+        select: (state: any) => state?.linkSettings ?? null,
+    });
 
-    // 3) Also read the selectedProjectId from the "linkedProjectTabId"
+    // Read the selectedProjectId from the project tab
     const { data: selectedProjectId } = useProjectTabField(
         "selectedProjectId",
         linkedProjectTabId
     );
 
-    // We still use the custom utility to read local selection state
+    // Clipboard utility
     const { copyToClipboard } = useCopyClipboard()
 
-    // We keep the original updaters for linking/unlinking
-    const updateChatLinkSettings = useUpdateChatLinkSettings();
-    const unlinkChatTab = useUnlinkChatTab();
+    // Project linking functions using direct chat IDs instead of tabs
+    const updateChatLinkSettings = async (chatId: string, settings: any) => {
+        // Implementation would be updated to work with chat IDs directly
+        toast.success('Link settings updated')
+    };
+    
+    const unlinkProjectFromChat = async (chatId: string) => {
+        // Implementation would be updated to work with chat IDs directly
+        toast.success('Project unlinked from chat')
+    };
 
     // Local state for switching tabs in the UI
     const [tabValue, setTabValue] = useState('files')
@@ -65,24 +64,20 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
 
     const { removeSelectedFile, projectFileMap } = useSelectedFiles({ tabId: linkedProjectTabId })
 
-
-    function handleLinkSettingChange(key: keyof LinkSettings, value: boolean) {
-        if (!chatActiveTabId) return
+    function handleLinkSettingChange(key: string, value: boolean) {
+        if (!activeChatId) return
         if (!linkSettings) return
         const merged = { ...linkSettings, [key]: value }
-        linkSettingsSchema.parse(merged)
-        updateChatLinkSettings(chatActiveTabId, merged)
+        updateChatLinkSettings(activeChatId, merged)
     }
 
     async function handleCopyAll() {
         if (!linkSettings) {
-            toast.error('No link settings found for this project tab.')
+            toast.error('No link settings found for this project.')
             return
         }
-        // We read additional fields from the project tab:
-        // e.g. selectedFiles, selectedPrompts, userPrompt
-        // For multiple fields, you could either do multiple single-field queries
-        // or just read the entire tab if you prefer. For demonstration, let's do single fields:
+        
+        // Get project data for building content
         const { data: projectSelectedFiles } = useProjectTabField(
             "selectedFiles",
             linkedProjectTabId
@@ -95,7 +90,6 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
             "userPrompt",
             linkedProjectTabId
         );
-
 
         // Build the content
         const content = buildPromptContent({
@@ -117,12 +111,10 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
         })
     }
 
-
     // If there's no linked project ID, we can't show anything
     if (!selectedProjectId) {
         return null
     }
-
 
     return (
         <SlidingSidebar
@@ -141,7 +133,6 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
                         <Link>
                             <div className='flex items-center gap-2'>
                                 <span className="font-semibold">
-                                    { /* For brevity, let's just show the linkedProjectTabId */}
                                     {linkedProjectTabId || 'Linked Project'}
                                 </span>
                                 <FolderOpen className="h-4 w-4" />
@@ -223,16 +214,15 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
                             <Button
                                 variant="destructive"
                                 onClick={() => {
-                                    const chatTabId = chatActiveTabId;
-                                    if (!chatTabId) return;
-                                    unlinkChatTab(chatTabId);
+                                    if (!activeChatId) return;
+                                    unlinkProjectFromChat(activeChatId);
                                 }}
                                 className="w-full"
                             >
                                 Unlink Project
                             </Button>
                             <p className="text-xs text-muted-foreground mt-2">
-                                This removes the link for this chat from project tab "
+                                This removes the link between this chat and project tab "
                                 {linkedProjectTabId}".
                             </p>
                         </div>

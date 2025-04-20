@@ -1,34 +1,22 @@
-import { useForkChat } from "@/hooks/api/use-chat-api";
 import { useCallback } from "react";
 import { useGetMessages } from "@/hooks/api/use-chat-api";
-import { APIProviders, ChatModelSettings } from "shared";
-import { useCreateChat } from "@/hooks/api/use-chat-api";
-import { useChatTabField } from "@/zustand/zustand-utility-hooks";
-import { useChatModelParams } from "./use-chat-model-params";
+import { APIProviders, ChatModelSettings } from "shared"; // Keep types
+import { useCreateChat } from "@/hooks/api/use-chat-api"; // Keep if create API exists
+import { useChatModelParams } from "./use-chat-model-params"; // Keep refactored hook
 import { useAIChat } from "@/hooks/use-ai-chat";
-
-export function useClearExcludedMessages(tabId: string) {
-    const { mutate: setExcludedMessageIds } = useChatTabField(
-        "excludedMessageIds",
-        tabId
-    );
-
-    const clearExcludedMessages = useCallback(() => {
-        setExcludedMessageIds([]);
-    }, [setExcludedMessageIds]);
-
-    return { clearExcludedMessages };
-}
+import { useSettings } from "@/zustand/selectors"; // Import useSettings
+import { useForkChat } from "@/hooks/api/use-chat-api"; // Assuming this API call exists
 
 export function useCreateChatHandler() {
-    const createChatMutation = useCreateChat();
+    const createChatMutation = useCreateChat(); // Assumes this API call doesn't depend on tabs
 
     const handleCreateChat = useCallback(
         async (chatTitle: string, currentChatId?: string) => {
             try {
+                // Ensure payload doesn't contain tab-specific fields if API changes
                 const newChat = await createChatMutation.mutateAsync({
                     title: chatTitle,
-                    copyExisting: false,
+                    copyExisting: false, // Assuming this means copy chat data, not tab state
                     currentChatId,
                 });
                 return newChat;
@@ -43,115 +31,122 @@ export function useCreateChatHandler() {
     return { handleCreateChat };
 }
 
+
 /**
- * Simplified hook for AI chat interaction using Vercel AI SDK and React Query.
- * Assumes useAIChat is updated to handle sending only new messages via `append`
- * and triggers `refetchMessages` in its `onFinish` callback.
+ * Simplified hook for AI chat interaction using global settings.
  */
 export function useChatWithAI({
     chatId,
-    provider,
-    model,
-    excludedMessageIds,
-    clearUserInput, // Keep this to clear input from the parent component (ChatPage)
-    systemMessage,
+    // Removed provider, model - get from global settings
+    excludedMessageIds, // Passed as prop from parent
+    clearUserInput,     // Passed as prop from parent
+    systemMessage,      // Passed as prop or get from global settings if applicable
 }: {
     chatId: string;
-    provider: APIProviders;
-    model: string;
     excludedMessageIds: string[];
     clearUserInput: () => void;
-    systemMessage?: string;
+    systemMessage?: string; // Make optional or decide if global
 }) {
-    // Fetch canonical messages using React Query
+    const settings = useSettings(); // Get global settings
+    const { settings: modelParams } = useChatModelParams(); // Get derived model params
+
+    // Fetch canonical messages using React Query (based on chatId)
     const {
         data: messagesData,
         refetch: refetchMessages,
         isFetching,
         isError: isMessagesError,
-    } = useGetMessages(chatId);
+    } = useGetMessages(chatId); // This remains the source of truth for messages
 
-    // Use the underlying AI chat hook for API interaction and stream handling
+    // Underlying AI chat hook
     const {
-        // messages: aiMessages, // We no longer rely on the SDK's internal message state for display
-        // handleSubmit, // We use append directly
         append,
-        isLoading, // This reflects the Vercel SDK's loading state (during streaming)
+        isLoading, // SDK's loading state during streaming
         error: aiError,
         stop,
-        // input, handleInputChange, setInput // Not needed if input is managed by Zustand
-    } = useAIChat({
-        // Pass necessary config to the underlying hook
+    } = useAIChat({ // Pass required config, now sourced globally
         chatId,
-        provider,
-        model,
-        excludedMessageIds,
-        systemMessage,
-        // Ensure useAIChat's internal onFinish calls refetchMessages()
-        // TODO: Uncomment this once useAIChat is updated to accept onFinish
-        /*
-        onFinish: () => {
-            console.log("[useChatWithAI -> useAIChat.onFinish] Streaming finished, refetching messages.");
-            refetchMessages();
-        }
-        */
+        provider: settings.provider as APIProviders, // Cast needed if type differs slightly
+        model: settings.model,
+        excludedMessageIds, // Pass through
+        systemMessage, // Pass through or get from global if made global
+        // onFinish: () => { // Keep if useAIChat supports this
+        //     console.log("[useChatWithAI -> useAIChat.onFinish] Streaming finished, refetching messages.");
+        //     refetchMessages();
+        // }
     });
 
-    // Prepare the message sending function
+    // Message sending function
     const handleSendMessage = useCallback(
-        async ({ userInput, modelSettings }: { userInput: string; modelSettings: ChatModelSettings }) => {
+        async ({ userInput }: { userInput: string }) => { // Removed modelSettings from args
             if (!userInput.trim() || !chatId) return;
 
-            // Clear input immediately in the parent component's state
-            clearUserInput();
+            clearUserInput(); // Clear parent's input state
 
             try {
-                console.log('[useChatWithAI] Calling append with:', { chatId, provider, model, systemMessage, userInput: userInput.trim() });
+                const currentModelSettings: ChatModelSettings = { // Construct settings for API
+                    temperature: modelParams.temperature,
+                    max_tokens: modelParams.max_tokens,
+                    top_p: modelParams.top_p,
+                    frequency_penalty: modelParams.frequency_penalty,
+                    presence_penalty: modelParams.presence_penalty,
+                    stream: modelParams.stream,
+                };
+
+                console.log('[useChatWithAI] Calling append with:', {
+                    chatId,
+                    provider: settings.provider,
+                    model: settings.model,
+                    systemMessage, // Include if used
+                    userInput: userInput.trim(),
+                    options: currentModelSettings, // Log effective settings
+                    excludedMessageIds,
+                });
+
                 await append(
-                    {
-                        // Message content for Vercel SDK append structure
+                    { // Vercel SDK message format
                         role: 'user',
                         content: userInput.trim(),
                     },
-                    {
-                        // Body data for the backend API call (/api/ai/chat)
+                    { // Backend API body (/api/ai/chat)
                         body: {
                             chatId: chatId,
-                            provider: provider,
-                            options: { model, ...modelSettings }, // Pass model settings
+                            provider: settings.provider,
+                            // Pass combined options (model + params)
+                            options: { model: settings.model, ...currentModelSettings },
                             excludedMessageIds: excludedMessageIds,
-                            systemMessage: systemMessage,
+                            systemMessage: systemMessage, // Send if provided
                             userMessageContent: userInput.trim(), // Explicitly send content
                         },
                     }
                 );
                 console.log('[useChatWithAI] Append call finished.');
+                // Consider calling refetchMessages() here if onFinish isn't reliable/implemented in useAIChat
+                // refetchMessages();
             } catch (err) {
                 console.error('[useChatWithAI] Error calling append:', err);
-                // Handle error appropriately, maybe show a toast notification
+                // Handle error (e.g., toast notification)
             }
         },
-        [append, chatId, provider, model, excludedMessageIds, systemMessage, clearUserInput]
+        // Dependencies updated: use global settings and params
+        [append, chatId, settings.provider, settings.model, modelParams, excludedMessageIds, systemMessage, clearUserInput, refetchMessages] // Added refetchMessages if called here
     );
 
-    // Combine errors if necessary
+    // Combine errors
     const error = aiError || (isMessagesError ? new Error("Failed to fetch messages") : null);
 
     return {
-        messages: messagesData?.data || [], // Return messages directly from React Query
-        isLoading, // Loading state during stream
-        isFetching, // Fetching state from React Query
+        messages: messagesData?.data || [], // Messages from React Query
+        isLoading,     // SDK streaming state
+        isFetching,    // React Query fetching state
         error,
         refetchMessages,
-        handleSendMessage, // Use this function to send messages
-        stop, // Allow stopping the stream
+        handleSendMessage,
+        stop,
     };
 }
 
-/**
- * Simplified hook to fetch chat messages using React Query.
- * No longer manages pending messages.
- */
+// Keep useChatMessages - It operates on chatId
 export function useChatMessages(chatId: string) {
     const {
         data: messagesData,
@@ -161,37 +156,31 @@ export function useChatMessages(chatId: string) {
     } = useGetMessages(chatId);
 
     return {
-        messages: messagesData?.data || [], // Directly return fetched data
+        messages: messagesData?.data || [],
         refetchMessages,
         isFetching,
         isError,
     };
 }
 
-interface UseForkChatArgs {
-    chatId: string;
-    excludedMessageIds: string[];
-    // setPendingMessages is removed as pending state is gone
-}
 
-export function useForkChatHandler({
-    chatId,
-    excludedMessageIds,
-}: UseForkChatArgs) {
-    const forkChatMutation = useForkChat();
+export function useForkChatHandler({ chatId }: { chatId: string }) { // Only needs chatId
+    const forkChatMutation = useForkChat(); // Assuming this API hook exists
 
     const handleForkChat = useCallback(async () => {
         if (!chatId) return;
         try {
+            // API call likely only needs the original chatId
             await forkChatMutation.mutateAsync({
                 chatId,
-                excludedMessageIds,
+                excludedMessageIds: [], // Don't send excluded IDs from old tab concept
             });
-            // No need to clear pending messages anymore
+            // Forking might navigate user or update list, handled elsewhere
+            console.log(`[handleForkChat] Fork initiated for chatId: ${chatId}`);
         } catch (error) {
             console.error("[handleForkChat] Error:", error);
         }
-    }, [chatId, excludedMessageIds, forkChatMutation]);
+    }, [chatId, forkChatMutation]);
 
     return { handleForkChat };
 }

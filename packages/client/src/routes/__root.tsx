@@ -18,7 +18,6 @@ import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
 import { useGlobalStateContext } from '@/zustand/global-state-provider'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
-import { useAllChatTabs } from '@/zustand/selectors'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -72,23 +71,12 @@ function GlobalCommandPalette() {
 
   // Get data from various sources
   const { data: projectsData } = useGetProjects()
-  const chatTabs = useAllChatTabs()
 
   useHotkeys('mod+k', (evt) => {
     evt.preventDefault()
     setOpen((o) => !o)
   })
 
-  // Filter chats based on search
-  const filteredChats = Object.entries(chatTabs ?? {})
-    .filter(([_, tab]) => {
-      const searchLower = debouncedSearch.toLowerCase()
-      return (
-        tab.activeChatId?.toLowerCase().includes(searchLower) ||
-        tab.messages?.some((msg) => msg.content.toLowerCase().includes(searchLower))
-      )
-    })
-    .slice(0, 5) // Limit to 5 results
 
   // Filter projects based on search
   const filteredProjects = (projectsData?.projects ?? [])
@@ -111,29 +99,6 @@ function GlobalCommandPalette() {
           <NavigationCommands onSelect={() => setOpen(false)} />
         </CommandGroup>
         <CommandSeparator />
-
-        {/* Chat Results */}
-        {filteredChats.length > 0 && (
-          <>
-            <CommandGroup heading='Chats'>
-              {filteredChats.map(([id, chat]) => (
-                <CommandItem
-                  key={id}
-                  onSelect={() => {
-                    navigate({ to: '/chat', search: { prefill: false } })
-                    setOpen(false)
-                  }}
-                >
-                  <span>Chat: {chat.activeChatId || 'Untitled'}</span>
-                  {chat.messages && chat.messages.length > 0 && (
-                    <span className='text-muted-foreground text-sm ml-2'>({chat.messages.length} messages)</span>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
 
         {/* Project Results */}
         {filteredProjects.length > 0 && (

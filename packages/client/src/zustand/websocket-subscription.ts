@@ -89,38 +89,16 @@ export function handleIncomingWebsocketMessage(msg: InboundMessage) {
                 }
             });
             
-            // Compare incoming chat tabs with current ones
-            const chatTabsToUpdate: Record<string, any> = {};
-            let hasChatTabChanges = false;
-            
-            Object.entries(msg.data.chatTabs || {}).forEach(([tabId, tabData]) => {
-                const currentTab = zustandStore.chatTabs[tabId];
-                const changes = getChangedFields(currentTab, tabData);
-                
-                if (changes) {
-                    chatTabsToUpdate[tabId] = {
-                        ...currentTab,
-                        ...changes
-                    };
-                    hasChatTabChanges = true;
-                }
-            });
-            
             // Check for settings changes
             const settingsChanges = getChangedFields(zustandStore.settings, msg.data.settings || {});
             
-            // Check for active tab changes
+            // Check for active project tab changes
             const projectActiveTabChanged = 
                 msg.data.projectActiveTabId !== undefined && 
                 msg.data.projectActiveTabId !== zustandStore.projectActiveTabId;
-                
-            const chatActiveTabChanged = 
-                msg.data.chatActiveTabId !== undefined && 
-                msg.data.chatActiveTabId !== zustandStore.chatActiveTabId;
             
             // Batch all updates into a single setState call to prevent cascading renders
-            if (hasProjectTabChanges || hasChatTabChanges || settingsChanges || 
-                projectActiveTabChanged || chatActiveTabChanged) {
+            if (hasProjectTabChanges || settingsChanges || projectActiveTabChanged) {
                 
                 useGlobalStateStore.setState((state) => {
                     const updates: Partial<typeof state> = {};
@@ -129,13 +107,6 @@ export function handleIncomingWebsocketMessage(msg: InboundMessage) {
                         updates.projectTabs = {
                             ...state.projectTabs,
                             ...projectTabsToUpdate
-                        };
-                    }
-                    
-                    if (hasChatTabChanges) {
-                        updates.chatTabs = {
-                            ...state.chatTabs,
-                            ...chatTabsToUpdate
                         };
                     }
                     
@@ -148,10 +119,6 @@ export function handleIncomingWebsocketMessage(msg: InboundMessage) {
                     
                     if (projectActiveTabChanged) {
                         updates.projectActiveTabId = msg.data.projectActiveTabId;
-                    }
-                    
-                    if (chatActiveTabChanged) {
-                        updates.chatActiveTabId = msg.data.chatActiveTabId;
                     }
                     
                     return updates;
@@ -216,66 +183,6 @@ export function handleIncomingWebsocketMessage(msg: InboundMessage) {
             // Only update if it's actually different
             if (zustandStore.projectActiveTabId !== msg.tabId) {
                 useGlobalStateStore.setState({ projectActiveTabId: msg.tabId })
-            }
-            break
-        }
-
-        case "create_chat_tab": {
-            const { tabId, data } = msg
-            useGlobalStateStore.setState((state) => ({
-                chatTabs: { ...state.chatTabs, [tabId]: data },
-                chatActiveTabId: tabId
-            }))
-            break
-        }
-
-        case "update_chat_tab":
-        case "update_chat_tab_partial": {
-            const { tabId } = msg
-            useGlobalStateStore.setState((state) => {
-                const existing = state.chatTabs[tabId]
-                if (!existing) return {}
-                
-                const updates = msg.type === "update_chat_tab" ? msg.data : msg.partial;
-                // Only update if changes are detected
-                const changes = getChangedFields(existing, updates);
-                if (!changes) return {};
-                
-                return {
-                    chatTabs: {
-                        ...state.chatTabs,
-                        [tabId]: {
-                            ...existing,
-                            ...changes,
-                        }
-                    }
-                }
-            })
-            break
-        }
-
-        case "delete_chat_tab": {
-            const { tabId } = msg
-            useGlobalStateStore.setState((state) => {
-                if (!state.chatTabs[tabId]) return {}; // No change if tab doesn't exist
-                
-                const newTabs = { ...state.chatTabs }
-                delete newTabs[tabId]
-                const remaining = Object.keys(newTabs)
-                return {
-                    chatTabs: newTabs,
-                    chatActiveTabId: state.chatActiveTabId === tabId
-                        ? (remaining.length > 0 ? remaining[0] : null)
-                        : state.chatActiveTabId
-                }
-            })
-            break
-        }
-
-        case "set_active_chat_tab": {
-            // Only update if it's actually different
-            if (zustandStore.chatActiveTabId !== msg.tabId) {
-                useGlobalStateStore.setState({ chatActiveTabId: msg.tabId })
             }
             break
         }

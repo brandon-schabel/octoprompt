@@ -1,27 +1,20 @@
-import { useChatTabField } from "@/zustand/zustand-utility-hooks";
-import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared";
-
-const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
+import { useSettings } from '@/zustand/selectors'; // Use global settings selector
+import { useUpdateSettings } from '@/zustand/updaters'; // Use global settings updater
+import { APIProviders } from "shared";
 
 export const useChatModelControl = () => {
-    const { data: provider = defaultModelConfigs.provider } =
-        useChatTabField("provider");
-    const { data: model = defaultModelConfigs.model } =
-        useChatTabField("model");
+    const settings = useSettings();
+    const updateSettings = useUpdateSettings();
 
-    const { mutate: setProviderField } = useChatTabField(
-        "provider",
-    );
-    const { mutate: setModelField } = useChatTabField(
-        "model",
-    );
+    const provider = settings.provider; // Get from global settings
+    const model = settings.model;       // Get from global settings
 
     function setProvider(newProvider: APIProviders) {
-        setProviderField(newProvider);
+        updateSettings({ provider: newProvider }); // Update global settings
     }
 
     function setCurrentModel(modelId: string) {
-        setModelField(modelId);
+        updateSettings({ model: modelId }); // Update global settings
     }
 
     return {

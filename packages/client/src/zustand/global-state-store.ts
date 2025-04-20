@@ -13,9 +13,7 @@ import {
 } from "shared"
 
 import type {
-    APIProviders,
     AppSettings,
-    ChatTabState,
     GlobalState,
     ProjectTabState,
 } from "shared"
@@ -33,10 +31,10 @@ interface SettingsSlice {
     setSettings: (partial: Partial<AppSettings>) => void
 }
 
-type StoreState = SettingsSlice & ProjectTabsSlice & ChatTabsSlice & GlobalSlice
+type StoreState = SettingsSlice & ProjectTabsSlice & GlobalSlice
 type StoreUpdater = (
     partial: StoreState | Partial<StoreState> | ((state: StoreState) => StoreState | Partial<StoreState>),
-    replace?: boolean
+    replace?: false | undefined
 ) => void
 
 /**
@@ -109,8 +107,6 @@ function createProjectTabsSlice(
                 ticketSort: "created_desc",
                 ticketStatusFilter: "all",
                 ticketId: null,
-                provider: undefined,
-                linkSettings: undefined,
                 sortOrder: 0,
             }
             set((state) => ({
@@ -154,127 +150,6 @@ function createProjectTabsSlice(
 }
 
 // ---------------------------------------------------
-/** Type for store actions that manage chat tabs. */
-interface ChatTabsSlice {
-    chatTabs: Record<string, ChatTabState>
-    chatActiveTabId: string | null
-
-    createChatTab: (options?: {
-        cleanTab?: boolean
-        model?: string
-        provider?: string
-        title?: string
-    }) => string
-
-    deleteChatTab: (tabId: string) => void
-    setActiveChatTab: (tabId: string) => void
-    updateChatTab: (tabId: string, partial: Partial<ChatTabState>) => void
-}
-
-/**
- * Creates a Zustand slice for chat tabs.
- */
-function createChatTabsSlice(
-    set: StoreUpdater,
-    get: () => StoreState
-): ChatTabsSlice {
-    return {
-        chatTabs: createInitialGlobalState().chatTabs,
-        chatActiveTabId: createInitialGlobalState().chatActiveTabId,
-
-        createChatTab: (options) => {
-            const newTabId = `chat-tab-${uuidv4()}`
-            const state = get()
-            const activeId = state.chatActiveTabId
-
-            let sourceBase: ChatTabState | undefined
-            if (activeId) {
-                sourceBase = state.chatTabs[activeId]
-            }
-
-            const fallback: ChatTabState = {
-                provider: defaultModelConfigs.provider as APIProviders,
-                model: defaultModelConfigs.model,
-                input: "",
-                messages: [],
-                excludedMessageIds: [],
-                displayName: "New Chat Tab",
-                activeChatId: undefined,
-                linkedProjectTabId: null,
-                linkSettings: undefined,
-                ollamaUrl: undefined,
-                lmStudioUrl: undefined,
-                temperature: 0.7,
-                max_tokens: 4000,
-                top_p: 1,
-                frequency_penalty: 0,
-                presence_penalty: 0,
-                stream: true,
-                sortOrder: 0,
-            }
-
-            const sourceOrFallback = sourceBase ?? fallback
-
-            const newTabData: ChatTabState = {
-                ...sourceOrFallback,
-                ...(options?.cleanTab
-                    ? {
-                        messages: [],
-                        input: "",
-                        excludedMessageIds: [],
-                        linkSettings: undefined,
-                        linkedProjectTabId: null,
-                    }
-                    : {}),
-                displayName: options?.title
-                    ? options.title
-                    : `Chat ${Object.keys(state.chatTabs).length + 1}`,
-                model: options?.model ?? sourceOrFallback.model,
-                provider: (options?.provider ?? sourceOrFallback.provider) as ChatTabState["provider"],
-            }
-
-            set((state) => ({
-                chatTabs: { ...state.chatTabs, [newTabId]: newTabData },
-                chatActiveTabId: newTabId
-            }))
-
-            return newTabId
-        },
-
-        deleteChatTab: (tabId) => {
-            set((state) => {
-                const newTabs = { ...state.chatTabs }
-                delete newTabs[tabId]
-                const remainingTabs = Object.keys(newTabs)
-                return {
-                    chatTabs: newTabs,
-                    chatActiveTabId: state.chatActiveTabId === tabId 
-                        ? (remainingTabs.length > 0 ? remainingTabs[0] : null)
-                        : state.chatActiveTabId
-                }
-            })
-        },
-
-        setActiveChatTab: (tabId) => {
-            set((state) => ({ chatActiveTabId: tabId }))
-        },
-
-        updateChatTab: (tabId, partial) => {
-            set((state) => {
-                const current = state.chatTabs[tabId]
-                if (!current) return {}
-                return {
-                    chatTabs: {
-                        ...state.chatTabs,
-                        [tabId]: { ...current, ...partial }
-                    }
-                }
-            })
-        },
-    }
-}
-
-// ---------------------------------------------------
 /** Type for "global" store keys not covered by slices above. */
 interface GlobalSlice {
     // Example: a full copy of the global state to do merges, if you prefer
@@ -292,16 +167,12 @@ function createGlobalSlice(
     return {
         mergeFullGlobalState: (incoming) => {
             set((state) => {
-                const merged = mergeDeep(
-                    {
-                        settings: state.settings,
-                        projectTabs: state.projectTabs,
-                        projectActiveTabId: state.projectActiveTabId,
-                        chatTabs: state.chatTabs,
-                        chatActiveTabId: state.chatActiveTabId,
-                    },
-                    incoming
-                ) as GlobalState
+                const currentState: GlobalState = {
+                    settings: state.settings,
+                    projectTabs: state.projectTabs,
+                    projectActiveTabId: state.projectActiveTabId,
+                }
+                const merged = mergeDeep(currentState, incoming) as GlobalState
                 return merged
             })
         },
@@ -312,8 +183,6 @@ function createGlobalSlice(
                     settings: state.settings,
                     projectTabs: state.projectTabs,
                     projectActiveTabId: state.projectActiveTabId,
-                    chatTabs: state.chatTabs,
-                    chatActiveTabId: state.chatActiveTabId,
                 }
                 return mergeDeep(currentGlobal, incoming) as GlobalState
             })
@@ -326,9 +195,8 @@ function createGlobalSlice(
 // ---------------------------------------------------
 export const useGlobalStateStore = create<StoreState>()(
     devtools((set, get) => ({
-        ...createSettingsSlice(set as StoreUpdater, get),
-        ...createProjectTabsSlice(set as StoreUpdater, get),
-        ...createChatTabsSlice(set as StoreUpdater, get),
-        ...createGlobalSlice(set as StoreUpdater, get),
+        ...createSettingsSlice(set, get),
+        ...createProjectTabsSlice(set, get),
+        ...createGlobalSlice(set, get),
     }))
 )

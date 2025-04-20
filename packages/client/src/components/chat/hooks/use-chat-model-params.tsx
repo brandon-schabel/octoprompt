@@ -1,13 +1,13 @@
-import { useChatTabField } from '@/zustand/zustand-utility-hooks';
-import { useActiveChatTab } from '@/zustand/selectors';
+import { useSettings } from '@/zustand/selectors'; // Use global settings selector
+import { useUpdateSettings } from '@/zustand/updaters'; // Use global settings updater
 import { useCallback, useMemo } from 'react';
-import { modelsTempNotAllowed } from 'shared';
+import { modelsTempNotAllowed } from 'shared'; // Keep this utility
 
 // Define parameter types
 type ModelParamMutationFn = (value: number) => void;
 type StreamMutationFn = (value: boolean) => void;
 
-// Combined model settings type
+// Combined model settings type (matches AppSettings relevant fields)
 export interface ModelSettings {
     temperature: number;
     top_p: number;
@@ -15,85 +15,73 @@ export interface ModelSettings {
     presence_penalty: number;
     max_tokens: number;
     stream: boolean;
-    model?: string; // Optional since it might be undefined initially
-    provider?: string; // Optional since it might be undefined initially
+    model?: string; // Optional: Already part of AppSettings
+    provider?: string; // Optional: Already part of AppSettings
 }
 
 /**
- * A hook that provides all chat model parameters in a single interface
- * with efficient updates and cache invalidation protection.
+ * A hook that provides global chat model parameters from AppSettings
+ * with efficient updates.
  */
 export function useChatModelParams() {
-    // Get the active chat tab to determine context
-    const { id: chatTabIdOrNull } = useActiveChatTab();
-    
-    // Convert from string | null to string | undefined as required by useChatTabField
-    const chatTabId = chatTabIdOrNull || undefined;
-    
-    // Get individual model parameter fields
-    // Each useChatTabField call returns { data, isLoading, mutate }
-    const temperatureField = useChatTabField('temperature', chatTabId);
-    const maxTokensField = useChatTabField('max_tokens', chatTabId);
-    const topPField = useChatTabField('top_p', chatTabId);
-    const frequencyPenaltyField = useChatTabField('frequency_penalty', chatTabId);
-    const presencePenaltyField = useChatTabField('presence_penalty', chatTabId);
-    const streamField = useChatTabField('stream', chatTabId);
-    const modelField = useChatTabField('model', chatTabId);
-    const providerField = useChatTabField('provider', chatTabId);
-    
-    // Extract values and setters
-    const temperature = temperatureField.data ?? 0.7; // Default values if undefined
-    const max_tokens = maxTokensField.data ?? 2048;
-    const top_p = topPField.data ?? 0.95;
-    const frequency_penalty = frequencyPenaltyField.data ?? 0;
-    const presence_penalty = presencePenaltyField.data ?? 0;
-    const stream = streamField.data ?? true;
-    const model = modelField.data;
-    const provider = providerField.data;
-    
+    const settings = useSettings();
+    const updateSettings = useUpdateSettings();
+
+    // Extract values directly from global settings
+    const {
+        temperature,
+        max_tokens,
+        top_p,
+        frequency_penalty,
+        presence_penalty,
+        stream,
+        model, // Get model for isTempDisabled check
+        provider,
+    } = settings;
+
     // Check if temperature should be disabled based on model
     const isTempDisabled = useMemo(() => {
         if (!model) return false;
         return modelsTempNotAllowed.some(m => model.includes(m));
     }, [model]);
-    
-    // Define all setter functions with consistent types
+
+    // Define all setter functions targeting global settings
     const setTemperature: ModelParamMutationFn = useCallback((value) => {
-        if (isTempDisabled) return; // Do nothing if temp is disabled for this model
-        temperatureField.mutate(value);
-    }, [isTempDisabled, temperatureField]);
-    
+        if (isTempDisabled) return;
+        updateSettings({ temperature: value });
+    }, [isTempDisabled, updateSettings]);
+
     const setMaxTokens: ModelParamMutationFn = useCallback((value) => {
-        maxTokensField.mutate(value);
-    }, [maxTokensField]);
-    
+        updateSettings({ max_tokens: value });
+    }, [updateSettings]);
+
     const setTopP: ModelParamMutationFn = useCallback((value) => {
-        topPField.mutate(value);
-    }, [topPField]);
-    
+        updateSettings({ top_p: value });
+    }, [updateSettings]);
+
     const setFreqPenalty: ModelParamMutationFn = useCallback((value) => {
-        frequencyPenaltyField.mutate(value);
-    }, [frequencyPenaltyField]);
-    
+        updateSettings({ frequency_penalty: value });
+    }, [updateSettings]);
+
     const setPresPenalty: ModelParamMutationFn = useCallback((value) => {
-        presencePenaltyField.mutate(value);
-    }, [presencePenaltyField]);
-    
+        updateSettings({ presence_penalty: value });
+    }, [updateSettings]);
+
     const setStream: StreamMutationFn = useCallback((value) => {
-        streamField.mutate(value);
-    }, [streamField]);
-    
-    // Combine all settings into a single settings object 
-    // Memoize to prevent re-renders when nothing has changed
-    const settings: ModelSettings = useMemo(() => ({
+        updateSettings({ stream: value });
+    }, [updateSettings]);
+
+    // Combine all settings into a single settings object
+    // Memoize to prevent re-renders when global settings haven't changed relevant fields
+    const modelSettings: ModelSettings = useMemo(() => ({
         temperature,
         top_p,
         frequency_penalty,
         presence_penalty,
         max_tokens,
         stream,
-        model,
-        provider
+        model, // Include for reference if needed
+        provider, // Include for reference if needed
     }), [
         temperature,
         top_p,
@@ -104,9 +92,9 @@ export function useChatModelParams() {
         model,
         provider
     ]);
-    
+
     return {
-        settings,
+        settings: modelSettings, // Return the derived settings object
         setTemperature,
         setMaxTokens,
         setTopP,
