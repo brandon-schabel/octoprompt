@@ -42,10 +42,10 @@ export const projectTabStateSchema = z.object({
     selectedPrompts: z.array(z.string()).optional().default([]),
     userPrompt: z.string().optional().default(""),
     searchByContent: z.boolean().optional().default(false),
-    displayName: z.string().optional(), // Keep for Project Tabs
+    displayName: z.string().optional(),
     contextLimit: z.number().optional().default(128000),
     resolveImports: z.boolean().optional().default(false),
-    preferredEditor: z.enum(["vscode", "cursor"]).optional().default("vscode"), // Assuming 'cursor' is a valid editor option based on previous code
+    preferredEditor: z.enum(["vscode", "cursor"]).optional().default("vscode"),
     suggestedFileIds: z.array(z.string()).optional().default([]),
     bookmarkedFileGroups: z
         .record(z.string(), z.array(z.string()))
@@ -61,8 +61,6 @@ export const projectTabStateSchema = z.object({
         .optional()
         .default("all"),
     ticketId: z.string().nullable().optional().default(null),
-    // provider: providerSchema.optional(), // Can be removed if only global provider is used
-    // linkSettings: linkSettingsSchema.optional(), // REMOVED
     sortOrder: z.number().optional().default(0), // Keep for Project Tabs
 });
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
@@ -126,6 +124,13 @@ export const globalStateSchema = z.object({
     settings: appSettingsSchema,
     projectTabs: projectTabsStateRecordSchema,
     projectActiveTabId: z.string().nullable().optional().default(null),
+    activeChatId: z.string().nullable().optional().default(null),
+    chatLinkSettings: z.record(z.string(), z.object({
+        includeSelectedFiles: z.boolean().optional().default(false),
+        includePrompts: z.boolean().optional().default(false),
+        includeUserPrompt: z.boolean().optional().default(false),
+        linkedProjectTabId: z.string().nullable().optional()
+    })).optional().default({})
 });
 export type GlobalState = z.infer<typeof globalStateSchema>;
 
@@ -183,4 +188,6 @@ export const createInitialGlobalState = (): GlobalState => ({
         },
     },
     projectActiveTabId: "defaultTab", // Assuming project tabs remain
+    activeChatId: null,
+    chatLinkSettings: {}
 });

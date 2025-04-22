@@ -65,6 +65,29 @@ export const setActiveProjectTabMessageSchema = baseInboundMessageSchema.extend(
     tabId: z.string(),
 });
 
+// 8) Set active chat
+export const setActiveChatMessageSchema = baseInboundMessageSchema.extend({
+    type: z.literal("set_active_chat"),
+    chatId: z.string(),
+});
+
+// 9) Update chat link settings
+export const updateChatLinkSettingsMessageSchema = baseInboundMessageSchema.extend({
+    type: z.literal("update_chat_link_settings"),
+    chatId: z.string(),
+    settings: z.object({
+        includeSelectedFiles: z.boolean().optional(),
+        includePrompts: z.boolean().optional(),
+        includeUserPrompt: z.boolean().optional(),
+        linkedProjectTabId: z.string().nullable().optional(),
+    }).partial(),
+});
+
+// 10) Unlink project from chat
+export const unlinkProjectFromChatMessageSchema = baseInboundMessageSchema.extend({
+    type: z.literal("unlink_project_from_chat"),
+    chatId: z.string(),
+});
 
 // 13) Create project tab from ticket
 export const createProjectTabFromTicketSchema = baseInboundMessageSchema.extend({
@@ -113,6 +136,9 @@ export const inboundMessageSchema = z.discriminatedUnion("type", [
     updateProjectTabPartialMessageSchema,
     deleteProjectTabMessageSchema,
     setActiveProjectTabMessageSchema,
+    setActiveChatMessageSchema,
+    updateChatLinkSettingsMessageSchema,
+    unlinkProjectFromChatMessageSchema,
     createProjectTabFromTicketSchema,
     updateGlobalStateKeyMessageSchema,
     updateSettingsMessageSchema,

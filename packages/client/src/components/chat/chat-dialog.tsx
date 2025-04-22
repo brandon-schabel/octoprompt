@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { useCreateChat } from "@/hooks/api/use-chat-api"
+import { useActiveChat } from "@/zustand/selectors"
+import { useSetActiveChat } from "@/zustand/updaters"
 
 type ChatDialogProps = {
     open: boolean
@@ -21,7 +23,8 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
     const [title, setTitle] = useState("")
     const [copyExisting, setCopyExisting] = useState(false)
     const createChatMutation = useCreateChat();
-    const [activeChatId, setActiveChatId] = useState<string | undefined>(undefined);
+    const activeChatId = useActiveChat();
+    const setActiveChat = useSetActiveChat();
 
     const generateDefaultTitle = () => `Chat ${new Date().toLocaleTimeString()}`;
     async function handleCreateChat(e: React.FormEvent<HTMLButtonElement>) {
@@ -31,10 +34,11 @@ export function ChatDialog({ open, onOpenChange }: ChatDialogProps) {
             const newChat = await createChatMutation.mutateAsync({
                 title: chatTitle,
                 copyExisting,
-                currentChatId: copyExisting ? activeChatId : undefined
+                currentChatId: copyExisting && activeChatId ? activeChatId : undefined
             });
             setTitle('');
             onOpenChange(false);
+            setActiveChat(newChat.id);
             return newChat;
         } catch (error) {
             console.error('Error creating chat:', error);

@@ -1,10 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../use-api';
-import { CreateChatBody, Chat, ChatMessage, APIProviders } from 'shared'
+import { Chat, ChatMessage, APIProviders } from 'shared'
 import { CreateMessageBodyGeneric } from 'shared/src/validation/chat-api-validation';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import { CreateChatOptions } from '@/components/chat/chat-dialog';
-
 
 interface UnifiedModel {
     id: string;

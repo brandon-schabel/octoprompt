@@ -14,7 +14,8 @@ import { PromptsList } from '../projects/prompts-list'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useQuery } from "@tanstack/react-query";
+import { useActiveChat, useChatLinkSettings } from '@/zustand/selectors'
+import { useUpdateChatLinkSettings, useUnlinkProjectFromChat } from '@/zustand/updaters'
 import {
     useProjectTabField,
 } from '@/zustand/zustand-utility-hooks'
@@ -24,17 +25,15 @@ type ChatProjectSidebarProps = {
 }
 
 export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarProps) {
-    // We get the activeChat from a global state or query
-    const { data: activeChatId } = useQuery({
-        queryKey: ["activeChat"],
-        select: (state: any) => state?.activeChatId ?? null,
-    });
+    // Get the activeChat from Zustand
+    const activeChatId = useActiveChat();
 
     // Get link settings for the active chat
-    const { data: linkSettings } = useQuery({
-        queryKey: ["chatLinkSettings", activeChatId],
-        select: (state: any) => state?.linkSettings ?? null,
-    });
+    const linkSettings = useChatLinkSettings(activeChatId);
+    
+    // Get update functions
+    const updateChatLinkSettings = useUpdateChatLinkSettings();
+    const unlinkProjectFromChat = useUnlinkProjectFromChat();
 
     // Read the selectedProjectId from the project tab
     const { data: selectedProjectId } = useProjectTabField(
@@ -44,17 +43,6 @@ export function ChatProjectSidebar({ linkedProjectTabId }: ChatProjectSidebarPro
 
     // Clipboard utility
     const { copyToClipboard } = useCopyClipboard()
-
-    // Project linking functions using direct chat IDs instead of tabs
-    const updateChatLinkSettings = async (chatId: string, settings: any) => {
-        // Implementation would be updated to work with chat IDs directly
-        toast.success('Link settings updated')
-    };
-    
-    const unlinkProjectFromChat = async (chatId: string) => {
-        // Implementation would be updated to work with chat IDs directly
-        toast.success('Project unlinked from chat')
-    };
 
     // Local state for switching tabs in the UI
     const [tabValue, setTabValue] = useState('files')

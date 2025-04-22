@@ -12,6 +12,25 @@ export function useSettings(): AppSettings {
 }
 
 /**
+ * Return the currently active chat ID
+ */
+export function useActiveChat(): string | null {
+    return useGlobalStateStore((s) => s.activeChatId)
+}
+
+/**
+ * Return chat link settings for a specific chat ID
+ */
+export function useChatLinkSettings(chatId: string | null): {
+    includeSelectedFiles?: boolean
+    includePrompts?: boolean
+    includeUserPrompt?: boolean
+    linkedProjectTabId?: string | null
+} | undefined {
+    return useGlobalStateStore((s) => chatId ? s.chatLinkSettings[chatId] : undefined)
+}
+
+/**
  * Return all project tabs as an object keyed by tabId
  */
 export function useAllProjectTabs(): Record<string, ProjectTabState> {
@@ -19,7 +38,7 @@ export function useAllProjectTabs(): Record<string, ProjectTabState> {
 }
 
 /**
- * Return the currently active project tab’s ID + data
+ * Return the currently active project tab's ID + data
  */
 export function useActiveProjectTab(): {
     id: string | null

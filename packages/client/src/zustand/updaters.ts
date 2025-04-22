@@ -8,6 +8,47 @@ import { useGlobalStateContext } from "./global-state-provider"
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils"
 import { TicketWithTasks } from "@/hooks/api/use-tickets-api"
 import { v4 as uuidv4 } from "uuid"
+// --- Chat State Updaters ---
+export function useSetActiveChat() {
+    const setActiveChat = useGlobalStateStore((s) => s.setActiveChat)
+    const { manager } = useGlobalStateContext()
+
+    return (chatId: string) => {
+        setActiveChat(chatId)
+        manager.sendMessage({
+            type: "set_active_chat",
+            chatId,
+        })
+    }
+}
+
+export function useUpdateChatLinkSettings() {
+    const updateChatLinkSettings = useGlobalStateStore((s) => s.updateChatLinkSettings)
+    const { manager } = useGlobalStateContext()
+
+    return (chatId: string, settings: any) => {
+        updateChatLinkSettings(chatId, settings)
+        manager.sendMessage({
+            type: "update_chat_link_settings",
+            chatId,
+            settings,
+        })
+    }
+}
+
+export function useUnlinkProjectFromChat() {
+    const unlinkProjectFromChat = useGlobalStateStore((s) => s.unlinkProjectFromChat)
+    const { manager } = useGlobalStateContext()
+
+    return (chatId: string) => {
+        unlinkProjectFromChat(chatId)
+        manager.sendMessage({
+            type: "unlink_project_from_chat",
+            chatId,
+        })
+    }
+}
+
 // --- Settings Updater ---
 export function useUpdateSettings() {
     const setSettings = useGlobalStateStore((s) => s.setSettings)
@@ -15,14 +56,12 @@ export function useUpdateSettings() {
     const { manager } = useGlobalStateContext()
 
     return (partialOrFn: PartialOrFn<AppSettings>) => {
-        // Add null check for settings
         if (!settings) {
-            console.warn("Settings not available for update yet.");
-            return;
+            console.warn("Settings not available for update yet.")
+            return
         }
         const finalPartial = getPartial(settings, partialOrFn)
         setSettings(finalPartial)
-        // Send WebSocket message (Make sure backend expects this format)
         manager.sendMessage({
             type: "update_settings_partial",
             partial: finalPartial,

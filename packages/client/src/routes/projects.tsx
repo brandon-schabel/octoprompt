@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
-import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
+import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { useCreateProjectTab } from '@/zustand/updaters'
 import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors'
 import { ResizablePanel } from '@/components/ui/resizable-panel'

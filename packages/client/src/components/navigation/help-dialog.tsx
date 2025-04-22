@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
-import { useQuery } from "@tanstack/react-query"
+import { useActiveChat } from "@/zustand/selectors"
+import { useSettings } from "@/zustand/selectors"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -11,18 +12,13 @@ export type HelpDialogProps = {
 }
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
-    // Get active chat and its settings from global state
-    const { data: activeChatData } = useQuery({
-        queryKey: ["activeChat"],
-        select: (state: any) => state ?? null,
-    });
-
-    // Get model info if needed
-    const { data: modelInfo } = useQuery({
-        queryKey: ["chatModelInfo", activeChatData?.activeChatId],
-        select: (state: any) => state ?? null,
-        enabled: !!activeChatData?.activeChatId,
-    });
+    // Get active chat from Zustand
+    const activeChatId = useActiveChat();
+    
+    // Get model info from global settings
+    const settings = useSettings();
+    const provider = settings?.provider;
+    const model = settings?.model;
 
     // Toggle help dialog with mod + /
     useHotkeys("mod+/", (e) => {
@@ -30,10 +26,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
         onOpenChange?.(!open)
     })
 
-    if (!activeChatData?.activeChatId) return null
-
-    const provider = modelInfo?.provider;
-    const model = modelInfo?.model;
+    if (!activeChatId) return null
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

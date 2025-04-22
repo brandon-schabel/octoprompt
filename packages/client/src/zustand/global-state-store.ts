@@ -31,7 +31,7 @@ interface SettingsSlice {
     setSettings: (partial: Partial<AppSettings>) => void
 }
 
-type StoreState = SettingsSlice & ProjectTabsSlice & GlobalSlice
+type StoreState = SettingsSlice & ProjectTabsSlice & ChatSlice & GlobalSlice
 type StoreUpdater = (
     partial: StoreState | Partial<StoreState> | ((state: StoreState) => StoreState | Partial<StoreState>),
     replace?: false | undefined
@@ -48,6 +48,65 @@ function createSettingsSlice(
         settings: createInitialGlobalState().settings,
         setSettings: (partial) => 
             set((state) => ({ settings: { ...state.settings, ...partial } })),
+    }
+}
+
+// ---------------------------------------------------
+/** Chat state slice to manage active chat and link settings */
+interface ChatSlice {
+    activeChatId: string | null
+    chatLinkSettings: Record<string, {
+        includeSelectedFiles?: boolean
+        includePrompts?: boolean
+        includeUserPrompt?: boolean
+        linkedProjectTabId?: string
+    }>
+    
+    setActiveChat: (chatId: string) => void
+    updateChatLinkSettings: (chatId: string, settings: any) => void
+    unlinkProjectFromChat: (chatId: string) => void
+}
+
+/**
+ * Creates a Zustand slice for chat management
+ */
+function createChatSlice(
+    set: StoreUpdater,
+    get: () => StoreState
+): ChatSlice {
+    return {
+        activeChatId: null,
+        chatLinkSettings: {},
+        
+        setActiveChat: (chatId) => {
+            set({ activeChatId: chatId })
+        },
+        
+        updateChatLinkSettings: (chatId, settings) => {
+            set((state) => ({
+                chatLinkSettings: {
+                    ...state.chatLinkSettings,
+                    [chatId]: {
+                        ...state.chatLinkSettings[chatId],
+                        ...settings
+                    }
+                }
+            }))
+        },
+        
+        unlinkProjectFromChat: (chatId) => {
+            set((state) => {
+                const newLinkSettings = { ...state.chatLinkSettings }
+                // Keep the record but remove the link to project
+                if (newLinkSettings[chatId]) {
+                    newLinkSettings[chatId] = {
+                        ...newLinkSettings[chatId],
+                        linkedProjectTabId: undefined
+                    }
+                }
+                return { chatLinkSettings: newLinkSettings }
+            })
+        }
     }
 }
 
@@ -171,6 +230,9 @@ function createGlobalSlice(
                     settings: state.settings,
                     projectTabs: state.projectTabs,
                     projectActiveTabId: state.projectActiveTabId,
+                    // Include chat state in the merge
+                    activeChatId: state.activeChatId,
+                    chatLinkSettings: state.chatLinkSettings,
                 }
                 const merged = mergeDeep(currentState, incoming) as GlobalState
                 return merged
@@ -183,6 +245,9 @@ function createGlobalSlice(
                     settings: state.settings,
                     projectTabs: state.projectTabs,
                     projectActiveTabId: state.projectActiveTabId,
+                    // Include chat state in the merge
+                    activeChatId: state.activeChatId,
+                    chatLinkSettings: state.chatLinkSettings,
                 }
                 return mergeDeep(currentGlobal, incoming) as GlobalState
             })
@@ -197,6 +262,7 @@ export const useGlobalStateStore = create<StoreState>()(
     devtools((set, get) => ({
         ...createSettingsSlice(set, get),
         ...createProjectTabsSlice(set, get),
+        ...createChatSlice(set, get),
         ...createGlobalSlice(set, get),
     }))
 )

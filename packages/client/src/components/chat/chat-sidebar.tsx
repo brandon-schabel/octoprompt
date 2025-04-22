@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Check, Edit2, MessageSquareIcon, Trash2, X, PlusIcon } from "lucide-react";
-import { Badge } from '@/components/ui/badge';
 import {
     useGetChats,
     useDeleteChat,
@@ -14,22 +13,14 @@ import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
 import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useActiveChat } from '@/zustand/selectors';
+import { useSetActiveChat } from '@/zustand/updaters';
 
 export function ChatSidebar() {
-    // Get active chat from global state or query
-    const { data: activeChatId } = useQuery({
-        queryKey: ["activeChat"],
-        select: (state: any) => state?.activeChatId ?? null,
-    });
+    // Get active chat from Zustand
+    const activeChatId = useActiveChat();
+    const setActiveChat = useSetActiveChat();
     
-    const queryClient = useQueryClient();
-    
-    // Function to set active chat
-    const setActiveChat = (chatId: string) => {
-        queryClient.setQueryData(["activeChat"], { activeChatId: chatId });
-    };
-
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState('');
     const [visibleCount, setVisibleCount] = useState(50);
@@ -183,7 +174,9 @@ export function ChatSidebar() {
                                                     'max-w-[180px] w-full text-left truncate',
                                                     isActive ? 'font-bold' : ''
                                                 )}
-                                                onClick={() => setActiveChat(chat.id)}
+                                                onClick={() => {
+                                                    setActiveChat(chat.id);
+                                                }}
                                                 title={chat.title ?? 'No Title'}
                                             >
                                                 {chat.title}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
@@ -7,10 +7,11 @@ import { ChatMessages } from '@/components/chat/chat-messages'
 import { AdaptiveChatInput } from '@/components/adaptive-chat-input'
 import { ChatHeader } from'@/components/chat/chat-header'
 
-
 import { useChatWithAI } from "@/components/chat/hooks/chat-hooks";
 import { DEFAULT_MODEL_CONFIGS } from "shared/index";
-
+import { useActiveChat } from '@/zustand/selectors'
+import { useSetActiveChat } from '@/zustand/updaters'
+import { v4 as uuidv4 } from 'uuid'
 
 export const Route = createFileRoute("/chat")({
   component: ChatPage,
@@ -19,13 +20,13 @@ export const Route = createFileRoute("/chat")({
   }),
 });
 
-
 const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
-// Define the component first before exporting it
 function ChatPage() {
-  const [chatId, setChatId] = useState<string>('');
-
+  // Get active chat from Zustand
+  const activeChatId = useActiveChat();
+  const setActiveChat = useSetActiveChat();
+  
   // Add local state to ensure input changes are tracked immediately
   const [localMessage, setLocalMessage] = useState('')
 
@@ -33,25 +34,24 @@ function ChatPage() {
   const {
     messages,
     handleSendMessage,
-    refetchMessages,
     isFetching,
     isLoading,
   } = useChatWithAI({
-    chatId,
+    chatId: activeChatId || '',
     excludedMessageIds: [],
     clearUserInput: () => setLocalMessage(''),
   });
 
   // Ensure there's an active chat ID
   useEffect(() => {
-    if (!chatId) {
-      const newChatId = `chat-${Date.now()}`
-      setChatId(newChatId)
+    if (!activeChatId) {
+      const newChatId = `chat-${uuidv4()}`
+      setActiveChat(newChatId)
     }
-  }, [chatId])
+  }, [activeChatId, setActiveChat])
 
   // Check if we have an active chat
-  const hasActiveChat = Boolean(chatId)
+  const hasActiveChat = Boolean(activeChatId)
 
   // Handle local input changes
   const handleInputChange = (val: string) => {
@@ -60,7 +60,7 @@ function ChatPage() {
 
   // Handle submit - this is where we send the message
   const handleSubmit = async () => {
-    if (!chatId || !localMessage?.trim()) return;
+    if (!activeChatId || !localMessage?.trim()) return;
 
     try {
       // Send the message using local state
@@ -88,7 +88,7 @@ function ChatPage() {
             <>
               {/* Header */}
               <div className='flex-shrink-0'>
-                <ChatHeader chatId={chatId} />
+                <ChatHeader />
               </div>
 
               {/* Messages container */}
@@ -109,8 +109,8 @@ function ChatPage() {
                   Select an existing chat from the sidebar or create a new one to get started.
                 </p>
                 <Button onClick={() => {
-                  const newChatId = `chat-${Date.now()}`;
-                  setChatId(newChatId);
+                  const newChatId = `chat-${uuidv4()}`;
+                  setActiveChat(newChatId);
                 }}>+ Start a Chat</Button>
               </div>
             </div>
@@ -125,24 +125,19 @@ function ChatPage() {
                   onChange={handleInputChange}
                   onSubmit={handleSubmit}
                   placeholder="Type your message..."
-                  disabled={!chatId || isLoading}
+                  disabled={!activeChatId || isLoading}
                   className="w-full"
                   preserveFormatting
                 />
                 <Button
                   onClick={() => {
                     try {
-                      console.log("[Send Button] Clicked with:", {
-                        chatId,
-                        hasInput: !!localMessage.trim(),
-                      });
-
                       if (!localMessage.trim()) {
                         console.warn("[Send Button] Empty message, not sending");
                         return;
                       }
 
-                      if (!chatId) {
+                      if (!activeChatId) {
                         console.error("[Send Button] No chatId available");
                         return;
                       }
@@ -154,7 +149,7 @@ function ChatPage() {
                       console.error("[Send Button] Error:", error);
                     }
                   }}
-                  disabled={!chatId || !localMessage?.trim() || isLoading}>
+                  disabled={!activeChatId || !localMessage?.trim() || isLoading}>
                   {isLoading ? "Sending..." : "Send"}
                 </Button>
               </div>
