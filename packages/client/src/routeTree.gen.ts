@@ -18,7 +18,6 @@ import { Route as ProjectsImport } from './routes/projects'
 import { Route as ProjectSummarizationImport } from './routes/project-summarization'
 import { Route as KeysImport } from './routes/keys'
 import { Route as FileSearchInterfaceImport } from './routes/file-search-interface'
-import { Route as CounterImport } from './routes/counter'
 import { Route as ChatImport } from './routes/chat'
 import { Route as AdminImport } from './routes/admin'
 import { Route as IndexImport } from './routes/index'
@@ -67,12 +66,6 @@ const FileSearchInterfaceRoute = FileSearchInterfaceImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const CounterRoute = CounterImport.update({
-  id: '/counter',
-  path: '/counter',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const ChatRoute = ChatImport.update({
   id: '/chat',
   path: '/chat',
@@ -114,13 +107,6 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatImport
-      parentRoute: typeof rootRoute
-    }
-    '/counter': {
-      id: '/counter'
-      path: '/counter'
-      fullPath: '/counter'
-      preLoaderRoute: typeof CounterImport
       parentRoute: typeof rootRoute
     }
     '/file-search-interface': {
@@ -181,7 +167,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
-  '/counter': typeof CounterRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
@@ -195,7 +180,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
-  '/counter': typeof CounterRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
@@ -210,7 +194,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
-  '/counter': typeof CounterRoute
   '/file-search-interface': typeof FileSearchInterfaceRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
@@ -226,7 +209,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/chat'
-    | '/counter'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
@@ -239,7 +221,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/chat'
-    | '/counter'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
@@ -252,7 +233,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/chat'
-    | '/counter'
     | '/file-search-interface'
     | '/keys'
     | '/project-summarization'
@@ -267,7 +247,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   ChatRoute: typeof ChatRoute
-  CounterRoute: typeof CounterRoute
   FileSearchInterfaceRoute: typeof FileSearchInterfaceRoute
   KeysRoute: typeof KeysRoute
   ProjectSummarizationRoute: typeof ProjectSummarizationRoute
@@ -281,7 +260,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   ChatRoute: ChatRoute,
-  CounterRoute: CounterRoute,
   FileSearchInterfaceRoute: FileSearchInterfaceRoute,
   KeysRoute: KeysRoute,
   ProjectSummarizationRoute: ProjectSummarizationRoute,
@@ -304,7 +282,6 @@ export const routeTree = rootRoute
         "/",
         "/admin",
         "/chat",
-        "/counter",
         "/file-search-interface",
         "/keys",
         "/project-summarization",
@@ -322,9 +299,6 @@ export const routeTree = rootRoute
     },
     "/chat": {
       "filePath": "chat.tsx"
-    },
-    "/counter": {
-      "filePath": "counter.tsx"
     },
     "/file-search-interface": {
       "filePath": "file-search-interface.tsx"
