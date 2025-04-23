@@ -1,326 +1,214 @@
+// packages/client/src/hooks/api/use-chat-api.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '../use-api';
-import { Chat, ChatMessage, APIProviders } from 'shared'
-import { CreateMessageBodyGeneric } from 'shared/src/validation/chat-api-validation';
 import { commonErrorHandler } from './common-mutation-error-handler';
-import { CreateChatOptions } from '@/components/chat/chat-dialog';
+import {
+    // Generated Query Options & Keys
+    getChatsOptions,
+    getChatsQueryKey,
+    getChatsByChatIdMessagesOptions,
+    getChatsByChatIdMessagesQueryKey,
+    // Generated Mutation Functions
+    postChatsMutation,
+    patchChatsByChatIdMutation,
+    deleteChatsByChatIdMutation,
+    postChatsByChatIdForkMutation,
+    postChatsByChatIdForkByMessageIdMutation,
+    deleteMessagesByMessageIdMutation,
+    getModelsOptions,
+    // Import SDK Options type if needed for mutations
+    // (Not strictly needed here as we pass simpler args)
+} from '../generated/@tanstack/react-query.gen';
+import type {
+    // Generated Data Types for Requests/Responses
+    GetChatsData,
+    PostChatsData,
+    PostChatsError,
+    GetChatsByChatIdMessagesData,
+    PatchChatsByChatIdData,
+    PatchChatsByChatIdError,
+    DeleteChatsByChatIdData,
+    DeleteChatsByChatIdError,
+    PostChatsByChatIdForkData,
+    PostChatsByChatIdForkError,
+    PostChatsByChatIdForkByMessageIdData,
+    PostChatsByChatIdForkByMessageIdError,
+    ForkChatRequestBody, // For useForkChat body
+    ForkChatFromMessageRequestBody,
+    DeleteMessagesByMessageIdData,
+    DeleteMessagesByMessageIdError,
+    GetModelsData, // For useForkChatFromMessage body
+    // Response types if needed directly (usually inferred)
+    // ChatListResponse, ChatResponse, MessageListResponse, OperationSuccessResponse
+} from '../generated/types.gen';
+import { APIProviders } from 'shared/src/global-state/global-state-schema';
+import { Options } from '../generated/sdk.gen'; // Only needed if passing full Options<>
 
-interface UnifiedModel {
-    id: string;
-    name: string;
-    description: string;
+// Define input types based on generated request body types
+export type CreateChatInput = PostChatsData['body'];
+export type UpdateChatInput = PatchChatsByChatIdData['body'];
+// Fork input types can use generated types directly or be defined:
+// export type ForkChatInputBody = ForkChatRequestBody;
+// export type ForkChatFromMessageInputBody = ForkChatFromMessageRequestBody;
+
+// Define Query Keys using generated functions
+const CHAT_KEYS = {
+    all: () => getChatsQueryKey(),
+    lists: () => getChatsQueryKey(), // Alias for clarity if needed
+    // No specific 'detail' for a single chat via GET /chats/{id}, lists handle chat entities
+    messages: (chatId: string) => getChatsByChatIdMessagesQueryKey({ path: { chatId } } as Options<GetChatsByChatIdMessagesData>),
+} as const;
+
+// --- Query Hooks ---
+
+// Get all chats
+export function useGetChats() {
+    const queryOptions = getChatsOptions(); // No params needed for base request
+    return useQuery(queryOptions);
 }
 
-export type UpdateChatInput = {
-    title: string;
-};
-
-// Provider-specific message input type
-export type SendMessageInput<TProvider extends APIProviders> = CreateMessageBodyGeneric<TProvider>
-
-// Add new types for the unified models API
-type ModelsResponse = {
-    data: UnifiedModel[];
-};
-
-// Add to your existing CHAT_KEYS
-export const CHAT_KEYS = {
-    all: ['chat'] as const,
-    chats: () => [...CHAT_KEYS.all, 'chats'] as const,
-    chat: (id: string) => [...CHAT_KEYS.chats(), id] as const,
-    messages: (chatId: string) => [...CHAT_KEYS.chat(chatId), 'messages'] as const,
-    models: (provider: APIProviders) => [...CHAT_KEYS.all, 'models', provider] as const,
-};
-
-async function getChats(api: ReturnType<typeof useApi>['api']): Promise<Chat[]> {
-    const response = await api.request('/api/chats');
-    return response.json();
-}
-
-async function getMessages(api: ReturnType<typeof useApi>['api'], chatId: string): Promise<{ data: ChatMessage[] }> {
-    const response = await api.request(`/api/chats/${chatId}/messages`);
-    return response.json();
-}
-
-async function sendMessage<T extends APIProviders>(
-    api: ReturnType<typeof useApi>['api'],
-    input: SendMessageInput<T>
-): Promise<ReadableStream<Uint8Array>> {
-    try {
-        console.log(`[sendMessage] Sending message to chatId: ${input.chatId} via /api/ai/chat`);
-
-        const response = await api.request('/api/ai/chat', {
-            method: 'POST',
-            body: input
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error(`[sendMessage /api/ai/chat] Server error:`, errorData);
-            throw new Error(errorData.error || `Failed to send message (${response.status})`);
-        }
-
-        // Check if the response has a body stream
-        if (!response.body) {
-            console.error(`[sendMessage /api/ai/chat] No response body stream available`);
-            throw new Error('No response stream available');
-        }
-
-        return response.body as ReadableStream<Uint8Array>;
-    } catch (error) {
-        console.error(`[sendMessage /api/ai/chat] Exception:`, error);
-        throw error;
-    }
-}
-
-
-async function deleteChat(api: ReturnType<typeof useApi>['api'], chatId: string): Promise<void> {
-    const response = await api.request(`/api/chats/${chatId}`, { method: 'DELETE' });
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete chat');
-    }
-}
-
-async function updateChat(api: ReturnType<typeof useApi>['api'], chatId: string, input: UpdateChatInput): Promise<Chat> {
-    const response = await api.request(`/api/chats/${chatId}`, {
-        method: 'PATCH',
-        body: input,
-    });
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update chat');
-    }
-    const data = await response.json();
-    return data.data;
-}
-
-async function deleteMessage(api: ReturnType<typeof useApi>['api'], messageId: string): Promise<void> {
-    const response = await api.request(`/api/ai/messages/${messageId}`, { method: 'DELETE' });
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete message');
-    }
-}
-
-// Hooks
-export const useGetChats = () => {
-    const { api } = useApi();
+// Get messages for a specific chat
+export function useGetMessages(chatId: string) {
+    const queryOptions = getChatsByChatIdMessagesOptions({ path: { chatId } } as Options<GetChatsByChatIdMessagesData>);
     return useQuery({
-        queryKey: CHAT_KEYS.chats(),
-        queryFn: () => getChats(api),
+        ...queryOptions,
+        enabled: !!chatId, // Only run query if chatId is provided
     });
-};
-
-export const useCreateChat = () => {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
-
-    return useMutation<Chat, Error, CreateChatOptions>({
-        mutationFn: async (input: CreateChatOptions) => {
-            const response = await api.request('/api/chats', {
-                method: 'POST',
-                body: {
-                    title: input.title || 'New Chat',
-                    copyExisting: input.copyExisting || false,
-                    currentChatId: input.currentChatId
-                },
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to create chat');
-            }
-
-            const data = await response.json();
-            return data.data;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
-        },
-        onError: commonErrorHandler
-    });
-};
-
-export const useGetMessages = (chatId: string) => {
-    const { api } = useApi();
-    return useQuery({
-        queryKey: CHAT_KEYS.messages(chatId),
-        queryFn: () => getMessages(api, chatId),
-        enabled: !!chatId,
-        staleTime: 0,
-    });
-};
-
-export const useSendMessage = <Provider extends APIProviders>() => {
-    const { api } = useApi();
-
-    return useMutation<
-        ReadableStream<Uint8Array>,
-        Error,
-        SendMessageInput<Provider>
-    >({
-        mutationFn: (input) => sendMessage(api, input),
-        onError: commonErrorHandler
-    });
-};
-
-
-export const useForkChat = () => {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
-    return useMutation<Chat, Error, { chatId: string; excludedMessageIds: string[] }>({
-        mutationFn: async ({ chatId, excludedMessageIds }) => {
-            try {
-                console.log(`[useForkChat] Forking chat: ${chatId}, excluded messages:`, excludedMessageIds);
-
-                const response = await api.request(`/api/chats/${chatId}/fork`, {
-                    method: 'POST',
-                    body: { excludedMessageIds }
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    console.error(`[useForkChat] Server error:`, data);
-                    throw new Error(data.error || `Failed to fork chat (${response.status})`);
-                }
-
-                console.log(`[useForkChat] Forked chat response:`, data);
-                return data.data;
-            } catch (error) {
-                console.error(`[useForkChat] Exception:`, error);
-                throw error;
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
-        },
-        onError: commonErrorHandler
-    });
-};
-
-export const useForkChatFromMessage = () => {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
-    return useMutation<Chat, Error, { chatId: string; messageId: string; excludedMessageIds: string[] }>({
-        mutationFn: async ({ chatId, messageId, excludedMessageIds }) => {
-            try {
-                console.log(`[useForkChatFromMessage] Forking chat ${chatId} from message ${messageId}, excluded:`, excludedMessageIds);
-
-                const response = await api.request(`/api/chats/${chatId}/fork/${messageId}`, {
-                    method: 'POST',
-                    body: { excludedMessageIds }
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    console.error(`[useForkChatFromMessage] Server error:`, data);
-                    throw new Error(data.error || `Failed to fork chat from message (${response.status})`);
-                }
-
-                console.log(`[useForkChatFromMessage] Forked chat response:`, data);
-                return data.data;
-            } catch (error) {
-                console.error(`[useForkChatFromMessage] Exception:`, error);
-                throw error;
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
-        },
-        onError: commonErrorHandler
-    });
-};
-
-export const useDeleteChat = () => {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
-
-    return useMutation<void, Error, string>({
-        mutationFn: (chatId: string) => deleteChat(api, chatId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
-        },
-        onError: commonErrorHandler
-    });
-};
-
-export const useUpdateChat = () => {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
-
-    return useMutation<Chat, Error, { chatId: string; input: UpdateChatInput }>({
-        mutationFn: ({ chatId, input }) => updateChat(api, chatId, input),
-        onSuccess: (_, { chatId }) => {
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chats() });
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.chat(chatId) });
-        },
-        onError: commonErrorHandler
-    });
-};
-
-export const useDeleteMessage = () => {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
-
-    return useMutation<void, Error, string>({
-        mutationFn: (messageId: string) => deleteMessage(api, messageId),
-        onSuccess: () => {
-            // Invalidate all message queries
-            queryClient.invalidateQueries({
-                queryKey: CHAT_KEYS.all,
-            });
-        },
-        onError: commonErrorHandler
-    });
-};
-
-// Update the getModels function
-async function getModels(
-    api: ReturnType<typeof useApi>['api'],
-    provider: APIProviders
-): Promise<ModelsResponse> { // Return type expects { data: UnifiedModel[] }
-    try {
-        console.log(`[getModels] Fetching models for provider: ${provider}`);
-        // The query parameter is correctly appended here
-        const response = await api.request(`/api/models?provider=${provider}`);
-
-        const responseData = await response.json(); // Always parse JSON first
-
-        if (!response.ok || !responseData.success) {
-            // Use the error message from the backend response if available
-            const errorMessage = responseData.error || `Failed to fetch ${provider} models (${response.status})`;
-            console.error(`[getModels] Error fetching models:`, responseData);
-            throw new Error(errorMessage);
-        }
-
-        // Check if data is an array as expected
-        if (!Array.isArray(responseData.data)) {
-            console.warn(`[getModels] Unexpected data format received:`, responseData);
-            throw new Error(`Received unexpected data format for ${provider} models.`);
-        }
-
-        console.log(`[getModels] Received models data for ${provider}:`, responseData.data);
-        // The structure now directly matches ModelsResponse
-        return { data: responseData.data };
-
-    } catch (error) {
-        console.error(`[getModels] Exception:`, error);
-        // Re-throw the error for React Query to handle
-        throw error;
-    }
 }
 
-// The useGetModels hook remains the same, it uses the updated getModels function
-export const useGetModels = (provider: APIProviders) => {
-    const { api } = useApi();
-    return useQuery<ModelsResponse, Error>({ // Explicitly type the hook
-        queryKey: CHAT_KEYS.models(provider),
-        queryFn: () => getModels(api, provider),
-        enabled: !!provider,
-        staleTime: 5 * 60 * 1000, // Add staleTime to cache models for 5 mins
-        refetchOnWindowFocus: false, // Optional: prevent refetch on focus
+// --- Mutation Hooks ---
+
+// Create a new chat
+export function useCreateChat() {
+    const queryClient = useQueryClient();
+    const mutationOptions = postChatsMutation(); // Get the generated mutation config
+
+    // Using generated types for better type safety
+    return useMutation<unknown, PostChatsError, CreateChatInput>({ // Input is the body
+        mutationFn: (body: CreateChatInput) => {
+            const opts: Options<PostChatsData> = { body };
+            return mutationOptions.mutationFn!(opts); // Call generated function
+        },
+        onSuccess: (data, variables, context) => {
+            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.all() });
+            // Optionally call original onSuccess if it existed or is needed
+            // mutationOptions.onSuccess?.(data, variables, context);
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
-};
+}
+
+// Update chat (e.g., title)
+export function useUpdateChat() {
+    const queryClient = useQueryClient();
+    const mutationOptions = patchChatsByChatIdMutation();
+
+    // Input includes chatId for path and data for body
+    return useMutation<unknown, PatchChatsByChatIdError, { chatId: string; data: UpdateChatInput }>({
+        mutationFn: (vars: { chatId: string; data: UpdateChatInput }) => {
+            const opts: Options<PatchChatsByChatIdData> = { path: { chatId: vars.chatId }, body: vars.data };
+            return mutationOptions.mutationFn!(opts);
+        },
+        onSuccess: (data, variables, context) => {
+            const chatId = variables.chatId;
+            // Invalidate all chats as title might appear in the list
+            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.all() });
+            // Optionally invalidate messages if needed, though only title changed
+            // queryClient.invalidateQueries({ queryKey: CHAT_KEYS.messages(chatId) });
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+}
+
+// Delete a chat
+export function useDeleteChat() {
+    const queryClient = useQueryClient();
+    const mutationOptions = deleteChatsByChatIdMutation();
+
+    // Input is just the chatId string
+    return useMutation<unknown, DeleteChatsByChatIdError, string>({
+        mutationFn: (chatId: string) => {
+            const opts: Options<DeleteChatsByChatIdData> = { path: { chatId } };
+            return mutationOptions.mutationFn!(opts);
+        },
+        onSuccess: (data, variables, context) => {
+            // 'variables' is the chatId here
+            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.all() });
+            // Remove messages query for the deleted chat if it exists in cache
+            queryClient.removeQueries({ queryKey: CHAT_KEYS.messages(variables) });
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+}
+
+// Fork a chat (from the beginning)
+export function useForkChat() {
+    const queryClient = useQueryClient();
+    const mutationOptions = postChatsByChatIdForkMutation();
+
+    // Input includes chatId and optional body (excludedMessageIds)
+    return useMutation<unknown, PostChatsByChatIdForkError, { chatId: string; body: ForkChatRequestBody }>({
+        mutationFn: (vars: { chatId: string; body: ForkChatRequestBody }) => {
+            const opts: Options<PostChatsByChatIdForkData> = { path: { chatId: vars.chatId }, body: vars.body };
+            return mutationOptions.mutationFn!(opts);
+        },
+        onSuccess: (data, variables, context) => {
+            // Invalidate all chats because a new one was created
+            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.all() });
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+}
+
+// Fork a chat from a specific message
+export function useForkChatFromMessage() {
+    const queryClient = useQueryClient();
+    const mutationOptions = postChatsByChatIdForkByMessageIdMutation();
+
+    // Input includes chatId, messageId, and optional body
+    return useMutation<unknown, PostChatsByChatIdForkByMessageIdError, { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }>({
+        mutationFn: (vars: { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }) => {
+            const opts: Options<PostChatsByChatIdForkByMessageIdData> = { path: { chatId: vars.chatId, messageId: vars.messageId }, body: vars.body };
+            return mutationOptions.mutationFn!(opts);
+        },
+        onSuccess: (data, variables, context) => {
+            // Invalidate all chats because a new one was created
+            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.all() });
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+}
+
+// Note: deleteMessagesByMessageIdMutation is available if needed, but often message deletion might be handled differently (e.g., soft delete or via chat context)
+// If you need a hook for it:
+
+export function useDeleteMessage() {
+    const queryClient = useQueryClient();
+    const mutationOptions = deleteMessagesByMessageIdMutation();
+
+    // Input is messageId string
+    return useMutation<unknown, DeleteMessagesByMessageIdError, string>({
+        mutationFn: (messageId: string) => {
+            const opts: Options<DeleteMessagesByMessageIdData> = { path: { messageId } };
+            return mutationOptions.mutationFn!(opts);
+        },
+        onSuccess: (data, variables, context) => {
+            // How to invalidate depends on how messages are fetched.
+            // If fetched per-chat, need to find the chat ID associated with the messageId.
+            // This might require more complex cache updates or fetching chat ID beforehand.
+            // A simpler approach might be to refetch all messages for the relevant chat
+            // if the chatId is known here or passed as part of variables.
+            // Example (assuming chatId was passed somehow or available in context):
+            // const chatId = context?.chatId || getChatIdFromMessageId(variables); // Pseudo-code
+            // if (chatId) {
+            //     queryClient.invalidateQueries({ queryKey: CHAT_KEYS.messages(chatId) });
+            // }
+            console.warn("Message deleted, but cache invalidation might need specific logic based on chatId.");
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+}
+
+export function useGetModels(provider: APIProviders) {
+    const queryOptions = getModelsOptions({ query: { provider ,} });
+    return useQuery(queryOptions);
+}

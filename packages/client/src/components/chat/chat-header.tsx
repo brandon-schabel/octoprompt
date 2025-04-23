@@ -1,16 +1,16 @@
 import { useMemo } from "react";
-import { Chat } from 'shared/index'; 
 import { useGetChats } from "@/hooks/api/use-chat-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { ModelSettingsPopover } from "./components/model-settings-popover";
 import { APIProviders } from "shared/index";
 import { useActiveChat } from "@/zustand/selectors";
+import { ApiChat } from "@/hooks/generated";
 
-export function ChatHeader() { 
+export function ChatHeader() {
     // Get active chat ID from Zustand
     const chatId = useActiveChat();
-    
+
     if (!chatId) {
         return null; // Or a placeholder indicating no chat selected
     }
@@ -18,8 +18,8 @@ export function ChatHeader() {
     // Get chat data for title
     const { data: chats } = useGetChats();
 
-    const activeChatData = useMemo(() => chats?.find((c: Chat) => c.id === chatId), [chats, chatId]);
-    
+    const activeChatData = useMemo(() => chats?.data?.find((c: ApiChat) => c.id === chatId), [chats, chatId]);
+
     // Get model controls (now reads/writes global settings)
     const { provider, setProvider, currentModel, setCurrentModel } = useChatModelControl();
 

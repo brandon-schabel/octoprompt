@@ -1,29 +1,48 @@
 import { useCallback } from "react";
-import { useGetMessages } from "@/hooks/api/use-chat-api";
-import { APIProviders, ChatModelSettings } from "shared"; // Keep types
-import { useCreateChat } from "@/hooks/api/use-chat-api"; // Keep if create API exists
-import { useChatModelParams } from "./use-chat-model-params"; // Keep refactored hook
+// Update imports to use the refactored hooks
+import {
+    useGetMessages,
+    useCreateChat,
+    useForkChat,
+    // useForkChatFromMessage // Import if you use it
+} from "@/hooks/api/use-chat-api";
+import { APIProviders, ChatModelSettings } from "shared";
+import { useChatModelParams } from "./use-chat-model-params";
 import { useAIChat } from "@/hooks/use-ai-chat";
-import { useSettings } from "@/zustand/selectors"; // Import useSettings
-import { useForkChat } from "@/hooks/api/use-chat-api"; // Assuming this API call exists
-
-
-
+import { useSettings } from "@/zustand/selectors";
+// Import the input type if needed for clarity/casting
+import type { CreateChatInput, } from "@/hooks/api/use-chat-api";
+import { ForkChatRequestBody } from "@/hooks/generated/types.gen";
 
 
 export function useCreateChatHandler() {
-    const createChatMutation = useCreateChat(); // Assumes this API call doesn't depend on tabs
+    // Use the refactored hook
+    const createChatMutation = useCreateChat();
 
     const handleCreateChat = useCallback(
         async (chatTitle: string, currentChatId?: string) => {
             try {
-                // Ensure payload doesn't contain tab-specific fields if API changes
-                const newChat = await createChatMutation.mutateAsync({
+                // Construct the input object matching CreateChatInput
+                const input: CreateChatInput = {
                     title: chatTitle,
-                    copyExisting: false, // Assuming this means copy chat data, not tab state
-                    currentChatId,
-                });
-                return newChat;
+                    // Assuming copyExisting=false means don't copy messages/settings
+                    copyExisting: false, // Adjust based on actual API meaning
+                    // Pass currentChatId only if the API uses it (e.g., for copying)
+                    // Check CreateChatRequestBody in types.gen.ts
+                    ...(currentChatId && { currentChatId: currentChatId }), // Conditionally add if API supports it for copying
+                };
+                // Call mutateAsync with the input object
+                const newChat = await createChatMutation.mutateAsync(input);
+                // The return type of mutateAsync depends on the generic definition,
+                // often unknown or the success response type. Assume success gives ChatResponse.
+                // If you need the created chat data, ensure useCreateChat returns it or handle cache updates.
+                // For now, assume it invalidates and the list updates, returning null or a success indicator.
+                // Let's adjust based on the hook returning `unknown` for now.
+                // We might need to update query data manually if immediate access to the new chat object is needed.
+                // queryClient.setQueryData(...) or rely on list refetch.
+                console.log("[handleCreateChat] Create mutation triggered for:", chatTitle);
+                // Returning null as the hook invalidates, doesn't directly return the new chat object in this setup
+                return null; // Adjust if the hook/API returns the created object directly
             } catch (error) {
                 console.error("[handleCreateChat] Error:", error);
                 return null;
@@ -38,57 +57,59 @@ export function useCreateChatHandler() {
 
 /**
  * Simplified hook for AI chat interaction using global settings.
+ * NOTE: This hook primarily interacts with useAIChat (Vercel SDK wrapper)
+ * and useGetMessages (our API). The refactoring mainly affects useGetMessages usage.
  */
 export function useChatWithAI({
     chatId,
-    // Removed provider, model - get from global settings
-    excludedMessageIds, // Passed as prop from parent
-    clearUserInput,     // Passed as prop from parent
-    systemMessage,      // Passed as prop or get from global settings if applicable
+    excludedMessageIds,
+    clearUserInput,
+    systemMessage,
 }: {
     chatId: string;
     excludedMessageIds: string[];
     clearUserInput: () => void;
-    systemMessage?: string; // Make optional or decide if global
+    systemMessage?: string;
 }) {
-    const settings = useSettings(); // Get global settings
-    const { settings: modelParams } = useChatModelParams(); // Get derived model params
+    const settings = useSettings();
+    const { settings: modelParams } = useChatModelParams();
 
-    // Fetch canonical messages using React Query (based on chatId)
+    // Fetch canonical messages using the refactored React Query hook
     const {
-        data: messagesData,
+        data: messagesResponse, // The hook returns the full response object { success: true, data: [...] }
         refetch: refetchMessages,
         isFetching,
         isError: isMessagesError,
-    } = useGetMessages(chatId); // This remains the source of truth for messages
+    } = useGetMessages(chatId); // Use the refactored hook
 
-    // Underlying AI chat hook
+    // Underlying AI chat hook (Vercel SDK wrapper - likely unchanged by this refactor)
     const {
         append,
-        isLoading, // SDK's loading state during streaming
+        isLoading,
         error: aiError,
         stop,
-    } = useAIChat({ // Pass required config, now sourced globally
+    } = useAIChat({
         chatId,
-        provider: settings.provider as APIProviders, // Cast needed if type differs slightly
+        provider: settings.provider as APIProviders,
         model: settings.model,
-        excludedMessageIds, // Pass through
-        systemMessage, // Pass through or get from global if made global
-        // onFinish: () => { // Keep if useAIChat supports this
+        excludedMessageIds,
+        systemMessage,
+        // onFinish might still be useful if useAIChat supports it for refetching
+        // onFinish: () => {
         //     console.log("[useChatWithAI -> useAIChat.onFinish] Streaming finished, refetching messages.");
         //     refetchMessages();
         // }
     });
 
-    // Message sending function
+    // Message sending function (interacts with useAIChat, not directly with our POST /message API)
     const handleSendMessage = useCallback(
-        async ({ userInput }: { userInput: string }) => { // Removed modelSettings from args
+        async ({ userInput }: { userInput: string }) => {
             if (!userInput.trim() || !chatId) return;
 
-            clearUserInput(); // Clear parent's input state
+            clearUserInput();
 
             try {
-                const currentModelSettings: ChatModelSettings = { // Construct settings for API
+                const currentModelSettings: ChatModelSettings = {
                     temperature: modelParams.temperature,
                     max_tokens: modelParams.max_tokens,
                     top_p: modelParams.top_p,
@@ -97,52 +118,39 @@ export function useChatWithAI({
                     stream: modelParams.stream,
                 };
 
-                console.log('[useChatWithAI] Calling append with:', {
-                    chatId,
-                    provider: settings.provider,
-                    model: settings.model,
-                    systemMessage, // Include if used
-                    userInput: userInput.trim(),
-                    options: currentModelSettings, // Log effective settings
-                    excludedMessageIds,
-                });
-
+                // This call goes to the Vercel useChat hook via our useAIChat wrapper
                 await append(
-                    { // Vercel SDK message format
-                        role: 'user',
-                        content: userInput.trim(),
-                    },
-                    { // Backend API body (/api/ai/chat)
+                    { role: 'user', content: userInput.trim() },
+                    {
                         body: {
                             chatId: chatId,
                             provider: settings.provider,
-                            // Pass combined options (model + params)
                             options: { model: settings.model, ...currentModelSettings },
                             excludedMessageIds: excludedMessageIds,
-                            systemMessage: systemMessage, // Send if provided
-                            userMessageContent: userInput.trim(), // Explicitly send content
+                            systemMessage: systemMessage,
+                            // userMessageContent: userInput.trim(), // Check if useAIChat/backend needs this explicitly
                         },
                     }
                 );
                 console.log('[useChatWithAI] Append call finished.');
-                // Consider calling refetchMessages() here if onFinish isn't reliable/implemented in useAIChat
-                // refetchMessages();
+                // If onFinish isn't reliable/available, refetch messages after append completes.
+                // Consider potential race conditions if streaming takes time.
+                // Maybe delay the refetch slightly or rely on optimistic updates within useAIChat.
+                refetchMessages();
             } catch (err) {
                 console.error('[useChatWithAI] Error calling append:', err);
-                // Handle error (e.g., toast notification)
             }
         },
-        // Dependencies updated: use global settings and params
-        [append, chatId, settings.provider, settings.model, modelParams, excludedMessageIds, systemMessage, clearUserInput, refetchMessages] // Added refetchMessages if called here
+        [append, chatId, settings.provider, settings.model, modelParams, excludedMessageIds, systemMessage, clearUserInput, refetchMessages]
     );
 
-    // Combine errors
     const error = aiError || (isMessagesError ? new Error("Failed to fetch messages") : null);
 
     return {
-        messages: messagesData?.data || [], // Messages from React Query
-        isLoading,     // SDK streaming state
-        isFetching,    // React Query fetching state
+        // Extract the actual messages array from the response object
+        messages: messagesResponse?.data || [],
+        isLoading,
+        isFetching,
         error,
         refetchMessages,
         handleSendMessage,
@@ -150,17 +158,18 @@ export function useChatWithAI({
     };
 }
 
-// Keep useChatMessages - It operates on chatId
+// Use the refactored hook for fetching messages
 export function useChatMessages(chatId: string) {
     const {
-        data: messagesData,
+        data: messagesResponse, // Hook returns the full response object
         refetch: refetchMessages,
         isFetching,
         isError,
-    } = useGetMessages(chatId);
+    } = useGetMessages(chatId); // Use the refactored hook
 
     return {
-        messages: messagesData?.data || [],
+        // Extract the actual messages array
+        messages: messagesResponse?.data || [],
         refetchMessages,
         isFetching,
         isError,
@@ -168,18 +177,24 @@ export function useChatMessages(chatId: string) {
 }
 
 
-export function useForkChatHandler({ chatId }: { chatId: string }) { // Only needs chatId
-    const forkChatMutation = useForkChat(); // Assuming this API hook exists
+export function useForkChatHandler({ chatId }: { chatId: string }) {
+    // Use the refactored hook
+    const forkChatMutation = useForkChat();
 
     const handleForkChat = useCallback(async () => {
         if (!chatId) return;
         try {
-            // API call likely only needs the original chatId
+            // Construct the input for the refactored hook
+            // It expects { chatId: string; body: ForkChatRequestBody }
+            const inputBody: ForkChatRequestBody = {
+                // Pass empty array if that's the default for a full fork
+                // Or allow passing specific IDs if needed by the UI
+                excludedMessageIds: [],
+            };
             await forkChatMutation.mutateAsync({
                 chatId,
-                excludedMessageIds: [], // Don't send excluded IDs from old tab concept
+                body: inputBody,
             });
-            // Forking might navigate user or update list, handled elsewhere
             console.log(`[handleForkChat] Fork initiated for chatId: ${chatId}`);
         } catch (error) {
             console.error("[handleForkChat] Error:", error);
@@ -188,3 +203,29 @@ export function useForkChatHandler({ chatId }: { chatId: string }) { // Only nee
 
     return { handleForkChat };
 }
+
+// Example if you were using useForkChatFromMessage
+/*
+export function useForkChatFromMessageHandler({ chatId, messageId }: { chatId: string; messageId: string; }) {
+    const forkMutation = useForkChatFromMessage(); // Use refactored hook
+
+    const handleFork = useCallback(async () => {
+        if (!chatId || !messageId) return;
+        try {
+            const inputBody: ForkChatFromMessageRequestBody = {
+                excludedMessageIds: [], // Or pass specific IDs if needed
+            };
+            await forkMutation.mutateAsync({
+                chatId,
+                messageId,
+                body: inputBody,
+            });
+            console.log(`[handleForkFromMessage] Fork initiated for chatId: ${chatId} from message ${messageId}`);
+        } catch (error) {
+            console.error("[handleForkFromMessage] Error:", error);
+        }
+    }, [chatId, messageId, forkMutation]);
+
+    return { handleFork };
+}
+*/
