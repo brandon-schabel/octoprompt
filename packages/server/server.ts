@@ -7,7 +7,6 @@ import { websocketStateAdapter } from "./src/utils/websocket/websocket-state-ada
 import { listProjects } from "@/services/project-service";
 import { watchersManager } from "@/services/shared-services";
 import { createCleanupService } from "@/services/file-services/cleanup-service";
-import { initKvStore } from "@/services/kv-service";
 import { isDevEnv, SERVER_PORT } from "@/constants/server-config";
 
 
@@ -132,7 +131,6 @@ function serveStatic(path: string): Response {
 if (import.meta.main) {
   console.log("Starting server...");
   (async () => {
-    await initKvStore();
     const server = await instantiateServer();
     function handleShutdown() {
       console.log("Received kill signal. Shutting down gracefully...");

@@ -10,7 +10,6 @@ import { providerKeyRoutes } from './routes/provider-key-routes';
 import { stateRoutes } from './routes/state-routes';
 import { adminRoutes } from './routes/admin-routes';
 import { aiFileChangeRoutes } from './routes/ai-file-change-routes';
-import { kvRoutes } from './routes/kv-routes';
 import { promptRoutes } from './routes/prompt-routes';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import packageJson from '../package.json'
@@ -59,7 +58,6 @@ app.route('/', providerKeyRoutes)
 app.route('/', stateRoutes)
 app.route('/', adminRoutes)
 app.route('/', aiFileChangeRoutes)
-app.route('/', kvRoutes)
 app.route('/', promptRoutes)
 
 // Global error handler

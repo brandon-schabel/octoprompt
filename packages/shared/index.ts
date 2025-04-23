@@ -1,6 +1,6 @@
 export type { CreateProjectBody, UpdateProjectParams, UpdateProjectBody, GetOrDeleteProjectParams, GetProjectFilesParams, SyncProjectParams } from './src/validation/projects-api-validation';
-export type { CreatePromptBody, UpdatePromptParams, UpdatePromptBody, GetOrDeletePromptParams, ListPromptsParams } from './src/validation/prompt-api-validation';
-export type { CreateProviderKeyBody, UpdateProviderKeyParams, UpdateProviderKeyBody, GetOrDeleteProviderKeyParams } from './src/validation/provider-key-api-validation';
+export type { CreatePromptBody, UpdatePromptBody, } from './src/validation/prompt-api-validation';
+export type { CreateProviderKeyBody, UpdateProviderKeyBody, } from './src/validation/provider-key-api-validation';
 export type { ModelOptions } from './src/validation/model-options-schema';
 export { projectsApiValidation } from './src/validation/projects-api-validation';
 export { promptApiValidation } from './src/validation/prompt-api-validation';
@@ -18,7 +18,6 @@ export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher
 // export * from './src/types/global-websocket-types';
 
 export { buildCombinedFileSummaries } from './src/utils/summary-formatter';
-export * from './src/kv-validators';
 export * from './src/global-state/websocket-global-schema';
 export * from './src/utils/merge-deep'
 
