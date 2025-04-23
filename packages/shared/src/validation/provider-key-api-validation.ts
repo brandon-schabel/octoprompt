@@ -1,29 +1,76 @@
-import { z } from "zod";
+import { z } from '@hono/zod-openapi';
 
+// --- Base Schema for a Provider Key ---
+// Represents the structure of a single ProviderKey object as returned by the API (excluding the sensitive key itself)
+export const ProviderKeySchema = z.object({
+    id: z.string().min(1).openapi({ example: 'key-1a2b3c4d', description: 'Provider Key ID' }),
+    provider: z.string().openapi({ example: 'openai', description: 'AI Provider identifier (e.g., openai, anthropic)' }),
+    // NOTE: We intentionally DO NOT include the 'key' field in the response schema for security.
+    // The full key might be returned on creation/update but shouldn't be listed.
+    createdAt: z.string().datetime().openapi({ example: '2024-03-01T11:00:00.000Z', description: 'Creation timestamp (ISO 8601)' }),
+    updatedAt: z.string().datetime().openapi({ example: '2024-03-01T11:05:00.000Z', description: 'Last update timestamp (ISO 8601)' })
+}).openapi('ProviderKey');
+
+// Schema for responses that include the key (e.g., after creation/update)
+export const ProviderKeyWithSecretSchema = ProviderKeySchema.extend({
+    key: z.string().openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' })
+}).openapi('ProviderKeyWithSecret');
+
+
+// --- Request Body Schemas ---
+export const CreateProviderKeyBodySchema = z.object({
+    provider: z.string().min(1).openapi({ example: 'anthropic' }),
+    key: z.string().min(1).openapi({ example: 'sk-ant-xxxxxxxx' }),
+}).openapi('CreateProviderKeyRequestBody');
+
+export const UpdateProviderKeyBodySchema = z.object({
+    // Allow updating only provider, only key, or both
+    provider: z.string().min(1).optional().openapi({ example: 'google' }),
+    key: z.string().min(1).optional().openapi({ example: 'aizaxxxxxxxxxxxxx' }),
+}).refine(data => data.provider || data.key, {
+    message: "At least one of provider or key must be provided for update"
+}).openapi('UpdateProviderKeyRequestBody');
+
+
+// --- Request Parameter Schemas ---
+export const ProviderKeyIdParamsSchema = z.object({
+    keyId: z.string().min(1).openapi({
+        param: { name: 'keyId', in: 'path' },
+        example: 'key-1a2b3c4d',
+        description: 'The ID of the provider key'
+    })
+}).openapi('ProviderKeyIdParams');
+
+
+// --- Response Schemas ---
+export const ProviderKeyResponseSchema = z.object({
+    success: z.literal(true),
+    // Use the schema WITH the secret key for single-item responses (create, getById, update)
+    data: ProviderKeyWithSecretSchema
+}).openapi('ProviderKeyResponse');
+
+export const ProviderKeyListResponseSchema = z.object({
+    success: z.literal(true),
+    // Use the schema WITHOUT the secret key for list responses
+    data: z.array(ProviderKeySchema)
+}).openapi('ProviderKeyListResponse');
+
+
+// --- Original structure (optional, might be redundant) ---
 export const providerKeyApiValidation = {
     create: {
-        body: z.object({
-            provider: z.string().min(1),
-            key: z.string().min(1),
-        })
+        body: CreateProviderKeyBodySchema // Use OpenAPI schema
     },
     update: {
-        params: z.object({
-            keyId: z.string(),
-        }),
-        body: z.object({
-            provider: z.string().min(1).optional(),
-            key: z.string().min(1).optional(),
-        })
+        params: ProviderKeyIdParamsSchema, // Use OpenAPI schema
+        body: UpdateProviderKeyBodySchema // Use OpenAPI schema
     },
     getOrDelete: {
-        params: z.object({
-            keyId: z.string(),
-        })
+        params: ProviderKeyIdParamsSchema // Use OpenAPI schema
     }
 } as const;
 
-export type CreateProviderKeyBody = z.infer<typeof providerKeyApiValidation.create.body>;
-export type UpdateProviderKeyParams = z.infer<typeof providerKeyApiValidation.update.params>;
-export type UpdateProviderKeyBody = z.infer<typeof providerKeyApiValidation.update.body>;
-export type GetOrDeleteProviderKeyParams = z.infer<typeof providerKeyApiValidation.getOrDelete.params>;
+// Export types if needed elsewhere
+export type CreateProviderKeyBody = z.infer<typeof CreateProviderKeyBodySchema>;
+export type UpdateProviderKeyBody = z.infer<typeof UpdateProviderKeyBodySchema>;
+export type ProviderKeyIdParams = z.infer<typeof ProviderKeyIdParamsSchema>;

@@ -1,4 +1,3 @@
-export type { CreateChatBody, CreateMessageBody, DeleteChatParams, DeleteMessageParams, ForkChatBody, ForkChatFromMessageBody, ForkChatFromMessageParams, GetMessagesParams, UpdateChatBody, UpdateChatParams, FileSearchValidationBody, ForkChatParams, CreateMessageBodyGeneric } from './src/validation/chat-api-validation';
 export type { CreateProjectBody, UpdateProjectParams, UpdateProjectBody, GetOrDeleteProjectParams, GetProjectFilesParams, SyncProjectParams } from './src/validation/projects-api-validation';
 export type { CreatePromptBody, UpdatePromptParams, UpdatePromptBody, GetOrDeletePromptParams, ListPromptsParams } from './src/validation/prompt-api-validation';
 export type { CreateProviderKeyBody, UpdateProviderKeyParams, UpdateProviderKeyBody, GetOrDeleteProviderKeyParams } from './src/validation/provider-key-api-validation';

@@ -10,7 +10,6 @@ export const DEFAULT_MODEL_CONFIGS = {
         presence_penalty: 0,
         stream: true,
     },
-    // suggest-files-routes.ts
     'suggest-code-files': {
         model: "qwen/qwen-plus",
         temperature: 0.7,

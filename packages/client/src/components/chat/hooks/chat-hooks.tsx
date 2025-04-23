@@ -7,6 +7,10 @@ import { useAIChat } from "@/hooks/use-ai-chat";
 import { useSettings } from "@/zustand/selectors"; // Import useSettings
 import { useForkChat } from "@/hooks/api/use-chat-api"; // Assuming this API call exists
 
+
+
+
+
 export function useCreateChatHandler() {
     const createChatMutation = useCreateChat(); // Assumes this API call doesn't depend on tabs
 

@@ -1,240 +1,195 @@
-/*
- * File: use-prompts-api.ts
- * Purpose: Provides React Query hooks for interacting with the prompts API
- * Key Features:
- * - CRUD operations for prompts
- * - Automatic cache invalidation
- * - Type-safe API calls
- * 
- * Most Recent Changes:
- * - Fixed query options to use gcTime instead of cacheTime
- * - Added proper error typing
- * - Added type-safe options interface
- */
-
-import { useMutation, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Prompt } from 'shared';
 import { commonErrorHandler } from './common-mutation-error-handler';
-import { useApi } from '../use-api';
+import {
+    getApiPromptsOptions,
+    getApiPromptsQueryKey,
+    postApiPromptsMutation,
+    getApiPromptsByPromptIdOptions,
+    getApiPromptsByPromptIdQueryKey,
+    patchApiPromptsByPromptIdMutation,
+    deleteApiPromptsByPromptIdMutation,
+    getApiProjectsByProjectIdPromptsOptions,
+    getApiProjectsByProjectIdPromptsQueryKey,
+    postApiProjectsByProjectIdPromptsByPromptIdMutation,
+    deleteApiProjectsByProjectIdPromptsByPromptIdMutation
+} from '../generated/@tanstack/react-query.gen';
+import type {
+    GetApiPromptsData,
+    PostApiPromptsData,
+    PostApiPromptsError,
+    GetApiPromptsByPromptIdData,
+    PatchApiPromptsByPromptIdData,
+    PatchApiPromptsByPromptIdError,
+    DeleteApiPromptsByPromptIdData,
+    DeleteApiPromptsByPromptIdError,
+    GetApiProjectsByProjectIdPromptsData,
+    PostApiProjectsByProjectIdPromptsByPromptIdData,
+    PostApiProjectsByProjectIdPromptsByPromptIdError,
+    DeleteApiProjectsByProjectIdPromptsByPromptIdData,
+    DeleteApiProjectsByProjectIdPromptsByPromptIdError,
+} from '../generated/types.gen'; // Corrected import path again to be relative to hooks dir
+import { Options } from '../generated/sdk.gen'; // Corrected import path again to be relative to hooks dir
 
-export type PromptResponse = {
-    success: boolean;
-    prompt?: Prompt;
-    error?: string;
-};
+// Removed PromptResponse, PromptListResponse, EnhancedPromptListResponse as generated types cover this.
 
-export type PromptListResponse = {
-    success: boolean;
-    prompts: Prompt[];
-    error?: string;
-};
+// Updated types to match generated hook inputs
+export type CreatePromptInput = PostApiPromptsData['body'];
+export type UpdatePromptInput = PatchApiPromptsByPromptIdData['body'];
 
-export type CreatePromptInput = {
-    name: string;
-    content: string;
-    projectId?: string;
-};
-
-export type UpdatePromptInput = {
-    name?: string;
-    content?: string;
-};
-
-// Add new types for enhanced prompt responses
-export type EnhancedPromptListResponse = PromptListResponse & {
-    metadata?: {
-        totalCount: number;
-        lastUpdated: string;
-    };
-};
-
+// Reusing generated query keys structure
 const PROMPT_KEYS = {
-    all: ['prompts'] as const,
-    lists: () => [...PROMPT_KEYS.all, 'list'] as const,
-    byProject: (projectId: string) => [...PROMPT_KEYS.lists(), { projectId }] as const,
-    details: () => [...PROMPT_KEYS.all, 'detail'] as const,
-    detail: (id: string) => [...PROMPT_KEYS.details(), id] as const,
+    all: () => getApiPromptsQueryKey(),
+    lists: () => getApiPromptsQueryKey(), // Assuming lists are the same as 'all' for this base
+    byProject: (projectId: string) => getApiProjectsByProjectIdPromptsQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdPromptsData>),
+    details: () => [...getApiPromptsQueryKey(), 'detail'], // Maintain detail structure if needed
+    detail: (id: string) => getApiPromptsByPromptIdQueryKey({ path: { promptId: id } } as Options<GetApiPromptsByPromptIdData>)
 } as const;
 
-// Get all prompts
-export function useGetPrompts() {
-    const { api } = useApi();
-    return useQuery<PromptListResponse>({
-        queryKey: PROMPT_KEYS.all,
-        queryFn: async () => {
-            const res = await api.request('/api/prompts');
-            return res.json();
-        },
-    });
+// Get all prompts using generated options
+export function useGetPrompts(options?: Partial<GetApiPromptsData['query']>) {
+    const queryOptions = getApiPromptsOptions({ query: options } as Options<GetApiPromptsData>);
+    return useQuery(queryOptions);
 }
 
 interface GetAllPromptsOptions {
-    includeMetadata?: boolean;
+    includeMetadata?: boolean; // Example of passing query params
     includeDeleted?: boolean;
     staleTime?: number;
     gcTime?: number;
 }
 
-// Enhanced prompt fetching with additional features
+// Enhanced prompt fetching using generated options
 export function useGetAllPrompts(options?: GetAllPromptsOptions) {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
+    const { staleTime, gcTime, ...queryParams } = options || {};
+    const queryOpts = getApiPromptsOptions({
+        query: queryParams as GetApiPromptsData['query']
+    } as Options<GetApiPromptsData>);
 
     return useQuery({
-        queryKey: [...PROMPT_KEYS.all, options],
-        queryFn: async () => {
-            const queryParams = new URLSearchParams();
-            if (options?.includeMetadata) {
-                queryParams.append('includeMetadata', 'true');
-            }
-            if (options?.includeDeleted) {
-                queryParams.append('includeDeleted', 'true');
-            }
-
-            const url = `/api/prompts${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-            const res = await api.request(url);
-            const data: PromptListResponse = await res.json();
-
-            // Add metadata if requested
-            if (options?.includeMetadata) {
-                return {
-                    success: data.success,
-                    prompts: data.prompts,
-                    error: data.error,
-                    metadata: {
-                        totalCount: data.prompts.length,
-                        lastUpdated: new Date().toISOString(),
-                    },
-                };
-            }
-
-            return data;
-        },
-        staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutes by default
-        gcTime: options?.gcTime ?? 1000 * 60 * 30, // 30 minutes by default
+        ...queryOpts,
+        staleTime: staleTime ?? 1000 * 60 * 5, // 5 minutes by default
+        gcTime: gcTime ?? 1000 * 60 * 30, // 30 minutes by default
+        // Select or transform data if needed to match previous EnhancedPromptListResponse structure
     });
 }
 
-// Get prompt by ID
+// Get prompt by ID using generated options
 export function useGetPrompt(id: string) {
-    const { api } = useApi();
-    return useQuery<PromptResponse>({
-        queryKey: PROMPT_KEYS.detail(id),
-        queryFn: async () => {
-            const res = await api.request(`/api/prompts/${id}`);
-            return res.json();
-        },
+    const queryOptions = getApiPromptsByPromptIdOptions({ path: { promptId: id } } as Options<GetApiPromptsByPromptIdData>);
+    return useQuery({
+        ...queryOptions,
         enabled: !!id,
     });
 }
 
-// Create prompt
+
+// Create prompt using generated mutation
 export function useCreatePrompt() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = postApiPromptsMutation();
 
-    return useMutation({
-        mutationFn: async (data: CreatePromptInput) => {
-            const res = await api.request('/api/prompts', {
-                method: 'POST',
-                body: data,
-            });
-            return res.json();
+    return useMutation<unknown, PostApiPromptsError, Options<PostApiPromptsData>>({
+        mutationFn: mutationOptions.mutationFn!,
+        onSuccess: (data, variables, context) => {
+            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
+            // Optionally call original onSuccess if provided
+            // mutationOptions.onSuccess?.(data, variables, context);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all });
-        },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
 
-// Update prompt
+// Update prompt using generated mutation
 export function useUpdatePrompt() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = patchApiPromptsByPromptIdMutation();
 
-    return useMutation({
-        mutationFn: async ({ promptId, data }: { promptId: string; data: UpdatePromptInput }) => {
-            const res = await api.request(`/api/prompts/${promptId}`, {
-                method: 'PATCH',
-                body: data,
-            });
-            return res.json();
+    return useMutation<unknown, PatchApiPromptsByPromptIdError, { promptId: string; data: UpdatePromptInput }>({
+        // Generated mutation expects Options<Patch...> which includes path and body
+        mutationFn: (vars: { promptId: string; data: UpdatePromptInput }) => {
+            const opts: Options<PatchApiPromptsByPromptIdData> = { path: { promptId: vars.promptId }, body: vars.data };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (_, { promptId }) => {
+        onSuccess: (data, variables, context) => {
+            const promptId = variables.promptId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.detail(promptId) });
-            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all });
+            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
+            // mutationOptions.onSuccess?.(data, variables, context);
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
 
-// Delete prompt
+// Delete prompt using generated mutation
 export function useDeletePrompt() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = deleteApiPromptsByPromptIdMutation();
 
-    return useMutation({
-        mutationFn: async (promptId: string) => {
-            const res = await api.request(`/api/prompts/${promptId}`, {
-                method: 'DELETE',
-            });
-            return res.json();
+    return useMutation<unknown, DeleteApiPromptsByPromptIdError, string>({
+        // Generated mutation expects Options<Delete...> which includes path
+        mutationFn: (promptId: string) => {
+            const opts: Options<DeleteApiPromptsByPromptIdData> = { path: { promptId } };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all });
+        onSuccess: (data, variables, context) => {
+            // variables is the promptId string here
+            queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
+            // Also invalidate the specific detail if needed, though it's deleted
+            // queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.detail(variables) });
+            // mutationOptions.onSuccess?.(data, variables, context);
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
 
-// Get prompts by project
+// Get prompts by project using generated options
 export function useGetProjectPrompts(projectId: string) {
-    const { api } = useApi();
-    return useQuery<PromptListResponse>({
-        queryKey: PROMPT_KEYS.byProject(projectId),
-        queryFn: async () => {
-            const res = await api.request(`/api/projects/${projectId}/prompts`);
-            return res.json();
-        },
+    const queryOptions = getApiProjectsByProjectIdPromptsOptions({ path: { projectId } } as Options<GetApiProjectsByProjectIdPromptsData>);
+    return useQuery({
+        ...queryOptions,
         enabled: !!projectId,
+        // Select or transform data if needed to match previous structure
     });
 }
 
-// Add prompt to project
+
+// Add prompt to project using generated mutation
 export function useAddPromptToProject() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = postApiProjectsByProjectIdPromptsByPromptIdMutation();
 
-    return useMutation({
-        mutationFn: async ({ promptId, projectId }: { promptId: string; projectId: string }) => {
-            const res = await api.request(`/api/projects/${projectId}/prompts/${promptId}`, {
-                method: 'POST',
-            });
-            return res.json();
+    return useMutation<unknown, PostApiProjectsByProjectIdPromptsByPromptIdError, { promptId: string; projectId: string }>({
+        // Generated mutation expects Options<Post...> which includes path
+        mutationFn: (vars: { promptId: string; projectId: string }) => {
+            const opts: Options<PostApiProjectsByProjectIdPromptsByPromptIdData> = { path: { promptId: vars.promptId, projectId: vars.projectId } };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (_, { projectId }) => {
+        onSuccess: (data, variables, context) => {
+            const projectId = variables.projectId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
+            // mutationOptions.onSuccess?.(data, variables, context);
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
 
-// Remove prompt from project
+// Remove prompt from project using generated mutation
 export function useRemovePromptFromProject() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = deleteApiProjectsByProjectIdPromptsByPromptIdMutation();
 
-    return useMutation({
-        mutationFn: async ({ promptId, projectId }: { promptId: string; projectId: string }) => {
-            const res = await api.request(`/api/projects/${projectId}/prompts/${promptId}`, {
-                method: 'DELETE',
-            });
-            return res.json();
+    return useMutation<unknown, DeleteApiProjectsByProjectIdPromptsByPromptIdError, { promptId: string; projectId: string }>({
+        // Generated mutation expects Options<Delete...> which includes path
+        mutationFn: (vars: { promptId: string; projectId: string }) => {
+            const opts: Options<DeleteApiProjectsByProjectIdPromptsByPromptIdData> = { path: { promptId: vars.promptId, projectId: vars.projectId } };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (_, { projectId }) => {
+        onSuccess: (data, variables, context) => {
+            const projectId = variables.projectId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
+            // mutationOptions.onSuccess?.(data, variables, context);
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }

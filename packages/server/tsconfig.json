@@ -7,8 +7,7 @@
     "target": "esnext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
+    "noEmit": false,
     "composite": true,
     "strict": true,
     "downlevelIteration": true,
@@ -33,7 +32,7 @@
   },
   "include": [
     "src",
-    "src/server-router.ts",
+    "src/middleware.ts",
     "server.ts",
     "build.ts",
     "src/utils/database.ts"

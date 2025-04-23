@@ -27,7 +27,7 @@
     "*.ts",
     "src/**/*.ts",
     "schema.ts"
-  ],
+, "../server/src/utils/response-utils.ts"  ],
   "exclude": [
     "node_modules",
     "dist"
