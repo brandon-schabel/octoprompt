@@ -46,10 +46,10 @@ import {
 import { buildNodeContent } from "@/components/projects/utils/projects-utils";
 
 import { getEditorUrl } from "@/lib/editor-urls";
-import { useActiveProjectTab } from "@/hooks/api/global-state/selectors";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
 import { useRefreshProject } from "@/hooks/api/use-projects-api";
 import { ProjectFile } from "@/hooks/generated/types.gen";
+import { useActiveProjectTab } from "@/hooks/api/use-state-api";
 
 /**
  * The user's preferred external editor.
@@ -132,7 +132,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
     },
     ref
 ) {
-    const { tabData: projectTabState, selectedProjectId } = useActiveProjectTab();
+    const [projectTabState, , selectedProjectId] = useActiveProjectTab();
     const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
     const resolveImports = projectTabState?.resolveImports ?? false;
     const preferredEditor = projectTabState?.preferredEditor ?? "vscode";

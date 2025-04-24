@@ -6,8 +6,8 @@ import { Plus } from "lucide-react";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
-import { useActiveProjectTab } from "@/hooks/api/global-state/selectors";
 import { Ticket, TicketWithTasks } from "@/hooks/generated";
+import { useActiveProjectTab } from "@/hooks/api/use-state-api";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -20,7 +20,8 @@ function TicketsPage() {
     // what TicketListPanel provides via onSelectTicket.
     const [selectedTicket, setSelectedTicket] = React.useState<TicketWithTasks | null>(null);
 
-    const { tabData: projectTabState, id: projectActiveTabId } = useActiveProjectTab()
+    const [projectTabState, , projectActiveTabId] = useActiveProjectTab()
+    // const projectActiveTabId = projectTabState?.id ?? null;
     const projectId = projectTabState?.selectedProjectId ?? null;
 
     const {

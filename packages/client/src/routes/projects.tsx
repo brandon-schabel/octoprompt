@@ -7,9 +7,10 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { useCreateProjectTab } from '@/hooks/api/global-state/updaters'
-import { useActiveProjectTab, useAllProjectTabs } from '@/hooks/api/global-state/selectors'
+import { useAllProjectTabs } from '@/hooks/api/global-state/selectors'
 import { ResizablePanel } from '@/components/ui/resizable-panel'
 import { ProjectResponse } from '@/hooks/generated'
+import { useActiveProjectTab } from '@/hooks/api/use-state-api'
 
 export function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
@@ -17,7 +18,8 @@ export function ProjectsPage() {
 
     // All tabs + active tab
     const tabs = useAllProjectTabs()
-    const { selectedProjectId } = useActiveProjectTab()
+    const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
+    const selectedProjectId = activeProjectTabState?.selectedProjectId
     const { data: projects } = useGetProjects()
 
     // Create a new tab from WebSocket side

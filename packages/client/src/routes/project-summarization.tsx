@@ -45,9 +45,10 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { useActiveProjectTab, useSettings } from "@/hooks/api/global-state/selectors"
+import { useSettings } from "@/hooks/api/global-state/selectors"
 import { ProjectFile } from "@/hooks/generated"
 import { AppSettings } from "shared/src/schemas/global-state-schema"
+import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -100,10 +101,10 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 export function ProjectSummarizationSettingsPage() {
     const { summarizationEnabledProjectIds = [] } = useSettings()
     const { summarizationIgnorePatterns = [] } = useSettings()
-    const { tabData: projectTabState } = useActiveProjectTab()
+    const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
     const updateSettings = useUpdateSettings()
 
-    const selectedProjectId = projectTabState?.selectedProjectId
+    const selectedProjectId = activeProjectTabState?.selectedProjectId
     const isProjectSummarizationEnabled = selectedProjectId
         ? summarizationEnabledProjectIds?.includes(selectedProjectId)
         : false

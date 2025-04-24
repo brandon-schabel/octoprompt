@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
-import { useActiveChat } from "@/hooks/api/global-state/selectors"
 import { useSettings } from "@/hooks/api/global-state/selectors"
+import { useActiveChatId } from "@/hooks/api/use-state-api"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -13,7 +13,7 @@ export type HelpDialogProps = {
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
     // Get active chat from Zustand
-    const activeChatId = useActiveChat();
+    const [activeChatId] = useActiveChatId();
     
     // Get model info from global settings
     const settings = useSettings();

@@ -13,9 +13,9 @@ import { Pencil, Trash2, Icon } from "lucide-react"
 import { tab } from '@lucide/lab'
 import { useProjectTabActions } from "@/hooks/use-project-tab-actions"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
-import { useActiveProjectTab } from "@/hooks/api/global-state/selectors"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { ProjectResponse } from "@/hooks/generated"
+import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 
 type ProjectHeaderProps = {
     projectData: ProjectResponse['data'] | null
@@ -26,14 +26,15 @@ const ProjectHeader = function ProjectHeader({
 }: ProjectHeaderProps) {
     // Router info (for highlighting tickets, etc.)
     const matches = useMatches()
-    const { selectedProjectId } = useActiveProjectTab()
+    const [projectTabData] = useActiveProjectTab()
+    const selectedProjectId = projectTabData?.selectedProjectId
     const isOnTicketsRoute = matches.some((m) => m.routeId === '/tickets')
     const isOnSummarizationRoute = matches.some((m) => m.routeId === '/project-summarization')
 
     // Tickets for this project
     const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? '')
     const openTicketsCount =
-        ticketsData?.ticketsWithTasks?.filter((t) => t.status === 'open').length ?? 0
+        ticketsData?.ticketsWithTasks?.filter((t) => t.ticket.status === 'open').length ?? 0
 
     if (!projectData) return null
 

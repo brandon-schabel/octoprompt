@@ -27,12 +27,10 @@ import { CSS } from '@dnd-kit/utilities';
 
 // Import Zustand hooks and selectors
 import {
-  useCreateProjectTab,
-  useSetActiveProjectTab,
-  useUpdateProjectTab,
-  useDeleteProjectTab,
-} from '@/hooks/api/global-state/updaters';
-import { useActiveProjectTab, useAllProjectTabs } from '@/hooks/api/global-state/selectors';
+  useProjectTabsState, // Using the refactored hook
+  useActiveProjectTab
+} from '@/hooks/api/use-state-api';
+// Keep API call hooks separate
 import { useCreateProject } from '@/hooks/api/use-projects-api';
 
 // Define props for the simplified component (mainly className now)
@@ -43,13 +41,19 @@ export type ProjectsTabManagerProps = {
 // Combined and Simplified Component
 export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   // --- State Management Hooks ---
-  const { createProjectTab } = useCreateProjectTab();
-  const setActiveProjectTab = useSetActiveProjectTab();
-  const updateProjectTab = useUpdateProjectTab();
-  const deleteProjectTab = useDeleteProjectTab();
+  // Get all needed state and actions from the refactored hook
+  const {
+    tabs, // This is Record<string, ProjectTab>
+    activeTabId,
+    setActiveTabId: setActiveProjectTab, // Rename for consistency if preferred
+    createTab: createProjectTab, // Rename for consistency if preferred
+    updateTab: updateProjectTab, // Rename for consistency if preferred
+    deleteTab: deleteProjectTab, // Rename for consistency if preferred
+    // replaceTabs // Not currently used in this component
+  } = useProjectTabsState();
 
-  const { tabData: activeProjectTabState, id: activeTabId } = useActiveProjectTab();
-  const tabs = useAllProjectTabs(); // This is Record<string, ProjectTab>
+  // Get active tab specific data and the memoized updater
+  const [activeProjectTabState, setActiveProjectTabData] = useActiveProjectTab(); // activeTabId is already available from useProjectTabsState
 
   // --- Component State ---
   const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null);
@@ -107,7 +111,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     useHotkeys(`${hotkeyPrefix}+${i}`, () => {
       const targetTabId = finalTabOrder[i - 1];
       if (targetTabId) setActiveProjectTab(targetTabId);
-    }, { preventDefault: true }, [finalTabOrder, setActiveProjectTab]); // Add dependencies
+    }, { preventDefault: true }, [finalTabOrder, setActiveProjectTab]); // Dependencies seem correct (order array, stable action)
   }
 
   useHotkeys(`${hotkeyPrefix}+tab`, (e) => {
@@ -117,7 +121,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     if (currentIndex === -1) return; // Active tab not in order? Should not happen
     const nextIndex = (currentIndex + 1) % finalTabOrder.length;
     setActiveProjectTab(finalTabOrder[nextIndex]);
-  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTab]); // Add dependencies
+  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTab]); // Dependencies seem correct (active id, order array, stable action)
 
   useHotkeys(`${hotkeyPrefix}+shift+tab`, (e) => {
     e.preventDefault();
@@ -126,12 +130,22 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     if (currentIndex === -1) return;
     const prevIndex = (currentIndex - 1 + finalTabOrder.length) % finalTabOrder.length;
     setActiveProjectTab(finalTabOrder[prevIndex]);
-  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTab]); // Add dependencies
+  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTab]); // Dependencies seem correct (active id, order array, stable action)
 
   // --- Event Handlers ---
   const handleCreateTab = () => {
-    // Pass required fields, ensure projectId is handled if needed
-    createProjectTab({ projectId: projectId ?? '', selectedFiles: [] });
+    // Add Guard Clause: Ensure we have a valid projectId from the active tab
+    if (!projectId) {
+      console.error("Cannot create project tab: No active project ID selected.");
+      // TODO: Consider adding a user-facing notification (e.g., toast)
+      // import { toast } from 'sonner';
+      // toast.error("Please select an active project before creating a new tab.");
+      return; // Prevent the API call if no valid project ID
+    }
+
+    // If projectId is valid, proceed with the API call
+    console.log(`Creating new project tab for projectId: ${projectId}`);
+    createProjectTab({ projectId: projectId, selectedFiles: [] });
   };
 
   const handleRenameTab = (tabId: string, newName: string) => {
@@ -227,7 +241,11 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     <>
       <Tabs
         value={activeTabId ?? ""} // Ensure value is always a string
-        onValueChange={setActiveProjectTab}
+        // onValueChange={setActiveProjectTab}
+        onValueChange={(value) => {
+          console.log('[ProjectsTabManager] onValueChange -> value:', value);
+          setActiveProjectTab(value);
+        }}
         className={cn("flex flex-col justify-start rounded-none border-b", className)} // Added border-b from original ProjectTabsManager
       // activationMode="manual" // Consider adding if clicking shouldn't activate immediately while dragging
       >

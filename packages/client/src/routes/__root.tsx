@@ -18,9 +18,6 @@ import { ComponentErrorBoundary } from '@/components/error-boundary/component-er
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { useGetState } from '@/hooks/api/use-state-api'
 
 function LoadingScreen() {
   const [showError, setShowError] = useState(false)
@@ -177,13 +174,13 @@ export const Route = createRootRouteWithContext()({
 })
 
 function RootComponent() {
-  const { data: data, isLoading: isLoadingState, } = useGetState()
+  // const { data: data, isLoading: isLoadingState, } = useGetState()
 
 
   // Show loading screen until both WebSocket is connected AND initial state is received
-  if (isLoadingState) {
-    return <LoadingScreen />
-  }
+  // if (isLoadingState) {
+  //   return <LoadingScreen />
+  // }
 
   return (
     <ErrorBoundary>

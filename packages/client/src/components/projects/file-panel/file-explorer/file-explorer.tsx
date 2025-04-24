@@ -1,6 +1,4 @@
-import React, { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-import { useActiveProjectTab } from '@/hooks/api/global-state/selectors'
 // Import the refactored hooks
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -28,6 +26,8 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@/hooks/generated/types.gen'
+import { useActiveProjectTab } from '@/hooks/api/use-state-api'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>
@@ -42,17 +42,18 @@ type FileExplorerProps = {
 }
 
 export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) {
-  const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
+  const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
+  const selectedProjectId = activeProjectTabState?.selectedProjectId
   const queryClient = useQueryClient()
 
   const {
     data: fileDataResponse,
     isLoading: filesLoading,
-  } = useGetProjectFiles(selectedProjectId || '')
+  } = useGetProjectFiles(activeProjectTabState?.selectedProjectId || '')
 
   const {
     data: projectDataResponse,
-  } = useGetProject(selectedProjectId || '')
+  } = useGetProject(activeProjectTabState?.selectedProjectId || '')
 
   const projectFiles = useMemo(() => fileDataResponse?.data || [], [fileDataResponse]);
   const project = useMemo(() => projectDataResponse?.data, [projectDataResponse]);
@@ -154,7 +155,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       <SelectedFilesDrawer
         selectedFiles={selectedFiles}
         fileMap={projectFileMap}
-        onRemoveFile={() => { }} 
+        onRemoveFile={() => { }}
         trigger={trigger}
         projectTabId={activeProjectTabId ?? ''}
       />

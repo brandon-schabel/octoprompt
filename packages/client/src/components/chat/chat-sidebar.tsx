@@ -12,15 +12,13 @@ import {
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
 import { toast } from 'sonner';
-import { useActiveChat } from '@/hooks/api/global-state/selectors';
-import { useSetActiveChat } from '@/hooks/api/global-state/updaters';
 import { Chat } from '@/hooks/generated';
+import { useActiveChatId } from '@/hooks/api/use-state-api';
 
 export function ChatSidebar() {
     // Get active chat from Zustand
-    const activeChatId = useActiveChat();
-    const setActiveChat = useSetActiveChat();
-    
+    const [activeChatId, setActiveChatId] = useActiveChatId();
+
     const [editingChatId, setEditingChatId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState('');
     const [visibleCount, setVisibleCount] = useState(50);
@@ -47,9 +45,9 @@ export function ChatSidebar() {
             const newChat = await createChat.mutateAsync({
                 title: defaultTitle,
                 copyExisting: false,
-            });
+            }) as Chat;
             toast.success('New chat created');
-            setActiveChat(newChat.id);
+            setActiveChatId(newChat?.id ?? null);
         } catch (error) {
             console.error('Error creating chat:', error);
             toast.error('Failed to create chat');
@@ -63,7 +61,7 @@ export function ChatSidebar() {
             await deleteChat.mutateAsync(chatId);
             // If deleted chat was active, clear active chat
             if (activeChatId === chatId) {
-                setActiveChat('');
+                setActiveChatId(null);
             }
         } catch (error) {
             console.error('Error deleting chat:', error);
@@ -79,7 +77,7 @@ export function ChatSidebar() {
         try {
             await updateChat.mutateAsync({
                 chatId,
-                input: { title: editingTitle },
+                data: { title: editingTitle },
             });
             setEditingChatId(null);
         } catch (error) {
@@ -175,7 +173,7 @@ export function ChatSidebar() {
                                                     isActive ? 'font-bold' : ''
                                                 )}
                                                 onClick={() => {
-                                                    setActiveChat(chat.id);
+                                                    setActiveChatId(chat.id);
                                                 }}
                                                 title={chat.title ?? 'No Title'}
                                             >

@@ -1,4 +1,3 @@
-import { ProjectFile } from "shared/schema"
 import { SelectedFilesListRef } from "../../selected-files-list"
 import { SelectedFilesList } from "../../selected-files-list"
 import { ShortcutDisplay } from "@/components/app-shortcut-display"
@@ -6,7 +5,8 @@ import { InfoTooltip } from "@/components/info-tooltip"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
-import { useActiveProjectTab } from "@/hooks/api/global-state/selectors"
+import { useActiveProjectTab } from "@/hooks/api/use-state-api"
+import { ProjectFile } from "@/hooks/generated"
 
 type SelectedFilesSidebarProps = {
     allFilesMap: Map<string, ProjectFile>
@@ -18,7 +18,7 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
     selectedFilesListRef,
     onNavigateToFileTree,
 }: SelectedFilesSidebarProps) {
-    const { id: activeProjectTabId } = useActiveProjectTab()
+    const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
     const { selectedFiles, removeSelectedFile } = useSelectedFiles()
 
     return (

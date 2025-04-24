@@ -3,7 +3,6 @@ import { useCallback, useState, useRef, useEffect, useMemo } from "react";
 // Remove direct Zustand store import
 // import { useGlobalStateStore } from "./global-state-store";
 import {
-  useActiveProjectTab,
   useSettings, // Stays, reads from API state now
 } from "./selectors";
 import {
@@ -17,8 +16,8 @@ import type {
 } from "shared";
 import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
 // Import the necessary API hooks and types
-import { useGetState } from "@/hooks/api/use-state-api";
 import { ProjectTabState, Theme } from "@/hooks/generated";
+import { useActiveProjectTab, useProjectTabsState } from "../use-state-api";
 // Remove useUpdateState unless PUT /api/state is still used somewhere
 // import { useUpdateState } from "@/hooks/api/use-state-api";
 // Remove ReplaceStateBody unless PUT /api/state is used
@@ -92,18 +91,21 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
   projectTabId?: string // Optional specific tab ID
 ) {
   // 1. Determine target Tab ID
-  const { id: activeTabIdFromState } = useActiveProjectTab(); // Reads active ID from API state
-  const targetTabId = projectTabId ?? activeTabIdFromState;
+  const [activeTabIdFromState, , activeTabId] = useActiveProjectTab(); // Reads active ID from API state
+  const targetTabId = projectTabId ?? activeTabId;
+
+
+  const projectTabsState = useProjectTabsState()
+
 
   // 2. Read Data from API State
-  const { data: stateResponse, isLoading: isStateLoading } = useGetState();
-  const projectTabs = stateResponse?.data?.projectTabs;
+  const projectTabs = projectTabsState.tabs
   const tabData = targetTabId ? projectTabs?.[targetTabId] : undefined;
   const data = tabData ? tabData[fieldKey] : undefined;
 
   // 3. Determine Loading State
   // Considered loading if API state is loading OR the target tab/field isn't found yet
-  const isLoading = isStateLoading || !tabData;
+  const isLoading = false || !tabData;
 
   // 4. Get the API-driven update function for project tabs
   const updateTab = useUpdateProjectTab(); // Assumes this uses useUpdateStatePartial internally

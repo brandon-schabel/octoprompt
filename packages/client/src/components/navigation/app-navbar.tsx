@@ -11,7 +11,8 @@ import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles,
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useUpdateActiveProjectTab } from "@/hooks/api/global-state/updaters"
-import { useActiveProjectTab, useSettings } from "@/hooks/api/global-state/selectors"
+import {  useSettings } from "@/hooks/api/global-state/selectors"
+import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -33,7 +34,7 @@ export function AppNavbar() {
     const { theme = 'dark' } = useSettings()
 
     const updateActiveProjectTab = useUpdateActiveProjectTab();
-    const { tabData: activeProjectTabState } = useActiveProjectTab()
+    const [activeProjectTabState] = useActiveProjectTab()
     const selectedProjectId = activeProjectTabState?.selectedProjectId;
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()

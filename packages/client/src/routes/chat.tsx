@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { ChatMessages } from '@/components/chat/chat-messages'
 import { AdaptiveChatInput } from '@/components/adaptive-chat-input'
-import { ChatHeader } from'@/components/chat/chat-header'
+import { ChatHeader } from '@/components/chat/chat-header'
 
 import { useChatWithAI } from "@/components/chat/hooks/chat-hooks";
 import { DEFAULT_MODEL_CONFIGS } from "shared/index";
-import { useActiveChat } from '@/hooks/api/global-state/selectors'
-import { useSetActiveChat } from '@/hooks/api/global-state/updaters'
 import { v4 as uuidv4 } from 'uuid'
+import { useActiveChatId } from '@/hooks/api/use-state-api'
 
 export const Route = createFileRoute("/chat")({
   component: ChatPage,
@@ -24,9 +23,9 @@ const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
 function ChatPage() {
   // Get active chat from Zustand
-  const activeChatId = useActiveChat();
-  const setActiveChat = useSetActiveChat();
-  
+  const [activeChatId, setActiveChat] = useActiveChatId();
+  // const setActiveChat = useSetActiveChat();
+
   // Add local state to ensure input changes are tracked immediately
   const [localMessage, setLocalMessage] = useState('')
 
