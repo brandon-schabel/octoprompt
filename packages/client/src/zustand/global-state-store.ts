@@ -1,13 +1,8 @@
-// packages/client/src/global-state-store/global-state-store.ts
-
 import { create } from "zustand"
 import { devtools } from "zustand/middleware"
 import { DEFAULT_MODEL_CONFIGS, mergeDeep } from "shared"
 import { v4 as uuidv4 } from "uuid"
 
-// ---------------------------------------------------
-// Import your shared Zod schemas and types
-// ---------------------------------------------------
 import {
     createInitialGlobalState,
 } from "shared"
@@ -19,13 +14,6 @@ import type {
 } from "shared"
 
 
-const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']    
-
-// ---------------------------------------------------
-// Define slices
-// ---------------------------------------------------
-
-/** Type for store actions that update global settings. */
 interface SettingsSlice {
     settings: AppSettings
     setSettings: (partial: Partial<AppSettings>) => void
@@ -37,22 +25,19 @@ type StoreUpdater = (
     replace?: false | undefined
 ) => void
 
-/**
- * Creates a Zustand slice to manage all "settings" state
- */
+
 function createSettingsSlice(
     set: StoreUpdater,
     get: () => StoreState
 ): SettingsSlice {
     return {
         settings: createInitialGlobalState().settings,
-        setSettings: (partial) => 
+        setSettings: (partial) =>
             set((state) => ({ settings: { ...state.settings, ...partial } })),
     }
 }
 
-// ---------------------------------------------------
-/** Chat state slice to manage active chat and link settings */
+
 interface ChatSlice {
     activeChatId: string | null
     chatLinkSettings: Record<string, {
@@ -61,15 +46,13 @@ interface ChatSlice {
         includeUserPrompt?: boolean
         linkedProjectTabId?: string
     }>
-    
+
     setActiveChat: (chatId: string) => void
     updateChatLinkSettings: (chatId: string, settings: any) => void
     unlinkProjectFromChat: (chatId: string) => void
 }
 
-/**
- * Creates a Zustand slice for chat management
- */
+
 function createChatSlice(
     set: StoreUpdater,
     get: () => StoreState
@@ -77,11 +60,11 @@ function createChatSlice(
     return {
         activeChatId: null,
         chatLinkSettings: {},
-        
+
         setActiveChat: (chatId) => {
             set({ activeChatId: chatId })
         },
-        
+
         updateChatLinkSettings: (chatId, settings) => {
             set((state) => ({
                 chatLinkSettings: {
@@ -93,7 +76,7 @@ function createChatSlice(
                 }
             }))
         },
-        
+
         unlinkProjectFromChat: (chatId) => {
             set((state) => {
                 const newLinkSettings = { ...state.chatLinkSettings }
@@ -110,8 +93,7 @@ function createChatSlice(
     }
 }
 
-// ---------------------------------------------------
-/** Type for store actions that manage project tabs. */
+
 interface ProjectTabsSlice {
     projectTabs: Record<string, ProjectTabState>
     projectActiveTabId: string | null
@@ -128,9 +110,6 @@ interface ProjectTabsSlice {
     updateProjectTab: (tabId: string, partial: Partial<ProjectTabState>) => void
 }
 
-/**
- * Creates a Zustand slice for project tabs.
- */
 function createProjectTabsSlice(
     set: StoreUpdater,
     get: () => StoreState
@@ -182,7 +161,7 @@ function createProjectTabsSlice(
                 const remainingTabs = Object.keys(newTabs)
                 return {
                     projectTabs: newTabs,
-                    projectActiveTabId: state.projectActiveTabId === tabId 
+                    projectActiveTabId: state.projectActiveTabId === tabId
                         ? (remainingTabs.length > 0 ? remainingTabs[0] : null)
                         : state.projectActiveTabId
                 }
@@ -208,17 +187,12 @@ function createProjectTabsSlice(
     }
 }
 
-// ---------------------------------------------------
-/** Type for "global" store keys not covered by slices above. */
 interface GlobalSlice {
     // Example: a full copy of the global state to do merges, if you prefer
     mergeFullGlobalState: (incoming: GlobalState) => void
     mergePartialGlobalState: (incoming: Partial<GlobalState>) => void
 }
 
-/**
- * Creates a slice for handling any large-scale merges or top-level fields
- */
 function createGlobalSlice(
     set: StoreUpdater,
     get: () => StoreState

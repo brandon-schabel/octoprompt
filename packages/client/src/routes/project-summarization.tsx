@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useOptimistic, useFormStatus, useCallback, useMemo, useState, useTransition } from "react"
+import { useOptimistic, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -109,10 +109,8 @@ export function ProjectSummarizationSettingsPage() {
         ? summarizationEnabledProjectIds?.includes(selectedProjectId)
         : false
 
-    // Add transition for better loading states
     const [isPending, startTransition] = useTransition()
 
-    // Base state
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
     const [expandedSummaryFileId, setExpandedSummaryFileId] = useState<string | null>(null)
     const [summaryDialogOpen, setSummaryDialogOpen] = useState(false)
@@ -123,7 +121,6 @@ export function ProjectSummarizationSettingsPage() {
     const [isResummarizeDialogOpen, setIsResummarizeDialogOpen] = useState(false)
     const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false)
 
-    // Optimistic state for better UX
     const [optimisticState, addOptimisticEntry] = useOptimistic<OptimisticState>(
         {
             selectedFileIds,
@@ -133,21 +130,17 @@ export function ProjectSummarizationSettingsPage() {
     )
 
 
-    // 1) Fetch all project files
     const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? "")
     const projectFiles = (data?.data || []) as ProjectFile[]
 
-    // 2) Fetch all file entries (now each includes its summary)
     const { data: summariesData } = useGetFileSummaries(selectedProjectId ?? "")
     const summaries = summariesData?.data || []
 
-    // Build a lookup map of fileId -> ProjectFile
     const summariesMap = new Map<string, ProjectFile>()
     for (const f of summaries) {
         summariesMap.set(f.id, f)
     }
 
-    // 3) Summarize selected files
     const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? "")
     const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? "")
     const resummarizeAllMutation = useResummarizeAllFiles(selectedProjectId ?? "")
@@ -156,7 +149,6 @@ export function ProjectSummarizationSettingsPage() {
     const includedFiles: ProjectFile[] = []
     const excludedFiles: ProjectFile[] = []
 
-    // Partition files into "ignored" vs "included"
     for (const file of projectFiles) {
         const isIgnored = matchesAnyPattern(file.path, ignorePatterns)
         if (isIgnored) {
@@ -166,10 +158,6 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    // -------------------------------------------------------------
-    // Compute token counts (used for sorting & filtering).
-    // We can memoize a map of { fileId -> tokenCount } for performance.
-    // -------------------------------------------------------------
     const tokensMap = new Map<string, number>()
     for (const file of includedFiles) {
         if (file.content) {
@@ -179,7 +167,6 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    // Add summaryTokensMap calculation
     const summaryTokensMap = new Map<string, number>()
     for (const file of includedFiles) {
         if (file.summary) {
@@ -189,11 +176,6 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    // File size is in the DB (`file.size`), so we can use that directly.
-
-    // -------------------------------------------------------------
-    // Filtering by token count
-    // -------------------------------------------------------------
     const filteredIncludedFiles = includedFiles.filter((file) => {
         const tokenCount = tokensMap.get(file.id) ?? 0
         if (minTokensFilter !== null && tokenCount < minTokensFilter) return false
@@ -201,9 +183,6 @@ export function ProjectSummarizationSettingsPage() {
         return true
     })
 
-    // -------------------------------------------------------------
-    // Sorting logic
-    // -------------------------------------------------------------
     const sortedIncludedFiles = [...filteredIncludedFiles].sort((a, b) => {
         const fileA = summariesMap.get(a.id)
         const fileB = summariesMap.get(b.id)
@@ -306,7 +285,6 @@ export function ProjectSummarizationSettingsPage() {
         )
     }
 
-    // Optimistic handlers
     async function handleSummarizeOptimistic() {
         if (!selectedFileIds.length) {
             toast.error("No Files Selected", {
@@ -316,13 +294,11 @@ export function ProjectSummarizationSettingsPage() {
         }
 
         startTransition(() => {
-            // Optimistically update UI
             addOptimisticEntry((current: OptimisticState) => ({
                 ...current,
                 summarizedFileIds: selectedFileIds
             }))
 
-            // Actual mutation
             summarizeMutation.mutate(
                 { fileIds: selectedFileIds },
                 {
@@ -343,13 +319,11 @@ export function ProjectSummarizationSettingsPage() {
 
     function handleExcludeFileOptimistic(filePath: string) {
         startTransition(() => {
-            // Optimistically update UI
             addOptimisticEntry((current: OptimisticState) => ({
                 ...current,
                 excludedPatterns: [...current.excludedPatterns, filePath]
             }))
 
-            // Actual update
             updateSettings((prev: AppSettings) => ({
                 ...prev,
                 summarizationIgnorePatterns: [
@@ -414,9 +388,6 @@ export function ProjectSummarizationSettingsPage() {
         setIsResummarizeDialogOpen(false)
     }
 
-    // --------------------------------------------
-    // "Summary Memory" & aggregated stats
-    // --------------------------------------------
     let totalContentLength = 0
     for (const file of includedFiles) {
         if (file.content) {

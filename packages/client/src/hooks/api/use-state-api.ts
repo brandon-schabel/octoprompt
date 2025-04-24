@@ -1,15 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import {
-    // Generated Query Options & Keys
     getApiStateOptions,
     getApiStateQueryKey,
-    // Generated Mutation Functions
     postApiStateMutation
 } from '../generated/@tanstack/react-query.gen';
 import type {
-    // Generated Data Types
-    GetApiStateData,
     GetApiStateResponse,
     PostApiStateData,
     PostApiStateError,
@@ -17,18 +13,15 @@ import type {
 } from '../generated/types.gen';
 import { Options } from '../generated/sdk.gen';
 
-// Input type for state updates
 export type UpdateStateInput = {
     key: string;
     value: any;
 };
 
-// Query keys for state
 const STATE_KEYS = {
     all: ['state'] as const,
 };
 
-// Get current application state
 export function useGetState() {
     const queryOptions = getApiStateOptions();
 
@@ -44,7 +37,6 @@ export function useGetState() {
     });
 }
 
-// Update a single state property
 export function useUpdateState() {
     const queryClient = useQueryClient();
     const mutationOptions = postApiStateMutation();

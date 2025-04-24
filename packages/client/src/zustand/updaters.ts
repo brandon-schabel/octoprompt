@@ -6,9 +6,9 @@ import type {
 } from "shared" // Adjusted imports
 import { useGlobalStateContext } from "./global-state-provider"
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils"
-import { TicketWithTasks } from "@/hooks/api/use-tickets-api"
 import { v4 as uuidv4 } from "uuid"
-// --- Chat State Updaters ---
+import { TicketWithTasks } from "@/hooks/generated"
+
 export function useSetActiveChat() {
     const setActiveChat = useGlobalStateStore((s) => s.setActiveChat)
     const { manager } = useGlobalStateContext()
@@ -119,45 +119,40 @@ export function useUpdateActiveProjectTabStateKey() {
     }
 }
 
-
-/**
- * Hook: create a project tab from a ticket
- */
-// Keep useCreateProjectTabFromTicket if needed, ensure it doesn't rely on removed chat state
 export function useCreateProjectTabFromTicket() {
     const { tabData: activeProjectTab } = useActiveProjectTab()
     const createProjectTab = useGlobalStateStore((s) => s.createProjectTab)
     const setActiveProjectTab = useSetActiveProjectTab()
     const updateProjectTab = useUpdateProjectTab()
 
-    return (ticket: TicketWithTasks, customTabId?: string) => {
+    return (data: TicketWithTasks, customTabId?: string) => {
         if (!activeProjectTab) return
 
         const tabId = customTabId ?? `ticket-tab-${uuidv4()}`
-        const userPrompt = buildTicketContent(ticket)
-        const suggestedFileIds = JSON.parse(ticket.suggestedFileIds || "[]")
+        const userPrompt = buildTicketContent(data)
+        const suggestedFileIds = JSON.parse(data.ticket.suggestedFileIds || "[]")
 
         const newTabData: ProjectTabState = {
             ...activeProjectTab,
-            selectedProjectId: ticket.projectId,
+            selectedProjectId: data.ticket.projectId,
             selectedFiles: suggestedFileIds,
             suggestedFileIds,
             userPrompt,
-            displayName: ticket.title || "Ticket Tab",
+            displayName: data.ticket.title || "Ticket Tab",
             editProjectId: null,
             promptDialogOpen: false,
             editPromptId: null,
             fileSearch: "",
             ticketSearch: "",
-            ticketId: ticket.id,
+            ticketId: data.ticket.id,
             sortOrder: 0,
         }
 
         createProjectTab({
-            projectId: ticket.projectId,
+            projectId: data.ticket.projectId,
             userPrompt,
             selectedFiles: suggestedFileIds,
-            displayName: ticket.title || "Ticket Tab",
+            displayName: data.ticket.title || "Ticket Tab",
         })
 
         // After creating, update with full tab data

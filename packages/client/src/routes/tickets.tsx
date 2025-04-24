@@ -7,7 +7,7 @@ import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
 import { useActiveProjectTab } from "@/zustand/selectors";
-import { TicketWithTasks } from "@/hooks/generated";
+import { Ticket, TicketWithTasks } from "@/hooks/generated";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -82,7 +82,7 @@ function TicketsPage() {
             <TicketDialog
                 isOpen={isDialogOpen}
                 onClose={handleCloseDialog}
-                ticket={selectedTicket}
+                ticket={selectedTicket as unknown as Ticket}
                 projectId={projectId}
             />
         </div>

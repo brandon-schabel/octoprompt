@@ -6,11 +6,6 @@ import { validateIncomingMessage, InboundMessage, OutboundMessage } from "shared
 
 import { handleIncomingWebsocketMessage } from "./websocket-subscription";
 
-/**
- * Minimal context so components can know:
- *  - isOpen: are we connected to the WebSocket?
- *  - hasReceivedInitialState: have we received the initial_state message?
- */
 interface GlobalStateContextValue {
     manager: SyncClientManager<InboundMessage, OutboundMessage>;
     isOpen: boolean;
@@ -108,35 +103,28 @@ export function GlobalStateProvider({ children }: { children: ReactNode }) {
             }
         }, BATCH_PROCESS_INTERVAL);
         return () => clearInterval(intervalId);
-    }, []); // Empty dependency array is correct here
+    }, []); 
 
-    // BNK Manager - Update messageHandlers
     const { isOpen, manager } = useSyncClient<InboundMessage, OutboundMessage>({
         config: {
             url: SERVER_WS_ENDPOINT,
-            validateIncomingMessage, // Uses updated validator
+            validateIncomingMessage, 
             autoReconnect: true,
             reconnectIntervalMs: 500,
-            maxReconnectAttempts: 500, // Consider making this Infinity or a large number
+            maxReconnectAttempts: 500, 
             messageHandlers: {
-                // Route all valid message types through the queueing system
-                // List only the types defined in the updated inboundMessageSchema
                 initial_state: (msg) => queueMessage(msg),
                 state_update: (msg) => queueMessage(msg),
-                // Project Tab Messages (if kept)
                 create_project_tab: (msg) => queueMessage(msg),
                 update_project_tab: (msg) => queueMessage(msg),
                 update_project_tab_partial: (msg) => queueMessage(msg),
                 delete_project_tab: (msg) => queueMessage(msg),
                 set_active_project_tab: (msg) => queueMessage(msg),
                 create_project_tab_from_ticket: (msg) => queueMessage(msg),
-                // Settings/Global Messages
                 update_global_state_key: (msg) => queueMessage(msg),
                 update_settings: (msg) => queueMessage(msg),
                 update_settings_partial: (msg) => queueMessage(msg),
                 update_theme: (msg) => queueMessage(msg),
-                // REMOVED: create_chat_tab, update_chat_tab, update_chat_tab_partial,
-                // REMOVED: delete_chat_tab, set_active_chat_tab, update_link_settings, update_provider
             },
         },
     });

@@ -3,17 +3,13 @@ import { commonErrorHandler } from './common-mutation-error-handler';
 import {
     getApiKeysOptions,
     getApiKeysQueryKey,
-    // getApiKeysByKeyIdOptions, // Optional
-    // getApiKeysByKeyIdQueryKey, // Optional
     postApiKeysMutation,
     patchApiKeysByKeyIdMutation,
     deleteApiKeysByKeyIdMutation,
 } from '../generated/@tanstack/react-query.gen';
 import type {
-    // Import response types which likely follow { success: boolean, data: ... }
-    ProviderKeyListResponse, // Expect: { success: boolean, data: ProviderKey[] }
-    ProviderKeyResponse,     // Expect: { success: boolean, data: ProviderKey }
-    // Import data/payload types
+    ProviderKeyListResponse,
+    ProviderKeyResponse,
     PostApiKeysData,
     PostApiKeysError,
     PatchApiKeysByKeyIdData,
@@ -21,26 +17,18 @@ import type {
     DeleteApiKeysByKeyIdData,
     DeleteApiKeysByKeyIdError,
     DeleteApiKeysByKeyIdResponse,
-    // Import the core entity type
     ProviderKey,
-    // GetApiKeysByKeyIdData, // Optional
-} from '../generated/types.gen'; // Adjust path if needed
-import { Options } from '../generated/sdk.gen'; // Adjust path if needed
+} from '../generated/types.gen';
+import { Options } from '../generated/sdk.gen';
 
-// Define input types based on generated request body types
 export type CreateKeyInput = PostApiKeysData['body'];
 export type UpdateKeyInput = PatchApiKeysByKeyIdData['body'];
 
-// Define Query Keys using generated functions
 const KEYS_KEYS = {
     all: () => getApiKeysQueryKey(),
     lists: () => getApiKeysQueryKey(),
-    // detail: (keyId: string) => getApiKeysByKeyIdQueryKey({ path: { keyId } } as Options<GetApiKeysByKeyIdData>), // Optional
 } as const;
 
-// --- Query Hooks ---
-
-// Get all provider keys
 export function useGetKeys() {
     const queryOptions = getApiKeysOptions();
     return useQuery({

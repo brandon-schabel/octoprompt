@@ -32,50 +32,42 @@ import type {
     DeleteApiProjectsByProjectIdPromptsByPromptIdError,
     PostApiPromptOptimizeError,
     PostApiPromptOptimizeData,
-} from '../generated/types.gen'; // Corrected import path again to be relative to hooks dir
-import { Options } from '../generated/sdk.gen'; // Corrected import path again to be relative to hooks dir
+} from '../generated/types.gen';
+import { Options } from '../generated/sdk.gen';
 
-// Removed PromptResponse, PromptListResponse, EnhancedPromptListResponse as generated types cover this.
 
-// Updated types to match generated hook inputs
 export type CreatePromptInput = PostApiPromptsData['body'];
 export type UpdatePromptInput = PatchApiPromptsByPromptIdData['body'];
 
-// Reusing generated query keys structure
 const PROMPT_KEYS = {
     all: () => getApiPromptsQueryKey(),
-    lists: () => getApiPromptsQueryKey(), // Assuming lists are the same as 'all' for this base
+    lists: () => getApiPromptsQueryKey(),
     byProject: (projectId: string) => getApiProjectsByProjectIdPromptsQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdPromptsData>),
-    details: () => [...getApiPromptsQueryKey(), 'detail'], // Maintain detail structure if needed
+    details: () => [...getApiPromptsQueryKey(), 'detail'],
     detail: (id: string) => getApiPromptsByPromptIdQueryKey({ path: { promptId: id } } as Options<GetApiPromptsByPromptIdData>)
 } as const;
 
-// Get all prompts using generated options
 export function useGetPrompts(options?: Partial<GetApiPromptsData['query']>) {
     const queryOptions = getApiPromptsOptions({ query: options } as Options<GetApiPromptsData>);
     return useQuery(queryOptions);
 }
 
 interface GetAllPromptsOptions {
-    includeMetadata?: boolean; // Example of passing query params
+    includeMetadata?: boolean;
     includeDeleted?: boolean;
     staleTime?: number;
     gcTime?: number;
 }
 
-// Enhanced prompt fetching using generated options
 export function useGetAllPrompts(options?: GetAllPromptsOptions) {
-    // Destructure only client-side options
     const { staleTime, gcTime } = options || {};
 
-    // Call the generated options function without query params, as the API doesn't expect them
-    const queryOpts = getApiPromptsOptions(); // Pass undefined or {} if needed, but likely handles undefined
+    const queryOpts = getApiPromptsOptions();
 
     return useQuery({
-        ...queryOpts, // Contains generated queryKey and queryFn
-        staleTime: staleTime ?? 1000 * 60 * 5, // Apply client-side staleTime
-        gcTime: gcTime ?? 1000 * 60 * 30, // Apply client-side gcTime
-        // Select or transform data if needed to match previous EnhancedPromptListResponse structure
+        ...queryOpts,
+        staleTime: staleTime ?? 1000 * 60 * 5,
+        gcTime: gcTime ?? 1000 * 60 * 30,
     });
 }
 
@@ -98,20 +90,16 @@ export function useCreatePrompt() {
         mutationFn: mutationOptions.mutationFn!,
         onSuccess: (data, variables, context) => {
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
-            // Optionally call original onSuccess if provided
-            // mutationOptions.onSuccess?.(data, variables, context);
         },
         onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
 
-// Update prompt using generated mutation
 export function useUpdatePrompt() {
     const queryClient = useQueryClient();
     const mutationOptions = patchApiPromptsByPromptIdMutation();
 
     return useMutation<unknown, PatchApiPromptsByPromptIdError, { promptId: string; data: UpdatePromptInput }>({
-        // Generated mutation expects Options<Patch...> which includes path and body
         mutationFn: (vars: { promptId: string; data: UpdatePromptInput }) => {
             const opts: Options<PatchApiPromptsByPromptIdData> = { path: { promptId: vars.promptId }, body: vars.data };
             return mutationOptions.mutationFn!(opts);
@@ -120,29 +108,22 @@ export function useUpdatePrompt() {
             const promptId = variables.promptId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.detail(promptId) });
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
-            // mutationOptions.onSuccess?.(data, variables, context);
         },
-        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
-// Delete prompt using generated mutation
 export function useDeletePrompt() {
     const queryClient = useQueryClient();
     const mutationOptions = deleteApiPromptsByPromptIdMutation();
 
     return useMutation<unknown, DeleteApiPromptsByPromptIdError, string>({
-        // Generated mutation expects Options<Delete...> which includes path
         mutationFn: (promptId: string) => {
             const opts: Options<DeleteApiPromptsByPromptIdData> = { path: { promptId } };
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: (data, variables, context) => {
-            // variables is the promptId string here
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
-            // Also invalidate the specific detail if needed, though it's deleted
-            // queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.detail(variables) });
-            // mutationOptions.onSuccess?.(data, variables, context);
         },
         onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
@@ -154,7 +135,6 @@ export function useGetProjectPrompts(projectId: string) {
     return useQuery({
         ...queryOptions,
         enabled: !!projectId,
-        // Select or transform data if needed to match previous structure
     });
 }
 
@@ -165,7 +145,6 @@ export function useAddPromptToProject() {
     const mutationOptions = postApiProjectsByProjectIdPromptsByPromptIdMutation();
 
     return useMutation<unknown, PostApiProjectsByProjectIdPromptsByPromptIdError, { promptId: string; projectId: string }>({
-        // Generated mutation expects Options<Post...> which includes path
         mutationFn: (vars: { promptId: string; projectId: string }) => {
             const opts: Options<PostApiProjectsByProjectIdPromptsByPromptIdData> = { path: { promptId: vars.promptId, projectId: vars.projectId } };
             return mutationOptions.mutationFn!(opts);
@@ -173,19 +152,16 @@ export function useAddPromptToProject() {
         onSuccess: (data, variables, context) => {
             const projectId = variables.projectId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
-            // mutationOptions.onSuccess?.(data, variables, context);
         },
         onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
 
-// Remove prompt from project using generated mutation
 export function useRemovePromptFromProject() {
     const queryClient = useQueryClient();
     const mutationOptions = deleteApiProjectsByProjectIdPromptsByPromptIdMutation();
 
     return useMutation<unknown, DeleteApiProjectsByProjectIdPromptsByPromptIdError, { promptId: string; projectId: string }>({
-        // Generated mutation expects Options<Delete...> which includes path
         mutationFn: (vars: { promptId: string; projectId: string }) => {
             const opts: Options<DeleteApiProjectsByProjectIdPromptsByPromptIdData> = { path: { promptId: vars.promptId, projectId: vars.projectId } };
             return mutationOptions.mutationFn!(opts);
@@ -193,7 +169,6 @@ export function useRemovePromptFromProject() {
         onSuccess: (data, variables, context) => {
             const projectId = variables.projectId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
-            // mutationOptions.onSuccess?.(data, variables, context);
         },
         onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
@@ -209,33 +184,3 @@ export const useOptimizePrompt = () => {
         onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
-// export type OptimizePromptResponse = {
-//     success: boolean;
-//     optimizedPrompt?: string;
-//     error?: string;
-// };
-
-// const PROMPTIMIZER_KEYS = {
-//     all: ['promptimizer'] as const,
-//     optimize: () => [...PROMPTIMIZER_KEYS.all, 'optimize'] as const,
-// } as const;
-
-// async function optimizePrompt(
-//     api: ReturnType<typeof useApi>['api'],
-//     userContext: string
-// ): Promise<OptimizePromptResponse> {
-//     const response = await api.request('/api/prompt/optimize', {
-//         method: 'POST',
-//         body: { userContext },
-//     });
-//     return response.json();
-// }
-
-// export const useOptimizePrompt = () => {
-//     const { api } = useApi();
-
-//     return useMutation<OptimizePromptResponse, Error, string>({
-//         mutationFn: (userContext: string) => optimizePrompt(api, userContext),
-//         onError: commonErrorHandler,
-//     });
-// };

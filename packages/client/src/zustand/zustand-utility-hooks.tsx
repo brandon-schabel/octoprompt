@@ -17,9 +17,6 @@ import type {
 } from "shared";
 import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
 
-/**
- * Debounce function that limits how often a function can be called
- */
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait = 300
@@ -67,10 +64,6 @@ export function useZustandGenericField<T extends object, K extends keyof T>(
   // The current field value from the record
   const data: T[K] | undefined = record ? record[fieldKey] : undefined;
 
-  /**
-   * mutate: sets the field to a new value (or uses a function callback).
-   *         Also invokes `sendWsMessage` if provided.
-   */
   const mutate = useCallback(
     (valueOrFn: T[K] | ((prevVal: T[K]) => T[K])) => {
       if (!record) return;

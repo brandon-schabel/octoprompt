@@ -1,26 +1,21 @@
-// packages/client/src/hooks/api/use-structured-output.ts
 import { useMutation } from '@tanstack/react-query';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import {
-    // Generated Mutation Function
     postApiStructuredOutputsMutation
 } from '../generated/@tanstack/react-query.gen';
 import type {
-    // Generated Data Types
     PostApiStructuredOutputsData,
     PostApiStructuredOutputsError,
     PostApiStructuredOutputsResponse
 } from '../generated/types.gen';
 import { Options } from '../generated/sdk.gen';
 
-// Import from shared package
 import {
     InferStructuredOutput,
     StructuredOutputType,
     structuredOutputSchemas
 } from "shared/index";
 
-// Request input type
 interface StructuredOutputRequest<T extends StructuredOutputType> {
     outputType: T;
     userMessage: string;
@@ -30,9 +25,6 @@ interface StructuredOutputRequest<T extends StructuredOutputType> {
     chatId?: string;
 }
 
-/**
- * A generic hook for generating structured output based on a specific schema
- */
 export function useGenerateStructuredOutput<T extends StructuredOutputType>(outputType: T) {
     const mutationOptions = postApiStructuredOutputsMutation();
 

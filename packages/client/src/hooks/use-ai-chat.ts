@@ -1,9 +1,10 @@
 // packages/client/src/components/chat/hooks/use-ai-chat.tsx
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { ChatMessage } from 'shared/schema';
-import { APIProviders, ChatModelSettings } from 'shared';
+import { ChatModelSettings } from 'shared';
 import { useGetMessages } from './api/use-chat-api';
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
+import { ChatMessage } from './generated';
 
 interface UseAIChatProps {
   chatId: string;
@@ -113,7 +114,7 @@ export function useAIChat({
         role: 'user',
         content: userInput.trim(),
         chatId,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const assistantMessage: ChatMessage = {
@@ -121,7 +122,7 @@ export function useAIChat({
         role: 'assistant',
         content: '',
         chatId,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Set pending messages for immediate UI feedback

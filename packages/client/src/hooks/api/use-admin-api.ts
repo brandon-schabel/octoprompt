@@ -51,13 +51,6 @@ export interface SystemStatus {
   };
 }
 
-// Admin query keys (can be kept for internal consistency or removed if unused elsewhere)
-const ADMIN_KEYS = {
-  all: ['admin'] as const,
-  envInfo: () => ['admin', 'env-info'] as const, // These might differ from generated keys
-  systemStatus: () => ['admin', 'system-status'] as const, // These might differ from generated keys
-};
-
 // Updated hooks using generated options
 export const useGetEnvironmentInfo = () => {
   const queryOptions = getApiAdminEnvInfoOptions();
