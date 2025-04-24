@@ -1,0 +1,56 @@
+{
+  "settings": {
+    "language": "en",
+    "theme": "light",
+    "codeThemeLight": "atomOneLight",
+    "codeThemeDark": "atomOneDark",
+    "ollamaGlobalUrl": "http://localhost:11434",
+    "lmStudioGlobalUrl": "http://localhost:1234",
+    "summarizationIgnorePatterns": [],
+    "summarizationAllowPatterns": [],
+    "summarizationEnabledProjectIds": [],
+    "useSpacebarToSelectAutocomplete": true,
+    "hideInformationalTooltips": false,
+    "autoScrollEnabled": true,
+    "provider": "openrouter",
+    "model": "qwen/qwen-plus",
+    "temperature": 0.7,
+    "max_tokens": 100000,
+    "top_p": 1,
+    "frequency_penalty": 0,
+    "presence_penalty": 0,
+    "stream": true
+  },
+  "projectTabs": {
+    "defaultTab": {
+      "selectedProjectId": "27826e4b73201c5209b4f223d8a2f5a4",
+      "editProjectId": null,
+      "promptDialogOpen": false,
+      "editPromptId": null,
+      "fileSearch": "",
+      "selectedFiles": [
+        "314faaca8f928197cf8e97333840ea8b",
+        "f3d8e14c972aacf0264cd108126e18fe",
+        "731f15fa487a3b546637c18db2ed3181",
+        "28e967f98bbbc587320946b660f06d4f"
+      ],
+      "selectedPrompts": [],
+      "userPrompt": "instead of syncing the state to the backend at all, i want to just move all state to the frontend using local storage, having all this state stuff on the backend is too complex, but I do want to persist the state ",
+      "searchByContent": false,
+      "displayName": "Default Project Tab",
+      "contextLimit": 128000,
+      "resolveImports": false,
+      "preferredEditor": "vscode",
+      "suggestedFileIds": [],
+      "bookmarkedFileGroups": {},
+      "ticketSearch": "",
+      "ticketSort": "created_desc",
+      "ticketStatusFilter": "all",
+      "ticketId": null,
+      "sortOrder": 0
+    }
+  },
+  "projectActiveTabId": "defaultTab",
+  "activeChatId": null,
+  "chatLinkSettings": {}
+}

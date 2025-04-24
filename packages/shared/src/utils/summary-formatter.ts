@@ -1,4 +1,4 @@
-import type { ProjectFile } from "../../schema";
+import type { ProjectFile } from "../schemas/project.schemas";
 
 /**
  * Optional configuration interface to control the output style

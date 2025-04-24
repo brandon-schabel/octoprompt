@@ -31,6 +31,21 @@ export const ProviderKeySchema = z.object({
     updatedAt: z.string().datetime().openapi({ example: '2024-03-01T11:05:00.000Z', description: 'Last update timestamp (ISO 8601)' })
 }).openapi('ProviderKey');
 
+
+
+
+// Schema for the data needed to CREATE a key (omits generated fields)
+export const CreateProviderKeyInputSchema = ProviderKeySchema.omit({
+    id: true, // ID is also typically generated
+    createdAt: true,
+    updatedAt: true,
+});
+
+// Type for the input data
+export type CreateProviderKeyInput = z.infer<typeof CreateProviderKeyInputSchema>;
+
+
+
 // Schema for responses that include the key (e.g., after creation/update)
 export const ProviderKeyWithSecretSchema = ProviderKeySchema.extend({
     key: z.string().openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' })

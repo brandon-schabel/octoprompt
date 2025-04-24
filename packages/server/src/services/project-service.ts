@@ -287,9 +287,8 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
         return; // Or throw new Error('No files found for project to resummarize');
     }
 
-    // const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
-    await forceSummarizeFiles(projectId, allFiles);
+    await forceSummarizeFiles(allFiles); // Pass only the files array
 }
 
 /**
@@ -337,9 +336,8 @@ export async function forceResummarizeSelectedFiles(
         throw new Error(`Failed to validate file data for forced re-summarization`);
     }
 
-    const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
-    await forceSummarizeFiles(projectId, selectedFiles, globalState);
+    await forceSummarizeFiles(selectedFiles); // Pass only the selected files array
 
     return {
         included: selectedFiles.length,
@@ -390,10 +388,9 @@ export async function summarizeSelectedFiles(projectId: string, fileIds: string[
         throw new Error(`Failed to validate file data for summarization`);
     }
 
-
-    const globalState = await getCurrentState();
+    // const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
-    const result = await summarizeFiles(projectId, selectedFiles, globalState);
+    const result = await summarizeFiles(projectId, selectedFiles);
 
     return {
         ...result, // { included: number, skipped: number }
