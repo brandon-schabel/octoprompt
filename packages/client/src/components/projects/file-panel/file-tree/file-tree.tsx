@@ -46,7 +46,7 @@ import {
 import { buildNodeContent } from "@/components/projects/utils/projects-utils";
 
 import { getEditorUrl } from "@/lib/editor-urls";
-import { useActiveProjectTab } from "@/zustand/selectors";
+import { useActiveProjectTab } from "@/hooks/api/global-state/selectors";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
 import { useRefreshProject } from "@/hooks/api/use-projects-api";
 import { ProjectFile } from "@/hooks/generated/types.gen";

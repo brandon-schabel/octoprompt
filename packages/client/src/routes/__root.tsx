@@ -15,7 +15,6 @@ import {
 import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
-import { useGlobalStateContext } from '@/zustand/global-state-provider'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
@@ -178,14 +177,11 @@ export const Route = createRootRouteWithContext()({
 })
 
 function RootComponent() {
-  const { isOpen, hasReceivedInitialState } = useGlobalStateContext()
-  const queryClient = useQueryClient()
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useLocalStorage('autoRefreshEnabled', true)
-  const { data: data, isLoading:isLoadingState, } = useGetState()
+  const { data: data, isLoading: isLoadingState, } = useGetState()
 
 
   // Show loading screen until both WebSocket is connected AND initial state is received
-  if (!isOpen || !hasReceivedInitialState || isLoadingState) {
+  if (isLoadingState) {
     return <LoadingScreen />
   }
 

@@ -10,8 +10,8 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon } from "lucide-react"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useUpdateActiveProjectTab } from "@/zustand/updaters"
-import { useActiveProjectTab, useSettings } from "@/zustand/selectors"
+import { useUpdateActiveProjectTab } from "@/hooks/api/global-state/updaters"
+import { useActiveProjectTab, useSettings } from "@/hooks/api/global-state/selectors"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)

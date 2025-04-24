@@ -10,12 +10,12 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
-import { Project } from 'shared/index'
+import { Project } from '@/hooks/generated'
 
 
 interface ProjectListProps {
     loading: boolean
-    projects: Project[] 
+    projects: Project[]
     selectedProjectId: string | null
     onSelectProject: (id: string) => void
     onEditProject: (id: string) => void

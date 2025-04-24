@@ -25,7 +25,7 @@ import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useUpdateSettings } from "@/zustand/updaters"
+import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
 import {
     Select,
     SelectContent,
@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { useActiveProjectTab, useSettings } from "@/zustand/selectors"
+import { useActiveProjectTab, useSettings } from "@/hooks/api/global-state/selectors"
 import { ProjectFile } from "@/hooks/generated"
 import { AppSettings } from "shared/src/schemas/global-state-schema"
 

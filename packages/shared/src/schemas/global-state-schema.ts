@@ -16,25 +16,25 @@ export const apiProviders = providerSchema.options;
 
 // Project tab state - (Keep as is, unless project tabs are also removed)
 export const projectTabStateSchema = z.object({
-    selectedProjectId: z.string().nullable().optional().default(null).openapi({ description: "UUID of the currently selected project within this tab, or null.", example: "proj_123abc" }),
-    editProjectId: z.string().nullable().optional().default(null).openapi({ description: "UUID of the project whose settings are being edited within this tab, or null.", example: null }),
+    selectedProjectId: z.string().nullable().optional().default(null).openapi({ description: "ID of the currently selected project within this tab, or null.", example: "proj_123abc" }),
+    editProjectId: z.string().nullable().optional().default(null).openapi({ description: "ID of the project whose settings are being edited within this tab, or null.", example: null }),
     promptDialogOpen: z.boolean().optional().default(false).openapi({ description: "Whether the prompt selection/creation dialog is open in this tab." }),
-    editPromptId: z.string().nullable().optional().default(null).openapi({ description: "UUID of the prompt being edited in this tab, or null.", example: "prompt_xyz789" }),
+    editPromptId: z.string().nullable().optional().default(null).openapi({ description: "ID of the prompt being edited in this tab, or null.", example: "prompt_xyz789" }),
     fileSearch: z.string().optional().default("").openapi({ description: "Current search query for files within this project tab.", example: "userService" }),
-    selectedFiles: z.array(z.string()).nullable().optional().default([]).openapi({ description: "Array of file UUIDs currently selected in this tab.", example: ["file_abc", "file_def"] }),
-    selectedPrompts: z.array(z.string()).optional().default([]).openapi({ description: "Array of prompt UUIDs currently selected in this tab.", example: ["prompt_ghi"] }),
+    selectedFiles: z.array(z.string()).nullable().optional().default([]).openapi({ description: "Array of file IDs currently selected in this tab.", example: ["file_abc", "file_def"] }),
+    selectedPrompts: z.array(z.string()).optional().default([]).openapi({ description: "Array of prompt IDs currently selected in this tab.", example: ["prompt_ghi"] }),
     userPrompt: z.string().optional().default("").openapi({ description: "The current user-entered text in the main prompt input for this tab.", example: "Refactor this component to use hooks." }),
     searchByContent: z.boolean().optional().default(false).openapi({ description: "Flag indicating if file search should search within file content." }),
     displayName: z.string().optional().openapi({ description: "User-defined display name for this project tab.", example: "Backend Services" }),
     contextLimit: z.number().optional().default(128000).openapi({ description: "Context limit (in tokens) specifically configured for this project tab, overriding global settings if set.", example: 16000 }),
     resolveImports: z.boolean().optional().default(false).openapi({ description: "Whether to attempt resolving imports to include related file context." }),
     preferredEditor: z.enum(["vscode", "cursor", "webstorm"]).optional().default("vscode").openapi({ description: "The preferred editor to open files with from this tab.", example: "cursor" }),
-    suggestedFileIds: z.array(z.string()).optional().default([]).openapi({ description: "Array of file UUIDs suggested by the AI for the current context.", example: ["file_sug1", "file_sug2"] }),
+    suggestedFileIds: z.array(z.string()).optional().default([]).openapi({ description: "Array of file IDs suggested by the AI for the current context.", example: ["file_sug1", "file_sug2"] }),
     bookmarkedFileGroups: z
         .record(z.string(), z.array(z.string()))
         .optional()
         .default({})
-        .openapi({ description: "A record of user-defined file groups (bookmarks), mapping group names to arrays of file UUIDs.", example: { "Auth Files": ["file_auth1", "file_auth2"] } }),
+        .openapi({ description: "A record of user-defined file groups (bookmarks), mapping group names to arrays of file IDs.", example: { "Auth Files": ["file_auth1", "file_auth2"] } }),
     ticketSearch: z.string().optional().default("").openapi({ description: "Current search query for tickets.", example: "UI bug" }),
     ticketSort: z
         .enum(["created_desc", "created_asc", "status", "priority"])
@@ -44,7 +44,7 @@ export const projectTabStateSchema = z.object({
         .enum(["all", "open", "in_progress", "closed"])
         .optional()
         .default("all").openapi({ description: "Filter criteria for ticket status." }),
-    ticketId: z.string().nullable().optional().default(null).openapi({ description: "UUID of the currently selected ticket, or null.", example: "ticket_999" }),
+    ticketId: z.string().nullable().optional().default(null).openapi({ description: "ID of the currently selected ticket, or null.", example: "ticket_999" }),
     sortOrder: z.number().optional().default(0).openapi({ description: "Numerical sort order for arranging project tabs." }),
 }).openapi('ProjectTabState', { description: 'Represents the state of a single project tab, including selections, searches, and configurations specific to that tab.' });
 export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
@@ -76,7 +76,7 @@ export const appSettingsSchema = z.object({
     lmStudioGlobalUrl: z.string().url().optional().default("http://localhost:1234").openapi({ description: "Base URL for the LM Studio local inference server.", example: "http://localhost:1234" }), // Default corrected based on common LM Studio port
     summarizationIgnorePatterns: z.array(z.string()).optional().default([]).openapi({ description: "Glob patterns for files/folders to ignore during automatic summarization.", example: ["**/node_modules/**", "**/*.log"] }),
     summarizationAllowPatterns: z.array(z.string()).optional().default([]).openapi({ description: "Glob patterns for files/folders to explicitly include in summarization (if ignore patterns also match).", example: ["src/**/*.ts"] }),
-    summarizationEnabledProjectIds: z.array(z.string()).optional().default([]).openapi({ description: "List of project UUIDs for which automatic summarization is enabled.", example: ["proj_123", "proj_456"] }),
+    summarizationEnabledProjectIds: z.array(z.string()).optional().default([]).openapi({ description: "List of project IDs for which automatic summarization is enabled.", example: ["proj_123", "proj_456"] }),
     useSpacebarToSelectAutocomplete: z.boolean().optional().default(true).openapi({ description: "Whether pressing Spacebar accepts the current autocomplete suggestion." }),
     hideInformationalTooltips: z.boolean().optional().default(false).openapi({ description: "Whether to hide tooltips that provide general information or tips." }),
     autoScrollEnabled: z.boolean().optional().default(true).openapi({ description: "Whether the chat view should automatically scroll to the bottom on new messages." }),
@@ -99,27 +99,27 @@ export const projectTabStateBaseSchema = projectTabStateSchema.partial();
 export type ProjectTabStatePartial = z.infer<typeof projectTabStateBaseSchema>;
 
 // Record schemas for the store state (Project only)
-export const projectTabsStateRecordSchema = z.record(z.string(), projectTabStateSchema).openapi('ProjectTabsStateRecord', { description: 'A map where keys are project tab UUIDs and values are the state objects for each tab.' });
+export const projectTabsStateRecordSchema = z.record(z.string(), projectTabStateSchema).openapi('ProjectTabsStateRecord', { description: 'A map where keys are project tab IDs and values are the state objects for each tab.' });
 export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
 
 // Chat Link Settings Schema
 export const chatLinkSettingsSchema = z.record(
-    z.string().uuid(), // Key is chat UUID
+    z.string(), // Key is chat ID
     z.object({
         includeSelectedFiles: z.boolean().optional().default(false).openapi({ description: 'Whether currently selected files from the linked project tab should be included as context.' }),
         includePrompts: z.boolean().optional().default(false).openapi({ description: 'Whether selected prompts from the linked project tab should be included.' }),
         includeUserPrompt: z.boolean().optional().default(false).openapi({ description: 'Whether the user prompt input from the linked project tab should be included.' }),
-        linkedProjectTabId: z.string().uuid().nullable().optional().openapi({ description: 'The UUID of the project tab this chat is linked to, or null if not linked.' })
+        linkedProjectTabId: z.string().nullable().optional().openapi({ description: 'The ID of the project tab this chat is linked to, or null if not linked.' })
     }).openapi('ChatLinkSetting', { description: 'Settings defining how a chat is linked to a project tab and what context is shared.' })
-).optional().default({}).openapi('ChatLinkSettingsMap', { description: 'A map where keys are chat UUIDs and values are the link settings for that chat.' });
+).optional().default({}).openapi('ChatLinkSettingsMap', { description: 'A map where keys are chat IDs and values are the link settings for that chat.' });
 
 
 // Global State Schema - The main object
 export const globalStateSchema = z.object({
     settings: appSettingsSchema.openapi({ description: "Application-wide settings." }),
     projectTabs: projectTabsStateRecordSchema.openapi({ description: "State of all open project tabs, keyed by tab ID." }),
-    projectActiveTabId: z.string().nullable().optional().default(null).openapi({ description: "The UUID of the currently active project tab, or null if none is active.", example: "tab_abc123" }),
-    activeChatId: z.string().nullable().optional().default(null).openapi({ description: "The UUID of the currently active chat session, or null.", example: "chat_xyz789" }),
+    projectActiveTabId: z.string().nullable().optional().default(null).openapi({ description: "The ID of the currently active project tab, or null if none is active.", example: "tab_abc123" }),
+    activeChatId: z.string().nullable().optional().default(null).openapi({ description: "The ID of the currently active chat session, or null.", example: "chat_xyz789" }),
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: "Link settings specific to each chat session." })
 }).openapi('GlobalState', { description: 'Represents the entire persistent application state.' });
 export type GlobalState = z.infer<typeof globalStateSchema>;

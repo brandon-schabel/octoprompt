@@ -10,7 +10,7 @@ import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-a
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { ChatMessage } from "@/hooks/generated";
-import { useSettings } from "@/zustand/selectors";
+import { useSettings } from "@/hooks/api/global-state/selectors";
 
 /**
  * Helper function to parse out <think> blocks in the assistant message.

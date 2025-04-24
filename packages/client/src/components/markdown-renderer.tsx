@@ -5,7 +5,7 @@ import ts from "react-syntax-highlighter/dist/esm/languages/hljs/typescript";
 import js from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
 // @ts-ignore
 import * as languages from "react-syntax-highlighter/dist/esm/languages/hljs";
-import { useThemeSettings } from "@/zustand/zustand-utility-hooks";
+import { useThemeSettings } from "@/hooks/api/global-state/global-state-utility-hooks";
 
 Object.entries(languages).forEach(([name, lang]) => {
     SyntaxHighlighter.registerLanguage(name, lang);

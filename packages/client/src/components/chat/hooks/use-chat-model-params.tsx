@@ -1,5 +1,5 @@
-import { useSettings } from '@/zustand/selectors'; // Use global settings selector
-import { useUpdateSettings } from '@/zustand/updaters'; // Use global settings updater
+import { useSettings } from '@/hooks/api/global-state/selectors'; // Use global settings selector
+import { useUpdateSettings } from '@/hooks/api/global-state/updaters'; // Use global settings updater
 import { useCallback, useMemo } from 'react';
 import { modelsTempNotAllowed } from 'shared'; // Keep this utility
 

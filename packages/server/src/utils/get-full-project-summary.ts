@@ -2,9 +2,9 @@ import { ApiError } from "shared";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter";
-import { websocketStateAdapter } from "./websocket/websocket-state-adapter";
 import { getProjectById } from "@/services/project-service";
 import { getFileSummaries } from "@/services/file-services/file-summary-service";
+import { getCurrentState } from "@/services/state/state-service";
 
 const buildProjectSummary = (includedFiles: ProjectFile[]) => {
     // Build the combined summaries using your summary-formatter
@@ -32,7 +32,7 @@ export const getFullProjectSummary = async (projectId: string) => {
     }
 
     // Retrieve global state to get ignore patterns (or other filtering preferences)
-    const globalState = await websocketStateAdapter.getState();
+    const globalState = await getCurrentState();
     const ignorePatterns = globalState.settings.summarizationIgnorePatterns || [];
     const allowPatterns = globalState.settings.summarizationAllowPatterns || [];
 

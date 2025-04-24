@@ -18,10 +18,10 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
-import { useUpdateActiveProjectTab, useUpdateSettings } from '@/zustand/updaters'
+import { useUpdateActiveProjectTab, useUpdateSettings } from '@/hooks/api/global-state/updaters'
 import { useSyncProject, } from '@/hooks/api/use-projects-api'
-import { useSettings } from '@/zustand/selectors'
-import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
+import { useSettings } from '@/hooks/api/global-state/selectors'
+import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
 import { EDITOR_OPTIONS } from 'shared/src/schemas/global-state-schema'
 import { EditorType } from 'shared/src/schemas/global-state-schema'
 import { useEffect } from 'react'
@@ -29,7 +29,7 @@ import { useEffect } from 'react'
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()
     const { data: contextLimit } = useProjectTabField('contextLimit')
-    const { summarizationEnabledProjectIds } = useSettings()
+    const { summarizationEnabledProjectIds = [] } = useSettings()
     const { data: resolveImports } = useProjectTabField('resolveImports')
     const { data: preferredEditor } = useProjectTabField('preferredEditor')
     const { data: projectId } = useProjectTabField('selectedProjectId')
@@ -80,8 +80,8 @@ export function ProjectSettingsDialog() {
         updateSettings(prev => ({
             ...prev,
             summarizationEnabledProjectIds: value
-                ? [...prev.summarizationEnabledProjectIds, projectId]
-                : prev.summarizationEnabledProjectIds.filter(id => id !== projectId)
+                ? [...(prev.summarizationEnabledProjectIds ?? []), projectId]
+                : (prev.summarizationEnabledProjectIds ?? []).filter(id => id !== projectId)
         }))
     }
 

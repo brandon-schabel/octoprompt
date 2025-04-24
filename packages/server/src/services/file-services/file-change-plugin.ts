@@ -2,10 +2,10 @@ import { createFileChangeWatcher, FileChangeEvent } from './file-change-watcher'
 import { getProjectFiles } from '../project-service';
 import { Project } from 'shared/src/schemas/project.schemas';
 import { relative } from 'node:path';
-import { websocketStateAdapter } from '@/utils/websocket/websocket-state-adapter';
 import { summarizeFiles } from './file-summary-service';
 import { syncProject } from './file-sync-service';
 import { resolvePath } from '@/utils/path-utils';
+import { getCurrentState } from '../state/state-service';
 
 export function createFileChangePlugin(
 ) {
@@ -31,7 +31,7 @@ export function createFileChangePlugin(
                     if (!updatedFile) {
                         return;
                     }
-                    const globalState = await websocketStateAdapter.getState();
+                    const globalState = await getCurrentState();
                     await summarizeFiles(
                         project.id,
                         [updatedFile],

@@ -9,8 +9,8 @@ import { ChatHeader } from'@/components/chat/chat-header'
 
 import { useChatWithAI } from "@/components/chat/hooks/chat-hooks";
 import { DEFAULT_MODEL_CONFIGS } from "shared/index";
-import { useActiveChat } from '@/zustand/selectors'
-import { useSetActiveChat } from '@/zustand/updaters'
+import { useActiveChat } from '@/hooks/api/global-state/selectors'
+import { useSetActiveChat } from '@/hooks/api/global-state/updaters'
 import { v4 as uuidv4 } from 'uuid'
 
 export const Route = createFileRoute("/chat")({

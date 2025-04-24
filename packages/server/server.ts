@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { statSync } from "node:fs";
 import { app } from "./src/app";
 
-import { websocketStateAdapter } from "./src/utils/websocket/websocket-state-adapter";
 import { listProjects } from "@/services/project-service";
 import { watchersManager } from "@/services/shared-services";
 import { createCleanupService } from "@/services/file-services/cleanup-service";
@@ -74,18 +73,12 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
     websocket: {
       async open(ws) {
         console.debug("New WS connection", { clientId: ws.data.clientId });
-        websocketStateAdapter.handleOpen(ws);
-        // broadcast current state to newly connected client
-        await websocketStateAdapter.broadcastState();
       },
       close(ws) {
         console.debug("WS closed", { clientId: ws.data.clientId });
-        websocketStateAdapter.handleClose(ws);
       },
       async message(ws, rawMessage) {
         try {
-          await websocketStateAdapter.handleMessage(ws, rawMessage.toString());
-          await websocketStateAdapter.broadcastState();
         } catch (err) {
           console.error("Error handling WS message:", err);
         }

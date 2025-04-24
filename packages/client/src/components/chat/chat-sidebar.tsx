@@ -12,8 +12,8 @@ import {
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
 import { toast } from 'sonner';
-import { useActiveChat } from '@/zustand/selectors';
-import { useSetActiveChat } from '@/zustand/updaters';
+import { useActiveChat } from '@/hooks/api/global-state/selectors';
+import { useSetActiveChat } from '@/hooks/api/global-state/updaters';
 import { Chat } from '@/hooks/generated';
 
 export function ChatSidebar() {

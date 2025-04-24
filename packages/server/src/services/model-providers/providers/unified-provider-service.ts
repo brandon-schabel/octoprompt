@@ -19,9 +19,9 @@ import { createProviderKeyService } from "./provider-key-service";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
 import { ProcessMessageParams, AISdkOptions } from "./unified-provider-types";
 import { createChatService } from "../chat/chat-service";
-import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 import { parseStructuredJson } from '@/utils/structured-output-fetcher';
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
+import { getCurrentState } from '@/services/state/state-service';
 
 // --- Constants for Base URLs (Can be overridden by settings) ---
 // Use the base URLs defined in the user's guide's .env section
@@ -60,7 +60,7 @@ export function createUnifiedProviderService(debugParam = false) {
         provider: APIProviders,
         options: AISdkOptions = {}
     ): Promise<LanguageModel> {
-        const state = await websocketStateAdapter.getState(); // Needed for local URLs
+        const state = await getCurrentState();
         const modelId = options.model || DEFAULT_MODEL_CONFIGS[provider]?.model || '';
 
         if (!modelId) {

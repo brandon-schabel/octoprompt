@@ -1,5 +1,5 @@
-import { useActiveProjectTab } from '@/zustand/selectors'
-import { useUpdateProjectTab, useDeleteProjectTab } from '@/zustand/updaters'
+import { useActiveProjectTab } from '@/hooks/api/global-state/selectors'
+import { useUpdateProjectTab, useDeleteProjectTab } from '@/hooks/api/global-state/updaters'
 
 export function useProjectTabActions() {
   const { id: activeTabId, tabData: activeProjectTabData } = useActiveProjectTab()

@@ -10,11 +10,11 @@ import {
 } from "../ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useUpdateSettings } from "@/zustand/updaters"
+import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Theme } from "shared/src/schemas/global-state-schema"
-import { useSettings } from "@/zustand/selectors"
+import { useSettings } from "@/hooks/api/global-state/selectors"
 
 type ThemeOption = {
     label: string;

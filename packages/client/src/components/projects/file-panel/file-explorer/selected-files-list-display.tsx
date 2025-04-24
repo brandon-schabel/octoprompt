@@ -6,7 +6,7 @@ import { InfoTooltip } from "@/components/info-tooltip"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
-import { useActiveProjectTab } from "@/zustand/selectors"
+import { useActiveProjectTab } from "@/hooks/api/global-state/selectors"
 
 type SelectedFilesSidebarProps = {
     allFilesMap: Map<string, ProjectFile>

@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
-import { useThemeSettings } from '@/zustand/zustand-utility-hooks'
+import { useThemeSettings } from '@/hooks/api/global-state/global-state-utility-hooks'
 import { toast } from 'sonner'
 import { ProjectFile } from '@/hooks/generated'
 

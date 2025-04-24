@@ -3,7 +3,7 @@ import { useGetChats } from "@/hooks/api/use-chat-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { ModelSettingsPopover } from "./components/model-settings-popover";
-import { useActiveChat } from "@/zustand/selectors";
+import { useActiveChat } from "@/hooks/api/global-state/selectors";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 export function ChatHeader() {

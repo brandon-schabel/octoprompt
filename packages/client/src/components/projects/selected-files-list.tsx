@@ -22,11 +22,11 @@ import {
   DropdownMenuShortcut
 } from "../ui/dropdown-menu"
 import { toast } from "sonner"
-import { useUpdateProjectTabState } from "@/zustand/updaters"
+import { useUpdateProjectTabState } from "@/hooks/api/global-state/updaters"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useProjectTab } from "@/zustand/selectors"
+import { useProjectTab } from "@/hooks/api/global-state/selectors"
 import { FileViewerDialog } from "../navigation/file-viewer-dialog"
 import { ProjectFile } from "@/hooks/generated"
 type SelectedFilesListProps = {

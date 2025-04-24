@@ -7,7 +7,7 @@ import { Textarea } from "../ui/textarea";
 import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
-import { useCreateProjectTab } from "@/zustand/updaters";
+import { useCreateProjectTab } from "@/hooks/api/global-state/updaters";
 import { Ticket } from "@/hooks/generated";
 
 interface TicketDialogProps {

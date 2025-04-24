@@ -1,4 +1,3 @@
-import { Project } from "shared/schema"
 import { ScanEye } from "lucide-react"
 import { toast } from "sonner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -14,7 +13,7 @@ import { Pencil, Trash2, Icon } from "lucide-react"
 import { tab } from '@lucide/lab'
 import { useProjectTabActions } from "@/hooks/use-project-tab-actions"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
-import { useActiveProjectTab } from "@/zustand/selectors"
+import { useActiveProjectTab } from "@/hooks/api/global-state/selectors"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { ProjectResponse } from "@/hooks/generated"
 

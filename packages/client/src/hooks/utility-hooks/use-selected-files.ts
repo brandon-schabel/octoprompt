@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useUpdateActiveProjectTab, useUpdateProjectTab } from '@/zustand/updaters'
+import { useUpdateActiveProjectTab, useUpdateProjectTab } from '@/hooks/api/global-state/updaters'
 import { ProjectFile } from '@/hooks/generated/types.gen'
-import { useActiveProjectTab } from '@/zustand/selectors'
-import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
+import { useActiveProjectTab } from '@/hooks/api/global-state/selectors'
+import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
 

@@ -4,7 +4,6 @@ import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from './components/ui/sonner'
-import { GlobalStateProvider } from './zustand/global-state-provider'
 
 // Initialize core services
 const queryClient = new QueryClient()
@@ -29,10 +28,8 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <QueryClientProvider client={queryClient}>
-      <GlobalStateProvider>
         <RouterProvider router={router} />
         <Toaster />
-      </GlobalStateProvider>
     </QueryClientProvider>
   )
 }

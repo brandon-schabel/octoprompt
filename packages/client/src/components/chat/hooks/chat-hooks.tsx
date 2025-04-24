@@ -7,7 +7,7 @@ import {
 import { ChatModelSettings } from "shared";
 import { useChatModelParams } from "./use-chat-model-params";
 import { useAIChat } from "@/hooks/use-ai-chat";
-import { useSettings } from "@/zustand/selectors";
+import { useSettings } from "@/hooks/api/global-state/selectors";
 // Import the input type if needed for clarity/casting
 import type { CreateChatInput, } from "@/hooks/api/use-chat-api";
 import { ForkChatRequestBody } from "@/hooks/generated/types.gen";

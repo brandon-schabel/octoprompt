@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { InfoTooltip } from './info-tooltip';
-import { ShortcutDisplay } from './app-shortcut-display'; 
+import { ShortcutDisplay } from './app-shortcut-display';
 import { LinkIcon, Plus, Pencil, Trash2, Settings, Icon } from 'lucide-react';
 import {
   DndContext,
@@ -31,8 +31,9 @@ import {
   useSetActiveProjectTab,
   useUpdateProjectTab,
   useDeleteProjectTab,
-} from '@/zustand/updaters';
-import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors';
+} from '@/hooks/api/global-state/updaters';
+import { useActiveProjectTab, useAllProjectTabs } from '@/hooks/api/global-state/selectors';
+import { useCreateProject } from '@/hooks/api/use-projects-api';
 
 // Define props for the simplified component (mainly className now)
 export type ProjectsTabManagerProps = {
@@ -42,7 +43,7 @@ export type ProjectsTabManagerProps = {
 // Combined and Simplified Component
 export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   // --- State Management Hooks ---
-  const createProjectTab = useCreateProjectTab();
+  const { createProjectTab } = useCreateProjectTab();
   const setActiveProjectTab = useSetActiveProjectTab();
   const updateProjectTab = useUpdateProjectTab();
   const deleteProjectTab = useDeleteProjectTab();

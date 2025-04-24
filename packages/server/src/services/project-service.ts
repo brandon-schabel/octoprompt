@@ -1,10 +1,10 @@
 // packages/server/src/services/project-service.ts
 import { db } from "@/utils/database";
 
-import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 import { forceSummarizeFiles, summarizeFiles } from "./file-services/file-summary-service";
 import { syncProject } from "./file-services/file-sync-service";
 import { CreateProjectBody, Project, ProjectFile, ProjectFileSchema, ProjectSchema, UpdateProjectBody } from "shared/src/schemas/project.schemas";
+import { getCurrentState } from "./state/state-service";
 
 // --- Internal DB Types and Mapping Functions Removed ---
 
@@ -288,7 +288,7 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
         return; // Or throw new Error('No files found for project to resummarize');
     }
 
-    const globalState = await websocketStateAdapter.getState();
+    const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
     await forceSummarizeFiles(projectId, allFiles, globalState);
 }
@@ -338,7 +338,7 @@ export async function forceResummarizeSelectedFiles(
         throw new Error(`Failed to validate file data for forced re-summarization`);
     }
 
-    const globalState = await websocketStateAdapter.getState();
+    const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
     await forceSummarizeFiles(projectId, selectedFiles, globalState);
 
@@ -392,7 +392,7 @@ export async function summarizeSelectedFiles(projectId: string, fileIds: string[
     }
 
 
-    const globalState = await websocketStateAdapter.getState();
+    const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
     const result = await summarizeFiles(projectId, selectedFiles, globalState);
 
