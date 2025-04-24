@@ -21,6 +21,7 @@ import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
+import { useGetState } from '@/hooks/api/use-state-api'
 
 function LoadingScreen() {
   const [showError, setShowError] = useState(false)
@@ -32,6 +33,8 @@ function LoadingScreen() {
 
     return () => clearTimeout(timer)
   }, [])
+
+
 
   return (
     <div className='h-screen w-screen flex flex-col items-center justify-center bg-background'>
@@ -178,9 +181,11 @@ function RootComponent() {
   const { isOpen, hasReceivedInitialState } = useGlobalStateContext()
   const queryClient = useQueryClient()
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useLocalStorage('autoRefreshEnabled', true)
+  const { data: data, isLoading:isLoadingState, } = useGetState()
+
 
   // Show loading screen until both WebSocket is connected AND initial state is received
-  if (!isOpen || !hasReceivedInitialState) {
+  if (!isOpen || !hasReceivedInitialState || isLoadingState) {
     return <LoadingScreen />
   }
 

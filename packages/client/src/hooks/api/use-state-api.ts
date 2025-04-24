@@ -3,13 +3,14 @@ import { commonErrorHandler } from './common-mutation-error-handler';
 import {
     getApiStateOptions,
     getApiStateQueryKey,
-    postApiStateMutation
+    putApiStateMutation,
 } from '../generated/@tanstack/react-query.gen';
 import type {
     GetApiStateResponse,
-    PostApiStateData,
-    PostApiStateError,
-    PostApiStateResponse
+    PutApiStateData,
+    PutApiStateError,
+    PutApiStateResponse,
+    ReplaceStateBody
 } from '../generated/types.gen';
 import { Options } from '../generated/sdk.gen';
 
@@ -39,15 +40,15 @@ export function useGetState() {
 
 export function useUpdateState() {
     const queryClient = useQueryClient();
-    const mutationOptions = postApiStateMutation();
+    const mutationOptions = putApiStateMutation();
 
-    return useMutation<PostApiStateResponse, PostApiStateError, UpdateStateInput>({
-        mutationFn: (variables: UpdateStateInput) => {
-            const opts: Options<PostApiStateData> = { body: variables };
+    return useMutation<PutApiStateResponse, PutApiStateError, ReplaceStateBody>({
+        mutationFn: (variables: ReplaceStateBody) => {
+            const opts: Options<PutApiStateData> = { body: variables };
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: STATE_KEYS.all });
+            queryClient.invalidateQueries({ queryKey: getApiStateQueryKey() });
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });

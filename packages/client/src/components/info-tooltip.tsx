@@ -2,7 +2,7 @@ import { HelpCircle, LucideIcon } from "lucide-react"
 import { ReactNode } from "react"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+import { useSettings } from "@/zustand/selectors"
 
 type InfoTooltipProps = {
     children: ReactNode
@@ -11,7 +11,7 @@ type InfoTooltipProps = {
 }
 
 export const InfoTooltip = ({ children, icon: Icon = HelpCircle, className }: InfoTooltipProps) => {
-    const { data: hideInformationalTooltips = false } = useSettingsField('hideInformationalTooltips')
+    const { hideInformationalTooltips = false } = useSettings()
 
     if (hideInformationalTooltips) return null
 

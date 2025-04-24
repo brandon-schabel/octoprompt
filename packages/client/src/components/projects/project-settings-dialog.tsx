@@ -19,18 +19,17 @@ import {
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { useUpdateActiveProjectTab, useUpdateSettings } from '@/zustand/updaters'
-import { useSyncProject,  } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab } from '@/zustand/selectors'
+import { useSyncProject, } from '@/hooks/api/use-projects-api'
+import { useSettings } from '@/zustand/selectors'
 import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
-import { useSettingsField } from '@/zustand/zustand-utility-hooks'
-import { useEffect } from 'react'
 import { EDITOR_OPTIONS } from 'shared/src/schemas/global-state-schema'
 import { EditorType } from 'shared/src/schemas/global-state-schema'
+import { useEffect } from 'react'
 
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()
     const { data: contextLimit } = useProjectTabField('contextLimit')
-    const { data: summarizationEnabledProjectIds } = useSettingsField('summarizationEnabledProjectIds')
+    const { summarizationEnabledProjectIds } = useSettings()
     const { data: resolveImports } = useProjectTabField('resolveImports')
     const { data: preferredEditor } = useProjectTabField('preferredEditor')
     const { data: projectId } = useProjectTabField('selectedProjectId')

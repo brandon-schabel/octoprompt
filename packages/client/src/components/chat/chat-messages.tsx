@@ -9,8 +9,8 @@ import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-api";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 import { ChatMessage } from "@/hooks/generated";
+import { useSettings } from "@/zustand/selectors";
 
 /**
  * Helper function to parse out <think> blocks in the assistant message.
@@ -299,7 +299,7 @@ export function ChatMessages(props: ChatMessagesProps) {
     const [rawMessageIds, setRawMessageIds] = useState<Set<string>>(new Set());
 
     // Use global auto-scroll setting
-    const { data: autoScrollEnabled = true } = useSettingsField('autoScrollEnabled')
+    const { autoScrollEnabled = true } = useSettings()
     const bottomRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom when new messages arrive and autoScroll is enabled

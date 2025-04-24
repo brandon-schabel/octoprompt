@@ -1,4 +1,3 @@
-// packages/shared/src/schemas/global-state-schema.ts
 import { z } from "zod";
 import { DEFAULT_MODEL_CONFIGS } from "../constants/model-default-configs";
 import { providerSchema, type APIProviders } from "./provider-key.schemas";

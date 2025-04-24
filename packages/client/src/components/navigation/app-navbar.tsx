@@ -8,12 +8,10 @@ import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useUpdateActiveProjectTab } from "@/zustand/updaters"
-import { useActiveProjectTab } from "@/zustand/selectors"
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+import { useActiveProjectTab, useSettings } from "@/zustand/selectors"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -32,7 +30,7 @@ export function AppNavbar() {
     const isOnPromptsRoute = matches.some(match => match.routeId === "/prompts")
     const isOnAdminRoute = matches.some(match => match.routeId === "/admin")
 
-    const { data: theme = 'dark' } = useSettingsField('theme')
+    const { theme = 'dark' } = useSettings()
 
     const updateActiveProjectTab = useUpdateActiveProjectTab();
     const { tabData: activeProjectTabState } = useActiveProjectTab()

@@ -1,13 +1,15 @@
+import { useGetState } from "@/hooks/api/use-state-api"
 import { useGlobalStateStore } from "./global-state-store"
 import type {
     ProjectTabState,
-    AppSettings,
 } from "shared"
+import { AppSettings, GetApiStateData } from "@/hooks/generated"
 
 export function useSettings(): AppSettings {
-    return useGlobalStateStore((s) => s.settings)
-}
+    const { data, isLoading, isError } = useGetState()
 
+    return data?.data?.settings as AppSettings
+}
 
 export function useActiveChat(): string | null {
     return useGlobalStateStore((s) => s.activeChatId)

@@ -45,8 +45,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { useActiveProjectTab } from "@/zustand/selectors"
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+import { useActiveProjectTab, useSettings } from "@/zustand/selectors"
 import { ProjectFile } from "@/hooks/generated"
 import { AppSettings } from "shared/src/schemas/global-state-schema"
 
@@ -99,8 +98,8 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 }
 
 export function ProjectSummarizationSettingsPage() {
-    const { data: summarizationEnabledProjectIds = [] } = useSettingsField('summarizationEnabledProjectIds')
-    const { data: summarizationIgnorePatterns = [] } = useSettingsField('summarizationIgnorePatterns')
+    const { summarizationEnabledProjectIds = [] } = useSettings()
+    const { summarizationIgnorePatterns = [] } = useSettings()
     const { tabData: projectTabState } = useActiveProjectTab()
     const updateSettings = useUpdateSettings()
 
@@ -851,7 +850,7 @@ export function ProjectSummarizationSettingsPage() {
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
     const updateSettings = useUpdateSettings()
-    const { data: patterns } = useSettingsField('summarizationIgnorePatterns')
+    const { summarizationIgnorePatterns = [] } = useSettings()
     const [newPattern, setNewPattern] = useState("")
 
     function handleAdd() {
@@ -889,12 +888,12 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
                         </Button>
                     </CollapsibleTrigger>
                     <span className="text-sm font-medium">
-                        Current Patterns ({patterns?.length ?? 0})
+                        Current Patterns ({summarizationIgnorePatterns?.length ?? 0})
                     </span>
                 </div>
                 <CollapsibleContent>
                     <ul className="mt-2 space-y-1">
-                        {patterns?.map((pattern, idx) => (
+                        {summarizationIgnorePatterns?.map((pattern, idx) => (
                             <li
                                 key={`${pattern}-${idx}`}
                                 className="flex items-center justify-between rounded p-1 hover:bg-accent/10"

@@ -8,6 +8,8 @@ import { useGlobalStateContext } from "./global-state-provider"
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils"
 import { v4 as uuidv4 } from "uuid"
 import { TicketWithTasks } from "@/hooks/generated"
+import { useQueryClient } from "@tanstack/react-query"
+import { getApiStateQueryKey } from "@/hooks/generated/@tanstack/react-query.gen"
 
 export function useSetActiveChat() {
     const setActiveChat = useGlobalStateStore((s) => s.setActiveChat)
@@ -54,6 +56,7 @@ export function useUpdateSettings() {
     const setSettings = useGlobalStateStore((s) => s.setSettings)
     const settings = useGlobalStateStore((s) => s.settings)
     const { manager } = useGlobalStateContext()
+    const queryClient = useQueryClient()
 
     return (partialOrFn: PartialOrFn<AppSettings>) => {
         if (!settings) {
@@ -66,6 +69,8 @@ export function useUpdateSettings() {
             type: "update_settings_partial",
             partial: finalPartial,
         })
+
+        queryClient.invalidateQueries({ queryKey: getApiStateQueryKey() })
     }
 }
 

@@ -11,11 +11,13 @@ import {
 } from "./updaters";
 
 import type {
+  GlobalState,
   ProjectTabState,
-  AppSettings,
   Theme,
 } from "shared";
 import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
+import { useGetState, useUpdateState } from "@/hooks/api/use-state-api";
+import { AppSettings, ReplaceStateBody } from "@/hooks/generated";
 
 function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -139,40 +141,6 @@ export function useProjectTabField<T extends keyof ProjectTabState>(
   );
 }
 
-export function useSettingsField<K extends keyof AppSettings>(fieldKey: K) {
-  const { manager } = useGlobalStateContext();
-  const settings = useSettings();
-  const updateSettings = useUpdateSettings();
-
-  // We'll wrap the store's action
-  const updateFn = useCallback(
-    (partial: Partial<AppSettings>) => {
-      updateSettings(partial);
-    },
-    [updateSettings]
-  );
-
-  // WebSocket partial updates
-  const sendWsMessage = useCallback(
-    (updatedValue: AppSettings[K]) => {
-      manager.sendMessage({
-        type: "update_settings_partial",
-        partial: { [fieldKey]: updatedValue },
-      });
-    },
-    [manager, fieldKey]
-  );
-
-  return useZustandGenericField(
-    settings,
-    fieldKey,
-    updateFn,
-    {
-      enabled: true,
-      sendWsMessage,
-    }
-  );
-}
 
 export function useThemeSettings() {
   const { manager } = useGlobalStateContext();
