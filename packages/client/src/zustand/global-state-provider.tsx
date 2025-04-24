@@ -103,15 +103,15 @@ export function GlobalStateProvider({ children }: { children: ReactNode }) {
             }
         }, BATCH_PROCESS_INTERVAL);
         return () => clearInterval(intervalId);
-    }, []); 
+    }, []);
 
     const { isOpen, manager } = useSyncClient<InboundMessage, OutboundMessage>({
         config: {
             url: SERVER_WS_ENDPOINT,
-            validateIncomingMessage, 
+            validateIncomingMessage,
             autoReconnect: true,
             reconnectIntervalMs: 500,
-            maxReconnectAttempts: 500, 
+            maxReconnectAttempts: 500,
             messageHandlers: {
                 initial_state: (msg) => queueMessage(msg),
                 state_update: (msg) => queueMessage(msg),

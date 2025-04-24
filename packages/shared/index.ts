@@ -4,8 +4,8 @@ export { buildCombinedFileSummaries } from './src/utils/summary-formatter';
 export * from './src/utils/merge-deep';
 
 // Global state management
-export * from './src/global-state/global-state-schema';
-export * from './src/global-state/websocket-global-schema';
+export * from './src/schemas/global-state-schema';
+export * from './src/schemas/websocket-global-schema';
 
 // Structured outputs
 export * from './src/structured-outputs/structured-output-schema';

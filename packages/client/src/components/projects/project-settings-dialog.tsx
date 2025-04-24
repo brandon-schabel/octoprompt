@@ -18,13 +18,14 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
-import { EDITOR_OPTIONS, type EditorType } from 'shared/src/global-state/global-state-schema'
 import { useUpdateActiveProjectTab, useUpdateSettings } from '@/zustand/updaters'
 import { useSyncProject,  } from '@/hooks/api/use-projects-api'
 import { useActiveProjectTab } from '@/zustand/selectors'
 import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
 import { useSettingsField } from '@/zustand/zustand-utility-hooks'
 import { useEffect } from 'react'
+import { EDITOR_OPTIONS } from 'shared/src/schemas/global-state-schema'
+import { EditorType } from 'shared/src/schemas/global-state-schema'
 
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()

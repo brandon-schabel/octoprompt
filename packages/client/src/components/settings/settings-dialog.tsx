@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
-import { Theme } from "shared/src/global-state/global-state-schema"
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import {
     Select,
@@ -15,6 +14,7 @@ import { useUpdateSettings } from "@/zustand/updaters"
 import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
+import { Theme } from "shared/src/schemas/global-state-schema"
 
 type ThemeOption = {
     label: string;

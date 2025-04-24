@@ -45,10 +45,10 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { AppSettings } from "shared/src/global-state/global-state-schema"
 import { useActiveProjectTab } from "@/zustand/selectors"
 import { useSettingsField } from "@/zustand/zustand-utility-hooks"
 import { ProjectFile } from "@/hooks/generated"
+import { AppSettings } from "shared/src/schemas/global-state-schema"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
