@@ -16,7 +16,7 @@ import type {
 } from "shared";
 import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
 // Import the necessary API hooks and types
-import { ProjectTabState, Theme } from "@/hooks/generated";
+import type{ ProjectTabState, Theme } from "../../generated";
 import { useActiveProjectTab, useProjectTabsState } from "../use-state-api";
 
 
