@@ -1,5 +1,4 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
-import { APIInterface } from '@/utils/api/api-interface'
 import { AppNavbar } from '@/components/navigation/app-navbar'
 import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -16,17 +15,9 @@ import {
 import { NavigationCommands } from '@/components/command/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
-import { useGlobalStateContext } from '@/zustand/global-state-provider'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
-import { useAllChatTabs } from '@/zustand/selectors'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-
-type RouterContext = {
-  api: APIInterface
-}
 
 function LoadingScreen() {
   const [showError, setShowError] = useState(false)
@@ -38,6 +29,8 @@ function LoadingScreen() {
 
     return () => clearTimeout(timer)
   }, [])
+
+
 
   return (
     <div className='h-screen w-screen flex flex-col items-center justify-center bg-background'>
@@ -72,26 +65,15 @@ function GlobalCommandPalette() {
 
   // Get data from various sources
   const { data: projectsData } = useGetProjects()
-  const chatTabs = useAllChatTabs()
 
   useHotkeys('mod+k', (evt) => {
     evt.preventDefault()
     setOpen((o) => !o)
   })
 
-  // Filter chats based on search
-  const filteredChats = Object.entries(chatTabs ?? {})
-    .filter(([_, tab]) => {
-      const searchLower = debouncedSearch.toLowerCase()
-      return (
-        tab.activeChatId?.toLowerCase().includes(searchLower) ||
-        tab.messages?.some((msg) => msg.content.toLowerCase().includes(searchLower))
-      )
-    })
-    .slice(0, 5) // Limit to 5 results
 
   // Filter projects based on search
-  const filteredProjects = (projectsData?.projects ?? [])
+  const filteredProjects = (projectsData?.data ?? [])
     .filter((project) => {
       const searchLower = debouncedSearch.toLowerCase()
       return (
@@ -111,29 +93,6 @@ function GlobalCommandPalette() {
           <NavigationCommands onSelect={() => setOpen(false)} />
         </CommandGroup>
         <CommandSeparator />
-
-        {/* Chat Results */}
-        {filteredChats.length > 0 && (
-          <>
-            <CommandGroup heading='Chats'>
-              {filteredChats.map(([id, chat]) => (
-                <CommandItem
-                  key={id}
-                  onSelect={() => {
-                    navigate({ to: '/chat', search: { prefill: false } })
-                    setOpen(false)
-                  }}
-                >
-                  <span>Chat: {chat.activeChatId || 'Untitled'}</span>
-                  {chat.messages && chat.messages.length > 0 && (
-                    <span className='text-muted-foreground text-sm ml-2'>({chat.messages.length} messages)</span>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
 
         {/* Project Results */}
         {filteredProjects.length > 0 && (
@@ -210,19 +169,18 @@ function GlobalCommandPalette() {
   )
 }
 
-export const Route = createRootRouteWithContext<RouterContext>()({
+export const Route = createRootRouteWithContext()({
   component: RootComponent
 })
 
 function RootComponent() {
-  const { isOpen, hasReceivedInitialState } = useGlobalStateContext()
-  const queryClient = useQueryClient()
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useLocalStorage('autoRefreshEnabled', true)
+  // const { data: data, isLoading: isLoadingState, } = useGetState()
+
 
   // Show loading screen until both WebSocket is connected AND initial state is received
-  if (!isOpen || !hasReceivedInitialState) {
-    return <LoadingScreen />
-  }
+  // if (isLoadingState) {
+  //   return <LoadingScreen />
+  // }
 
   return (
     <ErrorBoundary>

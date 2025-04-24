@@ -1,4 +1,4 @@
-import { Ticket } from "shared/schema";
+import { Ticket } from "@/hooks/generated";
 import { Badge } from "../ui/badge";
 
 interface TicketListProps {
@@ -34,9 +34,8 @@ export function TicketList({
                 return (
                     <div
                         key={ticket.id}
-                        className={`p-4 rounded-md cursor-pointer transition-colors ${
-                            isSelected ? "bg-accent" : "bg-card hover:bg-card/80"
-                        }`}
+                        className={`p-4 rounded-md cursor-pointer transition-colors ${isSelected ? "bg-accent" : "bg-card hover:bg-card/80"
+                            }`}
                         onClick={() => onSelectTicket(ticket)}
                     >
                         <div className="flex justify-between items-center">

@@ -1,8 +1,11 @@
 import { db } from "@/utils/database";
-import { CreatePromptBody, UpdatePromptBody } from "shared";
-import { Prompt, PromptProject } from "shared/schema";
-import { PromptReadSchema, PromptProjectReadSchema } from "shared/src/utils/database/db-schemas";
+import { CreatePromptBody, UpdatePromptBody, Prompt, PromptSchema, PromptProject, PromptProjectSchema } from "shared/src/schemas/prompt.schemas";
+import { DEFAULT_MODEL_CONFIGS } from 'shared';
+import { promptsMap } from '../utils/prompts-map';
+import { unifiedProvider } from './model-providers/providers/unified-provider-service';
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 
+const formatToISO = (sqlDate: string) => new Date(sqlDate).toISOString();
 
 export type RawPrompt = {
     id: string;
@@ -17,31 +20,13 @@ export type RawPromptProject = {
     project_id: string;
 };
 
-export function mapPrompt(row: RawPrompt): Prompt {
-    const parsedCreatedAt = new Date(row.created_at)
-    const parsedUpdatedAt = new Date(row.updated_at)
-
-    const mapped = {
-        id: row.id,
-        name: row.name,
-        content: row.content,
-        createdAt: parsedCreatedAt,
-        updatedAt: parsedUpdatedAt
-    };
-    const prompt = PromptReadSchema.parse(mapped);
-    return {
-        ...prompt,
-        createdAt: new Date(prompt.createdAt),
-        updatedAt: new Date(prompt.updatedAt)
-    };
-}
 
 export function mapPromptProject(row: RawPromptProject): PromptProject {
     const mapped = {
         promptId: row.prompt_id,
         projectId: row.project_id
     };
-    return PromptProjectReadSchema.parse(mapped);
+    return PromptProjectSchema.parse(mapped);
 }
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
@@ -51,7 +36,11 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
     RETURNING *
   `);
     const created = insertStmt.get(data.name, data.content) as RawPrompt;
-    const newPrompt = mapPrompt(created);
+    const newPrompt = PromptSchema.parse({
+        ...created,
+        createdAt: formatToISO(created.created_at),
+        updatedAt: formatToISO(created.updated_at)
+    });
 
     if (data.projectId) {
         await addPromptToProject(newPrompt.id, data.projectId);
@@ -79,13 +68,21 @@ export async function getPromptById(promptId: string): Promise<Prompt | null> {
     const stmt = db.prepare("SELECT * FROM prompts WHERE id = ? LIMIT 1");
     const found = stmt.get(promptId) as RawPrompt | undefined;
     if (!found) return null;
-    return mapPrompt(found);
+    return PromptSchema.parse({
+        ...found,
+        createdAt: formatToISO(found.created_at),
+        updatedAt: formatToISO(found.updated_at)
+    });
 }
 
 export async function listAllPrompts(): Promise<Prompt[]> {
     const stmt = db.prepare("SELECT * FROM prompts");
     const rows = stmt.all() as RawPrompt[];
-    return rows.map(mapPrompt);
+    return rows.map(row => PromptSchema.parse({
+        ...row,
+        createdAt: formatToISO(row.created_at),
+        updatedAt: formatToISO(row.updated_at)
+    }));
 }
 
 export async function listPromptsByProject(projectId: string): Promise<Prompt[]> {
@@ -96,7 +93,11 @@ export async function listPromptsByProject(projectId: string): Promise<Prompt[]>
     WHERE pp.project_id = ?
   `);
     const rows = stmt.all(projectId) as RawPrompt[];
-    return rows.map(mapPrompt);
+    return rows.map(row => PromptSchema.parse({
+        ...row,
+        createdAt: formatToISO(row.created_at),
+        updatedAt: formatToISO(row.updated_at)
+    }));
 }
 
 export async function updatePrompt(promptId: string, data: UpdatePromptBody): Promise<Prompt | null> {
@@ -114,7 +115,12 @@ export async function updatePrompt(promptId: string, data: UpdatePromptBody): Pr
         data.content ?? existing.content,
         promptId
     ) as RawPrompt;
-    return mapPrompt(updated);
+    // Fix 6: Convert dates before parsing
+    return PromptSchema.parse({
+        ...updated,
+        createdAt: formatToISO(updated.created_at),
+        updatedAt: formatToISO(updated.updated_at)
+    });
 }
 
 export async function deletePrompt(promptId: string): Promise<boolean> {
@@ -126,5 +132,62 @@ export async function deletePrompt(promptId: string): Promise<boolean> {
 export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {
     const stmt = db.prepare("SELECT * FROM prompt_projects WHERE prompt_id = ?");
     const rows = stmt.all(promptId) as RawPromptProject[];
-    return rows.map(mapPromptProject);
+    return rows.map(row => PromptProjectSchema.parse(row));
+}
+
+/**
+ * Takes the user's original context/intent/prompt and uses a model
+ * to generate a refined (optimized) version of that prompt.
+ */
+export async function optimizePrompt(userContext: string): Promise<string> {
+    const systemMessage = `
+<SystemPrompt>
+You are the Promptimizer, a specialized assistant that refines or rewrites user queries into
+more effective prompts. Given the user's context or goal, output ONLY the single optimized prompt.
+No additional commentary, no extraneous text, no markdown formatting.
+</SystemPrompt>
+
+<Reasoning>
+Follow the style guidelines and key requirements below:
+${promptsMap.contemplativePrompt}
+</Reasoning>
+`; // Ensure promptsMap.contemplativePrompt is loaded
+
+    const userMessage = userContext.trim();
+    if (!userMessage) {
+        return '';
+    }
+
+    try {
+        // Get config for the prompt optimization task
+        const cfg = DEFAULT_MODEL_CONFIGS['optimize-prompt'];
+        const provider = cfg.provider as APIProviders || 'openai';
+        const modelId = cfg.model;
+
+        if (!modelId) {
+            console.error("Model not configured for optimize-prompt task.");
+            return userMessage;
+        }
+
+        // Use generateSingleText for non-streaming prompt generation
+        const optimizedPrompt = await unifiedProvider.generateSingleText({
+            provider: provider,
+            systemMessage: systemMessage,
+            prompt: userMessage, // User context is the prompt here
+            options: {
+                model: modelId,
+                // No explicit maxTokens needed here if we expect a relatively short prompt output?
+                // Or set a reasonable limit like 2048 as before.
+                maxTokens: 2048,
+                temperature: cfg.temperature,
+            }
+        });
+
+        return optimizedPrompt.trim();
+
+    } catch (error) {
+        console.error('[PromptimizerService] Failed to optimize prompt:', error);
+        // Fallback to the original user message on error
+        return userMessage;
+    }
 }

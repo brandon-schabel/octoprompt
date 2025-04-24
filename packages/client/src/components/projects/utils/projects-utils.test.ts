@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'bun:test'
 import { buildPromptContent, calculateTotalTokens, buildFileTree } from './projects-utils'
-import { ProjectFile } from 'shared/schema'
-
+import type { ProjectFile } from '../../../hooks/generated'
 // Mock data
 const mockPrompts = {
     prompts: [
@@ -19,8 +18,12 @@ const mockProjectFiles = [
         extension: 'tsx',
         size: 100,
         content: 'console.log("App");',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        checksum: 'checksum1',
+        summary: 'Summary of App.tsx',
+        summaryLastUpdatedAt: new Date().toISOString(),
+        meta: ''
     },
     {
         id: 'f2',
@@ -30,8 +33,12 @@ const mockProjectFiles = [
         extension: 'ts',
         size: 200,
         content: 'export function helper() { return "helped"; }',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        checksum: 'checksum2',
+        summary: 'Summary of helper.ts',
+        summaryLastUpdatedAt: new Date().toISOString(),
+        meta: ''
     },
     {
         id: 'f3',
@@ -41,8 +48,12 @@ const mockProjectFiles = [
         extension: 'ts',
         size: 50,
         content: 'import "./components/App";',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        checksum: 'checksum3',
+        summary: 'Summary of index.ts',
+        summaryLastUpdatedAt: new Date().toISOString(),
+        meta: ''
     }
 ] satisfies ProjectFile[]
 
@@ -241,8 +252,12 @@ describe('buildFileTree', () => {
             extension: 'ts',
             size: 100,
             content: 'test',
-            createdAt: new Date(),
-            updatedAt: new Date()
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            checksum: 'checksum4',
+            summary: 'Summary of file.ts',
+            summaryLastUpdatedAt: new Date().toISOString(),
+            meta: ''
         }]
         const result = buildFileTree(singleFile)
         expect(result["file.ts"].file?.id).toBe("single")

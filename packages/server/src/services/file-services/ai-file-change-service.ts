@@ -1,102 +1,201 @@
 import { z } from "zod";
-import path from "path";
 import { readFile } from "fs/promises";
 import { Database } from "bun:sqlite";
-
-import { createOpenRouterProviderService, openRouterProvider } from "../model-providers/providers/open-router-provider";
+import { unifiedProvider } from "../model-providers/providers/unified-provider-service";
 import { resolvePath } from "@/utils/path-utils";
+import {  DEFAULT_MODEL_CONFIGS } from "shared"; 
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
-/**
- * Zod schema describing AI's JSON output structure
- * for a file-change request.
- */
+// Zod schema for the expected AI response
 export const FileChangeResponseSchema = z.object({
-  updatedContent: z.string(),
-  explanation: z.string(),
+  updatedContent: z.string().describe("The complete, updated content of the file after applying the changes."),
+  explanation: z.string().describe("A brief explanation of the changes made."),
 });
 
-/**
- * Type inferred from our Zod schema. This ensures we
- * have strong TS types matching the AI response.
- */
 export type FileChangeResponse = z.infer<typeof FileChangeResponseSchema>;
 
-/**
- * Minimal set of parameters needed for generating a file change
- * from the AI provider.
- */
-export interface GenerateFileChangeParams {
-  /** Path to the file to be updated. */
+// Parameters for the AI generation function
+export interface GenerateAIFileChangeParams {
   filePath: string;
-  /** The user's request/prompt describing desired changes. */
-  prompt: string;
-  /** An instance of your OpenRouter provider. */
-  openRouter?: ReturnType<typeof createOpenRouterProviderService>;
-  db: Database;
-  /** ID for a new conversation or correlation, if desired. */
-  chatId?: string;
-  /**
-   * Optional model config for the request,
-   * if not using a default from your code.
-   */
+  prompt: string; // User's request for changes
+  provider?: APIProviders;
   model?: string;
   temperature?: number;
+  // Add db if needed for context, but likely not for the AI call itself
 }
-
 
 /**
  * Reads the content of a file from disk.
- * Throws an Error if it fails to read.
  */
-export async function readLocalFileContent(
-  filePath: string
-): Promise<string> {
+export async function readLocalFileContent(filePath: string): Promise<string> {
   try {
-    // Expand tilde in the filepath if present
     const resolvedPath = resolvePath(filePath);
     const content = await readFile(resolvedPath, "utf-8");
     return content;
   } catch (error) {
-    console.error("Failed to read file:", error);
-    throw new Error("Could not read file content");
+    console.error("Failed to read file:", filePath, error);
+    throw new Error(`Could not read file content for: ${filePath}`);
   }
 }
 
+/**
+ * Uses an AI model to generate suggested file changes based on a prompt.
+ */
+export async function generateAIFileChange(
+  params: GenerateAIFileChangeParams
+): Promise<FileChangeResponse> {
+  const { filePath, prompt } = params;
+
+  // 1. Read existing file content
+  const originalContent = await readLocalFileContent(filePath);
+
+  // 2. Prepare AI request
+  const cfg = DEFAULT_MODEL_CONFIGS['generate-file-change'] || DEFAULT_MODEL_CONFIGS['generate-structured-output']; // Use specific or fallback config
+  const provider = params.provider || cfg.provider as APIProviders || 'openai'; // Default provider good at JSON
+  const modelId = params.model || cfg.model;
+  const temperature = params.temperature ?? cfg.temperature;
+
+  if (!modelId) {
+    throw new Error("Model not configured for generate-file-change task.");
+  }
+
+  const systemMessage = `
+You are an expert coding assistant. You will be given the content of a file and a user request describing changes.
+Your task is to:
+1. Understand the user's request and apply the necessary modifications to the file content.
+2. Output a JSON object containing:
+   - "updatedContent": The *entire* file content after applying the changes.
+   - "explanation": A concise summary of the modifications you made.
+Strictly adhere to the JSON output format. Only output the JSON object.
+File Path: ${filePath}
+`;
+
+  const userPrompt = `
+Original File Content:
+\`\`\`
+${originalContent}
+\`\`\`
+
+User Request: ${prompt}
+`;
+
+  try {
+    // 3. Call generateStructuredData
+    const aiResponse = await unifiedProvider.generateStructuredData({
+      provider: provider,
+      systemMessage: systemMessage,
+      prompt: userPrompt, // Combine original content and user request in the prompt
+      schema: FileChangeResponseSchema,
+      options: {
+        model: modelId,
+        temperature: temperature,
+        // Set appropriate maxTokens depending on expected file size + explanation
+        maxTokens: 4096, // Example: Adjust as needed
+      },
+    });
+
+    return aiResponse;
+
+  } catch (error) {
+    console.error(`[AIFileChangeService] Failed to generate AI file change for ${filePath}:`, error);
+    throw new Error(`AI failed to generate changes for ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+
+// --- Database interaction functions (remain largely the same) ---
+
 export type GenerateFileChangeOptions = {
   filePath: string;
-  prompt: string;
+  prompt: string; // The user's original prompt
   db: Database;
 }
 
-// Generates a file change by simulating diff creation from a prompt and inserting a record using a raw sqlite query
-export async function generateFileChange({ filePath, prompt, db }: GenerateFileChangeOptions) {
-  // In a real implementation, you might read the file content and generate a diff using an AI model
-  // For this example, we'll simulate the original content and the generated diff
-  const originalContent = "Original content of the file"; // Dummy content, replace with actual file read if needed
-  const suggestedDiff = `Diff for ${filePath}: ${prompt}`;
+// Define the structure of the file_changes table row
+export interface FileChangeDBRecord {
+  id: number;
+  file_path: string;
+  original_content: string;
+  suggested_diff: string | null; // Explanation stored here
+  status: 'pending' | 'confirmed';
+  timestamp: number;
+  prompt: string | null;
+  suggested_content: string | null;
+}
 
+/**
+ * Generates and records a file change suggestion based on user prompt.
+ * This is the main function called by the routes.
+ */
+export async function generateFileChange({ filePath, prompt, db }: GenerateFileChangeOptions) {
+  // 1. Generate the change suggestion using AI
+  const aiSuggestion = await generateAIFileChange({ filePath, prompt });
+
+  // 2. Prepare data for DB insertion
+  const originalContent = await readLocalFileContent(filePath);
   const status = "pending";
   const timestamp = Math.floor(Date.now() / 1000);
+  // Store explanation, original content. suggestedContent could also be stored if needed.
+  const suggestedDiffOrExplanation = aiSuggestion.explanation;
+  // Store the prompt that generated this change
+  const storedPrompt = prompt;
 
-  // Insert into the file_changes table using a raw sqlite query
-  const stmt = db.prepare("INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp) VALUES (?, ?, ?, ?, ?)");
-  const result = stmt.run(filePath, originalContent, suggestedDiff, status, timestamp);
+  // 3. Insert into the file_changes table
+  const stmt = db.prepare(
+    "INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp, prompt, suggested_content) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  );
+  const result = stmt.run(
+    filePath,
+    originalContent,
+    suggestedDiffOrExplanation,
+    status,
+    timestamp,
+    storedPrompt,
+    aiSuggestion.updatedContent // Store the suggested content
+  );
 
-  const changeId = result.lastInsertRowid;
+  const changeId = result.lastInsertRowid as number;
 
-  return { changeId, diff: suggestedDiff };
+  // 4. Fetch and return the newly created record
+  const newRecord = await getFileChange(db, changeId);
+  if (!newRecord) {
+    // Should not happen, but handle defensively
+    throw new Error(`Failed to retrieve newly created file change record with ID: ${changeId}`);
+  }
+  return newRecord;
 }
 
-// Retrieves a file change record from the database using a raw sqlite query
-export async function getFileChange(db: Database, changeId: number) {
+/**
+ * Retrieves a file change by ID from the database.
+ * Returns the file change information or null if not found.
+ */
+export async function getFileChange(db: Database, changeId: number): Promise<FileChangeDBRecord | null> {
   const stmt = db.prepare("SELECT * FROM file_changes WHERE id = ?");
-  const change = stmt.get(changeId);
-  return change || null;
+  const result = stmt.get(changeId) as FileChangeDBRecord | undefined;
+  return result || null;
 }
 
-// Confirms a file change by updating its status to 'confirmed' using a raw sqlite query
-export async function confirmFileChange(db: Database, changeId: number) {
-  const stmt = db.prepare("UPDATE file_changes SET status = ? WHERE id = ?");
-  const result = stmt.run("confirmed", changeId);
-  return result.changes > 0;
+/**
+ * Confirms a file change by updating its status in the database.
+ * Returns true if the update was successful.
+ */
+export async function confirmFileChange(db: Database, changeId: number): Promise<{ status: string; message: string }> {
+  // Check if the record exists and is pending before confirming
+  const existing = await getFileChange(db, changeId);
+  if (!existing) {
+     throw Object.assign(new Error(`File change with ID ${changeId} not found.`), { code: 'NOT_FOUND' });
+  }
+  if (existing.status !== 'pending') {
+     throw Object.assign(new Error(`File change with ID ${changeId} is already ${existing.status}.`), { code: 'INVALID_STATE' });
+  }
+
+  const stmt = db.prepare("UPDATE file_changes SET status = 'confirmed' WHERE id = ?");
+  const result = stmt.run(changeId);
+
+  if (result.changes > 0) {
+    return { status: "confirmed", message: `File change ${changeId} confirmed successfully.` };
+  } else {
+    // This case might indicate a race condition or unexpected DB state
+     throw new Error(`Failed to confirm file change ${changeId}. No rows updated.`);
+  }
 }

@@ -1,4 +1,3 @@
-import { Project } from "shared/schema"
 import { ScanEye } from "lucide-react"
 import { toast } from "sonner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -14,11 +13,12 @@ import { Pencil, Trash2, Icon } from "lucide-react"
 import { tab } from '@lucide/lab'
 import { useProjectTabActions } from "@/hooks/use-project-tab-actions"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
-import { useActiveProjectTab } from "@/zustand/selectors"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { ProjectResponse } from "@/hooks/generated"
+import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 
 type ProjectHeaderProps = {
-    projectData: Project | null
+    projectData: ProjectResponse['data'] | null
 }
 
 const ProjectHeader = function ProjectHeader({
@@ -26,14 +26,15 @@ const ProjectHeader = function ProjectHeader({
 }: ProjectHeaderProps) {
     // Router info (for highlighting tickets, etc.)
     const matches = useMatches()
-    const { selectedProjectId } = useActiveProjectTab()
+    const [projectTabData] = useActiveProjectTab()
+    const selectedProjectId = projectTabData?.selectedProjectId
     const isOnTicketsRoute = matches.some((m) => m.routeId === '/tickets')
     const isOnSummarizationRoute = matches.some((m) => m.routeId === '/project-summarization')
 
     // Tickets for this project
     const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? '')
     const openTicketsCount =
-        ticketsData?.ticketsWithTasks?.filter((t) => t.status === 'open').length ?? 0
+        ticketsData?.ticketsWithTasks?.filter((t) => t.ticket.status === 'open').length ?? 0
 
     if (!projectData) return null
 
@@ -58,20 +59,39 @@ const ProjectHeader = function ProjectHeader({
                                     {projectData?.name}
                                 </h2>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="flex items-center gap-2 max-w-md">
-                                <span className="break-all">{projectData?.path}</span>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-4 w-4 hover:bg-accent hover:text-accent-foreground"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        navigator.clipboard.writeText(projectData?.path || '')
-                                        toast.success('Project path copied to clipboard')
-                                    }}
-                                >
-                                    <Copy className="h-3 w-3" />
-                                </Button>
+                            <TooltipContent side="bottom" className="flex flex-col items-center gap-2 max-w-md">
+                                <div className="flex flex items-center gap-2">
+                                    <span className="break-all">{projectData?.path}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-4 w-4 hover:bg-accent hover:text-accent-foreground"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            navigator.clipboard.writeText(projectData?.path || '')
+                                            toast.success('Project path copied to clipboard')
+                                        }}
+                                    >
+                                        <Copy className="h-3 w-3" />
+                                    </Button>
+                                </div>
+
+
+                                <div className="flex items-center gap-2">
+                                    <span>Copy Project ID</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-4 w-4 hover:bg-accent hover:text-accent-foreground"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            navigator.clipboard.writeText(projectData?.id || '')
+                                            toast.success('Project ID copied to clipboard')
+                                        }}
+                                    >
+                                        <Copy className="h-3 w-3" />
+                                    </Button>
+                                </div>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>

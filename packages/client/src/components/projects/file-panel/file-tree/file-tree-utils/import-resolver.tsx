@@ -15,8 +15,7 @@
 // - If a file cannot be resolved, it's skipped. Package imports are also skipped.
 // - Returns a list of all fileIds that are imported by a given file, recursively.
 
-import { ProjectFile } from "shared/schema";
-
+import { ProjectFile } from "@/hooks/generated/types.gen";
 
 interface AliasMap {
   [aliasPrefix: string]: string[];

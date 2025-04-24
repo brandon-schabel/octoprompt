@@ -6,12 +6,11 @@ import { Switch } from "../ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { ChatMessage } from "shared/schema";
 import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-api";
-import { useUpdateActiveChatTab } from "@/zustand/updaters";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+import { ChatMessage } from "@/hooks/generated";
+import { useSettings } from "@/hooks/api/global-state/selectors";
 
 /**
  * Helper function to parse out <think> blocks in the assistant message.
@@ -291,7 +290,6 @@ export function ChatMessages(props: ChatMessagesProps) {
 
     // For toggling excluded messages in the global store
     const excludedSet = new Set(excludedMessageIds);
-    const updateActiveChatTab = useUpdateActiveChatTab();
 
     // For deleting/forking messages
     const deleteMessageMutation = useDeleteMessage();
@@ -301,7 +299,7 @@ export function ChatMessages(props: ChatMessagesProps) {
     const [rawMessageIds, setRawMessageIds] = useState<Set<string>>(new Set());
 
     // Use global auto-scroll setting
-    const { data: autoScrollEnabled = true } = useSettingsField('autoScrollEnabled')
+    const { autoScrollEnabled = true } = useSettings()
     const bottomRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom when new messages arrive and autoScroll is enabled
@@ -318,9 +316,6 @@ export function ChatMessages(props: ChatMessagesProps) {
         } else {
             newExcludedMessageIds.add(messageId);
         }
-        updateActiveChatTab({
-            excludedMessageIds: Array.from(newExcludedMessageIds),
-        });
     };
 
     const handleForkFromMessage = async (messageId: string) => {
@@ -330,11 +325,10 @@ export function ChatMessages(props: ChatMessagesProps) {
             const result = await forkChatMutation.mutateAsync({
                 chatId,
                 messageId,
-                excludedMessageIds,
-            });
-            updateActiveChatTab({
-                activeChatId: result.id,
-                excludedMessageIds: [],
+                // excludedMessageIds,
+                body: {
+                    excludedMessageIds
+                }
             });
             toast.success("Chat forked successfully");
         } catch (error) {

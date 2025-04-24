@@ -1,41 +1,47 @@
-// File: packages/client/src/components/chat/hooks/chat-hooks.tsx
-import { useForkChat } from "@/hooks/api/use-chat-api";
-import { useCallback, useState } from "react";
-import { useGetMessages } from "@/hooks/api/use-chat-api";
-import { ChatMessage } from "shared/schema";
-import { useSendMessage } from "@/hooks/api/use-chat-api";
-import { APIProviders, ChatModelSettings } from "shared";
-import { useCreateChat } from "@/hooks/api/use-chat-api";
-import { useChatTabField } from "@/zustand/zustand-utility-hooks";
+import { useCallback } from "react";
+import {
+    useGetMessages,
+    useCreateChat,
+    useForkChat,
+} from "@/hooks/api/use-chat-api";
+import { ChatModelSettings } from "shared";
 import { useChatModelParams } from "./use-chat-model-params";
+import { useAIChat } from "@/hooks/use-ai-chat";
+import { useSettings } from "@/hooks/api/global-state/selectors";
+// Import the input type if needed for clarity/casting
+import type { CreateChatInput, } from "@/hooks/api/use-chat-api";
+import { ForkChatRequestBody } from "@/hooks/generated/types.gen";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
-export type TempChatMessage = ChatMessage & { tempId?: string };
-
-export function useClearExcludedMessages(tabId: string) {
-    const { mutate: setExcludedMessageIds } = useChatTabField(
-        "excludedMessageIds",
-        tabId
-    );
-
-    const clearExcludedMessages = useCallback(() => {
-        setExcludedMessageIds([]);
-    }, [setExcludedMessageIds]);
-
-    return { clearExcludedMessages };
-}
 
 export function useCreateChatHandler() {
+    // Use the refactored hook
     const createChatMutation = useCreateChat();
 
     const handleCreateChat = useCallback(
         async (chatTitle: string, currentChatId?: string) => {
             try {
-                const newChat = await createChatMutation.mutateAsync({
+                // Construct the input object matching CreateChatInput
+                const input: CreateChatInput = {
                     title: chatTitle,
-                    copyExisting: false,
-                    currentChatId,
-                });
-                return newChat;
+                    // Assuming copyExisting=false means don't copy messages/settings
+                    copyExisting: false, // Adjust based on actual API meaning
+                    // Pass currentChatId only if the API uses it (e.g., for copying)
+                    // Check CreateChatRequestBody in types.gen.ts
+                    ...(currentChatId && { currentChatId: currentChatId }), // Conditionally add if API supports it for copying
+                };
+                // Call mutateAsync with the input object
+                const newChat = await createChatMutation.mutateAsync(input);
+                // The return type of mutateAsync depends on the generic definition,
+                // often unknown or the success response type. Assume success gives ChatResponse.
+                // If you need the created chat data, ensure useCreateChat returns it or handle cache updates.
+                // For now, assume it invalidates and the list updates, returning null or a success indicator.
+                // Let's adjust based on the hook returning `unknown` for now.
+                // We might need to update query data manually if immediate access to the new chat object is needed.
+                // queryClient.setQueryData(...) or rely on list refetch.
+                console.log("[handleCreateChat] Create mutation triggered for:", chatTitle);
+                // Returning null as the hook invalidates, doesn't directly return the new chat object in this setup
+                return null; // Adjust if the hook/API returns the created object directly
             } catch (error) {
                 console.error("[handleCreateChat] Error:", error);
                 return null;
@@ -47,227 +53,178 @@ export function useCreateChatHandler() {
     return { handleCreateChat };
 }
 
-interface UseSendMessageArgs {
-    chatId: string;
-    provider: APIProviders;
-    model: string;
-    excludedMessageIds: string[];     // For partial context
-    clearUserInput: () => void;       // A function to reset input in global state
-    pendingMessages: TempChatMessage[];
-    setPendingMessages: React.Dispatch<React.SetStateAction<TempChatMessage[]>>;
-    refetchMessages: () => Promise<any>;
-}
 
 /**
- * Hook to handle sending chat messages, with streaming updates.
- * We incorporate the new model settings from `useChatModelParams`.
+ * Simplified hook for AI chat interaction using global settings.
+ * NOTE: This hook primarily interacts with useAIChat (Vercel SDK wrapper)
+ * and useGetMessages (our API). The refactoring mainly affects useGetMessages usage.
  */
-export function useSendChatMessage(args: UseSendMessageArgs) {
+export function useChatWithAI({
+    chatId,
+    excludedMessageIds,
+    clearUserInput,
+    systemMessage,
+}: {
+    chatId: string;
+    excludedMessageIds: string[];
+    clearUserInput: () => void;
+    systemMessage?: string;
+}) {
+    const settings = useSettings();
+    const { settings: modelParams } = useChatModelParams();
+
+    // Fetch canonical messages using the refactored React Query hook
     const {
+        data: messagesResponse, // The hook returns the full response object { success: true, data: [...] }
+        refetch: refetchMessages,
+        isFetching,
+        isError: isMessagesError,
+    } = useGetMessages(chatId); // Use the refactored hook
+
+    // Underlying AI chat hook (Vercel SDK wrapper - likely unchanged by this refactor)
+    const {
+        append,
+        isLoading,
+        error: aiError,
+        stop,
+    } = useAIChat({
         chatId,
-        provider,
-        model,
+        provider: settings.provider as APIProviders,
+        model: settings.model,
         excludedMessageIds,
-        clearUserInput,
-        setPendingMessages,
-        refetchMessages,
-    } = args;
+        systemMessage,
+        // onFinish might still be useful if useAIChat supports it for refetching
+        // onFinish: () => {
+        //     console.log("[useChatWithAI -> useAIChat.onFinish] Streaming finished, refetching messages.");
+        //     refetchMessages();
+        // }
+    });
 
+    // Message sending function (interacts with useAIChat, not directly with our POST /message API)
+    const handleSendMessage = useCallback(
+        async ({ userInput }: { userInput: string }) => {
+            if (!userInput.trim() || !chatId) return;
 
+            clearUserInput();
 
-    const sendMessageMutation = useSendMessage();
+            try {
+                const currentModelSettings: ChatModelSettings = {
+                    temperature: modelParams.temperature,
+                    max_tokens: modelParams.max_tokens,
+                    top_p: modelParams.top_p,
+                    frequency_penalty: modelParams.frequency_penalty,
+                    presence_penalty: modelParams.presence_penalty,
+                    stream: modelParams.stream,
+                };
 
-    const handleSendMessage = useCallback(async ({
-        userInput,
-        modelSettings,
-    }: {
-        userInput: string;
-        modelSettings: ChatModelSettings
-    }) => {
-        const {
-            temperature,
-            max_tokens,
-            top_p,
-            frequency_penalty,
-            presence_penalty,
-            stream,
-        } = modelSettings;
-
-        if (!userInput.trim()) {
-            console.log("[handleSendMessage] Aborting - no input");
-            return;
-        }
-
-        // Clear input from global state
-        clearUserInput();
-
-        // Create local pending user + assistant messages
-        const userTempId = `temp-user-${Date.now()}`;
-        const assistantTempId = `temp-assistant-${Date.now()}`;
-
-        const userMessage: TempChatMessage = {
-            id: userTempId,
-            role: "user",
-            content: userInput.trim(),
-            chatId,
-            createdAt: new Date(),
-            tempId: userTempId,
-        };
-
-        const assistantMessage: TempChatMessage = {
-            id: assistantTempId,
-            role: "assistant",
-            content: "",
-            chatId,
-            createdAt: new Date(),
-            tempId: assistantTempId,
-        };
-
-        // Push them to local pending
-        setPendingMessages((prev) => [...prev, userMessage, assistantMessage]);
-
-        try {
-            // Pass the new settings into `options`
-            const streamResponse = await sendMessageMutation.mutateAsync({
-                message: userInput.trim(),
-                chatId,
-                provider,
-                tempId: assistantTempId,
-                options: {
-                    model,
-                    stream,
-                    temperature,
-                    max_tokens,
-                    top_p,
-                    frequency_penalty,
-                    presence_penalty,
-                },
-                excludedMessageIds,
-            });
-
-            // Stream the response and update assistant message content
-            const reader = streamResponse.getReader();
-            let assistantContent = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const text = new TextDecoder().decode(value);
-                if (text) {
-                    assistantContent += text;
-                    setPendingMessages((prev) =>
-                        prev.map((m) =>
-                            m.id === assistantTempId
-                                ? { ...m, content: assistantContent }
-                                : m
-                        )
-                    );
-                }
+                // This call goes to the Vercel useChat hook via our useAIChat wrapper
+                await append(
+                    { role: 'user', content: userInput.trim() },
+                    {
+                        body: {
+                            chatId: chatId,
+                            provider: settings.provider,
+                            options: { model: settings.model, ...currentModelSettings },
+                            excludedMessageIds: excludedMessageIds,
+                            systemMessage: systemMessage,
+                            // userMessageContent: userInput.trim(), // Check if useAIChat/backend needs this explicitly
+                        },
+                    }
+                );
+                console.log('[useChatWithAI] Append call finished.');
+                // If onFinish isn't reliable/available, refetch messages after append completes.
+                // Consider potential race conditions if streaming takes time.
+                // Maybe delay the refetch slightly or rely on optimistic updates within useAIChat.
+                refetchMessages();
+            } catch (err) {
+                console.error('[useChatWithAI] Error calling append:', err);
             }
+        },
+        [append, chatId, settings.provider, settings.model, modelParams, excludedMessageIds, systemMessage, clearUserInput, refetchMessages]
+    );
 
-            // Once streaming finishes, re-fetch from server + clear local pending
-            await refetchMessages();
-            setPendingMessages([]);
-        } catch (error) {
-            console.error("[handleSendMessage] Streaming error:", error);
-            setPendingMessages((prev) =>
-                prev.map((m) =>
-                    m.id === assistantTempId
-                        ? {
-                            ...m,
-                            content:
-                                error instanceof Error
-                                    ? `Error: ${error.message}`
-                                    : "Error: Failed to get response.",
-                        }
-                        : m
-                )
-            );
-        }
-    }, [
-        chatId,
-        provider,
-        model,
-        excludedMessageIds,
-        clearUserInput,
-        setPendingMessages,
-        sendMessageMutation,
+    const error = aiError || (isMessagesError ? new Error("Failed to fetch messages") : null);
+
+    return {
+        // Extract the actual messages array from the response object
+        messages: messagesResponse?.data || [],
+        isLoading,
+        isFetching,
+        error,
         refetchMessages,
-    ]);
-
-    return { handleSendMessage };
+        handleSendMessage,
+        stop,
+    };
 }
 
+// Use the refactored hook for fetching messages
 export function useChatMessages(chatId: string) {
-    const [pendingMessages, setPendingMessages] = useState<TempChatMessage[]>([]);
-
     const {
-        data: messagesData,
+        data: messagesResponse, // Hook returns the full response object
         refetch: refetchMessages,
         isFetching,
         isError,
-    } = useGetMessages(chatId);
-
-    // Merge server and pending
-    const messages = mergeServerAndPendingMessages(
-        messagesData?.data || [],
-        pendingMessages
-    );
-
-    function mergeServerAndPendingMessages(
-        serverMsgs: TempChatMessage[],
-        pending: TempChatMessage[]
-    ): TempChatMessage[] {
-        // Filter out any “temp-*” IDs from the server
-        const filteredServer = serverMsgs.filter(
-            (msg) => !msg.id.startsWith("temp-")
-        );
-        // Exclude duplicates from local pending
-        const pendingWithoutDupes = pending.filter(
-            (p) => !filteredServer.some((s) => s.tempId === p.tempId)
-        );
-        return [...filteredServer, ...pendingWithoutDupes];
-    }
+    } = useGetMessages(chatId); // Use the refactored hook
 
     return {
-        messages,
-        pendingMessages,
-        setPendingMessages,
+        // Extract the actual messages array
+        messages: messagesResponse?.data || [],
         refetchMessages,
         isFetching,
         isError,
     };
 }
 
-interface UseForkChatArgs {
-    chatId: string;
-    excludedMessageIds: string[];
-    setPendingMessages?: React.Dispatch<React.SetStateAction<any>>;
-}
 
-export function useForkChatHandler({
-    chatId,
-    excludedMessageIds,
-    setPendingMessages,
-}: UseForkChatArgs) {
+export function useForkChatHandler({ chatId }: { chatId: string }) {
+    // Use the refactored hook
     const forkChatMutation = useForkChat();
 
     const handleForkChat = useCallback(async () => {
         if (!chatId) return;
         try {
+            // Construct the input for the refactored hook
+            // It expects { chatId: string; body: ForkChatRequestBody }
+            const inputBody: ForkChatRequestBody = {
+                // Pass empty array if that's the default for a full fork
+                // Or allow passing specific IDs if needed by the UI
+                excludedMessageIds: [],
+            };
             await forkChatMutation.mutateAsync({
                 chatId,
-                excludedMessageIds,
+                body: inputBody,
             });
-            // Optionally reset pending messages if desired
-            if (setPendingMessages) {
-                setPendingMessages([]);
-            }
+            console.log(`[handleForkChat] Fork initiated for chatId: ${chatId}`);
         } catch (error) {
             console.error("[handleForkChat] Error:", error);
         }
-    }, [chatId, excludedMessageIds, forkChatMutation, setPendingMessages]);
+    }, [chatId, forkChatMutation]);
 
     return { handleForkChat };
 }
+
+// Example if you were using useForkChatFromMessage
+/*
+export function useForkChatFromMessageHandler({ chatId, messageId }: { chatId: string; messageId: string; }) {
+    const forkMutation = useForkChatFromMessage(); // Use refactored hook
+
+    const handleFork = useCallback(async () => {
+        if (!chatId || !messageId) return;
+        try {
+            const inputBody: ForkChatFromMessageRequestBody = {
+                excludedMessageIds: [], // Or pass specific IDs if needed
+            };
+            await forkMutation.mutateAsync({
+                chatId,
+                messageId,
+                body: inputBody,
+            });
+            console.log(`[handleForkFromMessage] Fork initiated for chatId: ${chatId} from message ${messageId}`);
+        } catch (error) {
+            console.error("[handleForkFromMessage] Error:", error);
+        }
+    }, [chatId, messageId, forkMutation]);
+
+    return { handleFork };
+}
+*/

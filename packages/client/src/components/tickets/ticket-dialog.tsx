@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Ticket } from "shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import { useCreateTicket, useUpdateTicket, useUpdateTicketSuggestedFiles, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
+import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
-import { useCreateProjectTab } from "@/zustand/updaters";
+import { useCreateProjectTab } from "@/hooks/api/global-state/updaters";
+import { Ticket } from "@/hooks/generated";
 
 interface TicketDialogProps {
     isOpen: boolean;
@@ -20,7 +20,8 @@ interface TicketDialogProps {
 export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialogProps) {
     const createTicket = useCreateTicket();
     const updateTicket = useUpdateTicket();
-    const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
+    // TODO: reimplment this
+    // const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
     const createProjectTab = useCreateProjectTab();
 
     // Local form state
@@ -70,15 +71,15 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                         status,
                     },
                 });
-
+                // TODO: reimplment this
                 // Also update suggested files if they've changed
-                const currentFiles = JSON.parse(ticket.suggestedFileIds || "[]");
-                if (JSON.stringify(currentFiles) !== JSON.stringify(selectedFileIds)) {
-                    await updateSuggestedFiles.mutateAsync({
-                        ticketId: ticket.id,
-                        suggestedFileIds: selectedFileIds,
-                    });
-                }
+                // const currentFiles = JSON.parse(ticket.suggestedFileIds || "[]");
+                // if (JSON.stringify(currentFiles) !== JSON.stringify(selectedFileIds)) {
+                //     await updateSuggestedFiles.mutateAsync({
+                //         ticketId: ticket.id,
+                //         suggestedFileIds: selectedFileIds,
+                //     });
+                // }
             } else {
                 // Creating a new ticket
                 await createTicket.mutateAsync({

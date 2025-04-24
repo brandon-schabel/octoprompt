@@ -3,29 +3,15 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { APIInterface } from './utils/api/api-interface'
-import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
 import { Toaster } from './components/ui/sonner'
-import { GlobalStateProvider } from './zustand/global-state-provider'
 
 // Initialize core services
 const queryClient = new QueryClient()
-const apiInterface = new APIInterface(
-  SERVER_HTTP_ENDPOINT
-)
-
-// Define the router context interface
-interface RouterContext {
-  api: APIInterface
-}
 
 // Create router instance with context
 const router = createRouter<typeof routeTree, "never", true>({
   routeTree,
   defaultPreload: 'intent',
-  context: {
-    api: apiInterface,
-  } satisfies RouterContext
 })
 
 // Type registration for router
@@ -42,10 +28,8 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <QueryClientProvider client={queryClient}>
-      <GlobalStateProvider>
         <RouterProvider router={router} />
         <Toaster />
-      </GlobalStateProvider>
     </QueryClientProvider>
   )
 }

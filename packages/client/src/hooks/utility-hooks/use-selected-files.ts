@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useUpdateActiveProjectTab, useUpdateProjectTab } from '@/zustand/updaters'
-import { ProjectFile, ProjectTabState } from 'shared'
-import { useActiveProjectTab } from '@/zustand/selectors'
-import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
+import { useUpdateActiveProjectTab, useUpdateProjectTab } from '@/hooks/api/global-state/updaters'
+import { ProjectFile } from '@/hooks/generated/types.gen'
+
+import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
+import { useActiveProjectTab } from '../api/use-state-api'
 
 const MAX_HISTORY_SIZE = 50
 
@@ -27,7 +28,7 @@ export function useSelectedFiles({
   tabId?: string | null
 } = {}) {
   const queryClient = useQueryClient()
-  const { id: activeProjectTabId, tabData: activeProjectTabState, selectedProjectId } = useActiveProjectTab()
+  const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const updateProjectTab = useUpdateProjectTab()
 
@@ -36,12 +37,12 @@ export function useSelectedFiles({
   const effectiveTabState = tabId ? useProjectTabField("selectedFiles", tabId).data : activeProjectTabState?.selectedFiles
 
   // Get all project files and build the file map
-  const { data: fileData } = useGetProjectFiles(selectedProjectId || '')
+  const { data: fileData } = useGetProjectFiles(activeProjectTabId || '')
   const fileMap = useMemo(() => {
     const m = new Map<string, ProjectFile>()
-    fileData?.files?.forEach(f => m.set(f.id, f))
+    fileData?.data?.forEach(f => m.set(f.id, f))
     return m
-  }, [fileData?.files])
+  }, [fileData?.data])
 
   // Query for getting the undo/redo state
   const { data: undoRedoState } = useQuery({
@@ -176,7 +177,7 @@ export function useSelectedFiles({
   // Select multiple files (replacing current selection)
   const selectFiles = (fileIdsOrUpdater: string[] | ((prev: string[]) => string[])) => {
     if (!isInitialized) return
-    const newFileIds = typeof fileIdsOrUpdater === 'function' 
+    const newFileIds = typeof fileIdsOrUpdater === 'function'
       ? fileIdsOrUpdater(selectedFiles)
       : fileIdsOrUpdater
     commitSelectionChange(newFileIds)

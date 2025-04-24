@@ -1,27 +1,13 @@
 import { serve } from "bun";
 import { join } from "node:path";
 import { statSync } from "node:fs";
-import app from "@/server-router";
-import "@/routes/chat-routes";
-import "@/routes/project-routes";
-import "@/routes/prompt-routes";
-import "@/routes/provider-key-routes";
-import "@/routes/promptimizer-routes";
-import "@/routes/ticket-routes";
-import "@/routes/suggest-files-routes";
-import "@/routes/kv-routes";
-import "@/routes/structured-output-routes";
-import "@/routes/ai-file-change-routes";
-import "@/routes/summarize-files-routes";
-import "@/routes/admin-routes";
+import { app } from "./src/app";
 
-import { globalStateSchema } from "shared";
-
-import { websocketStateAdapter } from "./src/utils/websocket/websocket-state-adapter";
 import { listProjects } from "@/services/project-service";
 import { watchersManager } from "@/services/shared-services";
 import { createCleanupService } from "@/services/file-services/cleanup-service";
-import { initKvStore } from "@/services/kv-service";
+import { isDevEnv, SERVER_PORT } from "@/constants/server-config";
+
 
 // Use the imported watchersManager, remove the local creation
 // export const watchersManager = createWatchersManager();
@@ -29,7 +15,6 @@ const cleanupService = createCleanupService({
   intervalMs: 5 * 60 * 1000,
 });
 
-const isDevEnv = process.env.DEV === "true";
 const CLIENT_PATH = isDevEnv
   ? join(import.meta.dir, "client-dist")
   : "./client-dist";
@@ -40,45 +25,7 @@ type ServerConfig = {
 
 type Server = ReturnType<typeof serve>;
 
-const DEV_PORT = 3000;
-const PROD_PORT = 3579;
-const PORT = isDevEnv ? DEV_PORT : PROD_PORT;
-
-// Register simple health check route
-app.get("/api/health", (c) => c.json({ success: true }));
-
-// Register API state endpoint
-app.get("/api/state", async (c) => {
-  try {
-    const currentState = websocketStateAdapter.getState();
-    return c.json(currentState);
-  } catch (error) {
-    console.error("Error fetching state:", error);
-    return c.json({ error: "Failed to fetch state" }, 500);
-  }
-});
-
-app.post("/api/state", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { key, value } = body as { key: string; value: unknown };
-    const currentState = websocketStateAdapter.getState();
-
-    // Shallow update
-    const newState = { ...currentState, [key]: value };
-    const validated = globalStateSchema.parse(newState);
-
-    // Set & broadcast
-    await websocketStateAdapter.setState(validated, true);
-
-    return c.json(validated);
-  } catch (error) {
-    console.error("Error updating state:", error);
-    return c.json({ error: String(error) }, 400);
-  }
-});
-
-export async function instantiateServer({ port = PORT }: ServerConfig = {}): Promise<Server> {
+export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {}): Promise<Server> {
   const server: Server = serve<{ clientId: string }>({
     idleTimeout: 255,
     port,
@@ -126,18 +73,12 @@ export async function instantiateServer({ port = PORT }: ServerConfig = {}): Pro
     websocket: {
       async open(ws) {
         console.debug("New WS connection", { clientId: ws.data.clientId });
-        websocketStateAdapter.handleOpen(ws);
-        // broadcast current state to newly connected client
-        await websocketStateAdapter.broadcastState();
       },
       close(ws) {
         console.debug("WS closed", { clientId: ws.data.clientId });
-        websocketStateAdapter.handleClose(ws);
       },
       async message(ws, rawMessage) {
         try {
-          await websocketStateAdapter.handleMessage(ws, rawMessage.toString());
-          await websocketStateAdapter.broadcastState();
         } catch (err) {
           console.error("Error handling WS message:", err);
         }
@@ -157,11 +98,13 @@ export async function instantiateServer({ port = PORT }: ServerConfig = {}): Pro
         "*.db-journal",
       ]);
     }
-    
+
     cleanupService.start();
   })();
 
   console.log(`Server running at http://localhost:${server.port}`);
+  console.log(`Server swagger at http://localhost:${server.port}/swagger`);
+  console.log(`Server docs at http://localhost:${server.port}/doc`);
   return server;
 }
 
@@ -181,7 +124,6 @@ function serveStatic(path: string): Response {
 if (import.meta.main) {
   console.log("Starting server...");
   (async () => {
-    await initKvStore();
     const server = await instantiateServer();
     function handleShutdown() {
       console.log("Received kill signal. Shutting down gracefully...");

@@ -1,89 +1,112 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '../use-api';
-import { ProviderKey } from 'shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { commonErrorHandler } from './common-mutation-error-handler';
+import {
+    getApiKeysOptions,
+    getApiKeysQueryKey,
+    postApiKeysMutation,
+    patchApiKeysByKeyIdMutation,
+    deleteApiKeysByKeyIdMutation,
+} from '../generated/@tanstack/react-query.gen';
+import type {
+    ProviderKeyListResponse,
+    ProviderKeyResponse,
+    PostApiKeysData,
+    PostApiKeysError,
+    PatchApiKeysByKeyIdData,
+    PatchApiKeysByKeyIdError,
+    DeleteApiKeysByKeyIdData,
+    DeleteApiKeysByKeyIdError,
+    DeleteApiKeysByKeyIdResponse,
+    ProviderKey,
+} from '../generated/types.gen';
+import { Options } from '../generated/sdk.gen';
 
-type KeyListResponse = {
-    success: boolean;
-    keys: ProviderKey[];
-};
+export type CreateKeyInput = PostApiKeysData['body'];
+export type UpdateKeyInput = PatchApiKeysByKeyIdData['body'];
 
-type KeyResponse = {
-    success: boolean;
-    key: ProviderKey;
-};
-
-type CreateKeyInput = {
-    provider: string;
-    key: string;
-};
-
-type UpdateKeyInput = {
-    provider?: string;
-    key?: string;
-};
-
-const KEYS_KEY = ['provider-keys'];
+const KEYS_KEYS = {
+    all: () => getApiKeysQueryKey(),
+    lists: () => getApiKeysQueryKey(),
+} as const;
 
 export function useGetKeys() {
-    const { api } = useApi();
+    const queryOptions = getApiKeysOptions();
     return useQuery({
-        queryKey: KEYS_KEY,
-        queryFn: async () => {
-            const res = await api.request('/api/keys');
-            const data = await res.json() as KeyListResponse;
-            return data.keys;
-        }
+        ...queryOptions,
+
+        select: (response: ProviderKeyListResponse) => {
+            if (!response.success) {
+                console.error("useGetKeys received unsuccessful response:", response);
+                return [];
+            }
+            return response.data;
+        },
     });
 }
 
-export function useCreateKey() {
-    const { api } = useApi();
-    const queryClient = useQueryClient();
 
-    return useMutation<ProviderKey, Error, CreateKeyInput>({
-        mutationFn: async (input: CreateKeyInput) => {
-            const res = await api.request('/api/keys', { method: 'POST', body: input });
-            const data = await res.json() as KeyResponse;
-            if (!data.success) throw new Error('Failed to create key');
-            return data.key;
+export function useCreateKey() {
+    const queryClient = useQueryClient();
+    const mutationOptions = postApiKeysMutation();
+
+    return useMutation<ProviderKey, PostApiKeysError, CreateKeyInput>({
+        mutationFn: async (body: CreateKeyInput) => {
+            const opts: Options<PostApiKeysData> = { body };
+            const response: ProviderKeyResponse = await mutationOptions.mutationFn!(opts);
+
+            if (!response || !response.success || !response.data) {
+                throw new Error('Failed to create key or key missing in response data');
+            }
+            return response.data;
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: KEYS_KEY });
+        onSuccess: (data, variables, context) => {
+            queryClient.invalidateQueries({ queryKey: KEYS_KEYS.lists() });
         },
-        onError: commonErrorHandler
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 export function useUpdateKey() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = patchApiKeysByKeyIdMutation();
 
-    return useMutation<ProviderKey, Error, { keyId: string; updates: UpdateKeyInput }>({
-        mutationFn: async ({ keyId, updates }: { keyId: string; updates: UpdateKeyInput }) => {
-            const res = await api.request(`/api/keys/${keyId}`, { method: 'PATCH', body: updates });
-            const data = await res.json() as KeyResponse;
-            if (!data.success) throw new Error('Failed to update key');
-            return data.key;
+    return useMutation<ProviderKey, PatchApiKeysByKeyIdError, { keyId: string; data: UpdateKeyInput }>({
+        mutationFn: async (vars: { keyId: string; data: UpdateKeyInput }) => {
+            const opts: Options<PatchApiKeysByKeyIdData> = {
+                path: { keyId: vars.keyId },
+                body: vars.data
+            };
+            const response: ProviderKeyResponse = await mutationOptions.mutationFn!(opts);
+
+            if (!response || !response.success || !response.data) {
+                throw new Error('Failed to update key or key missing in response data');
+            }
+            return response.data;
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: KEYS_KEY });
-        }
+        onSuccess: (data, variables, context) => {
+            const keyId = variables.keyId;
+            queryClient.invalidateQueries({ queryKey: KEYS_KEYS.lists() });
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 export function useDeleteKey() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = deleteApiKeysByKeyIdMutation();
 
-    return useMutation<void, Error, string>({
-        mutationFn: async (keyId: string) => {
-            const res = await api.request(`/api/keys/${keyId}`, { method: 'DELETE' });
-            const data = await res.json();
-            if (!data.success) throw new Error('Failed to delete key');
+    return useMutation<DeleteApiKeysByKeyIdResponse, DeleteApiKeysByKeyIdError, string>({
+        mutationFn: (keyId: string) => {
+            const opts: Options<DeleteApiKeysByKeyIdData> = { path: { keyId } };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: KEYS_KEY });
-        }
+        onSuccess: (data, variables, context) => {
+            if (!data.success) {
+                console.warn("Delete operation reported success, but response flag is false:", data);
+            }
+            const keyId = variables;
+            queryClient.invalidateQueries({ queryKey: KEYS_KEYS.lists() });
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }

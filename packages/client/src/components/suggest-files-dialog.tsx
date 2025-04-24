@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
-import { ProjectFile } from "shared"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
+import { ProjectFile } from "@/hooks/generated"
 
 type SuggestedFilesDialogProps = {
     open: boolean

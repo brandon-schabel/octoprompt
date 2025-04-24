@@ -14,15 +14,15 @@ import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetProjectPrompts
 import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
 import { useFindSuggestedFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useUpdateActiveProjectTab } from '@/zustand/updaters'
+import { useUpdateActiveProjectTab } from '@/hooks/api/global-state/updaters'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { InfoTooltip } from '@/components/info-tooltip'
-import { useActiveProjectTab } from '@/zustand/selectors'
-import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
+import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { z } from 'zod'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '../../components/ui/vertical-resizable-panel'
+import { useActiveProjectTab } from '@/hooks/api/use-state-api'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -34,7 +34,7 @@ interface PromptOverviewPanelProps {
 
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
     function PromptOverviewPanel({ className }, ref) {
-        const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
+        const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
         const updateActiveProjectTab = useUpdateActiveProjectTab()
 
         // Read selected prompts & user prompt from store
@@ -67,7 +67,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const [editPromptId, setEditPromptId] = useState<string | null>(null)
 
         // Load the project's prompts
-        const { data: promptData } = useGetProjectPrompts(selectedProjectId || '')
+        const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId || '')
         const createPromptMutation = useCreatePrompt()
         const updatePromptMutation = useUpdatePrompt()
         const deletePromptMutation = useDeletePrompt()
@@ -112,7 +112,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }
 
         // "Find suggested files" example
-        const findSuggestedFilesMutation = useFindSuggestedFiles(selectedProjectId || '')
+        const findSuggestedFilesMutation = useFindSuggestedFiles(activeProjectTabState?.selectedProjectId || '')
         const [showSuggestions, setShowSuggestions] = useState(false)
 
         const handleFindSuggestions = () => {
@@ -138,8 +138,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         })
 
         useEffect(() => {
-            if (editPromptId && promptData?.prompts) {
-                const p = promptData.prompts.find(x => x.id === editPromptId)
+            if (editPromptId && promptData?.data) {
+                const p = promptData.data.find(x => x.id === editPromptId)
                 if (p) {
                     promptForm.setValue('name', p.name)
                     promptForm.setValue('content', p.content)
@@ -147,14 +147,19 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             } else {
                 promptForm.reset()
             }
-        }, [editPromptId, promptData?.prompts])
+        }, [editPromptId, promptData?.data])
 
         async function handleCreatePrompt(values: z.infer<typeof promptSchema>) {
-            if (!selectedProjectId) return
+            if (!activeProjectTabState?.selectedProjectId) return
             const result = await createPromptMutation.mutateAsync({
-                ...values,
-                projectId: selectedProjectId,
+                body: {
+                    projectId: activeProjectTabState.selectedProjectId,
+                    name: values.name,
+                    content: values.content,
+                }
             })
+
+            // @ts-ignore
             if (result.success) {
                 toast.success('Prompt created')
                 setPromptDialogOpen(false)

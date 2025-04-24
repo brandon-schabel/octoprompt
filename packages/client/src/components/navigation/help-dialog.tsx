@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
-import { useActiveChatTab } from "@/zustand/selectors"
+import { useSettings } from "@/hooks/api/global-state/selectors"
+import { useActiveChatId } from "@/hooks/api/use-state-api"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -11,7 +12,13 @@ export type HelpDialogProps = {
 }
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
-    const { id: activeChatTabId, tabData: chatTabState } = useActiveChatTab()
+    // Get active chat from Zustand
+    const [activeChatId] = useActiveChatId();
+    
+    // Get model info from global settings
+    const settings = useSettings();
+    const provider = settings?.provider;
+    const model = settings?.model;
 
     // Toggle help dialog with mod + /
     useHotkeys("mod+/", (e) => {
@@ -19,11 +26,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
         onOpenChange?.(!open)
     })
 
-    if (!activeChatTabId) return null
-
-    if (!chatTabState) return null
-
-    const { provider, model } = chatTabState
+    if (!activeChatId) return null
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -52,14 +55,6 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         <p><ShortcutDisplay shortcut={['left', 'right']} delimiter=" / " />: Collapse/Expand folders</p>
                         <p><AppShortcutDisplay shortcut="select-file" />: Toggle file/folder selection</p>
                         <p><AppShortcutDisplay shortcut="select-folder" />: View file or toggle folder</p>
-
-                        <h3 className="font-semibold mt-4 mb-2">Tab Management</h3>
-                        <p><ShortcutDisplay shortcut={['t', '[1-9]']} />: Switch to project tab</p>
-                        <p><ShortcutDisplay shortcut={['c', '[1-9]']} />: Switch to chat tab</p>
-                        <p><AppShortcutDisplay shortcut="switch-next-project-tab" />: Next project tab</p>
-                        <p><AppShortcutDisplay shortcut="switch-previous-project-tab" />: Previous project tab</p>
-                        <p><AppShortcutDisplay shortcut="switch-next-chat-tab" />: Next chat tab</p>
-                        <p><AppShortcutDisplay shortcut="switch-previous-chat-tab" />: Previous chat tab</p>
 
                         <h3 className="font-semibold mt-4 mb-2">Selected Files</h3>
                         <p><ShortcutDisplay shortcut={['r', '[1-9]']} />: Remove file from selected list</p>

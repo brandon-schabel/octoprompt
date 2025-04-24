@@ -1,22 +1,3 @@
-/*
- * File: prompts.tsx
- * Purpose: Manages the display, creation, editing, and organization of prompts
- * Key Features:
- * - Lists all prompts with search and filtering
- * - Allows creating, editing, and deleting prompts with undo functionality
- * - Supports categorization, sorting by name or token size
- * - Displays token counts for each prompt
- * - Quick copy functionality for prompt content
- * - Integrates with projects for task creation
- * 
- * Most Recent Changes:
- * - Added quick copy button for prompt content
- * - Added undo functionality for deleted prompts
- * - Added token counting functionality
- * - Added sorting options (alphabetical, size ascending/descending)
- * - Improved error handling
- */
-
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button'
@@ -25,15 +6,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { Prompt } from 'shared'
 import { useGetPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu'
 import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { Textarea } from '@/components/ui/textarea'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
+import { Prompt } from '@/hooks/generated'
 
 // Utility function to estimate token count
 function estimateTokenCount(text: string, charsPerToken: number = 4): number {
@@ -54,7 +34,7 @@ function formatTokenCount(count: number): string {
 
 // API hooks for prompt management
 function usePrompts() {
-    const { data, isLoading, error } = useGetPrompts()
+    const { data: prompts, isLoading, error } = useGetPrompts()
     const createPromptMutation = useCreatePrompt()
     const updatePromptMutation = useUpdatePrompt()
     const deletePromptMutation = useDeletePrompt()
@@ -63,12 +43,12 @@ function usePrompts() {
     const recentlyDeletedPromptRef = useRef<Prompt | null>(null)
 
     return {
-        prompts: data?.prompts ?? [],
+        prompts: prompts?.data ?? [],
         isLoading,
         error: error?.message ?? null,
         createPrompt: async (data: { name: string; content: string }) => {
             try {
-                await createPromptMutation.mutateAsync(data)
+                await createPromptMutation.mutateAsync({ body: data })
                 toast.success('Prompt created successfully')
             } catch (err) {
                 toast.error('Failed to create prompt')
@@ -87,7 +67,7 @@ function usePrompts() {
         deletePrompt: async (promptId: string) => {
             try {
                 // Save the prompt being deleted for potential undo operation
-                const promptToDelete = data?.prompts.find(p => p.id === promptId) || null
+                const promptToDelete = prompts?.data.find(p => p.id === promptId) || null
                 recentlyDeletedPromptRef.current = promptToDelete
                 
                 // Delete the prompt
@@ -104,8 +84,10 @@ function usePrompts() {
                                     const recoveredPrompt = recentlyDeletedPromptRef.current
                                     // Use createPrompt to restore the deleted prompt with its original data
                                     await createPromptMutation.mutateAsync({
-                                        name: recoveredPrompt.name,
-                                        content: recoveredPrompt.content
+                                        body: {
+                                            name: recoveredPrompt.name,
+                                            content: recoveredPrompt.content
+                                        }
                                     })
                                     toast.success('Prompt restored successfully')
                                     recentlyDeletedPromptRef.current = null

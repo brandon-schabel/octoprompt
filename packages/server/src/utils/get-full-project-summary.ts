@@ -1,8 +1,7 @@
 import { ApiError } from "shared";
-import { ProjectFile } from "shared/schema";
+import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter";
-import { websocketStateAdapter } from "./websocket/websocket-state-adapter";
 import { getProjectById } from "@/services/project-service";
 import { getFileSummaries } from "@/services/file-services/file-summary-service";
 
@@ -19,7 +18,7 @@ const buildProjectSummary = (includedFiles: ProjectFile[]) => {
 export const getFullProjectSummary = async (projectId: string) => {
     const project = await getProjectById(projectId);
     if (!project) {
-        throw new ApiError("Project not found", 404, "NOT_FOUND");
+        throw new ApiError(404, "Project not found", "NOT_FOUND");
     }
 
     // Fetch all file summaries from the database
@@ -32,18 +31,17 @@ export const getFullProjectSummary = async (projectId: string) => {
     }
 
     // Retrieve global state to get ignore patterns (or other filtering preferences)
-    const globalState = await websocketStateAdapter.getState();
-    const ignorePatterns = globalState.settings.summarizationIgnorePatterns || [];
-    const allowPatterns = globalState.settings.summarizationAllowPatterns || [];
+    // const ignorePatterns = globalState.settings.summarizationIgnorePatterns || [];
+    // const allowPatterns = globalState.settings.summarizationAllowPatterns || [];
 
     // Filter out files that match ignore patterns (unless a file also matches an allow pattern, if applicable)
     // The same logic your summarization page uses can be applied here:
     function isIncluded(file: ProjectFile): boolean {
         // If any ignore pattern matches, we skip—unless an allow pattern overrides it.
-        const matchesIgnore = matchesAnyPattern(file.path, ignorePatterns);
-        if (matchesIgnore && !matchesAnyPattern(file.path, allowPatterns)) {
-            return false;
-        }
+        // const matchesIgnore = matchesAnyPattern(file.path, ignorePatterns);
+        // if (matchesIgnore && !matchesAnyPattern(file.path, allowPatterns)) {
+        //     return false;
+        // }
         return true;
     }
 

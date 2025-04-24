@@ -3,9 +3,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
-import { APIProviders } from "shared"
 import { useGetModels } from "@/hooks/api/use-chat-api"
 import { PROVIDER_SELECT_OPTIONS } from "@/constants/providers-constants"
+import { APIProviders } from "shared/src/schemas/provider-key.schemas"
 
 type ModelSelectorProps = {
     provider: APIProviders

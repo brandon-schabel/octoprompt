@@ -1,23 +1,25 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.3.3",
+  "version": "0.4.0-alpha",
   "type": "module",
   "scripts": {
     "setup": "bun run scripts/setup.ts",
     "dev": "bun run scripts/start-dev.ts",
-    "client:dev": "bun run scripts/start-client-dev.ts",
-    "server:dev": "bun run scripts/start-server-dev.ts",
+    "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
+    "dev:server": "bun run scripts/start-server-dev.ts",
     "stop": "bun run scripts/stop.ts",
     "build": "bun run scripts/build.ts",
     "format": "prettier --write .",
     "test": "bun test",
-    "pretest": "DB_FILENAME=test.db bun run src/utils/migrate-db.ts"
+    "pretest": "DB_FILENAME=test.db bun run src/utils/migrate-db.ts",
+    "openapi-ts": "openapi-ts"
   },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
+    "@hey-api/openapi-ts": "^0.66.5",
     "@types/archiver": "^6.0.3",
     "@types/bun": "latest",
     "@types/picomatch": "^3.0.1",
@@ -27,14 +29,16 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@bnk/ai": "^1.0.14",
     "@bnk/sync-engine": "1.0.0",
-    "@bnk/kv-store": "1.0.1",
+    "@hey-api/client-fetch": "^0.10.0",
+    "@hono/swagger-ui": "^0.5.1",
+    "@hono/zod-openapi": "^0.19.5",
     "@hono/zod-validator": "^0.4.3",
-    "hono": "^4.7.4",
+    "hono": "^4.7.7",
     "openai": "^4.78.1",
     "picomatch": "^4.0.2",
     "shared": "workspace:*",
     "zod": "^3.24.1"
-  }
+  },
+  "private": true
 }

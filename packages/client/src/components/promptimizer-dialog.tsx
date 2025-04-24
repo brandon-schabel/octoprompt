@@ -6,7 +6,6 @@ interface PromptimizerDialogProps {
     open: boolean
     onClose: () => void
     optimizedPrompt: string
-    // NEW: callback to let the parent update its prompt
     onUpdatePrompt?: (newPrompt: string) => void
 }
 

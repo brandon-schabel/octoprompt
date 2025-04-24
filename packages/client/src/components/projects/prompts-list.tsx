@@ -7,7 +7,6 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { ScrollArea } from '../ui/scroll-area'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
-import { ProjectFile } from 'shared'
 import { useGetProjectPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
@@ -15,14 +14,15 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { promptSchema } from '@/components/projects/utils/projects-utils'
-import { useUpdateProjectTabState } from '@/zustand/updaters'
+import { useUpdateProjectTabState } from '@/hooks/api/global-state/updaters'
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '../ui/dropdown-menu'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '../ui/badge'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { useProjectTab } from '@/zustand/selectors'
+import { useProjectTab } from '@/hooks/api/global-state/selectors'
+import { ProjectFile } from '@/hooks/generated'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
@@ -45,7 +45,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
 
     // Fetch the actual prompt data from the server
     const { data: promptData } = useGetProjectPrompts(selectedProjectId)
-    const prompts = promptData?.prompts || []
+    const prompts = promptData?.data || []
 
     // Mutations
     const createPromptMutation = useCreatePrompt()
@@ -76,7 +76,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const copySelectedPrompts = () => {
         if (!selectedPrompts.length) return
         const allPrompts = selectedPrompts.map(id => {
-            const p = promptData?.prompts.find(x => x.id === id)
+            const p = promptData?.data?.find((x: { id: string }) => x.id === id)
             return p ? `# ${p.name}\n${p.content}\n` : ""
         }).join("\n")
         navigator.clipboard.writeText(allPrompts)
@@ -101,10 +101,16 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const handleCreatePrompt = async (values: z.infer<typeof promptSchema>) => {
         if (!selectedProjectId) return
         const result = await createPromptMutation.mutateAsync({
-            ...values,
-            projectId: selectedProjectId,
+            // projectId: selectedProjectId,
+            body: {
+                projectId: selectedProjectId,
+                name: values.name,
+                content: values.content,
+            }
         })
-        if (result.success && result.prompt) {
+
+        // @ts-ignore
+        if (result.success && result.data) {
             toast.success('Prompt created successfully')
             promptForm.reset()
             setPromptDialogOpen(false)
@@ -138,7 +144,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
             promptForm.reset()
             return
         }
-        const found = prompts.find((p) => p.id === editPromptId)
+        const found = prompts.find((p: { id: string, name: string, content: string }) => p.id === editPromptId)
         if (found) {
             promptForm.setValue('name', found.name || '')
             promptForm.setValue('content', found.content || '')
@@ -171,7 +177,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                 break;
             case 'Enter':
                 e.preventDefault();
-                handleOpenPromptViewer(prompts[index] as ProjectFile);
+                handleOpenPromptViewer(prompts[index]);
                 break;
             case 'Escape':
                 e.preventDefault();
@@ -187,12 +193,29 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
         }
     }, [focusedIndex]);
 
-    const handleOpenPromptViewer = (prompt: ProjectFile) => {
+    const handleOpenPromptViewer = (prompt: {
+        id: string;
+        name: string;
+        content: string;
+        createdAt: string;
+        updatedAt: string;
+        projectId?: string;
+    }) => {
         setViewedPrompt({
-            ...prompt,
+            id: prompt.id,
+            name: prompt.name,
+            content: prompt.content,
             path: prompt.name,
-            extension: '.txt'
-        })
+            extension: '.txt',
+            projectId: prompt.projectId || selectedProjectId,
+            createdAt: new Date(prompt.createdAt).toISOString(),
+            updatedAt: new Date(prompt.updatedAt).toISOString(),
+            size: prompt.content?.length || 0,
+            meta: '',
+            summary: '',
+            summaryLastUpdatedAt: new Date().toISOString(),
+            checksum: ''
+        });
     }
 
     const handleClosePromptViewer = () => setViewedPrompt(null)
@@ -389,7 +412,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuItem onClick={() => handleOpenPromptViewer(prompt as ProjectFile)}>
+                                                    <DropdownMenuItem onClick={() => handleOpenPromptViewer(prompt)}>
                                                         <Eye className="mr-2 h-4 w-4" />
                                                         <span>View Prompt</span>
                                                     </DropdownMenuItem>

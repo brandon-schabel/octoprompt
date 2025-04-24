@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
-import { Theme } from "shared/src/global-state/global-state-schema"
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import {
     Select,
@@ -11,10 +10,11 @@ import {
 } from "../ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { useUpdateSettings } from "@/zustand/updaters"
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
+import { Theme } from "shared/src/schemas/global-state-schema"
+import { useSettings } from "@/hooks/api/global-state/selectors"
 
 type ThemeOption = {
     label: string;
@@ -37,16 +37,8 @@ type SettingsDialogProps = {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const { data: theme } = useSettingsField('theme')
+    const { useSpacebarToSelectAutocomplete: spacebarToSelectAutocomplete = true, hideInformationalTooltips, autoScrollEnabled, ollamaGlobalUrl, lmStudioGlobalUrl, codeThemeDark, codeThemeLight, theme } = useSettings()
     const isDarkMode = theme === 'dark'
-
-    const { data: spacebarToSelectAutocomplete = true } = useSettingsField('useSpacebarToSelectAutocomplete')
-    const { data: hideInformationalTooltips } = useSettingsField('hideInformationalTooltips')
-    const { data: autoScrollEnabled = true } = useSettingsField('autoScrollEnabled')
-    const { data: ollamaGlobalUrl = 'http://localhost:11434' } = useSettingsField('ollamaGlobalUrl')
-    const { data: lmStudioGlobalUrl = 'http://localhost:1234' } = useSettingsField('lmStudioGlobalUrl')
-    const { data: codeThemeLight = 'atomOneLight' } = useSettingsField('codeThemeLight')
-    const { data: codeThemeDark = 'atomOneDark' } = useSettingsField('codeThemeDark')
 
     const updateSettings = useUpdateSettings()
     const [autoRefreshEnabled, setAutoRefreshEnabled] = useLocalStorage('autoRefreshEnabled', true)

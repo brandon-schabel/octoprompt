@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   useGenerateFileChange,
   useGetFileChange,
@@ -36,17 +36,20 @@ export function AIFileChangeDialog({
 
   const generateMutation = useGenerateFileChange();
   const confirmMutation = useConfirmFileChange();
-  const { data: change, isLoading: isLoadingChange } = useGetFileChange(changeId);
+  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(changeId);
 
   const handleGenerate = async () => {
     if (!filePath) return;
 
     try {
-      const result = await generateMutation.mutateAsync({
+      const response = await generateMutation.mutateAsync({
         filePath,
         prompt,
       });
-      setChangeId(result.changeId);
+
+      if (response?.result?.id) {
+        setChangeId(response.result.id);
+      }
     } catch (error) {
       console.error("Failed to generate change:", error);
     }
@@ -105,11 +108,11 @@ export function AIFileChangeDialog({
                 <div className="flex items-center justify-center p-4">
                   <LoaderPinwheel />
                 </div>
-              ) : change ? (
-                // Show a diff between originalContent and suggestedDiff
+              ) : changeResponse ? (
+                // Show a diff between originalContent and the diff field
                 <DiffViewer
-                  oldValue={change.originalContent}
-                  newValue={change.suggestedDiff}
+                  oldValue={changeResponse.fileChange.originalContent}
+                  newValue={changeResponse.fileChange.suggestedContent}
                 />
               ) : (
                 <Alert variant="destructive">
@@ -137,7 +140,7 @@ export function AIFileChangeDialog({
           ) : (
             <Button
               onClick={handleConfirm}
-              disabled={isConfirming || !change}
+              disabled={isConfirming || !changeResponse}
               variant="default"
             >
               {isConfirming ? <LoaderPinwheel className="mr-2" /> : null}

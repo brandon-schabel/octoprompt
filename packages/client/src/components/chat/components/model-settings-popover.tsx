@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Settings2Icon } from 'lucide-react';
 import { useChatModelParams } from '../hooks/use-chat-model-params';
-import { useSynchronizedState } from '@/zustand/zustand-utility-hooks';
+import { useSynchronizedState } from '@/hooks/api/global-state/global-state-utility-hooks';
 
 /**
  * A popover for adjusting advanced model parameters (temperature, max_tokens, etc.)

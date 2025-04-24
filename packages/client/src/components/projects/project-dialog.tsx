@@ -12,8 +12,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from "@/hooks/api/use-projects-api"
 import { useEffect, useState } from "react"
-import { CreateProjectBody } from "shared/index"
-import { useUpdateActiveProjectTab } from "@/zustand/updaters"
+import { useUpdateActiveProjectTab } from "@/hooks/api/global-state/updaters"
+import { CreateProjectRequestBody } from "@/hooks/generated"
 
 type ProjectDialogProps = {
     open: boolean
@@ -24,7 +24,7 @@ type ProjectDialogProps = {
 export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogProps) {
     const navigate = useNavigate()
     const updateActiveProjectTab = useUpdateActiveProjectTab()
-    const [formData, setFormData] = useState<CreateProjectBody>({
+    const [formData, setFormData] = useState<CreateProjectRequestBody>({
         name: "",
         description: "",
         path: "",
@@ -39,11 +39,11 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
     const { mutate: syncProject } = useSyncProject(newlyCreatedProjectId ?? "")
 
     useEffect(() => {
-        if (projectData?.project && projectId) {
+        if (projectData?.data?.id && projectId) {
             setFormData({
-                name: projectData.project.name,
-                description: projectData.project.description ?? undefined,
-                path: projectData.project.path,
+                name: projectData.data.name,
+                description: projectData.data.description ?? undefined,
+                path: projectData.data.path,
             })
         } else {
             setFormData({
@@ -70,7 +70,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
         e.preventDefault()
         if (projectId) {
             // Editing existing project
-            updateProject({ id: projectId, updates: formData }, {
+            updateProject({ projectId: projectId, data: formData }, {
                 onSuccess: () => {
                     onOpenChange(false)
                 }
@@ -79,16 +79,16 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
             // Creating new project
             createProject(formData, {
                 onSuccess: (response) => {
-                    if (response.project) {
+                    if (response.data) {
                         // Set newly created project as current
                         updateActiveProjectTab(prev => ({
                             ...prev,
-                            selectedProjectId: response?.project?.id || null,
+                            selectedProjectId: response?.data?.id || undefined,
                             selectedFiles: [],
                             selectedPrompts: []
                         }))
                         // Store the newly created project id to trigger sync in useEffect
-                        setNewlyCreatedProjectId(response.project.id)
+                        setNewlyCreatedProjectId(response.data.id)
                     }
                 }
             })
@@ -108,7 +108,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
                             <Input
                                 id="name"
                                 value={formData.name}
-                                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, name: e.target.value }))}
                                 required
                             />
                         </div>
@@ -117,7 +117,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
                             <Input
                                 id="path"
                                 value={formData.path}
-                                onChange={(e) => setFormData(prev => ({ ...prev, path: e.target.value }))}
+                                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: e.target.value }))}
                                 required
                             />
                         </div>
@@ -126,7 +126,6 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
                             <Input
                                 id="description"
                                 value={formData.description}
-                                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                             />
                         </div>
                     </div>

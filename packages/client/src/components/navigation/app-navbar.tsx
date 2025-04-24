@@ -4,23 +4,19 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectList } from "@/components/projects/project-list"
 import { ProjectDialog } from "@/components/projects/project-dialog"
-import { ChatDialog } from "@/components/chat/chat-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
-import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useUpdateActiveProjectTab } from "@/zustand/updaters"
-import { useActiveProjectTab } from "@/zustand/selectors"
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+import { useUpdateActiveProjectTab } from "@/hooks/api/global-state/updaters"
+import {  useSettings } from "@/hooks/api/global-state/selectors"
+import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
     const [projectDialogOpen, setProjectDialogOpen] = useState(false)
-    const [chatDialogOpen, setChatDialogOpen] = useState(false)
     const [editProjectId, setEditProjectId] = useState<string | null>(null)
     const [helpOpen, setHelpOpen] = useState(false)
     const [settingsOpen, setSettingsOpen] = useState(false)
@@ -35,15 +31,14 @@ export function AppNavbar() {
     const isOnPromptsRoute = matches.some(match => match.routeId === "/prompts")
     const isOnAdminRoute = matches.some(match => match.routeId === "/admin")
 
-    const { data: theme = 'dark' } = useSettingsField('theme')
+    const { theme = 'dark' } = useSettings()
 
     const updateActiveProjectTab = useUpdateActiveProjectTab();
-    const { tabData: activeProjectTabState } = useActiveProjectTab()
+    const [activeProjectTabState] = useActiveProjectTab()
     const selectedProjectId = activeProjectTabState?.selectedProjectId;
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
-    const { api } = useApi()
 
     const globalTheme = theme || 'dark'
 
@@ -55,20 +50,6 @@ export function AppNavbar() {
         }
     }, [globalTheme])
 
-    // Health check
-    useQuery<{ success: boolean }>({
-        queryKey: ['health'],
-        refetchInterval: 30000,
-        queryFn: () =>
-            api.request('/api/health', {
-                method: 'GET',
-            }).then(res => {
-                if (res.status === 200) {
-                    return res.json()
-                }
-                throw new Error('Failed to fetch health')
-            })
-    })
 
     // Hotkeys
     useHotkeys('mod+o', (e: any) => {
@@ -195,16 +176,6 @@ export function AppNavbar() {
                             </Button>
                         )}
 
-                        {isOnChatRoute && (
-                            <Button
-                                variant="outline"
-                                onClick={() => setChatDialogOpen(true)}
-                                className="ml-auto"
-                            >
-                                <MessageSquareIcon className="mr-2 h-4 w-4" /> New Chat
-                            </Button>
-                        )}
-
                         {/* Settings button */}
                         <Button
                             variant="ghost"
@@ -236,7 +207,7 @@ export function AppNavbar() {
                     <div className="mt-4">
                         <ProjectList
                             loading={projectsLoading}
-                            projects={projectData?.projects ?? []}
+                            projects={projectData?.data ?? []}
                             selectedProjectId={selectedProjectId ?? null}
                             onSelectProject={handleSelectProject}
                             onEditProject={handleEditProject}
@@ -258,10 +229,6 @@ export function AppNavbar() {
                 open={projectDialogOpen}
                 projectId={editProjectId}
                 onOpenChange={setProjectDialogOpen}
-            />
-            <ChatDialog
-                open={chatDialogOpen}
-                onOpenChange={setChatDialogOpen}
             />
             <HelpDialog
                 open={helpOpen}

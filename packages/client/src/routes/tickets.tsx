@@ -6,8 +6,8 @@ import { Plus } from "lucide-react";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
-import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
-import { useActiveProjectTab } from "@/zustand/selectors";
+import { Ticket, TicketWithTasks } from "@/hooks/generated";
+import { useActiveProjectTab } from "@/hooks/api/use-state-api";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -20,7 +20,8 @@ function TicketsPage() {
     // what TicketListPanel provides via onSelectTicket.
     const [selectedTicket, setSelectedTicket] = React.useState<TicketWithTasks | null>(null);
 
-    const { tabData: projectTabState, id: projectActiveTabId } = useActiveProjectTab()
+    const [projectTabState, , projectActiveTabId] = useActiveProjectTab()
+    // const projectActiveTabId = projectTabState?.id ?? null;
     const projectId = projectTabState?.selectedProjectId ?? null;
 
     const {
@@ -62,7 +63,7 @@ function TicketsPage() {
             {/* Page Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">
-                    Tickets for {projectData?.project?.name}
+                    Tickets for {projectData?.data?.name}
                 </h2>
                 <Button onClick={() => setIsDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -82,7 +83,7 @@ function TicketsPage() {
             <TicketDialog
                 isOpen={isDialogOpen}
                 onClose={handleCloseDialog}
-                ticket={selectedTicket}
+                ticket={selectedTicket as unknown as Ticket}
                 projectId={projectId}
             />
         </div>

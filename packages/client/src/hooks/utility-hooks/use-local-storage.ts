@@ -1,16 +1,3 @@
-/*
- * File: use-local-storage.ts
- * Purpose: Provides a hook for syncing state with localStorage
- * Key Features:
- * - Persists state in localStorage
- * - Type-safe storage and retrieval
- * - Syncs across tabs/windows
- * 
- * Most Recent Changes:
- * - Initial implementation
- * - Added cross-tab synchronization
- */
-
 import { useState, useEffect, useCallback } from 'react';
 
 type SetValueFunction<T> = (value: T | ((prev: T) => T)) => void;

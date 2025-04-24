@@ -1,6 +1,5 @@
-// import-resolver.test.ts
-import type { ProjectFile } from 'shared/schema'
-import { gatherAliasesFromTsconfigs, getRecursiveImports, buildTsconfigAliasMap, TsconfigCache } from './import-resolver'
+import type { ProjectFile } from '../../../../../hooks/generated'
+import { gatherAliasesFromTsconfigs, getRecursiveImports, buildTsconfigAliasMap, type TsconfigCache } from './import-resolver'
 import { describe, it, expect, beforeAll } from 'bun:test'
 
 

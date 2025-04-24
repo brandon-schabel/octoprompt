@@ -46,12 +46,10 @@ import {
 import { buildNodeContent } from "@/components/projects/utils/projects-utils";
 
 import { getEditorUrl } from "@/lib/editor-urls";
-import { useActiveProjectTab } from "@/zustand/selectors";
-import { ProjectFile } from "shared/schema";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
-import { useApi } from "@/hooks/use-api";
-import { useQueryClient } from "@tanstack/react-query";
-import { PROJECT_FILES_KEYS, useRefreshProject } from "@/hooks/api/use-projects-api";
+import { useRefreshProject } from "@/hooks/api/use-projects-api";
+import { ProjectFile } from "@/hooks/generated/types.gen";
+import { useActiveProjectTab } from "@/hooks/api/use-state-api";
 
 /**
  * The user's preferred external editor.
@@ -134,7 +132,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
     },
     ref
 ) {
-    const { tabData: projectTabState, selectedProjectId } = useActiveProjectTab();
+    const [projectTabState, , selectedProjectId] = useActiveProjectTab();
     const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
     const resolveImports = projectTabState?.resolveImports ?? false;
     const preferredEditor = projectTabState?.preferredEditor ?? "vscode";

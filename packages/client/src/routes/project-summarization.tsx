@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useOptimistic, useFormStatus, useCallback, useMemo, useState, useTransition } from "react"
+import { useOptimistic, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -20,13 +20,12 @@ import {
     useResummarizeAllFiles,
     useRemoveSummariesFromFiles
 } from "@/hooks/api/use-projects-api"
-import { ProjectFile } from "shared/schema"
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher"
 import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useUpdateSettings } from "@/zustand/updaters"
+import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
 import {
     Select,
     SelectContent,
@@ -46,11 +45,10 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { AppSettings } from "shared/src/global-state/global-state-schema"
-import { useActiveProjectTab } from "@/zustand/selectors"
-import { useSettingsField } from "@/zustand/zustand-utility-hooks"
-
-
+import { useSettings } from "@/hooks/api/global-state/selectors"
+import { ProjectFile } from "@/hooks/generated"
+import { AppSettings } from "shared/src/schemas/global-state-schema"
+import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -88,7 +86,7 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
                             toast.success(resp.message || "File has been successfully re-summarized")
                         },
                         onError: (error) => {
-                            toast.error(error.message || "Failed to re-summarize file")
+                            toast.error(error?.error?.message || "Failed to re-summarize file")
                         }
                     }
                 )
@@ -101,20 +99,18 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 }
 
 export function ProjectSummarizationSettingsPage() {
-    const { data: summarizationEnabledProjectIds = [] } = useSettingsField('summarizationEnabledProjectIds')
-    const { data: summarizationIgnorePatterns = [] } = useSettingsField('summarizationIgnorePatterns')
-    const { tabData: projectTabState } = useActiveProjectTab()
+    const { summarizationEnabledProjectIds = [] } = useSettings()
+    const { summarizationIgnorePatterns = [] } = useSettings()
+    const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
     const updateSettings = useUpdateSettings()
 
-    const selectedProjectId = projectTabState?.selectedProjectId
+    const selectedProjectId = activeProjectTabState?.selectedProjectId
     const isProjectSummarizationEnabled = selectedProjectId
         ? summarizationEnabledProjectIds?.includes(selectedProjectId)
         : false
 
-    // Add transition for better loading states
     const [isPending, startTransition] = useTransition()
 
-    // Base state
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
     const [expandedSummaryFileId, setExpandedSummaryFileId] = useState<string | null>(null)
     const [summaryDialogOpen, setSummaryDialogOpen] = useState(false)
@@ -125,7 +121,6 @@ export function ProjectSummarizationSettingsPage() {
     const [isResummarizeDialogOpen, setIsResummarizeDialogOpen] = useState(false)
     const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false)
 
-    // Optimistic state for better UX
     const [optimisticState, addOptimisticEntry] = useOptimistic<OptimisticState>(
         {
             selectedFileIds,
@@ -135,21 +130,17 @@ export function ProjectSummarizationSettingsPage() {
     )
 
 
-    // 1) Fetch all project files
     const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? "")
-    const projectFiles = (data?.files || []) as ProjectFile[]
+    const projectFiles = (data?.data || []) as ProjectFile[]
 
-    // 2) Fetch all file entries (now each includes its summary)
     const { data: summariesData } = useGetFileSummaries(selectedProjectId ?? "")
-    const summaries = summariesData?.summaries || []
+    const summaries = summariesData?.data || []
 
-    // Build a lookup map of fileId -> ProjectFile
     const summariesMap = new Map<string, ProjectFile>()
     for (const f of summaries) {
         summariesMap.set(f.id, f)
     }
 
-    // 3) Summarize selected files
     const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? "")
     const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? "")
     const resummarizeAllMutation = useResummarizeAllFiles(selectedProjectId ?? "")
@@ -158,7 +149,6 @@ export function ProjectSummarizationSettingsPage() {
     const includedFiles: ProjectFile[] = []
     const excludedFiles: ProjectFile[] = []
 
-    // Partition files into "ignored" vs "included"
     for (const file of projectFiles) {
         const isIgnored = matchesAnyPattern(file.path, ignorePatterns)
         if (isIgnored) {
@@ -168,10 +158,6 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    // -------------------------------------------------------------
-    // Compute token counts (used for sorting & filtering).
-    // We can memoize a map of { fileId -> tokenCount } for performance.
-    // -------------------------------------------------------------
     const tokensMap = new Map<string, number>()
     for (const file of includedFiles) {
         if (file.content) {
@@ -181,7 +167,6 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    // Add summaryTokensMap calculation
     const summaryTokensMap = new Map<string, number>()
     for (const file of includedFiles) {
         if (file.summary) {
@@ -191,11 +176,6 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    // File size is in the DB (`file.size`), so we can use that directly.
-
-    // -------------------------------------------------------------
-    // Filtering by token count
-    // -------------------------------------------------------------
     const filteredIncludedFiles = includedFiles.filter((file) => {
         const tokenCount = tokensMap.get(file.id) ?? 0
         if (minTokensFilter !== null && tokenCount < minTokensFilter) return false
@@ -203,9 +183,6 @@ export function ProjectSummarizationSettingsPage() {
         return true
     })
 
-    // -------------------------------------------------------------
-    // Sorting logic
-    // -------------------------------------------------------------
     const sortedIncludedFiles = [...filteredIncludedFiles].sort((a, b) => {
         const fileA = summariesMap.get(a.id)
         const fileB = summariesMap.get(b.id)
@@ -308,7 +285,6 @@ export function ProjectSummarizationSettingsPage() {
         )
     }
 
-    // Optimistic handlers
     async function handleSummarizeOptimistic() {
         if (!selectedFileIds.length) {
             toast.error("No Files Selected", {
@@ -318,13 +294,11 @@ export function ProjectSummarizationSettingsPage() {
         }
 
         startTransition(() => {
-            // Optimistically update UI
             addOptimisticEntry((current: OptimisticState) => ({
                 ...current,
                 summarizedFileIds: selectedFileIds
             }))
 
-            // Actual mutation
             summarizeMutation.mutate(
                 { fileIds: selectedFileIds },
                 {
@@ -345,13 +319,11 @@ export function ProjectSummarizationSettingsPage() {
 
     function handleExcludeFileOptimistic(filePath: string) {
         startTransition(() => {
-            // Optimistically update UI
             addOptimisticEntry((current: OptimisticState) => ({
                 ...current,
                 excludedPatterns: [...current.excludedPatterns, filePath]
             }))
 
-            // Actual update
             updateSettings((prev: AppSettings) => ({
                 ...prev,
                 summarizationIgnorePatterns: [
@@ -416,9 +388,6 @@ export function ProjectSummarizationSettingsPage() {
         setIsResummarizeDialogOpen(false)
     }
 
-    // --------------------------------------------
-    // "Summary Memory" & aggregated stats
-    // --------------------------------------------
     let totalContentLength = 0
     for (const file of includedFiles) {
         if (file.content) {
@@ -882,7 +851,7 @@ export function ProjectSummarizationSettingsPage() {
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
     const updateSettings = useUpdateSettings()
-    const { data: patterns } = useSettingsField('summarizationIgnorePatterns')
+    const { summarizationIgnorePatterns = [] } = useSettings()
     const [newPattern, setNewPattern] = useState("")
 
     function handleAdd() {
@@ -920,12 +889,12 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
                         </Button>
                     </CollapsibleTrigger>
                     <span className="text-sm font-medium">
-                        Current Patterns ({patterns?.length ?? 0})
+                        Current Patterns ({summarizationIgnorePatterns?.length ?? 0})
                     </span>
                 </div>
                 <CollapsibleContent>
                     <ul className="mt-2 space-y-1">
-                        {patterns?.map((pattern, idx) => (
+                        {summarizationIgnorePatterns?.map((pattern, idx) => (
                             <li
                                 key={`${pattern}-${idx}`}
                                 className="flex items-center justify-between rounded p-1 hover:bg-accent/10"

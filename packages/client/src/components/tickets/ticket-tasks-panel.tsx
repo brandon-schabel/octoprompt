@@ -5,8 +5,8 @@ import { Button } from "../ui/button";
 import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Circle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { TicketTask } from "shared/schema";
 import { toast } from "sonner";
+import { Task } from "@/hooks/generated";
 
 interface TicketTasksPanelProps {
     ticketId: string;
@@ -19,7 +19,7 @@ interface TicketTasksPanelProps {
  * - Bulleted
  * - Comma-separated
  */
-function formatTasks(mode: "markdown" | "bulleted" | "comma", tasks: TicketTask[]): string {
+function formatTasks(mode: "markdown" | "bulleted" | "comma", tasks: Task[]): string {
     switch (mode) {
         case "markdown":
             return tasks
@@ -55,7 +55,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
         setNewTaskContent("");
     };
 
-    const handleToggleDone = (e: React.MouseEvent, task: TicketTask) => {
+    const handleToggleDone = (e: React.MouseEvent, task: Task) => {
         e.preventDefault();
         e.stopPropagation();
         updateTaskMut.mutate({
@@ -65,7 +65,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
         });
     };
 
-    const handleDeleteTask = (e: React.MouseEvent, task: TicketTask) => {
+    const handleDeleteTask = (e: React.MouseEvent, task: Task) => {
         e.preventDefault();
         e.stopPropagation();
         deleteTaskMut.mutate({ ticketId, taskId: task.id });

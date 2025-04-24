@@ -125,14 +125,14 @@ powershell -c "irm bun.sh/install.ps1 | iex"
      bun run client:dev
      ```
 
-   - **Server** (runs on port 3000):
+   - **Server** (runs on port 3147):
 
      ```bash
      bun run server:dev
      ```
 
    The client is available at [http://localhost:5173](http://localhost:5173)  
-   The server is available at [http://localhost:3000](http://localhost:3000)
+   The server is available at [http://localhost:3147](http://localhost:3147)
 
 ---
 

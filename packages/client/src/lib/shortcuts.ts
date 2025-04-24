@@ -1,15 +1,9 @@
-/**
- * Utility to detect Mac vs. non-Mac. 
- */
+
 export function isMacOS(): boolean {
     if (typeof window === 'undefined') return false
     return navigator.platform.toLowerCase().includes('mac')
 }
 
-/**
- * Common modifier key mapping. 
- * For any custom naming or more advanced logic, you can expand this map.
- */
 const MODIFIER_KEY_MAP = {
     command: '⌘',
     cmd: '⌘',
@@ -30,18 +24,13 @@ const MODIFIER_KEY_MAP = {
 
 export type ModifierKey = keyof typeof MODIFIER_KEY_MAP
 
-/**
- * Convert a single key token to the appropriate display value.
- */
 function toDisplayKey(rawKey: string): string {
     const lower = rawKey.toLowerCase().trim()
 
-    // Special case "mod" which we want to be "⌘" on mac and "^" elsewhere
     if (lower === 'mod') {
         return isMacOS() ? '⌘' : '^'
     }
 
-    // If one of the known modifiers, return its symbol
     if (MODIFIER_KEY_MAP[lower as ModifierKey]) {
         return MODIFIER_KEY_MAP[lower as ModifierKey]
     }
@@ -50,10 +39,6 @@ function toDisplayKey(rawKey: string): string {
     return rawKey.toUpperCase()
 }
 
-/**
- * Convert something like "mod+shift+p" or ["mod", "shift", "p"] 
- * into a single string display, e.g. "⌘ + ⇧ + P" on macOS.
- */
 export function formatShortcut(
     shortcut: string | string[],
     delimiter = ' + ',
@@ -63,9 +48,6 @@ export function formatShortcut(
     return mapped.join(delimiter)
 }
 
-/**
- * Updated shortcut map to include everything from your help text.
- */
 export const shortCutMap = {
     // Global Navigation
     'open-command-palette': ['mod', 'k'],

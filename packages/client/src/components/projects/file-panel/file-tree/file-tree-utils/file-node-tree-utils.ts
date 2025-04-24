@@ -1,4 +1,4 @@
-import { ProjectFile } from 'shared/schema'
+import { ProjectFile } from '@/hooks/generated'
 import { TsconfigCache } from './import-resolver'
 
 export type FileNode = {

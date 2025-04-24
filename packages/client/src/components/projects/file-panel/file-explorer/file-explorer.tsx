@@ -1,7 +1,5 @@
-import React, { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-import { useActiveProjectTab } from '@/zustand/selectors'
-import { useGetProject, useGetProjectFiles } from '@/hooks/api/use-projects-api'
+// Import the refactored hooks
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,12 +11,9 @@ import { formatShortcut } from '@/lib/shortcuts'
 import { X } from 'lucide-react'
 import { ResizablePanel } from '@/components/ui/resizable-panel'
 import { useHotkeys } from 'react-hotkeys-hook'
-
-import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
+import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-
-import type { ProjectFile } from 'shared/schema'
-import { useClickAway } from '@/hooks/use-click-away'
+import { useClickAway } from '@/hooks/utility-hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
 import { buildFileTree } from '../../utils/projects-utils'
 import { FileTreeRef, FileTree } from '../file-tree/file-tree'
@@ -29,7 +24,10 @@ import { SelectedFilesDrawer } from '../../selected-files-drawer'
 import { AIFileChangeDialog } from '@/components/file-changes/ai-file-change-dialog'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
-import { PROJECT_FILES_KEYS } from '@/hooks/api/use-projects-api'
+import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
+import { ProjectFile } from '@/hooks/generated/types.gen'
+import { useActiveProjectTab } from '@/hooks/api/use-state-api'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>
@@ -44,14 +42,21 @@ type FileExplorerProps = {
 }
 
 export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) {
-  const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
-  /**
-   * The server will do a fresh sync (via "GET /api/projects/:id/files")
-   * then we store them in React Query's cache.
-   */
-  const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId || '')
-  const { data: projectData } = useGetProject(selectedProjectId || '')
+  const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
+  const selectedProjectId = activeProjectTabState?.selectedProjectId
   const queryClient = useQueryClient()
+
+  const {
+    data: fileDataResponse,
+    isLoading: filesLoading,
+  } = useGetProjectFiles(activeProjectTabState?.selectedProjectId || '')
+
+  const {
+    data: projectDataResponse,
+  } = useGetProject(activeProjectTabState?.selectedProjectId || '')
+
+  const projectFiles = useMemo(() => fileDataResponse?.data || [], [fileDataResponse]);
+  const project = useMemo(() => projectDataResponse?.data, [projectDataResponse]);
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
   const closeFileViewer = () => setViewedFile(null)
@@ -92,20 +97,19 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     },
     [debouncedSetFileSearch]
   )
-
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
 
   const filteredFiles = useMemo(() => {
-    if (!fileData?.files) return []
+    if (!projectFiles) return []
     const trimmed = (localFileSearch || '').trim().toLowerCase()
-    if (!trimmed) return fileData.files
+    if (!trimmed) return projectFiles
     if (searchByContent) {
-      return fileData.files.filter((f) => {
-        return f.path.toLowerCase().includes(trimmed) || f.content?.toLowerCase().includes(trimmed)
+      return projectFiles.filter((f) => {
+        return f.path.toLowerCase().includes(trimmed) || (f.content && f.content.toLowerCase().includes(trimmed))
       })
     }
-    return fileData.files.filter((f) => f.path.toLowerCase().includes(trimmed))
-  }, [fileData?.files, localFileSearch, searchByContent])
+    return projectFiles.filter((f) => f.path.toLowerCase().includes(trimmed))
+  }, [projectFiles, localFileSearch, searchByContent])
 
   const fileTree = useMemo(() => {
     if (!filteredFiles.length) return {}
@@ -151,7 +155,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       <SelectedFilesDrawer
         selectedFiles={selectedFiles}
         fileMap={projectFileMap}
-        onRemoveFile={() => {}}
+        onRemoveFile={() => { }}
         trigger={trigger}
         projectTabId={activeProjectTabId ?? ''}
       />
@@ -159,7 +163,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   }
 
   const handleRequestAIFileChange = (filePath: string) => {
-    const file = fileData?.files?.find((f) => f.path === filePath)
+    // Use the derived `projectFiles` array
+    const file = projectFiles?.find((f) => f.path === filePath)
     if (file) {
       setSelectedFile(file)
       setAiDialogOpen(true)
@@ -267,7 +272,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         </InfoTooltip>
 
         <div className='flex lg:hidden items-center justify-between'>{renderMobileSelectedFilesDrawerButton()}</div>
-
         {showAutocomplete && (localFileSearch || '').trim() && suggestions.length > 0 && (
           <ul className='absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto'>
             <li className='px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border'>
@@ -279,9 +283,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               return (
                 <li
                   key={file.id}
-                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
-                    isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
-                  }`}
+                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                    }`}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -303,7 +306,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           <Skeleton className='h-8 w-1/2' />
           <Skeleton className='h-8 w-2/3' />
         </div>
-      ) : !fileData?.files?.length ? (
+      ) : !projectFiles.length ? (
         <EmptyProjectScreen
           fileSearch={localFileSearch}
           setFileSearch={setLocalFileSearch}
@@ -331,7 +334,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                       ref={ref.fileTreeRef}
                       root={fileTree}
                       onViewFile={setViewedFile}
-                      projectRoot={''}
+                      projectRoot={project?.path || ''}
                       resolveImports={resolveImports}
                       preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                       onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
@@ -374,7 +377,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                 ref={ref.fileTreeRef}
                 root={fileTree}
                 onViewFile={setViewedFile}
-                projectRoot={''}
+                projectRoot={project?.path || ''}
                 resolveImports={resolveImports}
                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                 onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
@@ -386,19 +389,20 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         </div>
       )}
 
-      {projectData?.project && (
+      {project && (
         <AIFileChangeDialog
           open={aiDialogOpen}
           onOpenChange={setAiDialogOpen}
-          filePath={(projectData?.project?.path || '') + '/' + (selectedFile?.path || '')}
+          filePath={`${project.path}/${selectedFile?.path || ''}`}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(selectedProjectId || '') })
+            queryClient.invalidateQueries({ queryKey: ['projectFiles', selectedProjectId || ''] })
             setAiDialogOpen(false)
             setSelectedFile(undefined)
           }}
         />
       )}
 
+      {/* FileViewerDialog uses `viewedFile` state, unchanged */}
       {viewedFile && <FileViewerDialog viewedFile={viewedFile} open={!!viewedFile} onClose={closeFileViewer} />}
     </div>
   )

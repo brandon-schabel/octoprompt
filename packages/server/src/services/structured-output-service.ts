@@ -1,81 +1,79 @@
 import { structuredOutputSchemas, StructuredOutputType, InferStructuredOutput } from "shared/src/structured-outputs/structured-output-schema";
-import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { ApiError } from "shared";
-import { zodToStructuredJsonSchema } from "shared/src/structured-outputs/structured-output-utils";
+// No longer need zodToStructuredJsonSchema or fetchStructuredOutput utils here
 import { z } from "zod";
-import { DEFAULT_MODEL_CONFIGS } from "shared";
-import { openRouterProvider } from "./model-providers/providers/open-router-provider";
+import { DEFAULT_MODEL_CONFIGS, } from "shared";
+// Import the refactored unified provider
+import { unifiedProvider } from "./model-providers/providers/unified-provider-service";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
+
 
 interface GenerateStructuredOutputOptions<T extends StructuredOutputType> {
     outputType: T;
-    userMessage: string;
+    userMessage: string; // Use userMessage instead of prompt for consistency
     systemMessage?: string;
+    provider?: APIProviders; // Allow specifying provider
     model?: string;
     temperature?: number;
-    chatId?: string;
-    /**
-     * When true, the service will automatically append
-     * the JSON schema to the system prompt. This can
-     * help some models produce valid JSON more consistently.
-     */
-    appendSchemaToPrompt?: boolean;
+    chatId?: string; // Keep if needed for logging/context, but not directly used by generateObject
+    // appendSchemaToPrompt is no longer needed, generateObject handles schema instruction
 }
 
 /**
- * Generate structured output using a specified schema "type." 
- * The final result is validated by Zod locally (and by OpenRouter's JSON Schema).
+ * Generate structured output using a specified schema "type."
+ * Uses Vercel AI SDK's generateObject for validation and generation.
  */
 export async function generateStructuredOutput<T extends StructuredOutputType>(
     params: GenerateStructuredOutputOptions<T>
 ): Promise<InferStructuredOutput<T>> {
 
-    const cfg = DEFAULT_MODEL_CONFIGS['generate-structured-output'];
+    const cfg = DEFAULT_MODEL_CONFIGS['generate-structured-output']; // e.g., { provider: 'openai', model: 'gpt-4o', temperature: 0.1 }
 
     const {
         outputType,
         userMessage,
-        systemMessage,
+        systemMessage, // Pass this to the helper
+        provider = cfg.provider as APIProviders || 'openai', // Default provider
         model = cfg.model,
         temperature = cfg.temperature,
-        chatId = "structured-output-generic",
-        appendSchemaToPrompt = false,
+        // chatId is not directly used by generateStructuredData, but might be useful contextually
     } = params;
 
-    const zodSchema = structuredOutputSchemas[outputType];
-
-    let finalSystemMessage = systemMessage ?? "";
-    if (appendSchemaToPrompt) {
-        const schemaObj = zodToStructuredJsonSchema(zodSchema);
-        const schemaAsJson = JSON.stringify(schemaObj, null, 2);
-
-        finalSystemMessage += `
-
-IMPORTANT: The output must strictly follow this JSON schema:
-\`\`\`json
-${schemaAsJson}
-\`\`\`
-Return **only** valid JSON matching the above schema.
-`;
+    if (!model) {
+        throw new ApiError(500, `Model not configured for generate-structured-output task.`, "CONFIG_ERROR");
     }
 
-    try {
+    const zodSchema = structuredOutputSchemas[outputType];
+    if (!zodSchema) {
+        throw new ApiError(400, `Unknown structured output type: '${outputType}'`, "SCHEMA_NOT_FOUND");
+    }
 
-        const validatedResult = await fetchStructuredOutput(openRouterProvider, {
-            userMessage,
-            systemMessage: finalSystemMessage,
-            zodSchema: zodSchema as z.ZodType<InferStructuredOutput<T>>,
-            schemaName: outputType,
-            model,
-            temperature,
-            chatId,
+    // Optional: Enhance system prompt if needed, but rely on generateObject primarily
+    let finalSystemMessage = systemMessage ?? `Generate a JSON object based on the user's request, strictly conforming to the required schema. Output ONLY the JSON.`;
+
+    try {
+        // Use the generateStructuredData helper from the unified provider
+        const validatedResult = await unifiedProvider.generateStructuredData({
+            provider: provider,
+            prompt: userMessage, // Pass user message as prompt
+            schema: zodSchema as z.ZodType<InferStructuredOutput<T>>,
+            systemMessage: finalSystemMessage, // Pass system message
+            options: {
+                model: model,
+                temperature: temperature,
+                // Add other options like maxTokens if needed
+            },
         });
 
         return validatedResult;
-    } catch (error) {
+
+    } catch (error: any) {
+        // Catch errors from generateStructuredData (includes model errors, validation errors)
+        console.error(`[StructuredOutputService] Error generating '${outputType}':`, error);
         throw new ApiError(
-            `Failed to generate structured output of type '${outputType}': ${String(error)}`,
             500,
-            "STRUCTURED_OUTPUT_ERROR"
+            `Failed to generate structured output of type '${outputType}': ${error.message || String(error)}`,
+            error instanceof ApiError ? error.code : "STRUCTURED_OUTPUT_ERROR"
         );
     }
 }

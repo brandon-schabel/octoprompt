@@ -5,11 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
-import { ProjectsTabManager } from '@/components/tab-managers/projects-tab-manager'
-import { useCreateProjectTab } from '@/zustand/updaters'
-import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors'
+import { ProjectsTabManager } from '@/components/projects-tab-manager'
+import { useCreateProjectTab } from '@/hooks/api/global-state/updaters'
+import { useAllProjectTabs } from '@/hooks/api/global-state/selectors'
 import { ResizablePanel } from '@/components/ui/resizable-panel'
-import type { Project } from 'shared'
+import { ProjectResponse } from '@/hooks/generated'
+import { useActiveProjectTab } from '@/hooks/api/use-state-api'
 
 export function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
@@ -17,7 +18,8 @@ export function ProjectsPage() {
 
     // All tabs + active tab
     const tabs = useAllProjectTabs()
-    const { selectedProjectId } = useActiveProjectTab()
+    const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
+    const selectedProjectId = activeProjectTabState?.selectedProjectId
     const { data: projects } = useGetProjects()
 
     // Create a new tab from WebSocket side
@@ -28,7 +30,7 @@ export function ProjectsPage() {
     if (noTabsYet) {
         return (
             <NoTabsYetView
-                projects={projects?.projects || []}
+                projects={projects?.data || []}
                 createNewTab={createNewTab}
             />
         )
@@ -117,7 +119,7 @@ function MainProjectsLayout({
 // references to selectedFiles, etc.)
 // -------------------------------------------------------------------------
 type NoTabsYetViewProps = {
-    projects: Project[]
+    projects: ProjectResponse['data'][]
     createNewTab: (args: { projectId: string }) => void
 }
 

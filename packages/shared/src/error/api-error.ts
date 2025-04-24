@@ -7,8 +7,8 @@ export class ApiError extends Error {
     public readonly details?: unknown;
   
     constructor(
-      message: string,
       status = 500,
+      message: string,
       code = 'INTERNAL_ERROR',
       details?: unknown
     ) {
