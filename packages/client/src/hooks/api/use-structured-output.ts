@@ -34,18 +34,15 @@ export function useGenerateStructuredOutput<T extends StructuredOutputType>(outp
         Omit<StructuredOutputRequest<T>, "outputType">
     >({
         mutationFn: async (requestBody: Omit<StructuredOutputRequest<T>, "outputType">) => {
-            // Merge the outputType with the provided request body
             const fullBody: PostApiStructuredOutputsData['body'] = {
                 outputType,
                 ...requestBody,
             };
 
             const opts: Options<PostApiStructuredOutputsData> = { body: fullBody };
-            
-            // Call the generated mutation function
+
             const result = await mutationOptions.mutationFn!(opts);
-            
-            // Validate with Zod schema for additional type safety
+
             const zodSchema = structuredOutputSchemas[outputType];
             return zodSchema.parse(result);
         },

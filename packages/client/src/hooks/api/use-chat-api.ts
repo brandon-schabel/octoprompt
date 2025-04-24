@@ -31,41 +31,31 @@ import type {
     DeleteMessagesByMessageIdError,
     GetModelsData,
 } from '../generated/types.gen';
-import { Options } from '../generated/sdk.gen'; // Only needed if passing full Options<>
+import { Options } from '../generated/sdk.gen';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 
-// Define input types based on generated request body types
 export type CreateChatInput = PostChatsData['body'];
 export type UpdateChatInput = PatchChatsByChatIdData['body'];
 
-// Define Query Keys using generated functions
 const CHAT_KEYS = {
     all: () => getChatsQueryKey(),
-    lists: () => getChatsQueryKey(), // Alias for clarity if needed
-    // No specific 'detail' for a single chat via GET /chats/{id}, lists handle chat entities
+    lists: () => getChatsQueryKey(),
     messages: (chatId: string) => getChatsByChatIdMessagesQueryKey({ path: { chatId } } as Options<GetChatsByChatIdMessagesData>),
 } as const;
 
-// --- Query Hooks ---
-
-// Get all chats
 export function useGetChats() {
-    const queryOptions = getChatsOptions(); // No params needed for base request
+    const queryOptions = getChatsOptions();
     return useQuery(queryOptions);
 }
 
-// Get messages for a specific chat
 export function useGetMessages(chatId: string) {
     const queryOptions = getChatsByChatIdMessagesOptions({ path: { chatId } } as Options<GetChatsByChatIdMessagesData>);
     return useQuery({
         ...queryOptions,
-        enabled: !!chatId, // Only run query if chatId is provided
+        enabled: !!chatId,
     });
 }
 
-// --- Mutation Hooks ---
-
-// Create a new chat
 export function useCreateChat() {
     const queryClient = useQueryClient();
     const mutationOptions = postChatsMutation(); // Get the generated mutation config
@@ -85,7 +75,6 @@ export function useCreateChat() {
     });
 }
 
-// Update chat (e.g., title)
 export function useUpdateChat() {
     const queryClient = useQueryClient();
     const mutationOptions = patchChatsByChatIdMutation();
@@ -107,7 +96,6 @@ export function useUpdateChat() {
     });
 }
 
-// Delete a chat
 export function useDeleteChat() {
     const queryClient = useQueryClient();
     const mutationOptions = deleteChatsByChatIdMutation();
@@ -128,7 +116,6 @@ export function useDeleteChat() {
     });
 }
 
-// Fork a chat (from the beginning)
 export function useForkChat() {
     const queryClient = useQueryClient();
     const mutationOptions = postChatsByChatIdForkMutation();
@@ -147,7 +134,6 @@ export function useForkChat() {
     });
 }
 
-// Fork a chat from a specific message
 export function useForkChatFromMessage() {
     const queryClient = useQueryClient();
     const mutationOptions = postChatsByChatIdForkByMessageIdMutation();
@@ -166,8 +152,6 @@ export function useForkChatFromMessage() {
     });
 }
 
-// Note: deleteMessagesByMessageIdMutation is available if needed, but often message deletion might be handled differently (e.g., soft delete or via chat context)
-// If you need a hook for it:
 
 export function useDeleteMessage() {
     const queryClient = useQueryClient();

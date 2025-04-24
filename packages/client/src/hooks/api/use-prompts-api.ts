@@ -13,8 +13,6 @@ import {
     postApiProjectsByProjectIdPromptsByPromptIdMutation,
     deleteApiProjectsByProjectIdPromptsByPromptIdMutation,
     postApiPromptOptimizeMutation,
-    postApiPromptOptimizeOptions,
-    postApiPromptOptimizeQueryKey,
 } from '../generated/@tanstack/react-query.gen';
 import type {
     GetApiPromptsData,
@@ -71,7 +69,6 @@ export function useGetAllPrompts(options?: GetAllPromptsOptions) {
     });
 }
 
-// Get prompt by ID using generated options
 export function useGetPrompt(id: string) {
     const queryOptions = getApiPromptsByPromptIdOptions({ path: { promptId: id } } as Options<GetApiPromptsByPromptIdData>);
     return useQuery({
@@ -81,7 +78,6 @@ export function useGetPrompt(id: string) {
 }
 
 
-// Create prompt using generated mutation
 export function useCreatePrompt() {
     const queryClient = useQueryClient();
     const mutationOptions = postApiPromptsMutation();
@@ -91,7 +87,7 @@ export function useCreatePrompt() {
         onSuccess: (data, variables, context) => {
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
         },
-        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
@@ -125,11 +121,10 @@ export function useDeletePrompt() {
         onSuccess: (data, variables, context) => {
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all() });
         },
-        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
-// Get prompts by project using generated options
 export function useGetProjectPrompts(projectId: string) {
     const queryOptions = getApiProjectsByProjectIdPromptsOptions({ path: { projectId } } as Options<GetApiProjectsByProjectIdPromptsData>);
     return useQuery({
@@ -139,7 +134,6 @@ export function useGetProjectPrompts(projectId: string) {
 }
 
 
-// Add prompt to project using generated mutation
 export function useAddPromptToProject() {
     const queryClient = useQueryClient();
     const mutationOptions = postApiProjectsByProjectIdPromptsByPromptIdMutation();
@@ -153,7 +147,7 @@ export function useAddPromptToProject() {
             const projectId = variables.projectId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
         },
-        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
@@ -170,7 +164,7 @@ export function useRemovePromptFromProject() {
             const projectId = variables.projectId;
             queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.byProject(projectId) });
         },
-        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
@@ -181,6 +175,6 @@ export const useOptimizePrompt = () => {
             const opts: Options<PostApiPromptOptimizeData> = { body: { userContext } };
             return mutationOptions.mutationFn!(opts);
         },
-        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }

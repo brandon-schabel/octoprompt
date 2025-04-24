@@ -10,8 +10,6 @@ import type {
   GetApiAdminSystemStatusResponse,
 } from '../generated/types.gen';
 
-
-// Re-export types for backward compatibility
 export interface TableCount {
   count: number;
 }
@@ -51,18 +49,16 @@ export interface SystemStatus {
   };
 }
 
-// Updated hooks using generated options
 export const useGetEnvironmentInfo = () => {
   const queryOptions = getApiAdminEnvInfoOptions();
   return useQuery<
-    GetApiAdminEnvInfoResponse, // TQueryFnData
-    Error,                     // TError
-    GetApiAdminEnvInfoResponse, // TData
-    ReturnType<typeof getApiAdminEnvInfoQueryKey> // TQueryKey
+    GetApiAdminEnvInfoResponse, 
+    Error,                     
+    GetApiAdminEnvInfoResponse, 
+    ReturnType<typeof getApiAdminEnvInfoQueryKey> 
   >({
-    queryKey: queryOptions.queryKey, // Use generated key
-    queryFn: queryOptions.queryFn,   // Use generated function
-    // queryKey: ADMIN_KEYS.envInfo(), // Use consistent key for cache management - Use generated key instead
+    queryKey: queryOptions.queryKey,
+    queryFn: queryOptions.queryFn,
     refetchOnWindowFocus: false,
     retry: 1,
   });
@@ -76,11 +72,10 @@ export const useGetSystemStatus = () => {
     GetApiAdminSystemStatusResponse,
     ReturnType<typeof getApiAdminSystemStatusQueryKey>
   >({
-    queryKey: queryOptions.queryKey, // Use generated key
-    queryFn: queryOptions.queryFn,   // Use generated function
-    // queryKey: ADMIN_KEYS.systemStatus(), // Use consistent key for cache management - Use generated key instead
+    queryKey: queryOptions.queryKey,
+    queryFn: queryOptions.queryFn,
     refetchOnWindowFocus: false,
     retry: 1,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 };

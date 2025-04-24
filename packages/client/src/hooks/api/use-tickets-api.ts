@@ -81,7 +81,6 @@ const TICKET_KEYS = {
         } as Options<GetApiProjectsByProjectIdTicketsWithTasksData>),
 };
 
-// List tickets by project
 export function useListTickets(projectId: string, status?: string) {
     const queryOptions = getApiProjectsByProjectIdTicketsOptions({
         path: { projectId },
@@ -106,7 +105,6 @@ export function useListTicketsWithCount(projectId: string, status?: string) {
     });
 }
 
-// Create a new ticket
 export function useCreateTicket() {
     const queryClient = useQueryClient();
     const mutationOptions = postApiTicketsMutation();
@@ -117,7 +115,6 @@ export function useCreateTicket() {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: (data: any) => {
-            // Invalidate all ticket queries for this project
             if (data.ticket?.projectId) {
                 queryClient.invalidateQueries({
                     queryKey: TICKET_KEYS.all,
@@ -129,7 +126,6 @@ export function useCreateTicket() {
     });
 }
 
-// Update a ticket
 export function useUpdateTicket() {
     const queryClient = useQueryClient();
     const mutationOptions = patchApiTicketsByTicketIdMutation();
@@ -143,7 +139,6 @@ export function useUpdateTicket() {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: (data: any) => {
-            // Invalidate all ticket queries for this project
             if (data.ticket?.projectId) {
                 queryClient.invalidateQueries({
                     queryKey: TICKET_KEYS.all,

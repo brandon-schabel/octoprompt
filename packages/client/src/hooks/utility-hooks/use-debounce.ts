@@ -1,19 +1,5 @@
-/*
- * File: use-debounce.ts
- * Purpose: Provides hooks for debouncing values and functions
- * Key Features:
- * - Debounces any value type
- * - Debounces function calls
- * - Configurable delay
- * 
- * Most Recent Changes:
- * - Added value debouncing
- * - Kept function debouncing as useDebounceCallback
- */
-
 import { useCallback, useRef, useState, useEffect } from 'react'
 
-// Debounce values (like search input)
 export function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
@@ -30,7 +16,6 @@ export function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue
 }
 
-// Debounce function calls (original implementation)
 export function useDebounceCallback<T extends (...args: any[]) => void>(
     callback: T,
     delay: number

@@ -47,7 +47,6 @@ export function useUpdateState() {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: () => {
-            // Invalidate state queries to trigger a refetch
             queryClient.invalidateQueries({ queryKey: STATE_KEYS.all });
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),

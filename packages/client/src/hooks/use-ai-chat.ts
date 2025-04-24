@@ -1,4 +1,3 @@
-// packages/client/src/components/chat/hooks/use-ai-chat.tsx
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { ChatModelSettings } from 'shared';
