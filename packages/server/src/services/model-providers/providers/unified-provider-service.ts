@@ -21,7 +21,6 @@ import { ProcessMessageParams, AISdkOptions } from "./unified-provider-types";
 import { createChatService } from "../chat/chat-service";
 import { parseStructuredJson } from '@/utils/structured-output-fetcher';
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
-import { getCurrentState } from '@/services/state/state-service';
 
 // --- Constants for Base URLs (Can be overridden by settings) ---
 // Use the base URLs defined in the user's guide's .env section
@@ -60,7 +59,6 @@ export function createUnifiedProviderService(debugParam = false) {
         provider: APIProviders,
         options: AISdkOptions = {}
     ): Promise<LanguageModel> {
-        const state = await getCurrentState();
         const modelId = options.model || DEFAULT_MODEL_CONFIGS[provider]?.model || '';
 
         if (!modelId) {
@@ -104,7 +102,7 @@ export function createUnifiedProviderService(debugParam = false) {
             }
             // --- OpenAI Compatible Providers ---
             case "lmstudio": {
-                const lmStudioUrl = state.settings.lmStudioGlobalUrl || DEFAULT_LMSTUDIO_BASE_URL;
+                const lmStudioUrl = DEFAULT_LMSTUDIO_BASE_URL;
                 if (!lmStudioUrl) throw new Error("LMStudio Base URL not configured.");
                 // Use the generic createOpenAI factory for compatible endpoints
                 return createOpenAI({
@@ -126,7 +124,7 @@ export function createUnifiedProviderService(debugParam = false) {
             }
             // --- Local Providers ---
             case "ollama": {
-                const ollamaUrl = state.settings.ollamaGlobalUrl || DEFAULT_OLLAMA_BASE_URL;
+                const ollamaUrl = DEFAULT_OLLAMA_BASE_URL;
                 if (!ollamaUrl) throw new Error("Ollama Base URL not configured.");
                 // Ensure ollama-ai-provider follows the Vercel SDK factory pattern
                 // It might be `ollama({ baseURL: ollamaUrl })(modelId)` or similar

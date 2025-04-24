@@ -5,7 +5,6 @@ import { relative } from 'node:path';
 import { summarizeFiles } from './file-summary-service';
 import { syncProject } from './file-sync-service';
 import { resolvePath } from '@/utils/path-utils';
-import { getCurrentState } from '../state/state-service';
 
 export function createFileChangePlugin(
 ) {
@@ -31,11 +30,9 @@ export function createFileChangePlugin(
                     if (!updatedFile) {
                         return;
                     }
-                    const globalState = await getCurrentState();
                     await summarizeFiles(
                         project.id,
                         [updatedFile],
-                        globalState
                     );
                 } catch (err) {
                     console.error('[FileChangePlugin] Error handling change:', err);

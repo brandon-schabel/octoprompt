@@ -1,10 +1,8 @@
 import { db } from "@/utils/database";
 import { GlobalState, DEFAULT_MODEL_CONFIGS, } from "shared";
-import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
-import { getCurrentState } from "../state/state-service";
 let concurrency = 5;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -16,15 +14,15 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 export async function shouldSummarizeFile(projectId: string, filePath: string): Promise<boolean> {
-    const state = await getCurrentState();
-    const s = state.settings;
-    if (!s.summarizationEnabledProjectIds.includes(projectId)) return false;
-    if (matchesAnyPattern(filePath, s.summarizationIgnorePatterns)) {
-        // if ignore matched, only allow if it also matches an allow pattern
-        if (!matchesAnyPattern(filePath, s.summarizationAllowPatterns)) {
-            return false;
-        }
-    }
+    // const state = await getCurrentState();
+    // const s = state.settings;
+    // if (!s.summarizationEnabledProjectIds.includes(projectId)) return false;
+    // if (matchesAnyPattern(filePath, s.summarizationIgnorePatterns)) {
+    //     // if ignore matched, only allow if it also matches an allow pattern
+    //     if (!matchesAnyPattern(filePath, s.summarizationAllowPatterns)) {
+    //         return false;
+    //     }
+    // }
     return true;
 }
 
@@ -115,10 +113,9 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
 export async function summarizeFiles(
     projectId: string,
     filesToSummarize: ProjectFile[],
-    globalState: GlobalState
 ): Promise<{ included: number; skipped: number }> {
-    const allowedProject = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
-    if (!allowedProject) return { included: 0, skipped: filesToSummarize.length };
+    // const allowedProject = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
+    // if (!allowedProject) return { included: 0, skipped: filesToSummarize.length };
 
     const chunks = chunkArray(filesToSummarize, concurrency);
     let includedCount = 0;
@@ -163,9 +160,7 @@ export async function summarizeFiles(
  * Forces summarization of files regardless of existing summary.
  */
 export async function forceSummarizeFiles(
-    projectId: string,
     filesToSummarize: ProjectFile[],
-    globalState: GlobalState
 ) {
     const chunks = chunkArray(filesToSummarize, concurrency);
     for (const chunk of chunks) {

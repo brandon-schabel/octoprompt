@@ -6,7 +6,6 @@ import { structuredOutputRoutes } from './routes/structured-output-routes';
 import { ticketRoutes } from './routes/ticket-routes';
 import { projectRoutes } from './routes/project-routes';
 import { providerKeyRoutes } from './routes/provider-key-routes';
-import { stateRoutes } from './routes/state-routes';
 import { adminRoutes } from './routes/admin-routes';
 import { aiFileChangeRoutes } from './routes/ai-file-change-routes';
 import { promptRoutes } from './routes/prompt-routes';
@@ -55,7 +54,6 @@ app.route('/', structuredOutputRoutes)
 app.route('/', ticketRoutes)
 app.route('/', projectRoutes)
 app.route('/', providerKeyRoutes)
-app.route('/', stateRoutes)
 app.route('/', adminRoutes)
 app.route('/', aiFileChangeRoutes)
 app.route('/', promptRoutes)
