@@ -9,11 +9,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -60,11 +55,11 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     }
     promptimizeMutation.mutate(expandedValue, {
       onSuccess: (resp) => {
-        if (resp.data.success && resp.data.optimizedPrompt) {
+        if (resp.success && resp.data?.optimizedPrompt) {
           setOptimizedPrompt(resp.data.optimizedPrompt)
           setPromptimizeDialogOpen(true)
         } else {
-          toast.error(resp.error || "No optimized prompt returned")
+          toast.error("Optimization failed or no prompt returned")
         }
       },
     })

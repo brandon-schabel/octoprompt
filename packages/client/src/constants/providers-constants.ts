@@ -1,4 +1,4 @@
-import { APIProviders } from "shared/index"
+import { APIProviders } from "shared/src/schemas/provider-key.schemas"
 
 
 export type ModelProvider = {

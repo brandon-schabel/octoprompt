@@ -30,6 +30,7 @@ import type {
     DeleteApiProjectsByProjectIdPromptsByPromptIdError,
     PostApiPromptOptimizeError,
     PostApiPromptOptimizeData,
+    PostApiPromptOptimizeResponse,
 } from '../generated/types.gen';
 import { Options } from '../generated/sdk.gen';
 
@@ -170,7 +171,7 @@ export function useRemovePromptFromProject() {
 
 export const useOptimizePrompt = () => {
     const mutationOptions = postApiPromptOptimizeMutation();
-    return useMutation<unknown, PostApiPromptOptimizeError, string>({
+    return useMutation<PostApiPromptOptimizeResponse, PostApiPromptOptimizeError, string>({
         mutationFn: (userContext: string) => {
             const opts: Options<PostApiPromptOptimizeData> = { body: { userContext } };
             return mutationOptions.mutationFn!(opts);

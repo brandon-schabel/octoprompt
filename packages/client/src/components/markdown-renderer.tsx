@@ -25,7 +25,7 @@ export function MarkdownRenderer({
     copyToClipboard,
 }: MarkdownRendererProps) {
 
-    const { isDarkMode, selectedTheme } = useThemeSettings()
+    const { isDarkMode, selectedSyntaxTheme } = useThemeSettings()
 
     const components: Components = {
         // @ts-ignore
@@ -55,7 +55,7 @@ export function MarkdownRenderer({
                         {/* @ts-ignore */}
                         <SyntaxHighlighter
                             language={match[1]}
-                            style={selectedTheme}
+                            style={selectedSyntaxTheme}
                             showLineNumbers
                             wrapLongLines
                         >

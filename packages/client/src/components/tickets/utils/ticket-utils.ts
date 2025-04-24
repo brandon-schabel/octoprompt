@@ -1,9 +1,8 @@
-import type { TicketTask } from "shared/schema";
-import type { Ticket } from "shared/schema";
+import { Ticket, Task, TicketWithTasks } from "@/hooks/generated/types.gen";
 
 export function buildTicketContent(
-    ticket: Ticket & { tasks?: TicketTask[] },
-    tasks?: TicketTask[]
+    ticket: Ticket,
+    tasks?: Task[]
 ): string {
     let content = '';
 
@@ -26,7 +25,7 @@ export function buildTicketContent(
     content += '\n';
 
     // Tasks section
-    const taskList = ticket.tasks || tasks;
+    const taskList = tasks;
     if (taskList && taskList.length > 0) {
         content += `## Tasks\n`;
         taskList.sort((a, b) => a.orderIndex - b.orderIndex)

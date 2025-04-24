@@ -28,7 +28,7 @@ export function ModelSelector({
     const modelOptions = data?.data.map((m) => ({
         id: m.id,
         displayName: m.name,
-        description: m.description || '',
+        // description: m.description || '',
     })) ?? []
 
     // Auto-select first model when options become available and no model is selected
@@ -36,7 +36,7 @@ export function ModelSelector({
     useEffect(() => {
         // Check if the current model is valid for the selected provider
         const isCurrentModelValid = modelOptions.some(model => model.id === currentModel)
-        
+
         if ((!currentModel || !isCurrentModelValid) && modelOptions.length > 0) {
             onModelChange(modelOptions[0].id)
         }
@@ -65,7 +65,7 @@ export function ModelSelector({
                                 {option.label}
                             </SelectItem>
                         ))}
-                 
+
                     </SelectContent>
                 </Select>
             </div>
@@ -111,9 +111,9 @@ export function ModelSelector({
                                         className="flex flex-col items-start"
                                     >
                                         <div className="font-medium">{model.displayName}</div>
-                                        <div className="text-xs text-muted-foreground">
+                                        {/* <div className="text-xs text-muted-foreground">
                                             {model.description}
-                                        </div>
+                                        </div> */}
                                     </CommandItem>
                                 ))}
                             </CommandList>

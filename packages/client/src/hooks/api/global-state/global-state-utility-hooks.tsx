@@ -18,10 +18,6 @@ import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
 // Import the necessary API hooks and types
 import { ProjectTabState, Theme } from "@/hooks/generated";
 import { useActiveProjectTab, useProjectTabsState } from "../use-state-api";
-// Remove useUpdateState unless PUT /api/state is still used somewhere
-// import { useUpdateState } from "@/hooks/api/use-state-api";
-// Remove ReplaceStateBody unless PUT /api/state is used
-// import { AppSettings, ReplaceStateBody } from "@/hooks/generated";
 
 
 // --- Debounce and isEqual Utilities (Keep as they are useful) ---
@@ -74,15 +70,6 @@ function isEqual(a: any, b: any): boolean {
 }
 
 
-// --- [DEPRECATED] useZustandGenericField ---
-// This hook is difficult to adapt to the API-centric model where updates
-// target top-level state keys. Hooks like useProjectTabField should be
-// implemented directly using API state hooks.
-/*
-export function useZustandGenericField<T extends object, K extends keyof T>(...) {
-  // ... original implementation ...
-}
-*/
 
 
 // --- [REFACTORED] useProjectTabField ---
@@ -112,7 +99,7 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
 
   // 5. Define the mutate function
   const mutate = useCallback(
-    (valueOrFn: ProjectTabState[K] | ((prevVal: ProjectTabState[K] | undefined) => ProjectTabState[K])) => {
+    (valueOrFn: ProjectTabState[K] | ((prevVal: ProjectTabState[K] | null | undefined) => ProjectTabState[K])) => {
       if (!targetTabId) {
         console.warn("Cannot mutate project tab field: No target tab ID.");
         return;
@@ -127,7 +114,8 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
       const oldVal = tabData[fieldKey];
       const newVal =
         typeof valueOrFn === "function"
-          ? (valueOrFn as (prev: ProjectTabState[K] | undefined) => ProjectTabState[K])(oldVal)
+          // @ts-ignore
+          ? (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
           : valueOrFn;
 
       // Call the refactored updateTab hook, which handles the API call

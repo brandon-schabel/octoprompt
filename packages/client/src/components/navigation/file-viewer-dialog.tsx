@@ -46,7 +46,7 @@ export function FileViewerDialog({
     const [isEditingFile, setIsEditingFile] = useState(false)
     const [editedContent, setEditedContent] = useState<string>('')
     const [showRawMarkdown, setShowRawMarkdown] = useState(false)
-    const { isDarkMode, selectedTheme } = useThemeSettings()
+    const { isDarkMode, selectedSyntaxTheme } = useThemeSettings()
 
     const { copyToClipboard } = useCopyClipboard()
 
@@ -169,7 +169,7 @@ export function FileViewerDialog({
                                     {/* @ts-ignore */}
                                     <SyntaxHighlighter
                                         language="markdown"
-                                        style={selectedTheme}
+                                        style={selectedSyntaxTheme}
                                         showLineNumbers
                                         wrapLongLines
                                     >
@@ -186,7 +186,7 @@ export function FileViewerDialog({
                             // @ts-ignore
                             <SyntaxHighlighter
                                 language={getLanguageByExtension(viewedFile?.extension)}
-                                style={selectedTheme}
+                                style={selectedSyntaxTheme}
                                 showLineNumbers
                                 wrapLongLines
                             >

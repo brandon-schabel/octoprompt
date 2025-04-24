@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 import { toast } from "sonner"
-import { Prompt } from "shared"
 
 import { useGetAllPrompts, useGetProjectPrompts, useAddPromptToProject, useRemovePromptFromProject } from "@/hooks/api/use-prompts-api"
 
