@@ -1,5 +1,35 @@
 import { db } from "@/utils/database";
-import { ProviderKey, ProviderKeySchema } from "shared/src/schemas/provider-key.schemas";
+import { CreateProviderKeyInputSchema, ProviderKey, ProviderKeySchema } from "shared/src/schemas/provider-key.schemas";
+import { parseTimestamp } from "@/utils/parse-timestamp";
+
+// Add a helper function to convert DB row to ProviderKey format
+function mapDbRowToProviderKey(row: any): ProviderKey | null {
+  if (!row) return null;
+
+
+  const createdAtDate = parseTimestamp(row.created_at);
+  const updatedAtDate = parseTimestamp(row.updated_at);
+
+  if (!createdAtDate || !updatedAtDate) {
+    console.warn(`Skipping row due to invalid or unparseable timestamp: ${JSON.stringify(row)}`);
+    return null;
+  }
+
+  const mapped = {
+    ...row,
+    createdAt: createdAtDate.toISOString(),
+    updatedAt: updatedAtDate.toISOString(),
+  };
+  delete mapped.created_at;
+  delete mapped.updated_at;
+
+  const parseResult = ProviderKeySchema.safeParse(mapped);
+  if (!parseResult.success) {
+    console.error(`Failed to parse provider key data: ${parseResult.error.message}`, mapped);
+    return null;
+  }
+  return parseResult.data;
+}
 
 export type CreateProviderKeyInput = {
   provider: string;
@@ -17,61 +47,65 @@ export type UpdateProviderKeyInput = {
  */
 export function createProviderKeyService() {
   async function createKey(data: CreateProviderKeyInput): Promise<ProviderKey> {
+    const validatedInput = CreateProviderKeyInputSchema.parse(data); // Use the input schema here
+
     const stmt = db.prepare(`
       INSERT INTO provider_keys (provider, key, created_at, updated_at, id)
-      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, lower(hex(randomblob(16))))
+      VALUES (?, ?, unixepoch(), unixepoch(), lower(hex(randomblob(16)))) -- Use unixepoch() for integer timestamps
       RETURNING *
     `);
-    const created = stmt.get(data.provider, data.key);
+    const created = stmt.get(validatedInput.provider, validatedInput.key);
     if (!created) {
-      throw new Error('Failed to create provider key');
+      throw new Error('Failed to create provider key or retrieve the created row.');
     }
-    return ProviderKeySchema.parse(created);
+    const result = mapDbRowToProviderKey(created);
+    if (!result) {
+      throw new Error('Failed to parse created provider key data after creation.'); // Adjusted error
+    }
+    return result;
   }
 
   async function listKeys(): Promise<ProviderKey[]> {
     const stmt = db.prepare(`SELECT * FROM provider_keys`);
     const rows = stmt.all();
-    // return rows.map(ProviderKeySchema.parse);
-    return rows.map((row: any) => ProviderKeySchema.parse(row));
+    // Use the helper function, filter out nulls
+    return rows.map(mapDbRowToProviderKey).filter((key): key is ProviderKey => key !== null);
   }
 
   async function getKeyById(id: string): Promise<ProviderKey | null> {
     const stmt = db.prepare(`SELECT * FROM provider_keys WHERE id = ? LIMIT 1`);
     const found = stmt.get(id);
-    if (!found) return null;
-    return ProviderKeySchema.parse(found);
+    return mapDbRowToProviderKey(found);
   }
 
   async function updateKey(id: string, data: UpdateProviderKeyInput): Promise<ProviderKey | null> {
     const stmt = db.prepare(`
-      UPDATE provider_keys 
-      SET 
+      UPDATE provider_keys
+      SET
         provider = COALESCE(?, provider),
         key = COALESCE(?, key),
-        updated_at = CURRENT_TIMESTAMP 
+        updated_at = unixepoch() -- Use unixepoch() for integer timestamps
       WHERE id = ?
       RETURNING *
     `);
     const provider = data.provider ?? null;
     const key = data.key ?? null;
     const updated = stmt.get(provider, key, id);
-    if (!updated) return null;
-    return ProviderKeySchema.parse(updated);
+    return mapDbRowToProviderKey(updated);
   }
 
   async function deleteKey(id: string): Promise<boolean> {
-    const stmt = db.prepare(`DELETE FROM provider_keys WHERE id = ? RETURNING *`);
-    const deleted = stmt.get(id);
-    return !!deleted;
+    const stmt = db.prepare(`DELETE FROM provider_keys WHERE id = ?`);
+    const deletedInfo = stmt.run(id); // run() returns { changes, lastInsertRowid }
+    return deletedInfo.changes > 0;
   }
 
   return {
-    createKey,
-    listKeys,
-    getKeyById,
-    updateKey,
-    deleteKey,
+    createKey: createKey,
+    listKeys: listKeys,
+    getKeyById: getKeyById,
+    updateKey: updateKey,
+    deleteKey: deleteKey,
   };
 }
 

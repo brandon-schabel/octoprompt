@@ -7,7 +7,6 @@ import {
 } from "@/services/project-service";
 import { randomString } from "./test-utils";
 import { db, resetDatabase } from "@db";
-import type { RawFile } from "@/services/project-service";
 
 /**
  * Mocks/stubs for external calls we don't want to execute in real tests.
@@ -127,19 +126,28 @@ describe("Project Service", () => {
             VALUES (?, ?, ?, ?, ?, ?, NULL, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING *
         `);
-        const insertedFile = stmt.get(project.id, "TestFile", "src/TestFile.ts", ".ts", 123, "initial content") as RawFile;
+        const insertedFile: any = stmt.get(project.id, "TestFile", "src/TestFile.ts", ".ts", 123, "initial content");
 
         // Instead of a real delay, inject a timestamp 1 second later
         const updatedAt = new Date(new Date(insertedFile.updated_at).valueOf() + 1000);
         const updatedFile = await updateFileContent(insertedFile.id, "new content", { updatedAt });
 
         expect(updatedFile.content).toBe("new content");
-        expect(updatedFile.updatedAt.valueOf()).toBe(updatedAt.valueOf());
-        expect(updatedFile.updatedAt.valueOf()).toBeGreaterThan(new Date(insertedFile.updated_at).valueOf());
+        expect(updatedFile.updatedAt).toBe(updatedAt.toISOString());
+        expect(new Date(updatedFile.updatedAt).valueOf()).toBeGreaterThan(new Date(insertedFile.updated_at).valueOf());
     });
 
     test("resummarizeAllFiles calls syncProject and forceSummarizeFiles", async () => {
         const project = await createProject({ name: "Summaries", path: "/sum" });
+        const stmt = db.prepare(`
+            INSERT INTO files (project_id, name, path, extension, size, content, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `);
+        stmt.run(project.id, "dummy.txt", "dummy.txt", ".txt", 10, "content");
+
+        syncProjectMock.mockClear();
+        forceSummarizeFilesMock.mockClear();
+
         await resummarizeAllFiles(project.id);
 
         // The mocks should have been called
@@ -160,8 +168,8 @@ describe("Project Service", () => {
             VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING *
         `);
-        const f1 = stmt.get(project.id, "file1", "file1.ts", ".ts", 111) as RawFile;
-        const f2 = stmt.get(project.id, "file2", "file2.ts", ".ts", 222) as RawFile;
+        const f1: any = stmt.get(project.id, "file1", "file1.ts", ".ts", 111);
+        const f2: any = stmt.get(project.id, "file2", "file2.ts", ".ts", 222);
 
         forceSummarizeFilesMock.mockClear();
         // Only re-summarize f1
@@ -178,13 +186,13 @@ describe("Project Service", () => {
             VALUES (?, ?, ?, ?, ?, NULL, NULL, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING *
         `);
-        const f1 = stmt.get(project.id, "f1", "f1.ts", ".ts", 100) as RawFile;
-        const f2 = stmt.get(project.id, "f2", "f2.ts", ".ts", 200) as RawFile;
+        const f1: any = stmt.get(project.id, "f1", "f1.ts", ".ts", 100);
+        const f2: any = stmt.get(project.id, "f2", "f2.ts", ".ts", 200);
 
         const result = await summarizeSelectedFiles(project.id, [f1.id, f2.id]);
         expect(result.included).toBe(2);
         expect(result.skipped).toBe(1); // this matches the mock's default
-        expect(result.message).toBe("Requested files have been summarized");
+        expect(result.message).toBe("Requested 2 files have been processed for summarization");
     });
 
     test("removeSummariesFromFiles updates summary fields to null", async () => {
@@ -195,14 +203,14 @@ describe("Project Service", () => {
             VALUES (?, ?, ?, ?, ?, NULL, ?, 0, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING *
         `);
-        const fileWithSummary = stmt.get(project.id, "HasSummary", "sum.ts", ".ts", 50, "Existing summary text") as RawFile;
+        const fileWithSummary: any = stmt.get(project.id, "HasSummary", "sum.ts", ".ts", 50, "Existing summary text");
 
         const result = await removeSummariesFromFiles(project.id, [fileWithSummary.id]);
         expect(result.success).toBe(true);
         expect(result.removedCount).toBe(1);
 
         const fetchStmt = db.prepare("SELECT * FROM files WHERE id = ?");
-        const fetched = fetchStmt.get(fileWithSummary.id) as RawFile;
+        const fetched: any = fetchStmt.get(fileWithSummary.id);
         expect(fetched.summary).toBeNull();
     });
 

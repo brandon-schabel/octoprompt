@@ -3,7 +3,7 @@ import { buildPromptContent, calculateTotalTokens, buildFileTree } from './proje
 import type { ProjectFile } from '../../../hooks/generated'
 // Mock data
 const mockPrompts = {
-    prompts: [
+    data: [
         { id: 'p1', name: 'Prompt One', content: 'This is prompt one content.' },
         { id: 'p2', name: 'Prompt Two', content: 'Prompt two: Some instructions here.' },
     ]

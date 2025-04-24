@@ -1,5 +1,6 @@
 // packages/server/src/services/project-service.ts
 import { db } from "@/utils/database";
+import { normalizeToIsoString } from "@/utils/parse-timestamp";
 
 import { forceSummarizeFiles, summarizeFiles } from "./file-services/file-summary-service";
 import { syncProject } from "./file-services/file-sync-service";
@@ -32,8 +33,8 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
             name: row.name,
             description: row.description,
             path: row.path,
-            createdAt: new Date(row.created_at).toISOString(), // Convert number timestamp to ISO string
-            updatedAt: new Date(row.updated_at).toISOString()  // Convert number timestamp to ISO string
+            createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+            updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
         };
         return ProjectSchema.parse(projectData);
     } catch (error) {
@@ -64,8 +65,8 @@ export async function getProjectById(projectId: string): Promise<Project | null>
             name: row.name,
             description: row.description,
             path: row.path,
-            createdAt: new Date(row.created_at).toISOString(),
-            updatedAt: new Date(row.updated_at).toISOString()
+            createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+            updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
         };
         return ProjectSchema.parse(projectData);
     } catch (error) {
@@ -93,8 +94,8 @@ export async function listProjects(): Promise<Project[]> {
                 name: row.name,
                 description: row.description,
                 path: row.path,
-                createdAt: new Date(row.created_at).toISOString(),
-                updatedAt: new Date(row.updated_at).toISOString()
+                createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
             };
             return ProjectSchema.parse(projectData);
         });
@@ -135,8 +136,8 @@ export async function updateProject(projectId: string, data: UpdateProjectBody):
             name: updatedRow.name,
             description: updatedRow.description,
             path: updatedRow.path,
-            createdAt: new Date(updatedRow.created_at).toISOString(),
-            updatedAt: new Date(updatedRow.updated_at).toISOString()
+            createdAt: normalizeToIsoString(updatedRow.created_at) ?? 'ErrorParsingDate',
+            updatedAt: normalizeToIsoString(updatedRow.updated_at) ?? 'ErrorParsingDate'
         };
         return ProjectSchema.parse(projectData);
     } catch (error) {
@@ -196,11 +197,11 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[] 
                 size: row.size,
                 content: row.content,
                 summary: row.summary,
-                summaryLastUpdatedAt: row.summary_last_updated_at ? new Date(row.summary_last_updated_at).toISOString() : null,
+                summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
                 meta: row.meta,
                 checksum: row.checksum,
-                createdAt: new Date(row.created_at).toISOString(),
-                updatedAt: new Date(row.updated_at).toISOString()
+                createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
             };
             return ProjectFileSchema.parse(fileData);
         });
@@ -254,11 +255,11 @@ export async function updateFileContent(
             size: updatedRow.size,
             content: updatedRow.content,
             summary: updatedRow.summary,
-            summaryLastUpdatedAt: updatedRow.summary_last_updated_at ? new Date(updatedRow.summary_last_updated_at).toISOString() : null,
+            summaryLastUpdatedAt: normalizeToIsoString(updatedRow.summary_last_updated_at) ?? null,
             meta: updatedRow.meta,
             checksum: updatedRow.checksum,
-            createdAt: new Date(updatedRow.created_at).toISOString(),
-            updatedAt: new Date(updatedRow.updated_at).toISOString()
+            createdAt: normalizeToIsoString(updatedRow.created_at) ?? 'ErrorParsingDate',
+            updatedAt: normalizeToIsoString(updatedRow.updated_at) ?? 'ErrorParsingDate'
         };
         return ProjectFileSchema.parse(fileData);
     } catch (error) {
@@ -287,9 +288,8 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
         return; // Or throw new Error('No files found for project to resummarize');
     }
 
-    // const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
-    await forceSummarizeFiles(projectId, allFiles);
+    await forceSummarizeFiles(allFiles); // Pass only the files array
 }
 
 /**
@@ -326,9 +326,9 @@ export async function forceResummarizeSelectedFiles(
             const fileData = {
                 id: row.id, projectId: row.project_id, name: row.name, path: row.path,
                 extension: row.extension, size: row.size, content: row.content, summary: row.summary,
-                summaryLastUpdatedAt: row.summary_last_updated_at ? new Date(row.summary_last_updated_at).toISOString() : null,
-                meta: row.meta, checksum: row.checksum, createdAt: new Date(row.created_at).toISOString(),
-                updatedAt: new Date(row.updated_at).toISOString()
+                summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
+                meta: row.meta, checksum: row.checksum, createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
             };
             return ProjectFileSchema.parse(fileData)
         });
@@ -337,9 +337,8 @@ export async function forceResummarizeSelectedFiles(
         throw new Error(`Failed to validate file data for forced re-summarization`);
     }
 
-    const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
-    await forceSummarizeFiles(projectId, selectedFiles, globalState);
+    await forceSummarizeFiles(selectedFiles); // Pass only the selected files array
 
     return {
         included: selectedFiles.length,
@@ -379,9 +378,9 @@ export async function summarizeSelectedFiles(projectId: string, fileIds: string[
             const fileData = {
                 id: row.id, projectId: row.project_id, name: row.name, path: row.path,
                 extension: row.extension, size: row.size, content: row.content, summary: row.summary,
-                summaryLastUpdatedAt: row.summary_last_updated_at ? new Date(row.summary_last_updated_at).toISOString() : null,
-                meta: row.meta, checksum: row.checksum, createdAt: new Date(row.created_at).toISOString(),
-                updatedAt: new Date(row.updated_at).toISOString()
+                summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
+                meta: row.meta, checksum: row.checksum, createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
             };
             return ProjectFileSchema.parse(fileData)
         });
@@ -390,10 +389,9 @@ export async function summarizeSelectedFiles(projectId: string, fileIds: string[
         throw new Error(`Failed to validate file data for summarization`);
     }
 
-
-    const globalState = await getCurrentState();
+    // const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
-    const result = await summarizeFiles(projectId, selectedFiles, globalState);
+    const result = await summarizeFiles(projectId, selectedFiles);
 
     return {
         ...result, // { included: number, skipped: number }

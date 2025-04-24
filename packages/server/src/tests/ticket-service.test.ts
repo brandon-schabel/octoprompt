@@ -22,22 +22,21 @@ import {
     listTicketsWithTasks,
     getTicketWithSuggestedFiles
 } from "@/services/ticket-service";
+import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
+import { ApiError } from "shared";
 
 describe("Ticket Service", () => {
-    let fetchMock: ReturnType<typeof mock>;
+    let generateStructuredDataMock: ReturnType<typeof mock>;
     let summaryMock: ReturnType<typeof mock>;
 
     beforeEach(async () => {
         await resetDatabase();
-        fetchMock = mock(async () => {
+        generateStructuredDataMock = mock(async () => {
             return { tasks: [{ title: "MockTask", description: "MockDesc" }] };
         });
         summaryMock = mock(async () => "Fake project summary content");
 
-        spyOn(
-            await import("@/utils/structured-output-fetcher"),
-            "fetchStructuredOutput"
-        ).mockImplementation(fetchMock);
+        spyOn(unifiedProvider, "generateStructuredData").mockImplementation(generateStructuredDataMock);
 
         spyOn(
             await import("@/utils/get-full-project-summary"),
@@ -185,7 +184,7 @@ describe("Ticket Service", () => {
         });
 
         const suggestions = await fetchTaskSuggestionsForTicket(ticket, "User context");
-        expect(fetchMock.mock.calls.length).toBe(1);
+        expect(generateStructuredDataMock.mock.calls.length).toBe(1);
         expect(summaryMock.mock.calls.length).toBe(1);
         expect(suggestions.tasks[0].title).toBe("MockTask");
     });
@@ -204,7 +203,7 @@ describe("Ticket Service", () => {
     });
 
     test("suggestTasksForTicket returns [] if error is thrown", async () => {
-        fetchMock.mockImplementationOnce(async () => {
+        generateStructuredDataMock.mockImplementationOnce(async () => {
             throw new Error("AI error");
         });
         const ticket = await createTicket({
@@ -288,7 +287,9 @@ describe("Ticket Service", () => {
     });
 
     test("createTask throws if ticket not found", async () => {
-        await expect(createTask("fakeid", "Nope")).rejects.toThrow("NOT_FOUND");
+        await expect(createTask("fakeid", "Nope")).rejects.toThrow(
+            expect.objectContaining({ code: "NOT_FOUND" })
+        );
     });
 
     test("getTasks returns tasks sorted by orderIndex", async () => {

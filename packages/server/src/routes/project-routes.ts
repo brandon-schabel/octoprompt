@@ -348,7 +348,7 @@ export const projectRoutes = new OpenAPIHono()
         const { projectId } = c.req.valid('param');
         const project = await projectService.getProjectById(projectId);
         if (!project) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         const payload = {
             success: true,
@@ -362,7 +362,7 @@ export const projectRoutes = new OpenAPIHono()
         const body = c.req.valid('json');
         const updatedProject = await projectService.updateProject(projectId, body);
         if (!updatedProject) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         const payload = {
             success: true,
@@ -375,7 +375,7 @@ export const projectRoutes = new OpenAPIHono()
         const { projectId } = c.req.valid('param');
         const deleted = await projectService.deleteProject(projectId);
         if (!deleted) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         watchersManager.stopWatchingProject(projectId);
         // Ensure the returned object matches OperationSuccessResponseSchema
@@ -390,7 +390,7 @@ export const projectRoutes = new OpenAPIHono()
         const { projectId } = c.req.valid('param');
         const project = await projectService.getProjectById(projectId);
         if (!project) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         await syncProject(project);
         // Ensure the returned object matches OperationSuccessResponseSchema
@@ -405,7 +405,7 @@ export const projectRoutes = new OpenAPIHono()
         const { projectId } = c.req.valid('param');
         const project = await projectService.getProjectById(projectId);
         if (!project) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         const files = await projectService.getProjectFiles(projectId);
         // Files already have ISO dates from service
@@ -421,7 +421,7 @@ export const projectRoutes = new OpenAPIHono()
         const { folder } = c.req.valid('query');
         const project = await projectService.getProjectById(projectId);
         if (!project) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         if (folder) {
             await syncProjectFolder(project, folder);
@@ -471,7 +471,7 @@ export const projectRoutes = new OpenAPIHono()
         const { projectId } = c.req.valid('param');
         const project = await projectService.getProjectById(projectId);
         if (!project) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         await projectService.resummarizeAllFiles(projectId);
         // Ensure the returned object matches OperationSuccessResponseSchema
@@ -505,7 +505,7 @@ export const projectRoutes = new OpenAPIHono()
         const project = await projectService.getProjectById(projectId);
         if (!project) {
             // Throwing here ensures this path doesn't return a success response
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
 
         const projectFiles = await projectService.getProjectFiles(projectId);
@@ -536,7 +536,7 @@ export const projectRoutes = new OpenAPIHono()
 
         const project = await projectService.getProjectById(projectId);
         if (!project) {
-            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
         }
         const projectSummary = await getFullProjectSummary(projectId);
 
@@ -602,7 +602,7 @@ ${projectSummary}`;
             const { projectId } = c.req.param(); // Already validated by middleware
             const project = await projectService.getProjectById(projectId);
             if (!project) {
-                throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+                throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
             }
 
             console.log(`Debug sync for project: ${project.id} at path: ${project.path}`);

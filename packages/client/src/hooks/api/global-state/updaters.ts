@@ -1,7 +1,7 @@
 import { useActiveProjectTab as useActiveProjectTabData, useProjectTabsState, useAppSettings, useActiveChatId } from "@/hooks/api/use-state-api"; // Use local state hooks
 import { buildTicketContent } from "@/components/tickets/utils/ticket-utils";
 import { AppSettings, GlobalState, ProjectTabState } from "shared/src/schemas/global-state-schema"; // Import from shared
-import { TicketWithTasks } from "@/hooks/generated";
+import { Task, Ticket, TicketWithTasks } from "@/hooks/generated";
 
 // Helper type (Keep)
 export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
@@ -254,7 +254,7 @@ export function useCreateProjectTabFromTicket() {
     // updateProjectTab is generally not needed post-creation with Zustand unless there's complex logic
 
     return (data: TicketWithTasks): string | undefined => { // Returns the new tab ID or undefined
-        const userPrompt = buildTicketContent(data);
+        const userPrompt = buildTicketContent(data.ticket, data.tasks);
         let suggestedFileIds: string[] = [];
         try {
             if (data.ticket.suggestedFileIds) {

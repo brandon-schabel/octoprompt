@@ -85,7 +85,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
     const handleCopyAll = useCallback(async (e: React.MouseEvent, ticket: TicketWithTasks) => {
         e.stopPropagation();
         try {
-            const content = buildTicketContent(ticket);
+            const content = buildTicketContent(ticket.ticket, ticket.tasks);
             await navigator.clipboard.writeText(content);
             toast.success("Copied ticket content!");
         } catch (err) {

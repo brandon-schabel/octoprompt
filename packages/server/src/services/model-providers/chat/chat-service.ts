@@ -1,4 +1,5 @@
 import { db } from "@/utils/database";
+import { normalizeToIsoString } from "@/utils/parse-timestamp";
 import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage } from "shared/src/schemas/chat.schemas";
 import { randomUUID } from "crypto";
 
@@ -22,7 +23,40 @@ type RawChatMessage = {
     created_at: number;
 };
 
+// Helper function to map DB row to Chat schema
+function mapDbRowToChat(row: any): Chat | null {
+    if (!row) return null;
+    const mapped = {
+        id: row.id,
+        title: row.title,
+        createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+        updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
+    };
+    const result = ChatSchema.safeParse(mapped);
+    if (!result.success) {
+        console.error(`Failed to parse chat data: ${result.error.message}`, mapped);
+        return null;
+    }
+    return result.data;
+}
 
+// Helper function to map DB row to ChatMessage schema
+function mapDbRowToChatMessage(row: any): ChatMessage | null {
+    if (!row) return null;
+    const mapped = {
+        id: row.id,
+        chatId: row.chat_id, // Map db column name
+        role: row.role,
+        content: row.content,
+        createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate'
+    };
+    const result = ChatMessageSchema.safeParse(mapped);
+    if (!result.success) {
+        console.error(`Failed to parse chat message data: ${result.error.message}`, mapped);
+        return null;
+    }
+    return result.data;
+}
 
 /**
  * Returns an object of functions handling chat logic in a functional style.
@@ -35,7 +69,12 @@ export function createChatService() {
             VALUES (?, ?)
             RETURNING *
         `);
-        const chat = stmt.get(chatId, title) as Chat;
+        const rawChat = stmt.get(chatId, title) as RawChat | undefined;
+        const chat = mapDbRowToChat(rawChat);
+
+        if (!chat) {
+            throw new Error("Failed to create or parse chat.");
+        }
 
         if (options?.copyExisting && options?.currentChatId) {
             const sourceStmt = db.prepare(`
@@ -74,7 +113,11 @@ export function createChatService() {
             VALUES (?, ?, ?, ?)
             RETURNING *
         `);
-        const saved = stmt.get(randomUUID(), message.chatId, message.role, message.content) as ChatMessage;
+        const rawSaved = stmt.get(randomUUID(), message.chatId, message.role, message.content) as RawChatMessage | undefined;
+        const saved = mapDbRowToChatMessage(rawSaved);
+        if (!saved) {
+            throw new Error("Failed to save or parse chat message.");
+        }
         return { ...saved, tempId: message.tempId };
     }
 
@@ -92,8 +135,8 @@ export function createChatService() {
             SELECT * FROM chats 
             ORDER BY updated_at
         `);
-        const rows = stmt.all() as Chat[];
-        return rows;
+        const rows = stmt.all() as RawChat[];
+        return rows.map(mapDbRowToChat).filter((chat): chat is Chat => chat !== null);
     }
 
     async function getChatMessages(chatId: string): Promise<ChatMessage[]> {
@@ -102,8 +145,8 @@ export function createChatService() {
             WHERE chat_id = ? 
             ORDER BY created_at
         `);
-        const messages = stmt.all(chatId) as ChatMessage[];
-        return messages;
+        const messages = stmt.all(chatId) as RawChatMessage[];
+        return messages.map(mapDbRowToChatMessage).filter((msg): msg is ChatMessage => msg !== null);
     }
 
     async function updateChat(chatId: string, title: string): Promise<Chat> {
@@ -113,9 +156,10 @@ export function createChatService() {
             WHERE id = ?
             RETURNING *
         `);
-        const updated = stmt.get(title, chatId) as Chat;
+        const rawUpdated = stmt.get(title, chatId) as RawChat | undefined;
+        const updated = mapDbRowToChat(rawUpdated);
         if (!updated) {
-            throw new Error("Chat not found");
+            throw new Error("Chat not found or failed to parse after update.");
         }
         return updated;
     }
@@ -166,7 +210,11 @@ export function createChatService() {
             VALUES (?)
             RETURNING *
         `);
-        const newChat = createStmt.get(newTitle) as Chat;
+        const rawNewChat = createStmt.get(newTitle) as RawChat | undefined;
+        const newChat = mapDbRowToChat(rawNewChat);
+        if (!newChat) {
+            throw new Error("Failed to create or parse forked chat.");
+        }
 
         const sourceMessagesStmt = db.prepare(`
             SELECT * FROM chat_messages 
@@ -222,7 +270,11 @@ export function createChatService() {
             VALUES (?)
             RETURNING *
         `);
-        const newChat = createStmt.get(newTitle) as Chat;
+        const rawNewChat = createStmt.get(newTitle) as RawChat | undefined;
+        const newChat = mapDbRowToChat(rawNewChat);
+        if (!newChat) {
+            throw new Error("Failed to create or parse forked chat from message.");
+        }
 
         const sourceMessagesStmt = db.prepare(`
             SELECT * FROM chat_messages 

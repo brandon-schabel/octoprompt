@@ -335,7 +335,7 @@ export const promptRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
             // Handle potential "not found" errors
             if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
                 // Could be either prompt or project
-                throw new ApiError(404, `Prompt or Project not found`, 'NOT_FOUND');
+                throw new ApiError(404, `Prompt or Project not found Prompt ID: `, 'NOT_FOUND');
             }
             throw error;
         }

@@ -192,5 +192,3 @@ kv-store.json
 **/websocket-state.json
 **/**.tsbuildinfo
 kv-store.json.*.backup
-
-packages/client/src/hooks/generated

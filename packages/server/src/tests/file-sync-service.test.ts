@@ -19,9 +19,9 @@ describe("file-sync-service", () => {
 
     test("getTextFiles returns only matching extension files", () => {
         const mockFiles = [
-            { name: "file1.ts", isDirectory: () => false },
-            { name: "file2.txt", isDirectory: () => false },
-            { name: "folder", isDirectory: () => true }
+            { name: "file1.ts", isDirectory: () => false, isFile: () => true },
+            { name: "file2.txt", isDirectory: () => false, isFile: () => true },
+            { name: "folder", isDirectory: () => true, isFile: () => false }
         ];
 
         spyOn(fs, "readdirSync").mockImplementation(((path: string, options?: { withFileTypes?: boolean }) => {
@@ -33,7 +33,14 @@ describe("file-sync-service", () => {
             }
         }) as any);
         
-        spyOn(fs, "statSync").mockImplementation(() => ({ size: 12n } as any));
+        spyOn(fs, "statSync").mockImplementation(((path: string) => {
+            // Mock behavior based on path
+            if (path === '/fakeDir') {
+                return { isDirectory: () => true }; // It's a directory
+            } else {
+                return { isDirectory: () => false, size: 12n }; // It's a file with size
+            }
+        }) as any);
 
         const result = getTextFiles("/fakeDir", []);
         expect(result.length).toBe(2);
@@ -56,8 +63,8 @@ describe("file-sync-service", () => {
 
         // Setup mock filesystem state
         const mockFiles = [
-            { name: "keep.ts", isDirectory: () => false },
-            { name: "update.ts", isDirectory: () => false }
+            { name: "keep.ts", isDirectory: () => false, isFile: () => true },
+            { name: "update.ts", isDirectory: () => false, isFile: () => true }
         ];
 
         spyOn(fs, "readdirSync").mockImplementation(((path: string, options?: { withFileTypes?: boolean }) => {
@@ -79,7 +86,15 @@ describe("file-sync-service", () => {
             return fileName && fileName in fileContents ? fileContents[fileName] : "";
         }) as any);
 
-        spyOn(fs, "statSync").mockImplementation(() => ({ size: 99n } as any));
+        spyOn(fs, "statSync").mockImplementation(((path: string) => {
+            // Mock behavior based on path
+            if (path === '/tmp/test-sync') {
+                 return { isDirectory: () => true }; // Project path is a directory
+            } else {
+                 // Files within the project directory
+                 return { isDirectory: () => false, size: 99n };
+            }
+        }) as any);
 
         // Run sync
         await syncProject(project);
