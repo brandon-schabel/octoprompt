@@ -1,12 +1,26 @@
-import { InferStructuredOutput, structuredOutputSchemas } from "shared/index"
-import { StructuredOutputType } from "shared/index"
-import { commonErrorHandler } from "./common-mutation-error-handler"
-import { useApi } from "../use-api"
-import { useMutation } from "@tanstack/react-query"
+// packages/client/src/hooks/api/use-structured-output.ts
+import { useMutation } from '@tanstack/react-query';
+import { commonErrorHandler } from './common-mutation-error-handler';
+import {
+    // Generated Mutation Function
+    postApiStructuredOutputsMutation
+} from '../generated/@tanstack/react-query.gen';
+import type {
+    // Generated Data Types
+    PostApiStructuredOutputsData,
+    PostApiStructuredOutputsError,
+    PostApiStructuredOutputsResponse
+} from '../generated/types.gen';
+import { Options } from '../generated/sdk.gen';
 
-/**
- * The shape of data we send to the route.
- */
+// Import from shared package
+import {
+    InferStructuredOutput,
+    StructuredOutputType,
+    structuredOutputSchemas
+} from "shared/index";
+
+// Request input type
 interface StructuredOutputRequest<T extends StructuredOutputType> {
     outputType: T;
     userMessage: string;
@@ -17,50 +31,32 @@ interface StructuredOutputRequest<T extends StructuredOutputType> {
 }
 
 /**
- * Server response shape. "data" holds the final structured object that
- * matches the schema for the requested outputType.
- */
-interface StructuredOutputResponse<T extends StructuredOutputType> {
-    success: boolean;
-    data: InferStructuredOutput<T>;
-}
-
-/**
- * A generic hook that requests a particular structured output type
- * from the server, returning strongly typed data when ready.
+ * A generic hook for generating structured output based on a specific schema
  */
 export function useGenerateStructuredOutput<T extends StructuredOutputType>(outputType: T) {
-    const { api } = useApi();
+    const mutationOptions = postApiStructuredOutputsMutation();
 
     return useMutation<
         InferStructuredOutput<T>,
-        Error,
+        PostApiStructuredOutputsError,
         Omit<StructuredOutputRequest<T>, "outputType">
     >({
-        mutationFn: async (requestBody) => {
-            // Merge in "outputType" from the hook argument
-            const fullBody: StructuredOutputRequest<T> = {
+        mutationFn: async (requestBody: Omit<StructuredOutputRequest<T>, "outputType">) => {
+            // Merge the outputType with the provided request body
+            const fullBody: PostApiStructuredOutputsData['body'] = {
                 outputType,
                 ...requestBody,
             };
 
-            const resp = await api.request("/api/structured-outputs", {
-                method: "POST",
-                body: fullBody,
-            });
-
-            if (!resp.ok) {
-                throw new Error(`Server error: ${resp.status} ${resp.statusText}`);
-            }
-
-            const data: StructuredOutputResponse<T> = await resp.json();
-
-            // Optionally parse it again with the Zod schema on the client if you want extra safety:
+            const opts: Options<PostApiStructuredOutputsData> = { body: fullBody };
+            
+            // Call the generated mutation function
+            const result = await mutationOptions.mutationFn!(opts);
+            
+            // Validate with Zod schema for additional type safety
             const zodSchema = structuredOutputSchemas[outputType];
-            const validated = zodSchema.parse(data.data);
-
-            return validated; // typed as InferStructuredOutput<T>
+            return zodSchema.parse(result);
         },
-        onError: commonErrorHandler,
+        onError: (error: PostApiStructuredOutputsError) => commonErrorHandler(error as unknown as Error),
     });
 }

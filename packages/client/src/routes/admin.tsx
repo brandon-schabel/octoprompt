@@ -1,17 +1,3 @@
-/**
- * Admin Page Component
- * This component provides administrative functionality including:
- * - Environment information display
- * - System status monitoring
- * - Eventually: logging configuration and other admin tools
- * 
- * Most recent changes:
- * - Initial implementation with environment info and system status tabs
- * - Updated to use project UI components instead of Chakra UI
- * - Switched from direct fetch calls to React Query hooks from use-admin-api.ts
- * - Added display for Bun version and database statistics
- */
-
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { toast } from 'sonner';
@@ -23,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useGetEnvironmentInfo, useGetSystemStatus } from '@/hooks/api/use-admin-api';
+import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants';
 
 // Create route
 export const Route = createFileRoute('/admin')({
@@ -100,6 +87,7 @@ function AdminPage() {
           <TabsTrigger value="env-info">Environment Info</TabsTrigger>
           <TabsTrigger value="system-status">System Status</TabsTrigger>
           <TabsTrigger value="database-stats">Database Stats</TabsTrigger>
+          <TabsTrigger value="swagger-ui">Swagger UI</TabsTrigger>
         </TabsList>
         
         {/* Environment Info Panel */}
@@ -378,6 +366,17 @@ function AdminPage() {
                 </CardContent>
               </Card>
             ) : null}
+          </div>
+        </TabsContent>
+
+        {/* Swagger UI Panel */}
+        <TabsContent value="swagger-ui">
+          <div className="h-[calc(100vh-200px)]">
+            <iframe 
+              src={`${SERVER_HTTP_ENDPOINT}/swagger`} 
+              title="Swagger UI"
+              className="w-full h-full border-none"
+            />
           </div>
         </TabsContent>
       </Tabs>

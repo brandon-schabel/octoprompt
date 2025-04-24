@@ -1,184 +1,608 @@
-import { zValidator } from '@hono/zod-validator';
-import { z } from '@hono/zod-openapi'
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { projectsApiValidation, ApiError, buildCombinedFileSummaries, DEFAULT_MODEL_CONFIGS } from "shared";
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import type { TypedResponse } from 'hono';
 import {
-    createProject, deleteProject, getProjectById, getProjectFiles, listProjects,
-    updateProject, forceResummarizeSelectedFiles, resummarizeAllFiles,
-    summarizeSelectedFiles, removeSummariesFromFiles
-} from "@/services/project-service";
+    ApiError,
+    buildCombinedFileSummaries,
+    DEFAULT_MODEL_CONFIGS,
+    // Import all schemas from shared
+
+} from "shared";
+import {
+    ProjectIdParamsSchema,
+    CreateProjectBodySchema,
+    UpdateProjectBodySchema,
+    RefreshQuerySchema,
+    GetFileSummariesQuerySchema,
+    SummarizeFilesBodySchema,
+    RemoveSummariesBodySchema,
+    SuggestFilesBodySchema,
+    ProjectSchema,
+    ProjectFileSchema,
+    ProjectResponseSchema,
+    ProjectListResponseSchema,
+    FileListResponseSchema,
+    FileSummaryListResponseSchema,
+    SummarizeFilesResponseSchema,
+    RemoveSummariesResponseSchema,
+    SuggestFilesResponseSchema,
+    FileSuggestionsZodSchema,
+    FileSuggestionsJsonSchema,
+    ProjectResponseMultiStatusSchema,
+    ProjectSummaryResponseSchema,
+    // Import types
+    Project,
+    ProjectFile,
+    CreateProjectBody,
+    UpdateProjectBody
+} from "shared/src/schemas/project.schemas";
+
+// Import common schemas
+import {
+    ApiErrorResponseSchema,
+    OperationSuccessResponseSchema,
+} from 'shared/src/schemas/common.schemas';
+
+import { existsSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+import { homedir as getHomedir } from 'node:os';
+
+import * as projectService from "@/services/project-service";
 import { syncProject, syncProjectFolder } from "@/services/file-services/file-sync-service";
 import { getFileSummaries } from "@/services/file-services/file-summary-service";
 import { watchersManager } from "@/services/shared-services";
-import { existsSync } from 'node:fs';
 import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 
-// --- Zod Schema for File Suggestions (Moved/Defined Here) ---
-export const FileSuggestionsZodSchema = z.object({
-    fileIds: z.array(z.string())
-});
+// DELETE REDUNDANT TYPE DEFINITIONS - SERVICE LAYER PROVIDES CORRECTLY TYPED DATA
 
-// --- JSON Schema (Optional but good practice with Zod OpenAPI) ---
-export const FileSuggestionsJsonSchema = {
-    type: "object",
-    properties: {
-        fileIds: {
-            type: "array",
-            items: { type: "string" },
-            description: "An array of file IDs relevant to the user input"
-        }
+// DELETE MAPPING FUNCTIONS - SERVICE LAYER ALREADY MAPS DATA CORRECTLY
+
+const createProjectRoute = createRoute({
+    method: 'post',
+    path: '/api/projects',
+    tags: ['Projects'],
+    summary: 'Create a new project and sync its files',
+    request: {
+        body: { content: { 'application/json': { schema: CreateProjectBodySchema } } },
     },
-    required: ["fileIds"],
-    additionalProperties: false
-};
-
-
-// Create a new Hono instance for project routes
-
-// --- Project CRUD ---
-
-const refreshQuerySchema = z.object({
-    folder: z.string().optional()
+    responses: {
+        201: {
+            content: { 'application/json': { schema: ProjectResponseSchema } },
+            description: 'Project created and initial sync started',
+        },
+        // Define the 207 response explicitly
+        207: {
+            content: { 'application/json': { schema: ProjectResponseMultiStatusSchema } },
+            description: 'Project created, but post-creation steps encountered issues',
+        },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
 });
 
-// Create a new project
-export const projectRoutes = new OpenAPIHono().post("/api/projects",
-    zValidator('json', projectsApiValidation.create.body),
-    async (c) => {
-        const body = c.req.valid('json');
-        const { resolve } = await import('node:path');
-        const { homedir } = await import('node:os');
+const listProjectsRoute = createRoute({
+    method: 'get',
+    path: '/api/projects',
+    tags: ['Projects'],
+    summary: 'List all projects',
+    responses: {
+        200: { content: { 'application/json': { schema: ProjectListResponseSchema } }, description: 'Successfully retrieved all projects' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
 
+const getProjectByIdRoute = createRoute({
+    method: 'get',
+    path: '/api/projects/{projectId}',
+    tags: ['Projects'],
+    summary: 'Get a specific project by ID',
+    request: { params: ProjectIdParamsSchema },
+    responses: {
+        200: { content: { 'application/json': { schema: ProjectResponseSchema } }, description: 'Successfully retrieved project details' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error (invalid projectId format)' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const updateProjectRoute = createRoute({
+    method: 'patch',
+    path: '/api/projects/{projectId}',
+    tags: ['Projects'],
+    summary: 'Update a project\'s details',
+    request: {
+        params: ProjectIdParamsSchema,
+        body: { content: { 'application/json': { schema: UpdateProjectBodySchema } } },
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: ProjectResponseSchema } }, description: 'Project updated successfully' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const deleteProjectRoute = createRoute({
+    method: 'delete',
+    path: '/api/projects/{projectId}',
+    tags: ['Projects'],
+    summary: 'Delete a project and its associated data',
+    request: { params: ProjectIdParamsSchema },
+    responses: {
+        200: { content: { 'application/json': { schema: OperationSuccessResponseSchema } }, description: 'Project deleted successfully' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const syncProjectRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/sync',
+    tags: ['Projects', 'Files'],
+    summary: 'Manually trigger a full file sync for a project',
+    request: { params: ProjectIdParamsSchema },
+    responses: {
+        200: { content: { 'application/json': { schema: OperationSuccessResponseSchema } }, description: 'Project sync initiated successfully' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error during sync' },
+    },
+});
+
+const getProjectFilesRoute = createRoute({
+    method: 'get',
+    path: '/api/projects/{projectId}/files',
+    tags: ['Projects', 'Files'],
+    summary: 'Get the list of files associated with a project',
+    request: { params: ProjectIdParamsSchema },
+    responses: {
+        200: { content: { 'application/json': { schema: FileListResponseSchema } }, description: 'Successfully retrieved project files' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const refreshProjectRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/refresh',
+    tags: ['Projects', 'Files'],
+    summary: 'Refresh project files (sync) optionally limited to a folder',
+    request: {
+        params: ProjectIdParamsSchema,
+        query: RefreshQuerySchema,
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: FileListResponseSchema } }, description: 'Successfully refreshed project files' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error during refresh/sync' },
+    },
+});
+
+const getFileSummariesRoute = createRoute({
+    method: 'get',
+    path: '/api/projects/{projectId}/file-summaries',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Get summaries for project files (all or specified)',
+    request: {
+        params: ProjectIdParamsSchema,
+        query: GetFileSummariesQuerySchema,
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: FileSummaryListResponseSchema } }, description: 'Successfully retrieved file summaries' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const summarizeFilesRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/summarize',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Summarize selected files in a project (or force re-summarize)',
+    request: {
+        params: ProjectIdParamsSchema,
+        body: { content: { 'application/json': { schema: SummarizeFilesBodySchema } } },
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: SummarizeFilesResponseSchema } }, description: 'File summarization process completed' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or some files not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error during summarization' },
+    },
+});
+
+const resummarizeAllFilesRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/resummarize-all',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Force re-summarization of all files in a project',
+    request: { params: ProjectIdParamsSchema },
+    responses: {
+        200: { content: { 'application/json': { schema: OperationSuccessResponseSchema } }, description: 'Process to re-summarize all files started/completed' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const removeSummariesRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/remove-summaries',
+    tags: ['Projects', 'Files'],
+    summary: 'Remove summaries from selected files',
+    request: {
+        params: ProjectIdParamsSchema,
+        body: { content: { 'application/json': { schema: RemoveSummariesBodySchema } } },
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: RemoveSummariesResponseSchema } }, description: 'Summaries removed successfully' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or some files not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const getProjectSummaryRoute = createRoute({
+    method: 'get',
+    path: '/api/projects/{projectId}/summary',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Get a combined summary of all files in the project',
+    request: { params: ProjectIdParamsSchema },
+    responses: {
+        200: { content: { 'application/json': { schema: ProjectSummaryResponseSchema } }, description: 'Successfully generated combined project summary' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const suggestFilesRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/suggest-files',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Suggest relevant files based on user input and project context',
+    request: {
+        params: ProjectIdParamsSchema,
+        body: { content: { 'application/json': { schema: SuggestFilesBodySchema } } },
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: SuggestFilesResponseSchema } }, description: 'Successfully suggested files' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error or AI processing error' },
+    },
+});
+
+// --- Hono App Instance ---
+export const projectRoutes = new OpenAPIHono()
+    .openapi(createProjectRoute, async (c) => {
+        const body = c.req.valid('json');
         let normalizedPath = body.path;
         if (normalizedPath.startsWith('~')) {
-            normalizedPath = normalizedPath.replace(/^~/, homedir());
+            normalizedPath = normalizedPath.replace(/^~/, getHomedir());
         }
-        normalizedPath = resolve(normalizedPath);
+        normalizedPath = resolvePath(normalizedPath);
         console.log(`Creating project - Original path: ${body.path}, Normalized path: ${normalizedPath}`);
 
         const projectData = { ...body, path: normalizedPath };
-        const project = await createProject(projectData);
-        console.log(`Project created with ID: ${project.id}`);
+        const createdProject = await projectService.createProject(projectData);
+        console.log(`Project created with ID: ${createdProject.id}`);
+
+        let syncWarning: string | undefined;
+        let syncError: string | undefined;
+        let httpStatus: 201 | 207 = 201; // Use explicit status codes
 
         try {
-            if (!existsSync(project.path)) {
-                console.error(`Project path does not exist: ${project.path}`);
-                return c.json({
-                    success: true,
-                    project,
-                    warning: "Project created but directory does not exist. No files will be synced."
-                }, 201);
-            }
-
-            console.log(`Starting sync for project: ${project.id} at path: ${project.path}`);
-            await syncProject(project);
-            console.log(`Finished syncing files for project: ${project.id}`);
-
-            console.log(`Starting file watchers for project: ${project.id}`);
-            await watchersManager.startWatchingProject(project, ["node_modules", "dist", ".git", "*.tmp", "*.db-journal"]);
-            console.log(`File watchers started for project: ${project.id}`);
-
-            const files = await getProjectFiles(project.id);
-            console.log(`Synced ${files?.length || 0} files for project`);
-        } catch (error) {
-            console.error(`Error during project setup: ${error}`);
-            // Still return the created project, maybe with an error indication in the response body
-            return c.json({
-                success: true, // Indicate project creation succeeded
-                project,
-                error: `Post-creation setup failed: ${String(error)}`
-            }, 207); // 207 Multi-Status might be appropriate
-        }
-
-        return c.json({ success: true, project }, 201);
-    }
-).get("/api/projects", async (c) => {
-    const projects = await listProjects();
-    return c.json({ success: true, projects });
-}).get("/api/projects/:projectId",
-    zValidator('param', projectsApiValidation.getOrDelete.params),
-    async (c) => {
-        const { projectId } = c.req.valid('param');
-        const project = await getProjectById(projectId);
-        if (!project) {
-            throw new ApiError(404, "Project not found", "NOT_FOUND");
-        }
-        return c.json({ success: true, project });
-    }
-)
-    .patch("/api/projects/:projectId",
-        zValidator('param', projectsApiValidation.update.params),
-        zValidator('json', projectsApiValidation.update.body),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const body = c.req.valid('json');
-            const updatedProject = await updateProject(projectId, body);
-            if (!updatedProject) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-            return c.json({ success: true, project: updatedProject });
-        }
-    ).delete("/api/projects/:projectId",
-        zValidator('param', projectsApiValidation.getOrDelete.params),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const deleted = await deleteProject(projectId);
-            if (!deleted) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-            return c.json({ success: true }, 200); // Consider 204 No Content
-        }
-    ).post("/api/projects/:projectId/sync",
-        zValidator('param', projectsApiValidation.sync.params),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const project = await getProjectById(projectId);
-            if (!project) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-            await syncProject(project);
-            return c.json({ success: true, message: "Project sync initiated." });
-        }
-    ).get("/api/projects/:projectId/files",
-        zValidator('param', projectsApiValidation.getFiles.params),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const project = await getProjectById(projectId);
-            if (!project) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-            await syncProject(project); // Ensure latest files are considered
-            const files = await getProjectFiles(projectId);
-            // The service likely returns null/[] if no files, not an error
-            return c.json({ success: true, files: files ?? [] });
-        }
-    ).post("/api/projects/:projectId/refresh",
-        zValidator('param', projectsApiValidation.sync.params),
-        zValidator('query', refreshQuerySchema),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const { folder } = c.req.valid('query');
-            const project = await getProjectById(projectId);
-            if (!project) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-            if (folder) {
-                await syncProjectFolder(project, folder);
+            if (!existsSync(createdProject.path)) {
+                console.warn(`Project path does not exist: ${createdProject.path}`);
+                syncWarning = "Project created but directory does not exist. No files will be synced.";
+                httpStatus = 207;
             } else {
-                await syncProject(project);
+                console.log(`Starting sync for project: ${createdProject.id} at path: ${createdProject.path}`);
+                await syncProject(createdProject);
+                console.log(`Finished syncing files for project: ${createdProject.id}`);
+                console.log(`Starting file watchers for project: ${createdProject.id}`);
+                await watchersManager.startWatchingProject(createdProject, ["node_modules", "dist", ".git", "*.tmp", "*.db-journal"]);
+                console.log(`File watchers started for project: ${createdProject.id}`);
+                const files = await projectService.getProjectFiles(createdProject.id);
+                console.log(`Synced ${files?.length || 0} files for project`);
             }
-            const files = await getProjectFiles(projectId);
-            return c.json({ success: true, files: files ?? [] });
+        } catch (error: any) {
+            console.error(`Error during project setup: ${error}`);
+            syncError = `Post-creation setup failed: ${String(error)}`;
+            httpStatus = 207;
         }
-    ).get("/api/projects/:projectId/debug-file-sync",
-        zValidator('param', projectsApiValidation.sync.params),
+
+        // Construct the payload matching the schema for the status code
+        if (httpStatus === 201) {
+            const payload = {
+                success: true,
+                data: createdProject,
+            } satisfies z.infer<typeof ProjectResponseSchema>;
+            return c.json(payload, 201);
+        } else { // httpStatus === 207
+            const payload = {
+                success: true,
+                data: createdProject,
+                ...(syncWarning && { warning: syncWarning }),
+                ...(syncError && { error: syncError }),
+            } satisfies z.infer<typeof ProjectResponseMultiStatusSchema>;
+            return c.json(payload, 207);
+        }
+    })
+
+    .openapi(listProjectsRoute, async (c) => {
+        const projects = await projectService.listProjects();
+        const payload = {
+            success: true,
+            data: projects
+        } satisfies z.infer<typeof ProjectListResponseSchema>;
+        return c.json(payload, 200);
+    })
+
+    .openapi(getProjectByIdRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const project = await projectService.getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        const payload = {
+            success: true,
+            data: project
+        } satisfies z.infer<typeof ProjectResponseSchema>;
+        return c.json(payload, 200);
+    })
+
+    .openapi(updateProjectRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const body = c.req.valid('json');
+        const updatedProject = await projectService.updateProject(projectId, body);
+        if (!updatedProject) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        const payload = {
+            success: true,
+            data: updatedProject
+        } satisfies z.infer<typeof ProjectResponseSchema>;
+        return c.json(payload, 200);
+    })
+
+    .openapi(deleteProjectRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const deleted = await projectService.deleteProject(projectId);
+        if (!deleted) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        watchersManager.stopWatchingProject(projectId);
+        // Ensure the returned object matches OperationSuccessResponseSchema
+        const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+            success: true,
+            message: "Project deleted successfully."
+        };
+        return c.json(payload, 200);
+    })
+
+    .openapi(syncProjectRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const project = await projectService.getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        await syncProject(project);
+        // Ensure the returned object matches OperationSuccessResponseSchema
+        const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+            success: true,
+            message: "Project sync initiated."
+        };
+        return c.json(payload, 200);
+    })
+
+    .openapi(getProjectFilesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const project = await projectService.getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        const files = await projectService.getProjectFiles(projectId);
+        // Files already have ISO dates from service
+        const payload = {
+            success: true,
+            data: files ?? []
+        } satisfies z.infer<typeof FileListResponseSchema>;
+        return c.json(payload, 200);
+    })
+
+    .openapi(refreshProjectRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const { folder } = c.req.valid('query');
+        const project = await projectService.getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        if (folder) {
+            await syncProjectFolder(project, folder);
+        } else {
+            await syncProject(project);
+        }
+        const files = await projectService.getProjectFiles(projectId);
+        // Files are already in API format
+        const payload = {
+            success: true,
+            data: files ?? []
+        } satisfies z.infer<typeof FileListResponseSchema>;
+        return c.json(payload, 200);
+    })
+
+    .openapi(getFileSummariesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const query = c.req.valid('query');
+        const fileIds = query?.fileIds?.split(',').filter(Boolean);
+
+        const filesWithSummaries = await getFileSummaries(projectId, fileIds);
+        // Files are already in API format
+        const payload = {
+            success: true,
+            data: filesWithSummaries ?? []
+        } satisfies z.infer<typeof FileSummaryListResponseSchema>;
+        return c.json(payload, 200);
+    })
+
+    .openapi(summarizeFilesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const { fileIds, force } = c.req.valid('json');
+
+        const result = force
+            ? await projectService.forceResummarizeSelectedFiles(projectId, fileIds)
+            : await projectService.summarizeSelectedFiles(projectId, fileIds);
+
+        // Ensure the returned object matches SummarizeFilesResponseSchema
+        const payload: z.infer<typeof SummarizeFilesResponseSchema> = {
+            success: true,
+            ...result // Spread the result which contains included, skipped, message
+        };
+        return c.json(payload, 200);
+    })
+
+    .openapi(resummarizeAllFilesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const project = await projectService.getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        await projectService.resummarizeAllFiles(projectId);
+        // Ensure the returned object matches OperationSuccessResponseSchema
+        const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+            success: true,
+            message: "Process to force-resummarize all files started/completed."
+        };
+        return c.json(payload, 200);
+    })
+
+    .openapi(removeSummariesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const { fileIds } = c.req.valid('json');
+        const result = await projectService.removeSummariesFromFiles(projectId, fileIds);
+        // Ensure the returned object matches RemoveSummariesResponseSchema (result already has the correct shape)
+        if (!result.success) {
+            // Handle potential failure from the service if needed, though schema expects success:true
+            console.error("Removal of summaries reported failure from service:", result);
+            throw new ApiError(500, result.message || "Failed to remove summaries");
+        }
+        const payload: z.infer<typeof RemoveSummariesResponseSchema> = {
+            success: true, // Explicitly set to true to match schema
+            removedCount: result.removedCount,
+            message: result.message
+        };
+        return c.json(payload, 200); // Defaults to 200
+    })
+
+    .openapi(getProjectSummaryRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const project = await projectService.getProjectById(projectId);
+        if (!project) {
+            // Throwing here ensures this path doesn't return a success response
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+
+        const projectFiles = await projectService.getProjectFiles(projectId);
+
+        // Calculate summary conditionally, default to empty string if no files
+        let summary = "";
+        if (!projectFiles) {
+            console.warn(`No files found for project ${projectId} when generating summary.`);
+            // Set summary to empty, but don't return early
+            summary = "";
+        } else {
+            summary = buildCombinedFileSummaries(projectFiles);
+        }
+
+        // Construct the single success payload at the end
+        const payload: z.infer<typeof ProjectSummaryResponseSchema> = {
+            success: true,
+            summary: summary // Use the calculated summary
+        };
+
+        // Explicitly return status 200
+        return c.json(payload, 200);
+    })
+
+    .openapi(suggestFilesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const { userInput } = c.req.valid('json');
+
+        const project = await projectService.getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
+        }
+        const projectSummary = await getFullProjectSummary(projectId);
+
+        const systemPrompt = `
+You are a code assistant that recommends relevant files based on user input.
+You have a list of file summaries and a user request.
+Return only valid JSON with the shape: {"fileIds": ["uuid1", "uuid2"]}
+Guidelines:
+- For simple tasks: return max 5 files
+- For complex tasks: return max 10 files
+- For very complex tasks: return max 20 files
+- Do not add comments in your response
+- Strictly follow the JSON schema, do not add any additional properties or comments`;
+
+        const userMessage = `
+User Query: ${userInput}
+Below is a combined summary of project files:
+${projectSummary}`;
+
+        try {
+            const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files'];
+            const result = await fetchStructuredOutput({
+                userMessage,
+                systemMessage: systemPrompt,
+                zodSchema: FileSuggestionsZodSchema,
+                jsonSchema: FileSuggestionsJsonSchema,
+                schemaName: "FileSuggestions",
+                model: cfg.model,
+                temperature: cfg.temperature,
+                chatId: `project-${projectId}-suggest-files`
+            });
+
+            const validatedResult = result as z.infer<typeof FileSuggestionsZodSchema>;
+
+            const payload = {
+                success: true,
+                recommendedFileIds: validatedResult.fileIds,
+            } satisfies z.infer<typeof SuggestFilesResponseSchema>;
+
+            const response: TypedResponse<z.infer<typeof SuggestFilesResponseSchema>, 200, 'json'> = c.json(payload, 200);
+            return response;
+
+        } catch (error: any) {
+            console.error("[SuggestFiles Project] Error:", error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(500, `Failed to suggest files: ${error.message}`, "AI_SUGGESTION_ERROR");
+        }
+    })
+
+    // --- Debug Route (Remains unchanged, validation added before) ---
+    .get("/api/projects/:projectId/debug-file-sync",
+        async (c, next) => {
+            const validator = z.object({ projectId: z.string().uuid("Invalid Project UUID format") });
+            const result = validator.safeParse(c.req.param());
+            if (!result.success) {
+                throw new ApiError(422, "Validation Error", "VALIDATION_ERROR", result.error.flatten());
+            }
+            await next();
+        },
         async (c) => {
+            // ... (debug route implementation remains the same) ...
             console.log("DEBUG FILE SYNC ENDPOINT CALLED");
-            const { projectId } = c.req.valid('param');
-            const project = await getProjectById(projectId);
+            const { projectId } = c.req.param(); // Already validated by middleware
+            const project = await projectService.getProjectById(projectId);
             if (!project) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
+                throw new ApiError(404, "Project not found", "PROJECT_NOT_FOUND");
             }
 
             console.log(`Debug sync for project: ${project.id} at path: ${project.path}`);
@@ -190,187 +614,23 @@ export const projectRoutes = new OpenAPIHono().post("/api/projects",
             }
 
             try {
-                const { resolve } = await import('node:path');
-                const { readdirSync } = await import('node:fs');
-
-                const absoluteProjectPath = resolve(project.path);
-                console.log(`Absolute project path: ${absoluteProjectPath}`);
-
-                try {
-                    const entries = readdirSync(absoluteProjectPath, { withFileTypes: true });
-                    console.log(`Found ${entries.length} entries in directory`);
-                } catch (err) {
-                    console.error(`Error reading directory: ${err}`);
-                    return c.json({ success: false, error: `Error reading project directory: ${String(err)}` }, 500);
-                }
-
                 await syncProject(project); // Perform the sync
-
-                const files = await getProjectFiles(project.id);
+                const files = await projectService.getProjectFiles(project.id);
                 console.log(`Synced ${files?.length || 0} files for project`);
-
                 return c.json({
                     success: true,
-                    message: "Manual sync completed",
+                    message: "Manual sync completed via debug endpoint",
                     fileCount: files?.length || 0,
                     path: project.path,
-                    exists: true // Checked above
+                    exists: true
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error(`Error in debug sync: ${error}`);
                 return c.json({ success: false, error: String(error) }, 500);
-            }
-        }
-    ).get("/api/projects/:projectId/file-summaries",
-        zValidator('param', projectsApiValidation.getFiles.params), // Reuse param schema
-        zValidator('query', z.object({
-            fileIds: z.string().optional(), // Comma-separated string
-        }).optional()),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const query = c.req.valid('query');
-            const fileIds = query?.fileIds?.split(',').filter(Boolean); // Split string into array
-
-            const summaries = await getFileSummaries(projectId, fileIds); // Pass optional fileIds array
-            return c.json({
-                success: true,
-                summaries,
-            });
-        }
-    ).post("/api/projects/:projectId/summarize",
-        zValidator('param', projectsApiValidation.sync.params), // Reuse param schema
-        zValidator('json', z.object({
-            fileIds: z.array(z.string()).nonempty("At least one file ID is required."),
-            force: z.boolean().optional().default(false),
-        })),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const { fileIds, force } = c.req.valid('json');
-
-            // Project existence check is handled within the service functions, but checking here is fine too.
-            const project = await getProjectById(projectId);
-            if (!project) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-
-            const result = force
-                ? await forceResummarizeSelectedFiles(projectId, fileIds)
-                : await summarizeSelectedFiles(projectId, fileIds);
-
-            return c.json({
-                success: true,
-                ...result, // Spread the result which might contain counts etc.
-            });
-        }
-    ).post("/api/projects/:projectId/resummarize-all",
-        zValidator('param', projectsApiValidation.sync.params), // Added validator for consistency
-        async (c) => {
-            const { projectId } = c.req.param(); // Can use req.param directly if simple
-
-            const project = await getProjectById(projectId);
-            if (!project) {
-                    throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-            // Consider making this async and returning a 202 Accepted if it's long-running
-            await resummarizeAllFiles(projectId);
-
-            return c.json({
-                success: true,
-                message: "Process to force-resummarize all files started." // Or finished if synchronous
-            });
-        }
-    ).post("/api/projects/:projectId/remove-summaries",
-        zValidator('param', projectsApiValidation.sync.params), // Reuse param schema
-        zValidator('json', z.object({
-            fileIds: z.array(z.string()).nonempty("At least one file ID is required."),
-        })),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const { fileIds } = await c.req.valid('json');
-
-            const project = await getProjectById(projectId);
-            if (!project) {
-                throw new ApiError(404, "Project not found", "NOT_FOUND");
-            }
-
-            const result = await removeSummariesFromFiles(projectId, fileIds);
-            return c.json(result);
-        }
-    ).get('/api/projects/:projectId/summary',
-        zValidator('param', projectsApiValidation.getOrDelete.params), // Reuse param schema
-        async (c) => {
-            try {
-                const { projectId } = c.req.valid('param');
-                const projectFiles = await getProjectFiles(projectId); // Fetch files with summaries
-
-                // This function combines summaries already present on the files
-                const summary = buildCombinedFileSummaries(projectFiles || []);
-                return c.json({ success: true, summary });
-            } catch (error) {
-                // Catch specific errors if needed, otherwise let global handler manage
-                console.error('Error generating project summary:', error);
-                if (error instanceof Error && error.message.includes('not found')) {
-                    throw new ApiError(404, "Project not found when fetching files for summary", "NOT_FOUND");
-                }
-                throw new ApiError(500, "Failed to generate project summary", "INTERNAL_ERROR");
-            }
-        }
-    ).post(
-        "/api/projects/:projectId/suggest-files",
-        zValidator('param', z.object({ projectId: z.string() })),
-        zValidator('json', z.object({ userInput: z.string().min(1) })),
-        async (c) => {
-            const { projectId } = c.req.valid('param');
-            const { userInput } = c.req.valid('json');
-
-            const projectSummary = await getFullProjectSummary(projectId); // Fetches and combines summaries
-
-            const systemPrompt = `
-      You are a code assistant that recommends relevant files based on user input.
-      You have a list of file summaries and a user request.
-
-      Return only valid JSON with the shape: {"fileIds": ["abc123", "def456"]}
-
-      Guidelines:
-      - For simple tasks: return max 5 files
-      - For complex tasks: return max 10 files
-      - For very complex tasks: return max 20 files
-      - Do not add comments in your response
-      - Strictly follow the JSON schema, do not add any additional properties or comments
-    `;
-
-            const userMessage = `
-      User Query: ${userInput}
-
-      Below is a combined summary of project files:
-      ${projectSummary}
-    `;
-
-            try {
-                const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files'];
-                const result = await fetchStructuredOutput({
-                    userMessage,
-                    systemMessage: systemPrompt,
-                    zodSchema: FileSuggestionsZodSchema, // Use schema defined above
-                    jsonSchema: FileSuggestionsJsonSchema, // Use schema defined above
-                    schemaName: "FileSuggestions",
-                    model: cfg.model,
-                    temperature: cfg.temperature,
-                    chatId: `project-${projectId}-suggest-files`
-                });
-
-                return c.json({
-                    success: true,
-                    recommendedFileIds: result.fileIds,
-                    // combinedSummaries: projectSummary // Optionally include context
-                });
-            } catch (error) {
-                console.error("[SuggestFiles Project] Error:", error);
-                throw new ApiError(500, "Failed to suggest files for project", "INTERNAL_ERROR");
             }
         }
     );
 
 
-// Export the type for the frontend client
+// Export the type for the frontend client generator
 export type ProjectRouteTypes = typeof projectRoutes;

@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from "react";
-import { TicketWithTasks, useListTicketsWithTasks, useDeleteTicket } from "@/hooks/api/use-tickets-api";
+import { useListTicketsWithTasks, useDeleteTicket } from "@/hooks/api/use-tickets-api";
 import { useUpdateProjectTabState, } from "@/zustand/updaters";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -24,6 +24,7 @@ import {
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { useProjectTab } from "@/zustand/selectors";
+import { TicketWithTasks } from "@/hooks/generated";
 
 interface TicketListPanelProps {
     projectTabId: string;
@@ -98,9 +99,10 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
         if (!ticketSearch.trim()) return tickets;
         const lower = ticketSearch.toLowerCase();
         return tickets.filter(t => {
+            
             return (
-                t.title.toLowerCase().includes(lower) ||
-                t.overview?.toLowerCase().includes(lower)
+                t.ticket.title.toLowerCase().includes(lower) ||
+                t.ticket.overview?.toLowerCase().includes(lower)
             );
         });
     }, [tickets, ticketSearch]);
@@ -111,28 +113,28 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
         switch (ticketSort) {
             case "created_asc":
                 return arr.sort((a, b) => {
-                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    const aTime = a.ticket.createdAt ? new Date(a.ticket.createdAt).getTime() : 0;
+                    const bTime = b.ticket.createdAt ? new Date(b.ticket.createdAt).getTime() : 0;
                     return aTime - bTime;
                 });
             case "created_desc":
                 return arr.sort((a, b) => {
-                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    const aTime = a.ticket.createdAt ? new Date(a.ticket.createdAt).getTime() : 0;
+                    const bTime = b.ticket.createdAt ? new Date(b.ticket.createdAt).getTime() : 0;
                     return bTime - aTime;
                 });
             case "status":
                 return arr.sort((a, b) => {
                     const statusOrder = { open: 1, in_progress: 2, closed: 3 };
-                    const aStatus = a.status as keyof typeof statusOrder;
-                    const bStatus = b.status as keyof typeof statusOrder;
+                    const aStatus = a.ticket.status as keyof typeof statusOrder;
+                    const bStatus = b.ticket.status as keyof typeof statusOrder;
                     return (statusOrder[aStatus] || 0) - (statusOrder[bStatus] || 0);
                 });
             case "priority":
                 return arr.sort((a, b) => {
                     const priorityOrder = { low: 1, normal: 2, high: 3 };
-                    const aPriority = a.priority as keyof typeof priorityOrder;
-                    const bPriority = b.priority as keyof typeof priorityOrder;
+                    const aPriority = a.ticket.priority as keyof typeof priorityOrder;
+                    const bPriority = b.ticket.priority as keyof typeof priorityOrder;
                     return (priorityOrder[bPriority] || 2) - (priorityOrder[aPriority] || 2); // default to normal priority
                 });
             default:
@@ -160,7 +162,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
         if (!ticketToDelete) return;
 
         try {
-            await deleteTicket.mutateAsync({ ticketId: ticketToDelete.id });
+            await deleteTicket.mutateAsync(ticketToDelete.ticket.id);
             toast.success("Ticket deleted successfully");
         } catch (err) {
             toast.error("Failed to delete ticket");
@@ -229,20 +231,20 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
 
                         return (
                             <div
-                                key={ticket.id}
+                                key={ticket.ticket.id}
                                 className="border rounded-md p-3 bg-card hover:bg-card/80 transition-colors cursor-pointer group"
                                 onClick={() => onSelectTicket?.(ticket)}
                             >
                                 <div className="flex items-center justify-between">
                                     <h2 className="font-semibold">
-                                        {ticket.title}
+                                        {ticket.ticket.title}
                                     </h2>
                                     <Badge variant="secondary">
                                         {completedTasks}/{totalTasks} tasks
                                     </Badge>
                                 </div>
                                 <div className="mt-1 text-sm text-muted-foreground">
-                                    {snippet(ticket.overview ?? "", 100)}
+                                    {snippet(ticket.ticket.overview ?? "", 100)}
                                 </div>
                                 <div className="mt-2 mb-2">
                                     <Progress
@@ -255,24 +257,24 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                                     <div className="flex items-center gap-2">
                                         <Badge
                                             className={cn(
-                                                PRIORITY_COLORS[ticket.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS.normal
+                                                PRIORITY_COLORS[ticket.ticket.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS.normal
                                             )}
                                         >
-                                            {ticket.priority || "normal"}
+                                            {ticket.ticket.priority || "normal"}
                                         </Badge>
                                         <Badge
                                             className={cn(
-                                                STATUS_COLORS[ticket.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.open
+                                                STATUS_COLORS[ticket.ticket.status as keyof typeof STATUS_COLORS] || STATUS_COLORS.open
                                             )}
                                         >
-                                            {ticket.status?.replace("_", " ").toUpperCase()}
-                                        </Badge>
+                                            {ticket.ticket.status?.replace("_", " ").toUpperCase()}
+                                        </Badge>    
                                     </div>
                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={(e) => copyOverview(e, ticket.overview ?? "")}
+                                            onClick={(e) => copyOverview(e, ticket.ticket.overview ?? "")}
                                         >
                                             <Copy className="h-4 w-4 mr-1" />
                                             Copy Overview
@@ -319,7 +321,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                         <AlertDialogTitle>Are you sure you want to delete this ticket?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the ticket
-                            "{ticketToDelete?.title}" and all its associated tasks.
+                            "{ticketToDelete?.ticket.title}" and all its associated tasks.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

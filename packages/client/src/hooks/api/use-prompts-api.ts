@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Prompt } from 'shared';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import {
     getApiPromptsOptions,
@@ -12,7 +11,10 @@ import {
     getApiProjectsByProjectIdPromptsOptions,
     getApiProjectsByProjectIdPromptsQueryKey,
     postApiProjectsByProjectIdPromptsByPromptIdMutation,
-    deleteApiProjectsByProjectIdPromptsByPromptIdMutation
+    deleteApiProjectsByProjectIdPromptsByPromptIdMutation,
+    postApiPromptOptimizeMutation,
+    postApiPromptOptimizeOptions,
+    postApiPromptOptimizeQueryKey,
 } from '../generated/@tanstack/react-query.gen';
 import type {
     GetApiPromptsData,
@@ -28,6 +30,8 @@ import type {
     PostApiProjectsByProjectIdPromptsByPromptIdError,
     DeleteApiProjectsByProjectIdPromptsByPromptIdData,
     DeleteApiProjectsByProjectIdPromptsByPromptIdError,
+    PostApiPromptOptimizeError,
+    PostApiPromptOptimizeData,
 } from '../generated/types.gen'; // Corrected import path again to be relative to hooks dir
 import { Options } from '../generated/sdk.gen'; // Corrected import path again to be relative to hooks dir
 
@@ -61,15 +65,16 @@ interface GetAllPromptsOptions {
 
 // Enhanced prompt fetching using generated options
 export function useGetAllPrompts(options?: GetAllPromptsOptions) {
-    const { staleTime, gcTime, ...queryParams } = options || {};
-    const queryOpts = getApiPromptsOptions({
-        query: queryParams as GetApiPromptsData['query']
-    } as Options<GetApiPromptsData>);
+    // Destructure only client-side options
+    const { staleTime, gcTime } = options || {};
+
+    // Call the generated options function without query params, as the API doesn't expect them
+    const queryOpts = getApiPromptsOptions(); // Pass undefined or {} if needed, but likely handles undefined
 
     return useQuery({
-        ...queryOpts,
-        staleTime: staleTime ?? 1000 * 60 * 5, // 5 minutes by default
-        gcTime: gcTime ?? 1000 * 60 * 30, // 30 minutes by default
+        ...queryOpts, // Contains generated queryKey and queryFn
+        staleTime: staleTime ?? 1000 * 60 * 5, // Apply client-side staleTime
+        gcTime: gcTime ?? 1000 * 60 * 30, // Apply client-side gcTime
         // Select or transform data if needed to match previous EnhancedPromptListResponse structure
     });
 }
@@ -193,3 +198,44 @@ export function useRemovePromptFromProject() {
         onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
     });
 }
+
+export const useOptimizePrompt = () => {
+    const mutationOptions = postApiPromptOptimizeMutation();
+    return useMutation<unknown, PostApiPromptOptimizeError, string>({
+        mutationFn: (userContext: string) => {
+            const opts: Options<PostApiPromptOptimizeData> = { body: { userContext } };
+            return mutationOptions.mutationFn!(opts);
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error), // Cast error type
+    });
+}
+// export type OptimizePromptResponse = {
+//     success: boolean;
+//     optimizedPrompt?: string;
+//     error?: string;
+// };
+
+// const PROMPTIMIZER_KEYS = {
+//     all: ['promptimizer'] as const,
+//     optimize: () => [...PROMPTIMIZER_KEYS.all, 'optimize'] as const,
+// } as const;
+
+// async function optimizePrompt(
+//     api: ReturnType<typeof useApi>['api'],
+//     userContext: string
+// ): Promise<OptimizePromptResponse> {
+//     const response = await api.request('/api/prompt/optimize', {
+//         method: 'POST',
+//         body: { userContext },
+//     });
+//     return response.json();
+// }
+
+// export const useOptimizePrompt = () => {
+//     const { api } = useApi();
+
+//     return useMutation<OptimizePromptResponse, Error, string>({
+//         mutationFn: (userContext: string) => optimizePrompt(api, userContext),
+//         onError: commonErrorHandler,
+//     });
+// };

@@ -1,16 +1,90 @@
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { db } from '@/utils/database';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas';
+
+// Response schemas
+const EnvironmentInfoSchema = z.object({
+    NODE_ENV: z.string().nullable(),
+    BUN_ENV: z.string().nullable(),
+    SERVER_PORT: z.string().nullable(),
+}).openapi('EnvironmentInfo');
+
+const DatabaseStatsSchema = z.object({
+    chats: z.object({ count: z.number() }),
+    chat_messages: z.object({ count: z.number() }),
+    projects: z.object({ count: z.number() }),
+    files: z.object({ count: z.number() }),
+    prompts: z.object({ count: z.number() }),
+    prompt_projects: z.object({ count: z.number() }),
+    provider_keys: z.object({ count: z.number() }),
+    tickets: z.object({ count: z.number() }),
+    ticket_files: z.object({ count: z.number() }),
+    ticket_tasks: z.object({ count: z.number() }),
+    file_changes: z.object({ count: z.number() }),
+}).openapi('DatabaseStats');
+
+const ServerInfoSchema = z.object({
+    version: z.string(),
+    bunVersion: z.string(),
+    platform: z.string(),
+    arch: z.string(),
+    memoryUsage: z.object({
+        rss: z.number(),
+        heapTotal: z.number(),
+        heapUsed: z.number(),
+        external: z.number(),
+        arrayBuffers: z.number(),
+    }),
+    uptime: z.number(),
+}).openapi('ServerInfo');
+
+const EnvInfoResponseSchema = z.object({
+    success: z.literal(true),
+    environment: EnvironmentInfoSchema,
+    serverInfo: ServerInfoSchema,
+    databaseStats: DatabaseStatsSchema
+}).openapi('EnvInfoResponse');
+
+const SystemStatusResponseSchema = z.object({
+    success: z.literal(true),
+    status: z.string(),
+    checks: z.object({
+        api: z.string(),
+        timestamp: z.string()
+    })
+}).openapi('SystemStatusResponse');
+
+// Route definitions
+const getEnvInfoRoute = createRoute({
+    method: 'get',
+    path: '/api/admin/env-info',
+    tags: ['Admin'],
+    summary: 'Get system environment information and database statistics',
+    responses: {
+        200: { content: { 'application/json': { schema: EnvInfoResponseSchema } }, description: 'Successfully retrieved environment information' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Error retrieving environment information' },
+    },
+});
+
+const getSystemStatusRoute = createRoute({
+    method: 'get',
+    path: '/api/admin/system-status',
+    tags: ['Admin'],
+    summary: 'Check system operational status',
+    responses: {
+        200: { content: { 'application/json': { schema: SystemStatusResponseSchema } }, description: 'Successfully retrieved system status' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Error retrieving system status' },
+    },
+});
+
 export const adminRoutes = new OpenAPIHono()
-    // Admin endpoint to get environment information
-    .get('/api/admin/env-info', async (c) => {
+    .openapi(getEnvInfoRoute, async (c) => {
         try {
             // Filter only needed environment variables for security
             const envInfo = {
-                NODE_ENV: process.env.NODE_ENV,
-                BUN_ENV: process.env.BUN_ENV,
-                SERVER_PORT: process.env.PORT,
-                // Add other safe-to-expose environment variables here
-                // Don't include secrets or sensitive information
+                NODE_ENV: process.env.NODE_ENV ?? null, // Ensure null if undefined
+                BUN_ENV: process.env.BUN_ENV ?? null,
+                SERVER_PORT: process.env.PORT ?? null,
             };
 
             // Get database statistics
@@ -28,49 +102,60 @@ export const adminRoutes = new OpenAPIHono()
                 file_changes: db.query('SELECT COUNT(*) as count FROM file_changes').get() as { count: number },
             };
 
-            return c.json({
+            const serverInfo = {
+                version: process.version,
+                bunVersion: Bun.version,
+                platform: process.platform,
+                arch: process.arch,
+                memoryUsage: process.memoryUsage(),
+                uptime: process.uptime(),
+            };
+
+            // Create properly typed payload
+            const payload: z.infer<typeof EnvInfoResponseSchema> = {
                 success: true,
                 environment: envInfo,
-                serverInfo: {
-                    version: process.version, // Node.js version
-                    bunVersion: Bun.version,  // Bun version
-                    platform: process.platform,
-                    arch: process.arch,
-                    memoryUsage: process.memoryUsage(),
-                    uptime: process.uptime(),
-                    // Add additional server information as needed
-                },
+                serverInfo: serverInfo,
                 databaseStats: dbStats
-            });
+            };
+            return c.json(payload, 200);
         } catch (e) {
             console.error('Failed to get environment info:', e);
-            return c.json({
-                error: 'Failed to get environment info',
-                errorMessage: e instanceof Error ? e.message : String(e)
-            }, 500);
+            const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                success: false,
+                error: {
+                    message: 'Failed to get environment info',
+                    code: 'ENV_INFO_ERROR',
+                    details: {}
+                }
+            };
+            return c.json(errorPayload, 500);
         }
     })
-    // Admin endpoint to check system status
-    .get('/api/admin/system-status', async (c) => {
+    .openapi(getSystemStatusRoute, async (c) => {
         try {
-            // Perform basic system checks
-            // You can add database connectivity check, external service checks, etc.
-
-            return c.json({
+            // Create properly typed payload
+            const payload: z.infer<typeof SystemStatusResponseSchema> = {
                 success: true,
                 status: 'operational',
                 checks: {
                     api: 'healthy',
                     timestamp: new Date().toISOString()
                 }
-            });
+            };
+            return c.json(payload, 200);
         } catch (e) {
             console.error('Failed to get system status:', e);
-            return c.json({
-                error: 'Failed to get system status',
-                errorMessage: e instanceof Error ? e.message : String(e)
-            }, 500);
+            const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                success: false,
+                error: {
+                    message: 'Failed to get system status',
+                    code: 'SYSTEM_STATUS_ERROR',
+                    details: {}
+                }
+            };
+            return c.json(errorPayload, 500);
         }
     });
 
-export type AdminRouteTypes = typeof adminRoutes; 
+export type AdminRouteTypes = typeof adminRoutes;

@@ -1,46 +1,103 @@
-// packages/shared/src/validation/chat-api-validation.ts
 import { z } from '@hono/zod-openapi';
-import { AI_API_PROVIDERS, type APIProviders } from '../global-state/global-state-schema';
-import type { ModelOptions } from './model-options-schema';
-// Remove direct import of DB schemas if they aren't used elsewhere in this file
-// import { ChatReadSchema, ChatMessageReadSchema } from "../utils/database/db-schemas";
+import { AI_API_PROVIDERS } from './provider-key.schemas';
 
+export const MessageRoleEnum = z.enum(['system', 'user', 'assistant', 'tool', 'function', 'data']);
 
-// --- Reusable Base Schemas ---
-export const ApiErrorResponseSchema = z.object({
-    success: z.literal(false).openapi({ description: 'Indicates the request was unsuccessful' }),
-    error: z.string().openapi({ example: 'Resource not found', description: 'A description of the error' }),
-    code: z.string().optional().openapi({ example: 'NOT_FOUND', description: 'An optional error code' }),
-    details: z.any().optional().openapi({ description: 'Optional details, e.g., validation errors' }),
-}).openapi('ApiErrorResponse');
-
-export const OperationSuccessResponseSchema = z.object({
-    success: z.literal(true).openapi({ description: 'Indicates if the request was successful' }),
-    message: z.string().optional().openapi({ example: 'Operation successful', description: 'An optional success message' })
-}).openapi('OperationSuccessResponse');
-
-// --- Schemas for API Data (Dates as Strings) ---
-
-const ApiChatSchema = z.object({
-    id: z.string().min(1).openapi({ example: 'chat-a1b2c3d4', description: 'Chat ID' }),
-    title: z.string().openapi({ example: 'My Chat Session', description: 'Chat title' }),
-    createdAt: z.string().datetime().openapi({ example: '2024-01-01T12:00:00.000Z', description: 'Creation timestamp (ISO 8601)' }),
-    updatedAt: z.string().datetime().openapi({ example: '2024-01-01T12:05:00.000Z', description: 'Last update timestamp (ISO 8601)' })
-}).openapi('ApiChat');
-
-// Explicitly define the allowed roles for better type safety
-const MessageRoleEnum = z.enum(['system', 'user', 'assistant', 'tool', 'function', 'data']);
 export type MessageRole = z.infer<typeof MessageRoleEnum>; // Export the type if needed elsewhere
-export { MessageRoleEnum }; // Export the enum itself
 
-const ApiChatMessageSchema = z.object({
+
+const baseModelOptionsSchema = z.object({
+    model: z.string().optional(),
+    max_tokens: z.number().optional(),
+    temperature: z.number().optional(),
+    top_p: z.number().optional(),
+    frequency_penalty: z.number().optional(),
+    presence_penalty: z.number().optional(),
+    stop: z.union([z.string(), z.array(z.string())]).optional(),
+});
+
+export type ModelOptions = z.infer<typeof baseModelOptionsSchema>;
+
+
+
+export const ChatReadSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
+export const ChatMessageReadSchema = z.object({
+    id: z.string(),
+    chatId: z.string(),
+    role: z.string(),
+    content: z.string(),
+    createdAt: z.date(),
+});
+
+
+// Base schemas for chat entities
+export const ChatSchema = z.object({
+    id: z.string().openapi({ example: 'chat_1a2b3c4d' }),
+    title: z.string(),
+    createdAt: z.string().datetime().openapi({ example: '2024-03-10T10:00:00.000Z' }),
+    updatedAt: z.string().datetime().openapi({ example: '2024-03-10T10:05:00.000Z' }),
+}).openapi('Chat');
+
+export const ChatMessageSchema = z.object({
     id: z.string().min(1).openapi({ example: 'msg-m1a2b3c4', description: 'Message ID' }),
     chatId: z.string().min(1).openapi({ example: 'chat-a1b2c3d4', description: 'Parent Chat ID' }),
     role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
     content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
     createdAt: z.string().datetime().openapi({ example: '2024-01-01T12:00:05.000Z', description: 'Creation timestamp (ISO 8601)' })
-    // Add other fields like 'name', 'tool_call_id' if they are returned by mapMessageToResponse
-}).openapi('ApiChatMessage');
+}).openapi('ChatMessage');
+
+// Request Parameter Schemas
+export const ChatIdParamsSchema = z.object({
+    chatId: z.string().min(1).openapi({
+        param: { name: 'chatId', in: 'path' },
+        example: 'chat_1a2b3c4d',
+        description: 'The ID of the chat'
+    })
+}).openapi('ChatIdParams');
+
+// Request Body Schemas
+export const CreateChatBodySchema = z.object({
+    title: z.string().min(1).openapi({ example: 'New Chat Session' }),
+    copyExisting: z.boolean().optional().openapi({ description: 'Copy messages from currentChatId if true' }),
+    currentChatId: z.string().min(1).optional().openapi({ example: 'chat-a1b2c3d4' })
+}).openapi('CreateChatRequestBody');
+
+export const UpdateChatBodySchema = z.object({
+    title: z.string().min(1).openapi({ example: 'Updated Chat Title' }),
+}).openapi('UpdateChatRequestBody');
+
+export const CreateChatMessageBodySchema = z.object({
+    role: z.string().openapi({ example: 'user', description: 'Message role (user, assistant, system)' }),
+    content: z.string().min(1).openapi({ example: 'How can I implement authentication?' }),
+}).openapi('CreateChatMessageRequestBody');
+
+// Response Schemas
+export const ChatResponseSchema = z.object({
+    success: z.literal(true),
+    data: ChatSchema
+}).openapi('ChatResponse');
+
+export const ChatListResponseSchema = z.object({
+    success: z.literal(true),
+    data: z.array(ChatSchema)
+}).openapi('ChatListResponse');
+
+export const ChatMessageResponseSchema = z.object({
+    success: z.literal(true),
+    data: ChatMessageSchema
+}).openapi('ChatMessageResponse');
+
+export const ChatMessagesListResponseSchema = z.object({
+    success: z.literal(true),
+    data: z.array(ChatMessageSchema)
+}).openapi('ChatMessagesListResponse');
+
 
 // Define the schema for a single model in the list
 // *** Adjust this schema based on the actual structure returned by your service ***
@@ -54,20 +111,9 @@ const UnifiedModelSchema = z.object({
 
 export { UnifiedModelSchema }; // Export the schema
 
-// --- Specific Response Schemas ---
-export const ChatResponseSchema = z.object({
-    success: z.literal(true),
-    data: ApiChatSchema
-}).openapi('ChatResponse');
-
-export const ChatListResponseSchema = z.object({
-    success: z.literal(true),
-    data: z.array(ApiChatSchema)
-}).openapi('ChatListResponse');
-
 export const MessageListResponseSchema = z.object({
     success: z.literal(true),
-    data: z.array(ApiChatMessageSchema)
+    data: z.array(ChatMessageSchema)
 }).openapi('MessageListResponse');
 
 // --- NEW: Define Models List Response Schema ---
@@ -76,13 +122,10 @@ export const ModelsListResponseSchema = z.object({
     data: z.array(UnifiedModelSchema) // Use the newly defined model schema
 }).openapi('ModelsListResponse'); // Register as component
 
-// Example: Create Chat Body
-export const CreateChatBodySchema = z.object({
-    title: z.string().min(1).openapi({ example: 'My New Chat Session' }),
-    copyExisting: z.boolean().optional().openapi({ description: 'Copy messages from currentChatId if true' }),
-    currentChatId: z.string().min(1).optional().openapi({ example: 'chat-a1b2c3d4' })
-}).openapi('CreateChatRequestBody');
-
+export const ModelListResponseSchema = z.object({
+    success: z.literal(true),
+    data: z.array(UnifiedModelSchema)
+}).openapi('ModelListResponse');
 
 
 export const GetMessagesParamsSchema = z.object({
@@ -140,10 +183,6 @@ export const UpdateChatParamsSchema = z.object({
         description: 'The ID of the chat to update'
     })
 }).openapi('UpdateChatParams');
-
-export const UpdateChatBodySchema = z.object({
-    title: z.string().min(1).openapi({ example: 'Updated Chat Title' })
-}).openapi('UpdateChatRequestBody');
 
 export const DeleteChatParamsSchema = z.object({
     chatId: z.string().min(1).openapi({
@@ -228,11 +267,12 @@ export const AiChatRequestSchema = z.object({
     }),
 }).openapi('AiChatRequestBody');
 
-export const ModelListResponseSchema = z.object({
-    success: z.literal(true),
-    data: z.array(UnifiedModelSchema)
-}).openapi('ModelListResponse');
-
+export type CreateMessageBodyGeneric = {
+    message: string;
+    chatId: string;
+    excludedMessageIds?: string[];
+    tempId?: string;
+} & ModelOptions
 
 // --- Validation Schemas with OpenAPI Enhancements (Keep as is, looks good) ---
 export const chatApiValidation = {
@@ -262,11 +302,12 @@ export const chatApiValidation = {
     }
 } as const;
 
-
-export type CreateMessageBodyGeneric<TProvider extends APIProviders> = {
-    message: string;
-    chatId: string;
-    excludedMessageIds?: string[];
+// Type exports
+export type Chat = z.infer<typeof ChatSchema>;
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+export type CreateChatBody = z.infer<typeof CreateChatBodySchema>;
+export type UpdateChatBody = z.infer<typeof UpdateChatBodySchema>;
+export type CreateChatMessageBody = z.infer<typeof CreateChatMessageBodySchema>;
+export type ExtendedChatMessage = ChatMessage & {
     tempId?: string;
-} & ModelOptions<TProvider>;
-
+}

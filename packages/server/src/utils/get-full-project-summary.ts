@@ -1,5 +1,5 @@
 import { ApiError } from "shared";
-import { ProjectFile } from "shared/schema";
+import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter";
 import { websocketStateAdapter } from "./websocket/websocket-state-adapter";
@@ -19,7 +19,7 @@ const buildProjectSummary = (includedFiles: ProjectFile[]) => {
 export const getFullProjectSummary = async (projectId: string) => {
     const project = await getProjectById(projectId);
     if (!project) {
-        throw new ApiError("Project not found", 404, "NOT_FOUND");
+        throw new ApiError(404, "Project not found", "NOT_FOUND");
     }
 
     // Fetch all file summaries from the database

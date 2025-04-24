@@ -6,8 +6,6 @@ import { FileExplorer } from './file-explorer/file-explorer'
 import { useSettings } from '@/zustand/selectors'
 import { useActiveProjectTab } from '@/zustand/selectors'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import type { Project } from 'shared'
-import type { ProjectFile } from 'shared/schema'
 import { useGetProject } from '@/hooks/api/use-projects-api'
 
 export type FilePanelRef = {
@@ -27,7 +25,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
     function FilePanel({ className }, ref) {
         // If not passed in, get from store
         const { selectedProjectId: projectId } = useActiveProjectTab()
-        const { data } = useGetProject(projectId ?? '')
+        const { data: projectData } = useGetProject(projectId ?? '')
 
         // We still keep references to let parent call `focusSearch`, etc.
         const searchInputRef = useRef<HTMLInputElement>(null)
@@ -89,7 +87,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
         return (
             <div id="outer-area" className={`flex flex-col h-full overflow-hidden ${className}`}>
                 <div className="flex flex-col flex-1 min-h-0">
-                    {data?.project && <ProjectHeader projectData={data.project} />}
+                    {projectData?.data && <ProjectHeader projectData={projectData.data} />}
                     <div className="flex-1 overflow-auto p-4 space-y-6">
                         <FileExplorer
                             ref={{

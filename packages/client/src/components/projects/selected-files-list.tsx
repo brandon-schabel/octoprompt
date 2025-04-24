@@ -28,8 +28,7 @@ import { formatShortcut } from "@/lib/shortcuts"
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useProjectTab } from "@/zustand/selectors"
 import { FileViewerDialog } from "../navigation/file-viewer-dialog"
-import { ProjectFile } from "shared/schema"
-
+import { ProjectFile } from "@/hooks/generated"
 type SelectedFilesListProps = {
   onRemoveFile: (fileId: string) => void
   onNavigateLeft?: () => void

@@ -1,5 +1,24 @@
 import { z } from '@hono/zod-openapi';
 
+export const AI_API_PROVIDERS = [
+    "openai",
+    "openrouter",
+    "lmstudio",
+    "ollama",
+    "xai",
+    "google_gemini",
+    "anthropic",
+    "groq",
+    "together",
+] as const;
+export const aiProviderSchema = z.enum(AI_API_PROVIDERS);
+
+// ------------------------------------------------------------------
+// Provider enum
+// ------------------------------------------------------------------
+export const providerSchema = z.enum(AI_API_PROVIDERS);
+export type APIProviders = z.infer<typeof providerSchema>;
+
 // --- Base Schema for a Provider Key ---
 // Represents the structure of a single ProviderKey object as returned by the API (excluding the sensitive key itself)
 export const ProviderKeySchema = z.object({
@@ -7,6 +26,7 @@ export const ProviderKeySchema = z.object({
     provider: z.string().openapi({ example: 'openai', description: 'AI Provider identifier (e.g., openai, anthropic)' }),
     // NOTE: We intentionally DO NOT include the 'key' field in the response schema for security.
     // The full key might be returned on creation/update but shouldn't be listed.
+    key: z.string().openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' }),
     createdAt: z.string().datetime().openapi({ example: '2024-03-01T11:00:00.000Z', description: 'Creation timestamp (ISO 8601)' }),
     updatedAt: z.string().datetime().openapi({ example: '2024-03-01T11:05:00.000Z', description: 'Last update timestamp (ISO 8601)' })
 }).openapi('ProviderKey');
@@ -56,6 +76,7 @@ export const ProviderKeyListResponseSchema = z.object({
 }).openapi('ProviderKeyListResponse');
 
 
+
 // --- Original structure (optional, might be redundant) ---
 export const providerKeyApiValidation = {
     create: {
@@ -74,3 +95,5 @@ export const providerKeyApiValidation = {
 export type CreateProviderKeyBody = z.infer<typeof CreateProviderKeyBodySchema>;
 export type UpdateProviderKeyBody = z.infer<typeof UpdateProviderKeyBodySchema>;
 export type ProviderKeyIdParams = z.infer<typeof ProviderKeyIdParamsSchema>;
+
+export type ProviderKey = z.infer<typeof ProviderKeySchema>;

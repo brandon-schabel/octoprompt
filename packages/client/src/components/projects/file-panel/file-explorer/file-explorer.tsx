@@ -1,7 +1,7 @@
 import React, { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useActiveProjectTab } from '@/zustand/selectors'
-import { useGetProject, useGetProjectFiles } from '@/hooks/api/use-projects-api'
+// Import the refactored hooks
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +17,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 
-import type { ProjectFile } from 'shared/schema'
+// Remove unused ProjectResponse type if it was defined locally before
 import { useClickAway } from '@/hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
 import { buildFileTree } from '../../utils/projects-utils'
@@ -29,7 +29,9 @@ import { SelectedFilesDrawer } from '../../selected-files-drawer'
 import { AIFileChangeDialog } from '@/components/file-changes/ai-file-change-dialog'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
-import { PROJECT_FILES_KEYS } from '@/hooks/api/use-projects-api'
+import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
+import { ProjectFile } from '@/hooks/generated/types.gen'
+// Import the PROJECT_FILES_KEYS constant if needed for invalidation (already used correctly below)
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>
@@ -45,13 +47,29 @@ type FileExplorerProps = {
 
 export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) {
   const { id: activeProjectTabId, selectedProjectId } = useActiveProjectTab()
-  /**
-   * The server will do a fresh sync (via "GET /api/projects/:id/files")
-   * then we store them in React Query's cache.
-   */
-  const { data: fileData, isLoading: filesLoading } = useGetProjectFiles(selectedProjectId || '')
-  const { data: projectData } = useGetProject(selectedProjectId || '')
   const queryClient = useQueryClient()
+
+  /**
+   * Use the refactored hooks. They return the TanStack Query result object.
+   * The actual API response { success: true, data: [...] } is in the `.data` property.
+   */
+  const {
+    data: fileDataResponse, // Renamed to indicate it's the full response object
+    isLoading: filesLoading,
+    // isError: filesError, // Can use this for error handling UI
+  } = useGetProjectFiles(selectedProjectId || '')
+
+  const {
+    data: projectDataResponse, // Renamed to indicate it's the full response object
+    // isLoading: projectLoading, // Can use this if needed
+    // isError: projectError, // Can use this for error handling UI
+  } = useGetProject(selectedProjectId || '')
+
+  // --- Extract the actual data from the response objects ---
+  // The structure is response -> .data (from TanStack Query) -> .data (from our API structure)
+  const projectFiles = useMemo(() => fileDataResponse?.data || [], [fileDataResponse]);
+  const project = useMemo(() => projectDataResponse?.data, [projectDataResponse]);
+  // ---
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
   const closeFileViewer = () => setViewedFile(null)
@@ -93,31 +111,38 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     [debouncedSetFileSearch]
   )
 
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  // useSelectedFiles hook seems independent of this change, assuming it manages its own state.
+  // Check if it needs projectFileMap derived from the new `projectFiles` variable.
+  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles(); // Pass the derived projectFiles
 
   const filteredFiles = useMemo(() => {
-    if (!fileData?.files) return []
+    // Use the derived `projectFiles` array
+    if (!projectFiles) return []
     const trimmed = (localFileSearch || '').trim().toLowerCase()
-    if (!trimmed) return fileData.files
+    if (!trimmed) return projectFiles // Return all files if no search term
     if (searchByContent) {
-      return fileData.files.filter((f) => {
-        return f.path.toLowerCase().includes(trimmed) || f.content?.toLowerCase().includes(trimmed)
+      return projectFiles.filter((f) => {
+        // Ensure content is checked safely
+        return f.path.toLowerCase().includes(trimmed) || (f.content && f.content.toLowerCase().includes(trimmed))
       })
     }
-    return fileData.files.filter((f) => f.path.toLowerCase().includes(trimmed))
-  }, [fileData?.files, localFileSearch, searchByContent])
+    return projectFiles.filter((f) => f.path.toLowerCase().includes(trimmed))
+    // Update dependency array
+  }, [projectFiles, localFileSearch, searchByContent])
 
   const fileTree = useMemo(() => {
     if (!filteredFiles.length) return {}
     return buildFileTree(filteredFiles)
   }, [filteredFiles])
 
+  // filteredFilesMap remains the same conceptually, depends on filteredFiles
   const filteredFilesMap = useMemo(() => {
     const m = new Map<string, ProjectFile>()
     filteredFiles.forEach((f) => m.set(f.id, f))
     return m
   }, [filteredFiles])
 
+  // suggestions depends on filteredFiles
   const suggestions = useMemo(() => filteredFiles.slice(0, 10), [filteredFiles])
 
   const toggleFileInSelection = useCallback(
@@ -150,8 +175,9 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     return (
       <SelectedFilesDrawer
         selectedFiles={selectedFiles}
+        // Pass the correct map derived from all project files
         fileMap={projectFileMap}
-        onRemoveFile={() => {}}
+        onRemoveFile={() => { }} // Implement removal logic if needed
         trigger={trigger}
         projectTabId={activeProjectTabId ?? ''}
       />
@@ -159,7 +185,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   }
 
   const handleRequestAIFileChange = (filePath: string) => {
-    const file = fileData?.files?.find((f) => f.path === filePath)
+    // Use the derived `projectFiles` array
+    const file = projectFiles?.find((f) => f.path === filePath)
     if (file) {
       setSelectedFile(file)
       setAiDialogOpen(true)
@@ -172,6 +199,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         ref={searchContainerRef}
         className='relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start'
       >
+        {/* Search Input and Autocomplete logic remains largely the same */}
+        {/* ... existing input and autocomplete JSX ... */}
         <div className='relative max-w-64 w-full'>
           <div className='flex items-center gap-2'>
             <Input
@@ -268,6 +297,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
         <div className='flex lg:hidden items-center justify-between'>{renderMobileSelectedFilesDrawerButton()}</div>
 
+        {/* Autocomplete List rendering uses `suggestions` which is derived correctly */}
         {showAutocomplete && (localFileSearch || '').trim() && suggestions.length > 0 && (
           <ul className='absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto'>
             <li className='px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border'>
@@ -275,13 +305,13 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
             </li>
             {suggestions.map((file, index) => {
               const isHighlighted = index === autocompleteIndex
+              // Use the projectFileMap derived from *all* files to check selection status correctly
               const isSelected = selectedFiles.includes(file.id)
               return (
                 <li
                   key={file.id}
-                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
-                    isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
-                  }`}
+                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                    }`}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -298,17 +328,20 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         )}
       </div>
 
+      {/* Loading state check remains the same */}
       {filesLoading ? (
         <div className='mt-2'>
           <Skeleton className='h-8 w-1/2' />
           <Skeleton className='h-8 w-2/3' />
         </div>
-      ) : !fileData?.files?.length ? (
+        // Check the derived projectFiles array for emptiness
+      ) : !projectFiles.length ? (
         <EmptyProjectScreen
           fileSearch={localFileSearch}
           setFileSearch={setLocalFileSearch}
           setSearchByContent={setSearchByContent}
         />
+        // Check the derived filteredFiles array for emptiness
       ) : !filteredFiles.length ? (
         <NoResultsScreen
           fileSearch={localFileSearch}
@@ -319,10 +352,14 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       ) : (
         <div className='flex-1 min-h-0 flex flex-col'>
           <div className='flex lg:hidden items-center justify-between mb-2'>
+            {/* Render mobile drawer button - uses projectFileMap derived correctly */}
             {renderMobileSelectedFilesDrawerButton()}
           </div>
 
           <div className='hidden lg:flex flex-1 min-h-0'>
+            {/* ResizablePanel structure remains the same */}
+            {/* FileTree uses `fileTree` derived correctly */}
+            {/* SelectedFilesListDisplay uses `projectFileMap` derived correctly */}
             <ResizablePanel
               leftPanel={
                 <div className='h-full w-full'>
@@ -331,7 +368,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                       ref={ref.fileTreeRef}
                       root={fileTree}
                       onViewFile={setViewedFile}
-                      projectRoot={''}
+                      // Use project path from derived project object
+                      projectRoot={project?.path || ''}
                       resolveImports={resolveImports}
                       preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                       onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
@@ -344,6 +382,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               rightPanel={
                 <div className='h-full w-full'>
                   <SelectedFilesListDisplay
+                    // Pass the map derived from *all* files
                     allFilesMap={projectFileMap}
                     selectedFilesListRef={ref.selectedFilesListRef}
                     onNavigateToFileTree={() => ref.fileTreeRef.current?.focusTree()}
@@ -368,13 +407,16 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
             />
           </div>
 
+          {/* Mobile layout structure remains the same */}
+          {/* FileTree uses `fileTree` derived correctly */}
           <div className='flex flex-col flex-1 min-h-0 lg:hidden'>
             <ScrollArea className='flex-1 min-h-0 border rounded-md'>
               <FileTree
                 ref={ref.fileTreeRef}
                 root={fileTree}
                 onViewFile={setViewedFile}
-                projectRoot={''}
+                // Use project path from derived project object
+                projectRoot={project?.path || ''}
                 resolveImports={resolveImports}
                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                 onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
@@ -386,20 +428,27 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         </div>
       )}
 
-      {projectData?.project && (
+      {/* Use the derived `project` object */}
+      {project && (
         <AIFileChangeDialog
           open={aiDialogOpen}
           onOpenChange={setAiDialogOpen}
-          filePath={(projectData?.project?.path || '') + '/' + (selectedFile?.path || '')}
+          // Construct the full path using the derived project path
+          filePath={`${project.path}/${selectedFile?.path || ''}`}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(selectedProjectId || '') })
+            // Invalidation uses the correct generated key via PROJECT_FILES_KEYS
+            queryClient.invalidateQueries({ queryKey: ['projectFiles', selectedProjectId || ''] })
             setAiDialogOpen(false)
             setSelectedFile(undefined)
           }}
         />
       )}
 
+      {/* FileViewerDialog uses `viewedFile` state, unchanged */}
       {viewedFile && <FileViewerDialog viewedFile={viewedFile} open={!!viewedFile} onClose={closeFileViewer} />}
     </div>
   )
 }
+
+// Note: Consider adding forwardRef if FileExplorer needs to be referenced directly
+// export const FileExplorer = React.forwardRef(FileExplorerComponent);

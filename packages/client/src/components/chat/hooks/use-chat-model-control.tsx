@@ -1,6 +1,6 @@
 import { useSettings } from '@/zustand/selectors'; // Use global settings selector
 import { useUpdateSettings } from '@/zustand/updaters'; // Use global settings updater
-import { APIProviders } from "shared";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 export const useChatModelControl = () => {
     const settings = useSettings();

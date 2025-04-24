@@ -20,11 +20,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useEffect, useState, useRef, forwardRef } from "react"
-import { useOptimizePrompt } from '@/hooks/api/use-promptimizer'
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from "sonner"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
+import { useOptimizePrompt } from "@/hooks/api/use-prompts-api"
 
 type ExpandableTextareaProps = {
   value: string
@@ -60,8 +60,8 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     }
     promptimizeMutation.mutate(expandedValue, {
       onSuccess: (resp) => {
-        if (resp.success && resp.optimizedPrompt) {
-          setOptimizedPrompt(resp.optimizedPrompt)
+        if (resp.data.success && resp.data.optimizedPrompt) {
+          setOptimizedPrompt(resp.data.optimizedPrompt)
           setPromptimizeDialogOpen(true)
         } else {
           toast.error(resp.error || "No optimized prompt returned")

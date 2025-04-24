@@ -2,16 +2,22 @@ import { createRoute, z } from '@hono/zod-openapi'
 import { streamSSE, SSEStreamingApi } from 'hono/streaming';
 
 import { createChatService } from '@/services/model-providers/chat/chat-service';
-import { APIProviders, ApiError } from 'shared';
+import { ApiError, } from 'shared';
+import {
+    ApiErrorResponseSchema,
+    OperationSuccessResponseSchema
+} from 'shared/src/schemas/common.schemas';
 import { unifiedProvider } from '@/services/model-providers/providers/unified-provider-service';
-import { MessageRoleEnum, AiChatRequestSchema, chatApiValidation, ApiErrorResponseSchema, ChatListResponseSchema, ChatResponseSchema, CreateChatBodySchema, DeleteChatParamsSchema, DeleteMessageParamsSchema, ForkChatBodySchema, ForkChatFromMessageBodySchema, ForkChatFromMessageParamsSchema, ForkChatParamsSchema, GetMessagesParamsSchema, MessageListResponseSchema, ModelsListResponseSchema, ModelsQuerySchema, OperationSuccessResponseSchema, UpdateChatBodySchema, UpdateChatParamsSchema, UnifiedModelSchema } from "shared/src/validation/chat-api-validation";
+import { MessageRoleEnum, AiChatRequestSchema, ChatListResponseSchema, ChatResponseSchema, CreateChatBodySchema, DeleteChatParamsSchema, DeleteMessageParamsSchema, ForkChatBodySchema, ForkChatFromMessageBodySchema, ForkChatFromMessageParamsSchema, ForkChatParamsSchema, GetMessagesParamsSchema, MessageListResponseSchema, ModelsListResponseSchema, ModelsQuerySchema, UpdateChatBodySchema, UpdateChatParamsSchema } from "shared/src/schemas/chat.schemas";
+
 import { ModelFetcherService, ProviderKeysConfig } from '@/services/model-providers/providers/model-fetcher-service';
 import { providerKeyService } from '@/services/model-providers/providers/provider-key-service';
-import { ProviderKey } from 'shared/schema';
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from "@/services/model-providers/providers/provider-defaults";
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 
 const chatService = createChatService();
+
 
 // --- Model Routes (/models) ---
 
@@ -335,8 +341,8 @@ export const chatRoutes = new OpenAPIHono()
         const userChats = await chatService.getAllChats();
         const responseData = userChats.map(chat => ({
             ...chat,
-            createdAt: chat.createdAt.toISOString(),
-            updatedAt: chat.updatedAt.toISOString(),
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
         }));
 
         return c.json({
@@ -367,8 +373,8 @@ export const chatRoutes = new OpenAPIHono()
             success: true,
             data: {
                 ...chat,
-                createdAt: chat.createdAt.toISOString(),
-                updatedAt: chat.updatedAt.toISOString(),
+                createdAt: chat.createdAt,
+                updatedAt: chat.updatedAt
             }
         } satisfies z.infer<typeof ChatResponseSchema>, 201);
     })
@@ -383,7 +389,7 @@ export const chatRoutes = new OpenAPIHono()
                 success: true,
                 data: messages.map(msg => ({
                     ...msg,
-                    createdAt: msg.createdAt.toISOString(),
+                    createdAt: msg.createdAt,
                     role: msg.role as z.infer<typeof MessageRoleEnum>,
                 }))
             } satisfies z.infer<typeof MessageListResponseSchema>, 200);
@@ -491,8 +497,8 @@ export const chatRoutes = new OpenAPIHono()
                 success: true,
                 data: {
                     ...newChat,
-                    createdAt: newChat.createdAt.toISOString(),
-                    updatedAt: newChat.updatedAt.toISOString()
+                    createdAt: newChat.createdAt,
+                    updatedAt: newChat.updatedAt
                 }
             } satisfies z.infer<typeof ChatResponseSchema>, 201);
         } catch (error) {
@@ -514,8 +520,8 @@ export const chatRoutes = new OpenAPIHono()
                 success: true,
                 data: {
                     ...newChat,
-                    createdAt: newChat.createdAt.toISOString(),
-                    updatedAt: newChat.updatedAt.toISOString()
+                    createdAt: newChat.createdAt,
+                    updatedAt: newChat.updatedAt
                 }
             } satisfies z.infer<typeof ChatResponseSchema>, 201);
         } catch (error) {
@@ -559,8 +565,8 @@ export const chatRoutes = new OpenAPIHono()
                 success: true,
                 data: {
                     ...updatedChat,
-                    createdAt: updatedChat.createdAt.toISOString(),
-                    updatedAt: updatedChat.updatedAt.toISOString()
+                    createdAt: updatedChat.createdAt,
+                    updatedAt: updatedChat.updatedAt
                 }
             } satisfies z.infer<typeof ChatResponseSchema>, 200);
         } catch (error) {

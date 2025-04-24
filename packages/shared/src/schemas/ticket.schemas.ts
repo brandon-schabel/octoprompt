@@ -1,6 +1,66 @@
 /* packages/shared/src/validation/tickets-api-validation.ts */
 import { z } from "zod";
 
+
+// Zod schemas for the 'tickets' table
+export const TicketCreateSchema = z.object({
+    projectId: z.string(),
+    title: z.string(),
+    overview: z.string().optional(),
+    status: z.string().optional(),
+    priority: z.string().optional(),
+    suggestedFileIds: z.string().optional(),
+});
+
+export const TicketReadSchema = z.object({
+    id: z.string(),
+    projectId: z.string(),
+    title: z.string(),
+    overview: z.string(),
+    status: z.string(),
+    priority: z.string(),
+    suggestedFileIds: z.string(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
+export const TicketUpdateSchema = z.object({
+    title: z.string().optional(),
+    overview: z.string().optional(),
+    status: z.string().optional(),
+    priority: z.string().optional(),
+    suggestedFileIds: z.string().optional(),
+});
+
+export const TicketFileReadSchema = z.object({
+    ticketId: z.string(),
+    fileId: z.string(),
+});
+
+// Zod schemas for the 'ticket_tasks' table
+export const TicketTaskCreateSchema = z.object({
+    ticketId: z.string(),
+    content: z.string(),
+    done: z.boolean().optional(),
+    orderIndex: z.number().optional(),
+});
+
+export const TicketTaskReadSchema = z.object({
+    id: z.string(),
+    ticketId: z.string(),
+    content: z.string(),
+    done: z.preprocess((val) => {
+        if (typeof val === 'number') return val === 1;
+        if (typeof val === 'boolean') return val;
+        return false;
+    }, z.boolean()),
+    orderIndex: z.number(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
+
+
 export const createTicketSchema = z.object({
     projectId: z.string().min(1),
     title: z.string().min(1),
@@ -116,3 +176,8 @@ export type UpdateTicketBody = z.infer<typeof updateTicketSchema>;
 export type CreateTaskBody = z.infer<typeof createTaskSchema>;
 export type UpdateTaskBody = z.infer<typeof updateTaskSchema>;
 export type ReorderTasksBody = z.infer<typeof reorderTasksSchema>;
+
+// Define types based on Zod schemas
+export type Ticket = z.infer<typeof TicketReadSchema>;
+export type TicketTask = z.infer<typeof TicketTaskReadSchema>;
+export type TicketFile = z.infer<typeof TicketFileReadSchema>;

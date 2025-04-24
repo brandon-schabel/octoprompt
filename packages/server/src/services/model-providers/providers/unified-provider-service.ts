@@ -3,26 +3,25 @@ import {
     CoreMessage,
     LanguageModel,
     streamText,
-    generateText, // Added for non-streaming cases
+    generateText,
     generateObject,
-    streamObject, // Added for structured output
+    streamObject,
 } from 'ai';
 import {
-    openai,
-    createOpenAI, // Renamed from createOpenAI for clarity if needed, but usually just openai is fine
+    createOpenAI,
 } from '@ai-sdk/openai';
-import { anthropic, createAnthropic } from '@ai-sdk/anthropic';
-import { google, createGoogleGenerativeAI } from '@ai-sdk/google';
-import { groq, createGroq } from '@ai-sdk/groq';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'; // Use the specific package
-import { createOllama } from 'ollama-ai-provider'; // Assuming ollama-ai-provider exports this
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { createOllama } from 'ollama-ai-provider';
 import { createProviderKeyService } from "./provider-key-service";
-import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared";
+import { DEFAULT_MODEL_CONFIGS } from "shared";
 import { ProcessMessageParams, AISdkOptions } from "./unified-provider-types";
 import { createChatService } from "../chat/chat-service";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
-import { ProviderKey } from 'shared/schema';
 import { parseStructuredJson } from '@/utils/structured-output-fetcher';
+import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 
 // --- Constants for Base URLs (Can be overridden by settings) ---
 // Use the base URLs defined in the user's guide's .env section

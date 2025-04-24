@@ -1,13 +1,13 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.3.3",
+  "version": "0.4.0-alpha",
   "type": "module",
   "scripts": {
     "setup": "bun run scripts/setup.ts",
     "dev": "bun run scripts/start-dev.ts",
-    "client:dev": "bun run scripts/start-client-dev.ts",
-    "server:dev": "bun run scripts/start-server-dev.ts",
+    "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
+    "dev:server": "bun run scripts/start-server-dev.ts",
     "stop": "bun run scripts/stop.ts",
     "build": "bun run scripts/build.ts",
     "format": "prettier --write .",

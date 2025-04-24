@@ -5,7 +5,6 @@ import { chatRoutes } from './routes/chat-routes';
 import { structuredOutputRoutes } from './routes/structured-output-routes';
 import { ticketRoutes } from './routes/ticket-routes';
 import { projectRoutes } from './routes/project-routes';
-import { promptimizerRoutes } from './routes/promptimizer-routes';
 import { providerKeyRoutes } from './routes/provider-key-routes';
 import { stateRoutes } from './routes/state-routes';
 import { adminRoutes } from './routes/admin-routes';
@@ -15,7 +14,7 @@ import { OpenAPIHono, z } from '@hono/zod-openapi';
 import packageJson from '../package.json'
 import { corsConfig } from './constants/server-config';
 import { swaggerUI } from '@hono/swagger-ui'
-import { ApiErrorResponseSchema } from 'shared/src/validation/chat-api-validation';
+import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas';
 
 // Helper to format Zod errors for more readable responses
 const formatZodErrors = (error: z.ZodError) => {
@@ -30,9 +29,11 @@ export const app = new OpenAPIHono({
             return c.json(
                 {
                     success: false,
-                    error: 'Validation Failed',
-                    code: 'VALIDATION_ERROR',
-                    details: formatZodErrors(result.error),
+                    error: {
+                        message: 'Validation Failed',
+                        code: 'VALIDATION_ERROR',
+                        details: formatZodErrors(result.error),
+                    },
                 } satisfies z.infer<typeof ApiErrorResponseSchema>,
                 422
             );
@@ -53,7 +54,6 @@ app.route('/', chatRoutes)
 app.route('/', structuredOutputRoutes)
 app.route('/', ticketRoutes)
 app.route('/', projectRoutes)
-app.route('/', promptimizerRoutes)
 app.route('/', providerKeyRoutes)
 app.route('/', stateRoutes)
 app.route('/', adminRoutes)
@@ -72,38 +72,46 @@ app.onError((err, c) => {
         statusCode = err.status;
         responseBody = {
             success: false,
-            error: err.message,
-            code: err.code || 'API_ERROR',
-            details: err.details
+            error: {
+                message: err.message,
+                code: err.code || 'API_ERROR',
+                details: err.details as Record<string, any> | undefined
+            },
         };
     } else if (err instanceof z.ZodError) {
         console.error("[ErrorHandler] ZodError (fallback):", err.issues);
         statusCode = 422;
         responseBody = {
             success: false,
-            error: 'Invalid Data Provided',
-            code: 'VALIDATION_ERROR',
-            details: formatZodErrors(err),
+            error: {
+                message: 'Invalid Data Provided',
+                code: 'VALIDATION_ERROR',
+                details: formatZodErrors(err),
+            },
         };
     } else if (err instanceof Error) {
         console.error(`[ErrorHandler] Generic Error: ${err.message}`);
         // Handle not found errors
-        if (err.message.includes('not found') || 
+        if (err.message.includes('not found') ||
             err.message.toLowerCase().includes('does not exist') ||
             err.message.toLowerCase().includes('cannot find')) {
             statusCode = 404;
             responseBody = {
                 success: false,
-                error: err.message,
-                code: 'NOT_FOUND',
+                error: {
+                    message: err.message,
+                    code: 'NOT_FOUND',
+                },
             };
         } else {
             // Default internal server error
             responseBody = {
                 success: false,
-                error: 'Internal Server Error',
-                code: 'INTERNAL_SERVER_ERROR',
-                details: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+                error: {
+                    message: 'Internal Server Error',
+                    code: 'INTERNAL_SERVER_ERROR',
+                    details: { env: process.env.NODE_ENV !== 'production' ? err.stack : undefined, }
+                },
             };
         }
     } else {
@@ -111,8 +119,10 @@ app.onError((err, c) => {
         console.error("[ErrorHandler] Unknown throwable:", err);
         responseBody = {
             success: false,
-            error: 'An unexpected error occurred',
-            code: 'UNKNOWN_ERROR',
+            error: {
+                message: 'An unexpected error occurred',
+                code: 'UNKNOWN_ERROR',
+            },
         };
     }
 

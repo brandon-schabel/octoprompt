@@ -7,10 +7,6 @@ import {
 } from '@/components/ui/popover'
 import { ChevronUp } from 'lucide-react'
 
-
-
-
-
 /**
  * Wrap your shortcuts in this component. 
  * It uses shadcn/ui Popover and a custom scaling animation.

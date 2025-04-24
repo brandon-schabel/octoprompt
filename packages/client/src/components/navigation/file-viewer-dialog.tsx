@@ -5,12 +5,12 @@ import { Edit, Save, XCircle, Copy, FileText, FileCode } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { Textarea } from '@/components/ui/textarea'
-import { ProjectFile } from 'shared/schema'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@/components/ui/switch'
 import { useThemeSettings } from '@/zustand/zustand-utility-hooks'
 import { toast } from 'sonner'
+import { ProjectFile } from '@/hooks/generated'
 
 type FileViewerDialogProps = {
     open: boolean

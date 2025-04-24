@@ -1,11 +1,10 @@
 import { z } from "zod";
-import path from "path";
 import { readFile } from "fs/promises";
 import { Database } from "bun:sqlite";
-// Import the refactored unified provider
 import { unifiedProvider } from "../model-providers/providers/unified-provider-service";
 import { resolvePath } from "@/utils/path-utils";
-import { APIProviders, DEFAULT_MODEL_CONFIGS } from "shared"; // Import necessary types
+import {  DEFAULT_MODEL_CONFIGS } from "shared"; 
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 // Zod schema for the expected AI response
 export const FileChangeResponseSchema = z.object({
@@ -112,54 +111,91 @@ export type GenerateFileChangeOptions = {
   db: Database;
 }
 
+// Define the structure of the file_changes table row
+export interface FileChangeDBRecord {
+  id: number;
+  file_path: string;
+  original_content: string;
+  suggested_diff: string | null; // Explanation stored here
+  status: 'pending' | 'confirmed';
+  timestamp: number;
+  prompt: string | null;
+  suggested_content: string | null;
+}
+
 /**
  * Generates and records a file change suggestion based on user prompt.
  * This is the main function called by the routes.
  */
 export async function generateFileChange({ filePath, prompt, db }: GenerateFileChangeOptions) {
   // 1. Generate the change suggestion using AI
-  // Consider making provider/model configurable here if needed
   const aiSuggestion = await generateAIFileChange({ filePath, prompt });
 
-  // 2. Extract necessary info for DB (e.g., explanation, maybe calculate diff if needed)
-  // For simplicity, storing explanation. Diff calculation is complex.
-  // You might store originalContent and aiSuggestion.updatedContent instead of calculating a diff.
-  const originalContent = await readLocalFileContent(filePath); // Read again or pass from generateAIFileChange
-
-  const status = "pending"; // Initial status
+  // 2. Prepare data for DB insertion
+  const originalContent = await readLocalFileContent(filePath);
+  const status = "pending";
   const timestamp = Math.floor(Date.now() / 1000);
+  // Store explanation, original content. suggestedContent could also be stored if needed.
+  const suggestedDiffOrExplanation = aiSuggestion.explanation;
+  // Store the prompt that generated this change
+  const storedPrompt = prompt;
 
   // 3. Insert into the file_changes table
-  // Adapt the table schema if you want to store updatedContent or explanation
-  // Assuming schema: (file_path, original_content, suggested_diff_or_explanation, status, timestamp)
-  const stmt = db.prepare("INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp) VALUES (?, ?, ?, ?, ?)");
-  // Storing explanation in suggested_diff column for this example
-  const result = stmt.run(filePath, originalContent, aiSuggestion.explanation, status, timestamp);
+  const stmt = db.prepare(
+    "INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp, prompt, suggested_content) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  );
+  const result = stmt.run(
+    filePath,
+    originalContent,
+    suggestedDiffOrExplanation,
+    status,
+    timestamp,
+    storedPrompt,
+    aiSuggestion.updatedContent // Store the suggested content
+  );
 
-  const changeId = result.lastInsertRowid;
+  const changeId = result.lastInsertRowid as number;
 
-  // Return ID and maybe the full AI response for further use
-  return { changeId, suggestion: aiSuggestion };
+  // 4. Fetch and return the newly created record
+  const newRecord = await getFileChange(db, changeId);
+  if (!newRecord) {
+    // Should not happen, but handle defensively
+    throw new Error(`Failed to retrieve newly created file change record with ID: ${changeId}`);
+  }
+  return newRecord;
 }
 
 /**
  * Retrieves a file change by ID from the database.
  * Returns the file change information or null if not found.
  */
-export async function getFileChange(db: Database, changeId: number) {
+export async function getFileChange(db: Database, changeId: number): Promise<FileChangeDBRecord | null> {
   const stmt = db.prepare("SELECT * FROM file_changes WHERE id = ?");
-  const result = stmt.get(changeId);
-  return result || null; // Return null instead of undefined when not found
+  const result = stmt.get(changeId) as FileChangeDBRecord | undefined;
+  return result || null;
 }
 
 /**
  * Confirms a file change by updating its status in the database.
  * Returns true if the update was successful.
  */
-export async function confirmFileChange(db: Database, changeId: number) {
+export async function confirmFileChange(db: Database, changeId: number): Promise<{ status: string; message: string }> {
+  // Check if the record exists and is pending before confirming
+  const existing = await getFileChange(db, changeId);
+  if (!existing) {
+     throw Object.assign(new Error(`File change with ID ${changeId} not found.`), { code: 'NOT_FOUND' });
+  }
+  if (existing.status !== 'pending') {
+     throw Object.assign(new Error(`File change with ID ${changeId} is already ${existing.status}.`), { code: 'INVALID_STATE' });
+  }
+
   const stmt = db.prepare("UPDATE file_changes SET status = 'confirmed' WHERE id = ?");
   const result = stmt.run(changeId);
-  
-  // Return a boolean indicating success based on changes
-  return result.changes > 0;
+
+  if (result.changes > 0) {
+    return { status: "confirmed", message: `File change ${changeId} confirmed successfully.` };
+  } else {
+    // This case might indicate a race condition or unexpected DB state
+     throw new Error(`Failed to confirm file change ${changeId}. No rows updated.`);
+  }
 }

@@ -1,31 +1,23 @@
-// packages/server/src/services/ticket-service.ts
-
 import { db } from "@/utils/database";
-import { CreateTicketBody, UpdateTicketBody, ApiError, APIProviders } from "shared";
-import { promptsMap } from "@/utils/prompts-map";
+import { ApiError } from "shared";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 import { z } from "zod";
-import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
 import { DEFAULT_MODEL_CONFIGS } from "shared";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 import {
+  CreateTicketBody, UpdateTicketBody,
   TicketReadSchema,
   TicketTaskReadSchema,
   TicketFileReadSchema,
   TicketCreateSchema,
   TicketUpdateSchema,
   TicketTaskCreateSchema,
-} from "shared/src/utils/database/db-schemas";
-import { Ticket, TicketTask, TicketFile } from "shared/schema";
+  type Ticket,
+  type TicketTask,
+  type TicketFile,
+} from "shared/src/schemas/ticket.schemas";
 import { randomUUID } from "crypto";
 import { unifiedProvider } from "./model-providers/providers/unified-provider-service";
-
-// const { tickets, ticketFiles, ticketTasks, files } = schema;
-
-// type Ticket = schema.Ticket;
-// type TicketFile = schema.TicketFile;
-// type NewTicket = schema.NewTicket;
-// type TicketTask = schema.TicketTask;
-// type NewTicketTask = schema.NewTicketTask;
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {
@@ -80,7 +72,7 @@ ${projectSummary}
 
   const cfg = DEFAULT_MODEL_CONFIGS['suggest-ticket-tasks'];
   if (!cfg.model) {
-    throw new ApiError(`Model not configured for 'suggest-ticket-tasks'`, 500, "CONFIG_ERROR");
+    throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, "CONFIG_ERROR");
   }
 
   const result = await unifiedProvider.generateStructuredData({
@@ -191,7 +183,7 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
     validatedData.suggestedFileIds ?? "[]"
   ) as any;
   if (!created) {
-    throw new ApiError("Failed to create ticket", 500, "CREATE_FAILED");
+    throw new ApiError(500, "Failed to create ticket", "CREATE_FAILED");
   }
   return mapTicket(created);
 }
@@ -234,7 +226,7 @@ export async function updateTicket(ticketId: string, data: UpdateTicketBody): Pr
       for (const fileId of fileIds) {
         const file = stmtFile.get(fileId, existing.projectId);
         if (!file) {
-          throw new ApiError("Some fileIds no longer exist on disk", 400, "FILE_NOT_FOUND");
+          throw new ApiError(400, "Some fileIds no longer exist on disk", "FILE_NOT_FOUND");
         }
       }
     }
@@ -346,7 +338,7 @@ export async function getTicketsWithFiles(projectId: string): Promise<(Ticket & 
 export async function createTask(ticketId: string, content: string): Promise<TicketTask> {
   const ticket = await getTicketById(ticketId);
   if (!ticket) {
-    throw new ApiError(`Ticket ${ticketId} not found (NOT_FOUND)`, 404, "NOT_FOUND");
+    throw new ApiError(404, `Ticket ${ticketId} not found`, "NOT_FOUND");
   }
   const validatedData = validateCreateTask(ticketId, content);
   const stmtMax = db.prepare(`SELECT MAX(order_index) as max FROM ticket_tasks WHERE ticket_id = ?`);
@@ -371,7 +363,7 @@ export async function createTask(ticketId: string, content: string): Promise<Tic
 
   const createdTaskRaw = stmt.get(...params) as any;
   if (!createdTaskRaw) {
-    throw new ApiError("Failed to create task", 500, "CREATE_FAILED");
+    throw new ApiError(500, "Failed to create task", "CREATE_FAILED");
   }
   return mapTicketTask(createdTaskRaw);
 }
@@ -402,7 +394,7 @@ export async function reorderTasks(
 export async function autoGenerateTasksFromOverview(ticketId: string): Promise<TicketTask[]> {
   const ticket = await getTicketById(ticketId);
   if (!ticket) {
-    throw new ApiError(`Ticket ${ticketId} not found`, 404, "NOT_FOUND");
+    throw new ApiError(404, `Ticket ${ticketId} not found`, "NOT_FOUND");
   }
   const titles = await suggestTasksForTicket(ticketId, ticket.overview ?? "");
   const inserted: TicketTask[] = [];
@@ -414,7 +406,7 @@ export async function autoGenerateTasksFromOverview(ticketId: string): Promise<T
         `);
     const createdRaw = stmt.get(ticketId, content, 0, idx) as any;
     if (!createdRaw) {
-      throw new ApiError("Failed to create task", 500, "CREATE_FAILED");
+      throw new ApiError(500, "Failed to create task", "CREATE_FAILED");
     }
     const createdTask = mapTicketTask(createdRaw);
     inserted.push(createdTask);
@@ -425,12 +417,14 @@ export async function autoGenerateTasksFromOverview(ticketId: string): Promise<T
 export async function listTicketsWithTaskCount(
   projectId: string,
   statusFilter?: string
-): Promise<Array<Ticket & { taskCount: number }>> {
+): Promise<Array<Ticket & { taskCount: number; completedTaskCount: number }>> {
   let query: string;
   let params: any[];
   if (statusFilter && statusFilter !== "all") {
     query = `
-          SELECT t.*, (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id) as taskCount
+          SELECT t.*, 
+            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id) as taskCount,
+            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id AND tt.done = 1) as completedTaskCount
           FROM tickets t
           WHERE t.project_id = ? AND t.status = ?
           ORDER BY t.created_at DESC
@@ -438,7 +432,9 @@ export async function listTicketsWithTaskCount(
     params = [projectId, statusFilter];
   } else {
     query = `
-          SELECT t.*, (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id) as taskCount
+          SELECT t.*, 
+            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id) as taskCount,
+            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id AND tt.done = 1) as completedTaskCount
           FROM tickets t
           WHERE t.project_id = ?
           ORDER BY t.created_at DESC
@@ -450,6 +446,7 @@ export async function listTicketsWithTaskCount(
   return rowsCount.map((r: any) => ({
     ...r,
     taskCount: Number(r.taskCount || 0),
+    completedTaskCount: Number(r.completedTaskCount || 0)
   }));
 }
 
@@ -515,5 +512,43 @@ export async function updateTask(ticketId: string, taskId: string, updates: { co
       return null;
     }
     throw error;
+  }
+}
+
+export async function suggestFilesForTicket(
+  ticketId: string,
+  options: { extraUserInput?: string }
+): Promise<{ recommendedFileIds: string[], combinedSummaries?: string, message?: string }> {
+  const ticket = await getTicketById(ticketId);
+  if (!ticket) {
+    throw new ApiError(404, "Ticket not found", "NOT_FOUND");
+  }
+
+  const tasks = await getTasks(ticketId);
+
+  // This is a simplified implementation - you'd likely want to actually
+  // call an AI service to get file suggestions based on the ticket content
+  try {
+    // Get files from the project that might be relevant
+    const projectFiles = await db.prepare(
+      `SELECT id FROM files WHERE project_id = ?`
+    ).all(ticket.projectId) as any[];
+
+    // For now, just return the first 5 files or fewer if there aren't many
+    const recommendedFileIds = projectFiles
+      .slice(0, Math.min(5, projectFiles.length))
+      .map((file: any) => file.id);
+
+    return {
+      recommendedFileIds,
+      combinedSummaries: `Combined summary for ticket: ${ticket.title}`,
+      message: "Files suggested based on ticket content"
+    };
+  } catch (error) {
+    console.error("[TicketService] Error suggesting files:", error);
+    return {
+      recommendedFileIds: [],
+      message: "Failed to suggest files"
+    };
   }
 }

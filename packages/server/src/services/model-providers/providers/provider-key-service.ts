@@ -1,6 +1,5 @@
 import { db } from "@/utils/database";
-import { ProviderKey } from "shared/schema";
-import { ProviderKeyReadSchema } from "shared/src/utils/database/db-schemas";
+import { ProviderKey, ProviderKeySchema } from "shared/src/schemas/provider-key.schemas";
 
 export type CreateProviderKeyInput = {
   provider: string;
@@ -12,21 +11,6 @@ export type UpdateProviderKeyInput = {
   key?: string;
 };
 
-function mapProviderKey(row: any): ProviderKey {
-  const mapped = {
-    id: row.id,
-    provider: row.provider,
-    key: row.key,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at)
-  };
-  const validated = ProviderKeyReadSchema.parse(mapped);
-  return {
-    ...validated,
-    createdAt: new Date(validated.createdAt),
-    updatedAt: new Date(validated.updatedAt)
-  };
-}
 
 /**
  * Returns an object of functions to create, list, update, and delete provider keys.
@@ -42,20 +26,21 @@ export function createProviderKeyService() {
     if (!created) {
       throw new Error('Failed to create provider key');
     }
-    return mapProviderKey(created);
+    return ProviderKeySchema.parse(created);
   }
 
   async function listKeys(): Promise<ProviderKey[]> {
     const stmt = db.prepare(`SELECT * FROM provider_keys`);
     const rows = stmt.all();
-    return rows.map(mapProviderKey);
+    // return rows.map(ProviderKeySchema.parse);
+    return rows.map((row: any) => ProviderKeySchema.parse(row));
   }
 
   async function getKeyById(id: string): Promise<ProviderKey | null> {
     const stmt = db.prepare(`SELECT * FROM provider_keys WHERE id = ? LIMIT 1`);
     const found = stmt.get(id);
     if (!found) return null;
-    return mapProviderKey(found);
+    return ProviderKeySchema.parse(found);
   }
 
   async function updateKey(id: string, data: UpdateProviderKeyInput): Promise<ProviderKey | null> {
@@ -72,7 +57,7 @@ export function createProviderKeyService() {
     const key = data.key ?? null;
     const updated = stmt.get(provider, key, id);
     if (!updated) return null;
-    return mapProviderKey(updated);
+    return ProviderKeySchema.parse(updated);
   }
 
   async function deleteKey(id: string): Promise<boolean> {

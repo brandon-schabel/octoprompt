@@ -26,15 +26,16 @@ export function PromptsDialogAll({
     onClose,
     selectedProjectId,
 }: PromptsDialogAllProps) {
-    const { data, isLoading, error } = useGetAllPrompts()
+    const { data: allPromptsResponse, isLoading, error } = useGetAllPrompts()
     const { data: projectPromptData } = useGetProjectPrompts(selectedProjectId ?? "")
     const addPromptToProject = useAddPromptToProject()
     const removePromptFromProject = useRemovePromptFromProject()
 
     const [searchTerm, setSearchTerm] = useState("")
 
-    const allPrompts = data?.prompts ?? []
-    const projectPrompts = projectPromptData?.prompts ?? []
+
+    const allPrompts = allPromptsResponse?.data ?? []
+    const projectPrompts = projectPromptData?.data ?? []
 
     // Filter & sort
     const filteredPrompts = useMemo(() => {

@@ -1,41 +1,17 @@
-// packages/server/src/routes/provider-key-routes.ts
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'; // <--- Import createRoute and OpenAPIHono
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'; //
 import { ApiError } from 'shared';
 import {
-    // Request Schemas
     CreateProviderKeyBodySchema,
     UpdateProviderKeyBodySchema,
     ProviderKeyIdParamsSchema,
-    // Response Schemas
     ProviderKeyResponseSchema,
     ProviderKeyListResponseSchema,
-    ProviderKeySchema, // Base schema without secret
-    ProviderKeyWithSecretSchema, // Schema with secret
-    // Common Schemas
-} from "shared/src/validation/provider-key-api-validation"; // <--- Import specific schemas
+    ProviderKeySchema,
+    ProviderKeyWithSecretSchema,
+} from "shared/src/schemas/provider-key.schemas";
 import { providerKeyService } from "@/services/model-providers/providers/provider-key-service";
-import { ProviderKey } from 'shared/schema'; // For typing DB results
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/validation/chat-api-validation';
-
-// Helper to map DB key to API response (without secret)
-const mapProviderKeyToPublicResponse = (dbKey: ProviderKey): z.infer<typeof ProviderKeySchema> => ({
-    id: dbKey.id,
-    provider: dbKey.provider,
-    createdAt: dbKey.createdAt.toISOString(),
-    updatedAt: dbKey.updatedAt.toISOString(),
-});
-
-// Helper to map DB key to API response (with secret)
-const mapProviderKeyToSecretResponse = (dbKey: ProviderKey): z.infer<typeof ProviderKeyWithSecretSchema> => ({
-    id: dbKey.id,
-    provider: dbKey.provider,
-    key: dbKey.key, // Include the key
-    createdAt: dbKey.createdAt.toISOString(),
-    updatedAt: dbKey.updatedAt.toISOString(),
-});
-
-
-// --- Route Definitions ---
+import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas';
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas';
 
 const createProviderKeyRoute = createRoute({
     method: 'post',
@@ -170,13 +146,11 @@ const deleteProviderKeyRoute = createRoute({
 });
 
 // --- Hono App Instance ---
-export const providerKeyRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
-    .openapi(createProviderKeyRoute, async (c) => { // <--- Use .openapi()
+export const providerKeyRoutes = new OpenAPIHono()
+    .openapi(createProviderKeyRoute, async (c) => {
         const body = c.req.valid('json'); // <--- Get validated data
         try {
-            const newKey = await providerKeyService.createKey(body);
-            const responseData = mapProviderKeyToSecretResponse(newKey);
-            return c.json({ success: true, data: responseData } satisfies z.infer<typeof ProviderKeyResponseSchema>, 201);
+            return c.json({ success: true, data: await providerKeyService.createKey(body) } satisfies z.infer<typeof ProviderKeyResponseSchema>, 201);
         } catch (error) {
             console.error("Error creating key:", error);
             // Let global handler manage, or add specific checks (e.g., duplicate provider?)
@@ -186,9 +160,7 @@ export const providerKeyRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
 
     .openapi(listProviderKeysRoute, async (c) => {
         try {
-            const keys = await providerKeyService.listKeys();
-            const responseData = keys.map(mapProviderKeyToPublicResponse); // Use public mapping
-            return c.json({ success: true, data: responseData } satisfies z.infer<typeof ProviderKeyListResponseSchema>, 200);
+            return c.json({ success: true, data: await providerKeyService.listKeys() } satisfies z.infer<typeof ProviderKeyListResponseSchema>, 200);
         } catch (error) {
             console.error("Error listing keys:", error);
             throw error; // Let global handler manage
@@ -199,15 +171,32 @@ export const providerKeyRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
         const { keyId } = c.req.valid('param');
         try {
             const k = await providerKeyService.getKeyById(keyId);
-            // Service should throw if not found
-            const responseData = mapProviderKeyToSecretResponse(k);
-            return c.json({ success: true, data: responseData } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
-        } catch (error: any) {
-            console.error(`Error getting key ${keyId}:`, error);
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+            // Check for null *before* mapping
+            if (k === null) {
                 throw new ApiError(404, "Key not found", "KEY_NOT_FOUND");
             }
-            throw error;
+            // 'k' is guaranteed non-null here, assert it for TS
+            return c.json({ success: true, data: k as ProviderKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
+        } catch (error: any) {
+            console.error(`Error getting key ${keyId}:`, error);
+            // Catch the specific ApiError for 404
+            if (error instanceof ApiError && error.status === 404) {
+                return c.json({
+                    success: false, error: {
+                        message: error.message,
+                        code: error.code,
+                        details: error.details ?? error.message
+                    }
+                } satisfies z.infer<typeof ApiErrorResponseSchema>, 404);
+            }
+            // Handle other errors (could be validation 422 or internal 500)
+            return c.json({
+                success: false, error: {
+                    message: "Internal Server Error",
+                    code: "INTERNAL_ERROR",
+                    details: {}
+                }
+            } satisfies z.infer<typeof ApiErrorResponseSchema>, 500);
         }
     })
 
@@ -216,15 +205,32 @@ export const providerKeyRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
         const body = c.req.valid('json');
         try {
             const updated = await providerKeyService.updateKey(keyId, body);
-            // Service should throw if not found
-            const responseData = mapProviderKeyToSecretResponse(updated);
-            return c.json({ success: true, data: responseData } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
-        } catch (error: any) {
-            console.error(`Error updating key ${keyId}:`, error);
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+            // Check for null *before* mapping
+            if (updated === null) {
                 throw new ApiError(404, "Key not found", "KEY_NOT_FOUND");
             }
-            throw error;
+            // 'updated' is guaranteed non-null here, assert it for TS
+            return c.json({ success: true, data: updated as ProviderKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
+        } catch (error: any) {
+            console.error(`Error updating key ${keyId}:`, error);
+            // Catch the specific ApiError for 404
+            if (error instanceof ApiError && error.status === 404) {
+                return c.json({
+                    success: false, error: {
+                        message: error.message,
+                        code: error.code,
+                        details: error.details ?? error.message
+                    }
+                } satisfies z.infer<typeof ApiErrorResponseSchema>, 404);
+            }
+            // Handle other errors (could be validation 422 or internal 500)
+            return c.json({
+                success: false, error: {
+                    message: "Internal Server Error",
+                    code: "INTERNAL_ERROR",
+                    details: {}
+                }
+            } satisfies z.infer<typeof ApiErrorResponseSchema>, 500);
         }
     })
 

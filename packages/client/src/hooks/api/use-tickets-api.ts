@@ -1,83 +1,128 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '../use-api';
-import { CreateTicketBody, UpdateTicketBody } from 'shared';
-import { Ticket, TicketTask } from 'shared/schema';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { commonErrorHandler } from './common-mutation-error-handler';
+import {
+    postApiTicketsMutation,
+    patchApiTicketsByTicketIdMutation,
+    deleteApiTicketsByTicketIdMutation,
+    getApiTicketsByTicketIdOptions,
+    getApiTicketsByTicketIdQueryKey,
+    getApiProjectsByProjectIdTicketsOptions,
+    getApiProjectsByProjectIdTicketsQueryKey,
+    getApiProjectsByProjectIdTicketsWithCountOptions,
+    getApiProjectsByProjectIdTicketsWithCountQueryKey,
+    getApiTicketsByTicketIdTasksOptions,
+    getApiTicketsByTicketIdTasksQueryKey,
+    postApiTicketsByTicketIdTasksMutation,
+    deleteApiTicketsByTicketIdTasksByTaskIdMutation,
+    patchApiTicketsByTicketIdTasksByTaskIdMutation,
+    patchApiTicketsByTicketIdTasksReorderMutation,
+    postApiTicketsByTicketIdAutoGenerateTasksMutation,
+    getApiTicketsBulkTasksOptions,
+    getApiTicketsBulkTasksQueryKey,
+    getApiProjectsByProjectIdTicketsWithTasksOptions,
+    getApiProjectsByProjectIdTicketsWithTasksQueryKey,
+    postApiTicketsByTicketIdLinkFilesMutation,
+    postApiTicketsByTicketIdSuggestFilesMutation,
+    postApiTicketsByTicketIdSuggestTasksMutation
+} from '../generated/@tanstack/react-query.gen';
+import type {
+    Ticket,
+    Task,
+    TicketWithTaskCount,
+    TicketWithTasks,
+    CreateTicketBody,
+    UpdateTicketBody,
+    GetApiTicketsByTicketIdData,
+    PatchApiTicketsByTicketIdData,
+    PatchApiTicketsByTicketIdError,
+    DeleteApiTicketsByTicketIdData,
+    DeleteApiTicketsByTicketIdError,
+    GetApiProjectsByProjectIdTicketsData,
+    GetApiProjectsByProjectIdTicketsWithCountData,
+    GetApiTicketsByTicketIdTasksData,
+    PostApiTicketsByTicketIdTasksData,
+    PostApiTicketsByTicketIdTasksError,
+    DeleteApiTicketsByTicketIdTasksByTaskIdData,
+    DeleteApiTicketsByTicketIdTasksByTaskIdError,
+    PatchApiTicketsByTicketIdTasksByTaskIdData,
+    PatchApiTicketsByTicketIdTasksByTaskIdError,
+    PatchApiTicketsByTicketIdTasksReorderData,
+    PatchApiTicketsByTicketIdTasksReorderError,
+    PostApiTicketsByTicketIdAutoGenerateTasksData,
+    PostApiTicketsByTicketIdAutoGenerateTasksError,
+    GetApiTicketsBulkTasksData,
+    GetApiProjectsByProjectIdTicketsWithTasksData,
+    PostApiTicketsByTicketIdLinkFilesData,
+    PostApiTicketsByTicketIdLinkFilesError,
+    PostApiTicketsByTicketIdSuggestFilesData,
+    PostApiTicketsByTicketIdSuggestFilesError,
+    SuggestedFilesResponse,
+    PostApiTicketsByTicketIdSuggestTasksData,
+    PostApiTicketsByTicketIdSuggestTasksError,
+    PostApiTicketsData,
+    PostApiTicketsError
+} from '../generated/types.gen';
+import { Options } from '../generated/sdk.gen';
 
-export interface TicketWithCount extends Ticket {
-    taskCount: number;
-}
-
-export interface TicketResult {
-    success: boolean;
-    ticket?: Ticket;
-    tickets?: Ticket[];
-    message?: string;
-    linkedFiles?: any[];
-    suggestedTasks?: string[];
-    tasks?: TicketTask[];
-    task?: TicketTask;
-    ticketsWithCount?: TicketWithCount[];
-    ticketsWithTasks?: TicketWithTasks[];
-}
-
-
-export interface TicketWithTasks extends Ticket {
-    tasks: TicketTask[];
-}
-
-export const TICKET_KEYS = {
+// Define Query Keys using generated functions
+const TICKET_KEYS = {
     all: ['tickets'] as const,
-    listByProject: (projectId: string) => [...TICKET_KEYS.all, 'list', projectId] as const,
-    listWithCount: (projectId: string) => [...TICKET_KEYS.all, 'list-with-count', projectId] as const,
-    detail: (ticketId: string) => [...TICKET_KEYS.all, 'detail', ticketId] as const,
-    tasks: (ticketId: string) => [...TICKET_KEYS.detail(ticketId), 'tasks'] as const,
-    bulkTasks: (ticketIds: string[]) => [...TICKET_KEYS.all, 'bulk-tasks', ticketIds.join(',')] as const,
-    listWithTasks: (projectId: string) => [...TICKET_KEYS.all, 'list-with-tasks', projectId] as const,
+    listByProject: (projectId: string) => 
+        getApiProjectsByProjectIdTicketsQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdTicketsData>),
+    listWithCount: (projectId: string, status?: string) => 
+        getApiProjectsByProjectIdTicketsWithCountQueryKey({ 
+            path: { projectId }, 
+            query: status && status !== "all" ? { status } : undefined 
+        } as Options<GetApiProjectsByProjectIdTicketsWithCountData>),
+    detail: (ticketId: string) => 
+        getApiTicketsByTicketIdQueryKey({ path: { ticketId } } as Options<GetApiTicketsByTicketIdData>),
+    tasks: (ticketId: string) => 
+        getApiTicketsByTicketIdTasksQueryKey({ path: { ticketId } } as Options<GetApiTicketsByTicketIdTasksData>),
+    bulkTasks: (ticketIds: string[]) => 
+        getApiTicketsBulkTasksQueryKey({ query: { ids: ticketIds.join(',') } } as Options<GetApiTicketsBulkTasksData>),
+    listWithTasks: (projectId: string, status?: string) => 
+        getApiProjectsByProjectIdTicketsWithTasksQueryKey({ 
+            path: { projectId }, 
+            query: status && status !== "all" ? { status } : undefined 
+        } as Options<GetApiProjectsByProjectIdTicketsWithTasksData>),
 };
 
 // List tickets by project
 export function useListTickets(projectId: string, status?: string) {
-    const { api } = useApi();
+    const queryOptions = getApiProjectsByProjectIdTicketsOptions({ 
+        path: { projectId },
+        query: status ? { status } : undefined
+    } as Options<GetApiProjectsByProjectIdTicketsData>);
+    
     return useQuery({
-        queryKey: TICKET_KEYS.listByProject(projectId),
-        queryFn: async () => {
-            const qs = status ? `?status=${status}` : '';
-            const resp = await api.request(`/api/projects/${projectId}/tickets${qs}`);
-            return resp.json() as Promise<TicketResult>;
-        },
+        ...queryOptions,
         enabled: !!projectId,
     });
 }
 
 export function useListTicketsWithCount(projectId: string, status?: string) {
-    const { api } = useApi();
+    const queryOptions = getApiProjectsByProjectIdTicketsWithCountOptions({ 
+        path: { projectId },
+        query: status && status !== "all" ? { status } : undefined
+    } as Options<GetApiProjectsByProjectIdTicketsWithCountData>);
+    
     return useQuery({
-        queryKey: TICKET_KEYS.listWithCount(projectId).concat(status || 'all'),
-        queryFn: async () => {
-            const qs = status && status !== "all" ? `?status=${status}` : '';
-            const resp = await api.request(`/api/projects/${projectId}/tickets-with-count${qs}`);
-            const data = await resp.json() as TicketResult;
-            return data;
-        },
+        ...queryOptions,
         enabled: !!projectId,
     });
 }
 
 // Create a new ticket
 export function useCreateTicket() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = postApiTicketsMutation();
 
-    return useMutation<TicketResult, Error, CreateTicketBody>({
-        mutationFn: async (body) => {
-            const resp = await api.request('/api/tickets', {
-                method: 'POST',
-                body,
-            });
-            return resp.json();
+    return useMutation<unknown, PostApiTicketsError, CreateTicketBody>({
+        mutationFn: (body: CreateTicketBody) => {
+            const opts: Options<PostApiTicketsData> = { body };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data) => {
+        onSuccess: (data: any) => {
             // Invalidate all ticket queries for this project
             if (data.ticket?.projectId) {
                 queryClient.invalidateQueries({
@@ -86,24 +131,24 @@ export function useCreateTicket() {
                 });
             }
         },
-        onError: commonErrorHandler
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 // Update a ticket
 export function useUpdateTicket() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = patchApiTicketsByTicketIdMutation();
 
-    return useMutation<TicketResult, Error, { ticketId: string; updates: UpdateTicketBody }>({
-        mutationFn: async ({ ticketId, updates }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}`, {
-                method: 'PATCH',
-                body: updates,
-            });
-            return resp.json();
+    return useMutation<unknown, PatchApiTicketsByTicketIdError, { ticketId: string; updates: UpdateTicketBody }>({
+        mutationFn: ({ ticketId, updates }) => {
+            const opts: Options<PatchApiTicketsByTicketIdData> = { 
+                path: { ticketId },
+                body: updates
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data) => {
+        onSuccess: (data: any) => {
             // Invalidate all ticket queries for this project
             if (data.ticket?.projectId) {
                 queryClient.invalidateQueries({
@@ -112,23 +157,21 @@ export function useUpdateTicket() {
                 });
             }
         },
-        onError: commonErrorHandler
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 // Delete a ticket
 export function useDeleteTicket() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const mutationOptions = deleteApiTicketsByTicketIdMutation();
 
-    return useMutation<TicketResult, Error, { ticketId: string }>({
-        mutationFn: async ({ ticketId }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}`, {
-                method: 'DELETE',
-            });
-            return resp.json();
+    return useMutation<unknown, DeleteApiTicketsByTicketIdError, string>({
+        mutationFn: (ticketId: string) => {
+            const opts: Options<DeleteApiTicketsByTicketIdData> = { path: { ticketId } };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data, { ticketId }) => {
+        onSuccess: (data, ticketId) => {
             // Invalidate all ticket-related queries
             queryClient.invalidateQueries({
                 queryKey: TICKET_KEYS.all,
@@ -145,262 +188,218 @@ export function useDeleteTicket() {
                 queryKey: TICKET_KEYS.tasks(ticketId)
             });
         },
-        onError: commonErrorHandler
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 // Link files to ticket
 export function useLinkFilesToTicket() {
-    const { api } = useApi();
-    return useMutation<TicketResult, Error, { ticketId: string; fileIds: string[] }>({
-        mutationFn: async ({ ticketId, fileIds }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}/link-files`, {
-                method: 'POST',
-                body: { fileIds },
-            });
-            return resp.json();
+    const queryClient = useQueryClient();
+    const mutationOptions = postApiTicketsByTicketIdLinkFilesMutation();
+
+    return useMutation<unknown, PostApiTicketsByTicketIdLinkFilesError, { ticketId: string; fileIds: string[] }>({
+        mutationFn: ({ ticketId, fileIds }) => {
+            const opts: Options<PostApiTicketsByTicketIdLinkFilesData> = { 
+                path: { ticketId },
+                body: { fileIds }
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onError: commonErrorHandler
+        onSuccess: (data, { ticketId }) => {
+            queryClient.invalidateQueries({
+                queryKey: TICKET_KEYS.detail(ticketId)
+            });
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 // Suggest tasks
 export function useSuggestTasksForTicket() {
-    const { api } = useApi();
-    return useMutation<TicketResult, Error, { ticketId: string; userContext?: string }>({
-        mutationFn: async ({ ticketId, userContext }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}/suggest-tasks`, {
-                method: 'POST',
-                body: { userContext },
-            });
-            return resp.json();
+    const mutationOptions = postApiTicketsByTicketIdSuggestTasksMutation();
+    
+    return useMutation<unknown, PostApiTicketsByTicketIdSuggestTasksError, { ticketId: string; userContext?: string }>({
+        mutationFn: ({ ticketId, userContext }) => {
+            const opts: Options<PostApiTicketsByTicketIdSuggestTasksData> = { 
+                path: { ticketId },
+                body: userContext ? { userContext } : undefined
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onError: commonErrorHandler
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 /** --- TASKS --- **/
 export function useListTasks(ticketId: string) {
-    const { api } = useApi();
+    const queryOptions = getApiTicketsByTicketIdTasksOptions({ 
+        path: { ticketId } 
+    } as Options<GetApiTicketsByTicketIdTasksData>);
+    
     return useQuery({
-        queryKey: TICKET_KEYS.tasks(ticketId),
-        queryFn: async () => {
-            const resp = await api.request(`/api/tickets/${ticketId}/tasks`);
-            return resp.json() as Promise<TicketResult>;
-        },
+        ...queryOptions,
         enabled: !!ticketId,
     });
 }
 
 export function useCreateTask() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
-    return useMutation<
-        TicketResult,
-        Error,
-        { ticketId: string; content: string }
-    >({
-        mutationFn: async ({ ticketId, content }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}/tasks`, {
-                method: 'POST',
-                body: { content },
-            });
-            return resp.json();
+    const mutationOptions = postApiTicketsByTicketIdTasksMutation();
+    
+    return useMutation<unknown, PostApiTicketsByTicketIdTasksError, { ticketId: string; content: string }>({
+        mutationFn: ({ ticketId, content }) => {
+            const opts: Options<PostApiTicketsByTicketIdTasksData> = { 
+                path: { ticketId },
+                body: { content }
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data, variables) => {
+        onSuccess: (data, { ticketId }) => {
             queryClient.invalidateQueries({
-                queryKey: TICKET_KEYS.tasks(variables.ticketId)
+                queryKey: TICKET_KEYS.tasks(ticketId)
             });
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 export function useUpdateTask() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
-    return useMutation<
-        TicketResult,
-        Error,
-        { ticketId: string; taskId: string; updates: Partial<{ content: string; done: boolean }> }
-    >({
-        mutationFn: async ({ ticketId, taskId, updates }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}/tasks/${taskId}`, {
-                method: 'PATCH',
-                body: updates,
-            });
-            return resp.json();
+    const mutationOptions = patchApiTicketsByTicketIdTasksByTaskIdMutation();
+    
+    return useMutation<unknown, PatchApiTicketsByTicketIdTasksByTaskIdError, 
+        { ticketId: string; taskId: string; updates: Partial<{ content: string; done: boolean }> }>({
+        mutationFn: ({ ticketId, taskId, updates }) => {
+            const opts: Options<PatchApiTicketsByTicketIdTasksByTaskIdData> = { 
+                path: { ticketId, taskId },
+                body: updates
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data, variables) => {
+        onSuccess: (data, { ticketId }) => {
             queryClient.invalidateQueries({
-                queryKey: TICKET_KEYS.tasks(variables.ticketId)
+                queryKey: TICKET_KEYS.tasks(ticketId)
             });
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 export function useDeleteTask() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
-    return useMutation<
-        TicketResult,
-        Error,
-        { ticketId: string; taskId: string }
-    >({
-        mutationFn: async ({ ticketId, taskId }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}/tasks/${taskId}`, {
-                method: 'DELETE',
-            });
-            return resp.json();
+    const mutationOptions = deleteApiTicketsByTicketIdTasksByTaskIdMutation();
+    
+    return useMutation<unknown, DeleteApiTicketsByTicketIdTasksByTaskIdError, { ticketId: string; taskId: string }>({
+        mutationFn: ({ ticketId, taskId }) => {
+            const opts: Options<DeleteApiTicketsByTicketIdTasksByTaskIdData> = { 
+                path: { ticketId, taskId }
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data, variables) => {
+        onSuccess: (data, { ticketId }) => {
             queryClient.invalidateQueries({
-                queryKey: TICKET_KEYS.tasks(variables.ticketId)
+                queryKey: TICKET_KEYS.tasks(ticketId)
             });
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 export function useReorderTasks() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
-    return useMutation<
-        TicketResult,
-        Error,
-        { ticketId: string; tasks: Array<{ taskId: string; orderIndex: number }> }
-    >({
-        mutationFn: async ({ ticketId, tasks }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}/tasks/reorder`, {
-                method: 'PATCH',
-                body: { tasks },
-            });
-            return resp.json();
+    const mutationOptions = patchApiTicketsByTicketIdTasksReorderMutation();
+    
+    return useMutation<unknown, PatchApiTicketsByTicketIdTasksReorderError, 
+        { ticketId: string; tasks: Array<{ taskId: string; orderIndex: number }> }>({
+        mutationFn: ({ ticketId, tasks }) => {
+            const opts: Options<PatchApiTicketsByTicketIdTasksReorderData> = { 
+                path: { ticketId },
+                body: { tasks }
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data, variables) => {
+        onSuccess: (data, { ticketId }) => {
             queryClient.invalidateQueries({
-                queryKey: TICKET_KEYS.tasks(variables.ticketId)
+                queryKey: TICKET_KEYS.tasks(ticketId)
             });
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
 export function useAutoGenerateTasks() {
-    const { api } = useApi();
     const queryClient = useQueryClient();
-    return useMutation<
-        TicketResult,
-        Error,
-        { ticketId: string }
-    >({
-        mutationFn: async ({ ticketId }) => {
-            const resp = await api.request(`/api/tickets/${ticketId}/auto-generate-tasks`, {
-                method: 'POST',
-            });
-            return resp.json();
+    const mutationOptions = postApiTicketsByTicketIdAutoGenerateTasksMutation();
+    
+    return useMutation<unknown, PostApiTicketsByTicketIdAutoGenerateTasksError, { ticketId: string }>({
+        mutationFn: ({ ticketId }) => {
+            const opts: Options<PostApiTicketsByTicketIdAutoGenerateTasksData> = { 
+                path: { ticketId }
+            };
+            return mutationOptions.mutationFn!(opts);
         },
-        onSuccess: (data, variables) => {
+        onSuccess: (data, { ticketId }) => {
             queryClient.invalidateQueries({
-                queryKey: TICKET_KEYS.tasks(variables.ticketId)
+                queryKey: TICKET_KEYS.tasks(ticketId)
             });
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
-};
+}
 
 /**
  * Hook to fetch tasks for multiple tickets at once
  */
 export function useBulkTicketTasks(ticketIds: string[]) {
-    const { api } = useApi();
     const queryClient = useQueryClient();
+    const queryOptions = getApiTicketsBulkTasksOptions({ 
+        query: { ids: ticketIds.join(',') } 
+    } as Options<GetApiTicketsBulkTasksData>);
 
     return useQuery({
-        queryKey: TICKET_KEYS.bulkTasks(ticketIds),
-        queryFn: async () => {
-            if (!ticketIds.length) return { tasks: {} };
-            const resp = await api.request(`/api/tickets/bulk-tasks?ids=${ticketIds.join(',')}`);
-            const data = await resp.json() as { success: boolean; tasks: Record<string, TicketTask[]> };
-
-            // Prefill the cache for individual ticket tasks
-            Object.entries(data.tasks).forEach(([ticketId, tasks]) => {
-                queryClient.setQueryData(
-                    TICKET_KEYS.tasks(ticketId),
-                    { success: true, tasks }
-                );
-            });
-
-            return data;
-        },
+        ...queryOptions,
         enabled: ticketIds.length > 0,
+        select: (data: any) => {
+            // Prefill the cache for individual ticket tasks
+            if (data.tasks) {
+                Object.entries(data.tasks).forEach(([ticketId, tasks]) => {
+                    queryClient.setQueryData(
+                        TICKET_KEYS.tasks(ticketId),
+                        { success: true, tasks }
+                    );
+                });
+            }
+            return data;
+        }
     });
 }
 
 /**
  * List all tickets for a project with their tasks included.
  */
-export function useListTicketsWithTasks(
-    projectId: string,
-    status?: string
-) {
-    const { api } = useApi();
+export function useListTicketsWithTasks(projectId: string, status?: string) {
+    const queryOptions = getApiProjectsByProjectIdTicketsWithTasksOptions({ 
+        path: { projectId },
+        query: status && status !== 'all' ? { status } : undefined
+    } as Options<GetApiProjectsByProjectIdTicketsWithTasksData>);
+    
     return useQuery({
-        queryKey: TICKET_KEYS.listWithTasks(projectId).concat(status || 'all'),
-        queryFn: async () => {
-            const qs = status && status !== 'all' ? `?status=${status}` : '';
-            const resp = await api.request(`/api/projects/${projectId}/tickets-with-tasks${qs}`);
-            const data: TicketResult = await resp.json();
-            return data;
-        },
+        ...queryOptions,
         enabled: !!projectId,
     });
 }
 
-export function useUpdateTicketSuggestedFiles() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async ({ ticketId, suggestedFileIds }: { ticketId: string; suggestedFileIds: string[] }) => {
-            const response = await fetch(`/api/tickets/${ticketId}/suggested-files`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ suggestedFileIds }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to update ticket suggested files");
-            }
-
-            const data = await response.json();
-            return data.ticket;
-        },
-        onSuccess: (ticket) => {
-            // Invalidate all ticket queries to ensure UI updates
-            queryClient.invalidateQueries({ queryKey: TICKET_KEYS.all });
-        },
-    });
-}
-
-export type SuggestFilesResponse = {
-    success: boolean;
-    recommendedFileIds?: string[];
-    combinedSummaries?: string;
-    message?: string;
-}
-
 export function useSuggestFilesForTicket(ticketId: string) {
-    const { api } = useApi();
+    const mutationOptions = postApiTicketsByTicketIdSuggestFilesMutation();
 
-    return useMutation<SuggestFilesResponse, Error, { extraUserInput?: string }>({
-        mutationFn: async ({ extraUserInput }) => {
-            const response = await api.request(`/api/tickets/${ticketId}/suggest-files`, {
-                method: 'POST',
-                body: { extraUserInput },
-            });
-            return response.json();
+    return useMutation<SuggestedFilesResponse, PostApiTicketsByTicketIdSuggestFilesError, { extraUserInput?: string }>({
+        mutationFn: ({ extraUserInput }) => {
+            const opts: Options<PostApiTicketsByTicketIdSuggestFilesData> = { 
+                path: { ticketId },
+                body: extraUserInput ? { extraUserInput } : undefined
+            };
+            return mutationOptions.mutationFn!(opts) as Promise<SuggestedFilesResponse>;
         },
-        onError: commonErrorHandler,
+        onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }

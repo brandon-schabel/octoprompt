@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DEFAULT_MODEL_CONFIGS } from "../constants/model-default-configs";
+import { providerSchema, type APIProviders } from "../schemas/provider-key.schemas";
 
 const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
 
@@ -11,24 +12,6 @@ export const EDITOR_OPTIONS = [
 
 export type EditorType = typeof EDITOR_OPTIONS[number]["value"];
 
-
-export const AI_API_PROVIDERS = [
-    "openai",
-    "openrouter",
-    "lmstudio",
-    "ollama",
-    "xai",
-    "google_gemini",
-    "anthropic",
-    "groq",
-    "together",
-] as const;
-
-// ------------------------------------------------------------------
-// Provider enum
-// ------------------------------------------------------------------
-export const providerSchema = z.enum(AI_API_PROVIDERS);
-export type APIProviders = z.infer<typeof providerSchema>;
 export const apiProviders = providerSchema.options;
 
 // Project tab state - (Keep as is, unless project tabs are also removed)

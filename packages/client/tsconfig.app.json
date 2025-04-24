@@ -28,20 +28,12 @@
       ],
       "shared/*": [
         "../shared/*"
-      ],
-      "@server/*": [
-        "../server/*"
       ]
     },
     "types": [
       "bun-types"
     ]
   },
-  "references": [
-    {
-      "path": "../server"
-    }
-  ],
   "include": [
     "src"
   ],

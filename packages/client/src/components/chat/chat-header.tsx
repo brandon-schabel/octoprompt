@@ -3,9 +3,8 @@ import { useGetChats } from "@/hooks/api/use-chat-api";
 import { useChatModelControl } from "@/components/chat/hooks/use-chat-model-control";
 import { ModelSelector } from "./components/model-selector";
 import { ModelSettingsPopover } from "./components/model-settings-popover";
-import { APIProviders } from "shared/index";
 import { useActiveChat } from "@/zustand/selectors";
-import { ApiChat } from "@/hooks/generated";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 export function ChatHeader() {
     // Get active chat ID from Zustand
@@ -18,7 +17,7 @@ export function ChatHeader() {
     // Get chat data for title
     const { data: chats } = useGetChats();
 
-    const activeChatData = useMemo(() => chats?.data?.find((c: ApiChat) => c.id === chatId), [chats, chatId]);
+    const activeChatData = useMemo(() => chats?.data?.find((c) => c.id === chatId), [chats, chatId]);
 
     // Get model controls (now reads/writes global settings)
     const { provider, setProvider, currentModel, setCurrentModel } = useChatModelControl();

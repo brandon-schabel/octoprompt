@@ -1,10 +1,10 @@
 import { db } from "@/utils/database";
-import { GlobalState, DEFAULT_MODEL_CONFIGS, APIProviders } from "shared";
+import { GlobalState, DEFAULT_MODEL_CONFIGS,  } from "shared";
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
 import { websocketStateAdapter } from "@/utils/websocket/websocket-state-adapter";
 import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
-import { ProjectFile } from "shared/schema";
-
+import { ProjectFile } from "shared/src/schemas/project.schemas";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 let concurrency = 5;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {

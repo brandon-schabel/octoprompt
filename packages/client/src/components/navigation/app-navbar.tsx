@@ -9,7 +9,6 @@ import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
-import { useApi } from "@/hooks/use-api"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useUpdateActiveProjectTab } from "@/zustand/updaters"
@@ -41,7 +40,6 @@ export function AppNavbar() {
     const navigate = useNavigate()
     const { data: projectData, isLoading: projectsLoading } = useGetProjects()
     const { mutate: deleteProject } = useDeleteProject()
-    const { api } = useApi()
 
     const globalTheme = theme || 'dark'
 
@@ -53,20 +51,6 @@ export function AppNavbar() {
         }
     }, [globalTheme])
 
-    // Health check
-    useQuery<{ success: boolean }>({
-        queryKey: ['health'],
-        refetchInterval: 30000,
-        queryFn: () =>
-            api.request('/api/health', {
-                method: 'GET',
-            }).then(res => {
-                if (res.status === 200) {
-                    return res.json()
-                }
-                throw new Error('Failed to fetch health')
-            })
-    })
 
     // Hotkeys
     useHotkeys('mod+o', (e: any) => {
@@ -224,7 +208,7 @@ export function AppNavbar() {
                     <div className="mt-4">
                         <ProjectList
                             loading={projectsLoading}
-                            projects={projectData?.projects ?? []}
+                            projects={projectData?.data ?? []}
                             selectedProjectId={selectedProjectId ?? null}
                             onSelectProject={handleSelectProject}
                             onEditProject={handleEditProject}

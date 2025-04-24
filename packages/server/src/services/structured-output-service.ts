@@ -1,11 +1,11 @@
-// packages/server/src/services/structured-output-service.ts
 import { structuredOutputSchemas, StructuredOutputType, InferStructuredOutput } from "shared/src/structured-outputs/structured-output-schema";
 import { ApiError } from "shared";
 // No longer need zodToStructuredJsonSchema or fetchStructuredOutput utils here
 import { z } from "zod";
-import { DEFAULT_MODEL_CONFIGS, APIProviders } from "shared";
+import { DEFAULT_MODEL_CONFIGS, } from "shared";
 // Import the refactored unified provider
 import { unifiedProvider } from "./model-providers/providers/unified-provider-service";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 
 interface GenerateStructuredOutputOptions<T extends StructuredOutputType> {
@@ -40,12 +40,12 @@ export async function generateStructuredOutput<T extends StructuredOutputType>(
     } = params;
 
     if (!model) {
-        throw new ApiError(`Model not configured for generate-structured-output task.`, 500, "CONFIG_ERROR");
+        throw new ApiError(500, `Model not configured for generate-structured-output task.`, "CONFIG_ERROR");
     }
 
     const zodSchema = structuredOutputSchemas[outputType];
     if (!zodSchema) {
-        throw new ApiError(`Unknown structured output type: '${outputType}'`, 400, "SCHEMA_NOT_FOUND");
+        throw new ApiError(400, `Unknown structured output type: '${outputType}'`, "SCHEMA_NOT_FOUND");
     }
 
     // Optional: Enhance system prompt if needed, but rely on generateObject primarily
@@ -71,8 +71,8 @@ export async function generateStructuredOutput<T extends StructuredOutputType>(
         // Catch errors from generateStructuredData (includes model errors, validation errors)
         console.error(`[StructuredOutputService] Error generating '${outputType}':`, error);
         throw new ApiError(
+            500,
             `Failed to generate structured output of type '${outputType}': ${error.message || String(error)}`,
-            error instanceof ApiError ? error.status : 500, // Preserve status code if already ApiError
             error instanceof ApiError ? error.code : "STRUCTURED_OUTPUT_ERROR"
         );
     }

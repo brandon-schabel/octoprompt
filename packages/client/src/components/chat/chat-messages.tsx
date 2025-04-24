@@ -6,11 +6,11 @@ import { Switch } from "../ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { ChatMessage } from "shared/schema";
 import { useDeleteMessage, useForkChatFromMessage } from "@/hooks/api/use-chat-api";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useSettingsField } from "@/zustand/zustand-utility-hooks"
+import { ChatMessage } from "@/hooks/generated";
 
 /**
  * Helper function to parse out <think> blocks in the assistant message.
@@ -325,7 +325,10 @@ export function ChatMessages(props: ChatMessagesProps) {
             const result = await forkChatMutation.mutateAsync({
                 chatId,
                 messageId,
-                excludedMessageIds,
+                // excludedMessageIds,
+                body: {
+                    excludedMessageIds
+                }
             });
             toast.success("Chat forked successfully");
         } catch (error) {

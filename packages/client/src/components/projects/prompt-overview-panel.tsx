@@ -138,8 +138,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         })
 
         useEffect(() => {
-            if (editPromptId && promptData?.prompts) {
-                const p = promptData.prompts.find(x => x.id === editPromptId)
+            if (editPromptId && promptData?.data) {
+                const p = promptData.data.find(x => x.id === editPromptId)
                 if (p) {
                     promptForm.setValue('name', p.name)
                     promptForm.setValue('content', p.content)
@@ -147,14 +147,19 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             } else {
                 promptForm.reset()
             }
-        }, [editPromptId, promptData?.prompts])
+        }, [editPromptId, promptData?.data])
 
         async function handleCreatePrompt(values: z.infer<typeof promptSchema>) {
             if (!selectedProjectId) return
             const result = await createPromptMutation.mutateAsync({
-                ...values,
-                projectId: selectedProjectId,
+                body: {
+                    projectId: selectedProjectId,
+                    name: values.name,
+                    content: values.content,
+                }
             })
+
+            // @ts-ignore
             if (result.success) {
                 toast.success('Prompt created')
                 setPromptDialogOpen(false)

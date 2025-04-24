@@ -1,6 +1,5 @@
 import { db } from "@/utils/database";
-import type { Chat, ChatMessage, ExtendedChatMessage } from "shared/schema";
-import { ChatReadSchema, ChatMessageReadSchema } from "shared/src/utils/database/db-schemas";
+import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage } from "shared/src/schemas/chat.schemas";
 import { randomUUID } from "crypto";
 
 export type CreateChatOptions = {
@@ -23,35 +22,7 @@ type RawChatMessage = {
     created_at: number;
 };
 
-function mapChat(row: RawChat): Chat {
-    const mapped = {
-        id: row.id,
-        title: row.title,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at)
-    };
-    const chat = ChatReadSchema.parse(mapped);
-    return {
-        ...chat,
-        createdAt: new Date(chat.createdAt),
-        updatedAt: new Date(chat.updatedAt)
-    };
-}
 
-function mapChatMessage(row: RawChatMessage): ChatMessage {
-    const mapped = {
-        id: row.id,
-        chatId: row.chat_id,
-        role: row.role,
-        content: row.content,
-        createdAt: new Date(row.created_at)
-    };
-    const message = ChatMessageReadSchema.parse(mapped);
-    return {
-        ...message,
-        createdAt: new Date(message.createdAt)
-    };
-}
 
 /**
  * Returns an object of functions handling chat logic in a functional style.
@@ -64,8 +35,7 @@ export function createChatService() {
             VALUES (?, ?)
             RETURNING *
         `);
-        const created = stmt.get(chatId, title) as RawChat;
-        const chat = mapChat(created);
+        const chat = stmt.get(chatId, title) as Chat;
 
         if (options?.copyExisting && options?.currentChatId) {
             const sourceStmt = db.prepare(`
@@ -104,9 +74,8 @@ export function createChatService() {
             VALUES (?, ?, ?, ?)
             RETURNING *
         `);
-        const saved = stmt.get(randomUUID(), message.chatId, message.role, message.content) as RawChatMessage;
-        const mappedMessage = mapChatMessage(saved);
-        return { ...mappedMessage, tempId: message.tempId };
+        const saved = stmt.get(randomUUID(), message.chatId, message.role, message.content) as ChatMessage;
+        return { ...saved, tempId: message.tempId };
     }
 
     async function updateMessageContent(messageId: string, content: string): Promise<void> {
@@ -123,18 +92,18 @@ export function createChatService() {
             SELECT * FROM chats 
             ORDER BY updated_at
         `);
-        const rows = stmt.all() as RawChat[];
-        return rows.map(mapChat);
+        const rows = stmt.all() as Chat[];
+        return rows;
     }
 
-    async function getChatMessages(chatId: string): Promise<ExtendedChatMessage[]> {
+    async function getChatMessages(chatId: string): Promise<ChatMessage[]> {
         const stmt = db.prepare(`
             SELECT * FROM chat_messages 
             WHERE chat_id = ? 
             ORDER BY created_at
         `);
-        const messages = stmt.all(chatId) as RawChatMessage[];
-        return messages.map(msg => ({ ...mapChatMessage(msg) }));
+        const messages = stmt.all(chatId) as ChatMessage[];
+        return messages;
     }
 
     async function updateChat(chatId: string, title: string): Promise<Chat> {
@@ -144,11 +113,11 @@ export function createChatService() {
             WHERE id = ?
             RETURNING *
         `);
-        const updated = stmt.get(title, chatId) as RawChat;
+        const updated = stmt.get(title, chatId) as Chat;
         if (!updated) {
             throw new Error("Chat not found");
         }
-        return mapChat(updated);
+        return updated;
     }
 
     async function deleteChat(chatId: string): Promise<void> {
@@ -163,7 +132,7 @@ export function createChatService() {
             WHERE id = ?
             RETURNING *
         `);
-        const result = deleteChatStmt.get(chatId) as RawChat | undefined;
+        const result = deleteChatStmt.get(chatId) as Chat | undefined;
         if (!result) {
             throw new Error("Chat not found");
         }
@@ -197,7 +166,7 @@ export function createChatService() {
             VALUES (?)
             RETURNING *
         `);
-        const newChat = mapChat(createStmt.get(newTitle) as RawChat);
+        const newChat = createStmt.get(newTitle) as Chat;
 
         const sourceMessagesStmt = db.prepare(`
             SELECT * FROM chat_messages 
@@ -253,7 +222,7 @@ export function createChatService() {
             VALUES (?)
             RETURNING *
         `);
-        const newChat = mapChat(createStmt.get(newTitle) as RawChat);
+        const newChat = createStmt.get(newTitle) as Chat;
 
         const sourceMessagesStmt = db.prepare(`
             SELECT * FROM chat_messages 

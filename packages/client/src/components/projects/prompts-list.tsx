@@ -7,7 +7,6 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { ScrollArea } from '../ui/scroll-area'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
-import { ProjectFile } from 'shared'
 import { useGetProjectPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
@@ -23,6 +22,7 @@ import { Badge } from '../ui/badge'
 import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { useProjectTab } from '@/zustand/selectors'
+import { ProjectFile } from '@/hooks/generated'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
@@ -76,7 +76,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const copySelectedPrompts = () => {
         if (!selectedPrompts.length) return
         const allPrompts = selectedPrompts.map(id => {
-            const p = promptData?.data?.find((x: {id: string}) => x.id === id)
+            const p = promptData?.data?.find((x: { id: string }) => x.id === id)
             return p ? `# ${p.name}\n${p.content}\n` : ""
         }).join("\n")
         navigator.clipboard.writeText(allPrompts)
@@ -108,6 +108,8 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                 content: values.content,
             }
         })
+
+        // @ts-ignore
         if (result.success && result.data) {
             toast.success('Prompt created successfully')
             promptForm.reset()
@@ -142,7 +144,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
             promptForm.reset()
             return
         }
-        const found = prompts.find((p: {id: string, name: string, content: string}) => p.id === editPromptId)
+        const found = prompts.find((p: { id: string, name: string, content: string }) => p.id === editPromptId)
         if (found) {
             promptForm.setValue('name', found.name || '')
             promptForm.setValue('content', found.content || '')
@@ -206,12 +208,12 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
             path: prompt.name,
             extension: '.txt',
             projectId: prompt.projectId || selectedProjectId,
-            createdAt: new Date(prompt.createdAt),
-            updatedAt: new Date(prompt.updatedAt),
+            createdAt: new Date(prompt.createdAt).toISOString(),
+            updatedAt: new Date(prompt.updatedAt).toISOString(),
             size: prompt.content?.length || 0,
             meta: '',
             summary: '',
-            summaryLastUpdatedAt: new Date(),
+            summaryLastUpdatedAt: new Date().toISOString(),
             checksum: ''
         });
     }

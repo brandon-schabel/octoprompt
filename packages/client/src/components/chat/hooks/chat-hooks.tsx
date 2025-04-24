@@ -1,18 +1,17 @@
 import { useCallback } from "react";
-// Update imports to use the refactored hooks
 import {
     useGetMessages,
     useCreateChat,
     useForkChat,
-    // useForkChatFromMessage // Import if you use it
 } from "@/hooks/api/use-chat-api";
-import { APIProviders, ChatModelSettings } from "shared";
+import { ChatModelSettings } from "shared";
 import { useChatModelParams } from "./use-chat-model-params";
 import { useAIChat } from "@/hooks/use-ai-chat";
 import { useSettings } from "@/zustand/selectors";
 // Import the input type if needed for clarity/casting
 import type { CreateChatInput, } from "@/hooks/api/use-chat-api";
 import { ForkChatRequestBody } from "@/hooks/generated/types.gen";
+import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 
 export function useCreateChatHandler() {

@@ -9,12 +9,12 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer"
 import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
-import { ProjectFile } from "shared"
 import { SelectedFilesList } from "@/components/projects/selected-files-list"
 import { useState } from "react"
 import { FormatTokenCount } from "../format-token-count"
 import { Badge } from "../ui/badge"
 import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
+import { ProjectFile } from "@/hooks/generated"
 
 type SelectedFilesDrawerProps = {
   selectedFiles: string[]

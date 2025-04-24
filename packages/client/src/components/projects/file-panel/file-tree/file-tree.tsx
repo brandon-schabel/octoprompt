@@ -47,11 +47,9 @@ import { buildNodeContent } from "@/components/projects/utils/projects-utils";
 
 import { getEditorUrl } from "@/lib/editor-urls";
 import { useActiveProjectTab } from "@/zustand/selectors";
-import { ProjectFile } from "shared/schema";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
-import { useApi } from "@/hooks/use-api";
-import { useQueryClient } from "@tanstack/react-query";
-import { PROJECT_FILES_KEYS, useRefreshProject } from "@/hooks/api/use-projects-api";
+import { useRefreshProject } from "@/hooks/api/use-projects-api";
+import { ProjectFile } from "@/hooks/generated/types.gen";
 
 /**
  * The user's preferred external editor.

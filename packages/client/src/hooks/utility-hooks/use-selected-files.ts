@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useUpdateActiveProjectTab, useUpdateProjectTab } from '@/zustand/updaters'
-import { ProjectFile, ProjectTabState } from 'shared'
+import { ProjectFile } from '@/hooks/generated/types.gen'
 import { useActiveProjectTab } from '@/zustand/selectors'
 import { useProjectTabField } from '@/zustand/zustand-utility-hooks'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
@@ -39,9 +39,9 @@ export function useSelectedFiles({
   const { data: fileData } = useGetProjectFiles(selectedProjectId || '')
   const fileMap = useMemo(() => {
     const m = new Map<string, ProjectFile>()
-    fileData?.files?.forEach(f => m.set(f.id, f))
+    fileData?.data?.forEach(f => m.set(f.id, f))
     return m
-  }, [fileData?.files])
+  }, [fileData?.data])
 
   // Query for getting the undo/redo state
   const { data: undoRedoState } = useQuery({

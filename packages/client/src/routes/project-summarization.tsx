@@ -20,7 +20,6 @@ import {
     useResummarizeAllFiles,
     useRemoveSummariesFromFiles
 } from "@/hooks/api/use-projects-api"
-import { ProjectFile } from "shared/schema"
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher"
 import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
 
@@ -49,8 +48,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AppSettings } from "shared/src/global-state/global-state-schema"
 import { useActiveProjectTab } from "@/zustand/selectors"
 import { useSettingsField } from "@/zustand/zustand-utility-hooks"
-
-
+import { ProjectFile } from "@/hooks/generated"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -88,7 +86,7 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
                             toast.success(resp.message || "File has been successfully re-summarized")
                         },
                         onError: (error) => {
-                            toast.error(error.message || "Failed to re-summarize file")
+                            toast.error(error?.error?.message || "Failed to re-summarize file")
                         }
                     }
                 )
@@ -137,11 +135,11 @@ export function ProjectSummarizationSettingsPage() {
 
     // 1) Fetch all project files
     const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? "")
-    const projectFiles = (data?.files || []) as ProjectFile[]
+    const projectFiles = (data?.data || []) as ProjectFile[]
 
     // 2) Fetch all file entries (now each includes its summary)
     const { data: summariesData } = useGetFileSummaries(selectedProjectId ?? "")
-    const summaries = summariesData?.summaries || []
+    const summaries = summariesData?.data || []
 
     // Build a lookup map of fileId -> ProjectFile
     const summariesMap = new Map<string, ProjectFile>()

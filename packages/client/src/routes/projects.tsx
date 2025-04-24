@@ -9,7 +9,7 @@ import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { useCreateProjectTab } from '@/zustand/updaters'
 import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors'
 import { ResizablePanel } from '@/components/ui/resizable-panel'
-import type { Project } from 'shared'
+import { ProjectResponse } from '@/hooks/generated'
 
 export function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
@@ -28,7 +28,7 @@ export function ProjectsPage() {
     if (noTabsYet) {
         return (
             <NoTabsYetView
-                projects={projects?.projects || []}
+                projects={projects?.data || []}
                 createNewTab={createNewTab}
             />
         )
@@ -117,7 +117,7 @@ function MainProjectsLayout({
 // references to selectedFiles, etc.)
 // -------------------------------------------------------------------------
 type NoTabsYetViewProps = {
-    projects: Project[]
+    projects: ProjectResponse['data'][]
     createNewTab: (args: { projectId: string }) => void
 }
 

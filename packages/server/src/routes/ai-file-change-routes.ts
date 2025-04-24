@@ -1,110 +1,263 @@
-import { z } from '@hono/zod-openapi'
-
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { db } from "@db";
 import { confirmFileChange, generateFileChange, getFileChange } from "@/services/file-services/ai-file-change-service";
-import { OpenAPIHono } from '@hono/zod-openapi';
+import {
+  ApiErrorResponseSchema,
+} from 'shared/src/schemas/common.schemas';
 
-// Validation schemas
-const generateChangeSchema = z.object({
-  filePath: z.string().min(1),
-  prompt: z.string().min(1),
+// Request schemas
+const GenerateChangeBodySchema = z.object({
+  filePath: z.string().min(1).openapi({ example: 'src/components/Button.tsx', description: 'Path to the file to modify' }),
+  prompt: z.string().min(1).openapi({ example: 'Add hover effects to the button', description: 'Instruction for the AI to follow' }),
+}).openapi('GenerateChangeBody');
+
+const FileChangeIdParamsSchema = z.object({
+  fileChangeId: z.string().transform(val => parseInt(val, 10)).openapi({
+    param: { name: 'fileChangeId', in: 'path' },
+    example: '123',
+    description: 'ID of the file change'
+  })
+}).openapi('FileChangeIdParams');
+
+// Response schemas
+const FileChangeResponseSchema = z.object({
+  success: z.literal(true),
+  result: z.object({
+    id: z.number(),
+    filePath: z.string(),
+    originalContent: z.string(),
+    suggestedContent: z.string(),
+    diff: z.string(),
+    prompt: z.string(),
+    status: z.string(),
+    createdAt: z.string().datetime(),
+  }).openapi('FileChangeResult')
+}).openapi('FileChangeResponse');
+
+const FileChangeDetailsResponseSchema = z.object({
+  success: z.literal(true),
+  fileChange: z.object({
+    id: z.number(),
+    filePath: z.string(),
+    originalContent: z.string(),
+    suggestedContent: z.string(),
+    diff: z.string(),
+    prompt: z.string(),
+    status: z.string(),
+    createdAt: z.string().datetime(),
+  }).openapi('FileChangeDetails')
+}).openapi('FileChangeDetailsResponse');
+
+const ConfirmChangeResponseSchema = z.object({
+  success: z.literal(true),
+  result: z.object({
+    status: z.string(),
+    message: z.string(),
+  }).openapi('ConfirmChangeResult')
+}).openapi('ConfirmChangeResponse');
+
+// Route definitions
+const generateFileChangeRoute = createRoute({
+  method: 'post',
+  path: '/api/file/ai-change',
+  tags: ['Files', 'AI'],
+  summary: 'Generate AI-assisted file changes based on a prompt',
+  request: {
+    body: { content: { 'application/json': { schema: GenerateChangeBodySchema } } },
+  },
+  responses: {
+    200: { content: { 'application/json': { schema: FileChangeResponseSchema } }, description: 'Successfully generated file change' },
+    400: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Invalid request' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Error generating file change' },
+  },
 });
+
+const getFileChangeRoute = createRoute({
+  method: 'get',
+  path: '/api/file/ai-change/{fileChangeId}',
+  tags: ['Files', 'AI'],
+  summary: 'Retrieve details about a specific AI file change',
+  request: {
+    params: FileChangeIdParamsSchema,
+  },
+  responses: {
+    200: { content: { 'application/json': { schema: FileChangeDetailsResponseSchema } }, description: 'Successfully retrieved file change' },
+    400: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Invalid file change ID' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'File change not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Error retrieving file change' },
+  },
+});
+
+const confirmFileChangeRoute = createRoute({
+  method: 'post',
+  path: '/api/file/ai-change/{fileChangeId}/confirm',
+  tags: ['Files', 'AI'],
+  summary: 'Confirm and apply an AI-generated file change',
+  request: {
+    params: FileChangeIdParamsSchema,
+  },
+  responses: {
+    200: { content: { 'application/json': { schema: ConfirmChangeResponseSchema } }, description: 'Successfully confirmed file change' },
+    400: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Invalid file change ID' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'File change not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Error confirming file change' },
+  },
+});
+
 export const aiFileChangeRoutes = new OpenAPIHono()
-  // POST endpoint to generate AI file changes
-  .post("/api/file/ai-change", async (c) => {
+  .openapi(generateFileChangeRoute, async (c) => {
     try {
-      const body = await c.req.json();
-
-      // Validate the request body
-      const result = generateChangeSchema.safeParse(body);
-      if (!result.success) {
-        return c.json({
-          success: false,
-          error: "Invalid request body",
-          details: result.error.issues
-        }, 400);
-      }
-
-      const validatedBody = result.data;
-      const changeResult = await generateFileChange({
-        filePath: validatedBody.filePath,
-        prompt: validatedBody.prompt,
+      const body = c.req.valid('json');
+      // Service now returns the full DB record
+      const changeRecord = await generateFileChange({
+        filePath: body.filePath,
+        prompt: body.prompt,
         db
       });
 
-      return c.json({
+      // Map the DB record to the response schema
+      const payload: z.infer<typeof FileChangeResponseSchema> = {
         success: true,
-        result: changeResult
-      });
+        result: {
+          id: changeRecord.id,
+          filePath: changeRecord.file_path,
+          originalContent: changeRecord.original_content,
+          // Map explanation to diff, and use stored suggested_content
+          suggestedContent: changeRecord.suggested_content ?? '',
+          diff: changeRecord.suggested_diff ?? '', // Assuming explanation is stored here
+          prompt: changeRecord.prompt ?? '', // Use stored prompt
+          status: changeRecord.status,
+          createdAt: new Date(changeRecord.timestamp * 1000).toISOString() // Convert Unix timestamp
+        }
+      };
+      return c.json(payload, 200);
     } catch (error) {
       console.error("Error generating file change:", error);
-      return c.json({
+      const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
-      }, 500);
+        error: {
+          message: "Failed to generate file change",
+          code: "FILE_CHANGE_GENERATION_ERROR",
+          details: {}
+        }
+      };
+      return c.json(errorPayload, 500);
     }
   })
-  // GET endpoint to retrieve an AI file change by ID
-  .get("/api/file/ai-change/:fileChangeId", async (c) => {
+  .openapi(getFileChangeRoute, async (c) => {
     try {
-      const fileChangeId = c.req.param('fileChangeId');
-      const changeId = parseInt(fileChangeId, 10);
+      const { fileChangeId } = c.req.valid('param');
 
-      if (isNaN(changeId)) {
-        return c.json({
+      if (isNaN(fileChangeId)) {
+        const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
           success: false,
-          error: "Invalid file change ID"
-        }, 400);
+          error: {
+            message: "Invalid file change ID",
+            code: "INVALID_INPUT",
+            details: {}
+          }
+        };
+        return c.json(errorPayload, 400);
       }
 
-      const fileChange = await getFileChange(db, changeId);
+      // Service returns the DB record or null
+      const fileChangeRecord = await getFileChange(db, fileChangeId);
 
-      if (fileChange === null) {
-        return c.json({
+      if (fileChangeRecord === null) {
+        const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
           success: false,
-          error: "File change not found"
-        }, 404);
+          error: {
+            message: "File change not found",
+            code: "NOT_FOUND",
+            details: {}
+          }
+        };
+        return c.json(errorPayload, 404);
       }
 
-      return c.json({
+      const payload: z.infer<typeof FileChangeDetailsResponseSchema> = {
         success: true,
-        fileChange
-      });
+        fileChange: {
+          id: fileChangeRecord.id,
+          filePath: fileChangeRecord.file_path,
+          originalContent: fileChangeRecord.original_content,
+          suggestedContent: fileChangeRecord.suggested_content ?? '',
+          diff: fileChangeRecord.suggested_diff ?? '',
+          prompt: fileChangeRecord.prompt ?? '',
+          status: fileChangeRecord.status,
+          createdAt: new Date(fileChangeRecord.timestamp * 1000).toISOString()
+        }
+      };
+      return c.json(payload, 200);
+
     } catch (error) {
       console.error("Error retrieving file change:", error);
-      return c.json({
+      const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
-      }, 500);
+        error: {
+          message: "Failed to retrieve file change",
+          code: "FILE_CHANGE_RETRIEVAL_ERROR",
+          details: {}
+        }
+      };
+      return c.json(errorPayload, 500);
     }
   })
-  // POST endpoint to confirm an AI file change
-  .post("/api/file/ai-change/:fileChangeId/confirm", async (c) => {
+  .openapi(confirmFileChangeRoute, async (c) => {
     try {
-      const fileChangeId = c.req.param('fileChangeId');
-      const changeId = parseInt(fileChangeId, 10);
+      const { fileChangeId } = c.req.valid('param');
 
-      if (isNaN(changeId)) {
-        return c.json({
-          success: false,
-          error: "Invalid file change ID"
-        }, 400);
+      if (isNaN(fileChangeId)) {
+        const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+          success: false, error: {
+            message: "Invalid file change ID",
+            code: "INVALID_INPUT",
+            details: {}
+          }
+        };
+        // Return 400 as defined in the route responses
+        return c.json(errorPayload, 400);
       }
 
-      const result = await confirmFileChange(db, changeId);
+      // Service now returns { status, message } or throws
+      const result = await confirmFileChange(db, fileChangeId);
 
-      return c.json({
+      const payload: z.infer<typeof ConfirmChangeResponseSchema> = {
         success: true,
-        result
-      });
+        result: result // Use the { status, message } object directly
+      };
+      return c.json(payload, 200);
     } catch (error) {
       console.error("Error confirming file change:", error);
-      return c.json({
+      let statusCode: 400 | 404 | 500 = 500; // Default to 500
+      let errorCode = "FILE_CHANGE_CONFIRM_ERROR";
+      let errorMessage = "Failed to confirm file change";
+
+      if (error instanceof Error) {
+        errorMessage = error.message; // Use actual error message
+        const code = (error as any).code;
+        if (code === 'NOT_FOUND') {
+          statusCode = 404;
+          errorCode = "NOT_FOUND";
+        } else if (code === 'INVALID_STATE') {
+          // 409 Conflict is not defined in route, map to 400 Bad Request
+          statusCode = 400;
+          errorCode = "INVALID_STATE";
+        }
+        // Add other specific error code checks if needed
+      }
+
+      const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
-      }, 500);
+        error: {
+          message: errorMessage,
+          code: errorCode,
+          details: {}
+        }
+      };
+      // Use one of the defined error statuses: 400, 404, or 500
+      return c.json(errorPayload, statusCode);
     }
   });
-
 
 export type AiFileChangeRouteTypes = typeof aiFileChangeRoutes;

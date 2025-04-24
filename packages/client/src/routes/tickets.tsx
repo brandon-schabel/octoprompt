@@ -6,8 +6,8 @@ import { Plus } from "lucide-react";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
-import type { TicketWithTasks } from "@/hooks/api/use-tickets-api";
 import { useActiveProjectTab } from "@/zustand/selectors";
+import { TicketWithTasks } from "@/hooks/generated";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,
@@ -62,7 +62,7 @@ function TicketsPage() {
             {/* Page Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">
-                    Tickets for {projectData?.project?.name}
+                    Tickets for {projectData?.data?.name}
                 </h2>
                 <Button onClick={() => setIsDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />

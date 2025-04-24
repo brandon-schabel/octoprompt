@@ -1,5 +1,4 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
-import { APIInterface } from '@/utils/api/api-interface'
 import { AppNavbar } from '@/components/navigation/app-navbar'
 import { useState, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -22,10 +21,6 @@ import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-
-type RouterContext = {
-  api: APIInterface
-}
 
 function LoadingScreen() {
   const [showError, setShowError] = useState(false)
@@ -79,7 +74,7 @@ function GlobalCommandPalette() {
 
 
   // Filter projects based on search
-  const filteredProjects = (projectsData?.projects ?? [])
+  const filteredProjects = (projectsData?.data ?? [])
     .filter((project) => {
       const searchLower = debouncedSearch.toLowerCase()
       return (
@@ -175,7 +170,7 @@ function GlobalCommandPalette() {
   )
 }
 
-export const Route = createRootRouteWithContext<RouterContext>()({
+export const Route = createRootRouteWithContext()({
   component: RootComponent
 })
 

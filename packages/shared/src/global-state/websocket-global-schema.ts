@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
     globalStateSchema,
     projectTabStateSchema,
-    providerSchema,
     themeSchema,
     appSettingsSchema,
     type GlobalState

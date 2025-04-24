@@ -1,13 +1,10 @@
-// packages/client/src/hooks/api/use-chat-api.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import {
-    // Generated Query Options & Keys
     getChatsOptions,
     getChatsQueryKey,
     getChatsByChatIdMessagesOptions,
     getChatsByChatIdMessagesQueryKey,
-    // Generated Mutation Functions
     postChatsMutation,
     patchChatsByChatIdMutation,
     deleteChatsByChatIdMutation,
@@ -15,12 +12,8 @@ import {
     postChatsByChatIdForkByMessageIdMutation,
     deleteMessagesByMessageIdMutation,
     getModelsOptions,
-    // Import SDK Options type if needed for mutations
-    // (Not strictly needed here as we pass simpler args)
 } from '../generated/@tanstack/react-query.gen';
 import type {
-    // Generated Data Types for Requests/Responses
-    GetChatsData,
     PostChatsData,
     PostChatsError,
     GetChatsByChatIdMessagesData,
@@ -32,23 +25,18 @@ import type {
     PostChatsByChatIdForkError,
     PostChatsByChatIdForkByMessageIdData,
     PostChatsByChatIdForkByMessageIdError,
-    ForkChatRequestBody, // For useForkChat body
+    ForkChatRequestBody,
     ForkChatFromMessageRequestBody,
     DeleteMessagesByMessageIdData,
     DeleteMessagesByMessageIdError,
-    GetModelsData, // For useForkChatFromMessage body
-    // Response types if needed directly (usually inferred)
-    // ChatListResponse, ChatResponse, MessageListResponse, OperationSuccessResponse
+    GetModelsData,
 } from '../generated/types.gen';
-import { APIProviders } from 'shared/src/global-state/global-state-schema';
 import { Options } from '../generated/sdk.gen'; // Only needed if passing full Options<>
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 
 // Define input types based on generated request body types
 export type CreateChatInput = PostChatsData['body'];
 export type UpdateChatInput = PatchChatsByChatIdData['body'];
-// Fork input types can use generated types directly or be defined:
-// export type ForkChatInputBody = ForkChatRequestBody;
-// export type ForkChatFromMessageInputBody = ForkChatFromMessageRequestBody;
 
 // Define Query Keys using generated functions
 const CHAT_KEYS = {
@@ -209,6 +197,6 @@ export function useDeleteMessage() {
 }
 
 export function useGetModels(provider: APIProviders) {
-    const queryOptions = getModelsOptions({ query: { provider ,} });
+    const queryOptions = getModelsOptions({ query: { provider, } });
     return useQuery(queryOptions);
 }

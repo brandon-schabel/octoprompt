@@ -2,7 +2,7 @@ import { createFileChangePlugin } from './file-change-plugin';
 
 import { db } from '@/utils/database';
 import { existsSync } from 'node:fs';
-import { Project } from 'shared/schema';
+import { Project } from 'shared/src/schemas/project.schemas';
 import { resolvePath } from '@/utils/path-utils';
 
 

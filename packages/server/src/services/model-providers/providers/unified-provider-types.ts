@@ -1,7 +1,7 @@
 
 // packages/server/src/services/model-providers/providers/unified-provider-types.ts
-import { APIProviders } from "shared";
 import { CoreMessage } from 'ai'; // Import CoreMessage
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 import { z } from "zod";
 
 // Options compatible with Vercel AI SDK's streamText, generateText, generateObject
@@ -44,11 +44,11 @@ export type ProcessMessageParams = {
     tempId?: string;
     systemMessage?: string;
     messages?: CoreMessage[];
-    
+
     // For structured outputs
     schema?: z.ZodSchema<any>;
     enum?: string[]; // For enum output strategy
-  };
+};
 
 // Optional: Define types for structured output generation if needed centrally
 // export type GenerateObjectParams<T> = {

@@ -9,13 +9,12 @@ import {
     useUpdateChat,
     useCreateChat,
 } from '@/hooks/api/use-chat-api';
-import { Chat } from 'shared/index';
 import { cn } from '@/lib/utils';
 import { SlidingSidebar } from '../sliding-sidebar';
 import { toast } from 'sonner';
 import { useActiveChat } from '@/zustand/selectors';
 import { useSetActiveChat } from '@/zustand/updaters';
-import { ApiChat } from '@/hooks/generated';
+import { Chat } from '@/hooks/generated';
 
 export function ChatSidebar() {
     // Get active chat from Zustand
@@ -34,7 +33,7 @@ export function ChatSidebar() {
     const createChat = useCreateChat();
 
     const sortedChats = useMemo(() => {
-        const chats: ApiChat[] = chatsData?.data ?? [];
+        const chats: Chat[] = chatsData?.data ?? [];
         return [...chats].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [chatsData]);
 

@@ -1,8 +1,7 @@
 import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
-import { PromptListResponse } from "@/hooks/api/use-prompts-api"
-import { ProjectFile } from "shared/schema"
 import { z } from 'zod'
 import { FileNode } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
+import { ProjectFile, PromptListResponse } from "@/hooks/generated/types.gen"
 
 export const projectSchema = z.object({
     name: z.string().min(1, 'Project name is required'),
@@ -26,7 +25,7 @@ export function buildPromptContent(
 ): string {
     let contentToCopy = ''
     let promptCount = 1
-    for (const prompt of promptData?.prompts ?? []) {
+    for (const prompt of promptData?.data ?? []) {
         if (selectedPrompts.includes(prompt.id)) {
             contentToCopy += `<meta prompt ${promptCount} = "${prompt.name}">\n${prompt.content}\n</meta prompt ${prompt.id}>\n\n`
             promptCount++
@@ -64,7 +63,7 @@ export function calculateTotalTokens(
     fileMap: Map<string, ProjectFile>
 ): number {
     let total = 0
-    for (const prompt of promptData?.prompts ?? []) {
+    for (const prompt of promptData?.data ?? []) {
         if (selectedPrompts.includes(prompt.id)) {
             total += estimateTokenCount(prompt.content)
         }

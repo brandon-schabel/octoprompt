@@ -1,24 +1,21 @@
-/**
- * Admin API Hooks
- * This file contains React Query hooks for admin-related API endpoints including:
- * - Environment information retrieval
- * - System status checks
- * - Other admin-related operations
- * 
- * Most recent changes:
- * - Initial implementation with useGetEnvironmentInfo and useGetSystemStatus hooks
- * - Updated EnvInfo interface to support Bun version and database statistics
- */
+import { useQuery } from '@tanstack/react-query';
+import {
+  getApiAdminEnvInfoOptions,
+  getApiAdminSystemStatusOptions,
+  getApiAdminEnvInfoQueryKey,
+  getApiAdminSystemStatusQueryKey
+} from '../generated/@tanstack/react-query.gen';
+import type {
+  GetApiAdminEnvInfoResponse,
+  GetApiAdminSystemStatusResponse,
+} from '../generated/types.gen';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '@/hooks/use-api';
 
-// Database table count type
+// Re-export types for backward compatibility
 export interface TableCount {
   count: number;
 }
 
-// Database statistics type
 export interface DatabaseStats {
   chats: TableCount;
   chat_messages: TableCount;
@@ -33,7 +30,6 @@ export interface DatabaseStats {
   file_changes: TableCount;
 }
 
-// Types for our admin data
 export interface EnvInfo {
   environment: Record<string, string | undefined>;
   serverInfo: {
@@ -55,54 +51,43 @@ export interface SystemStatus {
   };
 }
 
-// API functions
-async function getEnvironmentInfo(api: ReturnType<typeof useApi>['api']): Promise<EnvInfo> {
-  const response = await api.request('/api/admin/env-info', {
-    method: 'GET',
-  });
+// Admin query keys (can be kept for internal consistency or removed if unused elsewhere)
+const ADMIN_KEYS = {
+  all: ['admin'] as const,
+  envInfo: () => ['admin', 'env-info'] as const, // These might differ from generated keys
+  systemStatus: () => ['admin', 'system-status'] as const, // These might differ from generated keys
+};
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch environment info: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-async function getSystemStatus(api: ReturnType<typeof useApi>['api']): Promise<SystemStatus> {
-  const response = await api.request('/api/admin/system-status', {
-    method: 'GET',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch system status: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-// Hooks
+// Updated hooks using generated options
 export const useGetEnvironmentInfo = () => {
-  const { api } = useApi();
-  
-  return useQuery({
-    queryKey: ['admin', 'env-info'],
-    queryFn: () => getEnvironmentInfo(api),
+  const queryOptions = getApiAdminEnvInfoOptions();
+  return useQuery<
+    GetApiAdminEnvInfoResponse, // TQueryFnData
+    Error,                     // TError
+    GetApiAdminEnvInfoResponse, // TData
+    ReturnType<typeof getApiAdminEnvInfoQueryKey> // TQueryKey
+  >({
+    queryKey: queryOptions.queryKey, // Use generated key
+    queryFn: queryOptions.queryFn,   // Use generated function
+    // queryKey: ADMIN_KEYS.envInfo(), // Use consistent key for cache management - Use generated key instead
     refetchOnWindowFocus: false,
     retry: 1,
   });
 };
 
 export const useGetSystemStatus = () => {
-  const { api } = useApi();
-  
-  return useQuery({
-    queryKey: ['admin', 'system-status'],
-    queryFn: () => getSystemStatus(api),
+  const queryOptions = getApiAdminSystemStatusOptions();
+  return useQuery<
+    GetApiAdminSystemStatusResponse,
+    Error,
+    GetApiAdminSystemStatusResponse,
+    ReturnType<typeof getApiAdminSystemStatusQueryKey>
+  >({
+    queryKey: queryOptions.queryKey, // Use generated key
+    queryFn: queryOptions.queryFn,   // Use generated function
+    // queryKey: ADMIN_KEYS.systemStatus(), // Use consistent key for cache management - Use generated key instead
     refetchOnWindowFocus: false,
     retry: 1,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 };
-
-// For future additional admin operations
-// Could add mutations for actions like clearing logs, restarting services, etc. 

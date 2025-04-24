@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { InfoTooltip } from './info-tooltip'; // Assuming path is correct
-import { ShortcutDisplay } from './app-shortcut-display'; // Assuming path is correct
+import { InfoTooltip } from './info-tooltip';
+import { ShortcutDisplay } from './app-shortcut-display'; 
 import { LinkIcon, Plus, Pencil, Trash2, Settings, Icon } from 'lucide-react';
-import { tabPlus } from '@lucide/lab'; // Assuming path is correct
 import {
   DndContext,
   DragEndEvent,
@@ -32,20 +31,8 @@ import {
   useSetActiveProjectTab,
   useUpdateProjectTab,
   useDeleteProjectTab,
-} from '@/zustand/updaters'; // Assuming path is correct
-import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors'; // Assuming path is correct
-
-// Define the specific ProjectTab type
-type ProjectTab = {
-  selectedFiles: string[];
-  selectedPrompts: string[];
-  userPrompt?: string;
-  displayName?: string;
-  sortOrder?: number;
-  // Add other project-specific fields if any
-  selectedProjectId?: string; // Added based on usage in original ProjectsTabManager
-  linkedProjectTabId?: string; // Retained from GenericTabManager props if needed
-};
+} from '@/zustand/updaters';
+import { useActiveProjectTab, useAllProjectTabs } from '@/zustand/selectors';
 
 // Define props for the simplified component (mainly className now)
 export type ProjectsTabManagerProps = {
