@@ -1,5 +1,5 @@
 import { useAppSettings, useProjectTabsState, useActiveProjectTab as useActiveProjectTabDataHook } from "@/hooks/api/use-state-api";
-import { ChatLinkSettingsMap } from "@/hooks/generated";
+
 import { useGlobalStore } from "@/stores/global-store";
 import { ProjectTabsStateRecord, AppSettings, ProjectTabState } from "shared";
 
@@ -13,15 +13,7 @@ export function useActiveChatId(): string {
     return activeChatId;
 }
 
-type ChatLinkSetting = ChatLinkSettingsMap[string];
 
-export function useChatLinkSettings(chatId: string | null): ChatLinkSetting | undefined {
-    const allSettings = useGlobalStore((state) => state.chatLinkSettings);
-    if (!chatId || !allSettings) {
-        return undefined;
-    }
-    return allSettings[chatId] as ChatLinkSetting;
-}
 
 export function useAllProjectTabs(): ProjectTabsStateRecord {
     const { tabs } = useProjectTabsState();

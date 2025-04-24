@@ -47,7 +47,6 @@ export const projectTabStateSchema = z.object({
     ticketId: z.string().nullable().optional().default(null).openapi({ description: "ID of the currently selected ticket, or null.", example: "ticket_999" }),
     sortOrder: z.number().optional().default(0).openapi({ description: "Numerical sort order for arranging project tabs." }),
 }).openapi('ProjectTabState', { description: 'Represents the state of a single project tab, including selections, searches, and configurations specific to that tab.' });
-export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
 
 
 // Chat Model Settings (Defined once, used in AppSettings)
@@ -91,7 +90,6 @@ export const appSettingsSchema = z.object({
     presence_penalty: chatModelSettingsSchema.shape.presence_penalty,
     stream: chatModelSettingsSchema.shape.stream,
 }).openapi('AppSettings', { description: 'Global application settings, including theme, AI provider configuration, and default chat parameters.' });
-export type AppSettings = z.infer<typeof appSettingsSchema>;
 
 
 // Base schemas for partial updates (Project only) - Not directly used in GlobalState, but good practice
@@ -100,7 +98,6 @@ export type ProjectTabStatePartial = z.infer<typeof projectTabStateBaseSchema>;
 
 // Record schemas for the store state (Project only)
 export const projectTabsStateRecordSchema = z.record(z.string(), projectTabStateSchema).openapi('ProjectTabsStateRecord', { description: 'A map where keys are project tab IDs and values are the state objects for each tab.' });
-export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
 
 // Chat Link Settings Schema
 export const chatLinkSettingsSchema = z.record(
@@ -122,7 +119,6 @@ export const globalStateSchema = z.object({
     activeChatId: z.string().nullable().optional().default(null).openapi({ description: "The ID of the currently active chat session, or null.", example: "chat_xyz789" }),
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: "Link settings specific to each chat session." })
 }).openapi('GlobalState', { description: 'Represents the entire persistent application state.' });
-export type GlobalState = z.infer<typeof globalStateSchema>;
 
 
 // Initial Global State - Simplified (Function doesn't need OpenAPI spec, but uses the schemas)
@@ -149,3 +145,10 @@ export function getDefaultAppSettings(): AppSettings {
 export function getDefaultProjectTabState(displayName: string = "Default Project Tab"): ProjectTabState {
     return projectTabStateSchema.parse({ displayName });
 }
+
+export type ProjectTabState = z.infer<typeof projectTabStateSchema>;
+export type ProjectTabsStateRecord = z.infer<typeof projectTabsStateRecordSchema>;
+export type ChatLinkSettingsMap = z.infer<typeof chatLinkSettingsSchema>;
+export type AppSettings = z.infer<typeof appSettingsSchema>;
+export type GlobalState = z.infer<typeof globalStateSchema>;
+

@@ -74,7 +74,7 @@ export function useSelectedFiles({
   })
 
   // The actual 'selectedFiles' is whatever is at the current index, or empty array if not initialized
-  const selectedFiles = undoRedoState?.history[undoRedoState.index] ?? []
+  const selectedFiles: string[] = undoRedoState?.history[undoRedoState.index] ?? []
 
   // Only allow operations once we have initialized the state
   const isInitialized = undoRedoState !== null

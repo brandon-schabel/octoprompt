@@ -11,12 +11,9 @@ import {
   useUpdateSettings, // Stays, updates API state now
 } from "./updaters";
 
-import type {
-  // GlobalState, // Keep if needed for type casting API responses
-} from "shared";
+import type { ProjectTabState, Theme } from "shared/src/schemas/global-state-schema";
 import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
 // Import the necessary API hooks and types
-import type{ ProjectTabState, Theme } from "../../generated";
 import { useActiveProjectTab, useProjectTabsState } from "../use-state-api";
 
 
