@@ -1,5 +1,7 @@
 import { createRoute, z } from '@hono/zod-openapi'
 import { streamSSE, SSEStreamingApi } from 'hono/streaming';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { streamText, CoreMessage } from 'ai';
 
 import { createChatService } from '@/services/model-providers/chat/chat-service';
 import { ApiError, } from 'shared';
@@ -7,8 +9,25 @@ import {
     ApiErrorResponseSchema,
     OperationSuccessResponseSchema
 } from 'shared/src/schemas/common.schemas';
-import { unifiedProvider } from '@/services/model-providers/providers/unified-provider-service';
-import { MessageRoleEnum, AiChatRequestSchema, ChatListResponseSchema, ChatResponseSchema, CreateChatBodySchema, DeleteChatParamsSchema, DeleteMessageParamsSchema, ForkChatBodySchema, ForkChatFromMessageBodySchema, ForkChatFromMessageParamsSchema, ForkChatParamsSchema, GetMessagesParamsSchema, MessageListResponseSchema, ModelsListResponseSchema, ModelsQuerySchema, UpdateChatBodySchema, UpdateChatParamsSchema } from "shared/src/schemas/chat.schemas";
+import {
+    MessageRoleEnum,
+    ChatListResponseSchema,
+    ChatResponseSchema,
+    CreateChatBodySchema,
+    DeleteChatParamsSchema,
+    DeleteMessageParamsSchema,
+    ForkChatBodySchema,
+    ForkChatFromMessageBodySchema,
+    ForkChatFromMessageParamsSchema,
+    ForkChatParamsSchema,
+    GetMessagesParamsSchema,
+    MessageListResponseSchema,
+    ModelsListResponseSchema,
+    ModelsQuerySchema,
+    UpdateChatBodySchema,
+    UpdateChatParamsSchema,
+    AiChatRequestSchema
+} from "shared/src/schemas/chat.schemas";
 
 import { ModelFetcherService, ProviderKeysConfig } from '@/services/model-providers/providers/model-fetcher-service';
 import { providerKeyService } from '@/services/model-providers/providers/provider-key-service';
@@ -105,31 +124,30 @@ const getChatMessagesRoute = createRoute({
     },
 });
 
-// POST /ai/chat (Streaming Example)
-const postAiChatRoute = createRoute({
+// POST /ai/chat
+const postAiChatSdkRoute = createRoute({
     method: 'post',
     path: '/ai/chat',
     tags: ['AI'],
-    summary: 'Send message to AI for chat completion (streaming)',
+    summary: 'Chat completion (streaming response via AI SDK)',
+    description: 'Streams a chat completion response from the specified AI model using the Vercel AI SDK and a configured provider (e.g., OpenRouter).',
     request: {
         body: {
             content: {
-                'application/json': {
-                    schema: AiChatRequestSchema,
-                },
+                'application/json': { schema: AiChatRequestSchema }
             },
             required: true,
-            description: 'Chat context and message to send to the AI',
+            description: 'Provider, model, and messages for the AI chat completion',
         },
     },
     responses: {
         200: {
-            content: { 'text/event-stream': { schema: z.string().openapi({ description: "Streamed AI response chunks" }) } },
+            content: {
+                'text/event-stream': {
+                    schema: z.string().openapi({ description: "Stream of response tokens" })
+                }
+            },
             description: 'Successfully initiated AI response stream.',
-            headers: z.object({
-                'X-Vercel-AI-Data-Stream': z.string().openapi({ example: 'v1' }),
-                'X-Provider': z.string().openapi({ example: 'openai' }),
-            }).openapi('AiStreamHeaders')
         },
         422: {
             content: { 'application/json': { schema: ApiErrorResponseSchema } },
@@ -137,7 +155,7 @@ const postAiChatRoute = createRoute({
         },
         400: {
             content: { 'application/json': { schema: ApiErrorResponseSchema } },
-            description: 'Invalid input or missing user message',
+            description: 'Bad Request (e.g., missing key) or invalid provider/model',
         },
         500: {
             content: { 'application/json': { schema: ApiErrorResponseSchema } },
@@ -441,48 +459,52 @@ export const chatRoutes = new OpenAPIHono()
     })
 
     // POST /ai/chat
-    .openapi(postAiChatRoute, async (c) => {
-        const { chatId, provider = 'openai', options, tempId, systemMessage, messages: frontendMessages, schema, enumValues } = c.req.valid('json');
-        const userMessageContent = frontendMessages[frontendMessages.length - 1]?.content;
-
-        if (!userMessageContent) {
-            throw new ApiError(400, 'No user message content found', 'MISSING_MESSAGE_CONTENT');
-        }
+    .openapi(postAiChatSdkRoute, async (c) => {
+        const { provider, model, messages } = c.req.valid('json');
+        console.log(`[Hono AI SDK] /ai/chat: Provider=${provider}, Model=${model}`);
 
         try {
-            console.log(`[Hono Route] /ai/chat received for chatId: ${chatId}, provider: ${provider}`);
-            const streamResult = await unifiedProvider.processMessage({
-                chatId,
-                userMessage: userMessageContent,
-                provider: provider as APIProviders,
-                options: options ?? {},
-                tempId,
-                systemMessage,
-                schema,
-                enum: enumValues
-            });
+            // Use listKeys and find to get the key, addressing the linter error
+            const allKeys = await providerKeyService.listKeys();
+            const apiKeyEntry = allKeys.find(key => key.provider === provider);
+            if (!apiKeyEntry?.key) {
+                console.error(`[Hono AI SDK] API key not found for provider: ${provider}`);
+                throw new ApiError(400, `API key not found for provider "${provider}"`);
+            }
+            const apiKey = apiKeyEntry.key;
+
+            const openrouter = createOpenRouter({ apiKey });
+            const modelInstance = openrouter(model);
+
+            // Ensure messages conform to CoreMessage type
+            const coreMessages: CoreMessage[] = messages.map(msg => ({
+                role: msg.role,
+                content: msg.content
+            }));
+
+            const result = await streamText({ model: modelInstance, messages: coreMessages });
 
             c.header('Content-Type', 'text/event-stream; charset=utf-8');
-            c.header('X-Vercel-AI-Data-Stream', 'v1');
-            c.header('X-Provider', provider);
-            console.log(`[Hono Route] Returning stream for chatId: ${chatId}`);
+            c.header('Cache-Control', 'no-cache');
+            c.header('Connection', 'keep-alive');
 
-            return streamSSE(c, async (streamWriter: SSEStreamingApi) => {
+            console.log(`[Hono AI SDK] Returning SSE stream for: ${model}`);
+
+            return streamSSE(c, async (streamWriter) => {
                 try {
-                    await streamWriter.pipe(streamResult);
+                    await streamWriter.pipe(result.textStream);
                 } catch (streamError: any) {
-                    console.error(`[Hono Route] Stream Error for chatId ${chatId}:`, streamError);
+                    console.error(`[Hono AI SDK] Stream Error:`, streamError);
+                    await streamWriter.writeSSE({ event: 'error', data: JSON.stringify({ message: streamError.message }) });
+                } finally {
+                    streamWriter.close();
                 }
             });
-        } catch (error: any) {
-            console.error(`[Hono Route] /ai/chat Error for chatId ${chatId}:`, error);
-            const isApiKeyError = error.message?.includes('API key not found');
 
-            if (isApiKeyError) {
-                throw new ApiError(400, error.message || 'API key not found', 'MISSING_API_KEY');
-            } else {
-                throw new ApiError(500, error.message || 'Error processing AI message', 'PROVIDER_ERROR');
-            }
+        } catch (error: any) {
+            console.error(`[Hono AI SDK] /ai/chat Error:`, error);
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(500, error.message || 'Error processing AI SDK chat');
         }
     })
 

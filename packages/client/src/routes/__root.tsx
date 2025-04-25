@@ -12,7 +12,7 @@ import {
   CommandSeparator,
   CommandShortcut
 } from '@/components/ui/command'
-import { NavigationCommands } from '@/components/command/navigation-commands'
+import { NavigationCommands } from '@/components/navigation/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
 import { useGetProjects } from '@/hooks/api/use-projects-api'

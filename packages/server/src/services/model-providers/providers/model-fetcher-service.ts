@@ -166,7 +166,7 @@ export interface ProviderKeysConfig {
     groqKey?: string;
     togetherKey?: string;
     xaiKey?: string;
-    openRouterKey?: string;
+    openrouterKey?: string;
 }
 
 export type ListModelsOptions = {
@@ -308,7 +308,8 @@ export class ModelFetcherService {
     }: {
         headers?: Record<string, string>
     } = {}): Promise<OpenRouterModel[]> {
-        const openRouterKey = this.ensure(this.config.openRouterKey, "OpenRouter");
+        console.log({config: this.config})
+        const openRouterKey = this.ensure(this.config.openrouterKey, "openrouter");
         const response = await fetch(`${OPENROUTER_BASE_URL}/models`, {
             method: "GET",
             headers: {

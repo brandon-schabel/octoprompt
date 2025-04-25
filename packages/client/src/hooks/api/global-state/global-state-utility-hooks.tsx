@@ -113,7 +113,7 @@ export function useProjectTabField<K extends keyof ProjectTabState>(
         typeof valueOrFn === "function"
           // @ts-ignore
           ? (valueOrFn as (prev: ProjectTabState[K] | null | undefined) => ProjectTabState[K])(oldVal)
-          : valueOrFn;
+             : valueOrFn;
 
       // Call the refactored updateTab hook, which handles the API call
       // It expects the tabId and a *partial* update object for that specific tab

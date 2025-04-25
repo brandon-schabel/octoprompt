@@ -37,9 +37,10 @@ export function useSelectedFiles({
   const effectiveTabState = tabId ? useProjectTabField("selectedFiles", tabId).data : activeProjectTabState?.selectedFiles
 
   // Get all project files and build the file map
-  const { data: fileData } = useGetProjectFiles(activeProjectTabId || '')
+  const { data: fileData } = useGetProjectFiles(activeProjectTabState?.selectedProjectId || '')
   const fileMap = useMemo(() => {
     const m = new Map<string, ProjectFile>()
+
     fileData?.data?.forEach(f => m.set(f.id, f))
     return m
   }, [fileData?.data])

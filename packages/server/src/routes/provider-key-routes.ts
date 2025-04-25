@@ -6,8 +6,6 @@ import {
     ProviderKeyIdParamsSchema,
     ProviderKeyResponseSchema,
     ProviderKeyListResponseSchema,
-    ProviderKeySchema,
-    ProviderKeyWithSecretSchema,
 } from "shared/src/schemas/provider-key.schemas";
 import { providerKeyService } from "@/services/model-providers/providers/provider-key-service";
 import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas';

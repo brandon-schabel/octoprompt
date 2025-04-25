@@ -1,7 +1,10 @@
 import { z } from '@hono/zod-openapi';
 import { AI_API_PROVIDERS } from './provider-key.schemas';
 
-export const MessageRoleEnum = z.enum(['system', 'user', 'assistant', 'tool', 'function', 'data']);
+export const MessageRoleEnum = z.enum(['assistant', 'user', 'system', 
+    // 'tool',
+    // 'function'
+]);
 
 export type MessageRole = z.infer<typeof MessageRoleEnum>; // Export the type if needed elsewhere
 
@@ -234,19 +237,26 @@ export const aiSdkOptionsSchema = z.object({
     outputStrategy: z.enum(['object', 'array', 'enum', 'no-schema']).optional().openapi({ description: "Strategy for structured output generation" }),
 }).partial().optional().openapi('AiSdkOptions');
 
-// --- Updated AiChatRequestSchema ---
+// --- Updated AiChatRequestSchema --- (Renamed from the original AiChatRequestBody)
 export const AiChatRequestSchema = z.object({
     messages: z.array(messageSchema).min(1, { message: "Conversation must have at least one message." }).openapi({
         description: 'Array of messages forming the conversation history.'
     }),
+    // Renamed this from AiChatRequestBody to AiChatRequestSchema as per guide's example
+    // Retained fields like chatId, tempId, systemMessage, schema, enumValues from the original AiChatRequestBody
+    // as they might be used by the UnifiedProviderService, even if not strictly required by the new /api/chat route's basic example.
     chatId: z.string({ required_error: "chatId is required in the request body." })
-        .min(1, { message: "chatId cannot be empty." }).openapi({
+        .min(1, { message: "chatId cannot be empty." }).optional().openapi({ // Made optional for the basic /api/chat
             example: 'chat-a1b2c3d4',
-            description: 'The ID of the chat session this request belongs to.'
+            description: 'Optional ID of the chat session.'
         }),
-    provider: z.enum(AI_API_PROVIDERS).or(z.string()).optional().openapi({
-        example: 'openai',
-        description: 'The AI provider to use (e.g., openai, anthropic) or a custom identifier.'
+    provider: z.enum(AI_API_PROVIDERS).or(z.string()).openapi({ // Made provider required as per guide
+        example: 'openrouter',
+        description: 'The AI provider to use (e.g., openai, openrouter).'
+    }),
+    model: z.string().openapi({ // Added model as per guide
+        example: 'deepseek/deepseek-chat-v3-0324:free',
+        description: 'The model identifier to use.'
     }),
     options: aiSdkOptionsSchema.openapi({
         description: 'Optional parameters for the AI model.'
@@ -265,7 +275,7 @@ export const AiChatRequestSchema = z.object({
     enumValues: z.array(z.string()).optional().openapi({
         description: 'Optional array of enum values for specific structured output strategies.'
     }),
-}).openapi('AiChatRequestBody');
+}).openapi('AiChatRequestSchema'); // Updated the name here too
 
 export type CreateMessageBodyGeneric = {
     message: string;

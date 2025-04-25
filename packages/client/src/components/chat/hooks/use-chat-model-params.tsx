@@ -1,13 +1,11 @@
-import { useSettings } from '@/hooks/api/global-state/selectors'; // Use global settings selector
-import { useUpdateSettings } from '@/hooks/api/global-state/updaters'; // Use global settings updater
+import { useSettings } from '@/hooks/api/global-state/selectors';
+import { useUpdateSettings } from '@/hooks/api/global-state/updaters';
 import { useCallback, useMemo } from 'react';
-import { modelsTempNotAllowed } from 'shared'; // Keep this utility
+import { modelsTempNotAllowed } from 'shared';
 
-// Define parameter types
 type ModelParamMutationFn = (value: number) => void;
 type StreamMutationFn = (value: boolean) => void;
 
-// Combined model settings type (matches AppSettings relevant fields)
 export interface ModelSettings {
     temperature: number;
     top_p: number;
@@ -15,19 +13,14 @@ export interface ModelSettings {
     presence_penalty: number;
     max_tokens: number;
     stream: boolean;
-    model?: string; // Optional: Already part of AppSettings
-    provider?: string; // Optional: Already part of AppSettings
+    model?: string;
+    provider?: string;
 }
 
-/**
- * A hook that provides global chat model parameters from AppSettings
- * with efficient updates.
- */
 export function useChatModelParams() {
     const settings = useSettings();
     const updateSettings = useUpdateSettings();
 
-    // Extract values directly from global settings
     const {
         temperature,
         max_tokens,
@@ -35,17 +28,15 @@ export function useChatModelParams() {
         frequency_penalty,
         presence_penalty,
         stream,
-        model, // Get model for isTempDisabled check
+        model,
         provider,
     } = settings;
 
-    // Check if temperature should be disabled based on model
     const isTempDisabled = useMemo(() => {
         if (!model) return false;
         return modelsTempNotAllowed.some(m => model.includes(m));
     }, [model]);
 
-    // Define all setter functions targeting global settings
     const setTemperature: ModelParamMutationFn = useCallback((value) => {
         if (isTempDisabled) return;
         updateSettings({ temperature: value });
@@ -71,8 +62,6 @@ export function useChatModelParams() {
         updateSettings({ stream: value });
     }, [updateSettings]);
 
-    // Combine all settings into a single settings object
-    // Memoize to prevent re-renders when global settings haven't changed relevant fields
     const modelSettings: ModelSettings = useMemo(() => ({
         temperature,
         top_p,
@@ -80,8 +69,8 @@ export function useChatModelParams() {
         presence_penalty,
         max_tokens,
         stream,
-        model, // Include for reference if needed
-        provider, // Include for reference if needed
+        model,
+        provider,
     }), [
         temperature,
         top_p,
@@ -94,7 +83,7 @@ export function useChatModelParams() {
     ]);
 
     return {
-        settings: modelSettings, // Return the derived settings object
+        settings: modelSettings,
         setTemperature,
         setMaxTokens,
         setTopP,
