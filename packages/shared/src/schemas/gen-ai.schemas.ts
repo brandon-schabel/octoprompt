@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi';
 import { AI_API_PROVIDERS } from './provider-key.schemas'; // Assume this exists
 import { MessageRoleEnum } from './common.schemas'; // Assume this exists
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'; // Assume this exists
-import { FileSuggestionsZodSchema } from './project.schemas';
+import { ProjectFileSchema } from './project.schemas';
 
 // --- Schema for individual messages ---
 export const AiMessageSchema = z.object({
@@ -194,6 +194,49 @@ export const structuredDataSchemas = {
     },
     // Add more structured tasks here...
 } satisfies Record<string, StructuredDataSchemaConfig<any>>;
+
+
+
+export const FileSummaryListResponseSchema = z.object({
+    success: z.literal(true),
+    data: z.array(ProjectFileSchema)
+}).openapi('FileSummaryListResponse');
+
+export const SummarizeFilesResponseSchema = z.object({
+    success: z.literal(true),
+    included: z.number().int().openapi({ example: 5 }),
+    skipped: z.number().int().openapi({ example: 2 }),
+    message: z.string().openapi({ example: 'Files summarized successfully.' })
+}).openapi('SummarizeFilesResponse');
+
+export const RemoveSummariesResponseSchema = z.object({
+    success: z.literal(true),
+    removedCount: z.number().int().openapi({ example: 3 }),
+    message: z.string().openapi({ example: 'Summaries removed.' })
+}).openapi('RemoveSummariesResponse');
+
+export const SuggestFilesResponseSchema = z.object({
+    success: z.literal(true),
+    recommendedFileIds: z.array(z.string().min(1)).openapi({ example: ['file_1a2b3c4d', 'file_i9j0k1l2'] }),
+}).openapi('SuggestFilesResponse');
+
+// Export internal schemas needed by routes
+export const FileSuggestionsZodSchema = z.object({
+    fileIds: z.array(z.string())
+});
+
+export const FileSuggestionsJsonSchema = {
+    type: "object",
+    properties: {
+        fileIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "An array of file IDs relevant to the user input"
+        }
+    },
+    required: ["fileIds"],
+    additionalProperties: false
+};
 
 
 

@@ -12,7 +12,6 @@ import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
 import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
-import { useFindSuggestedFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useUpdateActiveProjectTab } from '@/hooks/api/global-state/updaters'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
@@ -202,10 +201,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 promptInputRef.current?.focus()
             },
         }))
-
-
-        console.log('suggestedFiles', suggestedFiles)
-        console.log('showSuggestions', showSuggestions)
 
         return (
             <div className={cn("flex flex-col h-full overflow-hidden", className)}>

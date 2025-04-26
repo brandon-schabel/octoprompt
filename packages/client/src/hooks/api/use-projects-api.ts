@@ -188,22 +188,6 @@ export const useSyncProject = (projectId: string) => {
 };
 
 
-export const useSummarizeProjectFiles = (projectId: string) => {
-    const queryClient = useQueryClient();
-    const mutationOptions = postApiProjectsByProjectIdSummarizeMutation();
-
-    return useMutation<PostApiProjectsByProjectIdSummarizeResponse, PostApiProjectsByProjectIdSummarizeError, SummarizeFilesInput>({
-        mutationFn: (body: SummarizeFilesInput) => {
-            const opts: Options<PostApiProjectsByProjectIdSummarizeData> = { path: { projectId }, body };
-            return mutationOptions.mutationFn!(opts);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summaries(projectId) });
-            queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
-        },
-        onError: (error) => commonErrorHandler(error as unknown as Error),
-    });
-};
 
 export const useFindSuggestedFiles = (projectId: string) => {
     const mutationOptions = postApiProjectsByProjectIdSuggestFilesMutation();

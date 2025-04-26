@@ -390,7 +390,7 @@ export async function summarizeSelectedFiles(projectId: string, fileIds: string[
 
     // const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
-    const result = await summarizeFiles(projectId, selectedFiles);
+    const result = await summarizeFiles(projectId, selectedFiles.map((f) => f.id));
 
     return {
         ...result, // { included: number, skipped: number }

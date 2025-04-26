@@ -279,7 +279,7 @@ async function getProviderLanguageModelInterface(
 /**
  * Helper function for non-streaming text generation.
  */
-async function generateSingleText({
+export async function generateSingleText({
     prompt, // Simple prompt convenience
     messages, // Or full message history
     provider = "openai",

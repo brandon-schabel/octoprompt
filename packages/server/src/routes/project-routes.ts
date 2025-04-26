@@ -10,20 +10,12 @@ import {
     CreateProjectBodySchema,
     UpdateProjectBodySchema,
     RefreshQuerySchema,
-    GetFileSummariesQuerySchema,
-    SummarizeFilesBodySchema,
-    RemoveSummariesBodySchema,
     ProjectResponseSchema,
     ProjectListResponseSchema,
     FileListResponseSchema,
-    FileSummaryListResponseSchema,
-    SummarizeFilesResponseSchema,
-    RemoveSummariesResponseSchema,
     ProjectResponseMultiStatusSchema,
     ProjectSummaryResponseSchema,
     // Import types
-    CreateProjectBody,
-    UpdateProjectBody
 } from "shared/src/schemas/project.schemas";
 
 // Import common schemas
@@ -166,71 +158,6 @@ const refreshProjectRoute = createRoute({
         404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
         422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
         500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error during refresh/sync' },
-    },
-});
-
-const getFileSummariesRoute = createRoute({
-    method: 'get',
-    path: '/api/projects/{projectId}/file-summaries',
-    tags: ['Projects', 'Files', 'AI'],
-    summary: 'Get summaries for project files (all or specified)',
-    request: {
-        params: ProjectIdParamsSchema,
-        query: GetFileSummariesQuerySchema,
-    },
-    responses: {
-        200: { content: { 'application/json': { schema: FileSummaryListResponseSchema } }, description: 'Successfully retrieved file summaries' },
-        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
-    },
-});
-
-const summarizeFilesRoute = createRoute({
-    method: 'post',
-    path: '/api/projects/{projectId}/summarize',
-    tags: ['Projects', 'Files', 'AI'],
-    summary: 'Summarize selected files in a project (or force re-summarize)',
-    request: {
-        params: ProjectIdParamsSchema,
-        body: { content: { 'application/json': { schema: SummarizeFilesBodySchema } } },
-    },
-    responses: {
-        200: { content: { 'application/json': { schema: SummarizeFilesResponseSchema } }, description: 'File summarization process completed' },
-        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or some files not found' },
-        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error during summarization' },
-    },
-});
-
-const resummarizeAllFilesRoute = createRoute({
-    method: 'post',
-    path: '/api/projects/{projectId}/resummarize-all',
-    tags: ['Projects', 'Files', 'AI'],
-    summary: 'Force re-summarization of all files in a project',
-    request: { params: ProjectIdParamsSchema },
-    responses: {
-        200: { content: { 'application/json': { schema: OperationSuccessResponseSchema } }, description: 'Process to re-summarize all files started/completed' },
-        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
-    },
-});
-
-const removeSummariesRoute = createRoute({
-    method: 'post',
-    path: '/api/projects/{projectId}/remove-summaries',
-    tags: ['Projects', 'Files'],
-    summary: 'Remove summaries from selected files',
-    request: {
-        params: ProjectIdParamsSchema,
-        body: { content: { 'application/json': { schema: RemoveSummariesBodySchema } } },
-    },
-    responses: {
-        200: { content: { 'application/json': { schema: RemoveSummariesResponseSchema } }, description: 'Summaries removed successfully' },
-        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or some files not found' },
-        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
     },
 });
 
@@ -410,68 +337,6 @@ export const projectRoutes = new OpenAPIHono()
         return c.json(payload, 200);
     })
 
-    .openapi(getFileSummariesRoute, async (c) => {
-        const { projectId } = c.req.valid('param');
-        const query = c.req.valid('query');
-        const fileIds = query?.fileIds?.split(',').filter(Boolean);
-
-        const filesWithSummaries = await getFileSummaries(projectId, fileIds);
-        // Files are already in API format
-        const payload = {
-            success: true,
-            data: filesWithSummaries ?? []
-        } satisfies z.infer<typeof FileSummaryListResponseSchema>;
-        return c.json(payload, 200);
-    })
-
-    .openapi(summarizeFilesRoute, async (c) => {
-        const { projectId } = c.req.valid('param');
-        const { fileIds, force } = c.req.valid('json');
-
-        const result = force
-            ? await projectService.forceResummarizeSelectedFiles(projectId, fileIds)
-            : await projectService.summarizeSelectedFiles(projectId, fileIds);
-
-        // Ensure the returned object matches SummarizeFilesResponseSchema
-        const payload: z.infer<typeof SummarizeFilesResponseSchema> = {
-            success: true,
-            ...result // Spread the result which contains included, skipped, message
-        };
-        return c.json(payload, 200);
-    })
-
-    .openapi(resummarizeAllFilesRoute, async (c) => {
-        const { projectId } = c.req.valid('param');
-        const project = await projectService.getProjectById(projectId);
-        if (!project) {
-            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
-        }
-        await projectService.resummarizeAllFiles(projectId);
-        // Ensure the returned object matches OperationSuccessResponseSchema
-        const payload: z.infer<typeof OperationSuccessResponseSchema> = {
-            success: true,
-            message: "Process to force-resummarize all files started/completed."
-        };
-        return c.json(payload, 200);
-    })
-
-    .openapi(removeSummariesRoute, async (c) => {
-        const { projectId } = c.req.valid('param');
-        const { fileIds } = c.req.valid('json');
-        const result = await projectService.removeSummariesFromFiles(projectId, fileIds);
-        // Ensure the returned object matches RemoveSummariesResponseSchema (result already has the correct shape)
-        if (!result.success) {
-            // Handle potential failure from the service if needed, though schema expects success:true
-            console.error("Removal of summaries reported failure from service:", result);
-            throw new ApiError(500, result.message || "Failed to remove summaries");
-        }
-        const payload: z.infer<typeof RemoveSummariesResponseSchema> = {
-            success: true, // Explicitly set to true to match schema
-            removedCount: result.removedCount,
-            message: result.message
-        };
-        return c.json(payload, 200); // Defaults to 200
-    })
 
     .openapi(getProjectSummaryRoute, async (c) => {
         const { projectId } = c.req.valid('param');
