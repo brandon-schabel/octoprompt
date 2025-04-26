@@ -16,7 +16,7 @@ import {
   type TicketFile,
 } from "shared/src/schemas/ticket.schemas";
 import { randomUUID } from "crypto";
-import { aiProviderInterface } from "./model-providers/providers/ai-provider-interface-services";
+import { generateStructuredData } from "./model-providers/providers/gen-ai-interface-services";
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {
@@ -74,18 +74,14 @@ ${projectSummary}
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, "CONFIG_ERROR");
   }
 
-  const result = await aiProviderInterface.generateStructuredData({
-    provider: cfg.provider as APIProviders || 'openai',
+  const result = await generateStructuredData({
     prompt: userMessage,
     systemMessage: defaultTaskPrompt,
     schema: TaskSuggestionsZodSchema,
-    options: {
-      model: cfg.model,
-      temperature: cfg.temperature,
-    },
+    options: MEDIUM_MODEL_CONFIG
   });
 
-  return result;
+  return result.object
 }
 
 function mapTicket(row: any): Ticket {

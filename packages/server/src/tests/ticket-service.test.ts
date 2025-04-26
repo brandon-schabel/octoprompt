@@ -22,21 +22,27 @@ import {
     listTicketsWithTasks,
     getTicketWithSuggestedFiles
 } from "@/services/ticket-service";
-import { aiProviderInterface } from "@/services/model-providers/providers/ai-provider-interface-services";
-import { ApiError } from "shared";
+
+
+const generateStructuredDataMock = mock(async () => {
+    return { object: { tasks: [{ title: "MockTask", description: "MockDesc" }] } };
+})
+
 
 describe("Ticket Service", () => {
-    let generateStructuredDataMock: ReturnType<typeof mock>;
     let summaryMock: ReturnType<typeof mock>;
 
     beforeEach(async () => {
         await resetDatabase();
-        generateStructuredDataMock = mock(async () => {
-            return { tasks: [{ title: "MockTask", description: "MockDesc" }] };
-        });
-        summaryMock = mock(async () => "Fake project summary content");
 
-        spyOn(aiProviderInterface, "generateStructuredData").mockImplementation(generateStructuredDataMock);
+        summaryMock = mock(async () => "Fake project summary content");
+        mock.module("@/services/model-providers/providers/gen-ai-interface-services", () => {
+            return {
+                generateStructuredData: generateStructuredDataMock
+            }
+        })
+
+        // spyOn(aiProviderInterface, "generateStructuredData").mockImplementation(generateStructuredDataMock);
 
         spyOn(
             await import("@/utils/get-full-project-summary"),
@@ -175,6 +181,7 @@ describe("Ticket Service", () => {
     });
 
     test("fetchTaskSuggestionsForTicket uses fetchStructuredOutput, getFullProjectSummary", async () => {
+
         const ticket = await createTicket({
             projectId: "fetchTest",
             title: "TestTitle",
@@ -452,7 +459,7 @@ describe("Ticket Service", () => {
         const f2 = found.find(x => x.id === t2.id);
         expect(f2?.tasks.length).toBe(0);
     });
-    
+
     test("getTicketWithSuggestedFiles returns parsed array of file IDs", async () => {
         const t = await createTicket({
             projectId: "gsf",

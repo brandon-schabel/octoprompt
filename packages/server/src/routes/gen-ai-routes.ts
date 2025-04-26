@@ -1,7 +1,5 @@
 import { createRoute, z } from '@hono/zod-openapi';
 
-// *** UPDATED IMPORT ***
-import { createChatService } from '@/services/chat-service'; // Keep if needed for other routes potentially
 import { ApiError, MEDIUM_MODEL_CONFIG, } from 'shared';
 import {
     ApiErrorResponseSchema,
@@ -25,25 +23,18 @@ import {
     // ... other gen-ai schemas if needed
 } from "shared/src/schemas/gen-ai.schemas";
 
-
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { aiProviderInterface, generateStructuredData } from '@/services/model-providers/providers/ai-provider-interface-services'; // Import the service instance
+import { generateSingleText, generateStructuredData, genTextStream } from '@/services/model-providers/providers/gen-ai-interface-services'; // Import the service instance
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-providers/providers/model-fetcher-service';
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/providers/provider-defaults';
 import { providerKeyService } from '@/services/model-providers/providers/provider-key-service';
-import { fetchStructuredOutput } from '@/utils/structured-output-fetcher';
-import { getProjectById } from '@/services/project-service';
 import { getFullProjectSummary } from '@/utils/get-full-project-summary';
+import { ProjectIdParamsSchema, SuggestFilesBodySchema, GetFileSummariesQuerySchema, RemoveSummariesBodySchema, SummarizeFilesBodySchema, SuggestFilesResponseSchema, FileSuggestionsZodSchema } from 'shared/src/schemas/project.schemas';
+import { stream } from 'hono/streaming';
 import { TypedResponse } from 'hono';
-import { ProjectIdParamsSchema, SuggestFilesBodySchema, SuggestFilesResponseSchema, FileSuggestionsZodSchema, FileSuggestionsJsonSchema } from 'shared/src/schemas/project.schemas';
 
 
-// Instantiate chat service if still needed for the /chats route
-const chatService = createChatService();
-
-
-// --- Configuration for Structured Data Generation Tasks ---
 
 // Define the Zod schema for filename suggestions
 const FilenameSuggestionSchema = z.object({
@@ -154,6 +145,32 @@ const generateTextRoute = createRoute({
     },
 });
 
+// POST /api/gen-ai/stream (Streaming Text Generation)
+const generateStreamRoute = createRoute({
+    method: 'post',
+    path: '/api/gen-ai/stream',
+    tags: ['GenAI'],
+    summary: 'Generate text using a specified model and prompt',
+    request: {
+        body: {
+            content: { 'application/json': { schema: AiGenerateTextRequestSchema } },
+            required: true,
+        },
+    },
+    responses: {
+        200: {
+            content: {
+                'text/event-stream': { // Standard content type for SSE/streaming text
+                    schema: z.string().openapi({ description: "Stream of response tokens (Vercel AI SDK format)" })
+                }
+            },
+            description: 'Successfully initiated AI response stream.',
+        },
+
+    },
+});
+
+
 // POST /api/gen-ai/structured (Structured Data Generation)
 const generateStructuredRoute = createRoute({
     method: 'post',
@@ -242,17 +259,37 @@ const suggestFilesRoute = createRoute({
 });
 
 export const genAiRoutes = new OpenAPIHono()
+    .openapi(generateStreamRoute, async (c) => {
+        const body = c.req.valid('json');
+        const { prompt, options, systemMessage } = body;
 
+        try {
+            const aiSDKStream = await genTextStream({
+                prompt,
+                ...(options && {
+                    options: options
+                }),
+                systemMessage,
+            });
+
+            return stream(c, async (stream) => {
+                await stream.pipe(aiSDKStream.toDataStream());
+            });
+        } catch (error: any) {
+            console.error("[GenAI Route Error - /stream]:", error);
+            throw new ApiError(500, `Failed to generate text: ${error.message}`, 'TEXT_GENERATION_FAILED');
+        }
+    })
     // --- NEW: Simple Text Generation Handler ---
     .openapi(generateTextRoute, async (c) => {
         const body = c.req.valid('json');
 
         try {
-            const generatedText = await aiProviderInterface.generateSingleText({
+            const generatedText = await generateSingleText({
                 prompt: body.prompt,
-                provider: body.provider as APIProviders, // Cast might be needed if schema allows any string
-                model: body.model,
-                options: body.options,
+                ...(body.options && {
+                    options: body.options
+                }),
                 systemMessage: body.systemMessage,
                 // debug: true // Optionally enable debug logging
             });
@@ -273,8 +310,7 @@ export const genAiRoutes = new OpenAPIHono()
     // --- NEW: Structured Data Generation Handler ---
     .openapi(generateStructuredRoute, async (c) => {
         const body = c.req.valid('json');
-        const { schemaKey, userInput, provider: providerOverride, options: optionsOverride } = body;
-
+        const { schemaKey, userInput, options } = body;
         // 1. Find the configuration for the requested schemaKey
         const config = structuredDataSchemas[schemaKey];
         if (!config) {
@@ -283,17 +319,14 @@ export const genAiRoutes = new OpenAPIHono()
 
         // 2. Prepare parameters for the AI service
         const finalPrompt = config.promptTemplate.replace('{userInput}', userInput);
-        const finalProvider = providerOverride as APIProviders | undefined ?? config.modelSettings?.model as APIProviders | undefined ?? 'openai'; // Default provider logic
-        const finalModel = optionsOverride?.model ?? config.modelSettings?.model ?? 'gpt-4o'; // Define default model logic
-        const finalOptions = { ...config.modelSettings, ...optionsOverride, model: finalModel }; // Merge options, override wins
+        const finalModel = options?.model ?? config.modelSettings?.model ?? 'gpt-4o'; // Define default model logic
+        const finalOptions = { ...config.modelSettings, ...options, model: finalModel }; // Merge options, override wins
         const finalSystemPrompt = config.systemPrompt;
 
         try {
             const result = await generateStructuredData({
                 prompt: finalPrompt,
                 schema: config.schema, // Pass the Zod schema from config
-                // provider: finalProvider,
-                // model: finalModel, // Pass the resolved model
                 options: finalOptions,
                 systemMessage: finalSystemPrompt,
                 // debug: true // Optionally enable debug logging
@@ -353,23 +386,21 @@ export const genAiRoutes = new OpenAPIHono()
     .openapi(postAiGenerateTextRoute, async (c) => {
         const {
             prompt,
-            provider,
-            model,
             options,
             systemMessage
         } = c.req.valid('json');
 
-        console.log(`[Hono AI Generate] /ai/generate/text request: Provider=${provider}, Model=${model}`);
+        console.log(`[Hono AI Generate] /ai/generate/text request: Provider=${options?.provider}, Model=${options?.model}`);
 
         try {
             // Combine model and other options
-            const unifiedOptions = { ...options, model };
 
             // Call the unified provider's non-streaming text generation function
-            const generatedText = await aiProviderInterface.generateSingleText({
+            const generatedText = await generateSingleText({
                 prompt,
-                provider: provider as APIProviders,
-                options: unifiedOptions,
+                ...(options && {
+                    options: options
+                }),
                 systemMessage,
                 // messages: undefined, // Not passing history for this simple route
             });

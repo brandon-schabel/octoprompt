@@ -1,7 +1,8 @@
 import { z } from '@hono/zod-openapi';
 import { AI_API_PROVIDERS } from './provider-key.schemas';
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas';
-import  { MessageRoleEnum } from './common.schemas';
+import { MessageRoleEnum } from './common.schemas';
+import { LOW_MODEL_CONFIG } from '../constants/model-default-configs';
 
 
 export type MessageRole = z.infer<typeof MessageRoleEnum>; // Export the type if needed elsewhere
@@ -11,6 +12,7 @@ const baseModelOptionsSchema = z.object({
     max_tokens: z.number().optional(),
     temperature: z.number().optional(),
     top_p: z.number().optional(),
+    top_k: z.number().optional(),
     frequency_penalty: z.number().optional(),
     presence_penalty: z.number().optional(),
     stop: z.union([z.string(), z.array(z.string())]).optional(),
@@ -169,7 +171,7 @@ export const DeleteMessageParamsSchema = z.object({
 export const ModelsQuerySchema = z.object({
     provider: z.string().openapi({
         description: 'The provider to filter models by',
-        example: 'openai'
+        example: LOW_MODEL_CONFIG.provider
     })
 }).openapi('ModelsQuery');
 
@@ -196,15 +198,7 @@ export const AiChatStreamRequestSchema = z.object({
         description: 'The latest message content from the user.',
         example: 'Thanks! Can you elaborate on the E=mc^2 part?'
     }),
-    provider: z.enum(AI_API_PROVIDERS).or(z.string()).openapi({
-        example: 'openrouter',
-        description: 'The AI provider to use (e.g., openai, openrouter).'
-    }),
-    model: z.string().min(1).openapi({
-        example: 'deepseek/deepseek-chat-v3-0324:free',
-        description: 'The model identifier to use.'
-    }),
-    options: AiSdkOptionsSchema.openapi({
+    options: AiSdkOptionsSchema.optional().openapi({
         description: 'Optional parameters for the AI model.'
     }),
     systemMessage: z.string().optional().openapi({ // Allows overriding system message for this turn

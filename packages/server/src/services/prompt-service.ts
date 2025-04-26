@@ -1,9 +1,7 @@
 import { db } from "@/utils/database";
 import { CreatePromptBody, UpdatePromptBody, Prompt, PromptSchema, PromptProject, PromptProjectSchema } from "shared/src/schemas/prompt.schemas";
-import { HIGH_MODEL_CONFIG } from 'shared';
 import { promptsMap } from '../utils/prompts-map';
-import { aiProviderInterface } from './model-providers/providers/ai-provider-interface-services';
-import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
+import { generateSingleText } from './model-providers/providers/gen-ai-interface-services';
 
 const formatToISO = (sqlDate: string) => new Date(sqlDate).toISOString();
 
@@ -159,28 +157,10 @@ ${promptsMap.contemplativePrompt}
     }
 
     try {
-        // Get config for the prompt optimization task
-        const cfg = HIGH_MODEL_CONFIG
-        const provider = cfg.provider as APIProviders || 'openai';
-        const modelId = cfg.model;
-
-        if (!modelId) {
-            console.error("Model not configured for optimize-prompt task.");
-            return userMessage;
-        }
-
         // Use generateSingleText for non-streaming prompt generation
-        const optimizedPrompt = await aiProviderInterface.generateSingleText({
-            provider: provider,
+        const optimizedPrompt = await generateSingleText({
             systemMessage: systemMessage,
             prompt: userMessage, // User context is the prompt here
-            options: {
-                model: modelId,
-                // No explicit maxTokens needed here if we expect a relatively short prompt output?
-                // Or set a reasonable limit like 2048 as before.
-                maxTokens: 2048,
-                temperature: cfg.temperature,
-            }
         });
 
         return optimizedPrompt.trim();

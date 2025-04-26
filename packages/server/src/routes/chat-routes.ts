@@ -28,7 +28,7 @@ import {
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 import { stream } from 'hono/streaming';
-import { handleChatMessage } from '@/services/model-providers/providers/ai-provider-interface-services';
+import { handleChatMessage } from '@/services/model-providers/providers/gen-ai-interface-services';
 
 const chatService = createChatService();
 
@@ -406,12 +406,13 @@ export const chatRoutes = new OpenAPIHono()
         const {
             chatId,
             userMessage,
-            provider,
-            model,
             options, // Contains optional temp, maxTokens, etc.
             systemMessage, // Optional system message override
             tempId // Optional tempId for UI
         } = c.req.valid('json');
+
+        const provider = options?.provider as APIProviders
+        const model = options?.model as string
 
         console.log(`[Hono AI Chat] /ai/chat request: ChatID=${chatId}, Provider=${provider}, Model=${model}`);
 
@@ -433,13 +434,11 @@ export const chatRoutes = new OpenAPIHono()
             const readableStream = await handleChatMessage({
                 chatId,
                 userMessage,
-                provider: provider as APIProviders, // Assert type if necessary
                 options: unifiedOptions,
                 // TODO: System Message should be on the chat, and not 
                 // need to be passed in on each request 
                 systemMessage,
                 tempId,
-                model,
                 // messages: undefined, // History fetched internally by processMessage
                 // schema: undefined, // Not using structured output in this basic streaming route
             });

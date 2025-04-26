@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { readFile } from "fs/promises";
 import { Database } from "bun:sqlite";
-import { aiProviderInterface } from "../model-providers/providers/ai-provider-interface-services";
+import { generateStructuredData } from "../model-providers/providers/gen-ai-interface-services";
 import { resolvePath } from "@/utils/path-utils";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
+import { MEDIUM_MODEL_CONFIG } from "shared/src/constants/model-default-configs";
 
 // Zod schema for the expected AI response
 export const FileChangeResponseSchema = z.object({
@@ -42,7 +43,7 @@ export async function readLocalFileContent(filePath: string): Promise<string> {
  */
 export async function generateAIFileChange(
   params: GenerateAIFileChangeParams
-): Promise<FileChangeResponse> {
+) {
   const { filePath, prompt } = params;
 
   // 1. Read existing file content
@@ -80,8 +81,7 @@ User Request: ${prompt}
 
   try {
     // 3. Call generateStructuredData
-    const aiResponse = await aiProviderInterface.generateStructuredData({
-      provider: provider,
+    const aiResponse = await generateStructuredData({
       systemMessage: systemMessage,
       prompt: userPrompt, // Combine original content and user request in the prompt
       schema: FileChangeResponseSchema,
@@ -135,7 +135,7 @@ export async function generateFileChange({ filePath, prompt, db }: GenerateFileC
   const status = "pending";
   const timestamp = Math.floor(Date.now() / 1000);
   // Store explanation, original content. suggestedContent could also be stored if needed.
-  const suggestedDiffOrExplanation = aiSuggestion.explanation;
+  const suggestedDiffOrExplanation = aiSuggestion.object.explanation;
   // Store the prompt that generated this change
   const storedPrompt = prompt;
 
@@ -150,7 +150,7 @@ export async function generateFileChange({ filePath, prompt, db }: GenerateFileC
     status,
     timestamp,
     storedPrompt,
-    aiSuggestion.updatedContent // Store the suggested content
+    aiSuggestion.object.updatedContent // Store the suggested content
   );
 
   const changeId = result.lastInsertRowid as number;

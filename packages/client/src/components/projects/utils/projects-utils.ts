@@ -111,7 +111,6 @@ export const buildFileTree = (files: ProjectFile[]) => {
 
 export function buildNodeContent(
     node: FileNode,
-    fileMap: Map<string, ProjectFile>,
     isFolder: boolean
 ): string {
     let contentToCopy = ''
@@ -120,6 +119,7 @@ export function buildNodeContent(
         contentToCopy += `<folder_contents>\n`
         const processNode = (node: FileNode) => {
             if (!node._folder && node.file?.content) {
+
                 contentToCopy += `File: ${node.file.path}\n\`\`\`tsx\n${node.file.content}\n\`\`\`\n\n`
             }
             if (node.children) {
@@ -135,4 +135,38 @@ export function buildNodeContent(
     }
 
     return contentToCopy
+}
+
+// --- New function ---
+/**
+ * Builds a string containing the path and summary of files within a node.
+ * For folders, it recursively includes summaries from all files within.
+ * For files, it includes only that file's summary.
+ */
+export function buildNodeSummaries(
+    node: FileNode,
+    isFolder: boolean
+): string {
+    let summariesToCopy = ''
+
+    if (isFolder) {
+        const processNode = (currentNode: FileNode, indent = "") => {
+            // Check if it's a file node and has a summary
+            if (!currentNode._folder && currentNode.file?.summary) {
+                summariesToCopy += `${indent}File: ${currentNode.file.path}\n${indent}Summary: ${currentNode.file.summary}\n\n`
+            }
+            // Recursively process children if they exist
+            if (currentNode.children) {
+                const sortedEntries = Object.entries(currentNode.children).sort(([nameA], [nameB]) =>
+                    nameA.localeCompare(nameB) // Sort children alphabetically
+                );
+                sortedEntries.forEach(([, childNode]) => processNode(childNode, indent)); // Keep same indent for files within a folder
+            }
+        }
+        processNode(node) // Start processing from the given folder node
+    } else if (node.file?.summary) { // It's a single file node with a summary
+        summariesToCopy += `File: ${node.file.path}\nSummary: ${node.file.summary}\n`
+    }
+
+    return summariesToCopy.trim(); // Trim trailing newlines if any
 }

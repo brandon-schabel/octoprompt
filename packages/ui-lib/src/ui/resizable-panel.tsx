@@ -220,7 +220,7 @@ function Resizer({ className, isDragging }: ResizerProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "w-1 mx-1 hover:w-1.5 bg-border hover:bg-primary/70 transition-all flex-shrink-0 relative z-10 h-full",
+        "w-1 mx-1 hover:w-1.5 bg-border hover:bg-primary/70 transition-all flex-shrink-0 relative h-full",
         isDragging && "bg-primary w-1.5",
         className
       )}

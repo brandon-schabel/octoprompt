@@ -1,8 +1,8 @@
 import { db } from "@/utils/database";
 import { GlobalState, LOW_MODEL_CONFIG, } from "shared";
-import { aiProviderInterface } from "@/services/model-providers/providers/ai-provider-interface-services";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
+import { generateSingleText } from "@/services/model-providers/providers/gen-ai-interface-services";
 let concurrency = 5;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -75,17 +75,11 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
 
     try {
         // Use generateSingleText for non-streaming summarization
-        const summaryText = await aiProviderInterface.generateSingleText({
-            provider: provider,
+        const summaryText = await generateSingleText({
             systemMessage: systemPrompt,
             // Use prompt for single input, or messages if more complex context needed
             prompt: fileContent.slice(0, maxContentLength),
-            options: {
-                model: modelId,
-                // Use maxTokens from Vercel AI SDK options type
-                maxTokens: cfg.max_tokens, // Map max_tokens to maxTokens
-                temperature: cfg.temperature,
-            }
+            options: cfg
         });
 
         const trimmedSummary = summaryText.trim();

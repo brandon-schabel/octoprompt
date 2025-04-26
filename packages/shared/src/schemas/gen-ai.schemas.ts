@@ -7,6 +7,7 @@ import { AI_API_PROVIDERS } from './provider-key.schemas'; // Keep provider list
 // or keep it in chat.schemas if it's tightly coupled to chat messages.
 // Let's keep it in chat.schemas for now as it's used there extensively.
 import { MessageRoleEnum } from './common.schemas';
+import { LOW_MODEL_CONFIG } from '../constants/model-default-configs';
 
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z.object({
@@ -21,28 +22,58 @@ export const AiMessageSchema = z.object({
 // --- Schema for AI SDK Options ---
 // Make sure this aligns with what Vercel/your provider actually accepts/uses
 export const AiSdkOptionsSchema = z.object({
-    model: z.string().optional().openapi({ example: 'gpt-4-turbo', description: 'Model ID to use' }),
-    temperature: z.number().min(0).max(2).optional().openapi({ example: 0.7 }),
-    maxTokens: z.number().int().positive().optional().openapi({ example: 100000 }), // Renamed from max_tokens for consistency
-    topP: z.number().min(0).max(1).optional().openapi({ example: 1 }), // Renamed from top_p
-    frequencyPenalty: z.number().optional().openapi({ example: 0 }), // Renamed from frequency_penalty
-    presencePenalty: z.number().optional().openapi({ example: 0 }), // Renamed from presence_penalty
-    topK: z.number().int().positive().optional().openapi({ example: -1 }), // Renamed from top_k
-    stop: z.union([z.string(), z.array(z.string())]).optional(), // Added stop sequences
-    response_format: z.any().optional().openapi({ description: 'Provider-specific response format options (e.g., { type: "json_object" })' }), // Use z.any() if structure varies greatly
-    // Optional fields specific to Vercel AI SDK Structured Output (might be less relevant if using generateObject directly)
-    // structuredOutputMode: z.enum(['auto', 'tool', 'json']).optional().openapi({ description: "Mode for structured output (if supported)" }),
-    // schemaName: z.string().optional().openapi({ description: "Name for structured output schema" }),
-    // schemaDescription: z.string().optional().openapi({ description: "Description for structured output schema" }),
-    // outputStrategy: z.enum(['object', 'array', 'enum', 'no-schema']).optional().openapi({ description: "Strategy for structured output generation" }),
-}).partial().openapi('AiSdkOptions'); // Made optional overall, as not all fields are always needed
+    temperature: z.number().min(0).max(2).optional().openapi({
+        description: "Controls the randomness of the output. Lower values (e.g., 0.2) make the output more focused, deterministic, and suitable for factual tasks. Higher values (e.g., 0.8) increase randomness and creativity, useful for brainstorming or creative writing. A value of 0 typically means greedy decoding (always picking the most likely token).",
+        example: LOW_MODEL_CONFIG.temperature ?? 0.7 // A common default balancing creativity and coherence
+    }),
+    maxTokens: z.number().int().positive().optional().openapi({
+        description: "The maximum number of tokens (words or parts of words) the model is allowed to generate in the response. This limits the output length and can affect cost. Note: This limit usually applies only to the *generated* tokens, not the input prompt tokens.",
+        example: LOW_MODEL_CONFIG.max_tokens ?? 1024 // Example: Limit response to roughly 1024 tokens
+    }),
+    topP: z.number().min(0).max(1).optional().openapi({
+        description: "Controls diversity via nucleus sampling. It defines a probability threshold (e.g., 0.9). The model considers only the smallest set of most probable tokens whose cumulative probability exceeds this threshold for the next token selection. Lower values (e.g., 0.5) restrict choices more, leading to less random outputs. A value of 1 considers all tokens. It's often recommended to alter *either* `temperature` *or* `topP`, not both.",
+        example: LOW_MODEL_CONFIG.top_p ?? 0.9 // Example: Consider top 90% probable tokens
+    }),
+    frequencyPenalty: z.number().min(-2).max(2).optional().openapi({ // Added typical range
+        description: "Applies a penalty to tokens based on how frequently they have already appeared in the generated text *and* the prompt. Positive values (e.g., 0.5) decrease the likelihood of the model repeating the same words or phrases verbatim, making the output less repetitive. Negative values encourage repetition.",
+        example: LOW_MODEL_CONFIG.frequency_penalty ?? 0.2 // Example: Slightly discourage repeating words
+    }),
+    presencePenalty: z.number().min(-2).max(2).optional().openapi({ // Added typical range
+        description: "Applies a penalty to tokens based on whether they have appeared *at all* in the generated text *and* the prompt so far (regardless of frequency). Positive values (e.g., 0.5) encourage the model to introduce new concepts and topics, reducing the likelihood of repeating *any* previously mentioned word. Negative values encourage staying on topic.",
+        example: LOW_MODEL_CONFIG.presence_penalty ?? 0.1 // Example: Slightly encourage introducing new concepts
+    }),
+    topK: z.number().int().positive().optional().openapi({
+        description: "Restricts the model's choices for the next token to the `k` most likely candidates. For example, if `topK` is 40, the model will only consider the top 40 most probable tokens at each step. A lower value restricts choices more. Setting `topK` to 1 is equivalent to greedy decoding (same as `temperature: 0`). Less commonly used than `topP`.",
+        example: LOW_MODEL_CONFIG.top_k ?? 40 // Example: Consider only the 40 most likely next tokens
+    }),
+    stop: z.union([z.string(), z.array(z.string())]).optional().openapi({
+        description: "Specifies one or more sequences of text where the AI should stop generating. Once the model generates a stop sequence, it will halt output immediately, even if `maxTokens` hasn't been reached. Useful for structured output or controlling conversational turns.",
+        example: ['\nHuman:', '\n---'] // Example: Stop if 'Human:' or '---' appears on a new line
+    }),
+    response_format: z.any().optional().openapi({ // Kept as z.any due to variance
+        description: "Specifies the desired format for the model's response. This is highly provider-specific. A common use case is enforcing JSON output, often requiring specific model versions.",
+        example: { type: 'json_object' } // Example: Request JSON output (syntax varies by provider)
+    }),
+    // structuredOutputMode, schemaName, etc. are often handled by specific library functions
+    // like `generateObject` rather than generic options, so keeping them commented out is reasonable
+    // unless you have a specific use case for passing them this way.
+    provider: z.string().optional().openapi({
+        description: "The provider to use for the AI request.",
+        example: LOW_MODEL_CONFIG.provider
+    }),
+    model: z.string().optional().openapi({
+        description: "The model to use for the AI request.",
+        example: LOW_MODEL_CONFIG.model
+    }),
+
+}).partial().openapi('AiSdkOptions'); // .partial() makes all fields optional implicitly
 
 // --- Schema for Available Models ---
 const UnifiedModelSchema = z.object({
-    id: z.string().openapi({ example: 'gpt-4-turbo', description: 'Model identifier' }),
-    name: z.string().openapi({ example: 'GPT-4 Turbo', description: 'User-friendly model name' }),
-    provider: z.string().openapi({ example: 'openai', description: 'Provider ID' }),
-    context_length: z.number().optional().openapi({ example: 128000, description: 'Context window size' }),
+    id: z.string().openapi({ example: LOW_MODEL_CONFIG.model ?? 'gpt-4o-mini', description: 'Model identifier' }),
+    name: z.string().openapi({ example: 'GPT-4o Mini', description: 'User-friendly model name' }),
+    provider: z.string().openapi({ example: LOW_MODEL_CONFIG.provider ?? 'openrouter', description: 'Provider ID' }),
+    context_length: z.number().optional().openapi({ example: 128000, description: 'Context window size in tokens' }),
     // Add other relevant fields like 'description', 'capabilities', etc.
 }).openapi('UnifiedModel');
 
@@ -59,16 +90,8 @@ export const AiGenerateTextRequestSchema = z.object({
         description: 'The text prompt for the AI.',
         example: 'Suggest 5 suitable filenames for a typescript utility file containing helper functions for string manipulation.'
     }),
-    provider: z.enum(AI_API_PROVIDERS).or(z.string()).openapi({
-        example: 'openai',
-        description: 'The AI provider to use (e.g., openai, openrouter, groq).'
-    }),
-    model: z.string().min(1).openapi({ // Model is required here as there's no chat context default
-        example: 'gpt-4o',
-        description: 'The specific model identifier to use.'
-    }),
-    options: AiSdkOptionsSchema.optional().openapi({ // Make options optional
-        description: 'Optional parameters for the AI model (temperature, maxTokens, etc.).'
+    options: AiSdkOptionsSchema.optional().openapi({ // Options are optional
+        description: 'Optional parameters to override default model behavior (temperature, maxTokens, etc.).'
     }),
     systemMessage: z.string().optional().openapi({
         example: 'You are an expert programmer. Provide concise and relevant suggestions.',

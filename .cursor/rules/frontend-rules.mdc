@@ -54,7 +54,7 @@ Below is a comprehensive guide to writing maintainable, modern, and real-time-ca
 ## 3. Composition & Organization
 
 1. **Break Down Large Components**  
-   - If a file nears ~200 lines, break it into sub-components or custom hooks. Keep a single file from becoming unmanageable.
+   - If a component nears ~200 lines, break it into sub-components or custom hooks. Keep a single file from becoming unmanageable.
 
 2. **Custom Hooks**  
    - Encapsulate domain logic or repeated UI logic in `useXyz` hooks.  
@@ -69,8 +69,45 @@ Below is a comprehensive guide to writing maintainable, modern, and real-time-ca
 ## 4. ShadCN/UI Integration
 
 1. **ShadCN + Radix**  
-   - Use ShadCN-wrapped Radix components (`@/components/ui/*`) for consistent, accessible UI.  
-   - Examples: `Dialog`, `AlertDialog`, `Popover`, `Select`, `Tabs`, etc.
+   - Use ShadCN-wrapped Radix components (`@ui`) for consistent, accessible UI.  
+    Available Components:
+alert
+alert-dialog
+avatar
+badge
+button
+card
+checkbox
+collapsible
+command
+context-menu
+dialog
+drawer
+dropdown-menu
+form
+icons
+input
+textarea
+tooltip
+button'
+label
+menubar
+popover
+progress
+resizable-panel
+scroll-area
+select
+separator
+sheet
+skeleton
+slider
+sonner
+switch
+table
+tabs
+textarea
+tooltip
+vertical-resizable-panel
 
 2. **Tailwind Utility Classes**  
    - Follow the design tokens in `tailwind.config.js` (colors, spacing, animation).  
@@ -91,6 +128,8 @@ Below is a comprehensive guide to writing maintainable, modern, and real-time-ca
    - Use route definitions in `routeTree.gen` or manually in `createFileRoute()`.  
 
 2. **React Query**  
+   - Uses `@hey-api/client-fetch` to generate the types and API client fetcher functions to be used with react query.
+   - In `packages/client/hooks/generated` there is `client.gen.ts`, `index.ts`, `sdk.gen.ts`, `types.gen`, and `@tanstack/react-query.gen.ts`
    - For any server data fetch or mutation, define a custom React Query hook (e.g., `useGetProjects`) that calls your server’s API (`fetch` or Axios) and returns the typed response.  
    - Let React Query handle caching, invalidation, refetch intervals, and concurrency safety.  
 
@@ -113,135 +152,12 @@ Below is a comprehensive guide to writing maintainable, modern, and real-time-ca
 
 ---
 
-## 7. BNK WebSocket Manager Usage
-
-We utilize **BNK WebSocket** libraries (`@bnk/client-sync` and `@bnk/react-websocket-manager`) to handle real-time state synchronization. Below are key guidelines:
-
-1. **Single WebSocket Connection**  
-   - Our code typically sets up **one** WebSocket in `main.tsx` or a dedicated provider (e.g., `GlobalStateProvider`) so we have a shared real-time channel.  
-   - If you need multiple websockets, be sure to manage them carefully (e.g. separate contexts or addresses).
-
-2. **Typed Messages**  
-   - For each front-end message shape, define a TypeScript type or interface. Example:
-     ```ts
-     interface OutgoingClientMessage {
-       type: "increment"
-       amount: number
-     }
-     ```
-   - For each server → client message, define a separate type or a union for multiple message types:
-     ```ts
-     interface IncomingServerMessage {
-       type: "state_update"
-       data: {
-         counter: number
-       }
-     }
-     ```
-3. **Centralized Manager**  
-   - We typically create a `BNKClientManager` (or `ClientWebSocketManager`) in a shared hook—like `useWebSocketManager()`—that all components can consume.  
-   - Alternatively, use the provided hook `useClientWebSocket<Incoming, Outgoing>()` from `@bnk/react-websocket-manager` directly in top-level components or route code.
-
-4. **Broadcasting & Updates**  
-   - On the server side, whenever the BNK manager’s state changes, it broadcasts new state. We interpret those “state_update” messages in the client.  
-   - On the client, ensure you handle the relevant message type in your `messageHandlers`. For example:
-     ```ts
-     messageHandlers: {
-       state_update: (msg) => {
-         setCounter(msg.data.counter)
-       }
-     }
-     ```
-
-5. **React Query + BNK**  
-   - Combine React Query and BNK WebSocket by invalidating queries or directly updating React Query cache in response to WebSocket events.  
-   - For example, if you get a “project_updated” message, you could do:
-     ```ts
-     const queryClient = useQueryClient()
-     messageHandlers: {
-       project_updated: (msg) => {
-         queryClient.invalidateQueries(['projects', msg.projectId])
-       }
-     }
-     ```
-   - This keeps your client data in sync automatically.
-
-6. **Zustand + BNK**  
-   - If you keep ephemeral UI states in Zustand, it’s possible to react to BNK WebSocket messages to update them.  
-   - Example: a “sidebar is open on all clients” scenario, or “active tab changed externally.” Evaluate carefully if these states truly need real-time sync.
-
-7. **Error Handling & Offline**  
-   - Listen for socket closure or error events.  
-   - Provide a fallback or a re-connect strategy in the manager config (e.g., `reconnectDelayMs`).  
-   - Keep the UI robust if the WebSocket is temporarily disconnected—React Query can still serve cached data in the meantime.
-
-### Example BNK Integration in `main.tsx`
-
-```tsx
-import ReactDOM from "react-dom/client"
-import { RouterProvider, createRouter } from "@tanstack/react-router"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { BNKWebSocketProvider } from "@bnk/react-websocket-manager" // hypothetical provider
-import { routeTree } from "./routeTree.gen"
-import { GlobalStateProvider } from "./zustand/global-state-provider"
-
-// 1. Create Query Client
-const queryClient = new QueryClient()
-
-// 2. Create the router
-const router = createRouter({
-  routeTree,
-  defaultPreload: "intent",
-})
-
-// 3. BNK config for client messages
-// (We can also define message shapes in a separate file)
-const bnkConfig = {
-  url: "ws://localhost:3147/ws",
-  debug: true,
-  messageHandlers: {
-    state_update: (msg) => {
-      // handle global state updates
-      // e.g. store in Zustand, or React Query invalidation
-    },
-    // ...other message types
-  },
-}
-
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={queryClient}>
-    <BNKWebSocketProvider config={bnkConfig}>
-      <GlobalStateProvider>
-        <RouterProvider router={router} />
-      </GlobalStateProvider>
-    </BNKWebSocketProvider>
-  </QueryClientProvider>
-)
-```
-
-**Notes**:  
-- Here, we wrap the entire app in `BNKWebSocketProvider` so any child component can use the `useClientWebSocket()` hook or read from the context directly.  
-- Alternatively, you can call `useClientWebSocket` at the top-level instead of using a dedicated provider.
-
----
-
 ## 8. Example Feature Flow (Projects Page)
 
 The `projects.tsx` file (shown in your code snippet) demonstrates how we integrate:
 
-- **React Query** (`useGetProjects()`) to fetch project data.  
-- **Zustand** store slices to manage “active tab” or ephemeral states.  
-- The user can easily incorporate BNK WebSocket events to reflect real-time changes in the projects list. For instance:
-  ```ts
-  // Add a "project_created" message handler:
-  messageHandlers: {
-    project_created: (msg) => {
-      // Invalidate the React Query for projects, or push new project into the cache
-      queryClient.invalidateQueries(['projects'])
-    },
-  }
-  ```
-- The `ProjectsTabManager` uses local state for tab navigation but *could* also respond to real-time events if multiple clients share the same workspace.
+- **React Query** (`useGetProjects()`) to fetch project data from `packages/client/hooks/api/use-projects-api.ts`.  
+- **Zustand** store slices to manage “active tab” or ephemeral states `packages/client/stores/global-store.ts`
 
 ---
 
@@ -249,19 +165,21 @@ The `projects.tsx` file (shown in your code snippet) demonstrates how we integra
 
 When adding or refactoring features:
 
-1. **Define** your domain types in `packages/shared` (Zod + TS).  
-2. **Create** or update your server route (via Bun + BNK server manager) if real-time is needed.  
-3. **Write** a React Query hook or TanStack Router loader for data fetching (`useGetXYZ()`).  
-4. **Integrate** BNK for real-time events if the feature has shared state or real-time updates.  
-5. **Use** ShadCN + Radix UI for consistent, accessible components.  
-6. **Keep** ephemeral UI states in Zustand if multiple components share a simple toggle, or local state if only used in one component.  
-7. **Test** everything with React Testing Library or `bun test`, focusing on user flows and accessibility.
+1. **Define** if required define db table in `packages/server/src/utils/database.ts` and schema in the shared schema `packages/shared/src/schemas` (Zod + OpenAPI + TS), the schemas serve at the source of truth for all data. When the server is running you can view the entire server API and Schemas with swagger at `http://localhost:3147/swagger` or retrieve the OpenAPI spec from `http://localhost:3147/doc`
+2. **Create** or update your Bun Hono Server route in `packages/server/src/routes`
+3. **Generate Client** Generate the API client run `bun run openapi-ts` in the root of the repo to generate the client types based on the schema/route Open API Specs
+4. **Write** a React Query hook based on the generated types and query client from `packages/client/src/hooks/generated/types.gen` and `packages/client/src/hooks/generated/@tanstack/react-query.gen`
+5. **UI Implementation** Using the project components, create a UI page or component using the apps component library and the created API
+6. **Testing** Perform unit tests on everything that can be isolate and are pure, create react component test using React Testing Library
+<!-- 5. **Use** ShadCN + Radix UI for consistent, accessible components.   -->
+<!-- 6. **Keep** ephemeral UI states in Zustand if multiple components share a simple toggle, or local state if only used in one component.   -->
+<!-- 7. **Test** everything with React Testing Library or `bun test`, focusing on user flows and accessibility. -->
 
 ---
 
 ## 10. Final Thoughts
 
-- **Single Source of Truth**: For server-sourced data, prefer React Query. For ephemeral UI toggles or concurrency among components, use Zustand With BNK WebSocket
+- **Single Source of Truth**: 
 - **Leverage TanStack Router** for route-level data and seamless code-splitting.  
 - **Aim for Composability**: break large components into smaller, domain-specific hooks and presentational sub-components.  
 - **Keep Accessibility** in mind with ShadCN/Radix: you get robust defaults, but do sanity checks.  
