@@ -1,6 +1,6 @@
 import { Folder, Pencil, Trash, Plus } from 'lucide-react'
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@ui'
-import { cn } from '@ui/lib/utils'
+import { cn } from '@/lib/utils'
 import { Button } from '@ui'
 import {
     DropdownMenu,

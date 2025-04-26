@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
-import { cn } from '@ui/lib/utils'
+import { cn } from '@/lib/utils'
 
 import { Button } from '@ui'
 import { Progress } from '@ui'
@@ -12,7 +12,6 @@ import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
 import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
-import { useFindSuggestedFiles } from '@/hooks/api/use-projects-api'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useUpdateActiveProjectTab } from '@/hooks/api/global-state/updaters'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
@@ -23,6 +22,8 @@ import { z } from 'zod'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '@ui'
 import { useActiveProjectTab } from '@/hooks/api/use-state-api'
+import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
+import { ProjectFile } from '@/hooks/generated'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -41,6 +42,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId || '')
         const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId || '')
         const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId || '')
+        const [suggestedFiles, setSuggestedFiles] = useState<ProjectFile[]>([])
 
         // Keep a local copy of userPrompt so that typing is instantly reflected in the textarea
         const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
@@ -112,7 +114,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }
 
         // "Find suggested files" example
-        const findSuggestedFilesMutation = useFindSuggestedFiles(activeProjectTabState?.selectedProjectId || '')
+        const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
         const [showSuggestions, setShowSuggestions] = useState(false)
 
         const handleFindSuggestions = () => {
@@ -121,10 +123,24 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 alert('Please enter a prompt!')
                 return
             }
-            findSuggestedFilesMutation.mutate(localUserPrompt, {
+            findSuggestedFilesMutation.mutate({ userInput: `Please suggest files for the following prompt: ${localUserPrompt}` }, {
                 onSuccess: (resp) => {
-                    if (resp.success && resp.recommendedFileIds) {
-                        updateActiveProjectTab({ suggestedFileIds: resp.recommendedFileIds })
+                    console.log('resp', resp)
+                    if (resp?.data?.success && resp.data?.recommendedFileIds) {
+                        const files = resp.data.recommendedFileIds.map(id => {
+                            const file = projectFileMap.get(id)
+                            console.log('file', file)
+                            console.log('projectFileMap', projectFileMap)
+                            if (file) {
+                                return file
+                            }
+
+                            return null
+                        }).filter(Boolean) as ProjectFile[]
+
+                        console.log('files', files)
+                        console.log('suggestedFiles', suggestedFiles)
+                        setSuggestedFiles(files)
                         setShowSuggestions(true)
                     }
                 },
@@ -191,7 +207,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 <SuggestedFilesDialog
                     open={showSuggestions}
                     onClose={() => setShowSuggestions(false)}
-                    suggestedFiles={[]} // pass the actual suggested files here if needed
+                    suggestedFiles={suggestedFiles}
                 />
 
                 <div className="flex-1 flex flex-col min-h-0 p-4 overflow-hidden min-w-0">

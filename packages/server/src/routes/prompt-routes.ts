@@ -12,8 +12,6 @@ import {
     ProjectAndPromptIdParamsSchema,
     PromptResponseSchema,
     PromptListResponseSchema,
-    PromptSchema,
-    type Prompt,
     OptimizePromptResponseSchema,
     OptimizePromptRequestSchema
 } from "shared/src/schemas/prompt.schemas";

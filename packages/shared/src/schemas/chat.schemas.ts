@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi';
 import { AI_API_PROVIDERS } from './provider-key.schemas';
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas';
-import  { MessageRoleEnum } from './common.schemas';
+import { MessageRoleEnum } from './common.schemas';
 
 
 export type MessageRole = z.infer<typeof MessageRoleEnum>; // Export the type if needed elsewhere
@@ -11,6 +11,7 @@ const baseModelOptionsSchema = z.object({
     max_tokens: z.number().optional(),
     temperature: z.number().optional(),
     top_p: z.number().optional(),
+    top_k: z.number().optional(),
     frequency_penalty: z.number().optional(),
     presence_penalty: z.number().optional(),
     stop: z.union([z.string(), z.array(z.string())]).optional(),
@@ -204,7 +205,7 @@ export const AiChatStreamRequestSchema = z.object({
         example: 'deepseek/deepseek-chat-v3-0324:free',
         description: 'The model identifier to use.'
     }),
-    options: AiSdkOptionsSchema.openapi({
+    options: AiSdkOptionsSchema.optional().openapi({
         description: 'Optional parameters for the AI model.'
     }),
     systemMessage: z.string().optional().openapi({ // Allows overriding system message for this turn

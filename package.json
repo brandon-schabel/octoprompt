@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.4.0-alpha",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "setup": "bun run scripts/setup.ts",
@@ -29,7 +29,6 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@bnk/sync-engine": "1.0.0",
     "@hey-api/client-fetch": "^0.10.0",
     "@hono/swagger-ui": "^0.5.1",
     "@hono/zod-openapi": "^0.19.5",

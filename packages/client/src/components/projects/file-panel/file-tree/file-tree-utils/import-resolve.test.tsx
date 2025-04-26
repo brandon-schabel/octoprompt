@@ -200,7 +200,6 @@ describe('Import Resolver', () => {
         const result = getRecursiveImports('app-menubar', allFiles, tsconfigCache);
         const expected = [
             'menubar',
-            'dialog',
             'project-list',
             'hooks-api',
             'global-state',
@@ -232,7 +231,7 @@ describe('Import Resolver', () => {
         const clickedFileId = 'app-menubar';
         const importedFiles = getRecursiveImports(clickedFileId, allFiles, tsconfigCache);
         if (autoSelectImports) {
-            const expected = ['menubar', 'dialog', 'project-list', 'hooks-api', 'global-state', 'project-dialog'];
+            const expected = ['menubar', 'project-list', 'hooks-api', 'global-state', 'project-dialog'];
             expect(new Set(importedFiles)).toEqual(new Set(expected));
         }
     })

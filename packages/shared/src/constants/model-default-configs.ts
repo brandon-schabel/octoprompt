@@ -13,6 +13,8 @@ export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
     top_p: 1,
     provider: "openrouter",
     model: "google/gemini-2.5-flash-preview",
+    top_k: 1,
+
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
@@ -23,6 +25,7 @@ export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
     top_p: 1,
     provider: "openrouter",
     model: "google/gemini-2.5-flash-preview",
+    top_k: 1,
 }
 
 export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
@@ -33,5 +36,6 @@ export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
     top_p: 1,
     provider: "openrouter",
     model: "google/gemini-2.5-flash-preview",
+    top_k: 1,
 }
 

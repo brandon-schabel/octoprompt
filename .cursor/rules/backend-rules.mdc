@@ -53,5 +53,4 @@ chat-routes.ts
 project-routes.ts
 prompt-routes.ts
 provider-key-routes.ts
-structured-output-routes.ts
 ticket-routes.ts

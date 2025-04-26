@@ -1,8 +1,9 @@
 import { db } from "@/utils/database";
 import { GlobalState, LOW_MODEL_CONFIG, } from "shared";
-import { aiProviderInterface } from "@/services/model-providers/providers/ai-provider-interface-services";
+import { generateSingleText } from "@/services/model-providers/providers/ai-provider-interface-services";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
+import { getProjectFiles } from "../project-service";
 let concurrency = 5;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -75,7 +76,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
 
     try {
         // Use generateSingleText for non-streaming summarization
-        const summaryText = await aiProviderInterface.generateSingleText({
+        const summaryText = await generateSingleText({
             provider: provider,
             systemMessage: systemPrompt,
             // Use prompt for single input, or messages if more complex context needed
@@ -112,12 +113,16 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
  */
 export async function summarizeFiles(
     projectId: string,
-    filesToSummarize: ProjectFile[],
+    fileIdsToSummarize: string[],
 ): Promise<{ included: number; skipped: number }> {
     // const allowedProject = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
     // if (!allowedProject) return { included: 0, skipped: filesToSummarize.length };
 
-    const chunks = chunkArray(filesToSummarize, concurrency);
+    const files = await getProjectFiles(projectId);
+
+    const filteredFiles = files?.filter((f) => fileIdsToSummarize.includes(f.id)) || [];
+
+    const chunks = chunkArray(filteredFiles, concurrency);
     let includedCount = 0;
     let skippedCount = 0;
 
@@ -170,10 +175,12 @@ export async function forceSummarizeFiles(
 
 export async function forceResummarizeSelectedFiles(
     projectId: string,
-    filesToSummarize: ProjectFile[],
-    globalState: GlobalState
+    fileIdsToSummarize: string[],
 ): Promise<{ included: number; skipped: number }> {
-    const chunks = chunkArray(filesToSummarize, concurrency);
+    const files = await getProjectFiles(projectId);
+    const filteredFiles = files?.filter((f) => fileIdsToSummarize.includes(f.id)) || [];
+
+    const chunks = chunkArray(filteredFiles, concurrency);
     let included = 0;
     let skipped = 0;
     for (const c of chunks) {

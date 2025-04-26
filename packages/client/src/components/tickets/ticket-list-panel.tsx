@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Copy, Filter, FileText, Trash2, ExternalLink } from "lucide-react";
 import { ScrollArea } from "@ui";
 import { toast } from "sonner";
-import { cn } from "@ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { buildTicketContent } from "./utils/ticket-utils";
 import { Progress } from "@ui";
 import {

@@ -5,9 +5,6 @@ import {
     streamText,
     generateText,
     generateObject,
-    streamObject,
-    StreamTextResult,
-    Schema,
 } from 'ai';
 import {
     createOpenAI,
@@ -282,7 +279,7 @@ async function getProviderLanguageModelInterface(
 /**
  * Helper function for non-streaming text generation.
  */
-async function generateSingleText({
+export async function generateSingleText({
     prompt, // Simple prompt convenience
     messages, // Or full message history
     provider = "openai",
@@ -339,49 +336,29 @@ async function generateSingleText({
     return text;
 }
 
-
-
-
-
 /**
 * Helper function for generating structured JSON objects.
 */
 export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeDef, any>>({ // Accept ZodTypeAny
     prompt,
     schema,
-    // provider = "openai",
-    // model, // Model should be required
-    options = {}, // Use AiSdkOptions type
     systemMessage,
     debug = false
 }: {
     prompt: string; // Make prompt required for simplicity here
     schema: T; // Use the generic type
-    // provider?: APIProviders;
-    // model: string; // Make model required
-    options?: AiSdkOptions & {
-        provider?: APIProviders;
-    }; // Use the imported type
     systemMessage?: string;
     debug?: boolean;
 }): Promise<{ object: z.infer<T>; usage: { completionTokens: number; promptTokens: number; totalTokens: number; }; finishReason: string /* ...other potential fields */ }> { // Return structure from generateObject
-    const providerCfg = LOW_MODEL_CONFIG
-    const provider = providerCfg.provider as APIProviders
-    const model = providerCfg.model
-
-    const finalProvider = options.provider ?? provider
-    const finalModel = options.model ?? model
-
+    const provider = LOW_MODEL_CONFIG.provider as APIProviders
+    const model = LOW_MODEL_CONFIG.model
 
     if (!prompt) {
         throw new Error("'prompt' must be provided for generateStructuredData.");
     }
-    // if (!model) {
-    //     throw new Error("Model must be provided for generateStructuredData.");
-    // }
 
     // Pass model in options
-    const modelInstance = await getProviderLanguageModelInterface(finalProvider, { ...options, model: finalModel });
+    const modelInstance = await getProviderLanguageModelInterface(provider, { ...LOW_MODEL_CONFIG, model: model });
 
     if (debug) {
         console.log(`[UnifiedProviderService] Generating structured data: Provider=${provider}, ModelID=${modelInstance.modelId}, Schema=${schema.description || 'Unnamed Schema'}`);
@@ -395,12 +372,12 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
         // mode: 'json', // Ensure JSON mode is requested
         prompt: prompt,
         system: systemMessage,
-        // Map compatible options - check generateObject documentation for supported fields
-        temperature: options.temperature,
-        maxTokens: options.maxTokens,
-        topP: options.topP,
-        frequencyPenalty: options.frequencyPenalty,
-        presencePenalty: options.presencePenalty,
+        temperature: LOW_MODEL_CONFIG.temperature,
+        maxTokens: LOW_MODEL_CONFIG.max_tokens,
+        topP: LOW_MODEL_CONFIG.top_p,
+        frequencyPenalty: LOW_MODEL_CONFIG.frequency_penalty,
+        presencePenalty: LOW_MODEL_CONFIG.presence_penalty,
+        topK: LOW_MODEL_CONFIG.top_k,
         // topK might not be supported by generateObject directly
         // stop sequences might not be applicable/supported
     });
