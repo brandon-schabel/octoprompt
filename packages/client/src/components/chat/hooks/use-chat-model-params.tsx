@@ -66,7 +66,9 @@ export function useChatModelParams() {
     ]);
 
     return {
-        settings: modelSettings,
+        settings: modelSettings as AiSdkOptions & {
+            provider: string;
+        },
         setTemperature,
         setMaxTokens,
         setTopP,

@@ -939,7 +939,6 @@ export function ProjectSummarizationSettingsPage() {
  * Extracted pattern-list component for ignore patterns.
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
-    // ... (IgnorePatternList implementation remains largely the same)
     const updateSettings = useUpdateSettings()
     const { summarizationIgnorePatterns = [] } = useSettings()
     const [newPattern, setNewPattern] = useState("")
@@ -947,7 +946,6 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
     function handleAdd() {
         const trimmed = newPattern.trim()
         if (!trimmed) return
-        // Prevent adding duplicates
         if (summarizationIgnorePatterns.includes(trimmed)) {
             toast.info("Pattern already exists.")
             return;
@@ -955,7 +953,7 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
 
         updateSettings((prev: AppSettings) => ({
             ...prev,
-            summarizationIgnorePatterns: [...(prev.summarizationIgnorePatterns ?? []), trimmed], // Ensure array exists
+            summarizationIgnorePatterns: [...(prev.summarizationIgnorePatterns ?? []), trimmed],
         }))
         setNewPattern("")
         toast.success(`Added ignore pattern: ${trimmed}`)
@@ -964,7 +962,7 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
     function handleRemove(pattern: string) {
         updateSettings((prev: AppSettings) => ({
             ...prev,
-            summarizationIgnorePatterns: (prev.summarizationIgnorePatterns ?? []).filter((p: string) => p !== pattern), // Ensure array exists
+            summarizationIgnorePatterns: (prev.summarizationIgnorePatterns ?? []).filter((p: string) => p !== pattern),
         }))
         toast.success(`Removed ignore pattern: ${pattern}`)
     }
@@ -978,39 +976,57 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
 
     return (
         <div className={!disabled ? "" : "opacity-50 pointer-events-none"}>
+            {/* Input and Add Button remain the same */}
             <div className="flex items-center gap-2 mt-1">
                 <Input
                     placeholder="Add glob pattern (e.g., node_modules/**)"
                     value={newPattern}
                     onChange={(e) => setNewPattern(e.target.value)}
-                    onKeyDown={handleKeyDown} // Add pattern on Enter key
+                    onKeyDown={handleKeyDown}
                     disabled={disabled}
                     className="h-9"
                 />
                 <Button onClick={handleAdd} disabled={disabled || !newPattern.trim()} size="sm">Add</Button>
             </div>
+
+            {/* Refactored Collapsible Trigger Area */}
             <Collapsible className="mt-2" defaultOpen={summarizationIgnorePatterns.length > 0}>
-                <div className="flex items-center gap-2 group">
-                    <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="p-0 h-6 w-6" disabled={disabled}>
+                {/* Use asChild on the CollapsibleTrigger */}
+                <CollapsibleTrigger asChild disabled={disabled}>
+                    {/* Make the entire div the trigger */}
+                    <div className="flex items-center gap-2 group cursor-pointer py-1" role="button" >
+                        {/* The Button is now mostly visual/structural within the trigger area */}
+                        <Button variant="ghost" size="sm" className="p-0 h-6 w-6 flex-shrink-0" tabIndex={-1} aria-hidden="true">
+                            {/* The Chevron itself indicates the toggle state */}
                             <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                             <span className="sr-only">Toggle Current Patterns</span>
                         </Button>
-                    </CollapsibleTrigger>
-                    <span className="text-sm font-medium text-muted-foreground cursor-pointer select-none" onClick={(e) => (e.target as HTMLElement).previousElementSibling?.click()}   >
-                        Current Patterns ({summarizationIgnorePatterns?.length ?? 0})
-                    </span>
-                </div>
+                        {/* The span is now part of the clickable trigger area */}
+                        <span className="text-sm font-medium text-muted-foreground select-none">
+                            Current Patterns ({summarizationIgnorePatterns?.length ?? 0})
+                        </span>
+                    </div>
+                </CollapsibleTrigger>
+
+                {/* CollapsibleContent remains the same */}
                 <CollapsibleContent>
                     {summarizationIgnorePatterns?.length > 0 ? (
-                        <ul className="mt-2 space-y-1 max-h-32 overflow-y-auto pr-2">
+                        <ul className="mt-1 space-y-1 max-h-32 overflow-y-auto pr-2"> {/* Adjusted margin-top */}
                             {summarizationIgnorePatterns?.map((pattern, idx) => (
                                 <li
-                                    key={`${pattern}-${idx}`} // Use index for stability if patterns aren't unique, though they should be
+                                    key={`${pattern}-${idx}`}
                                     className="flex items-center justify-between rounded p-1 hover:bg-accent/50"
                                 >
                                     <span className="font-mono text-xs flex-1 truncate" title={pattern}>{pattern}</span>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => handleRemove(pattern)} disabled={disabled}>
+                                    {/* Ensure remove button works correctly */}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 flex-shrink-0"
+                                        // Prevent click propagation to the collapsible trigger if necessary
+                                        onClick={(e) => { e.stopPropagation(); handleRemove(pattern); }}
+                                        disabled={disabled}
+                                    >
                                         <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                                         <span className="sr-only">Remove pattern {pattern}</span>
                                     </Button>
@@ -1018,7 +1034,7 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-xs text-muted-foreground mt-2 pl-8">No ignore patterns defined.</p>
+                        <p className="text-xs text-muted-foreground mt-1 pl-8">No ignore patterns defined.</p> // Adjusted margin/padding
                     )}
                 </CollapsibleContent>
             </Collapsible>

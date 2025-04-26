@@ -1,7 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { useChat, Message } from '@ai-sdk/react';
-import type { ChatModelSettings } from 'shared';
-import type { AiChatStreamRequest, AiSdkOptions } from './generated';
+import type { AiChatStreamRequest, AiSdkOptions, } from './generated';
 import { useGetMessages } from './api/use-chat-api';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 import { nanoid } from 'nanoid';
@@ -71,7 +70,7 @@ export function useAIChat({
 
   // Enhanced `sendMessage` function using `append`
   const sendMessage = useCallback(
-    async (messageContent: string, modelSettings?: ChatModelSettings) => {
+    async (messageContent: string, modelSettings?: AiSdkOptions) => {
       if (!messageContent.trim()) return;
 
       const userMessageId = nanoid(); // Used for optimistic UI and maybe tempId
@@ -90,10 +89,10 @@ export function useAIChat({
         sdkOptions = {
           // Only include fields if they have a value
           ...(modelSettings.temperature !== undefined && { temperature: modelSettings.temperature }),
-          ...(modelSettings.max_tokens !== undefined && { maxTokens: modelSettings.max_tokens }),
-          ...(modelSettings.top_p !== undefined && { topP: modelSettings.top_p }),
-          ...(modelSettings.frequency_penalty !== undefined && { frequencyPenalty: modelSettings.frequency_penalty }),
-          ...(modelSettings.presence_penalty !== undefined && { presencePenalty: modelSettings.presence_penalty }),
+          ...(modelSettings.maxTokens !== undefined && { maxTokens: modelSettings.maxTokens }),
+          ...(modelSettings.topP !== undefined && { topP: modelSettings.topP }),
+          ...(modelSettings.frequencyPenalty !== undefined && { frequencyPenalty: modelSettings.frequencyPenalty }),
+          ...(modelSettings.presencePenalty !== undefined && { presencePenalty: modelSettings.presencePenalty }),
           // Add mappings for top_k etc. if needed
         };
       }
@@ -108,9 +107,8 @@ export function useAIChat({
         tempId: userMessageId,            // Optional: Useful for correlating requests/responses
         ...(systemMessage && { systemMessage: systemMessage }), // Include systemMessage from props if provided
         provider: provider,                 // REQUIRED: Get from hook props
-        options: {
-          ...(sdkOptions && Object.keys(sdkOptions).length > 0 && { options: sdkOptions }),
-        }
+        // options: sdkOptions,
+        ...(sdkOptions ? { options: sdkOptions } : {}),
       };
 
       setInput(''); // Clear input field immediately
@@ -129,7 +127,7 @@ export function useAIChat({
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       // TODO: Get currentModelSettings from your UI state if applicable
-      const currentModelSettings: ChatModelSettings | undefined = undefined; // Replace with actual settings if you have them
+      const currentModelSettings: AiSdkOptions | undefined = undefined; // Replace with actual settings if you have them
       sendMessage(input, currentModelSettings);
     },
     [sendMessage, input]
