@@ -45,19 +45,10 @@ export async function generateAIFileChange(
   params: GenerateAIFileChangeParams
 ) {
   const { filePath, prompt } = params;
-
-  // 1. Read existing file content
   const originalContent = await readLocalFileContent(filePath);
 
-  // 2. Prepare AI request
   const cfg = MEDIUM_MODEL_CONFIG;
-  const provider = params.provider || cfg.provider as APIProviders || 'openai'; // Default provider good at JSON
-  const modelId = params.model || cfg.model;
-  const temperature = params.temperature ?? cfg.temperature;
 
-  if (!modelId) {
-    throw new Error("Model not configured for generate-file-change task.");
-  }
 
   const systemMessage = `
 You are an expert coding assistant. You will be given the content of a file and a user request describing changes.
@@ -85,12 +76,7 @@ User Request: ${prompt}
       systemMessage: systemMessage,
       prompt: userPrompt, // Combine original content and user request in the prompt
       schema: FileChangeResponseSchema,
-      options: {
-        model: modelId,
-        temperature: temperature,
-        // Set appropriate maxTokens depending on expected file size + explanation
-        maxTokens: 4096, // Example: Adjust as needed
-      },
+      options: cfg
     });
 
     return aiResponse;

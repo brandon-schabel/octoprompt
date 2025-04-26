@@ -7,9 +7,7 @@ import {
 } from 'shared/src/schemas/common.schemas';
 // Import chat-specific schemas if needed for other routes in this file (e.g. original /chats)
 import {
-    ChatListResponseSchema,
     ModelsQuerySchema,
-    // ... other chat schemas if used
 } from "shared/src/schemas/chat.schemas";
 // Import the NEW GenAI schemas
 import {
@@ -17,10 +15,14 @@ import {
     AiGenerateTextResponseSchema,
     AiGenerateStructuredRequestSchema,
     AiGenerateStructuredResponseSchema,
-    StructuredDataSchemaConfig, // Import the interface
+    StructuredDataSchemaConfig,
     ModelsListResponseSchema,
-    BaseStructuredDataConfigSchema
-    // ... other gen-ai schemas if needed
+    structuredDataSchemas,
+    FileSummaryListResponseSchema,
+    RemoveSummariesResponseSchema,
+    SummarizeFilesResponseSchema,
+    FileSuggestionsZodSchema,
+    SuggestFilesResponseSchema
 } from "shared/src/schemas/gen-ai.schemas";
 
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -258,6 +260,73 @@ const suggestFilesRoute = createRoute({
     },
 });
 
+
+const getFileSummariesRoute = createRoute({
+    method: 'get',
+    path: '/api/projects/{projectId}/file-summaries',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Get summaries for project files (all or specified)',
+    request: {
+        params: ProjectIdParamsSchema,
+        query: GetFileSummariesQuerySchema,
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: FileSummaryListResponseSchema } }, description: 'Successfully retrieved file summaries' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const summarizeFilesRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/summarize',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Summarize selected files in a project (or force re-summarize)',
+    request: {
+        params: ProjectIdParamsSchema,
+        body: { content: { 'application/json': { schema: SummarizeFilesBodySchema } } },
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: SummarizeFilesResponseSchema } }, description: 'File summarization process completed' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or some files not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error during summarization' },
+    },
+});
+
+const resummarizeAllFilesRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/resummarize-all',
+    tags: ['Projects', 'Files', 'AI'],
+    summary: 'Force re-summarization of all files in a project',
+    request: { params: ProjectIdParamsSchema },
+    responses: {
+        200: { content: { 'application/json': { schema: OperationSuccessResponseSchema } }, description: 'Process to re-summarize all files started/completed' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+const removeSummariesRoute = createRoute({
+    method: 'post',
+    path: '/api/projects/{projectId}/remove-summaries',
+    tags: ['Projects', 'Files'],
+    summary: 'Remove summaries from selected files',
+    request: {
+        params: ProjectIdParamsSchema,
+        body: { content: { 'application/json': { schema: RemoveSummariesBodySchema } } },
+    },
+    responses: {
+        200: { content: { 'application/json': { schema: RemoveSummariesResponseSchema } }, description: 'Summaries removed successfully' },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or some files not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
+    },
+});
+
+
 export const genAiRoutes = new OpenAPIHono()
     .openapi(generateStreamRoute, async (c) => {
         const body = c.req.valid('json');
@@ -312,7 +381,7 @@ export const genAiRoutes = new OpenAPIHono()
         const body = c.req.valid('json');
         const { schemaKey, userInput, options } = body;
         // 1. Find the configuration for the requested schemaKey
-        const config = structuredDataSchemas[schemaKey];
+        const config: StructuredDataSchemaConfig<z.ZodTypeAny> = structuredDataSchemas[schemaKey as keyof typeof structuredDataSchemas]
         if (!config) {
             throw new ApiError(400, `Invalid schemaKey provided: ${schemaKey}. Valid keys are: ${Object.keys(structuredDataSchemas).join(', ')}`, 'INVALID_SCHEMA_KEY');
         }
@@ -329,7 +398,6 @@ export const genAiRoutes = new OpenAPIHono()
                 schema: config.schema, // Pass the Zod schema from config
                 options: finalOptions,
                 systemMessage: finalSystemPrompt,
-                // debug: true // Optionally enable debug logging
             });
 
             // 3. Return the generated object
@@ -427,9 +495,8 @@ export const genAiRoutes = new OpenAPIHono()
         const { userInput } = c.req.valid('json');
 
         const projectSummary = await getFullProjectSummary(projectId);
-
         const systemPrompt = `
-You are a code assistant that recommends relevant files based on user input.
+        You are a code assistant that recommends relevant files based on user input.
 You have a list of file summaries and a user request.
 Return only valid JSON with the shape: {"fileIds": ["uuid1", "uuid2"]}
 Guidelines:
@@ -437,7 +504,8 @@ Guidelines:
 - For complex tasks: return max 10 files
 - For very complex tasks: return max 20 files
 - Do not add comments in your response
-- Strictly follow the JSON schema, do not add any additional properties or comments`;
+- Strictly follow the JSON schema, do not add any additional properties or comments
+        `
 
         const userMessage = `
 User Query: ${userInput}
@@ -445,31 +513,88 @@ Below is a combined summary of project files:
 ${projectSummary}`;
 
         try {
-            const cfg = MEDIUM_MODEL_CONFIG;
 
             const result = await generateStructuredData({
                 prompt: userMessage,
                 schema: FileSuggestionsZodSchema,
-                options: {
-                    model: cfg.model,
-                    temperature: cfg.temperature,
-                },
                 systemMessage: systemPrompt,
             })
-
-            // const validatedResult = result as z.infer<typeof FileSuggestionsZodSchema>;
 
             const payload = {
                 success: true,
                 recommendedFileIds: result.object.fileIds,
             } satisfies z.infer<typeof SuggestFilesResponseSchema>;
 
-            const response: TypedResponse<z.infer<typeof SuggestFilesResponseSchema>, 200, 'json'> = c.json(payload, 200);
-            return response;
-
+            return c.json(payload, 200);
         } catch (error: any) {
             console.error("[SuggestFiles Project] Error:", error);
             if (error instanceof ApiError) throw error;
             throw new ApiError(500, `Failed to suggest files: ${error.message}`, "AI_SUGGESTION_ERROR");
         }
+    })
+    // File Summary Routes
+
+    .openapi(getFileSummariesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const query = c.req.valid('query');
+        const fileIds = query?.fileIds?.split(',').filter(Boolean);
+
+        const filesWithSummaries = await getFileSummaries(projectId, fileIds);
+        // Files are already in API format
+        const payload = {
+            success: true,
+            data: filesWithSummaries ?? []
+        } satisfies z.infer<typeof FileSummaryListResponseSchema>;
+        return c.json(payload, 200);
+    })
+
+    .openapi(summarizeFilesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const { fileIds, force } = c.req.valid('json');
+
+        const result = force
+            ? await forceResummarizeSelectedFiles(projectId, fileIds)
+            : await summarizeSelectedFiles(projectId, fileIds);
+
+        // Ensure the returned object matches SummarizeFilesResponseSchema
+        const payload: z.infer<typeof SummarizeFilesResponseSchema> = {
+            success: true,
+            message: "Summarization process completed.",
+            included: result.included,
+            skipped: result.skipped,
+        };
+        return c.json(payload, 200);
+    })
+
+    .openapi(resummarizeAllFilesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const project = await getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
+        }
+        await resummarizeAllFiles(projectId);
+        // Ensure the returned object matches OperationSuccessResponseSchema
+        const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+            success: true,
+            message: "Process to force-resummarize all files started/completed."
+        };
+        return c.json(payload, 200);
+    })
+
+    .openapi(removeSummariesRoute, async (c) => {
+        const { projectId } = c.req.valid('param');
+        const { fileIds } = c.req.valid('json');
+        const result = await removeSummariesFromFiles(projectId, fileIds);
+        // Ensure the returned object matches RemoveSummariesResponseSchema (result already has the correct shape)
+        if (!result.success) {
+            // Handle potential failure from the service if needed, though schema expects success:true
+            console.error("Removal of summaries reported failure from service:", result);
+            throw new ApiError(500, result.message || "Failed to remove summaries");
+        }
+        const payload: z.infer<typeof RemoveSummariesResponseSchema> = {
+            success: true, // Explicitly set to true to match schema
+            removedCount: result.removedCount,
+            message: result.message
+        };
+        return c.json(payload, 200); // Defaults to 200
     })

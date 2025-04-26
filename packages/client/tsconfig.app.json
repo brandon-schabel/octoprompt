@@ -24,10 +24,10 @@
     "baseUrl": ".",
     "paths": {
       "@ui": [
-        "../ui-lib/index.ts"
+        "./src/components/ui"
       ],
       "@ui/*": [
-        "../ui-lib/src/*"
+        "./src/components/ui/*"
       ],
       "@/*": [
         "./src/*"
@@ -42,7 +42,6 @@
   },
   "include": [
     "src",
-    "../ui-lib",
   ],
   "exclude": [
     "**/*.test.ts",

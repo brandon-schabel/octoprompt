@@ -33,7 +33,7 @@ import {
 } from "@ui";
 
 import { useHotkeys } from "react-hotkeys-hook";
-import { cn } from "@ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { buildTsconfigAliasMap, getRecursiveImports } from "./file-tree-utils/import-resolver";
 import {
     toggleFile as toggleFileUtil,

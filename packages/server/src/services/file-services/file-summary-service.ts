@@ -3,6 +3,7 @@ import { GlobalState, LOW_MODEL_CONFIG, } from "shared";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 import { generateSingleText } from "@/services/model-providers/providers/gen-ai-interface-services";
+import { getProjectFiles } from "../project-service";
 let concurrency = 5;
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -106,12 +107,16 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
  */
 export async function summarizeFiles(
     projectId: string,
-    filesToSummarize: ProjectFile[],
+    fileIdsToSummarize: string[],
 ): Promise<{ included: number; skipped: number }> {
     // const allowedProject = globalState.settings.summarizationEnabledProjectIds.includes(projectId);
     // if (!allowedProject) return { included: 0, skipped: filesToSummarize.length };
 
-    const chunks = chunkArray(filesToSummarize, concurrency);
+    const files = await getProjectFiles(projectId);
+
+    const filteredFiles = files?.filter((f) => fileIdsToSummarize.includes(f.id)) || [];
+
+    const chunks = chunkArray(filteredFiles, concurrency);
     let includedCount = 0;
     let skippedCount = 0;
 
@@ -164,10 +169,12 @@ export async function forceSummarizeFiles(
 
 export async function forceResummarizeSelectedFiles(
     projectId: string,
-    filesToSummarize: ProjectFile[],
-    globalState: GlobalState
+    fileIdsToSummarize: string[],
 ): Promise<{ included: number; skipped: number }> {
-    const chunks = chunkArray(filesToSummarize, concurrency);
+    const files = await getProjectFiles(projectId);
+    const filteredFiles = files?.filter((f) => fileIdsToSummarize.includes(f.id)) || [];
+
+    const chunks = chunkArray(filteredFiles, concurrency);
     let included = 0;
     let skipped = 0;
     for (const c of chunks) {

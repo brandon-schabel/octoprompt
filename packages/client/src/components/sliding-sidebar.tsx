@@ -6,7 +6,7 @@ import React, {
     useMemo,
 } from 'react';
 import { Button } from '@ui';
-import { cn } from '@ui/lib/utils';
+import { cn } from '@/lib/utils';
 import { ChevronsLeft, ChevronsRight, X, LucideIcon } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage';
 

@@ -8,9 +8,10 @@ interface SummaryDialogProps {
     isOpen: boolean;
     onClose: () => void;
     summaryContent: string;
+    tokenCount: number;
 }
 
-export function SummaryDialog({ isOpen, onClose, summaryContent }: SummaryDialogProps) {
+export function SummaryDialog({ isOpen, onClose, summaryContent, tokenCount }: SummaryDialogProps) {
     const { copyToClipboard } = useCopyClipboard()
 
     const handleCopy = async () => {
@@ -44,6 +45,9 @@ export function SummaryDialog({ isOpen, onClose, summaryContent }: SummaryDialog
                     <pre className="whitespace-pre-wrap text-sm p-4 bg-muted rounded-lg">
                         {summaryContent}
                     </pre>
+                </div>
+                <div className="mt-4 text-sm">
+                    <span className="font-bold">Token Count:</span> {tokenCount}
                 </div>
             </DialogContent>
         </Dialog>

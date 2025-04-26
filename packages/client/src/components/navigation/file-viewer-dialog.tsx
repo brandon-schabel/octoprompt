@@ -17,6 +17,7 @@ type FileViewerDialogProps = {
     markdownText?: string
     onClose?: () => void
     onSave?: (content: string) => void
+    filePath?: string   
 }
 
 function getLanguageByExtension(extension?: string): string {
@@ -41,7 +42,8 @@ export function FileViewerDialog({
     viewedFile,
     markdownText: markdownText,
     onClose,
-    onSave
+    onSave,
+    filePath
 }: FileViewerDialogProps) {
     const [isEditingFile, setIsEditingFile] = useState(false)
     const [editedContent, setEditedContent] = useState<string>('')

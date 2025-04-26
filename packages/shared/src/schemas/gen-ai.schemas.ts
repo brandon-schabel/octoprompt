@@ -1,5 +1,8 @@
 import { z } from '@hono/zod-openapi';
-import { AI_API_PROVIDERS } from './provider-key.schemas'; // Keep provider list separate or move here if preferred
+import { AI_API_PROVIDERS } from './provider-key.schemas'; // Assume this exists
+import { MessageRoleEnum } from './common.schemas'; // Assume this exists
+import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'; // Assume this exists
+import { ProjectFileSchema } from './project.schemas';
 
 // --- Basic AI Interaction Schemas ---
 
@@ -13,14 +16,11 @@ import { LOW_MODEL_CONFIG } from '../constants/model-default-configs';
 export const AiMessageSchema = z.object({
     role: MessageRoleEnum,
     content: z.string(),
-    // Keep optional fields if needed internally, but often not needed for basic requests
-    // id: z.string().optional(),
-    // name: z.string().optional(),
-    // tool_call_id: z.string().optional(),
 }).openapi('AiMessage');
 
-// --- Schema for AI SDK Options ---
-// Make sure this aligns with what Vercel/your provider actually accepts/uses
+// --- Updated Schema for AI SDK Options ---
+// This schema defines common parameters to control the behavior of AI models during generation.
+// Not all parameters are supported by all models or providers.
 export const AiSdkOptionsSchema = z.object({
     temperature: z.number().min(0).max(2).optional().openapi({
         description: "Controls the randomness of the output. Lower values (e.g., 0.2) make the output more focused, deterministic, and suitable for factual tasks. Higher values (e.g., 0.8) increase randomness and creativity, useful for brainstorming or creative writing. A value of 0 typically means greedy decoding (always picking the most likely token).",
@@ -77,12 +77,12 @@ const UnifiedModelSchema = z.object({
     // Add other relevant fields like 'description', 'capabilities', etc.
 }).openapi('UnifiedModel');
 
-export { UnifiedModelSchema }; // Export the schema
+export { UnifiedModelSchema };
 
 export const ModelsListResponseSchema = z.object({
     success: z.literal(true),
-    data: z.array(UnifiedModelSchema) // Use the newly defined model schema
-}).openapi('ModelsListResponse'); // Register as component
+    data: z.array(UnifiedModelSchema)
+}).openapi('ModelsListResponse');
 
 // --- Schema for Quick, One-Off Text Generation Request ---
 export const AiGenerateTextRequestSchema = z.object({
@@ -95,12 +95,8 @@ export const AiGenerateTextRequestSchema = z.object({
     }),
     systemMessage: z.string().optional().openapi({
         example: 'You are an expert programmer. Provide concise and relevant suggestions.',
-        description: 'Optional system message to guide the AI.'
+        description: 'Optional system message to guide the AI behavior and persona.'
     }),
-    // Add optional messages field if few-shot is desired for this endpoint
-    // messages: z.array(messageSchema).optional().openapi({
-    //  description: 'Optional few-shot examples or preceding context.'
-    // }),
 }).openapi('AiGenerateTextRequest');
 
 // --- Schema for Quick, One-Off Text Generation Response ---
@@ -111,61 +107,141 @@ export const AiGenerateTextResponseSchema = z.object({
     })
 }).openapi('AiGenerateTextResponse');
 
-
-
-// --- Base Schema for Structured Data Configuration (for validation of static parts) ---
+// --- Base Schema for Structured Data Configuration ---
 export const BaseStructuredDataConfigSchema = z.object({
     name: z.string().min(1),
     description: z.string().min(1),
-    // We cannot include 'schema: z.ZodSchema' here in a type-safe generic way.
-    // The actual schema instance is stored separately in the runtime configuration object.
-    modelSettings: AiSdkOptionsSchema.optional(), // Use the existing AiSdkOptionsSchema
+    modelSettings: AiSdkOptionsSchema.optional(), // Use the updated AiSdkOptionsSchema
     systemPrompt: z.string().optional(),
-    promptTemplate: z.string().min(1).refine(s => s.includes('{userInput}'), {
+    promptTemplate: z.string().min(1).optional().refine(s => s?.includes('{userInput}'), {
         message: "promptTemplate must include the placeholder '{userInput}'"
     }),
 }).openapi('BaseStructuredDataConfig');
 
-
 // --- Schemas for Structured Data Generation ---
-
-// Define the structure for the configuration of each structured task
 export type BaseStructuredDataConfig = z.infer<typeof BaseStructuredDataConfigSchema>;
 
-
-// --- Keep the TypeScript Interface for Runtime Use ---
-// This interface correctly types the complete structure including the specific schema
 export interface StructuredDataSchemaConfig<T extends z.ZodTypeAny> extends BaseStructuredDataConfig {
-    schema: T; // The actual Zod schema for the output
+    schema: T;
 }
 
-// Input schema for the structured data endpoint
 export const AiGenerateStructuredRequestSchema = z.object({
     schemaKey: z.string().min(1).openapi({
-        description: "The key identifying the predefined structured task to perform.",
+        description: "The key identifying the predefined structured task configuration.",
         example: "filenameSuggestion"
     }),
     userInput: z.string().min(1).openapi({
-        description: "The user's input or context for the task.",
+        description: "The user's input or context for the structured generation task.",
         example: "A react component for displaying user profiles"
     }),
-    provider: z.enum(AI_API_PROVIDERS).or(z.string()).optional().openapi({
-        description: "Optional: Override the default AI provider for this task."
-    }),
-    options: AiSdkOptionsSchema.optional().openapi({
-        description: "Optional: Override default model options (temperature, etc.) for this task."
-    }),
+    // provider: z.enum(AI_API_PROVIDERS).or(z.string()).optional().openapi({
+    //     description: "Optional: Override the default AI provider defined in the task configuration."
+    // }),
+    // options: AiSdkOptionsSchema.optional().openapi({
+    //     description: "Optional: Override default model options (temperature, etc.) defined in the task configuration."
+    // }),
 }).openapi('AiGenerateStructuredRequest');
 
-// Generic response schema for the structured data endpoint
-// The actual 'data.output' structure depends on the specific 'schemaKey' used
 export const AiGenerateStructuredResponseSchema = z.object({
     success: z.literal(true),
     data: z.object({
-        output: z.any().openapi({ description: "The generated structured data, matching the schema defined by the 'schemaKey'." })
-        // You could add metadata here if needed, like model used, tokens, etc.
+        output: z.any().openapi({ description: "The generated structured data, validated against the schema defined by the 'schemaKey'." })
+        // Consider adding metadata: model used, tokens, latency, etc.
     })
 }).openapi('AiGenerateStructuredResponse');
+
+
+
+
+// Define the Zod schema for filename suggestions
+export const FilenameSuggestionSchema = z.object({
+    suggestions: z.array(z.string()).length(5).openapi({
+        description: "An array of exactly 5 suggested filenames.",
+        example: ["stringUtils.ts", "textHelpers.ts", "stringManipulators.ts", "strUtils.ts", "stringLib.ts"]
+    }),
+    reasoning: z.string().optional().openapi({
+        description: "Brief reasoning for the suggestions.",
+        example: "Suggestions focus on clarity and common naming conventions for utility files."
+    })
+}).openapi("FilenameSuggestionOutput");
+
+// Define other schemas as needed...
+// const CodeReviewSchema = z.object({ ... });
+
+// Central object mapping keys to structured task configurations
+// Place this here or in a separate config file (e.g., gen-ai-config.ts) and import it
+export const structuredDataSchemas = {
+    filenameSuggestion: {
+        // These fields match BaseStructuredDataConfigSchema
+        name: "Filename Suggestion",
+        description: "Suggests 5 suitable filenames based on a description of the file's content.",
+        // promptTemplate can be included to help with the prompt, but it's not required
+        promptTemplate: "Based on the following file description, suggest 5 suitable and conventional filenames. File Description: {userInput}",
+        systemPrompt: "You are an expert programmer specializing in clear code organization and naming conventions. Provide concise filename suggestions.",
+        // modelSettings: {
+        //     model: LOW_MODEL_CONFIG.model,
+        //     temperature: LOW_MODEL_CONFIG.temperature,
+        // },
+        // This field is part of the interface, but not the base Zod schema
+        schema: FilenameSuggestionSchema, // The actual Zod schema instance
+    },
+    // Example of another entry
+    basicSummary: {
+        name: "Basic Summary",
+        description: "Generates a short summary of the input text.",
+        promptTemplate: "Summarize the following text concisely: {userInput}",
+        systemPrompt: "You are a summarization expert.",
+        // modelSettings: { model: LOW_MODEL_CONFIG.model, temperature: LOW_MODEL_CONFIG.temperature, maxTokens: LOW_MODEL_CONFIG.max_tokens },
+        schema: z.object({ // Define the schema directly here
+            summary: z.string().openapi({ description: "The generated summary." })
+        }).openapi("BasicSummaryOutput")
+    },
+    // Add more structured tasks here...
+} satisfies Record<string, StructuredDataSchemaConfig<any>>;
+
+
+
+export const FileSummaryListResponseSchema = z.object({
+    success: z.literal(true),
+    data: z.array(ProjectFileSchema)
+}).openapi('FileSummaryListResponse');
+
+export const SummarizeFilesResponseSchema = z.object({
+    success: z.literal(true),
+    included: z.number().int().openapi({ example: 5 }),
+    skipped: z.number().int().openapi({ example: 2 }),
+    message: z.string().openapi({ example: 'Files summarized successfully.' })
+}).openapi('SummarizeFilesResponse');
+
+export const RemoveSummariesResponseSchema = z.object({
+    success: z.literal(true),
+    removedCount: z.number().int().openapi({ example: 3 }),
+    message: z.string().openapi({ example: 'Summaries removed.' })
+}).openapi('RemoveSummariesResponse');
+
+export const SuggestFilesResponseSchema = z.object({
+    success: z.literal(true),
+    recommendedFileIds: z.array(z.string().min(1)).openapi({ example: ['file_1a2b3c4d', 'file_i9j0k1l2'] }),
+}).openapi('SuggestFilesResponse');
+
+// Export internal schemas needed by routes
+export const FileSuggestionsZodSchema = z.object({
+    fileIds: z.array(z.string())
+});
+
+export const FileSuggestionsJsonSchema = {
+    type: "object",
+    properties: {
+        fileIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "An array of file IDs relevant to the user input"
+        }
+    },
+    required: ["fileIds"],
+    additionalProperties: false
+};
+
 
 
 // --- Type Exports ---
@@ -174,3 +250,6 @@ export type AiGenerateTextRequest = z.infer<typeof AiGenerateTextRequestSchema>;
 export type AiGenerateStructuredRequest = z.infer<typeof AiGenerateStructuredRequestSchema>;
 export type UnifiedModel = z.infer<typeof UnifiedModelSchema>;
 export type AiMessage = z.infer<typeof AiMessageSchema>;
+
+
+

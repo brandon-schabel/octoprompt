@@ -1,7 +1,6 @@
 import { ChangeEvent, KeyboardEvent, ClipboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { nanoid } from 'nanoid';
 import { MessageSquareIcon, PlusIcon, Check, X, Edit2, Trash2, Expand, Settings2Icon, Copy, GitFork, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { Message } from "@ai-sdk/react";
@@ -11,8 +10,8 @@ import { useChatModelParams } from '@/components/chat/hooks/use-chat-model-param
 import { useActiveChatId } from '@/hooks/api/use-state-api';
 import { SlidingSidebar } from '@/components/sliding-sidebar';
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
-import { Chat } from '@/hooks/generated';
-import { cn } from '@ui/lib/utils';
+import { AiSdkOptions, Chat } from '@/hooks/generated';
+import { cn } from '@/lib/utils';
 import {
   Command, CommandEmpty, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
   Button,
@@ -44,26 +43,21 @@ export function ModelSettingsPopover() {
     setTopP,
     setFreqPenalty,
     setPresPenalty,
-    setStream,
     isTempDisabled,
   } = useChatModelParams();
 
   // Use synchronized state hooks for debounced updates
-  const [temperature, updateTemperature] = useSynchronizedState(settings.temperature, setTemperature, 300, isTempDisabled);
-  const [maxTokens, updateMaxTokens] = useSynchronizedState(settings.max_tokens, setMaxTokens);
-  const [topP, updateTopP] = useSynchronizedState(settings.top_p, setTopP);
-  const [freqPenalty, updateFreqPenalty] = useSynchronizedState(settings.frequency_penalty, setFreqPenalty);
-  const [presPenalty, updatePresPenalty] = useSynchronizedState(settings.presence_penalty, setPresPenalty);
-  const [stream, updateStream] = useSynchronizedState(settings.stream, setStream);
+  const [temperature, updateTemperature] = useSynchronizedState(settings.temperature ?? 0.7, setTemperature, 300, isTempDisabled);
+  const [maxTokens, updateMaxTokens] = useSynchronizedState(settings.maxTokens ?? 100000, setMaxTokens);
+  const [topP, updateTopP] = useSynchronizedState(settings.topP ?? 0.9, setTopP);
+  const [freqPenalty, updateFreqPenalty] = useSynchronizedState(settings.frequencyPenalty ?? 0, setFreqPenalty);
+  const [presPenalty, updatePresPenalty] = useSynchronizedState(settings.presencePenalty ?? 0, setPresPenalty);
 
   // Using useCallback for handlers, although potentially overkill for simple updates
   const handleSliderChange = useCallback((updater: (val: number) => void) => (value: number[]) => {
     updater(value[0]);
   }, []);
 
-  const handleStreamToggle = useCallback((checked: boolean) => {
-    updateStream(checked);
-  }, [updateStream]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -101,11 +95,7 @@ export function ModelSettingsPopover() {
             <Label htmlFor="presence_penalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
             <Slider id="presence_penalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={handleSliderChange(updatePresPenalty)} />
           </div>
-          {/* Stream Toggle */}
-          <div className="flex items-center space-x-2">
-            <Switch id="stream" checked={stream} onCheckedChange={handleStreamToggle} />
-            <Label htmlFor="stream">Enable Streaming</Label>
-          </div>
+
         </div>
       </PopoverContent>
     </Popover>
@@ -1004,7 +994,7 @@ function ChatPage() {
 
     // Call the sendMessage function from useAIChat, passing the current input
     // AND the current modelSettings object.
-    sendMessage(input, modelSettings); // <-- Pass modelSettings here
+    sendMessage(input, modelSettings as AiSdkOptions); // <-- Pass modelSettings here
 
     // No need to call sdkHandleSubmit directly anymore for this form.
     // setInput('') is handled within sendMessage now.

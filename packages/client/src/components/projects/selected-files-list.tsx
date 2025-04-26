@@ -1,7 +1,7 @@
 // packages/client/src/components/projects/selected-files-list.tsx
 import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from "lucide-react"
 import { Button } from '@ui'
-import { cn } from "@ui/lib/utils"
+import { cn } from "@/lib/utils"
 import { useHotkeys } from "react-hotkeys-hook"
 import { Badge } from '@ui'
 import { FormatTokenCount } from "../format-token-count"
@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner"
 import { useUpdateProjectTabState } from "@/hooks/api/global-state/updaters"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
-import { formatShortcut } from "@ui/lib/shortcuts"
+import { formatShortcut } from "@/lib/shortcuts"
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useProjectTab } from "@/hooks/api/global-state/selectors"
 import { FileViewerDialog } from "../navigation/file-viewer-dialog"

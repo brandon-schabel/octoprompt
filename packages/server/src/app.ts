@@ -3,7 +3,6 @@ import { logger } from 'hono/logger';
 import { ApiError } from 'shared';
 import { chatRoutes } from './routes/chat-routes';
 import { genAiRoutes } from './routes/gen-ai-routes';
-import { structuredOutputRoutes } from './routes/structured-output-routes';
 import { ticketRoutes } from './routes/ticket-routes';
 import { projectRoutes } from './routes/project-routes';
 import { providerKeyRoutes } from './routes/provider-key-routes';
@@ -51,7 +50,6 @@ app.get("/api/health", (c) => c.json({ success: true }));
 
 // register all hono routes
 app.route('/', chatRoutes)
-app.route('/', structuredOutputRoutes)
 app.route('/', ticketRoutes)
 app.route('/', projectRoutes)
 app.route('/', providerKeyRoutes)

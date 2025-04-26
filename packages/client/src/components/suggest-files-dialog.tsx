@@ -95,14 +95,15 @@ export function SuggestedFilesDialog({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={handleDialogClose}>
-                        Close
-                    </Button>
-                    <Button onClick={handleSelectAll}>
+                    <Button onClick={handleSelectAll} variant="outline">
                         {suggestedFiles.every((file) => localSelectedFiles.has(file.id))
                             ? "Deselect All"
                             : "Select All"}
                     </Button>
+                    <Button onClick={handleDialogClose}>
+                        Confirm
+                    </Button>
+
                 </DialogFooter>
             </DialogContent>
         </Dialog>

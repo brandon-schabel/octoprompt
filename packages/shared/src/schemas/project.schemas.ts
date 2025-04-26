@@ -101,47 +101,6 @@ export const FileListResponseSchema = z.object({
     data: z.array(ProjectFileSchema)
 }).openapi('FileListResponse');
 
-export const FileSummaryListResponseSchema = z.object({
-    success: z.literal(true),
-    data: z.array(ProjectFileSchema)
-}).openapi('FileSummaryListResponse');
-
-export const SummarizeFilesResponseSchema = z.object({
-    success: z.literal(true),
-    included: z.number().int().openapi({ example: 5 }),
-    skipped: z.number().int().openapi({ example: 2 }),
-    message: z.string().openapi({ example: 'Files summarized successfully.' })
-}).openapi('SummarizeFilesResponse');
-
-export const RemoveSummariesResponseSchema = z.object({
-    success: z.literal(true),
-    removedCount: z.number().int().openapi({ example: 3 }),
-    message: z.string().openapi({ example: 'Summaries removed.' })
-}).openapi('RemoveSummariesResponse');
-
-export const SuggestFilesResponseSchema = z.object({
-    success: z.literal(true),
-    recommendedFileIds: z.array(z.string().min(1)).openapi({ example: ['file_1a2b3c4d', 'file_i9j0k1l2'] }),
-}).openapi('SuggestFilesResponse');
-
-// Export internal schemas needed by routes
-export const FileSuggestionsZodSchema = z.object({
-    fileIds: z.array(z.string())
-});
-
-export const FileSuggestionsJsonSchema = {
-    type: "object",
-    properties: {
-        fileIds: {
-            type: "array",
-            items: { type: "string" },
-            description: "An array of file IDs relevant to the user input"
-        }
-    },
-    required: ["fileIds"],
-    additionalProperties: false
-};
-
 // Type exports
 export type Project = z.infer<typeof ProjectSchema>;
 export type ProjectFile = z.infer<typeof ProjectFileSchema>;

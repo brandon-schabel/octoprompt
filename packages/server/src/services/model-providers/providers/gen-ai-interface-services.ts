@@ -337,7 +337,6 @@ export async function generateSingleText({
     return text;
 }
 
-
 /**
 * Helper function for generating structured JSON objects.
 */
