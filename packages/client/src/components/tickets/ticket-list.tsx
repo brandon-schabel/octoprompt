@@ -1,5 +1,5 @@
 import { Ticket } from "@/hooks/generated";
-import { Badge } from "../ui/badge";
+import { Badge } from '@ui';
 
 interface TicketListProps {
     tickets: Ticket[];

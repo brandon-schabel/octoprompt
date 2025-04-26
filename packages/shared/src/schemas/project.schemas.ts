@@ -154,8 +154,6 @@ export const ProjectSummaryResponseSchema = z.object({
     summary: z.string()
 }).openapi('ProjectSummaryResponse');
 
-
-
 export const projectsApiValidation = {
     create: { body: CreateProjectBodySchema },
     getOrDelete: { params: ProjectIdParamsSchema },

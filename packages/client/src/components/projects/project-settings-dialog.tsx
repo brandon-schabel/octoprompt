@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
+import { Button } from '@ui'
+import { Switch } from '@ui'
 import { Loader2, RefreshCw, Settings } from 'lucide-react'
 import {
     Dialog,
@@ -8,16 +8,16 @@ import {
     DialogTitle,
     DialogTrigger,
     DialogDescription,
-} from '@/components/ui/dialog'
+} from '@ui'
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Slider } from '@/components/ui/slider'
+} from '@ui'
+import { Input } from '@ui'
+import { Slider } from '@ui'
 import { useUpdateActiveProjectTab, useUpdateSettings } from '@/hooks/api/global-state/updaters'
 import { useSyncProject, } from '@/hooks/api/use-projects-api'
 import { useSettings } from '@/hooks/api/global-state/selectors'

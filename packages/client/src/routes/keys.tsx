@@ -1,16 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useGetKeys, useCreateKey, useDeleteKey } from '@/hooks/api/use-keys-api'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@ui'
+import { Input } from '@ui'
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@ui'
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select"
+} from "@ui"
 import { ExternalLinkIcon, Copy } from 'lucide-react'
 import { PROVIDERS } from '@/constants/providers-constants'
 import { InfoTooltip } from '@/components/info-tooltip'

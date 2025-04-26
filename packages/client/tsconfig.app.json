@@ -23,6 +23,12 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
+      "@ui": [
+        "../ui-lib/index.ts"
+      ],
+      "@ui/*": [
+        "../ui-lib/src/*"
+      ],
       "@/*": [
         "./src/*"
       ],
@@ -35,7 +41,8 @@
     ]
   },
   "include": [
-    "src"
+    "src",
+    "../ui-lib",
   ],
   "exclude": [
     "**/*.test.ts",

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useGenerateStructuredOutput } from "@/hooks/api/use-structured-output";
 import { createFileRoute } from "@tanstack/react-router";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "@ui";
+import { Button } from "@ui";
 
 export const Route = createFileRoute('/structured-output-demo')({
     component: DemoGenerateName,

@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { zodToStructuredJsonSchema, toOpenRouterSchema } from "shared/src/structured-outputs/structured-output-utils";
-import { DEFAULT_MODEL_CONFIGS } from "shared";
-import { createUnifiedProviderService } from "@/services/model-providers/providers/unified-provider-service";
+import { aiProviderInterfaceServices } from "@/services/model-providers/providers/ai-provider-interface-services";
+import { LOW_MODEL_CONFIG } from "shared";
 
 // Create a singleton instance of the provider service
-const unifiedProvider = createUnifiedProviderService(process.env.NODE_ENV !== 'production');
+const unifiedProvider = aiProviderInterfaceServices(process.env.NODE_ENV !== 'production');
 
 /**
  * Strips triple backticks and also removes JS/JSON-style comments & trailing commas.
@@ -128,8 +128,8 @@ export async function fetchStructuredOutput<T>(
         zodSchema,
         jsonSchema,
         schemaName = "StructuredResponse",
-        model = DEFAULT_MODEL_CONFIGS['fetch-structured-output'].model,
-        temperature = DEFAULT_MODEL_CONFIGS['fetch-structured-output'].temperature,
+        model = LOW_MODEL_CONFIG.model,
+        temperature = LOW_MODEL_CONFIG.temperature,
         chatId = "structured-chat",
         tempId,
     } = params;
@@ -139,11 +139,8 @@ export async function fetchStructuredOutput<T>(
 
     // 2) Begin streaming request
     const streamResult = await unifiedProvider.processMessage({
-        chatId,
         userMessage,
-        provider: "openrouter",
-        systemMessage,
-        tempId,
+        model: model ?? LOW_MODEL_CONFIG.model,
         options: {
             model,
             temperature,

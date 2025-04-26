@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { ProjectIdParamsSchema } from './project.schemas';
 // --- Base Schema for a Prompt ---
 // Represents the structure of a single Prompt object as returned by the API
 export const PromptSchema = z.object({
@@ -30,17 +31,9 @@ export const PromptIdParamsSchema = z.object({
     promptId: z.string().min(1).openapi({
         param: { name: 'promptId', in: 'path' },
         example: 'p1a2b3c4-e5f6-7890-1234-567890abcdef',
-        description: 'The UUID of the prompt'
+        description: 'The ID of the prompt'
     })
 }).openapi('PromptIdParams');
-
-export const ProjectIdParamsSchema = z.object({
-    projectId: z.string().min(1).openapi({
-        param: { name: 'projectId', in: 'path' },
-        example: 'project-789',
-        description: 'The ID of the project'
-    })
-}).openapi('ProjectIdParams');
 
 export const ProjectAndPromptIdParamsSchema = z.object({
     projectId: z.string().min(1).openapi({
@@ -54,7 +47,6 @@ export const ProjectAndPromptIdParamsSchema = z.object({
         description: 'The ID of the prompt'
     })
 }).openapi('ProjectAndPromptIdParams');
-
 
 // --- Response Schemas ---
 export const PromptResponseSchema = z.object({
@@ -106,7 +98,6 @@ export const OptimizePromptRequestSchema = z.object({
     }),
     // Add other potential fields if needed, e.g., targetAudience, desiredTone etc.
 }).openapi('OptimizePromptRequest');
-
 
 // --- Response Schema ---
 export const OptimizePromptResponseSchema = z.object({

@@ -3,7 +3,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from './components/ui/sonner'
+import { Toaster } from '@ui'
 
 // Initialize core services
 const queryClient = new QueryClient()

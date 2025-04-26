@@ -1,8 +1,8 @@
 import { db } from "@/utils/database";
 import { CreatePromptBody, UpdatePromptBody, Prompt, PromptSchema, PromptProject, PromptProjectSchema } from "shared/src/schemas/prompt.schemas";
-import { DEFAULT_MODEL_CONFIGS } from 'shared';
+import { HIGH_MODEL_CONFIG } from 'shared';
 import { promptsMap } from '../utils/prompts-map';
-import { unifiedProvider } from './model-providers/providers/unified-provider-service';
+import { aiProviderInterface } from './model-providers/providers/ai-provider-interface-services';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 
 const formatToISO = (sqlDate: string) => new Date(sqlDate).toISOString();
@@ -160,7 +160,7 @@ ${promptsMap.contemplativePrompt}
 
     try {
         // Get config for the prompt optimization task
-        const cfg = DEFAULT_MODEL_CONFIGS['optimize-prompt'];
+        const cfg = HIGH_MODEL_CONFIG
         const provider = cfg.provider as APIProviders || 'openai';
         const modelId = cfg.model;
 
@@ -170,7 +170,7 @@ ${promptsMap.contemplativePrompt}
         }
 
         // Use generateSingleText for non-streaming prompt generation
-        const optimizedPrompt = await unifiedProvider.generateSingleText({
+        const optimizedPrompt = await aiProviderInterface.generateSingleText({
             provider: provider,
             systemMessage: systemMessage,
             prompt: userMessage, // User context is the prompt here

@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { readFile } from "fs/promises";
 import { Database } from "bun:sqlite";
-import { unifiedProvider } from "../model-providers/providers/unified-provider-service";
+import { aiProviderInterface } from "../model-providers/providers/ai-provider-interface-services";
 import { resolvePath } from "@/utils/path-utils";
-import {  DEFAULT_MODEL_CONFIGS } from "shared"; 
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 // Zod schema for the expected AI response
@@ -50,7 +49,7 @@ export async function generateAIFileChange(
   const originalContent = await readLocalFileContent(filePath);
 
   // 2. Prepare AI request
-  const cfg = DEFAULT_MODEL_CONFIGS['generate-file-change'] || DEFAULT_MODEL_CONFIGS['generate-structured-output']; // Use specific or fallback config
+  const cfg = MEDIUM_MODEL_CONFIG;
   const provider = params.provider || cfg.provider as APIProviders || 'openai'; // Default provider good at JSON
   const modelId = params.model || cfg.model;
   const temperature = params.temperature ?? cfg.temperature;
@@ -81,7 +80,7 @@ User Request: ${prompt}
 
   try {
     // 3. Call generateStructuredData
-    const aiResponse = await unifiedProvider.generateStructuredData({
+    const aiResponse = await aiProviderInterface.generateStructuredData({
       provider: provider,
       systemMessage: systemMessage,
       prompt: userPrompt, // Combine original content and user request in the prompt
@@ -183,10 +182,10 @@ export async function confirmFileChange(db: Database, changeId: number): Promise
   // Check if the record exists and is pending before confirming
   const existing = await getFileChange(db, changeId);
   if (!existing) {
-     throw Object.assign(new Error(`File change with ID ${changeId} not found.`), { code: 'NOT_FOUND' });
+    throw Object.assign(new Error(`File change with ID ${changeId} not found.`), { code: 'NOT_FOUND' });
   }
   if (existing.status !== 'pending') {
-     throw Object.assign(new Error(`File change with ID ${changeId} is already ${existing.status}.`), { code: 'INVALID_STATE' });
+    throw Object.assign(new Error(`File change with ID ${changeId} is already ${existing.status}.`), { code: 'INVALID_STATE' });
   }
 
   const stmt = db.prepare("UPDATE file_changes SET status = 'confirmed' WHERE id = ?");
@@ -196,6 +195,6 @@ export async function confirmFileChange(db: Database, changeId: number): Promise
     return { status: "confirmed", message: `File change ${changeId} confirmed successfully.` };
   } else {
     // This case might indicate a race condition or unexpected DB state
-     throw new Error(`Failed to confirm file change ${changeId}. No rows updated.`);
+    throw new Error(`Failed to confirm file change ${changeId}. No rows updated.`);
   }
 }

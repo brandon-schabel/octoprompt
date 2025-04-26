@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useOptimistic, useState, useTransition } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
+import { Button } from '@ui'
+import { Input } from "@ui"
+import { Switch } from "@ui"
 import {
     Card,
     CardHeader,
@@ -10,8 +10,8 @@ import {
     CardDescription,
     CardContent,
     CardFooter,
-} from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@ui"
+import { Checkbox } from "@ui"
 import { X, Info, FileText, ChevronDown } from "lucide-react"
 import {
     useGetProjectFiles,
@@ -32,7 +32,7 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select"
+} from "@ui"
 import { FormatTokenCount } from "@/components/format-token-count"
 import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
 import {
@@ -42,9 +42,9 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog"
+} from "@ui"
 import { toast } from "sonner"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@ui"
 import { useSettings } from "@/hooks/api/global-state/selectors"
 import { ProjectFile } from "@/hooks/generated"
 import { AppSettings } from "shared/src/schemas/global-state-schema"

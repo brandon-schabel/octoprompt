@@ -3,7 +3,7 @@ import type { TypedResponse } from 'hono';
 import {
     ApiError,
     buildCombinedFileSummaries,
-    DEFAULT_MODEL_CONFIGS,
+    MEDIUM_MODEL_CONFIG,
     // Import all schemas from shared
 
 } from "shared";
@@ -260,22 +260,7 @@ const getProjectSummaryRoute = createRoute({
     },
 });
 
-const suggestFilesRoute = createRoute({
-    method: 'post',
-    path: '/api/projects/{projectId}/suggest-files',
-    tags: ['Projects', 'Files', 'AI'],
-    summary: 'Suggest relevant files based on user input and project context',
-    request: {
-        params: ProjectIdParamsSchema,
-        body: { content: { 'application/json': { schema: SuggestFilesBodySchema } } },
-    },
-    responses: {
-        200: { content: { 'application/json': { schema: SuggestFilesResponseSchema } }, description: 'Successfully suggested files' },
-        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error or AI processing error' },
-    },
-});
+
 
 // --- Hono App Instance ---
 export const projectRoutes = new OpenAPIHono()
@@ -530,61 +515,7 @@ export const projectRoutes = new OpenAPIHono()
         return c.json(payload, 200);
     })
 
-    .openapi(suggestFilesRoute, async (c) => {
-        const { projectId } = c.req.valid('param');
-        const { userInput } = c.req.valid('json');
 
-        const project = await projectService.getProjectById(projectId);
-        if (!project) {
-            throw new ApiError(404, `Project not found: ${projectId}`, "PROJECT_NOT_FOUND");
-        }
-        const projectSummary = await getFullProjectSummary(projectId);
-
-        const systemPrompt = `
-You are a code assistant that recommends relevant files based on user input.
-You have a list of file summaries and a user request.
-Return only valid JSON with the shape: {"fileIds": ["uuid1", "uuid2"]}
-Guidelines:
-- For simple tasks: return max 5 files
-- For complex tasks: return max 10 files
-- For very complex tasks: return max 20 files
-- Do not add comments in your response
-- Strictly follow the JSON schema, do not add any additional properties or comments`;
-
-        const userMessage = `
-User Query: ${userInput}
-Below is a combined summary of project files:
-${projectSummary}`;
-
-        try {
-            const cfg = DEFAULT_MODEL_CONFIGS['suggest-code-files'];
-            const result = await fetchStructuredOutput({
-                userMessage,
-                systemMessage: systemPrompt,
-                zodSchema: FileSuggestionsZodSchema,
-                jsonSchema: FileSuggestionsJsonSchema,
-                schemaName: "FileSuggestions",
-                model: cfg.model,
-                temperature: cfg.temperature,
-                chatId: `project-${projectId}-suggest-files`
-            });
-
-            const validatedResult = result as z.infer<typeof FileSuggestionsZodSchema>;
-
-            const payload = {
-                success: true,
-                recommendedFileIds: validatedResult.fileIds,
-            } satisfies z.infer<typeof SuggestFilesResponseSchema>;
-
-            const response: TypedResponse<z.infer<typeof SuggestFilesResponseSchema>, 200, 'json'> = c.json(payload, 200);
-            return response;
-
-        } catch (error: any) {
-            console.error("[SuggestFiles Project] Error:", error);
-            if (error instanceof ApiError) throw error;
-            throw new ApiError(500, `Failed to suggest files: ${error.message}`, "AI_SUGGESTION_ERROR");
-        }
-    })
 
     // --- Debug Route (Remains unchanged, validation added before) ---
     .get("/api/projects/:projectId/debug-file-sync",

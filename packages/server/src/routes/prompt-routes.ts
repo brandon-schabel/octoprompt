@@ -8,7 +8,7 @@ import {
     CreatePromptBodySchema,
     UpdatePromptBodySchema,
     PromptIdParamsSchema,
-    ProjectIdParamsSchema,
+
     ProjectAndPromptIdParamsSchema,
     PromptResponseSchema,
     PromptListResponseSchema,
@@ -18,6 +18,7 @@ import {
     OptimizePromptRequestSchema
 } from "shared/src/schemas/prompt.schemas";
 import { addPromptToProject, createPrompt, deletePrompt, getPromptById, listAllPrompts, listPromptsByProject, removePromptFromProject, updatePrompt, optimizePrompt } from "@/services/prompt-service";
+import { ProjectIdParamsSchema } from 'shared/src/schemas/project.schemas';
 
 
 // --- Route Definitions ---

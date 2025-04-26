@@ -11,10 +11,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@ui"
+import { Button } from "@ui"
+import { Textarea } from "@ui"
+import { Alert, AlertDescription } from "@ui"
 import { LoaderPinwheel } from "lucide-react";
 import { DiffViewer } from "./diff-viewer";
 

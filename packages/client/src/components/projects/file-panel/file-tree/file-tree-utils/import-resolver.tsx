@@ -2,7 +2,7 @@
 // This file implements the logic to recursively find and resolve all file imports for a given file.
 // It supports:
 // - Relative imports (e.g. "./something", "../other")
-// - Alias imports as defined in tsconfig paths (e.g. "@/..." or "@components/...")
+// - Alias imports as defined in tsconfig paths (e.g. "@/..." or "@ui/...")
 // - Ignores package imports (like "react", "@tanstack/react-router")
 // - Recursively includes all imports of imported files
 //
@@ -217,11 +217,11 @@ function resolveImportPath(
 
 function isAliasImport(importPath: string, aliases: AliasMap): boolean {
   // If any alias key matches the start of importPath (like "@/"), consider it an alias import.
-  // Aliases can have patterns like "@/*", "@components/*"
+  // Aliases can have patterns like "@/*", "@ui/*"
   // We'll match the part before the first slash against alias keys.
   // i.e. if importPath = "@/components/ui/menubar", 
   // keys might be "@/*": first part is "@"
-  // or "@components/*": first segment is "@components"
+  // or "@ui/*": first segment is "@ui"
   //
   // We'll need to test each alias key pattern.
 

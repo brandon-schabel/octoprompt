@@ -1,5 +1,5 @@
 import { Component, type PropsWithChildren } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@ui'
 import { AlertCircle } from 'lucide-react'
 
 type ErrorBoundaryState = {

@@ -8,8 +8,8 @@ import React, {
     useImperativeHandle,
     RefObject,
 } from "react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@ui";
+import { Checkbox } from "@ui";
 import {
     Folder,
     File as FileIcon,
@@ -28,10 +28,10 @@ import {
     ContextMenuItem,
     ContextMenuSeparator,
     ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+} from "@ui";
 
 import { useHotkeys } from "react-hotkeys-hook";
-import { cn } from "@/lib/utils";
+import { cn } from "@ui/lib/utils";
 import { buildTsconfigAliasMap, getRecursiveImports } from "./file-tree-utils/import-resolver";
 import {
     toggleFile as toggleFileUtil,
@@ -45,7 +45,7 @@ import {
 } from "./file-tree-utils/file-node-tree-utils";
 import { buildNodeContent } from "@/components/projects/utils/projects-utils";
 
-import { getEditorUrl } from "@/lib/editor-urls";
+import { getEditorUrl } from "@/utils/editor-urls";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
 import { useRefreshProject } from "@/hooks/api/use-projects-api";
 import { ProjectFile } from "@/hooks/generated/types.gen";

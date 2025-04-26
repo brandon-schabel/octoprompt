@@ -2,6 +2,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { ApiError } from 'shared';
 import { chatRoutes } from './routes/chat-routes';
+import { genAiRoutes } from './routes/gen-ai-routes';
 import { structuredOutputRoutes } from './routes/structured-output-routes';
 import { ticketRoutes } from './routes/ticket-routes';
 import { projectRoutes } from './routes/project-routes';
@@ -57,7 +58,7 @@ app.route('/', providerKeyRoutes)
 app.route('/', adminRoutes)
 app.route('/', aiFileChangeRoutes)
 app.route('/', promptRoutes)
-
+app.route('/', genAiRoutes)
 // Global error handler
 app.onError((err, c) => {
     console.error("[ErrorHandler]", err);

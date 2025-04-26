@@ -1,18 +1,18 @@
 import * as React from "react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from '@ui'
+import { ScrollArea } from "@ui"
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer"
+} from "@ui"
 import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
 import { SelectedFilesList } from "@/components/projects/selected-files-list"
 import { useState } from "react"
 import { FormatTokenCount } from "../format-token-count"
-import { Badge } from "../ui/badge"
+import { Badge } from "@ui"
 import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 import { ProjectFile } from "@/hooks/generated"
 

@@ -5,8 +5,8 @@ import React, {
     MouseEvent as ReactMouseEvent,
     useMemo,
 } from 'react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@ui';
+import { cn } from '@ui/lib/utils';
 import { ChevronsLeft, ChevronsRight, X, LucideIcon } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage';
 

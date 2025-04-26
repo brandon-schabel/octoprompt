@@ -1,19 +1,19 @@
 import { ScanEye } from "lucide-react"
 import { toast } from "sonner"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@ui"
+import { TooltipProvider } from "@ui"
 import { TicketIcon } from "lucide-react"
 import { Copy } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from '@ui'
 import { ProjectSettingsDialog } from "../project-settings-dialog"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from '@ui'
 import { Link, useMatches } from "@tanstack/react-router"
 import { useState, useEffect } from "react"
 import { Pencil, Trash2, Icon } from "lucide-react"
 import { tab } from '@lucide/lab'
 import { useProjectTabActions } from "@/hooks/use-project-tab-actions"
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@ui"
 import { ProjectResponse } from "@/hooks/generated"
 import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 

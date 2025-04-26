@@ -1,5 +1,5 @@
 
-import { Button } from "../ui/button";
+import { Button } from '@ui';
 import { Plus } from "lucide-react";
 
 interface TicketEmptyStateProps {

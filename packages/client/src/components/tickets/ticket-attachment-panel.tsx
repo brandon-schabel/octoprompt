@@ -1,7 +1,7 @@
 import React from "react";
 import { useLinkFilesToTicket } from "../../hooks/api/use-tickets-api";
 import { ProjectFile } from "@/hooks/generated";
-
+import { Button } from '@ui';
 interface TicketAttachmentsPanelProps {
     ticketId: string;
     projectFiles: ProjectFile[];

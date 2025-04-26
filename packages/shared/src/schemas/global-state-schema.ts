@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { DEFAULT_MODEL_CONFIGS } from "../constants/model-default-configs";
 import { providerSchema, type APIProviders } from "./provider-key.schemas";
+import { LOW_MODEL_CONFIG } from "../constants/model-default-configs";
 
-const defaultModelConfigs = DEFAULT_MODEL_CONFIGS['default']
+const defaultModelConfigs = LOW_MODEL_CONFIG
 
 export const EDITOR_OPTIONS = [
     { value: "vscode", label: "VS Code" },
@@ -51,12 +51,12 @@ export const projectTabStateSchema = z.object({
 
 // Chat Model Settings (Defined once, used in AppSettings)
 export const chatModelSettingsSchema = z.object({
-    temperature: z.number().min(0).max(2).default(defaultModelConfigs.temperature).openapi({ description: "Controls randomness. Lower values make the model more deterministic.", example: 0.7 }),
-    max_tokens: z.number().min(100).max(Infinity).default(defaultModelConfigs.max_tokens).openapi({ description: "Maximum number of tokens to generate in the chat completion.", example: 4096 }),
-    top_p: z.number().min(0).max(1).default(defaultModelConfigs.top_p).openapi({ description: "Nucleus sampling parameter. Considers tokens with top_p probability mass.", example: 1 }),
-    frequency_penalty: z.number().min(-2).max(2).default(defaultModelConfigs.frequency_penalty).openapi({ description: "Penalizes new tokens based on their frequency in the text so far.", example: 0 }),
-    presence_penalty: z.number().min(-2).max(2).default(defaultModelConfigs.presence_penalty).openapi({ description: "Penalizes new tokens based on whether they appear in the text so far.", example: 0 }),
-    stream: z.boolean().default(defaultModelConfigs.stream).openapi({ description: "Whether to stream back partial progress.", example: true }),
+    temperature: z.number().min(0).max(2).default(defaultModelConfigs.temperature ?? 0.7).openapi({ description: "Controls randomness. Lower values make the model more deterministic.", example: 0.7 }),
+    max_tokens: z.number().min(100).max(Infinity).default(defaultModelConfigs.max_tokens ?? 4096).openapi({ description: "Maximum number of tokens to generate in the chat completion.", example: 4096 }),
+    top_p: z.number().min(0).max(1).default(defaultModelConfigs.top_p ?? 1).openapi({ description: "Nucleus sampling parameter. Considers tokens with top_p probability mass.", example: 1 }),
+    frequency_penalty: z.number().min(-2).max(2).default(defaultModelConfigs.frequency_penalty ?? 0).openapi({ description: "Penalizes new tokens based on their frequency in the text so far.", example: 0 }),
+    presence_penalty: z.number().min(-2).max(2).default(defaultModelConfigs.presence_penalty ?? 0).openapi({ description: "Penalizes new tokens based on whether they appear in the text so far.", example: 0 }),
+    // stream: z.boolean().default(defaultModelConfigs.stream ?? true).openapi({ description: "Whether to stream back partial progress.", example: true }),
 }).openapi('ChatModelSettings', { description: 'Configuration parameters for the AI chat model generation.' });
 export type ChatModelSettings = z.infer<typeof chatModelSettingsSchema>;
 
@@ -80,15 +80,15 @@ export const appSettingsSchema = z.object({
     hideInformationalTooltips: z.boolean().optional().default(false).openapi({ description: "Whether to hide tooltips that provide general information or tips." }),
     autoScrollEnabled: z.boolean().optional().default(true).openapi({ description: "Whether the chat view should automatically scroll to the bottom on new messages." }),
 
-    // Global Chat Settings (Referencing the detailed chatModelSettingsSchema fields)
+    // Global Chat Model Settings (Referencing the detailed modelSettingsSchema fields)
     provider: providerSchema.optional().default(defaultModelConfigs.provider as APIProviders).openapi({ description: "Default AI provider to use for chat.", example: "openai" }),
-    model: z.string().optional().default(defaultModelConfigs.model).openapi({ description: "Default AI model name to use for chat.", example: "gpt-4-turbo-preview" }),
+    model: z.string().optional().default(defaultModelConfigs.model ?? "gpt-4o").openapi({ description: "Default AI model name to use for chat.", example: "gpt-4-turbo-preview" }),
     temperature: chatModelSettingsSchema.shape.temperature,
     max_tokens: chatModelSettingsSchema.shape.max_tokens,
     top_p: chatModelSettingsSchema.shape.top_p,
     frequency_penalty: chatModelSettingsSchema.shape.frequency_penalty,
     presence_penalty: chatModelSettingsSchema.shape.presence_penalty,
-    stream: chatModelSettingsSchema.shape.stream,
+    // stream: chatModelSettingsSchema.shape.stream,
 }).openapi('AppSettings', { description: 'Global application settings, including theme, AI provider configuration, and default chat parameters.' });
 
 

@@ -1,10 +1,10 @@
 import { structuredOutputSchemas, StructuredOutputType, InferStructuredOutput } from "shared/src/structured-outputs/structured-output-schema";
-import { ApiError } from "shared";
+import { ApiError, LOW_MODEL_CONFIG } from "shared";
 // No longer need zodToStructuredJsonSchema or fetchStructuredOutput utils here
 import { z } from "zod";
-import { DEFAULT_MODEL_CONFIGS, } from "shared";
+import { } from "shared";
 // Import the refactored unified provider
-import { unifiedProvider } from "./model-providers/providers/unified-provider-service";
+import { aiProviderInterface } from "./model-providers/providers/ai-provider-interface-services";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 
@@ -27,7 +27,7 @@ export async function generateStructuredOutput<T extends StructuredOutputType>(
     params: GenerateStructuredOutputOptions<T>
 ): Promise<InferStructuredOutput<T>> {
 
-    const cfg = DEFAULT_MODEL_CONFIGS['generate-structured-output']; // e.g., { provider: 'openai', model: 'gpt-4o', temperature: 0.1 }
+    const cfg = LOW_MODEL_CONFIG // e.g., { provider: 'openai', model: 'gpt-4o', temperature: 0.1 }
 
     const {
         outputType,
@@ -53,7 +53,7 @@ export async function generateStructuredOutput<T extends StructuredOutputType>(
 
     try {
         // Use the generateStructuredData helper from the unified provider
-        const validatedResult = await unifiedProvider.generateStructuredData({
+        const validatedResult = await aiProviderInterface.generateStructuredData({
             provider: provider,
             prompt: userMessage, // Pass user message as prompt
             schema: zodSchema as z.ZodType<InferStructuredOutput<T>>,

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Textarea } from "../ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ui";
+import { Button } from "@ui";
+import { Input } from '@ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui";
+import { Textarea } from "@ui";
 import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";

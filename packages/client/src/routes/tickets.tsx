@@ -1,7 +1,7 @@
 import React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { TicketDialog } from "../components/tickets/ticket-dialog";
-import { Button } from "../components/ui/button";
+import { Button } from "../../../ui-lib/src/ui/button";
 import { Plus } from "lucide-react";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";

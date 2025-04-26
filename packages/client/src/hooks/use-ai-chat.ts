@@ -1,9 +1,11 @@
 import { useCallback, useEffect } from 'react';
 import { useChat, Message } from '@ai-sdk/react';
-import { ChatModelSettings } from 'shared';
+import type { ChatModelSettings } from 'shared';
+import type { AiChatStreamRequest, AiSdkOptions } from './generated';
 import { useGetMessages } from './api/use-chat-api';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 import { nanoid } from 'nanoid';
+import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants';
 
 interface UseAIChatProps {
   chatId: string;
@@ -23,7 +25,8 @@ export function useAIChat({
     messages,
     input,
     handleInputChange,
-    handleSubmit: defaultHandleSubmit,
+    // Note: We won't use the default handleSubmit directly if we have custom logic
+    // handleSubmit: defaultHandleSubmit,
     isLoading,
     error,
     setMessages,
@@ -32,15 +35,16 @@ export function useAIChat({
     stop,
     setInput,
   } = useChat({
-    api: '/api/ai/chat',
-    id: chatId,
-    initialMessages: [],
+    api: `${SERVER_HTTP_ENDPOINT}/ai/chat`,
+    id: chatId, // Primarily for SDK internal state management
+    initialMessages: [], // Load messages via useEffect
     onError: (err) => {
-      console.error('[useAIChat] Error:', err);
+      // Optionally add more user-friendly error handling (e.g., toast notifications)
+      console.error('[useAIChat] API Error:', err);
     },
   });
 
-  // Fetch existing messages from the server
+  // Fetch existing messages from the server (seems correct)
   const {
     data: initialMessagesData,
     refetch: refetchMessages,
@@ -48,78 +52,103 @@ export function useAIChat({
     isError: isErrorFetchingInitial,
   } = useGetMessages(chatId);
 
-  // Effect to load initial messages into useChat state
+  // Effect to load initial messages into useChat state (seems correct)
   useEffect(() => {
-    if (initialMessagesData?.data && messages.length === 0) {
+    if (initialMessagesData?.data && messages.length === 0 && !isFetchingInitialMessages) {
       const formattedMessages: Message[] = initialMessagesData.data.map(msg => ({
         id: msg.id,
+        // Ensure role mapping handles potential future roles if schema changes
         role: msg.role as 'user' | 'assistant' | 'system',
         content: msg.content,
-        createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+        createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(), // Handle potential date parsing issues
       }));
+      // Prevent infinite loops by checking if messages are truly different if needed
       setMessages(formattedMessages);
     }
-  }, [initialMessagesData, setMessages, messages.length]);
+    // Add isFetchingInitialMessages to dependencies to avoid setting messages while fetching
+  }, [initialMessagesData, setMessages, messages.length, isFetchingInitialMessages]);
+
 
   // Enhanced `sendMessage` function using `append`
   const sendMessage = useCallback(
-    async (messageContent: string, options?: ChatModelSettings) => {
+    async (messageContent: string, modelSettings?: ChatModelSettings) => {
       if (!messageContent.trim()) return;
 
-      const userMessageId = nanoid();
+      const userMessageId = nanoid(); // Used for optimistic UI and maybe tempId
 
-      const messageToSend: Message = {
+      // 1. Prepare the message object for the useChat hook's state
+      const messageForSdkState: Message = {
         id: userMessageId,
         role: 'user',
         content: messageContent.trim(),
         createdAt: new Date(),
       };
 
-      const body = {
-        provider,
-        model,
-        ...(options && { options: { 
-          model: model,
-          temperature: options.temperature,
-          maxTokens: options.max_tokens,
-          topP: options.top_p,
-          frequencyPenalty: options.frequency_penalty,
-          presencePenalty: options.presence_penalty,
-        } }),
+      // 2. Map frontend ChatModelSettings (snake_case) to backend AiSdkOptions (camelCase)
+      let sdkOptions: AiSdkOptions | undefined = undefined;
+      if (modelSettings) {
+        sdkOptions = {
+          // Only include fields if they have a value
+          ...(modelSettings.temperature !== undefined && { temperature: modelSettings.temperature }),
+          ...(modelSettings.max_tokens !== undefined && { maxTokens: modelSettings.max_tokens }),
+          ...(modelSettings.top_p !== undefined && { topP: modelSettings.top_p }),
+          ...(modelSettings.frequency_penalty !== undefined && { frequencyPenalty: modelSettings.frequency_penalty }),
+          ...(modelSettings.presence_penalty !== undefined && { presencePenalty: modelSettings.presence_penalty }),
+          // Add mappings for top_k etc. if needed
+        };
+      }
+
+      // 3. Construct the request body EXACTLY matching AiChatStreamRequestSchema
+      //    Use the imported type for compile-time checks!
+      const requestBody: AiChatStreamRequest = {
+        chatId: chatId,                     // REQUIRED: Get from hook props
+        userMessage: messageContent.trim(), // REQUIRED: The actual user message
+        provider: provider,                 // REQUIRED: Get from hook props
+        model: model,                       // REQUIRED: Get from hook props
+        // Optional fields:
+        tempId: userMessageId,            // Optional: Useful for correlating requests/responses
+        ...(systemMessage && { systemMessage: systemMessage }), // Include systemMessage from props if provided
+        ...(sdkOptions && Object.keys(sdkOptions).length > 0 && { options: sdkOptions }), // Include mapped options ONLY if they exist
       };
 
-      setInput('');
+      setInput(''); // Clear input field immediately
 
-      await append(messageToSend, { body });
+      // 4. Call append:
+      //    - First argument: The message object to add optimistically to the UI state.
+      //    - Second argument: Options object containing the `body` to send to the API.
+      await append(messageForSdkState, { body: requestBody });
     },
-    [append, provider, model, setInput]
+    // Dependencies: Ensure all values used inside useCallback are listed
+    [append, chatId, provider, model, systemMessage, setInput]
   );
 
-  // Create a form handler that uses our `sendMessage`
+  // Create a form handler that uses our enhanced `sendMessage`
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      const currentModelSettings: ChatModelSettings | undefined = undefined;
+      // TODO: Get currentModelSettings from your UI state if applicable
+      const currentModelSettings: ChatModelSettings | undefined = undefined; // Replace with actual settings if you have them
       sendMessage(input, currentModelSettings);
     },
     [sendMessage, input]
   );
 
+  // Return values needed by the UI
   return {
     messages,
     input,
     handleInputChange,
-    handleSubmit: handleFormSubmit,
+    handleSubmit: handleFormSubmit, // Use the custom submit handler
     isLoading,
     error,
     setInput,
-    reload,
-    stop,
-    append,
-    setMessages,
-    sendMessage,
+    reload, // Useful for retrying the last exchange
+    stop,   // Useful for stopping the stream
+    // append, // Usually not needed directly by the UI if using sendMessage
+    // setMessages, // Usually only needed for initial load or manual manipulation
+    sendMessage, // Expose the custom sending function
     isFetchingInitialMessages,
     isErrorFetchingInitial,
-    refetchMessages,
+    refetchMessages, // Allow UI to trigger a refetch of history
   };
 }

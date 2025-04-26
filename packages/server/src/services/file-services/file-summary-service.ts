@@ -1,6 +1,6 @@
 import { db } from "@/utils/database";
-import { GlobalState, DEFAULT_MODEL_CONFIGS, } from "shared";
-import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
+import { GlobalState, LOW_MODEL_CONFIG, } from "shared";
+import { aiProviderInterface } from "@/services/model-providers/providers/ai-provider-interface-services";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 let concurrency = 5;
@@ -64,7 +64,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
   `;
 
     // Determine provider and model from config (ensure config keys match APIProviders enum)
-    const cfg = DEFAULT_MODEL_CONFIGS["summarize-file"]; // e.g., { provider: 'openai', model: 'gpt-3.5-turbo', temperature: 0.2, max_tokens: 256 }
+    const cfg = LOW_MODEL_CONFIG;
     const provider = cfg.provider as APIProviders || 'openai'; // Default if not specified
     const modelId = cfg.model;
 
@@ -75,7 +75,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<void> {
 
     try {
         // Use generateSingleText for non-streaming summarization
-        const summaryText = await unifiedProvider.generateSingleText({
+        const summaryText = await aiProviderInterface.generateSingleText({
             provider: provider,
             systemMessage: systemPrompt,
             // Use prompt for single input, or messages if more complex context needed

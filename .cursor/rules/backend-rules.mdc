@@ -14,13 +14,44 @@ This document describes how our backend is built and organized, including our ro
 Our backend follows a layered, service-oriented architecture with clear separation of concerns. The main layers are:
 
 - **Database Layer:**  
-  All database schemas are defined in the shared package (e.g. `packages/shared/src/utilts/database/db-schemas.ts`). Any change in business data (like projects, files, prompts, etc.) starts by updating these schemas.  
-- **Service Layer:**  
-  Business logic is encapsulated in services (e.g. `ProjectService`, `FileSyncService`, `FileSummaryService`). These services perform database operations, file synchronization, summarization, and other domain-specific tasks.
-- **Route Layer:**  
-API endpoints are defined with Hono
-- **WebSocket Integration:**  
-  For real-time state updates, our backend integrates with BNK WebSocket. Global state is managed via an adapter (in `packages/server/src/utils/websocket/websocket-state-adapter.ts`) that loads and broadcasts state changes over WebSocket.
-- **AI & Structured Outputs:**  
-  AI tools are integrated to generate structured outputs. On the server side, the structured output fetcher (found in `packages/server/src/utils/structured-output-fetcher.ts`) converts Zod schemas to JSON schemas, streams responses from the AI model, and validates them with Zod. On the client, the `useGenerateStructuredOutput` hook leverages these capabilities to return strongly typed structured data.
+  All database schemas are defined in the shared package (e.g. `packages/shared/src/schemas/db-schemas.ts`). 
+  The Schema files are:
+  chat.schemas.ts
+  common.schemas.ts
+  global-state-schemas.ts
+  project.schemas.ts
+  provider-key.schemas.ts
+  ticket-schemas.ts
 
+- **Service Layer:**  
+  The services are closely associated with the schemas, here are the follow services in `packages/server/src/services`
+  chat-service.ts (Manage chat CRUD in DB as well as the AI APIs)
+  project-service.ts (Manage projects, files in project, etc)
+  prompt-service.ts (Service to CRUD user prompts)
+  provider-key-service.ts (Manage AI provider keys)
+  ticket-service.ts (Create tickets and tasks)
+
+  There are additional services that tie into and use serveral schemas together such as 
+  ai-file-change-service (service for watching for file changes and updating the database accordinly)
+  cleanup-service
+  file-change-plugin
+  file-change-watcher (change watcher)
+  file-summary-service (AI File summary service)
+  file-sync-service (sync files to be)
+  watchers-manager
+  model-fetcher-service (for fetching ai models form the various ai model services)
+  unified-provider-service (this is a very important interface for interfacing with the different AI provider)
+  structured-output-service.ts (a utility for fetching typed/structured data from LLMs)
+
+
+
+- **Route Layer:**  
+API endpoints are defined with Hono, Zod with OpenAPI extension
+admin-routes.ts
+ai-file-change-routes.ts
+chat-routes.ts
+project-routes.ts
+prompt-routes.ts
+provider-key-routes.ts
+structured-output-routes.ts
+ticket-routes.ts

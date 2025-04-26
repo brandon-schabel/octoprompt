@@ -11,7 +11,7 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut
-} from '@/components/ui/command'
+} from '@ui'
 import { NavigationCommands } from '@/components/navigation/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'

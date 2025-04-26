@@ -1,5 +1,5 @@
-import { formatShortcut, shortCutMap } from "@/lib/shortcuts"
-import { Badge } from "./ui/badge"
+import { formatShortcut, shortCutMap } from "@ui/lib/shortcuts"
+import { Badge } from '@ui'
 
 
 export function AppShortcutDisplay({

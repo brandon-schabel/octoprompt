@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn } from '@ui/lib/utils'
 
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { Button } from '@ui'
+import { Progress } from '@ui'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-list'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
@@ -21,7 +21,7 @@ import { useProjectTabField } from '@/hooks/api/global-state/global-state-utilit
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { z } from 'zod'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
-import { VerticalResizablePanel } from '../../components/ui/vertical-resizable-panel'
+import { VerticalResizablePanel } from '@ui'
 import { useActiveProjectTab } from '@/hooks/api/use-state-api'
 
 export type PromptOverviewPanelRef = {

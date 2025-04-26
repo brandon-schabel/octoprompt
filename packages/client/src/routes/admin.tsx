@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@ui';
+import { Card, CardHeader, CardContent, CardTitle } from '@ui';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@ui';
+import { Alert, AlertTitle, AlertDescription } from '@ui';
+import { Badge } from '@ui';
+import { Button } from '@ui';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useGetEnvironmentInfo, useGetSystemStatus } from '@/hooks/api/use-admin-api';
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants';

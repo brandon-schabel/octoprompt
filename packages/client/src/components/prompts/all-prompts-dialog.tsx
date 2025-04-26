@@ -5,10 +5,9 @@ import {
     DialogHeader,
     DialogTitle,
     DialogDescription,
-    DialogFooter
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+    DialogFooter,
+    Input, Button
+} from "@ui"
 import { AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 

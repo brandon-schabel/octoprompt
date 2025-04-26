@@ -14,4 +14,10 @@ export const ApiErrorResponseSchema = z.object({
 export const OperationSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().openapi({ example: 'Operation completed successfully' })
-}).openapi('OperationSuccessResponse'); 
+}).openapi('OperationSuccessResponse');
+
+
+export const MessageRoleEnum = z.enum(['assistant', 'user', 'system',
+  // 'tool',
+  // 'function'
+]);

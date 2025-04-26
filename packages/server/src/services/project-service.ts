@@ -1,4 +1,3 @@
-// packages/server/src/services/project-service.ts
 import { db } from "@/utils/database";
 import { normalizeToIsoString } from "@/utils/parse-timestamp";
 

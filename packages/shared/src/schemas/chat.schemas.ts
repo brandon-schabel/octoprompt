@@ -1,13 +1,10 @@
 import { z } from '@hono/zod-openapi';
 import { AI_API_PROVIDERS } from './provider-key.schemas';
+import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas';
+import  { MessageRoleEnum } from './common.schemas';
 
-export const MessageRoleEnum = z.enum(['assistant', 'user', 'system', 
-    // 'tool',
-    // 'function'
-]);
 
 export type MessageRole = z.infer<typeof MessageRoleEnum>; // Export the type if needed elsewhere
-
 
 const baseModelOptionsSchema = z.object({
     model: z.string().optional(),
@@ -20,24 +17,6 @@ const baseModelOptionsSchema = z.object({
 });
 
 export type ModelOptions = z.infer<typeof baseModelOptionsSchema>;
-
-
-
-export const ChatReadSchema = z.object({
-    id: z.string(),
-    title: z.string(),
-    createdAt: z.date(),
-    updatedAt: z.date(),
-});
-
-export const ChatMessageReadSchema = z.object({
-    id: z.string(),
-    chatId: z.string(),
-    role: z.string(),
-    content: z.string(),
-    createdAt: z.date(),
-});
-
 
 // Base schemas for chat entities
 export const ChatSchema = z.object({
@@ -102,28 +81,11 @@ export const ChatMessagesListResponseSchema = z.object({
 }).openapi('ChatMessagesListResponse');
 
 
-// Define the schema for a single model in the list
-// *** Adjust this schema based on the actual structure returned by your service ***
-const UnifiedModelSchema = z.object({
-    id: z.string().openapi({ example: 'gpt-4-turbo', description: 'Model identifier' }),
-    name: z.string().openapi({ example: 'GPT-4 Turbo', description: 'User-friendly model name' }),
-    provider: z.string().openapi({ example: 'openai', description: 'Provider ID' }),
-    context_length: z.number().optional().openapi({ example: 128000, description: 'Context window size' }),
-    // Add other relevant fields like 'description', 'capabilities', etc.
-}).openapi('UnifiedModel');
-
-export { UnifiedModelSchema }; // Export the schema
-
 export const MessageListResponseSchema = z.object({
     success: z.literal(true),
     data: z.array(ChatMessageSchema)
 }).openapi('MessageListResponse');
 
-// --- NEW: Define Models List Response Schema ---
-export const ModelsListResponseSchema = z.object({
-    success: z.literal(true),
-    data: z.array(UnifiedModelSchema) // Use the newly defined model schema
-}).openapi('ModelsListResponse'); // Register as component
 
 export const ModelListResponseSchema = z.object({
     success: z.literal(true),
@@ -212,70 +174,55 @@ export const ModelsQuerySchema = z.object({
 }).openapi('ModelsQuery');
 
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
+// --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const messageSchema = z.object({
     role: MessageRoleEnum,
     content: z.string(),
-    id: z.string().optional(),
-    name: z.string().optional(),
-    tool_call_id: z.string().optional(),
+    // Keep optional fields if needed internally, but often not needed for basic requests
+    // id: z.string().optional(),
+    // name: z.string().optional(),
+    // tool_call_id: z.string().optional(),
 }).openapi('AiMessage');
 
-// --- Schema for AI SDK Options ---
-// Make sure this aligns with what Vercel/your provider actually accepts/uses
-export const aiSdkOptionsSchema = z.object({
-    model: z.string().optional().openapi({ example: 'gpt-4-turbo', description: 'Model ID to use' }),
-    temperature: z.number().min(0).max(2).optional().openapi({ example: 0.7 }),
-    maxTokens: z.number().int().positive().optional().openapi({ example: 1024 }),
-    topP: z.number().min(0).max(1).optional().openapi({ example: 1 }),
-    frequencyPenalty: z.number().optional().openapi({ example: 0 }),
-    presencePenalty: z.number().optional().openapi({ example: 0 }),
-    topK: z.number().int().positive().optional().openapi({ example: -1 }),
-    response_format: z.any().optional().openapi({ description: 'Provider-specific response format options' }), // Use z.any() if structure varies greatly
-    structuredOutputMode: z.enum(['auto', 'tool', 'json']).optional().openapi({ description: "Mode for structured output (if supported)" }),
-    schemaName: z.string().optional().openapi({ description: "Name for structured output schema" }),
-    schemaDescription: z.string().optional().openapi({ description: "Description for structured output schema" }),
-    outputStrategy: z.enum(['object', 'array', 'enum', 'no-schema']).optional().openapi({ description: "Strategy for structured output generation" }),
-}).partial().optional().openapi('AiSdkOptions');
 
-// --- Updated AiChatRequestSchema --- (Renamed from the original AiChatRequestBody)
-export const AiChatRequestSchema = z.object({
-    messages: z.array(messageSchema).min(1, { message: "Conversation must have at least one message." }).openapi({
-        description: 'Array of messages forming the conversation history.'
+// --- REVISED: Schema for Streaming Chat Request ---
+// Renamed for clarity and modified fields
+export const AiChatStreamRequestSchema = z.object({
+    chatId: z.string().min(1).openapi({
+        example: 'chat-a1b2c3d4',
+        description: 'Required ID of the chat session to continue.'
     }),
-    // Renamed this from AiChatRequestBody to AiChatRequestSchema as per guide's example
-    // Retained fields like chatId, tempId, systemMessage, schema, enumValues from the original AiChatRequestBody
-    // as they might be used by the UnifiedProviderService, even if not strictly required by the new /api/chat route's basic example.
-    chatId: z.string({ required_error: "chatId is required in the request body." })
-        .min(1, { message: "chatId cannot be empty." }).optional().openapi({ // Made optional for the basic /api/chat
-            example: 'chat-a1b2c3d4',
-            description: 'Optional ID of the chat session.'
-        }),
-    provider: z.enum(AI_API_PROVIDERS).or(z.string()).openapi({ // Made provider required as per guide
+    userMessage: z.string().min(1, { message: "User message cannot be empty." }).openapi({
+        description: 'The latest message content from the user.',
+        example: 'Thanks! Can you elaborate on the E=mc^2 part?'
+    }),
+    provider: z.enum(AI_API_PROVIDERS).or(z.string()).openapi({
         example: 'openrouter',
         description: 'The AI provider to use (e.g., openai, openrouter).'
     }),
-    model: z.string().openapi({ // Added model as per guide
+    model: z.string().min(1).openapi({
         example: 'deepseek/deepseek-chat-v3-0324:free',
         description: 'The model identifier to use.'
     }),
-    options: aiSdkOptionsSchema.openapi({
+    options: AiSdkOptionsSchema.openapi({
         description: 'Optional parameters for the AI model.'
     }),
+    systemMessage: z.string().optional().openapi({ // Allows overriding system message for this turn
+        example: 'Respond concisely.',
+        description: 'Optional system message override for this specific request.'
+    }),
     tempId: z.string().optional().openapi({
-        example: 'temp_msg_123',
-        description: 'Temporary client-side ID for optimistic updates.'
+        example: 'temp_msg_456',
+        description: 'Temporary client-side ID for optimistic UI updates.'
     }),
-    systemMessage: z.string().optional().openapi({
-        example: 'You are a helpful assistant.',
-        description: 'Optional system message to guide the AI.'
+    debug: z.boolean().optional().openapi({
+        example: true,
+        description: 'Enable debug mode for detailed logging.'
     }),
-    schema: z.any().optional().openapi({
-        description: 'Optional Zod schema (or JSON schema representation) for structured output.'
-    }),
-    enumValues: z.array(z.string()).optional().openapi({
-        description: 'Optional array of enum values for specific structured output strategies.'
-    }),
-}).openapi('AiChatRequestSchema'); // Updated the name here too
+    // 'messages' array is removed - history will be fetched using chatId
+    // Fields related to SDK native structured output (schema, enumValues, etc.) are removed
+    // but could be added back if needed for the streaming endpoint via `options`.
+}).openapi('AiChatStreamRequest');
 
 export type CreateMessageBodyGeneric = {
     message: string;
@@ -321,3 +268,4 @@ export type CreateChatMessageBody = z.infer<typeof CreateChatMessageBodySchema>;
 export type ExtendedChatMessage = ChatMessage & {
     tempId?: string;
 }
+export type AiChatStreamRequest = z.infer<typeof AiChatStreamRequestSchema>;

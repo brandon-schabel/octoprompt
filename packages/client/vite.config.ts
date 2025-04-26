@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { resolve } from 'path';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 // babel.config.js
 const ReactCompilerConfig = {
@@ -20,7 +21,10 @@ export default defineConfig({
         ["babel-plugin-react-compiler", ReactCompilerConfig],
       ],
     },
-  })],
+  }),
+  tsconfigPaths()
+
+  ],
   resolve: {
     alias: {
       '@': '/src',

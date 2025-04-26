@@ -1,4 +1,3 @@
-// src/stores/global-store.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage, PersistOptions } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -181,9 +180,3 @@ export const useGlobalStore = create<StoreType>()(
         ) // End persist
     ) // End immer
 );
-
-// --- Optional: Selectors for optimized access ---
-// (Keep these commented out or implement as needed)
-// export const selectSettings = (state: StoreType) => state.settings;
-// export const selectProjectTabs = (state: StoreType) => state.projectTabs;
-// ...etc

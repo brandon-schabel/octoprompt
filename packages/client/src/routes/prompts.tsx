@@ -1,16 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@ui'
+import { Input } from '@ui'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
 import { toast } from 'sonner'
 import { useGetPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@ui'
 import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { Prompt } from '@/hooks/generated'
@@ -38,7 +38,7 @@ function usePrompts() {
     const createPromptMutation = useCreatePrompt()
     const updatePromptMutation = useUpdatePrompt()
     const deletePromptMutation = useDeletePrompt()
-    
+
     // Keep track of recently deleted prompts for undo functionality
     const recentlyDeletedPromptRef = useRef<Prompt | null>(null)
 
@@ -69,10 +69,10 @@ function usePrompts() {
                 // Save the prompt being deleted for potential undo operation
                 const promptToDelete = prompts?.data.find(p => p.id === promptId) || null
                 recentlyDeletedPromptRef.current = promptToDelete
-                
+
                 // Delete the prompt
                 await deletePromptMutation.mutateAsync(promptId)
-                
+
                 // Show success toast with undo option
                 toast.success('Prompt deleted', {
                     action: {
@@ -123,7 +123,7 @@ export function PromptsPage() {
             prompt.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
             prompt.content.toLowerCase().includes(debouncedSearch.toLowerCase())
         )
-        
+
         // Then sort based on selected order
         let sorted = [...filtered]
         if (sortOrder === "alphabetical") {
@@ -133,7 +133,7 @@ export function PromptsPage() {
         } else if (sortOrder === "size_asc") {
             sorted.sort((a, b) => estimateTokenCount(a.content) - estimateTokenCount(b.content))
         }
-        
+
         return sorted
     }, [prompts, debouncedSearch, sortOrder])
 
@@ -156,7 +156,7 @@ export function PromptsPage() {
                     />
                     <Badge>{filteredAndSortedPrompts.length} Prompts</Badge>
                 </div>
-                
+
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -253,19 +253,19 @@ interface PromptCardProps {
 
 function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
     const { copyToClipboard, status } = useCopyClipboard()
-    
+
     const formatDate = (date: string | Date) => {
         try {
-            return typeof date === 'string' 
+            return typeof date === 'string'
                 ? new Date(date).toLocaleDateString()
                 : date.toLocaleDateString()
         } catch (e) {
             return 'Invalid date'
         }
     }
-    
+
     const tokenCount = estimateTokenCount(prompt.content)
-    
+
     // Determine token count color based on size
     const getTokenCountClass = () => {
         if (tokenCount > 3000) return "text-red-500"
@@ -295,27 +295,27 @@ function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
                 <p className="text-sm text-muted-foreground line-clamp-3">{prompt.content}</p>
             </CardContent>
             <CardFooter className="flex justify-end space-x-2">
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={handleCopy}
                     title="Copy prompt content"
                     className="h-8 w-8"
                 >
                     <Copy className="h-4 w-4" />
                 </Button>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onEdit}
                     title="Edit prompt"
                     className="h-8 w-8"
                 >
                     <Pencil className="h-4 w-4" />
                 </Button>
-                <Button 
-                    variant="destructive" 
-                    size="sm" 
+                <Button
+                    variant="destructive"
+                    size="sm"
                     onClick={onDelete}
                 >
                     Delete
@@ -337,7 +337,7 @@ function PromptDialog({ open, onOpenChange, prompt, onSave }: PromptDialogProps)
     const [name, setName] = useState(prompt?.name ?? '')
     const [content, setContent] = useState(prompt?.content ?? '')
     const [isSubmitting, setIsSubmitting] = useState(false)
-    
+
     const tokenCount = useMemo(() => estimateTokenCount(content), [content])
 
     // Update form fields when prompt changes
@@ -356,7 +356,7 @@ function PromptDialog({ open, onOpenChange, prompt, onSave }: PromptDialogProps)
             toast.error('Prompt name is required')
             return
         }
-        
+
         try {
             setIsSubmitting(true)
             await onSave({ name, content })

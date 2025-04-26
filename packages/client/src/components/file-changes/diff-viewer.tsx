@@ -1,8 +1,6 @@
 import React, { useMemo } from "react";
 import { computeLineDiff } from "./compute-line-diff";
 
-
-
 interface DiffViewerProps {
     oldValue: string;
     newValue: string;

@@ -115,7 +115,7 @@ describe('Import Resolver', () => {
         DialogContent,
         DialogHeader,
         DialogTitle,
-      } from "@/components/ui/dialog"
+      } from "@ui"
       import { ProjectList } from "@/components/projects/project-list"
       import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
       import { useGlobalState } from "@/hooks/use-global-state"

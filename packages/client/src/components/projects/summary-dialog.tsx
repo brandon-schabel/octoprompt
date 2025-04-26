@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ui";
+import { Button } from "@ui";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";

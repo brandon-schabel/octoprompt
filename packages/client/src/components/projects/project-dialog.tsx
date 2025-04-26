@@ -6,10 +6,10 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@ui"
+import { Button } from '@ui'
+import { Input } from "@ui"
+import { Label } from "@ui"
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from "@/hooks/api/use-projects-api"
 import { useEffect, useState } from "react"
 import { useUpdateActiveProjectTab } from "@/hooks/api/global-state/updaters"

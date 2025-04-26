@@ -1,7 +1,7 @@
 // tests/chat-service.test.ts
 import { describe, test, expect, beforeEach } from "bun:test";
 import { db, resetDatabase } from "@db";
-import { createChatService } from "@/services/model-providers/chat/chat-service";
+import { createChatService } from "@/services/chat-service";
 import { randomString } from "./test-utils";
 
 let chatService: ReturnType<typeof createChatService>;

@@ -47,7 +47,7 @@ export type ChatMessage = {
     /**
      * Role of the message sender
      */
-    role: 'system' | 'user' | 'assistant' | 'tool' | 'function' | 'data';
+    role: 'assistant' | 'user' | 'system';
     /**
      * Message content
      */
@@ -61,38 +61,6 @@ export type ChatMessage = {
 export type MessageListResponse = {
     success: true;
     data: Array<ChatMessage>;
-};
-
-export type UnifiedModel = {
-    /**
-     * Model identifier
-     */
-    id: string;
-    /**
-     * User-friendly model name
-     */
-    name: string;
-    /**
-     * Provider ID
-     */
-    provider: string;
-    /**
-     * Context window size
-     */
-    context_length?: number;
-};
-
-export type ModelsListResponse = {
-    success: true;
-    data: Array<UnifiedModel>;
-};
-
-export type AiMessage = {
-    role: 'system' | 'user' | 'assistant' | 'tool' | 'function' | 'data';
-    content: string;
-    id?: string;
-    name?: string;
-    tool_call_id?: string;
 };
 
 /**
@@ -109,58 +77,43 @@ export type AiSdkOptions = {
     frequencyPenalty?: number;
     presencePenalty?: number;
     topK?: number;
+    stop?: string | Array<string>;
     /**
-     * Provider-specific response format options
+     * Provider-specific response format options (e.g., { type: "json_object" })
      */
     response_format?: unknown;
-    /**
-     * Mode for structured output (if supported)
-     */
-    structuredOutputMode?: 'auto' | 'tool' | 'json';
-    /**
-     * Name for structured output schema
-     */
-    schemaName?: string;
-    /**
-     * Description for structured output schema
-     */
-    schemaDescription?: string;
-    /**
-     * Strategy for structured output generation
-     */
-    outputStrategy?: 'object' | 'array' | 'enum' | 'no-schema';
 };
 
-export type AiChatRequestBody = {
+export type AiChatStreamRequest = {
     /**
-     * Array of messages forming the conversation history.
-     */
-    messages: Array<AiMessage>;
-    /**
-     * The ID of the chat session this request belongs to.
+     * Required ID of the chat session to continue.
      */
     chatId: string;
     /**
-     * The AI provider to use (e.g., openai, anthropic) or a custom identifier.
+     * The latest message content from the user.
      */
-    provider?: ('openai' | 'openrouter' | 'lmstudio' | 'ollama' | 'xai' | 'google_gemini' | 'anthropic' | 'groq' | 'together') | string;
-    options?: AiSdkOptions;
+    userMessage: string;
     /**
-     * Temporary client-side ID for optimistic updates.
+     * The AI provider to use (e.g., openai, openrouter).
      */
-    tempId?: string;
+    provider: ('openai' | 'openrouter' | 'lmstudio' | 'ollama' | 'xai' | 'google_gemini' | 'anthropic' | 'groq' | 'together') | string;
     /**
-     * Optional system message to guide the AI.
+     * The model identifier to use.
+     */
+    model: string;
+    options: AiSdkOptions;
+    /**
+     * Optional system message override for this specific request.
      */
     systemMessage?: string;
     /**
-     * Optional Zod schema (or JSON schema representation) for structured output.
+     * Temporary client-side ID for optimistic UI updates.
      */
-    schema?: unknown;
+    tempId?: string;
     /**
-     * Optional array of enum values for specific structured output strategies.
+     * Enable debug mode for detailed logging.
      */
-    enumValues?: Array<string>;
+    debug?: boolean;
 };
 
 export type ForkChatRequestBody = {
@@ -496,15 +449,6 @@ export type ProjectSummaryResponse = {
     summary: string;
 };
 
-export type SuggestFilesResponse = {
-    success: true;
-    recommendedFileIds: Array<string>;
-};
-
-export type SuggestFilesRequestBody = {
-    userInput: string;
-};
-
 export type ProviderKey = {
     /**
      * Provider Key ID
@@ -749,6 +693,95 @@ export type OptimizePromptRequest = {
     userContext: string;
 };
 
+export type AiGenerateTextResponse = {
+    success: true;
+    data: {
+        /**
+         * The generated text response from the AI.
+         */
+        text: string;
+    };
+};
+
+export type AiGenerateTextRequest = {
+    /**
+     * The text prompt for the AI.
+     */
+    prompt: string;
+    /**
+     * The AI provider to use (e.g., openai, openrouter, groq).
+     */
+    provider: ('openai' | 'openrouter' | 'lmstudio' | 'ollama' | 'xai' | 'google_gemini' | 'anthropic' | 'groq' | 'together') | string;
+    /**
+     * The specific model identifier to use.
+     */
+    model: string;
+    options?: AiSdkOptions & unknown;
+    /**
+     * Optional system message to guide the AI.
+     */
+    systemMessage?: string;
+};
+
+export type AiGenerateStructuredResponse = {
+    success: true;
+    data: {
+        /**
+         * The generated structured data, matching the schema defined by the 'schemaKey'.
+         */
+        output?: unknown;
+    };
+};
+
+export type AiGenerateStructuredRequest = {
+    /**
+     * The key identifying the predefined structured task to perform.
+     */
+    schemaKey: string;
+    /**
+     * The user's input or context for the task.
+     */
+    userInput: string;
+    /**
+     * Optional: Override the default AI provider for this task.
+     */
+    provider?: ('openai' | 'openrouter' | 'lmstudio' | 'ollama' | 'xai' | 'google_gemini' | 'anthropic' | 'groq' | 'together') | string;
+    options?: AiSdkOptions & unknown;
+};
+
+export type UnifiedModel = {
+    /**
+     * Model identifier
+     */
+    id: string;
+    /**
+     * User-friendly model name
+     */
+    name: string;
+    /**
+     * Provider ID
+     */
+    provider: string;
+    /**
+     * Context window size
+     */
+    context_length?: number;
+};
+
+export type ModelsListResponse = {
+    success: true;
+    data: Array<UnifiedModel>;
+};
+
+export type SuggestFilesResponse = {
+    success: true;
+    recommendedFileIds: Array<string>;
+};
+
+export type SuggestFilesRequestBody = {
+    userInput: string;
+};
+
 export type GetChatsData = {
     body?: never;
     path?: never;
@@ -848,49 +881,11 @@ export type GetChatsByChatIdMessagesResponses = {
 
 export type GetChatsByChatIdMessagesResponse = GetChatsByChatIdMessagesResponses[keyof GetChatsByChatIdMessagesResponses];
 
-export type GetModelsData = {
-    body?: never;
-    path?: never;
-    query: {
-        /**
-         * The provider to filter models by
-         */
-        provider: string;
-    };
-    url: '/models';
-};
-
-export type GetModelsErrors = {
-    /**
-     * Invalid provider or configuration error
-     */
-    400: ApiErrorResponse;
-    /**
-     * Validation error
-     */
-    422: ApiErrorResponse;
-    /**
-     * Internal Server Error
-     */
-    500: ApiErrorResponse;
-};
-
-export type GetModelsError = GetModelsErrors[keyof GetModelsErrors];
-
-export type GetModelsResponses = {
-    /**
-     * Successfully retrieved model list
-     */
-    200: ModelsListResponse;
-};
-
-export type GetModelsResponse = GetModelsResponses[keyof GetModelsResponses];
-
 export type PostAiChatData = {
     /**
-     * Chat context and message to send to the AI
+     * Chat ID, user message, provider, model, and options for the streaming AI chat completion.
      */
-    body: AiChatRequestBody;
+    body: AiChatStreamRequest;
     path?: never;
     query?: never;
     url: '/ai/chat';
@@ -898,15 +893,19 @@ export type PostAiChatData = {
 
 export type PostAiChatErrors = {
     /**
-     * Invalid input or missing user message
+     * Bad Request (e.g., missing API key for provider, invalid provider/model)
      */
     400: ApiErrorResponse;
     /**
-     * Validation error
+     * Chat session (chatId) not found.
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation error (invalid request body)
      */
     422: ApiErrorResponse;
     /**
-     * Internal Server Error or AI provider error
+     * Internal Server Error or AI provider communication error
      */
     500: ApiErrorResponse;
 };
@@ -915,7 +914,7 @@ export type PostAiChatError = PostAiChatErrors[keyof PostAiChatErrors];
 
 export type PostAiChatResponses = {
     /**
-     * Streamed AI response chunks
+     * Stream of response tokens (Vercel AI SDK format)
      */
     200: string;
 };
@@ -2220,44 +2219,6 @@ export type GetApiProjectsByProjectIdSummaryResponses = {
 
 export type GetApiProjectsByProjectIdSummaryResponse = GetApiProjectsByProjectIdSummaryResponses[keyof GetApiProjectsByProjectIdSummaryResponses];
 
-export type PostApiProjectsByProjectIdSuggestFilesData = {
-    body?: SuggestFilesRequestBody;
-    path: {
-        /**
-         * The ID of the project
-         */
-        projectId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/suggest-files';
-};
-
-export type PostApiProjectsByProjectIdSuggestFilesErrors = {
-    /**
-     * Project not found
-     */
-    404: ApiErrorResponse;
-    /**
-     * Validation Error
-     */
-    422: ApiErrorResponse;
-    /**
-     * Internal Server Error or AI processing error
-     */
-    500: ApiErrorResponse;
-};
-
-export type PostApiProjectsByProjectIdSuggestFilesError = PostApiProjectsByProjectIdSuggestFilesErrors[keyof PostApiProjectsByProjectIdSuggestFilesErrors];
-
-export type PostApiProjectsByProjectIdSuggestFilesResponses = {
-    /**
-     * Successfully suggested files
-     */
-    200: SuggestFilesResponse;
-};
-
-export type PostApiProjectsByProjectIdSuggestFilesResponse = PostApiProjectsByProjectIdSuggestFilesResponses[keyof PostApiProjectsByProjectIdSuggestFilesResponses];
-
 export type GetApiKeysData = {
     body?: never;
     path?: never;
@@ -2765,7 +2726,7 @@ export type DeleteApiPromptsByPromptIdData = {
     body?: never;
     path: {
         /**
-         * The UUID of the prompt
+         * The ID of the prompt
          */
         promptId: string;
     };
@@ -2803,7 +2764,7 @@ export type GetApiPromptsByPromptIdData = {
     body?: never;
     path: {
         /**
-         * The UUID of the prompt
+         * The ID of the prompt
          */
         promptId: string;
     };
@@ -2841,7 +2802,7 @@ export type PatchApiPromptsByPromptIdData = {
     body: UpdatePromptRequestBody;
     path: {
         /**
-         * The UUID of the prompt
+         * The ID of the prompt
          */
         promptId: string;
     };
@@ -2906,6 +2867,180 @@ export type PostApiPromptOptimizeResponses = {
 };
 
 export type PostApiPromptOptimizeResponse = PostApiPromptOptimizeResponses[keyof PostApiPromptOptimizeResponses];
+
+export type PostApiGenAiTextData = {
+    body: AiGenerateTextRequest;
+    path?: never;
+    query?: never;
+    url: '/api/gen-ai/text';
+};
+
+export type PostApiGenAiTextErrors = {
+    /**
+     * Validation Error (invalid input)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error or AI Provider Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiGenAiTextError = PostApiGenAiTextErrors[keyof PostApiGenAiTextErrors];
+
+export type PostApiGenAiTextResponses = {
+    /**
+     * Successfully generated text
+     */
+    200: AiGenerateTextResponse;
+};
+
+export type PostApiGenAiTextResponse = PostApiGenAiTextResponses[keyof PostApiGenAiTextResponses];
+
+export type PostApiGenAiStructuredData = {
+    body: AiGenerateStructuredRequest;
+    path?: never;
+    query?: never;
+    url: '/api/gen-ai/structured';
+};
+
+export type PostApiGenAiStructuredErrors = {
+    /**
+     * Bad Request: Invalid or unknown schemaKey provided.
+     */
+    400: ApiErrorResponse;
+    /**
+     * Validation Error (invalid input)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error or AI Provider Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiGenAiStructuredError = PostApiGenAiStructuredErrors[keyof PostApiGenAiStructuredErrors];
+
+export type PostApiGenAiStructuredResponses = {
+    /**
+     * Successfully generated structured data
+     */
+    200: AiGenerateStructuredResponse;
+};
+
+export type PostApiGenAiStructuredResponse = PostApiGenAiStructuredResponses[keyof PostApiGenAiStructuredResponses];
+
+export type GetModelsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * The provider to filter models by
+         */
+        provider: string;
+    };
+    url: '/models';
+};
+
+export type GetModelsErrors = {
+    /**
+     * Invalid provider or configuration error
+     */
+    400: ApiErrorResponse;
+    /**
+     * Validation error
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type GetModelsError = GetModelsErrors[keyof GetModelsErrors];
+
+export type GetModelsResponses = {
+    /**
+     * Successfully retrieved model list
+     */
+    200: ModelsListResponse;
+};
+
+export type GetModelsResponse = GetModelsResponses[keyof GetModelsResponses];
+
+export type PostAiGenerateTextData = {
+    /**
+     * Prompt, provider, model, and options for text generation.
+     */
+    body: AiGenerateTextRequest;
+    path?: never;
+    query?: never;
+    url: '/ai/generate/text';
+};
+
+export type PostAiGenerateTextErrors = {
+    /**
+     * Bad Request (e.g., missing API key, invalid provider/model)
+     */
+    400: ApiErrorResponse;
+    /**
+     * Validation error (invalid request body)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error or AI provider communication error
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostAiGenerateTextError = PostAiGenerateTextErrors[keyof PostAiGenerateTextErrors];
+
+export type PostAiGenerateTextResponses = {
+    /**
+     * Successfully generated text response.
+     */
+    200: AiGenerateTextResponse;
+};
+
+export type PostAiGenerateTextResponse = PostAiGenerateTextResponses[keyof PostAiGenerateTextResponses];
+
+export type PostApiProjectsByProjectIdSuggestFilesData = {
+    body?: SuggestFilesRequestBody;
+    path: {
+        /**
+         * The ID of the project
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/suggest-files';
+};
+
+export type PostApiProjectsByProjectIdSuggestFilesErrors = {
+    /**
+     * Project not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation Error
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error or AI processing error
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiProjectsByProjectIdSuggestFilesError = PostApiProjectsByProjectIdSuggestFilesErrors[keyof PostApiProjectsByProjectIdSuggestFilesErrors];
+
+export type PostApiProjectsByProjectIdSuggestFilesResponses = {
+    /**
+     * Successfully suggested files
+     */
+    200: SuggestFilesResponse;
+};
+
+export type PostApiProjectsByProjectIdSuggestFilesResponse = PostApiProjectsByProjectIdSuggestFilesResponses[keyof PostApiProjectsByProjectIdSuggestFilesResponses];
 
 export type ClientOptions = {
     baseUrl: 'http://localhost:3147' | (string & {});

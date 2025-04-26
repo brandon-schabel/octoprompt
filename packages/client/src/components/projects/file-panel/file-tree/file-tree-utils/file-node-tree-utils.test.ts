@@ -10,7 +10,7 @@ import {
     toggleFile,
     toggleFolder
 } from './file-node-tree-utils'
-import type { ProjectFile } from 'shared/schema'
+import type { ProjectFile } from '../../../../../hooks/generated'
 
 describe('estimateTokenCount', () => {
     test('should correctly estimate tokens for normal text', () => {

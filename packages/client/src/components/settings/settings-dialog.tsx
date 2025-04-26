@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ui"
+import { Switch } from "@ui"
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import {
     Select,
@@ -7,11 +7,11 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "../ui/select"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+} from "@ui"
+import { Label } from "@ui"
+import { Input } from "@ui"
 import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea } from "@ui"
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Theme } from "shared/src/schemas/global-state-schema"
 import { useSettings } from "@/hooks/api/global-state/selectors"

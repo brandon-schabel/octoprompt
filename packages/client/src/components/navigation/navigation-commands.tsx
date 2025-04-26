@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { CommandItem } from '@/components/ui/command'
+import { CommandItem } from '@ui'
 import { FileIcon, ChatBubbleIcon, CounterClockwiseClockIcon, GearIcon } from '@radix-ui/react-icons'
 
 type NavigationCommandProps = {

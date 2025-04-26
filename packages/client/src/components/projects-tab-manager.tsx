@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { cn } from '@/lib/utils';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@ui/lib/utils';
+import { Tabs, TabsList, TabsTrigger } from '@ui';
+import { Button } from '@ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui';
+import { Input } from '@ui';
+import { Badge } from '@ui';
 import { InfoTooltip } from './info-tooltip';
 import { ShortcutDisplay } from './app-shortcut-display';
 import { LinkIcon, Plus, Pencil, Trash2, Settings, Icon } from 'lucide-react';

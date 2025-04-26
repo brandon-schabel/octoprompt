@@ -1,8 +1,7 @@
 import { db } from "@/utils/database";
-import { ApiError } from "shared";
+import { ApiError, MEDIUM_MODEL_CONFIG } from "shared";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 import { z } from "zod";
-import { DEFAULT_MODEL_CONFIGS } from "shared";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 import {
   CreateTicketBody, UpdateTicketBody,
@@ -17,7 +16,7 @@ import {
   type TicketFile,
 } from "shared/src/schemas/ticket.schemas";
 import { randomUUID } from "crypto";
-import { unifiedProvider } from "./model-providers/providers/unified-provider-service";
+import { aiProviderInterface } from "./model-providers/providers/ai-provider-interface-services";
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {
@@ -70,12 +69,12 @@ Below is a combined summary of project files:
 ${projectSummary}
 `;
 
-  const cfg = DEFAULT_MODEL_CONFIGS['suggest-ticket-tasks'];
+  const cfg = MEDIUM_MODEL_CONFIG;
   if (!cfg.model) {
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, "CONFIG_ERROR");
   }
 
-  const result = await unifiedProvider.generateStructuredData({
+  const result = await aiProviderInterface.generateStructuredData({
     provider: cfg.provider as APIProviders || 'openai',
     prompt: userMessage,
     systemMessage: defaultTaskPrompt,

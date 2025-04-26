@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useReorderTasks, useAutoGenerateTasks } from "../../hooks/api/use-tickets-api";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+import { Input } from '@ui';
+import { Button } from '@ui';
 import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Circle } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui';
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { toast } from "sonner";
 import { Task } from "@/hooks/generated";

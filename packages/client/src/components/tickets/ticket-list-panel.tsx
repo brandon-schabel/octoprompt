@@ -1,16 +1,16 @@
 import React, { useMemo, useCallback } from "react";
 import { useListTicketsWithTasks, useDeleteTicket } from "@/hooks/api/use-tickets-api";
 import { useUpdateProjectTabState, } from "@/hooks/api/global-state/updaters";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Badge } from "../ui/badge";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../ui/select";
+import { Button } from "@ui";
+import { Input } from '@ui';
+import { Badge } from "@ui";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@ui";
 import { Copy, Filter, FileText, Trash2, ExternalLink } from "lucide-react";
-import { ScrollArea } from "../ui/scroll-area";
+import { ScrollArea } from "@ui";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn } from "@ui/lib/utils";
 import { buildTicketContent } from "./utils/ticket-utils";
-import { Progress } from "../ui/progress";
+import { Progress } from "@ui";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -20,7 +20,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "../ui/alert-dialog";
+} from "@ui";
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { useProjectTab } from "@/hooks/api/global-state/selectors";

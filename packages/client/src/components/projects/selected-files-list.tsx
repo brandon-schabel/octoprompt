@@ -1,13 +1,13 @@
 // packages/client/src/components/projects/selected-files-list.tsx
 import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from '@ui'
+import { cn } from "@ui/lib/utils"
 import { useHotkeys } from "react-hotkeys-hook"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from '@ui'
 import { FormatTokenCount } from "../format-token-count"
 import { forwardRef, useRef, useState, useImperativeHandle, KeyboardEvent, useMemo } from 'react'
-import { Input } from "../ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog"
+import { Input } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,11 +20,11 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuShortcut
-} from "../ui/dropdown-menu"
+} from '@ui'
 import { toast } from "sonner"
 import { useUpdateProjectTabState } from "@/hooks/api/global-state/updaters"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
-import { formatShortcut } from "@/lib/shortcuts"
+import { formatShortcut } from "@ui/lib/shortcuts"
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useProjectTab } from "@/hooks/api/global-state/selectors"
 import { FileViewerDialog } from "../navigation/file-viewer-dialog"
@@ -431,7 +431,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -444,7 +444,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 <div
                   className={cn(
                     "flex flex-col p-2 rounded-md border bg-muted/50",

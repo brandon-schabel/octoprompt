@@ -22,7 +22,7 @@ import {
     listTicketsWithTasks,
     getTicketWithSuggestedFiles
 } from "@/services/ticket-service";
-import { unifiedProvider } from "@/services/model-providers/providers/unified-provider-service";
+import { aiProviderInterface } from "@/services/model-providers/providers/ai-provider-interface-services";
 import { ApiError } from "shared";
 
 describe("Ticket Service", () => {
@@ -36,7 +36,7 @@ describe("Ticket Service", () => {
         });
         summaryMock = mock(async () => "Fake project summary content");
 
-        spyOn(unifiedProvider, "generateStructuredData").mockImplementation(generateStructuredDataMock);
+        spyOn(aiProviderInterface, "generateStructuredData").mockImplementation(generateStructuredDataMock);
 
         spyOn(
             await import("@/utils/get-full-project-summary"),

@@ -89,9 +89,6 @@ export const useGetProject = (projectId: string) => {
 };
 
 export const useGetProjectFiles = (projectId: string) => {
-    console.log({
-        getProjectFiles: projectId
-    })
     const queryOptions = getApiProjectsByProjectIdFilesOptions({ path: { projectId } } as Options<GetApiProjectsByProjectIdFilesData>);
     return useQuery({
         ...queryOptions,

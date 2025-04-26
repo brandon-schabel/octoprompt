@@ -1,7 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@ui'
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@ui'
+import { Input } from '@ui'
+import { Button } from '@ui'
 import { Loader2 } from 'lucide-react'
 import { UseFormReturn } from 'react-hook-form'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
@@ -26,7 +26,7 @@ export function PromptDialog({
     createPromptPending,
     updatePromptPending,
     onClose,
-    
+
 }: PromptDialogProps) {
     const handleFormKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && e.target instanceof HTMLTextAreaElement) {
@@ -54,8 +54,8 @@ export function PromptDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...promptForm}>
-                    <form 
-                        onSubmit={promptForm.handleSubmit(editPromptId ? handleUpdatePrompt : handleCreatePrompt)} 
+                    <form
+                        onSubmit={promptForm.handleSubmit(editPromptId ? handleUpdatePrompt : handleCreatePrompt)}
                         className="space-y-4"
                         onKeyDown={handleFormKeyDown}
                     >

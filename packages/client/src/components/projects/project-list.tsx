@@ -1,14 +1,14 @@
 import { Folder, Pencil, Trash, Plus } from 'lucide-react'
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
-import { cn } from '@/lib/utils'
-import { Button } from "@/components/ui/button"
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from '@ui'
+import { cn } from '@ui/lib/utils'
+import { Button } from '@ui'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@ui"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { Project } from '@/hooks/generated'
 

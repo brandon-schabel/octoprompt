@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@ui'
 import {
     Popover,
     PopoverTrigger,
     PopoverContent,
-} from '@/components/ui/popover'
+} from '@ui'
 import { ChevronUp } from 'lucide-react'
 
 /**

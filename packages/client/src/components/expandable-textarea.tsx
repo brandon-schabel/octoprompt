@@ -1,24 +1,24 @@
 import { Expand, Mic, MicOff, Copy, Wand2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from '@ui'
+import { Textarea } from '@ui'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog"
+} from "@ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@ui"
 import { useEffect, useState, useRef, forwardRef } from "react"
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from "sonner"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
-import { formatShortcut } from "@/lib/shortcuts"
+import { formatShortcut } from "@ui/lib/shortcuts"
 import { useOptimizePrompt } from "@/hooks/api/use-prompts-api"
 
 type ExpandableTextareaProps = {
