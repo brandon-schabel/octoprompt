@@ -1,16 +1,7 @@
 import { z } from '@hono/zod-openapi';
-import { AI_API_PROVIDERS } from './provider-key.schemas'; // Assume this exists
 import { MessageRoleEnum } from './common.schemas'; // Assume this exists
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'; // Assume this exists
 import { ProjectFileSchema } from './project.schemas';
-
-// --- Basic AI Interaction Schemas ---
-
-// Re-exporting MessageRoleEnum might be useful here if it's truly generic AI,
-// or keep it in chat.schemas if it's tightly coupled to chat messages.
-// Let's keep it in chat.schemas for now as it's used there extensively.
-import { MessageRoleEnum } from './common.schemas';
-import { LOW_MODEL_CONFIG } from '../constants/model-default-configs';
 
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z.object({
@@ -134,12 +125,9 @@ export const AiGenerateStructuredRequestSchema = z.object({
         description: "The user's input or context for the structured generation task.",
         example: "A react component for displaying user profiles"
     }),
-    // provider: z.enum(AI_API_PROVIDERS).or(z.string()).optional().openapi({
-    //     description: "Optional: Override the default AI provider defined in the task configuration."
-    // }),
-    // options: AiSdkOptionsSchema.optional().openapi({
-    //     description: "Optional: Override default model options (temperature, etc.) defined in the task configuration."
-    // }),
+    options: AiSdkOptionsSchema.optional().openapi({
+        description: "Optional: Override default model options (temperature, etc.) defined in the task configuration."
+    }),
 }).openapi('AiGenerateStructuredRequest');
 
 export const AiGenerateStructuredResponseSchema = z.object({

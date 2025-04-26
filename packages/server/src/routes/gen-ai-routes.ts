@@ -17,12 +17,11 @@ import {
     AiGenerateStructuredResponseSchema,
     StructuredDataSchemaConfig,
     ModelsListResponseSchema,
-    structuredDataSchemas,
     FileSummaryListResponseSchema,
     RemoveSummariesResponseSchema,
     SummarizeFilesResponseSchema,
+    SuggestFilesResponseSchema,
     FileSuggestionsZodSchema,
-    SuggestFilesResponseSchema
 } from "shared/src/schemas/gen-ai.schemas";
 
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -32,9 +31,10 @@ import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-provid
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/providers/provider-defaults';
 import { providerKeyService } from '@/services/model-providers/providers/provider-key-service';
 import { getFullProjectSummary } from '@/utils/get-full-project-summary';
-import { ProjectIdParamsSchema, SuggestFilesBodySchema, GetFileSummariesQuerySchema, RemoveSummariesBodySchema, SummarizeFilesBodySchema, SuggestFilesResponseSchema, FileSuggestionsZodSchema } from 'shared/src/schemas/project.schemas';
+import { ProjectIdParamsSchema, SuggestFilesBodySchema, GetFileSummariesQuerySchema, RemoveSummariesBodySchema, SummarizeFilesBodySchema } from 'shared/src/schemas/project.schemas';
 import { stream } from 'hono/streaming';
-import { TypedResponse } from 'hono';
+import { forceResummarizeSelectedFiles, getFileSummaries } from '@/services/file-services/file-summary-service';
+import { summarizeSelectedFiles, getProjectById, resummarizeAllFiles, removeSummariesFromFiles } from '@/services/project-service';
 
 
 
@@ -387,14 +387,14 @@ export const genAiRoutes = new OpenAPIHono()
         }
 
         // 2. Prepare parameters for the AI service
-        const finalPrompt = config.promptTemplate.replace('{userInput}', userInput);
-        const finalModel = options?.model ?? config.modelSettings?.model ?? 'gpt-4o'; // Define default model logic
+        const finalPrompt = config?.promptTemplate?.replace('{userInput}', userInput);
+        const finalModel = options?.model ?? config?.modelSettings?.model ?? 'gpt-4o'; // Define default model logic
         const finalOptions = { ...config.modelSettings, ...options, model: finalModel }; // Merge options, override wins
         const finalSystemPrompt = config.systemPrompt;
 
         try {
             const result = await generateStructuredData({
-                prompt: finalPrompt,
+                prompt: finalPrompt ?? '',
                 schema: config.schema, // Pass the Zod schema from config
                 options: finalOptions,
                 systemMessage: finalSystemPrompt,
