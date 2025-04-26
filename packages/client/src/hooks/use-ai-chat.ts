@@ -103,12 +103,14 @@ export function useAIChat({
       const requestBody: AiChatStreamRequest = {
         chatId: chatId,                     // REQUIRED: Get from hook props
         userMessage: messageContent.trim(), // REQUIRED: The actual user message
-        provider: provider,                 // REQUIRED: Get from hook props
         model: model,                       // REQUIRED: Get from hook props
         // Optional fields:
         tempId: userMessageId,            // Optional: Useful for correlating requests/responses
         ...(systemMessage && { systemMessage: systemMessage }), // Include systemMessage from props if provided
-        ...(sdkOptions && Object.keys(sdkOptions).length > 0 && { options: sdkOptions }), // Include mapped options ONLY if they exist
+        provider: provider,                 // REQUIRED: Get from hook props
+        options: {
+          ...(sdkOptions && Object.keys(sdkOptions).length > 0 && { options: sdkOptions }),
+        }
       };
 
       setInput(''); // Clear input field immediately

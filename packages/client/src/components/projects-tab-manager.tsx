@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { cn } from '@ui/lib/utils';
+import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@ui';
 import { Button } from '@ui';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui';

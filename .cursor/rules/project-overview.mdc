@@ -59,12 +59,6 @@ The **client** is responsible for maintaining and displaying the application’s
   - State slices are separated into:
     - **Project Tabs:** Handling project-specific data.
     - **Chat Tabs:** Managing chat-specific interactions.
-  - This division allows independent updating and management based on unique identifiers like project ID or chat ID.
-
-- **WebSocket Sync Client Integration:**
-  - The client connects to the server’s WebSocket endpoint using BNK’s client WebSocket manager (`@bnk/sync-client`).
-  - The `GlobalStateProvider` (in `global-state-provider.tsx`) sets up the WebSocket connection and propagates state changes to the Zustand store.
-  - Incoming WebSocket messages trigger updates in the client’s global state (via handlers in `websocket-subscription.ts`).
 
 - **AI Structured Output on the Client:**
   - The client leverages hooks like `useGenerateStructuredOutput` to request structured data from the server.

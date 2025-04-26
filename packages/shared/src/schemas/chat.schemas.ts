@@ -11,6 +11,7 @@ const baseModelOptionsSchema = z.object({
     max_tokens: z.number().optional(),
     temperature: z.number().optional(),
     top_p: z.number().optional(),
+    top_k: z.number().optional(),
     frequency_penalty: z.number().optional(),
     presence_penalty: z.number().optional(),
     stop: z.union([z.string(), z.array(z.string())]).optional(),

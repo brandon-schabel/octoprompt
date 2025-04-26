@@ -2,16 +2,14 @@ import { createRoute, z } from '@hono/zod-openapi';
 
 // *** UPDATED IMPORT ***
 import { createChatService } from '@/services/chat-service'; // Keep if needed for other routes potentially
-import { ApiError, MEDIUM_MODEL_CONFIG, } from 'shared';
+import { ApiError, LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, } from 'shared';
 import {
     ApiErrorResponseSchema,
     OperationSuccessResponseSchema
 } from 'shared/src/schemas/common.schemas';
 // Import chat-specific schemas if needed for other routes in this file (e.g. original /chats)
 import {
-    ChatListResponseSchema,
     ModelsQuerySchema,
-    // ... other chat schemas if used
 } from "shared/src/schemas/chat.schemas";
 // Import the NEW GenAI schemas
 import {
@@ -19,10 +17,10 @@ import {
     AiGenerateTextResponseSchema,
     AiGenerateStructuredRequestSchema,
     AiGenerateStructuredResponseSchema,
-    StructuredDataSchemaConfig, // Import the interface
+    StructuredDataSchemaConfig,
     ModelsListResponseSchema,
-    BaseStructuredDataConfigSchema
-    // ... other gen-ai schemas if needed
+    BaseStructuredDataConfigSchema,
+    structuredDataSchemas
 } from "shared/src/schemas/gen-ai.schemas";
 
 
@@ -32,63 +30,10 @@ import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schem
 import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-providers/providers/model-fetcher-service';
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/providers/provider-defaults';
 import { providerKeyService } from '@/services/model-providers/providers/provider-key-service';
-import { fetchStructuredOutput } from '@/utils/structured-output-fetcher';
-import { getProjectById } from '@/services/project-service';
 import { getFullProjectSummary } from '@/utils/get-full-project-summary';
 import { TypedResponse } from 'hono';
 import { ProjectIdParamsSchema, SuggestFilesBodySchema, SuggestFilesResponseSchema, FileSuggestionsZodSchema, FileSuggestionsJsonSchema } from 'shared/src/schemas/project.schemas';
 
-
-// Instantiate chat service if still needed for the /chats route
-const chatService = createChatService();
-
-
-// --- Configuration for Structured Data Generation Tasks ---
-
-// Define the Zod schema for filename suggestions
-const FilenameSuggestionSchema = z.object({
-    suggestions: z.array(z.string()).length(5).openapi({
-        description: "An array of exactly 5 suggested filenames.",
-        example: ["stringUtils.ts", "textHelpers.ts", "stringManipulators.ts", "strUtils.ts", "stringLib.ts"]
-    }),
-    reasoning: z.string().optional().openapi({
-        description: "Brief reasoning for the suggestions.",
-        example: "Suggestions focus on clarity and common naming conventions for utility files."
-    })
-}).openapi("FilenameSuggestionOutput");
-
-// Define other schemas as needed...
-// const CodeReviewSchema = z.object({ ... });
-
-// Central object mapping keys to structured task configurations
-// Place this here or in a separate config file (e.g., gen-ai-config.ts) and import it
-const structuredDataSchemas: Record<string, StructuredDataSchemaConfig<any>> = {
-    filenameSuggestion: {
-        // These fields match BaseStructuredDataConfigSchema
-        name: "Filename Suggestion",
-        description: "Suggests 5 suitable filenames based on a description of the file's content.",
-        promptTemplate: "Based on the following file description, suggest 5 suitable and conventional filenames. File Description: {userInput}",
-        systemPrompt: "You are an expert programmer specializing in clear code organization and naming conventions. Provide concise filename suggestions.",
-        modelSettings: {
-            model: "gpt-4o",
-            temperature: 0.5,
-        },
-        // This field is part of the interface, but not the base Zod schema
-        schema: FilenameSuggestionSchema, // The actual Zod schema instance
-    },
-    // Example of another entry
-    basicSummary: {
-        name: "Basic Summary",
-        description: "Generates a short summary of the input text.",
-        promptTemplate: "Summarize the following text concisely: {userInput}",
-        systemPrompt: "You are a summarization expert.",
-        modelSettings: { model: "gpt-4o", temperature: 0.6, maxTokens: 150 },
-        schema: z.object({ // Define the schema directly here
-            summary: z.string().openapi({ description: "The generated summary." })
-        }).openapi("BasicSummaryOutput")
-    }
-    // Add more structured tasks here...
-};
 
 
 // GET /models
@@ -273,30 +218,25 @@ export const genAiRoutes = new OpenAPIHono()
     // --- NEW: Structured Data Generation Handler ---
     .openapi(generateStructuredRoute, async (c) => {
         const body = c.req.valid('json');
-        const { schemaKey, userInput, provider: providerOverride, options: optionsOverride } = body;
+        const { schemaKey, userInput,
+        } = body;
 
         // 1. Find the configuration for the requested schemaKey
-        const config = structuredDataSchemas[schemaKey];
+        const config: StructuredDataSchemaConfig<z.ZodTypeAny> = structuredDataSchemas[schemaKey as keyof typeof structuredDataSchemas]
         if (!config) {
             throw new ApiError(400, `Invalid schemaKey provided: ${schemaKey}. Valid keys are: ${Object.keys(structuredDataSchemas).join(', ')}`, 'INVALID_SCHEMA_KEY');
         }
 
         // 2. Prepare parameters for the AI service
-        const finalPrompt = config.promptTemplate.replace('{userInput}', userInput);
-        const finalProvider = providerOverride as APIProviders | undefined ?? config.modelSettings?.model as APIProviders | undefined ?? 'openai'; // Default provider logic
-        const finalModel = optionsOverride?.model ?? config.modelSettings?.model ?? 'gpt-4o'; // Define default model logic
-        const finalOptions = { ...config.modelSettings, ...optionsOverride, model: finalModel }; // Merge options, override wins
+        const finalPrompt = config?.promptTemplate ? config?.promptTemplate.replace('{userInput}', userInput) : userInput;
+
         const finalSystemPrompt = config.systemPrompt;
 
         try {
             const result = await generateStructuredData({
                 prompt: finalPrompt,
-                schema: config.schema, // Pass the Zod schema from config
-                // provider: finalProvider,
-                // model: finalModel, // Pass the resolved model
-                options: finalOptions,
+                schema: config.schema,
                 systemMessage: finalSystemPrompt,
-                // debug: true // Optionally enable debug logging
             });
 
             // 3. Return the generated object
@@ -396,9 +336,8 @@ export const genAiRoutes = new OpenAPIHono()
         const { userInput } = c.req.valid('json');
 
         const projectSummary = await getFullProjectSummary(projectId);
-
         const systemPrompt = `
-You are a code assistant that recommends relevant files based on user input.
+        You are a code assistant that recommends relevant files based on user input.
 You have a list of file summaries and a user request.
 Return only valid JSON with the shape: {"fileIds": ["uuid1", "uuid2"]}
 Guidelines:
@@ -406,7 +345,8 @@ Guidelines:
 - For complex tasks: return max 10 files
 - For very complex tasks: return max 20 files
 - Do not add comments in your response
-- Strictly follow the JSON schema, do not add any additional properties or comments`;
+- Strictly follow the JSON schema, do not add any additional properties or comments
+        `
 
         const userMessage = `
 User Query: ${userInput}
@@ -414,28 +354,19 @@ Below is a combined summary of project files:
 ${projectSummary}`;
 
         try {
-            const cfg = MEDIUM_MODEL_CONFIG;
 
             const result = await generateStructuredData({
                 prompt: userMessage,
                 schema: FileSuggestionsZodSchema,
-                options: {
-                    model: cfg.model,
-                    temperature: cfg.temperature,
-                },
                 systemMessage: systemPrompt,
             })
-
-            // const validatedResult = result as z.infer<typeof FileSuggestionsZodSchema>;
 
             const payload = {
                 success: true,
                 recommendedFileIds: result.object.fileIds,
             } satisfies z.infer<typeof SuggestFilesResponseSchema>;
 
-            const response: TypedResponse<z.infer<typeof SuggestFilesResponseSchema>, 200, 'json'> = c.json(payload, 200);
-            return response;
-
+            return c.json(payload, 200);
         } catch (error: any) {
             console.error("[SuggestFiles Project] Error:", error);
             if (error instanceof ApiError) throw error;

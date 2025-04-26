@@ -1,4 +1,4 @@
-import { formatShortcut, shortCutMap } from "@ui/lib/shortcuts"
+import { formatShortcut, shortCutMap } from "@/lib/shortcuts"
 import { Badge } from '@ui'
 
 

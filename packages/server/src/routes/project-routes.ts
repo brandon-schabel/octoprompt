@@ -4,8 +4,6 @@ import {
     ApiError,
     buildCombinedFileSummaries,
     MEDIUM_MODEL_CONFIG,
-    // Import all schemas from shared
-
 } from "shared";
 import {
     ProjectIdParamsSchema,
@@ -15,23 +13,15 @@ import {
     GetFileSummariesQuerySchema,
     SummarizeFilesBodySchema,
     RemoveSummariesBodySchema,
-    SuggestFilesBodySchema,
-    ProjectSchema,
-    ProjectFileSchema,
     ProjectResponseSchema,
     ProjectListResponseSchema,
     FileListResponseSchema,
     FileSummaryListResponseSchema,
     SummarizeFilesResponseSchema,
     RemoveSummariesResponseSchema,
-    SuggestFilesResponseSchema,
-    FileSuggestionsZodSchema,
-    FileSuggestionsJsonSchema,
     ProjectResponseMultiStatusSchema,
     ProjectSummaryResponseSchema,
     // Import types
-    Project,
-    ProjectFile,
     CreateProjectBody,
     UpdateProjectBody
 } from "shared/src/schemas/project.schemas";
@@ -50,8 +40,6 @@ import * as projectService from "@/services/project-service";
 import { syncProject, syncProjectFolder } from "@/services/file-services/file-sync-service";
 import { getFileSummaries } from "@/services/file-services/file-summary-service";
 import { watchersManager } from "@/services/shared-services";
-import { fetchStructuredOutput } from "@/utils/structured-output-fetcher";
-import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 
 // DELETE REDUNDANT TYPE DEFINITIONS - SERVICE LAYER PROVIDES CORRECTLY TYPED DATA
 

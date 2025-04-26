@@ -68,18 +68,39 @@ export type MessageListResponse = {
  */
 export type AiSdkOptions = {
     /**
-     * Model ID to use
+     * Specifies the exact AI model identifier to use for the generation request. This often overrides a default model set elsewhere. Ensure the ID is valid for the selected provider.
      */
     model?: string;
+    /**
+     * Controls the randomness of the output. Lower values (e.g., 0.2) make the output more focused, deterministic, and suitable for factual tasks. Higher values (e.g., 0.8) increase randomness and creativity, useful for brainstorming or creative writing. A value of 0 typically means greedy decoding (always picking the most likely token).
+     */
     temperature?: number;
+    /**
+     * The maximum number of tokens (words or parts of words) the model is allowed to generate in the response. This limits the output length and can affect cost. Note: This limit usually applies only to the *generated* tokens, not the input prompt tokens.
+     */
     maxTokens?: number;
+    /**
+     * Controls diversity via nucleus sampling. It defines a probability threshold (e.g., 0.9). The model considers only the smallest set of most probable tokens whose cumulative probability exceeds this threshold for the next token selection. Lower values (e.g., 0.5) restrict choices more, leading to less random outputs. A value of 1 considers all tokens. It's often recommended to alter *either* `temperature` *or* `topP`, not both.
+     */
     topP?: number;
+    /**
+     * Applies a penalty to tokens based on how frequently they have already appeared in the generated text *and* the prompt. Positive values (e.g., 0.5) decrease the likelihood of the model repeating the same words or phrases verbatim, making the output less repetitive. Negative values encourage repetition.
+     */
     frequencyPenalty?: number;
+    /**
+     * Applies a penalty to tokens based on whether they have appeared *at all* in the generated text *and* the prompt so far (regardless of frequency). Positive values (e.g., 0.5) encourage the model to introduce new concepts and topics, reducing the likelihood of repeating *any* previously mentioned word. Negative values encourage staying on topic.
+     */
     presencePenalty?: number;
+    /**
+     * Restricts the model's choices for the next token to the `k` most likely candidates. For example, if `topK` is 40, the model will only consider the top 40 most probable tokens at each step. A lower value restricts choices more. Setting `topK` to 1 is equivalent to greedy decoding (same as `temperature: 0`). Less commonly used than `topP`.
+     */
     topK?: number;
+    /**
+     * Specifies one or more sequences of text where the AI should stop generating. Once the model generates a stop sequence, it will halt output immediately, even if `maxTokens` hasn't been reached. Useful for structured output or controlling conversational turns.
+     */
     stop?: string | Array<string>;
     /**
-     * Provider-specific response format options (e.g., { type: "json_object" })
+     * Specifies the desired format for the model's response. This is highly provider-specific. A common use case is enforcing JSON output, often requiring specific model versions.
      */
     response_format?: unknown;
 };
@@ -137,38 +158,6 @@ export type OperationSuccessResponse = {
 
 export type UpdateChatRequestBody = {
     title: string;
-};
-
-export type StructuredOutputResponse = {
-    success: true;
-    data?: unknown;
-};
-
-export type StructuredOutputRequest = {
-    /**
-     * Type of structured output to generate
-     */
-    outputType: string;
-    /**
-     * User prompt for generating the output
-     */
-    userMessage: string;
-    /**
-     * Optional system prompt
-     */
-    systemMessage?: string;
-    /**
-     * Optional model to use
-     */
-    model?: string;
-    /**
-     * Optional temperature parameter
-     */
-    temperature?: number;
-    /**
-     * Optional chat ID for tracking
-     */
-    chatId?: string;
 };
 
 export type Ticket = {
@@ -718,7 +707,7 @@ export type AiGenerateTextRequest = {
     model: string;
     options?: AiSdkOptions & unknown;
     /**
-     * Optional system message to guide the AI.
+     * Optional system message to guide the AI behavior and persona.
      */
     systemMessage?: string;
 };
@@ -727,7 +716,7 @@ export type AiGenerateStructuredResponse = {
     success: true;
     data: {
         /**
-         * The generated structured data, matching the schema defined by the 'schemaKey'.
+         * The generated structured data, validated against the schema defined by the 'schemaKey'.
          */
         output?: unknown;
     };
@@ -735,18 +724,13 @@ export type AiGenerateStructuredResponse = {
 
 export type AiGenerateStructuredRequest = {
     /**
-     * The key identifying the predefined structured task to perform.
+     * The key identifying the predefined structured task configuration.
      */
     schemaKey: string;
     /**
-     * The user's input or context for the task.
+     * The user's input or context for the structured generation task.
      */
     userInput: string;
-    /**
-     * Optional: Override the default AI provider for this task.
-     */
-    provider?: ('openai' | 'openrouter' | 'lmstudio' | 'ollama' | 'xai' | 'google_gemini' | 'anthropic' | 'groq' | 'together') | string;
-    options?: AiSdkOptions & unknown;
 };
 
 export type UnifiedModel = {
@@ -763,7 +747,7 @@ export type UnifiedModel = {
      */
     provider: string;
     /**
-     * Context window size
+     * Context window size in tokens
      */
     context_length?: number;
 };
@@ -1123,35 +1107,6 @@ export type PatchChatsByChatIdResponses = {
 };
 
 export type PatchChatsByChatIdResponse = PatchChatsByChatIdResponses[keyof PatchChatsByChatIdResponses];
-
-export type PostApiStructuredOutputsData = {
-    body?: StructuredOutputRequest;
-    path?: never;
-    query?: never;
-    url: '/api/structured-outputs';
-};
-
-export type PostApiStructuredOutputsErrors = {
-    /**
-     * Invalid request or unsupported output type
-     */
-    400: ApiErrorResponse;
-    /**
-     * Error generating structured output
-     */
-    500: ApiErrorResponse;
-};
-
-export type PostApiStructuredOutputsError = PostApiStructuredOutputsErrors[keyof PostApiStructuredOutputsErrors];
-
-export type PostApiStructuredOutputsResponses = {
-    /**
-     * Successfully generated structured output
-     */
-    200: StructuredOutputResponse;
-};
-
-export type PostApiStructuredOutputsResponse = PostApiStructuredOutputsResponses[keyof PostApiStructuredOutputsResponses];
 
 export type PostApiTicketsData = {
     body?: CreateTicketBody;

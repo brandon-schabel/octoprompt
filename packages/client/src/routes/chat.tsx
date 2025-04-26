@@ -12,7 +12,7 @@ import { useActiveChatId } from '@/hooks/api/use-state-api';
 import { SlidingSidebar } from '@/components/sliding-sidebar';
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
 import { Chat } from '@/hooks/generated';
-import { cn } from '@ui/lib/utils';
+import { cn } from '@/lib/utils';
 import {
   Command, CommandEmpty, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
   Button,

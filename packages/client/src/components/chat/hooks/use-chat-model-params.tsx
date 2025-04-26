@@ -1,21 +1,10 @@
 import { useSettings } from '@/hooks/api/global-state/selectors';
 import { useUpdateSettings } from '@/hooks/api/global-state/updaters';
+import { AiSdkOptions } from '@/hooks/generated';
 import { useCallback, useMemo } from 'react';
 import { modelsTempNotAllowed } from 'shared';
 
 type ModelParamMutationFn = (value: number) => void;
-type StreamMutationFn = (value: boolean) => void;
-
-export interface ModelSettings {
-    temperature: number;
-    top_p: number;
-    frequency_penalty: number;
-    presence_penalty: number;
-    max_tokens: number;
-    stream: boolean;
-    model?: string;
-    provider?: string;
-}
 
 export function useChatModelParams() {
     const settings = useSettings();
@@ -27,7 +16,6 @@ export function useChatModelParams() {
         top_p,
         frequency_penalty,
         presence_penalty,
-        stream,
         model,
         provider,
     } = settings;
@@ -58,17 +46,13 @@ export function useChatModelParams() {
         updateSettings({ presence_penalty: value });
     }, [updateSettings]);
 
-    const setStream: StreamMutationFn = useCallback((value) => {
-        updateSettings({ stream: value });
-    }, [updateSettings]);
 
-    const modelSettings: ModelSettings = useMemo(() => ({
+    const modelSettings: AiSdkOptions = useMemo(() => ({
         temperature,
         top_p,
         frequency_penalty,
         presence_penalty,
         max_tokens,
-        stream,
         model,
         provider,
     }), [
@@ -77,7 +61,6 @@ export function useChatModelParams() {
         frequency_penalty,
         presence_penalty,
         max_tokens,
-        stream,
         model,
         provider
     ]);
@@ -89,7 +72,6 @@ export function useChatModelParams() {
         setTopP,
         setFreqPenalty,
         setPresPenalty,
-        setStream,
         isTempDisabled,
     };
 }

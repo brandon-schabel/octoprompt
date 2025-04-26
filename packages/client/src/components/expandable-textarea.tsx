@@ -18,7 +18,7 @@ import { useEffect, useState, useRef, forwardRef } from "react"
 import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from "sonner"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
-import { formatShortcut } from "@ui/lib/shortcuts"
+import { formatShortcut } from "@/lib/shortcuts"
 import { useOptimizePrompt } from "@/hooks/api/use-prompts-api"
 
 type ExpandableTextareaProps = {
