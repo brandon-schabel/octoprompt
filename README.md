@@ -54,32 +54,29 @@ Quick links:
 [Open API Spec Endpoint](http://localhost:3147/doc)
 
 > **Tip:** Even without setting up AI keys, you can still manage projects, create tickets, and explore OctoPrompt’s local file summarization functionality (if you skip AI usage, no external calls will be made).
-
 > If a file or folder doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `packages/server/src/services/file-sync-service.ts` file.
 
 ---
 
 ## Key User Features
-**🛠️ Context Building Tools** 
-  OctoPrompt has a great file search and file picking interface. As you pick files you will see file populate in the "Selected Files", and everything you add including fils, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed. 
+
+**🛠️ Context Building Tools**
+  OctoPrompt has a great file search and file picking interface. As you pick files you will see file populate in the "Selected Files", and everything you add including fils, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed.
 
 - **🎟️ Ticket and Task Planning**
-  Write a ticket with an overview and let AI generate the ticket tasks for you. Because OctoPrompt has a built in file summarization agent, it can use the full project summary context to help plan your next big feature. 
+  Write a ticket with an overview and let AI generate the ticket tasks for you. Because OctoPrompt has a built in file summarization agent, it can use the full project summary context to help plan your next big feature.
 
 - **💬 Built In AI Chat**
   Configure and get start with using AI Chats  built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
 
-
-- **📚 Prompt Library** 
+- **📚 Prompt Library**
   Save your favorite prompts directly into OctoPrompt and import them into any project. This allows you to import and use prompts in any project. Importing prompts into project just creates an association so things don't get cluttered between projects.
-
-- **🛟 Type Safe & Modular**  
-  Written in TypeScript (both client and server). Flexible architecture to easily customize or extend functionality.
 
 - **🔥 High Performance**  
   Uses **Bun** on the backend for top-notch speed with minimal overhead. Avoids heavy libraries and leans on built-in APIs with heavy lift from Hono and Zod.
 
 ## Features For the Nerds
+
 - **📝 Bun Server with OpenAPI Spec**
   No guessing about what is going on, every OctoPrompt endpoint can be test using the [Swagger Endpoint](http://localhost:3147/swagger)
 
@@ -89,6 +86,8 @@ Quick links:
 - **🔌 Customizable**  
   Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Zustand, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
 
+- **🛟 Type Safe & Modular**  
+  Written in TypeScript with full Zod validation. Flexible architecture to easily customize or extend functionality.
 
 ## Screenshots
 
@@ -129,21 +128,21 @@ bun run dev
 
 #### Start Client/Server Separately
 
-- **Server Only** (runs on port 3147):
+- **Server Only** from the root (runs on port 3147):
 
 ```bash
 bun run dev:server
 ```
 
-- **Client Only** (runs on port 5173):
+- **Client Only** from the root (runs on port 5173):
 Note: this will generate the `openapi-ts` client, the server must be running first.
 
 ```bash
 bun run dev:client
 ```
 
-   The client is available at [http://localhost:5173](http://localhost:5173)  
-   The server is available at [http://localhost:3147](http://localhost:3147)
+The client is available at [http://localhost:5173](http://localhost:5173)  
+The server is available at [http://localhost:3147](http://localhost:3147)
 
 ---
 
