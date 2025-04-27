@@ -35,10 +35,10 @@ Note: Only needed if Bun isn't already installed.
 cd octoprompt && npm install -g bun
 ```
 
-### Step 3 - Run Setup to Initialize DB
+### Step 3 - Install Repo Packages && Run Setup to Initialize DB
 
 ```bash
-bun run setup
+bun i && bun run setup
 ```
 
 ### Step 4 - Start Server and Client
@@ -116,7 +116,6 @@ Quick links:
 <https://github.com/user-attachments/assets/dcdc4d34-fb67-4ec8-9544-426f7fe95eec>
 
 ---
-
 
 2. **Start the development servers**:
 

@@ -24,7 +24,7 @@ async function startServices() {
 
     // run openapi-ts generate
     console.log("🚀 Generating openapi-ts client...");
-    const openapiTsProcess = Bun.spawn(["bun", "run", "openapi-ts", "generate"], {
+    const openapiTsProcess = Bun.spawn(["bun", "run", "openapi-ts"], {
       cwd: join(rootDir),
       stdio: ["inherit", "inherit", "inherit"],
     });

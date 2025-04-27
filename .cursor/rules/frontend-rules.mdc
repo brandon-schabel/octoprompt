@@ -1,6 +1,6 @@
 ---
 description: It's helpful for building features on the client.
-globs: packages/client/src/**/*.tsx, client/src/**/*.tsx
+globs: packages/client/src/**/*.tsx
 alwaysApply: false
 ---
 # Frontend Cursor Rules: Extended Guidelines
@@ -165,7 +165,7 @@ The `projects.tsx` file (shown in your code snippet) demonstrates how we integra
 
 When adding or refactoring features:
 
-1. **Define** if required define db table in `packages/server/src/utils/database.ts` and schema in the shared schema `packages/shared/src/schemas` (Zod + OpenAPI + TS), the schemas serve at the source of truth for all data. When the server is running you can view the entire server API and Schemas with swagger at `http://localhost:3147/swagger` or retrieve the OpenAPI spec from `http://localhost:3147/doc`
+1. **Define** if required define db table in `packages/server/src/utils/database.ts` and schema in the shared schema `packages/shared/src/schemas` (Zod + OpenAPI + TS), the schemas serve at the source of truth for all data. When the server is running you can view the entire server API and Schemas with [Swagger UI](mdc:http:/localhost:3147/swagger)  or retrieve the OpenAPI spec from `http://localhost:3147/doc`
 2. **Create** or update your Bun Hono Server route in `packages/server/src/routes`
 3. **Generate Client** Generate the API client run `bun run openapi-ts` in the root of the repo to generate the client types based on the schema/route Open API Specs
 4. **Write** a React Query hook based on the generated types and query client from `packages/client/src/hooks/generated/types.gen` and `packages/client/src/hooks/generated/@tanstack/react-query.gen`

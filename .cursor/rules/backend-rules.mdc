@@ -1,7 +1,7 @@
 ---
-description: Rules for server-side TypeScript code (Bun + Zod) in packages/server/src
-globs: packages/server/src/**/*.ts, server/src/**/*.ts,
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 # Backend Architecture & File Building Guide  (Updated 2025‑04‑26)
 
