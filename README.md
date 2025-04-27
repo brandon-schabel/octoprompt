@@ -126,27 +126,78 @@ Thank you to the following projects - and everything that came before
 [Radix UI - Used By ShadCN](https://www.radix-ui.com/)
 [Tailwind CSS](https://tailwindcss.com/)
 
-## Screenshots
+## Screenshots and Descriptions
 
-### Project View, select files, prompts, and provid instructions
 
-![tickets-1](https://github.com/user-attachments/assets/43f08ccd-6ae7-4325-a531-1438c3cf214c)
+### Chat with LLMs 
 
-### View all tickets for your project
+OctoPrompt has a built-in chat, experiment with different LLMs, get help with your programming problems.
 
-![tickets-2](https://github.com/user-attachments/assets/784cb82b-44d9-40e5-8692-d7d814afa5e1)
+![octoprompt-chat-page](https://github.com/user-attachments/assets/1a82618c-6e52-4956-92ef-95170447beb9)
 
-### Auto Generate a list of tasks based on the overview provided
+### Project View
 
-![tickets-3](https://github.com/user-attachments/assets/ecac1202-ffda-4456-94ad-bd04edbcde95)
+Select Files, Prompts, and Provide Instructions
 
-### Copy the contents of the ticket to your clipboard, in various formats
+![octoprompt-projects-view](https://github.com/user-attachments/assets/53f76bf9-c730-45f0-a602-59c845b6ff9d)
 
-![tickets-4](https://github.com/user-attachments/assets/2de8190b-ff4c-4712-91a3-5ca59a129fc7)
+### Copy File Or Folder Contents, Summaries, and File Structures (Project Page)
 
-### Chat with LLMs
+With LLMs context is everything, sometimes you just need the file structured, sometimes you need the entire folder contents, copy whatever you need
 
-![Xnapper-2024-12-26-13 55 19](https://github.com/user-attachments/assets/c234a42a-336e-4b9e-82c8-bec7e88ab570)
+![octoprompt-project-copy-folder-summary](https://github.com/user-attachments/assets/fa1f8a05-d6c9-41b0-b368-06e17931af07)
+
+### AI File Suggestions (Project Page)
+
+Let AI take the wheel and have it provide you suggested files based on your user input. This feature will take in your full project summary into considerdation and suggest files to you.
+
+![octoprompt-suggested-files-view](https://github.com/user-attachments/assets/9a955bcd-d58c-40c3-90f0-b06c1e3a2582)
+
+### Project Summary Page
+
+Project summary page which has various settings for configuring which files should and shouldn't be summarized. For example
+if you have large documents in your file you should exclude them. They likely wont get summarized anyway because they would likely 
+exceed the context limit, but better safe than sorry.
+
+![octoprompt-project-summary-page](https://github.com/user-attachments/assets/1212a7eb-7a58-489d-b206-adca83e7f811)
+
+### View Project Compiled Summary (Project Summary Page)
+
+View the compiled full project summary in the projects summary page, used in the file suggestions and task generation.
+
+![octoprompt-project-summary-overview-dialog](https://github.com/user-attachments/assets/e99c11ff-280e-4af7-b12e-6725dea16d5c)
+
+### Prompt Management Page
+
+Save and manage all your prompts on the prompt management page. Prompts are configured per project to not over crowd project prompts.
+
+![octoprompt-prompts-page](https://github.com/user-attachments/assets/01777d7f-86d2-4aac-bd06-d1377971def1)
+
+### Provider Keys Page
+
+Save your API keys for each provider. Set limits on your API keys, set reasonable limits especially for development.
+
+![octoprompt-provider-keys-page](https://github.com/user-attachments/assets/4869df1b-c1f6-4f7e-a5da-b3a584c0d178)
+
+### Project Tickets Management Page
+
+Use the ticket management page to plan your next features, tickets are scope per project.
+
+![octoprompt-tickets-overview](https://github.com/user-attachments/assets/9950ae1e-3770-40a7-bb63-cddd2f3c03eb)
+
+### Auto Generate Tasks (Tickets Page)
+
+Generate tasks with AI with project specfic context using the full project summaries.
+
+![octoprompt-generated-tasks-ticket-dialog](https://github.com/user-attachments/assets/b4d42880-1a36-4043-8ebc-6fe1c094cf76)
+
+### Keyboard Shortcuts Dialog
+
+Selected the wrong folder? Undo your select with `control/cmd + z` and redo with `control/cmd + shift +z`. Find other shortcuts in the top right of the app, there is a "?" which brings up a Dialog with various shortcuts that can be used throughout OctoPrompt
+
+![octoprompt-keyboard-shortcuts-help-dialog](https://github.com/user-attachments/assets/cee0ecf2-21b0-4822-91cf-06f691258b88)
+
+
 
 ## Videos
 
