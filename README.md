@@ -2,7 +2,7 @@
 
 ## Introduction
 
-OctoPrompt is a development tool for your codebase by building context from your project files, prompts, and your input. OctoPrompt takes advantage of AI agents to perform things like ticket/task planning, and building a knowledgebase from your code files, finding suggested files based on user input as well as using the knowledge based built from the summary agent,
+OctoPrompt is a development tool for your codebase by building context from your project files, prompts, and your input. OctoPrompt takes advantage of AI agents to perform things like ticket/task planning, and building a knowledgebase from your code files, and finding suggested files based on user input as well as from the knowledge base built by the summary agent.
 
 ### Repo Management Made Easy
 
