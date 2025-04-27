@@ -68,10 +68,6 @@ export type MessageListResponse = {
  */
 export type AiSdkOptions = {
     /**
-     * Specifies the exact AI model identifier to use for the generation request. This often overrides a default model set elsewhere. Ensure the ID is valid for the selected provider.
-     */
-    model?: string;
-    /**
      * Controls the randomness of the output. Lower values (e.g., 0.2) make the output more focused, deterministic, and suitable for factual tasks. Higher values (e.g., 0.8) increase randomness and creativity, useful for brainstorming or creative writing. A value of 0 typically means greedy decoding (always picking the most likely token).
      */
     temperature?: number;
@@ -103,6 +99,14 @@ export type AiSdkOptions = {
      * Specifies the desired format for the model's response. This is highly provider-specific. A common use case is enforcing JSON output, often requiring specific model versions.
      */
     response_format?: unknown;
+    /**
+     * The provider to use for the AI request.
+     */
+    provider?: string;
+    /**
+     * The model to use for the AI request.
+     */
+    model?: string;
 };
 
 export type AiChatStreamRequest = {
@@ -114,14 +118,6 @@ export type AiChatStreamRequest = {
      * The latest message content from the user.
      */
     userMessage: string;
-    /**
-     * The AI provider to use (e.g., openai, openrouter).
-     */
-    provider: ('openai' | 'openrouter' | 'lmstudio' | 'ollama' | 'xai' | 'google_gemini' | 'anthropic' | 'groq' | 'together') | string;
-    /**
-     * The model identifier to use.
-     */
-    model: string;
     options?: AiSdkOptions;
     /**
      * Optional system message override for this specific request.
@@ -652,6 +648,18 @@ export type OptimizePromptRequest = {
     userContext: string;
 };
 
+export type AiGenerateTextRequest = {
+    /**
+     * The text prompt for the AI.
+     */
+    prompt: string;
+    options?: AiSdkOptions & unknown;
+    /**
+     * Optional system message to guide the AI behavior and persona.
+     */
+    systemMessage?: string;
+};
+
 export type AiGenerateTextResponse = {
     success: true;
     data: {
@@ -660,26 +668,6 @@ export type AiGenerateTextResponse = {
          */
         text: string;
     };
-};
-
-export type AiGenerateTextRequest = {
-    /**
-     * The text prompt for the AI.
-     */
-    prompt: string;
-    /**
-     * The AI provider to use (e.g., openai, openrouter, groq).
-     */
-    provider: ('openai' | 'openrouter' | 'lmstudio' | 'ollama' | 'xai' | 'google_gemini' | 'anthropic' | 'groq' | 'together') | string;
-    /**
-     * The specific model identifier to use.
-     */
-    model: string;
-    options?: AiSdkOptions & unknown;
-    /**
-     * Optional system message to guide the AI behavior and persona.
-     */
-    systemMessage?: string;
 };
 
 export type AiGenerateStructuredResponse = {
@@ -701,6 +689,7 @@ export type AiGenerateStructuredRequest = {
      * The user's input or context for the structured generation task.
      */
     userInput: string;
+    options?: AiSdkOptions & unknown;
 };
 
 export type UnifiedModel = {
@@ -2665,6 +2654,22 @@ export type PostApiPromptOptimizeResponses = {
 };
 
 export type PostApiPromptOptimizeResponse = PostApiPromptOptimizeResponses[keyof PostApiPromptOptimizeResponses];
+
+export type PostApiGenAiStreamData = {
+    body: AiGenerateTextRequest;
+    path?: never;
+    query?: never;
+    url: '/api/gen-ai/stream';
+};
+
+export type PostApiGenAiStreamResponses = {
+    /**
+     * Stream of response tokens (Vercel AI SDK format)
+     */
+    200: string;
+};
+
+export type PostApiGenAiStreamResponse = PostApiGenAiStreamResponses[keyof PostApiGenAiStreamResponses];
 
 export type PostApiGenAiTextData = {
     body: AiGenerateTextRequest;
