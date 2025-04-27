@@ -2,11 +2,11 @@
 
 ## Introduction
 
-OctoPrompt is a development tool for your codebase by building context from your project files, prompts, and your input. OctoPrompt takes advantage of AI agents to perform things like ticket/task planning, and building a knowledgebase from your code files, and finding suggested files based on user input as well as from the knowledge base built by the summary agent.
+OctoPrompt is a development tool for your codebase by building context from your project files, prompts, and your input. OctoPrompt takes advantage of AI agents to perform things like ticket/task planning, building a knowledgebase from your code files, and finding suggested files based on user input as well as from the knowledge base built by the summary agent.
 
 ### Repo Management Made Easy
 
-Save, manage, and include all your favorite prompts with the built in prompt manager. Copy all context to clipboard with a single click to use with any AI API provider or use OctoPrompt built in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your codebase and allows you to make architectural changes to your code faster than before, all without the hassle of an agent running up your API bill running around your repo. OctoPrompt works completely without AI models as well, it is a great AI context builder without the use of agents. Using OctoPrompt to build out context works really well because you are providing the AI with all the context it needs, but not overloading it with things it doesn't need - other tools suggest loading your repo into context which can be costly if using API and diminishes model output quality.
+Save, manage, and include all your favorite prompts with the built-in prompt manager. Copy all context to clipboard with a single click to use with any AI API provider or use OctoPrompt built-in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your codebase and allows you to make architectural changes to your code faster than before, all without the hassle of an agent running up your API bill running around your repo. OctoPrompt works completely without AI models as well, it is a great AI context builder without the use of agents. Using OctoPrompt to build out context works really well because you are providing the AI with all the context it needs, but not overloading it with things it doesn't need - other tools suggest loading your repo into context which can be costly if using API and diminishes model output quality.
 
 Thank you for checking out the project. If you have any questions please feel free to reach out and support Open Source by leaving a star.
 
@@ -43,64 +43,68 @@ bun run dev
 ```
 
 Quick links:
+
 [UI](http://localhost:5173)
+
 [Server Base](http://localhost:3147)
+
 [Swagger UI](http://localhost:3147/swagger)
+
 [Open API Spec Endpoint](http://localhost:3147/doc)
 
-> If a file or folder doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `packages/server/src/services/file-sync-service.ts` file.
+> If a file or folder doesn't show up that you need to show up, you can adjust the inclusion and exclusion settings in the `packages/server/src/services/file-sync-service.ts` file.
 
 ---
 
 ## Key User Features
 
-- **🏛️ Project Management View**
+### **🏛️ Project Management View**
 
-Manage and sync multiple projects in OctoPrompt. In the Projects view you can open several tabs, and each tab will hold it own state. This allows you to build multiple features in parallel or even just quickly switch between projects. OctoPrompt will always persist the state, even on page reload, because saving your is important.
+Manage and sync multiple projects in OctoPrompt. In the Projects view you can open several tabs, and each tab will hold its own state. This allows you to build multiple features in parallel or even just quickly switch between projects. OctoPrompt will always persist the state, even on page reload, because saving your work is important.
 
-- **🛠️ Context Building Tools**
+### **🛠️ Context Building Tools**
 
-OctoPrompt has a great file search and file picking interface. As you pick files you will see file populate in the "Selected Files", and everything you add including fils, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed.
+OctoPrompt has a great file search and file picking interface. As you pick files you will see files populate in the "Selected Files", and everything you add including files, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed.
 
-- **🤖🕵️‍♂️ AI Agents**
+### **🤖🕵️‍♂️ AI Agents**
 
-OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help help generate tasks for you tickets, suggest files to select based on your "user input".
+OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help  generate tasks for you tickets, suggest files to select based on your "user input".
 
-- **🎟️ Ticket and Task Planning**
+### **🎟️ Ticket and Task Planning**
 
-Write a ticket with an overview and let AI generate the ticket tasks for you. Because OctoPrompt has a built in file summarization agent, it can use the full project summary context to help plan your next big feature.
+Write a ticket with an overview and let AI generate the ticket tasks for you. Because OctoPrompt has a built-in file summarization agent, it can use the full project summary context to help plan your next big feature.
 
-- **💬 Built In AI Chat - Use Any Model**
+### **💬 built-in AI Chat ### Use Any Model**
 
-Configure and get start with using AI Chats  built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
+Configure and get started with using AI Chats  built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
 
-- **📚 Prompt Library**
+### **📚 Prompt Library**
 
 Save your favorite prompts directly into OctoPrompt and import them into any project. This allows you to import and use prompts in any project. Importing prompts into project just creates an association so things don't get cluttered between projects.
 
-- **⌨️ Key Bindings**
+### **⌨️ Key Bindings**
 
 Quickly navigate through the navigation using keyboard commands, use the help button in the top right corner to view the available hotkeys.
   
-## Features For the Nerds
+## Features For Nerds
 
-- **📝 Bun Server with OpenAPI Spec**
+### **📝 Bun Server with OpenAPI Spec**
 
 No guessing about what is going on, every OctoPrompt endpoint can be test using the [Swagger Endpoint](http://localhost:3147/swagger)
 
-- **🏠 Local-First**
+### **🏠 Local-First**
 
-Operates entirely on your local machine—no mandatory cloud dependencies—letting you keep your data where you want it. Run OctoPrompt on your machine, and use local AI Models with Ollam or LM Studio
+Operates entirely on your local machine—no mandatory cloud dependencies—letting you keep your data where you want it. Run OctoPrompt on your machine, and use local AI Models with Ollama or LM Studio
 
-- **🔌 Customizable**  
+### **🔌 Customizable**  
 
 Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Zustand, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
 
-- **🛟 Type Safe & Modular**  
+### **🛟 Type Safe & Modular**  
 
 Written in TypeScript with full back-to-front Zod validation. All types are generated from the schemas which are the source of truth for the data/validations. Flexible architecture to easily customize or extend functionality.
   
-- **🔥 High Performance**  
+### **🔥 High Performance**  
 
 Uses **Bun** on the backend for top-notch speed with minimal overhead. Avoids heavy libraries and leans on built-in APIs with heavy lift from Hono and Zod.
 
@@ -174,13 +178,13 @@ The server is available at [http://localhost:3147](http://localhost:3147)
 
 ### IMPORTANT - Configure Your Provider Keys
 
-#### In Order to use AI features you must configure providers keys and pontentially youre model config
+#### In Order to use AI features you must configure providers keys and potentially your model config
 
 If you choose to enable AI features, click the **"Keys"** button in the navbar and configure each provider key.  
 For example:  
 ![Xnapper-2025-01-13-20 25 41](https://github.com/user-attachments/assets/3b87ca3e-3182-4271-8235-b98477f182ac)
 
-Then select the appropriate provider. OpenRouter is recommended becuase it will give you access to many providers and models, however OctoPrompt supports other API Providers direct.
+Then select the appropriate provider. OpenRouter is recommended because it will give you access to many providers and models, however OctoPrompt supports other API Providers direct.
 Lastly input the API key from your providers.
 
 #### Supported Providers Keys Pages Links
@@ -205,7 +209,7 @@ You can always install local models with software like:
 - Click the chat icon and  **New Chat** in the top-left.
 - **Type** a question — OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.
 
-figure your model defaults for the OctoPrompt AI Features
+Configure your model defaults for the OctoPrompt AI Features
 
 The default AI model configurations for various services are maintained in the file [shared/constants/model-default-configs.ts](./packages/shared/constants/model-default-configs.ts). This file centralizes settings such as the model to use, the response temperature, and the provider for each AI-related service, with more configurations to come.
 
