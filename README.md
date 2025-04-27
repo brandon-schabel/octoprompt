@@ -74,9 +74,9 @@ OctoPrompt implements various AI features to help you deal with increasingly com
 
 Write a ticket with an overview and let AI generate the ticket tasks for you. Because OctoPrompt has a built-in file summarization agent, it can use the full project summary context to help plan your next big feature.
 
-### **💬 built-in AI Chat ### Use Any Model**
+### **💬 Built-In AI Chat**
 
-Configure and get started with using AI Chats  built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
+Chat with any AI model. Configure and get started with using AI Chats  built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
 
 ### **📚 Prompt Library**
 
@@ -128,8 +128,7 @@ Thank you to the following projects - and everything that came before
 
 ## Screenshots and Descriptions
 
-
-### Chat with LLMs 
+### Chat with LLMs
 
 OctoPrompt has a built-in chat, experiment with different LLMs, get help with your programming problems.
 
@@ -156,7 +155,7 @@ Let AI take the wheel and have it provide you suggested files based on your user
 ### Project Summary Page
 
 Project summary page which has various settings for configuring which files should and shouldn't be summarized. For example
-if you have large documents in your file you should exclude them. They likely wont get summarized anyway because they would likely 
+if you have large documents in your file you should exclude them. They likely wont get summarized anyway because they would likely
 exceed the context limit, but better safe than sorry.
 
 ![octoprompt-project-summary-page](https://github.com/user-attachments/assets/1212a7eb-7a58-489d-b206-adca83e7f811)
@@ -196,8 +195,6 @@ Generate tasks with AI with project specfic context using the full project summa
 Selected the wrong folder? Undo your select with `control/cmd + z` and redo with `control/cmd + shift +z`. Find other shortcuts in the top right of the app, there is a "?" which brings up a Dialog with various shortcuts that can be used throughout OctoPrompt
 
 ![octoprompt-keyboard-shortcuts-help-dialog](https://github.com/user-attachments/assets/cee0ecf2-21b0-4822-91cf-06f691258b88)
-
-
 
 ## Videos
 
