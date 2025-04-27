@@ -41,6 +41,7 @@
     "@openrouter/ai-sdk-provider": "^0.4.5",
     "ai": "^4.3.9",
     "hono": "^4.7.7",
+    "ignore": "^7.0.4",
     "ollama-ai-provider": "^1.2.0",
     "openai": "^4.78.1",
     "picomatch": "^4.0.2",

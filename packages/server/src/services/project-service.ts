@@ -349,7 +349,7 @@ export async function forceResummarizeSelectedFiles(
 /**
  * Summarizes a specific list of file IDs within a project (skipping already summarized).
  */
-export async function summarizeSelectedFiles(projectId: string, fileIds: string[]) {
+export async function summarizeSelectedFiles(projectId: string, fileIds: string[], ) {
     if (fileIds.length === 0) {
         return { included: 0, skipped: 0, message: "No file IDs provided" };
     }
@@ -390,6 +390,9 @@ export async function summarizeSelectedFiles(projectId: string, fileIds: string[
 
     // const globalState = await getCurrentState();
     // Pass the validated ProjectFile array
+
+
+
     const result = await summarizeFiles(projectId, selectedFiles.map((f) => f.id));
 
     return {

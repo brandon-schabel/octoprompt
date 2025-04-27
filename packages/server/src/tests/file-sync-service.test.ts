@@ -4,6 +4,7 @@ import { db, resetDatabase } from "@db";
 import { syncProject, getTextFiles, computeChecksum } from "@/services/file-services/file-sync-service";
 import * as fs from "node:fs";
 import type { PathOrFileDescriptor } from "node:fs";
+import ignore from "ignore";
 
 describe("file-sync-service", () => {
     let projectId: string;
@@ -19,30 +20,66 @@ describe("file-sync-service", () => {
 
     test("getTextFiles returns only matching extension files", () => {
         const mockFiles = [
+            // Files expected to be kept
             { name: "file1.ts", isDirectory: () => false, isFile: () => true },
             { name: "file2.txt", isDirectory: () => false, isFile: () => true },
+            // File to be ignored by extension check in getTextFiles
+            { name: "image.png", isDirectory: () => false, isFile: () => true },
+            // File to be ignored by explicit ignore rule
+            { name: "ignored.log", isDirectory: () => false, isFile: () => true },
+            // Directory to be ignored by rule (and hardcoded check)
+            { name: "node_modules", isDirectory: () => true, isFile: () => false },
+            // Normal directory to recurse into (will return empty)
             { name: "folder", isDirectory: () => true, isFile: () => false }
         ];
 
         spyOn(fs, "readdirSync").mockImplementation(((path: string, options?: { withFileTypes?: boolean }) => {
-            if (path === '/fakeDir') {
+            // Simulate reading '/fakeProjectRoot'
+            if (path === '/fakeProjectRoot') {
                 return options?.withFileTypes ? mockFiles : mockFiles.map(f => f.name);
-            } else {
-                // For any subdirectory, return an empty array to prevent recursion
+            }
+            // Simulate reading subdirectories (return empty)
+            else if (path === '/fakeProjectRoot/folder' || path === '/fakeProjectRoot/node_modules') {
+                return options?.withFileTypes ? [] : [];
+            }
+            // Default empty for unexpected paths
+            else {
                 return options?.withFileTypes ? [] : [];
             }
         }) as any);
-        
+
         spyOn(fs, "statSync").mockImplementation(((path: string) => {
-            // Mock behavior based on path
-            if (path === '/fakeDir') {
-                return { isDirectory: () => true }; // It's a directory
-            } else {
-                return { isDirectory: () => false, size: 12n }; // It's a file with size
+            // Mock directories
+            if (path === '/fakeProjectRoot' || path === '/fakeProjectRoot/folder' || path === '/fakeProjectRoot/node_modules') {
+                return { isDirectory: () => true, isFile: () => false };
+            }
+            // Mock files
+            else if (path.startsWith('/fakeProjectRoot/')) {
+                return { isDirectory: () => false, isFile: () => true, size: 10 };
+            }
+            // Default: throw error for unexpected paths? Or return basic stat?
+            else {
+                throw new Error(`ENOENT: statSync mock doesn't handle path: ${path}`);
             }
         }) as any);
 
-        const result = getTextFiles("/fakeDir", []);
+        // Create an ignore instance with rules for the test
+        const ig = ignore();
+        ig.add('node_modules'); // Should be ignored by name
+        ig.add('*.log');      // Should ignore ignored.log
+
+        // --- CORRECTED CALL ---
+        // Provide a string project root and the ignore instance.
+        // Use ALLOWED_FILE_CONFIGS from the actual constants for realistic filtering.
+        const result = getTextFiles("/fakeProjectRoot", "/fakeProjectRoot", ig /*, ALLOWED_FILE_CONFIGS (implicitly uses default) */);
+
+        // --- VERIFICATION ---
+        // Expect only paths to file1.ts and file2.txt
+        expect(result).toEqual([
+            '/fakeProjectRoot/file1.ts',
+            '/fakeProjectRoot/file2.txt'
+        ]);
+        // Ensure length matches expectation
         expect(result.length).toBe(2);
     });
 
@@ -89,10 +126,10 @@ describe("file-sync-service", () => {
         spyOn(fs, "statSync").mockImplementation(((path: string) => {
             // Mock behavior based on path
             if (path === '/tmp/test-sync') {
-                 return { isDirectory: () => true }; // Project path is a directory
+                return { isDirectory: () => true }; // Project path is a directory
             } else {
-                 // Files within the project directory
-                 return { isDirectory: () => false, size: 99n };
+                // Files within the project directory
+                return { isDirectory: () => false, size: 99n };
             }
         }) as any);
 

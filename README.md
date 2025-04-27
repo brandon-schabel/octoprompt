@@ -52,7 +52,7 @@ Quick links:
 
 [Open API Spec Endpoint](http://localhost:3147/doc)
 
-> If a file or folder doesn't show up that you need to show up, you can adjust the inclusion and exclusion settings in the `packages/server/src/services/file-sync-service.ts` file.
+> If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file.
 
 ---
 
@@ -68,7 +68,7 @@ OctoPrompt has a great file search and file picking interface. As you pick files
 
 ### **🤖🕵️‍♂️ AI Agents**
 
-OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help  generate tasks for you tickets, suggest files to select based on your "user input".
+OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help  generate tasks for your tickets, suggest files to select based on your "user input".
 
 ### **🎟️ Ticket and Task Planning**
 
