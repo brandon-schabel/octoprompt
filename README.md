@@ -117,15 +117,7 @@ Quick links:
 
 ---
 
-2. **Start the development servers**:
-
-From the root of the repo, you can start both the client and server together:
-
-```bash
-bun run dev
-```
-
-#### Start Client/Server Separately
+### Start Client/Server Separately
 
 - **Server Only** from the root (runs on port 3147):
 
@@ -145,13 +137,42 @@ The server is available at [http://localhost:3147](http://localhost:3147)
 
 ---
 
-## IMPORTANT - Configure Your Provider Keys
+## Usage Instructions
+
+### IMPORTANT - Configure Your Provider Keys
+
+#### In Order to use AI features you must configure providers keys and pontentially youre model config
 
 If you choose to enable AI features, click the **"Keys"** button in the navbar and configure each provider key.  
 For example:  
 ![Xnapper-2025-01-13-20 25 41](https://github.com/user-attachments/assets/3b87ca3e-3182-4271-8235-b98477f182ac)
 
-## Configure your model defaults for the OctoPrompt AI Features
+Then select the appropriate provider. OpenRouter is recommended becuase it will give you access to many providers and models, however OctoPrompt supports other API Providers direct.
+Lastly input the API key from your providers.
+
+#### Supported Providers Keys Pages Links
+
+[OpenRouter](https://openrouter.ai/settings/keys)
+[Open AI](https://platform.openai.com/api-keys)
+[XAI](https://console.x.ai)
+[Google Gemini](https://aistudio.google.com/app/apikey)
+[Anthropic - AKA Claude Models](https://console.anthropic.com/settings/keys)
+[Groq - Fast Inference](https://console.groq.com/keys)
+
+#### Local Providers (FREE!)
+
+You can always install local models with software like:
+[Ollama](https://ollama.com/download)
+[LM Studio](https://lmstudio.ai/)
+
+### 1. Simple Local Chat
+
+- **Open** your web client at [localhost:5173](http://localhost:5173).
+- Click "Chat" in the Navbar.
+- Click the chat icon and  **New Chat** in the top-left.
+- **Type** a question — OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.
+
+figure your model defaults for the OctoPrompt AI Features
 
 The default AI model configurations for various services are maintained in the file [shared/constants/model-default-configs.ts](./packages/shared/constants/model-default-configs.ts). This file centralizes settings such as the model to use, the response temperature, and the provider for each AI-related service, with more configurations to come.
 
@@ -204,110 +225,6 @@ Each distribution includes:
 - The standalone server executable
 - Pre-migrated SQLite database
 - Built client files (served automatically by the server)
-
----
-
-## Usage Examples
-
-Below are some ways you might interact with OctoPrompt once it’s up and running.
-
-### 1. Simple Local Chat
-
-- **Open** your web client at [localhost:5173](http://localhost:5173).
-- Click "Chat" in the Navbar.
-- Click **New Chat** in the top-right corner.
-- **Type** a question—OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.
-
-### 2. File Summaries & Suggestions
-
-- In the **Projects** section, select or create a project.  
-- Sync your codebase by pressing **Sync**.  
-- OctoPrompt automatically watches for file changes.  
-- Switch to **Chat** and link your project.  
-- Type a code-related question—OctoPrompt will gather context from your local files and suggest relevant snippets.
-
-### 3. Advanced Configuration
-
-- Edit watchers and ignore patterns under **Project Summarization**.  
-- Manage code providers (like OpenAI, Anthropic, or local LLMs) under **Keys**.  
-- Tweak user prompts or create new ones for specialized workflows—e.g., test generation or advanced code refactoring.
-
----
-
-## API Documentation (High-Level)
-
-OctoPrompt consists of **TypeScript** modules on both the client and server side. Here’s a quick overview:
-
-### Server Modules
-
-1. **Router & Plugins** (e.g., `server-router.ts`)  
-   - Responsible for request routing, including **CORS** and **Error Handling**.
-
-2. **Service Layer** (e.g., `project-service.ts`, `file-sync-service.ts`, etc.)  
-   - Encapsulates logic for project management, file watching, summarization, and prompt optimization.
-
-3. **Sync Engine based on WebSockets**  
-   - Provides real-time updates for file changes or chat messages.
-
-4. **Model Providers**  
-   - Integrates with local or external LLMs to fulfill queries and summarizations.
-
-### Client Modules
-
-1. **Routes** (React + TypeScript)  
-   - `projects.tsx`, `chat.tsx`, `keys.tsx`, etc.  
-   - Each route uses a tab-based UI for your projects and chats.
-
-2. **Hooks** (API + Utility)  
-   - Reusable for data fetching (`useGetProjects`, `useGetKeys`) and local UI state management (`useSelectedFiles`).
-
-3. **Global State**  
-   - Managed via shared context and React’s modern features, giving you a single source of truth.
-
-### Additional Notables
-
-- **Promptimizer**  
-  Fine-tunes user inputs for more accurate or concise model queries.  
-- **File Summaries**  
-  Summaries stored locally in the DB. Combines with watchers for continuous updates.
-
----
-
-## Performance Notes
-
-- **Bun** is used for the server to minimize overhead and speed up file operations.  
-- Uses streaming responses for chat messages—no large in-memory buffers.  
-- Minimal external libraries, leaning on built-in Node/Bun capabilities whenever possible.
-
----
-
-## Configuration & Customization
-
-- **Local-First**: By default, everything runs on your local environment. You decide if/when to bring in cloud APIs.  
-- **File Watchers**: Add patterns to ignore or allow certain files. Summaries update automatically.  
-- **Custom Prompts**: Create specialized prompts for your tasks. Share them with your teammates if you like.  
-- **Editor Links**: Use your favorite editor (VSCode, WebStorm, etc.) by configuring open-file links in the UI.
-- **Audio Input**: While OctoPrompt supports audio input, something like [SuperWhisper]("https://superwhisper.com/") works better since it can accessed anywhere.
-
----
-
-## Testing
-
-OctoPrompt is set up with **Bun’s native test runner** on the server side:
-
-- Run tests once:
-
-  ```bash
-  bun test
-  ```
-
-- Run tests in watch mode:
-
-  ```bash
-  bun test --watch
-  ```
-
-Feel free to add your own client tests (e.g., React testing libraries) or integrate with any test tools you prefer.
 
 ---
 
