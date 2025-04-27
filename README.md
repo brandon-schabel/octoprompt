@@ -49,13 +49,13 @@ Quick links:
 
 ## Key User Features
 
-- **🏛️ Project Management View **
+- **🏛️ Project Management View**
   Manage and sync multiple projects in OctoPrompt. In the Projects view you can open several tabs, and each tab will hold it own state. This allows you to build multiple features in parallel or even just quickly switch between projects. OctoPrompt will always persist the state, even on page reload, because saving your is important.
 
 - **🛠️ Context Building Tools**
   OctoPrompt has a great file search and file picking interface. As you pick files you will see file populate in the "Selected Files", and everything you add including fils, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed.
 
-- **🤖🕵️‍♂️ AI Agents **
+- **🤖🕵️‍♂️ AI Agents**
   OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help help generate tasks for you tickets, suggest files to select based on your "user input".
 
 - **🎟️ Ticket and Task Planning**
