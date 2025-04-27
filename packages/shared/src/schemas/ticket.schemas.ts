@@ -59,7 +59,19 @@ export const TicketTaskReadSchema = z.object({
     updatedAt: z.date(),
 });
 
+export const TaskSuggestionsZodSchema = z.object({
+    tasks: z.array(z.object({
+        title: z.string(),
 
+        // Additioanl fields that aren't being used yet
+        description: z.string().optional(),
+        files: z.array(z.object({
+            fileId: z.string(),
+            fileName: z.string(),
+        })).optional(),
+    }))
+});
+export type TaskSuggestions = z.infer<typeof TaskSuggestionsZodSchema>;
 
 export const createTicketSchema = z.object({
     projectId: z.string().min(1),

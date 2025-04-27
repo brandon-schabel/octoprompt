@@ -45,7 +45,7 @@ function TicketsPage() {
     if (!projectId) {
         return (
             <div className="p-4">
-                <h2 className="text-xl font-bold">No project selected</h2>
+                <h2 className="text-xl font- pbold">No project selected</h2>
                 <p>Select a project to view tickets.</p>
             </div>
         );

@@ -658,7 +658,7 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
   }
 
   return (
-    <ScrollArea className="flex-1" ref={scrollAreaRef}>
+    <ScrollArea className="flex-1 h-full" ref={scrollAreaRef}>
       <div className="space-y-4 p-4">
         {messages.map((msg) => (
           <ChatMessageItem

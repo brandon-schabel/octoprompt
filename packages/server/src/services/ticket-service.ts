@@ -14,6 +14,8 @@ import {
   type Ticket,
   type TicketTask,
   type TicketFile,
+  TaskSuggestions,
+  TaskSuggestionsZodSchema,
 } from "shared/src/schemas/ticket.schemas";
 import { randomUUID } from "crypto";
 import { generateStructuredData } from "./model-providers/providers/gen-ai-interface-services";
@@ -45,13 +47,7 @@ export function stripTripleBackticks(text: string): string {
   return text.trim();
 }
 
-export const TaskSuggestionsZodSchema = z.object({
-  tasks: z.array(z.object({
-    title: z.string(),
-    description: z.string().optional(),
-  }))
-});
-export type TaskSuggestions = z.infer<typeof TaskSuggestionsZodSchema>;
+
 
 export async function fetchTaskSuggestionsForTicket(
   ticket: Ticket,
@@ -62,7 +58,12 @@ export async function fetchTaskSuggestionsForTicket(
   const userMessage = `
   <goal>
   Suggest tasks for this ticket. The tickets should be relevant to the project.  The gaol is to break down the
-  ticket into smaller, actionable tasks based on the users request. 
+  ticket into smaller, actionable tasks based on the users request. Refer to the ticket overview and title for context. 
+  Break the ticket down into step by step tasks that are clear, actionable, and specific to the project. 
+
+
+  - Each Task should include which files are relevant to the task.
+
   </goal>
 
   <ticket_title>
@@ -80,6 +81,8 @@ export async function fetchTaskSuggestionsForTicket(
   ${projectSummary}
 `;
 
+  console.log("userMessage", userMessage);
+
   const cfg = MEDIUM_MODEL_CONFIG;
   if (!cfg.model) {
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, "CONFIG_ERROR");
@@ -91,6 +94,8 @@ export async function fetchTaskSuggestionsForTicket(
     schema: TaskSuggestionsZodSchema,
     options: MEDIUM_MODEL_CONFIG
   });
+
+  console.log("result", result);
 
   return result.object
 }

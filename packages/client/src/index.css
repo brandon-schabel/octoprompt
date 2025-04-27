@@ -93,13 +93,40 @@
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+* {
+  @apply border-border;
+  /* === Scrollbar Styles === */
+  /* Firefox */
+  scrollbar-width: thin; /* Makes scrollbar thinner */
+  /* thumb-color track-color */
+  scrollbar-color: hsl(var(--muted-foreground)) hsl(var(--secondary));
+}
+
+/* WebKit (Chrome, Safari, Edge, Opera) */
+::-webkit-scrollbar {
+  width: 8px; /* Width of vertical scrollbar */
+  height: 8px; /* Height of horizontal scrollbar */
+}
+
+::-webkit-scrollbar-track {
+  background-color: hsl(var(--secondary)); /* Color of the track */
+  border-radius: 10px; /* Optional: round the track */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground)); /* Color of the thumb */
+  border-radius: 10px; /* Round the thumb */
+  /* Optional: Add a border to create padding around the thumb */
+  /* border: 2px solid hsl(var(--secondary)); */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--foreground)); /* Color on hover */
+}
+/* === End Scrollbar Styles === */
+
+body {
+  @apply bg-background text-foreground;
 }
 
 @keyframes move {
