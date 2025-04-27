@@ -1,19 +1,8 @@
 # OctoPrompt
 
-OctoPrompt is a development tool that allows you to use LLMs by building context from your project files, prompts, and your input. OctoPrompt helps you find the files you need quickly, and will detect file changes and use an agent to summarize files to help you plan tickets and tasks, suggest files to add to your context. There is also a built in prompt manager to save all your favorite prompts. Copy all context to clipboard with a single click to use with any AI API provider or use OctoPrompt built in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your code and allows you to make architectural changes to your code faster than before, all without the hassle an agent running up your API bill running around your repo. OctoPrompt is designed to help you with everything from planning tickets and tasks, to picking the files you need, choosing prompts to add to your context and packing that up to use with any API provider. OctoPrompt works completely without AI models as is very useful even without configuring any models.
+OctoPrompt is a development tool for you codebase by building context from your project files, prompts, and your input as well as takes advantage of AI agents to perform things like ticket/task planning, find suggested files, and building a knowledgebase from your code files. There is also a built in prompt manager to save all your favorite prompts. Copy all context to clipboard with a single click to use with any AI API provider or use OctoPrompt built in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your codebase and allows you to make architectural changes to your code faster than before, all without the hassle of an agent running up your API bill running around your repo. OctoPrompt works completely without AI models as, it is a great AI context builder without the use of agents.
 
 Thank you for checkout out the project. If you have any questions please feel free to reach out and support Open Source by leaving a star.
-
-## Introduction
-
-At its core, you **open a code project**, and the server attaches **file watchers** to that project. You can optionally use an AI agent to **summarize your code files**, while another built-in agent helps you create **tickets** (like a lightweight JIRA) for new features, bug fixes, or any task you need. The AI-driven file summaries allow the ticket agent to create context-aware tasks. A third agent can suggest which specific files are needed to accomplish a ticket.
-
-This workflow is particularly handy for **planning**:
-
-1. **Summarize** your files to build context
-2. **Create** a feature or bugfix ticket
-3. **Generate** a list of tasks relevant to your codebase
-4. **Copy** the tasks or code references with one click to paste them wherever you need—ChatGPT, Cursor, or any LLM interface.
 
 You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. OctoPrompt AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt’s local file watchers, built-in ticket system, quick file searching, and prompt management.
 
