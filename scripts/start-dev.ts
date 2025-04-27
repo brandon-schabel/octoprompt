@@ -22,6 +22,14 @@ async function startServices() {
 
 
 
+    // run openapi-ts generate
+    console.log("🚀 Generating openapi-ts client...");
+    const openapiTsProcess = Bun.spawn(["bun", "run", "openapi-ts", "generate"], {
+      cwd: join(rootDir),
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+    processes.push(openapiTsProcess);
+
     // Start client (Vite runs on 5173 by default)
     console.log("🚀 Starting client...");
     const clientProcess = Bun.spawn(["bun", "run", "dev"], {

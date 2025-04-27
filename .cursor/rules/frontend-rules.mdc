@@ -171,9 +171,6 @@ When adding or refactoring features:
 4. **Write** a React Query hook based on the generated types and query client from `packages/client/src/hooks/generated/types.gen` and `packages/client/src/hooks/generated/@tanstack/react-query.gen`
 5. **UI Implementation** Using the project components, create a UI page or component using the apps component library and the created API
 6. **Testing** Perform unit tests on everything that can be isolate and are pure, create react component test using React Testing Library
-<!-- 5. **Use** ShadCN + Radix UI for consistent, accessible components.   -->
-<!-- 6. **Keep** ephemeral UI states in Zustand if multiple components share a simple toggle, or local state if only used in one component.   -->
-<!-- 7. **Test** everything with React Testing Library or `bun test`, focusing on user flows and accessibility. -->
 
 ---
 

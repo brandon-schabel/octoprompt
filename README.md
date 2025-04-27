@@ -55,26 +55,40 @@ Quick links:
 
 > **Tip:** Even without setting up AI keys, you can still manage projects, create tickets, and explore OctoPrompt’s local file summarization functionality (if you skip AI usage, no external calls will be made).
 
-> If a file doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `packages/server/src/services/file-sync-service.ts` file.
+> If a file or folder doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `packages/server/src/services/file-sync-service.ts` file.
 
 ---
 
-## Key Features
+## Key User Features
+**🛠️ Context Building Tools** 
+  OctoPrompt has a great file search and file picking interface. As you pick files you will see file populate in the "Selected Files", and everything you add including fils, prompts, and of course user input will be counted toward the context and you will be informed of how many tokens you are using. Context length is important for improved accuracy and cost, so you want to provide just what is needed. 
 
-- **Local-First**  
-  Operates primarily on your local machine—no mandatory cloud dependencies—letting you keep your data where you want it.
+- **🎟️ Ticket and Task Planning**
+  Write a ticket with an overview and let AI generate the ticket tasks for you. Because OctoPrompt has a built in file summarization agent, it can use the full project summary context to help plan your next big feature. 
 
-- **Type Safe & Modular**  
+- **💬 Built In AI Chat**
+  Configure and get start with using AI Chats  built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
+
+
+- **📚 Prompt Library** 
+  Save your favorite prompts directly into OctoPrompt and import them into any project. This allows you to import and use prompts in any project. Importing prompts into project just creates an association so things don't get cluttered between projects.
+
+- **🛟 Type Safe & Modular**  
   Written in TypeScript (both client and server). Flexible architecture to easily customize or extend functionality.
 
-- **High Performance**  
-  Uses **Bun** on the backend for top-notch speed with minimal overhead. Avoids heavy libraries and leans on built-in APIs.
+- **🔥 High Performance**  
+  Uses **Bun** on the backend for top-notch speed with minimal overhead. Avoids heavy libraries and leans on built-in APIs with heavy lift from Hono and Zod.
 
-- **Batteries Included**  
-  Chat management, file watchers, prompts, code summarization, ticket creation, and more. Instantly ready for local dev tasks.
+## Features For the Nerds
+- **📝 Bun Server with OpenAPI Spec**
+  No guessing about what is going on, every OctoPrompt endpoint can be test using the [Swagger Endpoint](http://localhost:3147/swagger)
 
-- **Customizable**  
-  Extensible plugin-based design. Add or remove features, tweak watchers, or build your own modules.
+- **🏠 Local-First**  
+  Operates entirely on your local machine—no mandatory cloud dependencies—letting you keep your data where you want it. Run OctoPrompt on your machine, and use local AI Models with Ollam or LM Studio
+
+- **🔌 Customizable**  
+  Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Zustand, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
+
 
 ## Screenshots
 
@@ -104,43 +118,6 @@ Quick links:
 
 ---
 
-## Project Setup
-
-Below are the instructions for getting started with **OctoPrompt**. We use **Bun** for both installation and serving.
-
-### Prerequisite
-
-Make sure you have [Bun](https://bun.sh) installed
-
-#### Install Bun With NPM
-
-```bash
-npm install -g bun
-```
-
-#### Install Bun on macOS/Linux
-
-```bash
-curl -fsSL https://bun.sh/install | bash
-```
-
-#### Install Bun on Windows (PowerShell)
-
-```bash
-powershell -c "irm bun.sh/install.ps1 | iex"
-```
-
-### Installation & Setup
-
-1. **Install dependencies and set up the project**:
-
-```bash
-# Install all workspace dependencies
-bun install
-
-# Run the setup script (sets up database and other requirements)
-bun run setup
-```
 
 2. **Start the development servers**:
 
