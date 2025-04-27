@@ -59,14 +59,25 @@ export async function fetchTaskSuggestionsForTicket(
 ): Promise<TaskSuggestions> {
   const projectSummary = await getFullProjectSummary(ticket.projectId);
 
-  const userMessage = `Please suggest tasks for this ticket:
-Title: ${ticket.title}
-Overview: ${ticket.overview}
+  const userMessage = `
+  <goal>
+  Suggest tasks for this ticket. The tickets should be relevant to the project.  The gaol is to break down the
+  ticket into smaller, actionable tasks based on the users request. 
+  </goal>
 
-UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
+  <ticket_title>
+  ${ticket.title}
+  </ticket_title>
 
-Below is a combined summary of project files:
-${projectSummary}
+  <ticket_overview>
+  ${ticket.overview}
+  </ticket_overview>
+
+  <user_context>
+  ${userContext ? `Additional Context: ${userContext}` : ''}
+  </user_context>
+
+  ${projectSummary}
 `;
 
   const cfg = MEDIUM_MODEL_CONFIG;

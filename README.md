@@ -1,6 +1,8 @@
 # OctoPrompt
 
-Welcome to **OctoPrompt**—your local-first, fully customizable chat-based code companion. Built on **Bun** and **React**, OctoPrompt is designed to make your dev life easier without bogging down your system. Because everything runs locally, you have complete control over your data and can fine-tune functionality to suit your needs.
+OctoPrompt Development Tool that allows you to use LLMs with your codebase efficiently. OctoPrompt helps you find the files you need quickly, and will detect file changes and use an agent to summarize files to help you plan tickets and tasks, suggest files to add to your context. There is also a built in prompt manager to save all your favorite prompts. Copy all files, prompts, and your request to clipboard with a single click to use with any AI API provider or use OctoPrompt built in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your code and allows you to make architectural changes to your code faster than before, all without the hassle an agent running up your API bill running around your repo. OctoPrompt is designed to help you with everything from planning tickets and tasks, to picking the files you need, choosing prompts to add to your context and packing that up to use with any API provider. OctoPrompt works completely without AI models as is very useful even without configuring any models.
+
+Thank you for checkout out the project. If you have any questions please feel free to reach out and support Open Source by leaving a star.
 
 ## Introduction
 
@@ -13,23 +15,47 @@ This workflow is particularly handy for **planning**:
 3. **Generate** a list of tasks relevant to your codebase
 4. **Copy** the tasks or code references with one click to paste them wherever you need—ChatGPT, Cursor, or any LLM interface.
 
-You are always in control of your data. By default, everything runs locally, and the AI features (currently powered by OpenRouter) are entirely optional. This will be configureable, but currently it is hard coded. If you do enable AI, it can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt’s local file watchers, built-in ticket system, quick file searching, and prompt management.
-
-> **Note:** OctoPrompt is still in beta. While features like file search, file selection, prompt management, and project tickets are quite stable, the app has not been extensively tested on very large projects. It should handle hundreds of files without issue, but if you run into any problems—or if you need to ignore certain directories or file patterns—configure your **file watcher filters** accordingly and feel free to file an issue.
+You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. OctoPrompt AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt’s local file watchers, built-in ticket system, quick file searching, and prompt management.
 
 ---
 
 ## Quick Start
 
-For most users, the easiest way to try out OctoPrompt is by downloading the **prebuilt binaries** from our [**latest tags**](https://github.com/brandon-schabel/octoprompt/tags).
+### Step 1 - Clone OctoPrompt
 
-1. **Download** the appropriate binary for your platform (Windows, Linux, or macOS).
-2. **Unzip** (if needed) and run the executable.
-3. **Open** [http://localhost:3579](http://localhost:3579) (or as indicated by the binary’s logs) to start using OctoPrompt.
+```bash
+git clone https://github.com/brandon-schabel/octoprompt
+```
+
+### Step 2 - Install Bun with NPM
+
+Note: Only needed if Bun isn't already installed.
+
+```bash
+cd octoprompt && npm install -g bun
+```
+
+### Step 3 - Run Setup to Initialize DB
+
+```bash
+bun run setup
+```
+
+### Step 4 - Start Server and Client
+
+```bash
+bun run dev
+```
+
+Quick links:
+[UI](http://localhost:5173)
+[Server Base](http://localhost:3147)
+[Swagger UI](http://localhost:3147/swagger)
+[Open API Spec Endpoint](http://localhost:3147/doc)
 
 > **Tip:** Even without setting up AI keys, you can still manage projects, create tickets, and explore OctoPrompt’s local file summarization functionality (if you skip AI usage, no external calls will be made).
 
-> If a file doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `file-sync-service` file.
+> If a file doesn't show up that you need to show up, you can adjust the inclusion and exlusion settings in the `packages/server/src/services/file-sync-service.ts` file.
 
 ---
 
@@ -84,15 +110,21 @@ Below are the instructions for getting started with **OctoPrompt**. We use **Bun
 
 ### Prerequisite
 
-Make sure you have [Bun](https://bun.sh) installed.
+Make sure you have [Bun](https://bun.sh) installed
 
-#### macOS/Linux
+#### Install Bun With NPM
+
+```bash
+npm install -g bun
+```
+
+#### Install Bun on macOS/Linux
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
 ```
 
-#### Windows (PowerShell)
+#### Install Bun on Windows (PowerShell)
 
 ```bash
 powershell -c "irm bun.sh/install.ps1 | iex"
@@ -102,34 +134,36 @@ powershell -c "irm bun.sh/install.ps1 | iex"
 
 1. **Install dependencies and set up the project**:
 
-   ```bash
-   # Install all workspace dependencies
-   bun install
+```bash
+# Install all workspace dependencies
+bun install
 
-   # Run the setup script (sets up database and other requirements)
-   bun run setup
-   ```
+# Run the setup script (sets up database and other requirements)
+bun run setup
+```
 
 2. **Start the development servers**:
-   From the root of the repo, you can start both the client and server together:
 
-   ```bash
-   bun run dev
-   ```
+From the root of the repo, you can start both the client and server together:
 
-   #### Start Client/Server Separately
+```bash
+bun run dev
+```
 
-   - **Client** (runs on port 5173):
+#### Start Client/Server Separately
 
-     ```bash
-     bun run client:dev
-     ```
+- **Server Only** (runs on port 3147):
 
-   - **Server** (runs on port 3147):
+```bash
+bun run dev:server
+```
 
-     ```bash
-     bun run server:dev
-     ```
+- **Client Only** (runs on port 5173):
+Note: this will generate the `openapi-ts` client, the server must be running first.
+
+```bash
+bun run dev:client
+```
 
    The client is available at [http://localhost:5173](http://localhost:5173)  
    The server is available at [http://localhost:3147](http://localhost:3147)

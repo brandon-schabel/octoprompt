@@ -7,10 +7,21 @@ type Process = {
 
 async function startServices() {
   const processes: Process[] = [];
-  
+
   try {
     const rootDir = process.cwd();
-    
+    // Start server (runs on 3147)
+    // the server must be running first because the client needs 
+    // to generate the openapi-ts client from the server's openapi spec located at /doc
+    console.log("🚀 Starting server...");
+    const serverProcess = Bun.spawn(["bun", "run", "dev"], {
+      cwd: join(rootDir, "packages", "server"),
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+    processes.push(serverProcess);
+
+
+
     // Start client (Vite runs on 5173 by default)
     console.log("🚀 Starting client...");
     const clientProcess = Bun.spawn(["bun", "run", "dev"], {
@@ -19,13 +30,6 @@ async function startServices() {
     });
     processes.push(clientProcess);
 
-    // Start server (runs on 3147)
-    console.log("🚀 Starting server...");
-    const serverProcess = Bun.spawn(["bun", "run", "dev"], {
-      cwd: join(rootDir, "packages", "server"),
-      stdio: ["inherit", "inherit", "inherit"],
-    });
-    processes.push(serverProcess);
 
     // Handle process termination
     process.on("SIGINT", async () => {
@@ -35,7 +39,7 @@ async function startServices() {
     });
 
     // Keep the script running
-    await new Promise(() => {});
+    await new Promise(() => { });
   } catch (error) {
     console.error("❌ Error starting services:", error);
     processes.forEach(proc => proc.kill());

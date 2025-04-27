@@ -1,17 +1,13 @@
 import { ApiError } from "shared";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
-import { matchesAnyPattern } from "shared/src/utils/pattern-matcher";
-import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter";
 import { getProjectById } from "@/services/project-service";
 import { getFileSummaries } from "@/services/file-services/file-summary-service";
+import { buildCombinedFileSummariesXml } from "shared/src/utils/summary-formatter";
 
 const buildProjectSummary = (includedFiles: ProjectFile[]) => {
     // Build the combined summaries using your summary-formatter
-    return buildCombinedFileSummaries(includedFiles, {
-        // We can override the header style to show the file path
-        headerStyle: (file) => `File: ${file.name}, File ID: ${file.id}`,
-        sectionDelimiter: "---",
-        includeEmptySummaries: false
+    return buildCombinedFileSummariesXml(includedFiles, {
+        includeEmptySummaries: true
     });
 }
 

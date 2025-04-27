@@ -1,64 +1,133 @@
 import type { ProjectFile } from "../schemas/project.schemas";
 
 /**
- * Optional configuration interface to control the output style
- * or any other formatting rules you want.
+ * Helper function to escape characters unsafe for XML content.
  */
-export interface SummaryFormatOptions {
-    sectionDelimiter?: string; // e.g. "-----"
-    headerStyle?: (file: ProjectFile) => string;
-    footerStyle?: (file: ProjectFile) => string;
-    includeEmptySummaries?: boolean; // Whether to include items with no summary
+function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      // Should not happen with the regex, but ensures function returns string
+      default: return c;
+    }
+  });
 }
 
-const defaultOptions: Required<SummaryFormatOptions> = {
-    sectionDelimiter: "----------------------------------------",
-    headerStyle: (file: ProjectFile) => `File: ${file.name}`,
-    footerStyle: () => "",
-    includeEmptySummaries: false
+
+/**
+ * Optional configuration interface to control XML output.
+ */
+export interface SummaryXmlOptions {
+    /** Whether to include <file> elements for files with no summary text. */
+    includeEmptySummaries?: boolean;
+    /** Placeholder text for empty summaries when includeEmptySummaries is true. */
+    emptySummaryText?: string;
+}
+
+// Define default options for the XML generation
+const defaultXmlOptions: Required<SummaryXmlOptions> = {
+    includeEmptySummaries: false,
+    emptySummaryText: "(No summary provided)"
 };
 
 /**
- * Combines all file summaries into a single multiline string.
- * Each file's name is displayed before its summary, with a separator in between.
+ * Combines all file summaries into a single XML string.
+ * Each file is represented by a <file> element containing <name> and <summary>.
+ *
+ * Example Output:
+ * <summary_memory>
+ * <file>
+ * <name>src/utils.ts</name>
+ * <summary>Contains utility functions for string manipulation.</summary>
+ * </file>
+ * <file>
+ * <name>README.md</name>
+ * <summary>Project documentation.</summary>
+ * </file>
+ * </summary_memory>
  */
-export function buildCombinedFileSummaries(
+export function buildCombinedFileSummariesXml(
     files: ProjectFile[],
-    options: SummaryFormatOptions = {}
+    options: SummaryXmlOptions = {}
 ): string {
-    const { sectionDelimiter, headerStyle, footerStyle, includeEmptySummaries } = {
-        ...defaultOptions,
+    // Merge provided options with defaults
+    const { includeEmptySummaries, emptySummaryText } = {
+        ...defaultXmlOptions,
         ...options
     };
 
+    // Handle the case where no files are provided
     if (!files.length) {
-        return "No files provided.";
+        // Return an empty root element, which is more idiomatic for XML
+        return "<summary_memory>\n</summary_memory>";
     }
 
+    // Start the root XML element
     let output = "<summary_memory>\n";
 
     for (const file of files) {
-        // Skip empty summaries if not configured to include them.
-        if (!file.summary?.trim() && !includeEmptySummaries) {
+        const summaryContent = file.summary?.trim();
+
+        // Skip files with empty summaries if not configured to include them
+        if (!summaryContent && !includeEmptySummaries) {
             continue;
         }
 
-        // Build header for this file
-        output += `${headerStyle(file)}\n`;
+        // Start the <file> element for this file
+        output += "  <file>\n"; // Indentation for readability
 
-        // Add the actual summary
-        output += file.summary?.trim() || "(No summary provided)";
+        output += `    <file_id>${file.id}</file_id>\n`;
 
-        // Optional trailing text
-        const footerText = footerStyle(file);
-        if (footerText) {
-            output += `\n${footerText}`;
-        }
+        // Add the <name> element, escaping the file name
+        output += `    <name>${escapeXml(file.name)}</name>\n`;
 
-        // Add the delimiter after each file
-        output += `\n${sectionDelimiter}\n\n`;
+        // Add the <summary> element, escaping the content
+        // Use placeholder text if summary is empty but included
+        const summaryTextToInclude = summaryContent || emptySummaryText;
+        output += `    <summary>${escapeXml(summaryTextToInclude)}</summary>\n`;
+
+        // Close the <file> element
+        output += "  </file>\n";
     }
 
+    // Close the root XML element
     output += "</summary_memory>";
+
     return output;
 }
+
+// --- Example Usage (assuming you have ProjectFile defined elsewhere) ---
+
+/*
+// Define the ProjectFile type/interface if not already imported
+interface ProjectFile {
+    name: string;
+    summary?: string;
+    // other properties...
+}
+
+const sampleFiles: ProjectFile[] = [
+    { name: "src/index.ts", summary: "Main entry point & setup." },
+    { name: "src/schemas/project.schemas.ts", summary: "Defines the ProjectFile type." },
+    { name: "README.md", summary: " Contains <important> project info & usage instructions. " }, // Example with special chars & whitespace
+    { name: "config.json" } // Example with no summary
+];
+
+// Example 1: Default behavior (skip empty summaries)
+const xmlOutputDefault = buildCombinedFileSummariesXml(sampleFiles);
+console.log("--- Default Output ---");
+console.log(xmlOutputDefault);
+
+// Example 2: Include empty summaries with custom placeholder
+const xmlOutputIncludeEmpty = buildCombinedFileSummariesXml(sampleFiles, {
+    includeEmptySummaries: true,
+    emptySummaryText: "[No Summary Available]"
+});
+console.log("\n--- Output Including Empty ---");
+console.log(xmlOutputIncludeEmpty);
+
+*/

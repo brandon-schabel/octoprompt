@@ -496,26 +496,45 @@ export const genAiRoutes = new OpenAPIHono()
 
         const projectSummary = await getFullProjectSummary(projectId);
         const systemPrompt = `
-        You are a code assistant that recommends relevant files based on user input.
+<role>
+You are a code assistant that recommends relevant files based on user input.
 You have a list of file summaries and a user request.
-Return only valid JSON with the shape: {"fileIds": ["uuid1", "uuid2"]}
-Guidelines:
+</role>
+
+<response_format>
+    {"fileIds": ["9d679879sad7fdf324312", "9d679879sad7fdf324312"]}
+</response_format>
+
+<guidelines>
 - For simple tasks: return max 5 files
 - For complex tasks: return max 10 files
 - For very complex tasks: return max 20 files
 - Do not add comments in your response
 - Strictly follow the JSON schema, do not add any additional properties or comments
+- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
+</guidelines>
         `
 
-        const userMessage = `
-User Query: ${userInput}
-Below is a combined summary of project files:
-${projectSummary}`;
+        const userPrompt = `
+<user_query>
+${userInput}
+</user_query>
+
+<project_summary>
+${projectSummary}
+</project_summary>
+`;
 
         try {
 
+
+            console.log({
+                prompt: userPrompt,
+                systemPrompt,
+            })
+
             const result = await generateStructuredData({
-                prompt: userMessage,
+                prompt: userPrompt,
                 schema: FileSuggestionsZodSchema,
                 systemMessage: systemPrompt,
             })
