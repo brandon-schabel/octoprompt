@@ -93,6 +93,8 @@ export function useAIChat({
           ...(modelSettings.topP !== undefined && { topP: modelSettings.topP }),
           ...(modelSettings.frequencyPenalty !== undefined && { frequencyPenalty: modelSettings.frequencyPenalty }),
           ...(modelSettings.presencePenalty !== undefined && { presencePenalty: modelSettings.presencePenalty }),
+          ...(modelSettings.provider !== undefined && { provider: modelSettings.provider }),
+          ...(modelSettings.model !== undefined && { model: modelSettings.model }),
           // Add mappings for top_k etc. if needed
         };
       }
@@ -102,11 +104,9 @@ export function useAIChat({
       const requestBody: AiChatStreamRequest = {
         chatId: chatId,                     // REQUIRED: Get from hook props
         userMessage: messageContent.trim(), // REQUIRED: The actual user message
-        model: model,                       // REQUIRED: Get from hook props
         // Optional fields:
         tempId: userMessageId,            // Optional: Useful for correlating requests/responses
         ...(systemMessage && { systemMessage: systemMessage }), // Include systemMessage from props if provided
-        provider: provider,                 // REQUIRED: Get from hook props
         // options: sdkOptions,
         ...(sdkOptions ? { options: sdkOptions } : {}),
       };

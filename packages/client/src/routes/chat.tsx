@@ -948,7 +948,7 @@ function ChatPage() {
     isLoading: isAiLoading,
     error,
     setInput,
-    sendMessage, // <-- Get the sendMessage function from the hook
+    sendMessage,
     // reload,
     // stop,
   } = useAIChat({
@@ -994,7 +994,7 @@ function ChatPage() {
 
     // Call the sendMessage function from useAIChat, passing the current input
     // AND the current modelSettings object.
-    sendMessage(input, modelSettings as AiSdkOptions); // <-- Pass modelSettings here
+    sendMessage(input, modelSettings);
 
     // No need to call sdkHandleSubmit directly anymore for this form.
     // setInput('') is handled within sendMessage now.
