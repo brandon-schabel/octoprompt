@@ -1,4 +1,4 @@
-import React from "react";
+ import React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { TicketDialog } from "../components/tickets/ticket-dialog";
 import { Button } from "../components/ui/button";
@@ -83,7 +83,7 @@ function TicketsPage() {
             <TicketDialog
                 isOpen={isDialogOpen}
                 onClose={handleCloseDialog}
-                ticket={selectedTicket as unknown as Ticket}
+                ticketWithTasks={selectedTicket}
                 projectId={projectId}
             />
         </div>

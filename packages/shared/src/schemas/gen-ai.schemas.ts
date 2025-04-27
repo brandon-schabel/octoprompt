@@ -1,10 +1,9 @@
 import { z } from '@hono/zod-openapi';
-import { AI_API_PROVIDERS } from './provider-key.schemas'; // Assume this exists
 import { MessageRoleEnum } from './common.schemas'; // Assume this exists
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'; // Assume this exists
 import { ProjectFileSchema } from './project.schemas';
 
-// --- Schema for individual messages ---
+// --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z.object({
     role: MessageRoleEnum,
     content: z.string(),
@@ -14,10 +13,6 @@ export const AiMessageSchema = z.object({
 // This schema defines common parameters to control the behavior of AI models during generation.
 // Not all parameters are supported by all models or providers.
 export const AiSdkOptionsSchema = z.object({
-    model: z.string().optional().openapi({
-        description: "Specifies the exact AI model identifier to use for the generation request. This often overrides a default model set elsewhere. Ensure the ID is valid for the selected provider.",
-        example: LOW_MODEL_CONFIG.model ?? 'gpt-4o-mini', // Use default or a common example
-    }),
     temperature: z.number().min(0).max(2).optional().openapi({
         description: "Controls the randomness of the output. Lower values (e.g., 0.2) make the output more focused, deterministic, and suitable for factual tasks. Higher values (e.g., 0.8) increase randomness and creativity, useful for brainstorming or creative writing. A value of 0 typically means greedy decoding (always picking the most likely token).",
         example: LOW_MODEL_CONFIG.temperature ?? 0.7 // A common default balancing creativity and coherence
@@ -53,6 +48,14 @@ export const AiSdkOptionsSchema = z.object({
     // structuredOutputMode, schemaName, etc. are often handled by specific library functions
     // like `generateObject` rather than generic options, so keeping them commented out is reasonable
     // unless you have a specific use case for passing them this way.
+    provider: z.string().optional().openapi({
+        description: "The provider to use for the AI request.",
+        example: LOW_MODEL_CONFIG.provider
+    }),
+    model: z.string().optional().openapi({
+        description: "The model to use for the AI request.",
+        example: LOW_MODEL_CONFIG.model
+    }),
 
 }).partial().openapi('AiSdkOptions'); // .partial() makes all fields optional implicitly
 
@@ -60,7 +63,7 @@ export const AiSdkOptionsSchema = z.object({
 const UnifiedModelSchema = z.object({
     id: z.string().openapi({ example: LOW_MODEL_CONFIG.model ?? 'gpt-4o-mini', description: 'Model identifier' }),
     name: z.string().openapi({ example: 'GPT-4o Mini', description: 'User-friendly model name' }),
-    provider: z.string().openapi({ example: LOW_MODEL_CONFIG.provider ?? 'openai', description: 'Provider ID' }),
+    provider: z.string().openapi({ example: LOW_MODEL_CONFIG.provider ?? 'openrouter', description: 'Provider ID' }),
     context_length: z.number().optional().openapi({ example: 128000, description: 'Context window size in tokens' }),
     // Add other relevant fields like 'description', 'capabilities', etc.
 }).openapi('UnifiedModel');
@@ -77,14 +80,6 @@ export const AiGenerateTextRequestSchema = z.object({
     prompt: z.string().min(1, { message: "Prompt cannot be empty." }).openapi({
         description: 'The text prompt for the AI.',
         example: 'Suggest 5 suitable filenames for a typescript utility file containing helper functions for string manipulation.'
-    }),
-    provider: z.enum(AI_API_PROVIDERS).or(z.string()).openapi({
-        example: 'openai',
-        description: 'The AI provider to use (e.g., openai, openrouter, groq).'
-    }),
-    model: z.string().min(1).openapi({
-        example: LOW_MODEL_CONFIG.model ?? 'gpt-4o-mini',
-        description: 'The specific model identifier to use.'
     }),
     options: AiSdkOptionsSchema.optional().openapi({ // Options are optional
         description: 'Optional parameters to override default model behavior (temperature, maxTokens, etc.).'
@@ -130,12 +125,9 @@ export const AiGenerateStructuredRequestSchema = z.object({
         description: "The user's input or context for the structured generation task.",
         example: "A react component for displaying user profiles"
     }),
-    // provider: z.enum(AI_API_PROVIDERS).or(z.string()).optional().openapi({
-    //     description: "Optional: Override the default AI provider defined in the task configuration."
-    // }),
-    // options: AiSdkOptionsSchema.optional().openapi({
-    //     description: "Optional: Override default model options (temperature, etc.) defined in the task configuration."
-    // }),
+    options: AiSdkOptionsSchema.optional().openapi({
+        description: "Optional: Override default model options (temperature, etc.) defined in the task configuration."
+    }),
 }).openapi('AiGenerateStructuredRequest');
 
 export const AiGenerateStructuredResponseSchema = z.object({

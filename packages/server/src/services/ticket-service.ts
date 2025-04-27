@@ -16,7 +16,7 @@ import {
   type TicketFile,
 } from "shared/src/schemas/ticket.schemas";
 import { randomUUID } from "crypto";
-import { aiProviderInterface } from "./model-providers/providers/ai-provider-interface-services";
+import { generateStructuredData } from "./model-providers/providers/gen-ai-interface-services";
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {
@@ -59,14 +59,25 @@ export async function fetchTaskSuggestionsForTicket(
 ): Promise<TaskSuggestions> {
   const projectSummary = await getFullProjectSummary(ticket.projectId);
 
-  const userMessage = `Please suggest tasks for this ticket:
-Title: ${ticket.title}
-Overview: ${ticket.overview}
+  const userMessage = `
+  <goal>
+  Suggest tasks for this ticket. The tickets should be relevant to the project.  The gaol is to break down the
+  ticket into smaller, actionable tasks based on the users request. 
+  </goal>
 
-UserContext: ${userContext ? `Additional Context: ${userContext}` : ''}
+  <ticket_title>
+  ${ticket.title}
+  </ticket_title>
 
-Below is a combined summary of project files:
-${projectSummary}
+  <ticket_overview>
+  ${ticket.overview}
+  </ticket_overview>
+
+  <user_context>
+  ${userContext ? `Additional Context: ${userContext}` : ''}
+  </user_context>
+
+  ${projectSummary}
 `;
 
   const cfg = MEDIUM_MODEL_CONFIG;
@@ -74,18 +85,14 @@ ${projectSummary}
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, "CONFIG_ERROR");
   }
 
-  const result = await aiProviderInterface.generateStructuredData({
-    provider: cfg.provider as APIProviders || 'openai',
+  const result = await generateStructuredData({
     prompt: userMessage,
     systemMessage: defaultTaskPrompt,
     schema: TaskSuggestionsZodSchema,
-    options: {
-      model: cfg.model,
-      temperature: cfg.temperature,
-    },
+    options: MEDIUM_MODEL_CONFIG
   });
 
-  return result;
+  return result.object
 }
 
 function mapTicket(row: any): Ticket {

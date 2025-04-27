@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { readFile } from "fs/promises";
 import { Database } from "bun:sqlite";
-import { generateStructuredData } from "../model-providers/providers/ai-provider-interface-services";
+import { generateStructuredData } from "../model-providers/providers/gen-ai-interface-services";
 import { resolvePath } from "@/utils/path-utils";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
-import { MEDIUM_MODEL_CONFIG } from "shared";
+import { MEDIUM_MODEL_CONFIG } from "shared/src/constants/model-default-configs";
 
 // Zod schema for the expected AI response
 export const FileChangeResponseSchema = z.object({
@@ -48,11 +48,7 @@ export async function generateAIFileChange(
   const originalContent = await readLocalFileContent(filePath);
 
   const cfg = MEDIUM_MODEL_CONFIG;
-  const modelId = params.model ?? cfg.model;
 
-  if (!modelId) {
-    throw new Error("Model not configured for generate-file-change task.");
-  }
 
   const systemMessage = `
 You are an expert coding assistant. You will be given the content of a file and a user request describing changes.
@@ -74,11 +70,21 @@ ${originalContent}
 User Request: ${prompt}
 `;
 
-  return await generateStructuredData({
-    systemMessage: systemMessage,
-    prompt: userPrompt, // Combine original content and user request in the prompt
-    schema: FileChangeResponseSchema,
-  });
+  try {
+    // 3. Call generateStructuredData
+    const aiResponse = await generateStructuredData({
+      systemMessage: systemMessage,
+      prompt: userPrompt, // Combine original content and user request in the prompt
+      schema: FileChangeResponseSchema,
+      options: cfg
+    });
+
+    return aiResponse;
+
+  } catch (error) {
+    console.error(`[AIFileChangeService] Failed to generate AI file change for ${filePath}:`, error);
+    throw new Error(`AI failed to generate changes for ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 

@@ -7,6 +7,7 @@ import React, {
     forwardRef,
     useImperativeHandle,
     RefObject,
+    useMemo,
 } from "react";
 import { Button } from "@ui";
 import { Checkbox } from "@ui";
@@ -19,6 +20,7 @@ import {
     Copy,
     Wand2,
     RefreshCw,
+    ClipboardList,
 } from "lucide-react";
 import clsx from "clsx";
 import { toast } from "sonner";
@@ -42,8 +44,9 @@ import {
     countTotalFiles,
     formatTokenCount,
     FileNode,
+    estimateTokenCount,
 } from "./file-tree-utils/file-node-tree-utils";
-import { buildNodeContent } from "@/components/projects/utils/projects-utils";
+import { buildNodeContent, buildNodeSummaries } from "@/components/projects/utils/projects-utils";
 
 import { getEditorUrl } from "@/utils/editor-urls";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
@@ -203,6 +206,12 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
         [isFolder, item.node, folderChecked, handleToggleFile, handleToggleFolder, handleEnter]
     );
 
+
+    const summaries = useMemo(() => buildNodeSummaries(item.node, isFolder), [item.node, isFolder]);
+    const contents = useMemo(() => buildNodeContent(item.node, isFolder), [item.node, isFolder]);
+    const tree = useMemo(() => buildTreeStructure(item.node), [item.node]);
+    const hasSummary = item.node.file?.summary;
+
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>
@@ -329,9 +338,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={async (e) => {
                                         e.stopPropagation();
-                                        const content = buildNodeContent(item.node, projectFileMap, false);
                                         try {
-                                            await navigator.clipboard.writeText(content);
+                                            await navigator.clipboard.writeText(contents);
                                             toast.success("File contents copied to clipboard");
                                         } catch (err) {
                                             toast.error("Failed to copy file contents");
@@ -341,6 +349,36 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                                 >
                                     <Copy className="h-4 w-4" />
                                 </Button>
+
+                                {/* --- New Copy Summary Button --- */}
+                                {hasSummary && ( // Only show if file has a summary
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        title="Copy File Summary" // Add tooltip
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            // Use false for isFolder when copying single file summary
+                                            const summary = buildNodeSummaries(item.node, false);
+                                            if (summary) {
+                                                try {
+                                                    await navigator.clipboard.writeText(summary);
+                                                    toast.success("File summary copied to clipboard");
+                                                } catch (err) {
+                                                    toast.error("Failed to copy file summary");
+                                                    console.error(err);
+                                                }
+                                            } else {
+                                                toast.info("No summary available for this file.");
+                                            }
+                                        }}
+                                    >
+                                        <ClipboardList className="h-4 w-4" />
+                                    </Button>
+                                )}
+
+
                                 {onRequestAIFileChange && (
                                     <Button
                                         variant="ghost"
@@ -354,6 +392,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                                         <Wand2 className="h-4 w-4" />
                                     </Button>
                                 )}
+
+
                             </>
                         )}
                     </div>
@@ -384,9 +424,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 {/* Copy contents for both files and folders */}
                 <ContextMenuItem
                     onClick={async () => {
-                        const content = buildNodeContent(item.node, projectFileMap, isFolder);
                         try {
-                            await navigator.clipboard.writeText(content);
+                            await navigator.clipboard.writeText(contents);
                             toast.success(
                                 `${isFolder ? "Folder" : "File"} contents copied to clipboard`
                             );
@@ -398,21 +437,51 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                         }
                     }}
                 >
-                    Copy {isFolder ? "Folder" : "File"} Contents
+                    Copy {isFolder ? "Folder" : "File"} Contents ({estimateTokenCount(contents)} Tokens)
                 </ContextMenuItem>
 
                 {/* Folder-specific context menu items */}
                 {isFolder && (
-                    <ContextMenuItem
-                        onClick={async () => {
-                            const tree = buildTreeStructure(item.node);
-                            await navigator.clipboard.writeText(tree);
-                            toast.success("Folder tree copied to clipboard");
-                        }}
-                    >
-                        Copy Folder Tree
-                    </ContextMenuItem>
+                    <>
+
+                        {/* --- New Copy Folder Summaries Context Menu Item --- */}
+                        <ContextMenuItem
+                            onClick={async () => {
+                                if (summaries) {
+                                    try {
+                                        await navigator.clipboard.writeText(summaries);
+                                        toast.success("Folder summaries copied to clipboard");
+                                    } catch (err) {
+                                        toast.error("Failed to copy folder summaries");
+                                        console.error(err);
+                                    }
+                                } else {
+                                    toast.info("No file summaries found in this folder.");
+                                }
+                            }}
+                        >
+                            Copy Folder Summaries ({estimateTokenCount(summaries)} Tokens)
+                        </ContextMenuItem>
+                        {/* --- End New Copy Folder Summaries Context Menu Item --- */}
+
+
+                        <ContextMenuItem /* Copy Folder Tree */
+                            onClick={async () => {
+                                try {
+                                    await navigator.clipboard.writeText(tree);
+                                    toast.success("Folder tree copied to clipboard");
+                                } catch (err) {
+                                    toast.error("Failed to copy folder tree");
+                                    console.error(err);
+                                }
+                            }}
+                        >
+                            Copy Folder Tree ({estimateTokenCount(tree)} Tokens)
+                        </ContextMenuItem>
+                    </>
                 )}
+
+
 
                 {/* "Modify with AI..." for files */}
                 {!isFolder && item.node.file?.path && onRequestAIFileChange && (

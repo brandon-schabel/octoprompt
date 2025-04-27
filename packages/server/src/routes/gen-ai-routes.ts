@@ -1,6 +1,6 @@
 import { createRoute, z } from '@hono/zod-openapi';
 
-import { ApiError, LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, } from 'shared';
+import { ApiError, MEDIUM_MODEL_CONFIG, } from 'shared';
 import {
     ApiErrorResponseSchema,
     OperationSuccessResponseSchema
@@ -17,26 +17,71 @@ import {
     AiGenerateStructuredResponseSchema,
     StructuredDataSchemaConfig,
     ModelsListResponseSchema,
-    structuredDataSchemas,
     FileSummaryListResponseSchema,
     RemoveSummariesResponseSchema,
     SummarizeFilesResponseSchema,
+    SuggestFilesResponseSchema,
     FileSuggestionsZodSchema,
-    SuggestFilesResponseSchema
 } from "shared/src/schemas/gen-ai.schemas";
 
-
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { aiProviderInterface, generateStructuredData } from '@/services/model-providers/providers/ai-provider-interface-services'; // Import the service instance
+import { generateSingleText, generateStructuredData, genTextStream } from '@/services/model-providers/providers/gen-ai-interface-services'; // Import the service instance
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-providers/providers/model-fetcher-service';
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/providers/provider-defaults';
 import { providerKeyService } from '@/services/model-providers/providers/provider-key-service';
 import { getFullProjectSummary } from '@/utils/get-full-project-summary';
 import { ProjectIdParamsSchema, SuggestFilesBodySchema, GetFileSummariesQuerySchema, RemoveSummariesBodySchema, SummarizeFilesBodySchema } from 'shared/src/schemas/project.schemas';
+import { stream } from 'hono/streaming';
 import { forceResummarizeSelectedFiles, getFileSummaries } from '@/services/file-services/file-summary-service';
-import { getProjectById, resummarizeAllFiles, removeSummariesFromFiles, summarizeSelectedFiles } from '@/services/project-service';
+import { summarizeSelectedFiles, getProjectById, resummarizeAllFiles, removeSummariesFromFiles } from '@/services/project-service';
 
+
+
+// Define the Zod schema for filename suggestions
+const FilenameSuggestionSchema = z.object({
+    suggestions: z.array(z.string()).length(5).openapi({
+        description: "An array of exactly 5 suggested filenames.",
+        example: ["stringUtils.ts", "textHelpers.ts", "stringManipulators.ts", "strUtils.ts", "stringLib.ts"]
+    }),
+    reasoning: z.string().optional().openapi({
+        description: "Brief reasoning for the suggestions.",
+        example: "Suggestions focus on clarity and common naming conventions for utility files."
+    })
+}).openapi("FilenameSuggestionOutput");
+
+// Define other schemas as needed...
+// const CodeReviewSchema = z.object({ ... });
+
+// Central object mapping keys to structured task configurations
+// Place this here or in a separate config file (e.g., gen-ai-config.ts) and import it
+const structuredDataSchemas: Record<string, StructuredDataSchemaConfig<any>> = {
+    filenameSuggestion: {
+        // These fields match BaseStructuredDataConfigSchema
+        name: "Filename Suggestion",
+        description: "Suggests 5 suitable filenames based on a description of the file's content.",
+        promptTemplate: "Based on the following file description, suggest 5 suitable and conventional filenames. File Description: {userInput}",
+        systemPrompt: "You are an expert programmer specializing in clear code organization and naming conventions. Provide concise filename suggestions.",
+        modelSettings: {
+            model: "gpt-4o",
+            temperature: 0.5,
+        },
+        // This field is part of the interface, but not the base Zod schema
+        schema: FilenameSuggestionSchema, // The actual Zod schema instance
+    },
+    // Example of another entry
+    basicSummary: {
+        name: "Basic Summary",
+        description: "Generates a short summary of the input text.",
+        promptTemplate: "Summarize the following text concisely: {userInput}",
+        systemPrompt: "You are a summarization expert.",
+        modelSettings: { model: "gpt-4o", temperature: 0.6, maxTokens: 150 },
+        schema: z.object({ // Define the schema directly here
+            summary: z.string().openapi({ description: "The generated summary." })
+        }).openapi("BasicSummaryOutput")
+    }
+    // Add more structured tasks here...
+};
 
 
 // GET /models
@@ -101,6 +146,32 @@ const generateTextRoute = createRoute({
         },
     },
 });
+
+// POST /api/gen-ai/stream (Streaming Text Generation)
+const generateStreamRoute = createRoute({
+    method: 'post',
+    path: '/api/gen-ai/stream',
+    tags: ['GenAI'],
+    summary: 'Generate text using a specified model and prompt',
+    request: {
+        body: {
+            content: { 'application/json': { schema: AiGenerateTextRequestSchema } },
+            required: true,
+        },
+    },
+    responses: {
+        200: {
+            content: {
+                'text/event-stream': { // Standard content type for SSE/streaming text
+                    schema: z.string().openapi({ description: "Stream of response tokens (Vercel AI SDK format)" })
+                }
+            },
+            description: 'Successfully initiated AI response stream.',
+        },
+
+    },
+});
+
 
 // POST /api/gen-ai/structured (Structured Data Generation)
 const generateStructuredRoute = createRoute({
@@ -257,17 +328,37 @@ const removeSummariesRoute = createRoute({
 
 
 export const genAiRoutes = new OpenAPIHono()
+    .openapi(generateStreamRoute, async (c) => {
+        const body = c.req.valid('json');
+        const { prompt, options, systemMessage } = body;
 
+        try {
+            const aiSDKStream = await genTextStream({
+                prompt,
+                ...(options && {
+                    options: options
+                }),
+                systemMessage,
+            });
+
+            return stream(c, async (stream) => {
+                await stream.pipe(aiSDKStream.toDataStream());
+            });
+        } catch (error: any) {
+            console.error("[GenAI Route Error - /stream]:", error);
+            throw new ApiError(500, `Failed to generate text: ${error.message}`, 'TEXT_GENERATION_FAILED');
+        }
+    })
     // --- NEW: Simple Text Generation Handler ---
     .openapi(generateTextRoute, async (c) => {
         const body = c.req.valid('json');
 
         try {
-            const generatedText = await aiProviderInterface.generateSingleText({
+            const generatedText = await generateSingleText({
                 prompt: body.prompt,
-                provider: body.provider as APIProviders, // Cast might be needed if schema allows any string
-                model: body.model,
-                options: body.options,
+                ...(body.options && {
+                    options: body.options
+                }),
                 systemMessage: body.systemMessage,
                 // debug: true // Optionally enable debug logging
             });
@@ -288,9 +379,7 @@ export const genAiRoutes = new OpenAPIHono()
     // --- NEW: Structured Data Generation Handler ---
     .openapi(generateStructuredRoute, async (c) => {
         const body = c.req.valid('json');
-        const { schemaKey, userInput,
-        } = body;
-
+        const { schemaKey, userInput, options } = body;
         // 1. Find the configuration for the requested schemaKey
         const config: StructuredDataSchemaConfig<z.ZodTypeAny> = structuredDataSchemas[schemaKey as keyof typeof structuredDataSchemas]
         if (!config) {
@@ -298,14 +387,16 @@ export const genAiRoutes = new OpenAPIHono()
         }
 
         // 2. Prepare parameters for the AI service
-        const finalPrompt = config?.promptTemplate ? config?.promptTemplate.replace('{userInput}', userInput) : userInput;
-
+        const finalPrompt = config?.promptTemplate?.replace('{userInput}', userInput);
+        const finalModel = options?.model ?? config?.modelSettings?.model ?? 'gpt-4o'; // Define default model logic
+        const finalOptions = { ...config.modelSettings, ...options, model: finalModel }; // Merge options, override wins
         const finalSystemPrompt = config.systemPrompt;
 
         try {
             const result = await generateStructuredData({
-                prompt: finalPrompt,
-                schema: config.schema,
+                prompt: finalPrompt ?? '',
+                schema: config.schema, // Pass the Zod schema from config
+                options: finalOptions,
                 systemMessage: finalSystemPrompt,
             });
 
@@ -363,23 +454,21 @@ export const genAiRoutes = new OpenAPIHono()
     .openapi(postAiGenerateTextRoute, async (c) => {
         const {
             prompt,
-            provider,
-            model,
             options,
             systemMessage
         } = c.req.valid('json');
 
-        console.log(`[Hono AI Generate] /ai/generate/text request: Provider=${provider}, Model=${model}`);
+        console.log(`[Hono AI Generate] /ai/generate/text request: Provider=${options?.provider}, Model=${options?.model}`);
 
         try {
             // Combine model and other options
-            const unifiedOptions = { ...options, model };
 
             // Call the unified provider's non-streaming text generation function
-            const generatedText = await aiProviderInterface.generateSingleText({
+            const generatedText = await generateSingleText({
                 prompt,
-                provider: provider as APIProviders,
-                options: unifiedOptions,
+                ...(options && {
+                    options: options
+                }),
                 systemMessage,
                 // messages: undefined, // Not passing history for this simple route
             });
@@ -407,26 +496,45 @@ export const genAiRoutes = new OpenAPIHono()
 
         const projectSummary = await getFullProjectSummary(projectId);
         const systemPrompt = `
-        You are a code assistant that recommends relevant files based on user input.
+<role>
+You are a code assistant that recommends relevant files based on user input.
 You have a list of file summaries and a user request.
-Return only valid JSON with the shape: {"fileIds": ["uuid1", "uuid2"]}
-Guidelines:
+</role>
+
+<response_format>
+    {"fileIds": ["9d679879sad7fdf324312", "9d679879sad7fdf324312"]}
+</response_format>
+
+<guidelines>
 - For simple tasks: return max 5 files
 - For complex tasks: return max 10 files
 - For very complex tasks: return max 20 files
 - Do not add comments in your response
 - Strictly follow the JSON schema, do not add any additional properties or comments
+- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
+</guidelines>
         `
 
-        const userMessage = `
-User Query: ${userInput}
-Below is a combined summary of project files:
-${projectSummary}`;
+        const userPrompt = `
+<user_query>
+${userInput}
+</user_query>
+
+<project_summary>
+${projectSummary}
+</project_summary>
+`;
 
         try {
 
+
+            console.log({
+                prompt: userPrompt,
+                systemPrompt,
+            })
+
             const result = await generateStructuredData({
-                prompt: userMessage,
+                prompt: userPrompt,
                 schema: FileSuggestionsZodSchema,
                 systemMessage: systemPrompt,
             })

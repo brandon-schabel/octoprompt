@@ -1,6 +1,5 @@
 export { ApiError } from './src/error/api-error';
 export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher';
-export { buildCombinedFileSummaries } from './src/utils/summary-formatter';
 export * from './src/utils/merge-deep';
 
 // Global state management

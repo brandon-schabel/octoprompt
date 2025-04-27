@@ -8,16 +8,17 @@ import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../.
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
 import { useCreateProjectTab } from "@/hooks/api/global-state/updaters";
-import { Ticket } from "@/hooks/generated";
+import { Ticket, TicketWithTasks } from "@/hooks/generated";
 
 interface TicketDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    ticket: Ticket | null;     // If non-null, we are editing an existing ticket
+    ticketWithTasks: TicketWithTasks | null;     // If non-null, we are editing an existing ticket
     projectId: string;         // The project ID to which the ticket belongs
 }
 
-export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialogProps) {
+
+export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks, projectId }: TicketDialogProps) {
     const createTicket = useCreateTicket();
     const updateTicket = useUpdateTicket();
     // TODO: reimplment this
@@ -31,17 +32,17 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     const [status, setStatus] = useState<"open" | "in_progress" | "closed">("open");
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const suggestFilesMutation = useSuggestFilesForTicket(ticket?.id ?? "");
+    const suggestFilesMutation = useSuggestFilesForTicket(ticketWithTasks?.ticket.id ?? "");
 
     // On open/edit, populate form with existing ticket data or reset
     useEffect(() => {
-        if (ticket) {
-            setTitle(ticket.title);
-            setOverview(ticket.overview ?? "");
-            setPriority(ticket.priority as "low" | "normal" | "high");
-            setStatus(ticket.status as "open" | "in_progress" | "closed");
+        if (ticketWithTasks) {
+            setTitle(ticketWithTasks.ticket.title);
+            setOverview(ticketWithTasks.ticket.overview ?? "");
+            setPriority(ticketWithTasks.ticket.priority as "low" | "normal" | "high");
+            setStatus(ticketWithTasks.ticket.status as "open" | "in_progress" | "closed");
             try {
-                setSelectedFileIds(JSON.parse(ticket.suggestedFileIds || "[]"));
+                setSelectedFileIds(JSON.parse(ticketWithTasks.ticket.suggestedFileIds || "[]"));
             } catch {
                 setSelectedFileIds([]);
             }
@@ -52,7 +53,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
             setStatus("open");
             setSelectedFileIds([]);
         }
-    }, [ticket]);
+    }, [ticketWithTasks]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -60,10 +61,10 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
 
         setIsSubmitting(true);
         try {
-            if (ticket) {
+            if (ticketWithTasks) {
                 // Editing existing ticket
                 await updateTicket.mutateAsync({
-                    ticketId: ticket.id,
+                    ticketId: ticketWithTasks.ticket.id,
                     updates: {
                         title,
                         overview,
@@ -119,7 +120,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
 
     // 2) Handle "Suggest Files" response
     async function handleSuggestFiles() {
-        if (!ticket) return;
+        if (!ticketWithTasks) return;
         try {
             const res = await suggestFilesMutation.mutateAsync({ extraUserInput: overview });
             if (res?.recommendedFileIds) {
@@ -133,17 +134,24 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
     // 3) Open in Project Tab
     // TODO: reimplment this
     function handleOpenInProjectTab() {
-        if (!ticket) return;
+        if (!ticketWithTasks) return;
         // Build a default userPrompt – e.g. the ticket's title & overview
-        const userPrompt = `Ticket: ${ticket.title}\n\n${ticket.overview}`;
+        const userPrompt = `
+        <ticket_title>
+            ${ticketWithTasks.ticket.title}
+        </ticket_title>
+        <ticket_overview>
+            ${ticketWithTasks.ticket.overview}
+        </ticket_overview>
+        `;
         // Or include tasks from <TicketTasksPanel> if you want
 
         // Actually create the tab:
         createProjectTab({
-            projectId: ticket.projectId,
+            projectId: ticketWithTasks.ticket.projectId,
             userPrompt,
             selectedFiles: selectedFileIds,     // from this ticket
-            displayName: ticket.title ?? "New Tab"
+            displayName: ticketWithTasks.ticket.title ?? "New Tab"
         });
         // You could also close the dialog if desired:
         onClose();
@@ -172,7 +180,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
             >
                 <DialogHeader>
                     <DialogTitle className="flex space-x-2 items-center">
-                        <span>{ticket ? "Edit Ticket" : "Create New Ticket"}</span>
+                        <span>{ticketWithTasks ? "Edit Ticket" : "Create New Ticket"}</span>
                         <InfoTooltip className="max-w-xs">
                             Providing a detailed overview helps auto-generate tasks & file suggestions!
                         </InfoTooltip>
@@ -290,8 +298,8 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                     {/* </div> */}
 
                     {/* Render tasks panel only if editing an existing ticket */}
-                    {ticket && (
-                        <TicketTasksPanel ticketId={ticket.id} overview={overview} />
+                    {ticketWithTasks && (
+                        <TicketTasksPanel ticketId={ticketWithTasks.ticket.id} overview={overview} />
                     )}
 
                     <div className="flex justify-end space-x-2">
@@ -307,7 +315,7 @@ export function TicketDialog({ isOpen, onClose, ticket, projectId }: TicketDialo
                             type="submit"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Saving..." : ticket ? "Update" : "Create"}
+                            {isSubmitting ? "Saving..." : ticketWithTasks ? "Update" : "Create"}
                         </Button>
                     </div>
                 </form>

@@ -81,8 +81,8 @@ export const appSettingsSchema = z.object({
     autoScrollEnabled: z.boolean().optional().default(true).openapi({ description: "Whether the chat view should automatically scroll to the bottom on new messages." }),
 
     // Global Chat Model Settings (Referencing the detailed modelSettingsSchema fields)
-    provider: providerSchema.optional().default(defaultModelConfigs.provider as APIProviders).openapi({ description: "Default AI provider to use for chat.", example: "openai" }),
-    model: z.string().optional().default(defaultModelConfigs.model ?? "gpt-4o").openapi({ description: "Default AI model name to use for chat.", example: "gpt-4-turbo-preview" }),
+    provider: providerSchema.optional().default(defaultModelConfigs.provider as APIProviders).openapi({ description: "Default AI provider to use for chat.", example: "openrouter" }),
+    model: z.string().optional().default(defaultModelConfigs.model ?? "gpt-4o").openapi({ description: "Default AI model name to use for chat.", example: "gpt-4o" }),
     temperature: chatModelSettingsSchema.shape.temperature,
     max_tokens: chatModelSettingsSchema.shape.max_tokens,
     top_p: chatModelSettingsSchema.shape.top_p,

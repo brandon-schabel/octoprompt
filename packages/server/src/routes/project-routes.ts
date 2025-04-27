@@ -2,7 +2,6 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import type { TypedResponse } from 'hono';
 import {
     ApiError,
-    buildCombinedFileSummaries,
     MEDIUM_MODEL_CONFIG,
 } from "shared";
 import {
@@ -32,6 +31,7 @@ import * as projectService from "@/services/project-service";
 import { syncProject, syncProjectFolder } from "@/services/file-services/file-sync-service";
 import { getFileSummaries } from "@/services/file-services/file-summary-service";
 import { watchersManager } from "@/services/shared-services";
+import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter';
 
 // DELETE REDUNDANT TYPE DEFINITIONS - SERVICE LAYER PROVIDES CORRECTLY TYPED DATA
 
@@ -355,7 +355,7 @@ export const projectRoutes = new OpenAPIHono()
             // Set summary to empty, but don't return early
             summary = "";
         } else {
-            summary = buildCombinedFileSummaries(projectFiles);
+            summary = buildCombinedFileSummariesXml(projectFiles);
         }
 
         // Construct the single success payload at the end

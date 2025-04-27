@@ -8,7 +8,7 @@ import { Project } from 'shared/src/schemas/project.schemas';
 // --- Constants (ALLOWED_EXTENSIONS, DEFAULT_EXCLUSIONS) remain the same ---
 export const ALLOWED_EXTENSIONS = [
   // Documentation & Config
-  '.md', '.txt', '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.conf', '.config',
+  '.md', 'mdc', '.txt', '.json', '.yaml', '.yml', '.toml', '.xml', '.ini', '.conf', '.config',
 
   // Web Development
   '.ts', '.tsx', '.js', '.jsx', '.mjs', '.mts', '.cjs', '.cts', '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue', '.svelte', '.svg',

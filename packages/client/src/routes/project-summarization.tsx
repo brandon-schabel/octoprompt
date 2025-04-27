@@ -20,7 +20,7 @@ import {
     useRemoveSummariesFromFiles
 } from "@/hooks/api/use-projects-api"
 import { matchesAnyPattern } from "shared/src/utils/pattern-matcher"
-import { buildCombinedFileSummaries } from "shared/src/utils/summary-formatter"
+import { buildCombinedFileSummariesXml } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
@@ -444,16 +444,11 @@ export function ProjectSummarizationSettingsPage() {
     }
 
     // Use the filtered list for formatted summary generation
-    const formattedCombinedSummary = buildCombinedFileSummaries(
+    const formattedCombinedSummary = buildCombinedFileSummariesXml(
         includedFilesWithSummaries, // Pass the pre-filtered list
         {
-            sectionDelimiter: "----------------------------------------",
-            headerStyle: (file) => `File: ${file.path}`,
-            footerStyle: (file) => `Last Updated: ${file.summaryLastUpdatedAt
-                ? new Date(file.summaryLastUpdatedAt).toLocaleString()
-                : 'Never' // Should not happen if it's in this list
-                }`,
             includeEmptySummaries: false, // Already filtered, but good practice
+            emptySummaryText: "NO_SUMMARY",
         }
     );
 

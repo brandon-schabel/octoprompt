@@ -15,7 +15,6 @@ import { createGroq } from '@ai-sdk/groq';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { createOllama } from 'ollama-ai-provider';
 import { createProviderKeyService } from "./provider-key-service";
-import { AISdkOptions } from "./unified-provider-types";
 import { createChatService } from "../../chat-service";
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 import { AiChatStreamRequest } from 'shared/src/schemas/chat.schemas';
@@ -37,8 +36,6 @@ let providerKeysCache: ProviderKey[] | null = null;
 export async function handleChatMessage({
     chatId,
     userMessage,
-    provider,
-    model,
     options = {},
     systemMessage,
     tempId,
@@ -46,12 +43,15 @@ export async function handleChatMessage({
 }: AiChatStreamRequest): Promise<ReturnType<typeof streamText>> { // Return type changed
     let finalAssistantMessageId: string | undefined;
 
+    const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
+    const provider = finalOptions.provider as APIProviders
+
     const chatService = createChatService();
 
     // try {
     // 1. Get Model Instance
     // Pass model directly to options for getProviderModel
-    const modelInstance = await getProviderLanguageModelInterface(provider as APIProviders, { ...options, model });
+    const modelInstance = await getProviderLanguageModelInterface(finalOptions.provider as APIProviders, finalOptions);
 
     // 2. Prepare Messages
     let messagesToProcess: CoreMessage[] = [];
@@ -96,15 +96,15 @@ export async function handleChatMessage({
         messages: messagesToProcess,
 
         // Map options directly from the request
-        temperature: options.temperature,
-        maxTokens: options.maxTokens,
-        topP: options.topP,
-        frequencyPenalty: options.frequencyPenalty,
-        presencePenalty: options.presencePenalty,
-        topK: options.topK,
+        temperature: finalOptions.temperature,
+        maxTokens: finalOptions.maxTokens,
+        topP: finalOptions.topP,
+        frequencyPenalty: finalOptions.frequencyPenalty,
+        presencePenalty: finalOptions.presencePenalty,
+        topK: finalOptions.topK,
         // Pass through response_format if provided in options
-        ...(options.response_format && {
-            response_format: options.response_format
+        ...(finalOptions.response_format && {
+            response_format: finalOptions.response_format
         }),
 
         // Handle completion and errors
@@ -190,10 +190,11 @@ async function getKey(provider: APIProviders, debug: boolean): Promise<string | 
  */
 async function getProviderLanguageModelInterface(
     provider: APIProviders,
-    options: AISdkOptions = {},
+    options: AiSdkOptions = {},
     debug: boolean = false
 ): Promise<LanguageModel> {
-    const modelId = options.model || LOW_MODEL_CONFIG.model || '';
+    const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
+    const modelId = finalOptions.model || LOW_MODEL_CONFIG.model || '';
 
     if (!modelId) {
         throw new Error(`Model ID must be specified for provider ${provider} either in options or defaults.`);
@@ -282,23 +283,23 @@ async function getProviderLanguageModelInterface(
 export async function generateSingleText({
     prompt, // Simple prompt convenience
     messages, // Or full message history
-    provider = "openai",
     options = {},
     systemMessage,
     debug = false
 }: {
-    prompt?: string;
+    prompt: string;
     messages?: CoreMessage[];
-    provider?: APIProviders;
-    options?: AISdkOptions;
+    options?: AiSdkOptions;
     systemMessage?: string;
     debug?: boolean;
 }): Promise<string> {
+    const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
+    const provider = finalOptions.provider as APIProviders
     if (!prompt && (!messages || messages.length === 0)) {
         throw new Error("Either 'prompt' or 'messages' must be provided for generateSingleText.");
     }
 
-    const modelInstance = await getProviderLanguageModelInterface(provider, options);
+    const modelInstance = await getProviderLanguageModelInterface(provider, finalOptions);
 
     let messagesToProcess: CoreMessage[] = [];
     if (systemMessage) {
@@ -320,13 +321,13 @@ export async function generateSingleText({
         model: modelInstance,
         messages: messagesToProcess,
         // Map options - Use new names from AiSdkOptionsSchema
-        temperature: options.temperature,
-        maxTokens: options.maxTokens, // Changed from max_tokens
-        topP: options.topP,           // Changed from top_p
-        frequencyPenalty: options.frequencyPenalty, // Changed from frequency_penalty
-        presencePenalty: options.presencePenalty, // Changed from presence_penalty
-        topK: options.topK,           // Changed from top_k
-        // stop: options.stop,           // Added stop
+        temperature: finalOptions.temperature,
+        maxTokens: finalOptions.maxTokens,
+        topP: finalOptions.topP,
+        frequencyPenalty: finalOptions.frequencyPenalty,
+        presencePenalty: finalOptions.presencePenalty,
+        topK: finalOptions.topK,
+        // stop: options.stop,           
     });
 
     if (debug) {
@@ -342,23 +343,26 @@ export async function generateSingleText({
 export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeDef, any>>({ // Accept ZodTypeAny
     prompt,
     schema,
+    options = {},
     systemMessage,
-    debug = false
+    debug = false,
 }: {
-    prompt: string; // Make prompt required for simplicity here
-    schema: T; // Use the generic type
+    prompt: string;
+    schema: T;
     systemMessage?: string;
     debug?: boolean;
+    options?: AiSdkOptions;
 }): Promise<{ object: z.infer<T>; usage: { completionTokens: number; promptTokens: number; totalTokens: number; }; finishReason: string /* ...other potential fields */ }> { // Return structure from generateObject
-    const provider = LOW_MODEL_CONFIG.provider as APIProviders
-    const model = LOW_MODEL_CONFIG.model
+    const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
+    const provider = finalOptions.provider as APIProviders
+
+    const model = finalOptions.model
 
     if (!prompt) {
         throw new Error("'prompt' must be provided for generateStructuredData.");
     }
-
     // Pass model in options
-    const modelInstance = await getProviderLanguageModelInterface(provider, { ...LOW_MODEL_CONFIG, model: model });
+    const modelInstance = await getProviderLanguageModelInterface(provider, { ...finalOptions, model: model });
 
     if (debug) {
         console.log(`[UnifiedProviderService] Generating structured data: Provider=${provider}, ModelID=${modelInstance.modelId}, Schema=${schema.description || 'Unnamed Schema'}`);
@@ -372,12 +376,12 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
         // mode: 'json', // Ensure JSON mode is requested
         prompt: prompt,
         system: systemMessage,
-        temperature: LOW_MODEL_CONFIG.temperature,
-        maxTokens: LOW_MODEL_CONFIG.max_tokens,
-        topP: LOW_MODEL_CONFIG.top_p,
-        frequencyPenalty: LOW_MODEL_CONFIG.frequency_penalty,
-        presencePenalty: LOW_MODEL_CONFIG.presence_penalty,
-        topK: LOW_MODEL_CONFIG.top_k,
+        temperature: finalOptions.temperature,
+        maxTokens: finalOptions.maxTokens,
+        topP: finalOptions.topP,
+        frequencyPenalty: finalOptions.frequencyPenalty,
+        presencePenalty: finalOptions.presencePenalty,
+        topK: finalOptions.topK,
         // topK might not be supported by generateObject directly
         // stop sequences might not be applicable/supported
     });
@@ -390,17 +394,114 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
     return result; // Return the full result object which includes .object, .usage etc.
 }
 
-export function aiProviderInterfaceServices(debugParam = false) {
-    const debug = debugParam;
 
-    return {
-        processMessage: handleChatMessage, // For streaming chat
-        generateSingleText, // For non-streaming text
-        generateStructuredData, // For structured JSON output
-        getProviderModel: getProviderLanguageModelInterface, // Expose if needed by other services directly
-        // listModels - Still complex to implement reliably across providers with Vercel SDK
-    };
+
+/**
+ * Generates streaming text output for a given prompt or message history
+ * without saving to the database. Ideal for one-off streaming use cases.
+ *
+ * Returns a ReadableStream conforming to the Vercel AI SDK protocol.
+ */
+export async function genTextStream({
+    prompt,         // Optional: Simple user prompt
+    messages,       // Optional: Full message history
+    options = {},   // AI SDK options (including model)
+    systemMessage,  // Optional: System message
+    debug = false
+}: {
+    prompt?: string; // Allow only prompt
+    messages?: CoreMessage[]; // Allow only messages
+    options?: AiSdkOptions; // Use the correct type
+    systemMessage?: string;
+    debug?: boolean;
+}): Promise<ReturnType<typeof streamText>> { // Return type is the stream
+    const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
+    const provider = finalOptions.provider as APIProviders
+
+    // 1. Input Validation
+    if (!prompt && (!messages || messages.length === 0)) {
+        throw new Error("Either 'prompt' or 'messages' must be provided for genTextStream.");
+    }
+
+    try {
+        // 2. Get Model Instance
+        // Pass model directly from options if provided
+        const modelInstance = await getProviderLanguageModelInterface(provider, finalOptions, debug);
+
+        // 3. Prepare Messages
+        let messagesToProcess: CoreMessage[] = [];
+        if (systemMessage) {
+            messagesToProcess.push({ role: 'system', content: systemMessage });
+        }
+        if (messages) {
+            messagesToProcess.push(...messages);
+        }
+        // Add the prompt as the last user message if provided
+        if (prompt) {
+            // Ensure it doesn't duplicate the last message if messages were also provided
+            const lastMessage = messagesToProcess[messagesToProcess.length - 1];
+            if (!lastMessage || !(lastMessage.role === 'user' && lastMessage.content === prompt)) {
+                messagesToProcess.push({ role: 'user', content: prompt });
+            }
+        }
+
+        // Ensure there's something to process
+        if (messagesToProcess.length === 0) {
+            throw new Error("No valid input content (prompt or messages) resulted in messages to process.");
+        }
+
+
+        if (debug) {
+            console.log(`[UnifiedProviderService - genTextStream] Starting stream for ${provider}/${modelInstance.modelId}. Messages:`, messagesToProcess);
+        }
+
+        // 4. Call streamText for text generation
+        // No database interactions needed here
+        return streamText({
+            model: modelInstance,
+            messages: messagesToProcess,
+
+            // Map options directly from the request
+            temperature: options.temperature,
+            maxTokens: options.maxTokens,
+            topP: options.topP,
+            frequencyPenalty: options.frequencyPenalty,
+            presencePenalty: options.presencePenalty,
+            topK: options.topK,
+            // Pass through response_format if provided in options
+            ...(options.response_format && {
+                response_format: options.response_format
+            }),
+
+            // Minimal handlers for logging or potential side-effects *not* involving the DB
+            onFinish: ({ text, usage, finishReason }) => {
+                if (debug) {
+                    console.log(`[UnifiedProviderService - genTextStream] streamText finished for ${provider}/${modelInstance.modelId}. Reason: ${finishReason}. Usage: ${JSON.stringify(usage)}.`);
+                    // console.log(`[UnifiedProviderService - genTextStream] Final Text: ${text}`); // Be cautious logging full text in production
+                }
+                // No DB updates needed
+            },
+            onError: (error) => {
+                console.error(`[UnifiedProviderService - genTextStream] Error during stream for ${provider}/${modelInstance.modelId}:`, error);
+                // No DB updates needed
+                // The error will propagate through the stream to the client
+            },
+        });
+
+    } catch (error: any) {
+        console.error(`[UnifiedProviderService - genTextStream] Error setting up stream for ${provider}:`, error);
+        // How to handle errors before the stream starts?
+        // Option 1: Re-throw the error to be handled by the caller
+        // throw error;
+
+        // Option 2: Return a stream that immediately errors out
+        const errorStream = new ReadableStream({
+            start(controller) {
+                controller.error(error);
+            }
+        });
+        // Cast needed because the direct return type doesn't match perfectly
+        // without the generic constraints of StreamTextResult, but it works functionally.
+        return errorStream as unknown as ReturnType<typeof streamText>;
+    }
 }
-
-// Export a singleton instance
-export const aiProviderInterface = aiProviderInterfaceServices(process.env.NODE_ENV !== 'production'); // Enable debug based on env

@@ -1,20 +1,30 @@
 ---
-description: Rules for server-side TypeScript code (Bun + Zod) in packages/server/src
-globs: packages/server/src/**/*.ts, server/src/**/*.ts,
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
-# Backend Architecture & File Building Guide
+# Backend Architecture & File Building Guide  (Updated 2025‑04‑26)
 
-This document describes how our backend is built and organized, including our router setup, extensive use of Zod validations, AI tools for structured outputs, and the overall process for building project features. Use this as a reference when creating or updating backend files.
+This document is the **single source of truth** for how the backend of this monorepo is structured, how new capabilities should be added, and which coding conventions every file MUST follow. Everything below is distilled from the current codebase – the examples are live snippets taken from the files you sent me so you can copy‑paste them as templates.
 
 ---
+## 1. Layered Architecture at a Glance
 
-## 1. Overall Architecture
+```
+┌────────────────────────┐
+│       Routes           │  ➜ Hono + @hono/zod-openapi definitions
+├────────────────────────┤
+│       Services         │  ➜ Business logic & DB access
+├────────────────────────┤
+│  Cross‑Cutting Utils   │  ➜ Unified AI provider, watchers, stream helpers
+├────────────────────────┤
+│    Database Layer      │  ➜ SQLite (bun:better‑sqlite3) + migration scripts
+└────────────────────────┘
+```
+All data contracts are **declared once** as Zod schemas in `packages/shared/src/schemas/*`.  Services consume/return the *parsed* versions of those schemas, and Routes never touch raw DB rows.
 
-Our backend follows a layered, service-oriented architecture with clear separation of concerns. The main layers are:
-
-- **Database Layer:**  
-  All database schemas are defined in the shared package (e.g. `packages/shared/src/schemas/db-schemas.ts`). 
+- **Schema Layer:**  
+  All schemas are defined in the shared package (e.g. `packages/shared/src/schemas/db-schemas.ts`). 
   The Schema files are:
   chat.schemas.ts
   common.schemas.ts
@@ -54,3 +64,338 @@ project-routes.ts
 prompt-routes.ts
 provider-key-routes.ts
 ticket-routes.ts
+
+| Layer | Folder | Key Files |
+|-------|--------|-----------|
+| Database | `packages/server/src/utils` | `database.ts` (SQLite wrapper) |
+| Schemas  | `packages/shared/src/schemas` | `chat.schemas.ts`, `project.schemas.ts`, … |
+| Services | `packages/server/src/services` | `chat-service.ts`, `project-service.ts`, … |
+| Routes   | `packages/server/src/routes` | `chat-routes.ts`, `project-routes.ts`, … |
+| Utilities| `packages/server/src/services/*-services` | `unified-provider-service.ts`, `watchers-manager.ts`, … |
+
+> **Golden Rule**: *Raw data is converted to typed objects **once** (in the Service) and everything downstream works with those validated types.*
+
+---
+## 2. Schema Conventions  (`packages/shared/src/schemas`)
+
+* **Naming** – File name ends with `.schemas.ts` and exports Zod objects **and** their `z.infer` TypeScript aliases.
+* **OpenAPI** – Every schema that crosses the network has `.openapi(<Name>)` so Swagger UI is generated automatically.
+* **Example & Description** – Provide `example` and `description` in every `.openapi({ … })` block.
+
+```ts
+// chat.schemas.ts – excerpt
+export const ChatSchema = z.object({
+  id: z.string().openapi({ example: 'chat_1a2b3c4d' }),
+  title: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+}).openapi('Chat');
+
+export type Chat = z.infer<typeof ChatSchema>;
+```
+
+### Parameter & Body Schemas
+* Path params schemas end with `ParamsSchema`; they annotate the param location via `.openapi({ param: { name, in: 'path' } })`.
+* Body schemas end with `BodySchema` and live alongside the entity file.
+
+---
+## 3. Service Pattern  (`packages/server/src/services/*`)
+
+* Each Service file focuses on **one domain** (Chat, Project, Prompt…).
+* Raw SQLite rows are converted immediately and **validated**:
+
+```ts
+// project-service.ts – createProject
+const row = stmt.get(...);
+const projectData = {
+  id: row.id,
+  name: row.name,
+  // …
+  createdAt: normalizeToIsoString(row.created_at),
+  updatedAt: normalizeToIsoString(row.updated_at),
+};
+return ProjectSchema.parse(projectData); // Validation gate
+```
+
+* Services **never** return `any`; they return `Promise<Project>` or `Promise<Project[]>`—the type exported from the schema file.
+* Throw `ApiError` from `shared/src` for domain‑level failures; Routes decide HTTP status.
+
+---
+## 4. Route Definition Pattern  (`packages/server/src/routes/*`)
+
+Routes are declared in **three steps**:
+
+1. **createRoute** ➜ declarative contract (method, path, schemas, tags).
+2. **.openapi(route, handler)** ➜ attach typed implementation.
+3. **Return shape** validated at compile‑time via `satisfies z.infer<typeof SomeResponseSchema>`.
+
+```ts
+// chat-routes.ts – GET /chats example
+const getAllChatsRoute = createRoute({
+  method: 'get',
+  path: '/chats',
+  tags: ['Chats'],
+  summary: 'Get all chat sessions',
+  responses: {
+    200: { content: { 'application/json': { schema: ChatListResponseSchema } } },
+  },
+});
+
+export const chatRoutes = new OpenAPIHono()
+  .openapi(getAllChatsRoute, async c => {
+    const userChats = await chatService.getAllChats();
+    return c.json({
+      success: true,
+      data: userChats,
+    } satisfies z.infer<typeof ChatListResponseSchema>, 200);
+  });
+```
+
+### Streaming Endpoints
+For SSE/text streaming use `hono/streaming` and the **Unified Provider Service**:
+
+```ts
+// POST /ai/chat (excerpt)
+const readableStream = await handleChatMessage({ /*…*/ });
+return stream(c, async (s) => { await s.pipe(readableStream.toDataStream()); });
+```
+
+> **Tip**: Always set `Content-Type: text/event-stream` + `Cache-Control: no-cache` headers inside the handler.
+
+---
+## 5. Cross‑Cutting Utilities
+
+| Utility | Purpose | Key API |
+|---------|---------|---------|
+| **unified-provider-service.ts** | Normalises calls to OpenAI, OpenRouter, Groq, etc. | `handleChatMessage(opts)` returns a **ReadableStream** for the route.
+| **watchers-manager.ts** | Starts/stops file‑system watchers per project. | `startWatchingProject(project, ignoreGlobs)` |
+| **file-summary-service.ts** | Creates & caches AI summaries per file. | `summarizeFiles(projectId, fileIds)` |
+
+---
+## 6. Error‑Handling Contract
+
+* Throw `new ApiError(status, message, code, meta?)` inside services or routes.
+* `app.onError()` in `packages/server/src/app.ts` converts `ApiError` to JSON: `{ error, code }`.
+
+---
+## 7. Build & Code‑Gen Pipeline
+
+1. **Run server** ➜ `bun run dev` (port 3147). Swagger UI at `/swagger`.
+2. **Generate TS client** ➜ `bun run openapi-ts` (root). This reads the live OpenAPI doc and writes:
+   * `packages/client/src/hooks/generated/*` – typed fetchers & React Query wrappers.
+3. **Write React Query hooks** ➜ `packages/client/src/hooks/api/*.ts` compose the generated fetcher (see `useCreateChat()` for reference).
+
+---
+## 8. Template Snippets
+
+### New Schema
+```ts
+export const ThingSchema = z.object({
+  id: z.string().uuid().openapi({ example: 'thing_123' }),
+  name: z.string(),
+}).openapi('Thing');
+export type Thing = z.infer<typeof ThingSchema>;
+```
+
+### New Service Function
+```ts
+export async function getThing(id: string): Promise<Thing | null> {
+  const row = db.prepare('SELECT * FROM things WHERE id = ?').get(id);
+  if (!row) return null;
+  return ThingSchema.parse({ ...row, createdAt: normalizeToIsoString(row.created_at) });
+}
+```
+
+### New Route
+```ts
+const getThingRoute = createRoute({
+  method: 'get',
+  path: '/things/{id}',
+  tags: ['Things'],
+  request: { params: ThingIdParamsSchema },
+  responses: { 200: { content: { 'application/json': { schema: ThingResponseSchema } } } },
+});
+
+apiRoutes.openapi(getThingRoute, async c => {
+  const { id } = c.req.valid('param');
+  const thing = await getThing(id);
+  if (!thing) throw new ApiError(404, `Thing not found: ${id}`, 'THING_NOT_FOUND');
+  return c.json({ success: true, data: thing } satisfies z.infer<typeof ThingResponseSchema>, 200);
+});
+```
+
+---
+## 9. Checklist for Every PR
+
+- [ ] **Schema** updated + `.openapi()` added.
+- [ ] **Service** returns parsed schema objects (no raw DB rows leaked).
+- [ ] **Route** uses `createRoute` + `OpenAPIHono` pattern.
+- [ ] Responses typed with `satisfies z.infer<…>`.
+- [ ] Errors thrown with `ApiError`.
+- [ ] Added/updated tests (`bun test`).
+- [ ] Ran `bun run openapi-ts` and committed generated client.
+
+Happy coding! 🎉
+
+
+---
+## 10. Gen‑AI Route Patterns
+
+The backend exposes **three kinds of Gen‑AI endpoints**.  All follow the same `createRoute → .openapi()` recipe, but each has its own wrinkles.
+
+| Pattern | When to use | Key headers | Service helper |
+|---------|-------------|-------------|----------------|
+| **Streaming chat**  (`POST /ai/chat`) | A conversational UI that needs token‑by‑token updates (React AI SDK) | `Content‑Type: text/event-stream; Cache-Control: no-cache` | `handleChatMessage()` |
+| **One‑off text generation** (`POST /ai/generate/text`) | Simple prompt‑in / text‑out, no chat history | none (standard JSON) | `generateSingleText()` |
+| **Structured output** (`POST /api/gen-ai/structured`) | Ask the model for JSON that matches a Zod schema | none | `generateStructuredData({ prompt, schema, … })` |
+
+### 10.1  Streaming Chat Route Template (SSE)
+```ts
+const postAiChatRoute = createRoute({
+  method: 'post',
+  path: '/ai/chat',
+  tags: ['AI'],
+  summary: 'Chat completion (streaming)',
+  request: { body: { content: { 'application/json': { schema: AiChatStreamRequestSchema } }, required: true } },
+  responses: {
+    200: { content: { 'text/event-stream': { schema: z.string() } } },
+  },
+});
+
+export const genAiRoutes = new OpenAPIHono()
+  .openapi(postAiChatRoute, async c => {
+    const params = c.req.valid('json');
+    c.header('Content-Type', 'text/event-stream; charset=utf-8');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Connection', 'keep-alive');
+
+    const streamRs = await handleChatMessage({
+      chatId: params.chatId,
+      userMessage: params.userMessage,
+      provider: params.provider,
+      options: { ...params.options, model: params.model },
+      systemMessage: params.systemMessage,
+    });
+
+    return stream(c, async s => await s.pipe(streamRs.toDataStream()));
+  });
+```
+*Keep the handler thin*: history fetch & DB writes live in `handleChatMessage()`.
+
+### 10.2  One‑Off Text Generation Route Template
+```ts
+const postGenerateTextRoute = createRoute({
+  method: 'post',
+  path: '/ai/generate/text',
+  tags: ['AI'],
+  summary: 'Generate text (non‑streaming)',
+  request: { body: { content: { 'application/json': { schema: AiGenerateTextRequestSchema } }, required: true } },
+  responses: { 200: { content: { 'application/json': { schema: AiGenerateTextResponseSchema } } } },
+});
+
+.genAiRoutes.openapi(postGenerateTextRoute, async c => {
+  const { prompt, provider, model, options, systemMessage } = c.req.valid('json');
+  const text = await generateSingleText({
+    prompt,
+    options: { ...options, model, provider },
+    systemMessage,
+  });
+  return c.json({ success: true, data: { text } } satisfies z.infer<typeof AiGenerateTextResponseSchema>, 200);
+});
+```
+
+### 10.3  Structured Output Route Template
+```ts
+const postStructuredRoute = createRoute({
+  method: 'post',
+  path: '/api/gen-ai/structured',
+  tags: ['GenAI'],
+  summary: 'Generate structured data',
+  request: { body: { content: { 'application/json': { schema: AiGenerateStructuredRequestSchema } }, required: true } },
+  responses: { 200: { content: { 'application/json': { schema: AiGenerateStructuredResponseSchema } } } },
+});
+
+.genAiRoutes.openapi(postStructuredRoute, async c => {
+  const { schemaKey, userInput } = c.req.valid('json');
+  const cfg = structuredDataSchemas[schemaKey];
+  if (!cfg) throw new ApiError(400, `Invalid schemaKey: ${schemaKey}`, 'INVALID_SCHEMA_KEY');
+
+  const prompt = cfg.promptTemplate?.replace('{userInput}', userInput) ?? userInput;
+  const { object } = await generateStructuredData({ prompt, schema: cfg.schema, systemMessage: cfg.systemPrompt });
+
+  return c.json({ success: true, data: { output: object } } satisfies z.infer<typeof AiGenerateStructuredResponseSchema>, 200);
+});
+```
+
+**Dos & Don’ts**
+* **DO** import and reuse the response/param schemas from `shared/src/schemas/gen-ai.schemas.ts`.
+* **DO** keep provider/model selection fully dynamic – never hard‑code OpenAI.
+* **DO** bubble up errors with `throw new ApiError(status, msg, code)`.
+* **DON’T** leak raw service errors to the client; wrap them in `ApiError` or let `app.onError()` handle.
+
+### 10.4  Adding More Gen‑AI Endpoints
+1. Create/extend a Zod schema in **shared** and `.openapi()` annotate it.
+2. Write a **service helper** if you need DB or provider orchestration.
+3. Define the **route contract** with `createRoute`.
+4. Implement with `.openapi()` using the patterns above.
+5. Run `bun run openapi-ts` and commit generated client types.
+
+
+## 11. Unified Provider Interface 101
+
+The **`unified-provider-service.ts`** (a.k.a. *AI Provider Interface*) is our thin wrapper over the Vercel AI SDK.  It exists so that **all routes talk to models the same way**, regardless of vendor.
+
+### 11.1 What the Wrapper Gives You
+| Helper | Use‑case | Returns |
+|--------|----------|---------|
+| `handleChatMessage(opts)` | Streaming chat + DB persistence | **ReadableStream** (SSE‑ready) |
+| `genTextStream(opts)` | One-shot prompt streaming  | ``
+| `generateSingleText(opts)` | One‑shot prompt → text | `Promise<string>` |
+| `generateStructuredData(opts)` | Prompt → JSON that matches any Zod schema | `Promise<{ object, usage, finishReason }>` |
+| `getProviderModel(provider, options)` | Low‑level access to a pre‑auth’d `LanguageModel` | `LanguageModel` |
+
+### 11.2 Using It Properly
+* **Never** call the Vercel SDK directly from a route – always go through the wrapper so keys, retries, and logging are consistent.
+* **Map request schemas 1‑to‑1** with `AISdkOptions`:
+  ```ts
+  const unifiedOpts = { ...body.options, model: body.model };
+  const text = await aiProviderInterface.generateSingleText({
+    prompt: body.prompt,
+    provider: body.provider,
+    options: unifiedOpts,
+    systemMessage: body.systemMessage,
+  });
+  ```
+* **Provider Keys** come from the DB via `provider-key-service`.  If a key is missing the helper will fall back to env vars or throw an `ApiError`.
+* **Local Providers** like Ollama/LM Studio are treated as OpenAI‑compatible; configure `OLLAMA_BASE_URL` or `LMSTUDIO_BASE_URL` in `.env`.
+* **Structured Data** – always pass a Zod schema; the helper will invoke `generateObject()` and return `.object` already parsed.
+
+### 11.3 Adding a New Provider
+1. Insert a new case in `getProviderLanguageModelInterface()` that returns a Vercel SDK model factory.
+2. Update `APIProviders` enum + DB UI so keys can be stored.
+3. No route changes needed – the existing endpoints accept any provider string.
+
+```ts
+case "azure_openai": {
+  const apiKey = await getKey("azure_openai", debug);
+  return createOpenAI({
+    apiKey,
+    baseURL: `https://your‑azure‑endpoint.openai.azure.com/openai/deployments/gpt‑4o`,
+    // Azure requires api-version query param – configure via baseURL or interceptors.
+  })(modelId);
+}
+```
+
+### 11.4 Common Pitfalls
+* **Missing keys** – the wrapper prints a warning and most local endpoints will still work, but cloud providers will 401.
+* **Wrong model name** – the Vercel SDK throws a *model not found* error; bubble it up with `ApiError(400, …, 'MODEL_NOT_FOUND')`.
+* **Forgetting SSE headers** – routes that pipe `handleChatMessage()` must set `Content‑Type: text/event-stream` *before* `stream()`.
+
+---
+## 12. Checklist for Every PR *(updated)*
+- [ ] Schema, service, **Gen‑AI route**, and **Unified Provider calls** follow Sections 10 & 11.
+- [ ] Streaming endpoints send correct SSE headers.
+- [ ] Structured routes validate `schemaKey` and use `generateStructuredData()`.
+- [ ] Added provider‑key migrations/UI if a new provider was introduced.
+- [ ] … *(rest of previous checklist remains unchanged).*
+

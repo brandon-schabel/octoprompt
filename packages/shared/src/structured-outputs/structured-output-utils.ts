@@ -60,11 +60,6 @@ export function zodToStructuredJsonSchema<T extends z.ZodTypeAny>(
     zodSchema: T
 ): JSONSchema {
     const def = zodSchema._def;
-
-    console.log("def", def)
-
-    console.log({ zodSchema })
-
     switch (def.typeName) {
         case z.ZodFirstPartyTypeKind.ZodOptional: {
             const unwrapped = def.innerType;
