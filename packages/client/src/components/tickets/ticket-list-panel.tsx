@@ -151,7 +151,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
     }, []);
 
     const [ticketToDelete, setTicketToDelete] = useState<TicketWithTasks | null>(null);
-    const deleteTicket = useDeleteTicket();
+    const deleteTicket = useDeleteTicket(projectId);
 
     const handleDeleteTicket = useCallback(async (e: React.MouseEvent, ticket: TicketWithTasks) => {
         e.stopPropagation();

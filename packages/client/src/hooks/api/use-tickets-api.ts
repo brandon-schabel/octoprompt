@@ -105,7 +105,7 @@ export function useListTicketsWithCount(projectId: string, status?: string) {
     });
 }
 
-export function useCreateTicket() {
+export function useCreateTicket(projectId: string) {
     const queryClient = useQueryClient();
     const mutationOptions = postApiTicketsMutation();
 
@@ -115,18 +115,21 @@ export function useCreateTicket() {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: (data: any) => {
-            if (data.ticket?.projectId) {
-                queryClient.invalidateQueries({
-                    queryKey: TICKET_KEYS.all,
-                    refetchType: 'all'
-                });
-            }
+            queryClient.invalidateQueries({
+                queryKey: TICKET_KEYS.all,
+                refetchType: 'all'
+            });
+            queryClient.invalidateQueries({
+                queryKey: getApiProjectsByProjectIdTicketsWithTasksQueryKey({
+                    path: { projectId }
+                })
+            });
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
-export function useUpdateTicket() {
+export function useUpdateTicket(projectId: string) {
     const queryClient = useQueryClient();
     const mutationOptions = patchApiTicketsByTicketIdMutation();
 
@@ -139,18 +142,22 @@ export function useUpdateTicket() {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: (data: any) => {
-            if (data.ticket?.projectId) {
-                queryClient.invalidateQueries({
-                    queryKey: TICKET_KEYS.all,
-                    refetchType: 'all'
-                });
-            }
+            queryClient.invalidateQueries({
+                queryKey: TICKET_KEYS.all,
+                refetchType: 'all'
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: getApiProjectsByProjectIdTicketsWithTasksQueryKey({
+                    path: { projectId }
+                })
+            });
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
 
-export function useDeleteTicket() {
+export function useDeleteTicket(projectId: string) {
     const queryClient = useQueryClient();
     const mutationOptions = deleteApiTicketsByTicketIdMutation();
 
@@ -171,6 +178,14 @@ export function useDeleteTicket() {
 
             queryClient.invalidateQueries({
                 queryKey: TICKET_KEYS.tasks(ticketId)
+            });
+
+            console.log({ data })
+
+            queryClient.invalidateQueries({
+                queryKey: getApiProjectsByProjectIdTicketsWithTasksQueryKey({
+                    path: { projectId }
+                })
             });
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),

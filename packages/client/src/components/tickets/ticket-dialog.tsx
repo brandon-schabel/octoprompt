@@ -19,8 +19,8 @@ interface TicketDialogProps {
 
 
 export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks, projectId }: TicketDialogProps) {
-    const createTicket = useCreateTicket();
-    const updateTicket = useUpdateTicket();
+    const createTicket = useCreateTicket(projectId);
+    const updateTicket = useUpdateTicket(projectId);
     // TODO: reimplment this
     // const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
     const createProjectTab = useCreateProjectTab();

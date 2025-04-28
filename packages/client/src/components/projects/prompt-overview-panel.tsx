@@ -70,9 +70,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // Load the project's prompts
         const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId || '')
-        const createPromptMutation = useCreatePrompt()
-        const updatePromptMutation = useUpdatePrompt()
-        const deletePromptMutation = useDeletePrompt()
+        const createPromptMutation = useCreatePrompt(activeProjectTabState?.selectedProjectId || '')
+        const updatePromptMutation = useUpdatePrompt(activeProjectTabState?.selectedProjectId || '')
 
         // Read selected files
         const { selectedFiles, projectFileMap } = useSelectedFiles()
@@ -183,6 +182,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         }
 
         async function handleUpdatePromptContent(promptId: string, updates: { name: string; content: string }) {
+            if (!activeProjectTabState?.selectedProjectId) return
             await updatePromptMutation.mutateAsync({ promptId, data: updates })
             toast.success('Prompt updated')
             setPromptDialogOpen(false)

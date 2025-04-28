@@ -48,9 +48,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const prompts = promptData?.data || []
 
     // Mutations
-    const createPromptMutation = useCreatePrompt()
-    const updatePromptMutation = useUpdatePrompt()
-    const deletePromptMutation = useDeletePrompt()
+    const createPromptMutation = useCreatePrompt(selectedProjectId)
+    const updatePromptMutation = useUpdatePrompt(selectedProjectId)
+    const deletePromptMutation = useDeletePrompt(selectedProjectId)
 
     // local UI state
     const [focusedIndex, setFocusedIndex] = useState<number>(-1)
@@ -134,7 +134,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     // Delete prompt
     // ---------------
     const handleDeletePrompt = async (promptId: string) => {
-        await deletePromptMutation.mutateAsync(promptId)
+        if (!selectedProjectId) return
+        await deletePromptMutation.mutateAsync({
+            promptId,
+        })
         toast.success('Prompt deleted successfully')
     }
 

@@ -107,10 +107,15 @@ export function useDeleteChat() {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: (data, variables, context) => {
-            // 'variables' is the chatId here
-            queryClient.invalidateQueries({ queryKey: CHAT_KEYS.all() });
-            // Remove messages query for the deleted chat if it exists in cache
-            queryClient.removeQueries({ queryKey: CHAT_KEYS.messages(variables) });
+            const chatId = variables;
+            if (chatId) {
+                queryClient.invalidateQueries({ queryKey: getChatsByChatIdMessagesQueryKey({ path: { chatId } }) });
+                console.log(`Invalidated messages for chat ${chatId} after deleting chat`);
+            } else {
+                console.warn(`useDeleteChat: Could not invalidate messages for chat ${chatId}, chatId missing.`);
+                // Maybe invalidate *all* message queries as a last resort?
+                // queryClient.invalidateQueries({ queryKey: [{ _id: 'getChatsByChatIdMessages' }] }); // Prefix might work
+            }
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });

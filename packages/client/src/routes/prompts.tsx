@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
 import { toast } from 'sonner'
-import { useGetPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
+import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetAllPrompts } from '@/hooks/api/use-prompts-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@ui'
 import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
@@ -32,80 +32,6 @@ function formatTokenCount(count: number): string {
     return count.toString()
 }
 
-// API hooks for prompt management
-function usePrompts() {
-    const { data: prompts, isLoading, error } = useGetPrompts()
-    const createPromptMutation = useCreatePrompt()
-    const updatePromptMutation = useUpdatePrompt()
-    const deletePromptMutation = useDeletePrompt()
-
-    // Keep track of recently deleted prompts for undo functionality
-    const recentlyDeletedPromptRef = useRef<Prompt | null>(null)
-
-    return {
-        prompts: prompts?.data ?? [],
-        isLoading,
-        error: error?.message ?? null,
-        createPrompt: async (data: { name: string; content: string }) => {
-            try {
-                await createPromptMutation.mutateAsync({ body: data })
-                toast.success('Prompt created successfully')
-            } catch (err) {
-                toast.error('Failed to create prompt')
-                throw err
-            }
-        },
-        updatePrompt: async (promptId: string, data: { name?: string; content?: string }) => {
-            try {
-                await updatePromptMutation.mutateAsync({ promptId, data })
-                toast.success('Prompt updated successfully')
-            } catch (err) {
-                toast.error('Failed to update prompt')
-                throw err
-            }
-        },
-        deletePrompt: async (promptId: string) => {
-            try {
-                // Save the prompt being deleted for potential undo operation
-                const promptToDelete = prompts?.data.find(p => p.id === promptId) || null
-                recentlyDeletedPromptRef.current = promptToDelete
-
-                // Delete the prompt
-                await deletePromptMutation.mutateAsync(promptId)
-
-                // Show success toast with undo option
-                toast.success('Prompt deleted', {
-                    action: {
-                        label: 'Undo',
-                        onClick: async () => {
-                            // Recover the deleted prompt if it exists
-                            if (recentlyDeletedPromptRef.current) {
-                                try {
-                                    const recoveredPrompt = recentlyDeletedPromptRef.current
-                                    // Use createPrompt to restore the deleted prompt with its original data
-                                    await createPromptMutation.mutateAsync({
-                                        body: {
-                                            name: recoveredPrompt.name,
-                                            content: recoveredPrompt.content
-                                        }
-                                    })
-                                    toast.success('Prompt restored successfully')
-                                    recentlyDeletedPromptRef.current = null
-                                } catch (err) {
-                                    toast.error('Failed to restore prompt')
-                                }
-                            }
-                        }
-                    },
-                    duration: 5000 // Give user extra time to react
-                })
-            } catch (err) {
-                toast.error('Failed to delete prompt')
-                throw err
-            }
-        },
-    }
-}
 
 export function PromptsPage() {
     const [searchQuery, setSearchQuery] = useState('')
@@ -114,15 +40,20 @@ export function PromptsPage() {
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null)
     const [sortOrder, setSortOrder] = useState<"alphabetical" | "default" | "size_asc" | "size_desc">("alphabetical")
 
-    const { prompts, isLoading, error, createPrompt, updatePrompt, deletePrompt } = usePrompts()
+    // const { prompts, isLoading, error, createPrompt, updatePrompt, deletePrompt } = usePrompts()
+    const { data: prompts, isLoading, error } = useGetAllPrompts()
+    const deletePromptMutation = useDeletePrompt()
+    const createPromptMutation = useCreatePrompt()
+    const updatePromptMutation = useUpdatePrompt()
+
 
     // Filter and sort prompts
     const filteredAndSortedPrompts = useMemo(() => {
         // First filter by search query
-        const filtered = prompts.filter(prompt =>
+        const filtered = prompts?.data?.filter(prompt =>
             prompt.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
             prompt.content.toLowerCase().includes(debouncedSearch.toLowerCase())
-        )
+        ) ?? []
 
         // Then sort based on selected order
         let sorted = [...filtered]
@@ -189,7 +120,7 @@ export function PromptsPage() {
                     {isLoading ? (
                         <div>Loading prompts...</div>
                     ) : error ? (
-                        <div>Error loading prompts: {error}</div>
+                        <div>Error loading prompts: {error.message}</div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredAndSortedPrompts.map((prompt) => (
@@ -199,7 +130,12 @@ export function PromptsPage() {
                                     onEdit={() => setSelectedPrompt(prompt)}
                                     onDelete={async () => {
                                         try {
-                                            await deletePrompt(prompt.id)
+                                            // alert to confirm deletion    
+                                            if (confirm('Are you sure you want to delete this prompt?')) {
+                                                await deletePromptMutation.mutateAsync({ promptId: prompt.id })
+                                            }
+                                            // toast to confirm deletion
+                                            toast.success('Prompt deleted successfully')
                                         } catch {
                                             // Error is handled in usePrompts
                                         }
@@ -224,9 +160,9 @@ export function PromptsPage() {
                 onSave={async (data) => {
                     try {
                         if (selectedPrompt) {
-                            await updatePrompt(selectedPrompt.id, data)
+                            await updatePromptMutation.mutateAsync({ promptId: selectedPrompt.id, data })
                         } else {
-                            await createPrompt(data)
+                            await createPromptMutation.mutateAsync({ body: data })
                         }
                         setIsCreateDialogOpen(false)
                         setSelectedPrompt(null)
