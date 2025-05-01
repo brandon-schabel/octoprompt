@@ -1,8 +1,7 @@
 {
   "name": "octoprompt",
-  "module": "server.ts",
-  "type": "module",
   "version": "0.4.2",
+  "module": "server.ts",
   "scripts": {
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
@@ -10,7 +9,5 @@
     "dev": "DEV=true bun --watch server.ts",
     "start:prod": "cd dist && ./start.sh"
   },
-  "dependencies": {
-
-  }
+  "type": "module"
 }

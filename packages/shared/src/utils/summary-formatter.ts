@@ -38,7 +38,7 @@ const defaultXmlOptions: Required<SummaryXmlOptions> = {
  * Combines all file summaries into a single XML string.
  * Each file is represented by a <file> element containing <name> and <summary>.
  *
- * Example Output:
+ * Example Output: 
  * <summary_memory>
  * <file>
  * <name>src/utils.ts</name>

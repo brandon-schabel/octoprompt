@@ -30,6 +30,12 @@ import type {
     DeleteMessagesByMessageIdData,
     DeleteMessagesByMessageIdError,
     GetModelsData,
+    PostChatsResponse,
+    PatchChatsByChatIdResponse,
+    DeleteChatsByChatIdResponse,
+    PostChatsByChatIdForkResponse,
+    PostChatsByChatIdForkByMessageIdResponse,
+    DeleteMessagesByMessageIdResponse,
 } from '../generated/types.gen';
 import { Options } from '../generated/sdk.gen';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
@@ -61,7 +67,7 @@ export function useCreateChat() {
     const mutationOptions = postChatsMutation(); // Get the generated mutation config
 
     // Using generated types for better type safety
-    return useMutation<unknown, PostChatsError, CreateChatInput>({ // Input is the body
+    return useMutation<PostChatsResponse, PostChatsError, CreateChatInput>({ // Input is the body
         mutationFn: (body: CreateChatInput) => {
             const opts: Options<PostChatsData> = { body };
             return mutationOptions.mutationFn!(opts); // Call generated function
@@ -80,7 +86,7 @@ export function useUpdateChat() {
     const mutationOptions = patchChatsByChatIdMutation();
 
     // Input includes chatId for path and data for body
-    return useMutation<unknown, PatchChatsByChatIdError, { chatId: string; data: UpdateChatInput }>({
+    return useMutation<PatchChatsByChatIdResponse, PatchChatsByChatIdError, { chatId: string; data: UpdateChatInput }>({
         mutationFn: (vars: { chatId: string; data: UpdateChatInput }) => {
             const opts: Options<PatchChatsByChatIdData> = { path: { chatId: vars.chatId }, body: vars.data };
             return mutationOptions.mutationFn!(opts);
@@ -101,7 +107,7 @@ export function useDeleteChat() {
     const mutationOptions = deleteChatsByChatIdMutation();
 
     // Input is just the chatId string
-    return useMutation<unknown, DeleteChatsByChatIdError, string>({
+    return useMutation<DeleteChatsByChatIdResponse, DeleteChatsByChatIdError, string>({
         mutationFn: (chatId: string) => {
             const opts: Options<DeleteChatsByChatIdData> = { path: { chatId } };
             return mutationOptions.mutationFn!(opts);
@@ -126,7 +132,7 @@ export function useForkChat() {
     const mutationOptions = postChatsByChatIdForkMutation();
 
     // Input includes chatId and optional body (excludedMessageIds)
-    return useMutation<unknown, PostChatsByChatIdForkError, { chatId: string; body: ForkChatRequestBody }>({
+    return useMutation<PostChatsByChatIdForkResponse, PostChatsByChatIdForkError, { chatId: string; body: ForkChatRequestBody }>({
         mutationFn: (vars: { chatId: string; body: ForkChatRequestBody }) => {
             const opts: Options<PostChatsByChatIdForkData> = { path: { chatId: vars.chatId }, body: vars.body };
             return mutationOptions.mutationFn!(opts);
@@ -144,7 +150,7 @@ export function useForkChatFromMessage() {
     const mutationOptions = postChatsByChatIdForkByMessageIdMutation();
 
     // Input includes chatId, messageId, and optional body
-    return useMutation<unknown, PostChatsByChatIdForkByMessageIdError, { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }>({
+    return useMutation<PostChatsByChatIdForkByMessageIdResponse, PostChatsByChatIdForkByMessageIdError, { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }>({
         mutationFn: (vars: { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }) => {
             const opts: Options<PostChatsByChatIdForkByMessageIdData> = { path: { chatId: vars.chatId, messageId: vars.messageId }, body: vars.body };
             return mutationOptions.mutationFn!(opts);
@@ -163,7 +169,7 @@ export function useDeleteMessage() {
     const mutationOptions = deleteMessagesByMessageIdMutation();
 
     // Input is messageId string
-    return useMutation<unknown, DeleteMessagesByMessageIdError, string>({
+    return useMutation<DeleteMessagesByMessageIdResponse, DeleteMessagesByMessageIdError, string>({
         mutationFn: (messageId: string) => {
             const opts: Options<DeleteMessagesByMessageIdData> = { path: { messageId } };
             return mutationOptions.mutationFn!(opts);

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useNavigate } from "@tanstack/react-router"
 
 import { Button } from '@ui'
 import { Progress } from '@ui'
@@ -21,9 +22,12 @@ import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { z } from 'zod'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '@ui'
-import { useActiveProjectTab } from '@/hooks/api/use-state-api'
+import { useActiveChatId, useActiveProjectTab } from '@/hooks/api/use-state-api'
 import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
-import { ProjectFile } from '@/hooks/generated'
+import { Chat, ProjectFile } from '@/hooks/generated'
+import { useCreateChat } from '@/hooks/api/use-chat-api'
+import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
+import { Binoculars, Copy, Icon, MessageCircleCode, Search } from 'lucide-react'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -46,6 +50,11 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // Keep a local copy of userPrompt so that typing is instantly reflected in the textarea
         const [localUserPrompt, setLocalUserPrompt] = useState(globalUserPrompt)
+        const createChatMutation = useCreateChat();
+        const [, setInitialChatContent] = useLocalStorage('initial-chat-content', '')
+        const [, setActiveChatId] = useActiveChatId()
+        const navigate = useNavigate()
+
 
         // Update localUserPrompt if global changes externally
         useEffect(() => {
@@ -94,11 +103,17 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // IMPORTANT: We read from the textarea ref to guarantee we have the freshest user input.
         const promptInputRef = useRef<HTMLTextAreaElement>(null)
-        const handleCopyAll = () => {
-            // Fallback to localUserPrompt if the ref is unavailable for any reason
+
+        // "Find suggested files" example
+        const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
+        const [showSuggestions, setShowSuggestions] = useState(false)
+
+
+
+        const buildFullProjectContext = () => {
             const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
 
-            const finalPrompt = buildPromptContent({
+            return buildPromptContent({
                 promptData,
                 selectedPrompts,
                 userPrompt: finalUserPrompt,
@@ -106,15 +121,13 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 fileMap: projectFileMap,
             })
 
-            copyToClipboard(finalPrompt, {
+        }
+        const handleCopyAll = () => {
+            copyToClipboard(buildFullProjectContext(), {
                 successMessage: 'All content copied',
                 errorMessage: 'Copy failed',
             })
         }
-
-        // "Find suggested files" example
-        const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
-        const [showSuggestions, setShowSuggestions] = useState(false)
 
         const handleFindSuggestions = () => {
             // If localUserPrompt is empty, ask user to type something
@@ -188,6 +201,38 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             setPromptDialogOpen(false)
         }
 
+
+        async function handleChatWithContext() {
+            const defaultTitle = `New Chat ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            setInitialChatContent(buildFullProjectContext())
+
+            // without the timeout, the intial content doesn't get set before the navigation to the chat page
+            setTimeout(async () => {
+
+                try {
+                    const newChat = await createChatMutation.mutateAsync({
+                        title: defaultTitle,
+                    });
+                    // Ensure newChat has an ID (adjust based on actual return type)
+                    const newChatId = (newChat)?.data.id; // Type assertion might be needed
+                    if (newChatId) {
+                        setActiveChatId(newChatId);
+                        // navigate to the chat, where the chat page will load the initial content from local storage
+                        navigate({ to: '/chat' })
+
+                        toast.success('New chat created');
+                    } else {
+                        throw new Error("Created chat did not return an ID.");
+                    }
+                } catch (error) {
+                    console.error('Error creating chat:', error);
+                    toast.error('Failed to create chat');
+                }
+                console.log('chat with context')
+                // create a new chat with the context as the input
+            }, 10)
+        }
+
         // Hotkey for copy
         useHotkeys('mod+shift+c', (e) => {
             e.preventDefault()
@@ -256,13 +301,21 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                     />
                                     <div className="flex gap-2 mt-2 shrink-0">
                                         <Button onClick={handleCopyAll}>
-                                            Copy All
+                                            <Copy /> Copy All
                                         </Button>
                                         <Button
                                             onClick={handleFindSuggestions}
                                             disabled={findSuggestedFilesMutation.isPending}
                                         >
-                                            {findSuggestedFilesMutation.isPending ? 'Finding...' : 'Find Suggested Files'}
+                                            {findSuggestedFilesMutation.isPending ?
+                                                <>
+                                                    <Binoculars />
+                                                    'Finding...'
+                                                </>
+                                                : <> <Search />Suggest Files</>}
+                                        </Button>
+                                        <Button onClick={handleChatWithContext}>
+                                            <MessageCircleCode /> Chat
                                         </Button>
                                     </div>
                                 </div>

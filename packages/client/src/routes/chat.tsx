@@ -10,7 +10,7 @@ import { useChatModelParams } from '@/components/chat/hooks/use-chat-model-param
 import { useActiveChatId } from '@/hooks/api/use-state-api';
 import { SlidingSidebar } from '@/components/sliding-sidebar';
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
-import { AiSdkOptions, Chat } from '@/hooks/generated';
+import { Chat } from '@/hooks/generated';
 import { cn } from '@/lib/utils';
 import {
   Command, CommandEmpty, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
@@ -31,6 +31,7 @@ import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-cont
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce';
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants';
 import { useSynchronizedState } from '@/hooks/api/global-state/global-state-utility-hooks';
+import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage';
 
 // --- Model Settings Popover ---
 
@@ -222,32 +223,44 @@ export function AdaptiveChatInput({
   onSubmit,
   placeholder,
   className = "",
-  title = "Edit Message",
   disabled = false,
   preserveFormatting = true,
 }: AdaptiveChatInputProps) {
   const [localValue, setLocalValue] = useState(value);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [expandedValue, setExpandedValue] = useState(value);
-  const [isMultiline, setIsMultiline] = useState(false);
+  const [isMultiline, setIsMultiline] = useState(false); // Keep track of mode
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debouncedOnChange = useDebounceCallback(onChange, 200);
 
-  // Sync local state when the `value` prop changes from parent
+  // Sync local state ONLY when the value prop changes EXTERNALLY
+  // and set initial multiline state based on the incoming prop value
   useEffect(() => {
+    // Avoid feedback loop: Only update localValue if the prop is different
     if (value !== localValue) {
       setLocalValue(value);
-      // console.log("[AdaptiveChatInput] Value changed from parent:", { value, localValue })
     }
-  }, [value]); // Removed localValue from dependency array
-
-  // Determine if input should be multiline
-  useEffect(() => {
-    const shouldBeMultiline = value?.includes('\n') || value?.length > 100;
-    setIsMultiline(shouldBeMultiline);
+    // Determine initial multiline state based on the prop
+    const shouldBeMultilineInitially = value?.includes('\n') || (value?.length ?? 0) > 100;
+    if (shouldBeMultilineInitially !== isMultiline) {
+        setIsMultiline(shouldBeMultilineInitially);
+    }
+    // Intentionally only depending on 'value' prop for this effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+
+  // Determine if input should be multiline BASED ON LOCAL VALUE changes
+  useEffect(() => {
+    // Thresholds for switching to multiline
+    const shouldBeMultiline = localValue?.includes('\n') || (localValue?.length ?? 0) > 80; // Adjusted threshold slightly
+
+    // Only update state if the mode needs to change
+    if (shouldBeMultiline !== isMultiline) {
+      setIsMultiline(shouldBeMultiline);
+    }
+    // Note: We generally don't automatically switch BACK to single-line
+    // as it can be jarring. Once multiline, it stays multiline for this input session.
+  }, [localValue, isMultiline]);
 
   // Handler for input changes (updates local state and calls debounced parent onChange)
   const handleLocalChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -256,7 +269,7 @@ export function AdaptiveChatInput({
     debouncedOnChange(newValue);
   }, [debouncedOnChange]);
 
-  // Paste handler with formatting preservation
+  // Paste handler
   const handlePaste = useCallback((e: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!preserveFormatting) return;
     e.preventDefault();
@@ -271,7 +284,7 @@ export function AdaptiveChatInput({
 
     const html = e.clipboardData?.getData("text/html") ?? "";
     // Lightly trim newlines if not pasting code blocks
-    if (!html.includes("```")) {
+    if (!html.includes("</code>")) { // Simple check for code block presence
       newValue = newValue
         .split("\n")
         .map((line) => line.trim())
@@ -281,8 +294,8 @@ export function AdaptiveChatInput({
 
     setLocalValue(newValue);
     onChange(newValue); // Update parent immediately on paste
-    if (newValue.includes("\n")) setIsMultiline(true);
 
+    // Recalculate cursor position and focus after state update
     requestAnimationFrame(() => {
       const cursorPos = start + pasteText.length;
       target.setSelectionRange(cursorPos, cursorPos);
@@ -290,46 +303,29 @@ export function AdaptiveChatInput({
     });
   }, [preserveFormatting, onChange]);
 
-  // Submit handler (reads value directly from ref)
+  // Submit handler (reads value directly from ref if available)
   const triggerSubmit = useCallback(() => {
-    const element = isMultiline ? textareaRef.current : inputRef.current;
-    const finalValue = element?.value ?? localValue; // Use ref value if available
+    // Use the most up-to-date localValue for submission
+    const finalValue = localValue;
 
     // Ensure parent has the latest value before submitting
     if (finalValue !== value) {
-      onChange(finalValue);
+      onChange(finalValue); // Send final value immediately
     }
-    setLocalValue(finalValue); // Sync local state too
+    // Parent component (ChatPage) should clear the input via its state/props
+    // setLocalValue(''); // Don't clear localValue here, let parent handle it
     onSubmit?.();
-  }, [isMultiline, localValue, onChange, onSubmit, value]);
+  }, [localValue, onChange, onSubmit, value]);
 
-
-  // Keydown handler (Enter submits if not multiline and Shift is not pressed)
+  // Keydown handler
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    // Submit on Enter ONLY if NOT multiline and Shift is not pressed
     if (e.key === 'Enter' && !e.shiftKey && !isMultiline) {
       e.preventDefault();
       triggerSubmit();
     }
+    // Default behavior for Enter in textarea (newline) is allowed because isMultiline will be true
   }, [isMultiline, triggerSubmit]);
-
-  // Expand/collapse handlers
-  const openDialog = useCallback(() => {
-    setExpandedValue(localValue); // Use current local value when opening
-    setIsExpanded(true);
-  }, [localValue]);
-
-  const handleDialogClose = useCallback((open: boolean) => {
-    if (!open && expandedValue !== localValue) {
-      // If dialog closed and value changed, update parent
-      setLocalValue(expandedValue);
-      onChange(expandedValue);
-    }
-    setIsExpanded(open);
-  }, [expandedValue, localValue, onChange]);
-
-  const handleExpandedChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
-    setExpandedValue(e.target.value);
-  }, []);
 
   // Base props for input/textarea
   const baseProps = {
@@ -340,58 +336,41 @@ export function AdaptiveChatInput({
     placeholder,
     disabled,
     spellCheck: false,
-    className: cn("pl-10 font-mono w-full", className) // Ensure w-full and move base classes here
+    // Base styling applied to both
+    className: cn("pl-10 font-mono w-full", className)
   };
 
   return (
     <div className="relative w-full" id="adaptive-chat-input">
       {isMultiline ? (
-        <div className="relative">
-          <Textarea
-            {...baseProps}
-            ref={textareaRef}
-            className="pr-8 min-h-[60px] resize-y" // Allow vertical resize
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-1 top-1.5 h-6 w-6 text-muted-foreground hover:text-foreground" // Adjusted positioning and styling
-            onClick={openDialog}
-            disabled={disabled}
-            aria-label="Expand editor"
-            title="Expand editor"
-          >
-            <Expand className="h-4 w-4" />
-          </Button>
-        </div>
+        <Textarea
+          {...baseProps}
+          ref={textareaRef}
+          rows={1} // Start with minimum rows
+          style={{
+             fieldSizing: 'content', // CSS for auto-resizing based on content
+             overflowY: 'auto' // Ensure scrollbar appears if max-height is reached
+          }}
+          className={cn(
+              baseProps.className,
+              "min-h-[60px]", // Minimum height equivalent to ~2-3 lines
+              "max-h-[250px]", // Maximum height before scrolling activates
+              "pr-8",         // Padding for potential internal elements or styling
+              "resize-none"   // Disable manual resizing handle
+           )}
+        />
       ) : (
-        <Input {...baseProps} ref={inputRef} />
+        <Input
+          {...baseProps}
+          ref={inputRef}
+          // Ensure single-line input doesn't wrap unexpectedly
+          className={cn(baseProps.className, "overflow-hidden whitespace-nowrap")}
+        />
       )}
-
-      {/* Fullscreen Dialog for expanded view */}
-      <Dialog open={isExpanded} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-[90vw] w-full h-[90vh] flex flex-col p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 min-h-0">
-            <Textarea
-              ref={textareaRef} // Can reuse ref, although interaction is mainly via state here
-              value={expandedValue}
-              onChange={handleExpandedChange}
-              placeholder={placeholder}
-              disabled={disabled}
-              spellCheck={false}
-              className="h-full w-full resize-none font-mono text-sm p-2 border rounded" // Simple styling for dialog textarea
-            />
-          </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => handleDialogClose(false)}>
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Potential Expand Button (Optional) - Currently handled automatically */}
+      {/* {isMultiline && (
+          <button className="absolute right-2 top-2">...</button>
+      )} */}
     </div>
   );
 }
@@ -714,7 +693,7 @@ export function ChatSidebar() {
         // copyExisting: false, // Assuming this is default or handled by API
       });
       // Ensure newChat has an ID (adjust based on actual return type)
-      const newChatId = (newChat as Chat)?.id; // Type assertion might be needed
+      const newChatId = (newChat)?.data.id; // Type assertion might be needed
       if (newChatId) {
         setActiveChatId(newChatId);
         toast.success('New chat created');
@@ -939,6 +918,20 @@ function ChatPage() {
   const provider = modelSettings.provider ?? 'openrouter';
   // --- IMPORTANT: Get model from modelSettings, not a hardcoded default ---
   const model = modelSettings.model; // Use the model selected via useChatModelParams/useChatModelControl
+  const [initialChatContent, setInitialChatContent] = useLocalStorage('initial-chat-content', '')
+
+
+  useEffect(() => {
+    console.log('initialChatContent', initialChatContent)
+    console.log('activeChatId', activeChatId)
+    // if initial chat content is set, set the input to the initial chat content, clear initial chat content
+    if (initialChatContent.length > 0) {
+
+      setInput(initialChatContent)
+      // setInitialChatContent('')
+    }
+
+  }, [initialChatContent])
 
   const {
     messages,
@@ -1028,6 +1021,7 @@ function ChatPage() {
                   placeholder="Type your message..."
                   disabled={isAiLoading || !model} // Disable if loading or no model selected
                   preserveFormatting
+
                 />
                 <Button
                   type="submit"

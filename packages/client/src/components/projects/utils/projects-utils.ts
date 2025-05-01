@@ -27,32 +27,30 @@ export function buildPromptContent(
     let promptCount = 1
     for (const prompt of promptData?.data ?? []) {
         if (selectedPrompts.includes(prompt.id)) {
-            contentToCopy += `<meta prompt ${promptCount} = "${prompt.name}">\n${prompt.content}\n</meta prompt ${prompt.id}>\n\n`
+            // Using a more descriptive tag for clarity
+            contentToCopy += `<system_prompt index="${promptCount}" name="${prompt.name}">\n<![CDATA[\n${prompt.content}\n]]>\n</system_prompt>\n\n`
             promptCount++
         }
     }
 
-
-    // Only add file_contents section if there are files to include
     const filesWithContent = selectedFiles
         .map(fileId => fileMap.get(fileId))
         .filter((file): file is ProjectFile => !!file?.content)
 
-
     if (filesWithContent.length > 0) {
-        contentToCopy += `<file_contents>\n`
+        contentToCopy += `<file_context>\n`
         for (const file of filesWithContent) {
-            contentToCopy += `File: ${file.path}\n\`\`\`tsx\n${file.content}\n\`\`\`\n\n`
+            contentToCopy += `<file>\n  <path>${file.path}</path>\n  <content><![CDATA[\n${file.content}\n]]></content>\n</file>\n\n`
         }
-        contentToCopy += `</file_contents>\n`
+        contentToCopy += `</file_context>\n`
     }
 
     const trimmedUserPrompt = userPrompt.trim()
     if (trimmedUserPrompt) {
-        contentToCopy += `<user_instructions>\n${trimmedUserPrompt}\n</user_instructions>\n\n`
+        contentToCopy += `<user_instructions>\n<![CDATA[\n${trimmedUserPrompt}\n]]>\n</user_instructions>\n\n`
     }
 
-    return contentToCopy
+    return contentToCopy.trimEnd() // Remove trailing newline
 }
 
 export function calculateTotalTokens(
@@ -116,25 +114,25 @@ export function buildNodeContent(
     let contentToCopy = ''
 
     if (isFolder) {
-        contentToCopy += `<folder_contents>\n`
-        const processNode = (node: FileNode) => {
-            if (!node._folder && node.file?.content) {
-
-                contentToCopy += `File: ${node.file.path}\n\`\`\`tsx\n${node.file.content}\n\`\`\`\n\n`
+        contentToCopy += `<folder_context path="${node.file?.path ?? 'unknown'}">\n` // Add folder path if available
+        const processNode = (currentNode: FileNode) => {
+            if (!currentNode._folder && currentNode.file?.content) {
+                contentToCopy += `  <file>\n    <path>${currentNode.file.path}</path>\n    <content><![CDATA[\n${currentNode.file.content}\n]]></content>\n  </file>\n`
             }
-            if (node.children) {
-                Object.values(node.children).forEach(processNode)
+            if (currentNode.children) {
+                Object.values(currentNode.children).forEach(processNode)
             }
         }
         processNode(node)
-        contentToCopy += `</folder_contents>\n`
+        contentToCopy += `</folder_context>\n`
     } else if (node.file?.content) {
-        contentToCopy += `<file_contents>\n`
-        contentToCopy += `File: ${node.file.path}\n\`\`\`tsx\n${node.file.content}\n\`\`\`\n`
-        contentToCopy += `</file_contents>\n`
+        // Single file context uses file_context tag for consistency
+        contentToCopy += `<file_context>\n`
+        contentToCopy += `  <file>\n    <path>${node.file.path}</path>\n    <content><![CDATA[\n${node.file.content}\n]]></content>\n  </file>\n`
+        contentToCopy += `</file_context>\n`
     }
 
-    return contentToCopy
+    return contentToCopy.trimEnd() // Remove trailing newline
 }
 
 // --- New function ---

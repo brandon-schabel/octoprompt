@@ -29,6 +29,10 @@ export type ChatResponse = {
 export type CreateChatRequestBody = {
     title: string;
     /**
+     * Starting content for the chat
+     */
+    startingContent?: string;
+    /**
      * Copy messages from currentChatId if true
      */
     copyExisting?: boolean;
