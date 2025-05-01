@@ -27,8 +27,9 @@ import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
 import { Chat, ProjectFile } from '@/hooks/generated'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Binoculars, Bot, Copy, MessageCircleCode, Search } from 'lucide-react'
-import { useRunAgentCoder } from '@/hooks/api/use-agent-coder-api'
+import { Binoculars, Bot, Copy, ListChecks, MessageCircleCode, RefreshCw, Search } from 'lucide-react'
+import { useRunAgentCoder, useGetAgentCoderLog } from '@/hooks/api/use-agent-coder-api'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -42,6 +43,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     function PromptOverviewPanel({ className }, ref) {
         const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
         const updateActiveProjectTab = useUpdateActiveProjectTab()
+
+        // Log Dialog State
+        const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
+        const [currentLogId, setCurrentLogId] = useState<string | undefined>(undefined);
 
         // Read selected prompts & user prompt from store
         const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId || '')
@@ -111,6 +116,12 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const [showSuggestions, setShowSuggestions] = useState(false)
 
         const runAgentCoderMutation = useRunAgentCoder(activeProjectTabState?.selectedProjectId || '');
+
+        // Fetch Agent Logs - Only enable when the dialog is open
+        const { data: logData, isLoading: isLogLoading, isError: isLogError, error: logError, refetch: refetchLogs } = useGetAgentCoderLog(
+            currentLogId,
+            { enabled: isLogDialogOpen }
+        );
 
         const buildFullProjectContext = () => {
             const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
@@ -258,7 +269,41 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             if (selectedFileIds.length === 0) { toast.warning("Please select at least one file for context."); return; }
 
             console.log("Running Agent Coder with:", { projectId: activeProjectTabState.selectedProjectId, userInput: finalUserPrompt, selectedFileIds, runTests: false });
-            runAgentCoderMutation.mutate({ userInput: finalUserPrompt, selectedFileIds, runTests: false });
+
+            // Reset log state and open dialog before mutation starts
+            setCurrentLogId(undefined);
+            setIsLogDialogOpen(true);
+            // Trigger initial fetch for latest logs
+            refetchLogs();
+
+            runAgentCoderMutation.mutate({
+                userInput: finalUserPrompt, selectedFileIds, // runTests: false
+            }, {
+                onSuccess: (response) => {
+                    // On success, update logId to the specific one for this run
+                    const logId = response?.data?.logId;
+                    if (logId) {
+                        setCurrentLogId(logId);
+                        // Hook will refetch automatically due to state change
+                    } else {
+                        console.warn("Agent Coder succeeded but no logId returned.");
+                        // Keep logId undefined, log viewer will show latest
+                    }
+                },
+                onError: (error) => {
+                    // Attempt to get logId from error details (depends on backend implementation)
+                    // Assuming error.details might contain { logId: '...' }
+                    // @ts-expect-error - accessing potential property
+                    const logIdFromError = error?.response?.data?.error?.details?.logId as string | undefined;
+                    if (logIdFromError) {
+                        setCurrentLogId(logIdFromError);
+                        // Hook will refetch automatically due to state change
+                    } else {
+                        console.warn("Agent Coder failed, logId not found in error details.");
+                        // Keep logId undefined, log viewer will show latest
+                    }
+                }
+            });
         };
         // --- End Agent Coder Handler ---
 
@@ -314,23 +359,24 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                         onChange={(val) => setLocalUserPrompt(val)}
                                         className="flex-1 min-h-0 bg-background"
                                     />
-                                    <div className="flex gap-2 mt-2 shrink-0">
-                                        <Button onClick={handleCopyAll}>
-                                            <Copy /> Copy All
+                                    <div className="flex gap-2 mt-2 shrink-0 flex-wrap">
+                                        <Button onClick={handleCopyAll} size="sm">
+                                            <Copy className="h-3.5 w-3.5 mr-1" /> Copy All
                                         </Button>
                                         <Button
                                             onClick={handleFindSuggestions}
                                             disabled={findSuggestedFilesMutation.isPending}
+                                            size="sm"
                                         >
                                             {findSuggestedFilesMutation.isPending ?
                                                 <>
-                                                    <Binoculars />
-                                                    'Finding...'
+                                                    <Binoculars className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                                    Finding...
                                                 </>
-                                                : <> <Search />Suggest Files</>}
+                                                : <> <Search className="h-3.5 w-3.5 mr-1" />Suggest Files</>}
                                         </Button>
-                                        <Button onClick={handleChatWithContext}>
-                                            <MessageCircleCode /> Chat
+                                        <Button onClick={handleChatWithContext} size="sm">
+                                            <MessageCircleCode className="h-3.5 w-3.5 mr-1" /> Chat
                                         </Button>
                                         <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
                                             {runAgentCoderMutation.isPending ? <><Bot className="h-3.5 w-3.5 mr-1 animate-spin" /> Running...</> : <> <Bot className="h-3.5 w-3.5 mr-1" />Run Agent</>}
@@ -361,7 +407,98 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     updatePromptPending={updatePromptMutation.isPending}
                     onClose={() => setPromptDialogOpen(false)}
                 />
+
+                <AgentCoderLogDialog
+                    open={isLogDialogOpen}
+                    onOpenChange={setIsLogDialogOpen}
+                    logId={currentLogId}
+                    logData={logData}
+                    isLoading={isLogLoading}
+                    isError={isLogError}
+                    error={logError}
+                    refetch={refetchLogs}
+                />
             </div>
         )
     }
 )
+
+// --- Agent Coder Log Dialog Component ---
+interface AgentCoderLogDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    logId: string | undefined;
+    logData: any; // Type according to actual API response structure
+    isLoading: boolean;
+    isError: boolean;
+    error: Error | null;
+    refetch: () => void;
+}
+
+function AgentCoderLogDialog({
+    open,
+    onOpenChange,
+    logId,
+    logData,
+    isLoading,
+    isError,
+    error,
+    refetch
+}: AgentCoderLogDialogProps) {
+
+    const logEntries = useMemo(() => {
+        if (!logData) return [];
+        // Assuming logData is an array of log objects
+        // If it's JSONL string, parse it here
+        if (Array.isArray(logData)) {
+            return logData;
+        } else {
+            console.warn("Log data is not an array:", logData);
+            return []; // Handle unexpected format
+        }
+    }, [logData]);
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[80%] md:max-w-[70%] lg:max-w-[60%] max-h-[85vh] flex flex-col">
+                <DialogHeader className="shrink-0">
+                    <DialogTitle className="flex items-center justify-between">
+                        <span>Agent Coder Logs {logId ? `(${logId.substring(0, 8)}...)` : '(Latest)'}</span>
+                        <Button onClick={refetch} size="sm" variant="ghost" disabled={isLoading}>
+                           <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                        </Button>
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 min-h-0 overflow-y-auto border rounded-md my-2 p-2 bg-muted/20">
+                    {isLoading && <p className="text-center p-4 text-muted-foreground">Loading logs...</p>}
+                    {isError && (
+                        <div className="text-center p-4 text-destructive">
+                            <p>Error loading logs:</p>
+                            <pre className="text-xs whitespace-pre-wrap">{error?.message || 'Unknown error'}</pre>
+                        </div>
+                    )}
+                    {!isLoading && !isError && logEntries.length === 0 && (
+                        <p className="text-center p-4 text-muted-foreground">No log entries found.</p>
+                    )}
+                    {!isLoading && !isError && logEntries.length > 0 && (
+                        <div className="space-y-1 font-mono text-xs">
+                            {logEntries.map((entry, index) => (
+                                // Basic rendering - enhance as needed
+                                <div key={index} className="whitespace-pre-wrap break-words">
+                                   {JSON.stringify(entry)}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <DialogFooter className="shrink-0">
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">
+                            Close
+                        </Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}

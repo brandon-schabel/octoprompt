@@ -1,14 +1,15 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { z } from 'zod';
 import { dirname, join } from 'node:path';
-import { mkdir } from 'node:fs/promises';
-import { Context } from 'hono';
+import { mkdir, readdir, stat } from 'node:fs/promises';
 
 import { ApiError } from 'shared';
 import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas';
 import { ProjectFile, ProjectIdParamsSchema } from 'shared/src/schemas/project.schemas';
 
-import { mainOrchestrator, AgentCoderRunRequestSchema as OriginalAgentCoderRunRequestSchema, AgentCoderRunResponseSchema } from '@/services/agents/agent-coder-service';
+import { mainOrchestrator, AgentCoderRunRequestSchema as OriginalAgentCoderRunRequestSchema, AgentCoderRunResponseSchema, TaskPlan } from '@/services/agents/agent-coder-service';
+import { AGENT_LOGS_DIR, getOrchestratorLogFilePath, listLogFiles } from '@/services/agents/agent-logger';
+
 const AgentCoderRunRequestSchema = OriginalAgentCoderRunRequestSchema.extend({
     runTests: z.boolean().optional().default(false).describe('Whether to attempt running tests after code generation'),
 });
@@ -46,6 +47,89 @@ const runAgentCoderRoute = createRoute({
         500: {
             content: { 'application/json': { schema: ApiErrorResponseSchema } },
             description: 'Internal Server Error or Agent Coder execution failed',
+        },
+    },
+});
+
+// --- Helper: JSONL Parser ---
+/**
+ * Parses a string containing JSONL (JSON Lines) data.
+ * Skips lines that are empty or cannot be parsed as valid JSON.
+ * @param content The raw string content of the JSONL file.
+ * @returns An array of parsed JSON objects.
+ */
+function parseJsonl(content: string): Array<Record<string, unknown>> {
+    const lines = content.split('\n');
+    const parsedObjects: Array<Record<string, unknown>> = [];
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine) { // Skip empty lines
+            try {
+                parsedObjects.push(JSON.parse(trimmedLine));
+            } catch (error) {
+                // Skip lines that fail to parse
+                console.warn(`[JSONL Parser] Skipping invalid line: ${trimmedLine.substring(0, 100)}...`, error); // Log warning for debugging
+            }
+        }
+    }
+    return parsedObjects;
+}
+
+// --- Route for Getting Agent Logs ---
+
+// Use the same pattern as the logger to identify log files
+const LOG_FILE_PATTERN_FOR_ROUTE = /^agent-orchestrator-(.+)\.jsonl$/;
+
+// Renamed schema for clarity as it's now query params
+const AgentCoderLogQuerySchema = z.object({
+    logId: z.string().optional().openapi({ description: 'The unique ID of the log file to retrieve. If omitted, the latest log will be returned.' })
+});
+
+const getAgentCoderLogsRoute = createRoute({
+    method: 'get',
+    path: '/api/agent-coder/logs', // Removed {logId?} from path
+    tags: ['AI', 'Agent', 'Logs'],
+    summary: 'Retrieve the execution logs for a specific Agent Coder run or the latest run via logId query parameter',
+    request: {
+        // Moved logId schema to query
+        query: AgentCoderLogQuerySchema, // Changed from params to query
+    },
+    responses: {
+        200: {
+            content: { 'application/json': { schema: z.array(z.record(z.unknown())) } },
+            description: 'Agent Coder log file content as an array of JSON objects',
+        },
+        404: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Log file not found',
+        },
+        500: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Internal Server Error reading log file',
+        },
+    },
+});
+
+// --- Route for Listing Agent Logs ---
+
+const ListAgentCoderLogsResponseSchema = z.object({
+    success: z.boolean(),
+    data: z.array(z.string()).openapi({ description: 'List of available agent log filenames' })
+});
+
+const listAgentCoderLogsRoute = createRoute({
+    method: 'get',
+    path: '/api/agent-coder/logs/list',
+    tags: ['AI', 'Agent', 'Logs'],
+    summary: 'List available Agent Coder log filenames',
+    responses: {
+        200: {
+            content: { 'application/json': { schema: ListAgentCoderLogsResponseSchema } },
+            description: 'List of available agent log filenames',
+        },
+        500: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Internal Server Error retrieving log list',
         },
     },
 });
@@ -101,34 +185,31 @@ export const agentCoderRoutes = new OpenAPIHono()
 
             console.log(`[Agent Coder Route] Orchestrator finished for project ${projectId}. Success: ${orchestratorResult.success}`);
 
-            // Convert Map<string, ProjectFile> or ProjectFile[] back to ProjectFile[] for the response/writing
-            // Handle potential Map return type
-            const orchestratorFiles = orchestratorResult.files ?? [];
-            resultFilesForResponse = Array.isArray(orchestratorFiles)
-                ? orchestratorFiles
-                : Array.from(orchestratorFiles.values());
+            // Explicitly type the result to guide TypeScript inference
+            const typedOrchestratorResult: {
+                success: boolean;
+                files: ProjectFile[];
+                tasks: TaskPlan | null;
+                logId: string
+            } = orchestratorResult;
 
             // 4. Check orchestrator result
-            if (!orchestratorResult.success) {
-                const failedTasks = orchestratorResult.tasks?.tasks.filter(t => t.status === 'FAILED').map(t => t.title).join(', ') || 'unknown tasks';
+            if (!typedOrchestratorResult.success) { // Use the typed result
+                const failedTasks = typedOrchestratorResult.tasks?.tasks.filter(t => t.status === 'FAILED').map(t => t.title).join(', ') || 'unknown tasks';
                 const message = `Agent Coder execution failed. Failed tasks: ${failedTasks}`;
-                console.error(`[Agent Coder Route] ${message}`, orchestratorResult.tasks);
+                console.error(`[Agent Coder Route] ${message}`, typedOrchestratorResult.tasks);
                 // Throw 500, but include task details if available
-                throw new ApiError(500, message, 'AGENT_CODER_FAILED', { tasks: orchestratorResult.tasks });
+                throw new ApiError(500, message, 'AGENT_CODER_FAILED', { tasks: typedOrchestratorResult.tasks });
             }
 
             // --- 5. Write updated/new files to filesystem ---
-            if (resultFilesForResponse.length > 0) {
-                console.log(`[Agent Coder Route] Writing ${resultFilesForResponse.length} updated/new files to filesystem...`);
+            if (typedOrchestratorResult.files.length > 0) {
+                console.log(`[Agent Coder Route] Writing ${typedOrchestratorResult.files.length} updated/new files to filesystem...`);
                 try {
                     const absoluteProjectPath = resolvePath(project.path); // Get absolute project root
-
-                    // Fetch original files again to compare checksums (more reliable than comparing content strings)
-                    // Alternatively, the orchestrator could return *only* the changed files with original checksums included.
-                    // For simplicity now, let's re-fetch or use the previously fetched map.
                     const originalFileMap = projectFileMap; // Use the map fetched earlier
 
-                    const writePromises = resultFilesForResponse.map(async (updatedFile) => {
+                    const writePromises = typedOrchestratorResult.files.map(async (updatedFile) => {
                         // Basic check: only write files with content
                         if (updatedFile.content === null || updatedFile.content === undefined) {
                             console.warn(`[Agent Coder Route] Skipping file write for ${updatedFile.path} due to null content.`);
@@ -196,13 +277,22 @@ export const agentCoderRoutes = new OpenAPIHono()
             }
             // --- End File Writing ---
 
+            // 6. Check orchestrator result again for final response structure
+            if (!typedOrchestratorResult.success) { // Use typed result
+                // This case should ideally be caught earlier, but handle defensively
+                console.error("[Agent Coder Route] Orchestrator returned success=false unexpectedly at response stage.", typedOrchestratorResult.tasks);
+                throw new ApiError(500, "Agent Coder failed during execution.", 'AGENT_CODER_FAILED_LATE', { tasks: typedOrchestratorResult.tasks });
+            }
 
-            // 6. Format and Send Success Response
+            // 7. Format and Send Success Response
+            // Construct payload directly from successful orchestrator result
             const responsePayload: z.infer<typeof AgentCoderRunResponseSchema> = {
-                success: true,
+                success: true, // Known true because we checked typedOrchestratorResult.success
                 data: {
-                    updatedFiles: resultFilesForResponse, // Return the state as determined by the orchestrator
-                    taskPlan: orchestratorResult.tasks ?? undefined
+                    // Use files directly from the successful result
+                    updatedFiles: typedOrchestratorResult.files,
+                    taskPlan: typedOrchestratorResult.tasks ?? undefined,
+                    logId: typedOrchestratorResult.logId
                 }
             };
             return c.json(responsePayload, 200);
@@ -213,17 +303,131 @@ export const agentCoderRoutes = new OpenAPIHono()
                 // Ensure the status code aligns with defined responses (404, 422, 500)
                 const status = [404, 422, 500].includes(error.status) ? error.status : 500;
                 // Construct payload conforming to ApiErrorResponseSchema, safely handling details
-                const errorDetails = (typeof error.details === 'object' && error.details !== null) 
-                                     ? error.details as Record<string, any> 
-                                     : undefined;
+                const errorDetails = (typeof error.details === 'object' && error.details !== null)
+                    ? error.details as Record<string, any>
+                    : undefined;
                 const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
-                     success: false, 
-                     error: { code: error.code, message: error.message, details: errorDetails }
+                    success: false,
+                    error: { code: error.code, message: error.message, details: errorDetails }
                 };
                 return c.json(errorPayload, status as 404 | 422 | 500);
             }
             // Generic internal server error
             const errorPayload: z.infer<typeof ApiErrorResponseSchema> = { success: false, error: { code: 'AGENT_CODER_EXECUTION_ERROR', message: `Failed to execute Agent Coder: ${error.message}` } };
+            return c.json(errorPayload, 500);
+        }
+    })
+    // Add the new logs route handler
+    .openapi(getAgentCoderLogsRoute, async (c) => {
+        const { logId } = c.req.valid('query'); // Corrected: Changed from 'param' to 'query'
+
+        console.log(`[Agent Logs Route] Request for logId query: ${logId ?? 'latest'}`);
+
+        try {
+            let logFilePath: string;
+
+            if (logId) {
+                // Specific log ID provided
+                const { filePath, logId: logIdFromFilePath } = getOrchestratorLogFilePath(logId);
+                logFilePath = filePath;
+                console.log(`[Agent Logs Route] Using specific log path: ${filePath}, logId: ${logIdFromFilePath}`);
+            } else {
+                // No log ID, find the latest log
+                console.log(`[Agent Logs Route] No logId provided, searching for latest log in ${AGENT_LOGS_DIR}`);
+                const files = await readdir(AGENT_LOGS_DIR);
+                // Corrected filter: Use the regex pattern to find .jsonl files
+                const logFiles = files.filter(f => LOG_FILE_PATTERN_FOR_ROUTE.test(f));
+
+                if (logFiles.length === 0) {
+                    console.warn(`[Agent Logs Route] No matching *.jsonl log files found in ${AGENT_LOGS_DIR}`); // Updated warning
+                    const errorPayload404: z.infer<typeof ApiErrorResponseSchema> = {
+                        success: false,
+                        error: { code: 'LOG_NOT_FOUND', message: `No agent log files found.` }
+                    };
+                    return c.json(errorPayload404, 404);
+                }
+
+                // Get stats for each log file to find the most recent
+                const fileStats = await Promise.all(
+                    logFiles.map(async (file) => {
+                        const filePath = join(AGENT_LOGS_DIR, file);
+                        const stats = await stat(filePath);
+                        return { path: filePath, mtimeMs: stats.mtimeMs };
+                    })
+                );
+
+                // Sort by modification time descending
+                fileStats.sort((a, b) => b.mtimeMs - a.mtimeMs);
+                logFilePath = fileStats[0].path;
+                console.log(`[Agent Logs Route] Found latest log file: ${logFilePath}`);
+            }
+
+            // Now read the determined log file
+            const logFile = Bun.file(logFilePath);
+            const exists = await logFile.exists();
+
+            if (!exists) {
+                const message = logId
+                    ? `Log file with ID ${logId} not found.`
+                    : `Latest log file (${logFilePath}) not found or inaccessible.`;
+                console.warn(`[Agent Logs Route] Log file not found: ${logFilePath}`);
+                const errorPayload404: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: { code: 'LOG_NOT_FOUND', message }
+                };
+                return c.json(errorPayload404, 404);
+            }
+
+            const logContent = await logFile.text();
+            console.log(`[Agent Logs Route] Successfully retrieved log file: ${logFilePath}`);
+
+            // Parse the JSONL content
+            const parsedLogs = parseJsonl(logContent);
+
+            // Return the parsed logs as JSON
+            return c.json(parsedLogs, 200);
+
+        } catch (error: any) {
+            // Handle specific Bun errors or fs errors if needed
+            if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+                console.error(`[Agent Logs Route] Directory or file not found:`, error);
+                const errorPayload404: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: { code: 'AGENT_LOGS_DIRECTORY_NOT_FOUND', message: `Log directory or specific log file not found: ${error.message}` }
+                };
+                return c.json(errorPayload404, 404);
+            }
+
+            console.error(`[Agent Logs Route] Error retrieving log (query: ${logId ?? 'latest'}):`, error);
+
+            // Removed specific ApiError 404 check as it's less likely with the new logic structure
+
+            const errorPayload500: z.infer<typeof ApiErrorResponseSchema> = {
+                success: false,
+                error: { code: 'LOG_RETRIEVAL_ERROR', message: `Failed to retrieve logs: ${error instanceof Error ? error.message : String(error)}` }
+            };
+            return c.json(errorPayload500, 500);
+        }
+    })
+    // Add the new route handler for listing logs
+    .openapi(listAgentCoderLogsRoute, async (c) => {
+        console.log(`[Agent Logs List Route] Request received.`);
+        try {
+            const logFilenames = await listLogFiles();
+            const responsePayload: z.infer<typeof ListAgentCoderLogsResponseSchema> = {
+                success: true,
+                data: logFilenames,
+            };
+            return c.json(responsePayload, 200);
+        } catch (error: any) {
+            console.error(`[Agent Logs List Route] Error listing log files:`, error);
+            const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                success: false,
+                error: {
+                    code: 'LOG_LIST_ERROR',
+                    message: `Failed to list agent logs: ${error instanceof Error ? error.message : String(error)}`
+                }
+            };
             return c.json(errorPayload, 500);
         }
     });

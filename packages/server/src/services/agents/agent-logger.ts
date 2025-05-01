@@ -1,5 +1,13 @@
 import { BunFile, file, write, fileURLToPath } from 'bun'; // Import Bun file system functions
+import { mkdir, readdir } from 'node:fs/promises'; // Added readdir
+import { join } from 'node:path'; // Added for LOG_DIR and getLogFilePath
+import os from 'node:os'; // Added for LOG_DIR
 // import type { FileWriter } from 'bun'; // Removed problematic type import
+
+
+
+
+export const AGENT_LOGS_DIR = './agent-logs'
 
 
 // --- Logger Setup ---
@@ -7,49 +15,84 @@ const getRandomId = () => {
     return Math.random().toString(36).substring(2, 15);
 }
 
-const getOrchestratorLogFilePath = () => {
+export const getOrchestratorLogFilePath = (logId?: string) => {
     // Ensure the directory exists (using Bun's fs is tricky, usually done outside or assumed)
     // For simplicity, we'll assume './agent-logs/' exists.
-    const fileName = `agent-orchestrator-${getRandomId()}.jsonl` // Use .jsonl extension
-    const filePath = `./agent-logs/${fileName}`;
+    const fileName = `agent-orchestrator-${logId ?? getRandomId()}.jsonl` // Use .jsonl extension
+    const filePath = `${AGENT_LOGS_DIR}/${fileName}`;
     return {
         fileName,
-        filePath
+        filePath,
+        logId
     }
 }
+
+
+// // Function to get the full path for a given log ID
+// export function getLogFilePath(logId: string): string {
+//     // Basic validation/sanitization for logId might be needed to prevent path traversal
+//     if (!logId || logId.includes('/') || logId.includes('..')) {
+//         throw new Error(`Invalid logId format: ${logId}`);
+//     }
+//     return join(LOG_DIR, `${logId}.log`);
+// }
+
+// Ensure log directory exists (call this once at startup ideally, but safe here too)
+async function ensureLogDirExists() {
+    try {
+        await mkdir(AGENT_LOGS_DIR, { recursive: true });
+        console.log(`Log directory ensured: ${AGENT_LOGS_DIR}`); // Added confirmation
+    } catch (error) {
+        console.error(`Failed to create or access log directory: ${AGENT_LOGS_DIR}`, error);
+        // Decide if this should be fatal. If logging is critical, maybe re-throw.
+        // throw error;
+    }
+}
+ensureLogDirExists(); // Call it on module load to ensure the directory exists before logging starts
+
+// --- Logger Setup ---
+// Removed getRandomId and getOrchestratorLogFilePath
 
 let logFile: BunFile | null = null;
 let fileWriter: ReturnType<BunFile['writer']> | null = null; // Store the writer - Use ReturnType
 let loggerInitialized = false;
+let currentLogFilePath: string | null = null; // Store the current path
 
+// Accept logFilePath as an argument
+export async function initializeLogger(logFilePath: string) {
+    if (loggerInitialized && logFilePath === currentLogFilePath) {
+        // Already initialized with the same file, do nothing
+        return;
+    }
+    // If initialized with a different file, potentially close the old one first (optional)
+    // if (fileWriter) { await fileWriter.end(); }
 
-export async function initializeLogger() {
-    if (loggerInitialized) return;
-
-    const { filePath, fileName } = getOrchestratorLogFilePath();
     try {
-        logFile = file(filePath);
+        logFile = file(logFilePath); // Use the provided path
         fileWriter = logFile.writer(); // Get the writer
+        currentLogFilePath = logFilePath; // Store the path being used
 
         // Start marker as JSON
         const startLog = JSON.stringify({ timestamp: new Date().toISOString(), level: 'info', message: '--- Log Start ---' });
         fileWriter.write(startLog + '\n'); // Write using the writer
-        // Don't flush immediately, let subsequent logs handle it or flush periodically if needed
+        await fileWriter.flush(); // Ensure start log is written
 
-        console.log(`Logging initialized. Verbose logs available in ${filePath}`);
+        console.log(`Logging initialized. Verbose logs available in ${logFilePath}`);
         loggerInitialized = true;
 
-        // Return file info if needed elsewhere
+        // Return file info if needed elsewhere (optional, maybe just return true/false)
         return {
-            fileName,
-            filePath
+            fileName: logFilePath.split('/').pop() || logFilePath, // Extract filename
+            filePath: logFilePath
         }
     } catch (error) {
-        console.error("FATAL: Failed to initialize file logger:", error);
+        console.error(`FATAL: Failed to initialize file logger for ${logFilePath}:`, error);
         logFile = null;
         fileWriter = null; // Reset writer on error
+        currentLogFilePath = null;
         loggerInitialized = false; // Ensure we know it failed
         // Optionally re-throw or handle error
+        throw error; // Re-throw to signal failure in the orchestrator
     }
 
 }
@@ -133,5 +176,35 @@ export async function log(message: string, level: LogLevel = 'info', data?: Reco
 //         console.log("Logger closed.");
 //     }
 // }
+
+// --- Function to List Log Files ---
+
+const LOG_FILE_PATTERN = /^agent-orchestrator-(.+)\.jsonl$/; // Regex to match and extract logId
+
+/**
+ * Lists available agent log filenames from the AGENT_LOGS_DIR.
+ * Filters for files matching the expected pattern.
+ * @returns A promise that resolves to an array of log filenames (e.g., "agent-orchestrator-xyz123.jsonl").
+ */
+export async function listLogFiles(): Promise<string[]> {
+    try {
+        await ensureLogDirExists(); // Make sure directory exists
+        const files = await readdir(AGENT_LOGS_DIR);
+        // Filter files matching the pattern
+        const logFiles = files.filter(f => LOG_FILE_PATTERN.test(f));
+        console.log(`[Agent Logger] Found ${logFiles.length} log files in ${AGENT_LOGS_DIR}`);
+        return logFiles;
+    } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            console.warn(`[Agent Logger] Log directory not found during listing: ${AGENT_LOGS_DIR}`);
+            return []; // Return empty array if directory doesn't exist
+        }
+        console.error(`[Agent Logger] Error listing log files in ${AGENT_LOGS_DIR}:`, error);
+        throw new Error('Failed to list agent log files.'); // Re-throw for handling in the route
+    }
+}
+
+// --- End Function to List Log Files ---
+
 
 // --- End Logger Setup ---
