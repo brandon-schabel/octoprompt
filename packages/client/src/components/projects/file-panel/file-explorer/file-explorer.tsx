@@ -333,7 +333,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                     <FileTree
                       ref={ref.fileTreeRef}
                       root={fileTree}
-                      onViewFile={setViewedFile}
+                      onViewFile={(file) => setViewedFile(file as ProjectFile)}
                       projectRoot={project?.path || ''}
                       resolveImports={resolveImports}
                       preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
@@ -376,7 +376,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               <FileTree
                 ref={ref.fileTreeRef}
                 root={fileTree}
-                onViewFile={setViewedFile}
+                onViewFile={(file) => setViewedFile(file as ProjectFile)}
                 projectRoot={project?.path || ''}
                 resolveImports={resolveImports}
                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}

@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'bun:test'
-import { buildPromptContent, calculateTotalTokens, buildFileTree } from '../../../client/src/components/projects/utils/projects-utils'
 import type { ProjectFile } from '../schemas/project.schemas'
+import { buildPromptContent, calculateTotalTokens, buildFileTree } from './projects-utils'
 // Mock data
 const mockPrompts = {
+    success: true as const,
     data: [
-        { id: 'p1', name: 'Prompt One', content: 'This is prompt one content.' },
-        { id: 'p2', name: 'Prompt Two', content: 'Prompt two: Some instructions here.' },
+        { id: 'p1', name: 'Prompt One', content: 'This is prompt one content.', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'p2', name: 'Prompt Two', content: 'Prompt two: Some instructions here.', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     ]
 }
 
@@ -92,7 +93,7 @@ describe('buildPromptContent', () => {
             fileMap
         })
         expect(result).not.toContain('<user_instructions>')
-        expect(result).toContain('<meta prompt')
+        expect(result).toContain('<system_prompt index="1" name="Prompt One">')
     })
 
     it('should include selected prompts', () => {
@@ -103,7 +104,7 @@ describe('buildPromptContent', () => {
             selectedFiles: [],
             fileMap
         })
-        expect(result).toContain('<meta prompt 1 = "Prompt One">')
+        expect(result).toContain('<system_prompt index="1" name="Prompt One">')
         expect(result).toContain('This is prompt one content.')
     })
 
@@ -115,8 +116,8 @@ describe('buildPromptContent', () => {
             selectedFiles: [],
             fileMap
         })
-        expect(result).toContain('<meta prompt 1 = "Prompt One">')
-        expect(result).toContain('<meta prompt 2 = "Prompt Two">')
+        expect(result).toContain('<system_prompt index="1" name="Prompt One">')
+        expect(result).toContain('<system_prompt index="2" name="Prompt Two">')
     })
 
     it('should include user instructions if provided', () => {
@@ -139,10 +140,10 @@ describe('buildPromptContent', () => {
             selectedFiles: ['f1', 'f2'],
             fileMap
         })
-        expect(result).toContain('<file_contents>')
-        expect(result).toContain('File: src/components/App.tsx')
+        expect(result).toContain('<file_context>')
+        expect(result).toContain('<path>src/components/App.tsx</path>')
         expect(result).toContain('console.log("App");')
-        expect(result).toContain('File: src/utils/helper.ts')
+        expect(result).toContain('<path>src/utils/helper.ts</path>')
         expect(result).toContain('return "helped";')
     })
 
@@ -154,9 +155,11 @@ describe('buildPromptContent', () => {
             selectedFiles: ['f2'],
             fileMap
         })
-        expect(result).toContain('<meta prompt 1 = "Prompt One">')
+        expect(result).toContain('<system_prompt index="1" name="Prompt One">')
+        expect(result).toContain('<user_instructions>')
         expect(result).toContain('Do something special')
-        expect(result).toContain('File: src/utils/helper.ts')
+        expect(result).toContain('<file_context>')
+        expect(result).toContain('<path>src/utils/helper.ts</path>')
     })
 })
 

@@ -71,7 +71,7 @@ export type VisibleItem = {
 
 export type FileTreeProps = {
     root: Record<string, FileNode>;
-    onViewFile?: (file: ProjectFile) => void;
+    onViewFile?: (file: ProjectFile | null) => void;
     projectRoot: string;
     resolveImports?: boolean;
     preferredEditor: EditorType;

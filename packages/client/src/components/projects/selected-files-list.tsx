@@ -1,4 +1,3 @@
-// packages/client/src/components/projects/selected-files-list.tsx
 import { X, Copy, Bookmark, ArrowUpDown, ArrowDownAZ, RotateCw, RotateCcw, Eye } from "lucide-react"
 import { Button } from '@ui'
 import { cn } from "@/lib/utils"
@@ -167,7 +166,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         break
       case 'ArrowRight':
         e.preventDefault()
-        setViewedFile(projectFileMap.get(fileId) || null)
+        setViewedFile(projectFileMap.get(fileId) as ProjectFile)
 
         break
       case 'Backspace':
@@ -426,7 +425,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setViewedFile(projectFileMap.get(fileId) || null)}
+                    onClick={() => setViewedFile(projectFileMap.get(fileId) as ProjectFile)}
                     className="h-8 w-8"
                   >
                     <Eye className="h-4 w-4" />

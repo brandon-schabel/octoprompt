@@ -378,9 +378,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                         <Button onClick={handleChatWithContext} size="sm">
                                             <MessageCircleCode className="h-3.5 w-3.5 mr-1" /> Chat
                                         </Button>
-                                        <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
+                                        {false && <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
                                             {runAgentCoderMutation.isPending ? <><Bot className="h-3.5 w-3.5 mr-1 animate-spin" /> Running...</> : <> <Bot className="h-3.5 w-3.5 mr-1" />Run Agent</>}
-                                        </Button>
+                                        </Button>}
                                     </div>
                                 </div>
                             </div>
@@ -465,7 +465,7 @@ function AgentCoderLogDialog({
                     <DialogTitle className="flex items-center justify-between">
                         <span>Agent Coder Logs {logId ? `(${logId.substring(0, 8)}...)` : '(Latest)'}</span>
                         <Button onClick={refetch} size="sm" variant="ghost" disabled={isLoading}>
-                           <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
                         </Button>
                     </DialogTitle>
                 </DialogHeader>
@@ -485,7 +485,7 @@ function AgentCoderLogDialog({
                             {logEntries.map((entry, index) => (
                                 // Basic rendering - enhance as needed
                                 <div key={index} className="whitespace-pre-wrap break-words">
-                                   {JSON.stringify(entry)}
+                                    {JSON.stringify(entry)}
                                 </div>
                             ))}
                         </div>
