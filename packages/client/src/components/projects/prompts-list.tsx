@@ -13,7 +13,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { promptSchema } from '@/components/projects/utils/projects-utils'
+
 import { useUpdateProjectTabState } from '@/hooks/api/global-state/updaters'
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@ui'
@@ -23,6 +23,7 @@ import { InfoTooltip } from '../info-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { useProjectTab } from '@/hooks/api/global-state/selectors'
 import { ProjectFile } from '@/hooks/generated'
+import { promptSchema } from 'shared/src/utils/projects-utils'
 
 export type PromptsListRef = {
     focusPrompts: () => void;

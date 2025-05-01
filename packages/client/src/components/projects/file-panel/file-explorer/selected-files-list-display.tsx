@@ -7,9 +7,10 @@ import { ScrollArea } from "@ui"
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
 import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 import { ProjectFile } from "@/hooks/generated"
+import { ProjectFileMap } from "shared/src/schemas/project.schemas"
 
 type SelectedFilesSidebarProps = {
-    allFilesMap: Map<string, ProjectFile>
+    allFilesMap: ProjectFileMap
     selectedFilesListRef: React.RefObject<SelectedFilesListRef>
     onNavigateToFileTree: () => void
 }

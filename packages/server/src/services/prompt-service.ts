@@ -1,7 +1,7 @@
 import { db } from "@/utils/database";
 import { CreatePromptBody, UpdatePromptBody, Prompt, PromptSchema, PromptProject, PromptProjectSchema } from "shared/src/schemas/prompt.schemas";
 import { promptsMap } from '../utils/prompts-map';
-import { generateSingleText } from './model-providers/providers/gen-ai-interface-services';
+import { generateSingleText } from './gen-ai-services';
 
 const formatToISO = (sqlDate: string) => new Date(sqlDate).toISOString();
 

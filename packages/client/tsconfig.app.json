@@ -41,7 +41,7 @@
     ]
   },
   "include": [
-    "src",
+    "src", "../shared/src/utils/projects-utils.test.ts", "../shared/src/utils/projects-utils.ts", "../shared/src/utils/file-tree-utils",
   ],
   "exclude": [
     "**/*.test.ts",

@@ -15,7 +15,7 @@ import { useProjectTabField } from '@/hooks/api/global-state/global-state-utilit
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useClickAway } from '@/hooks/utility-hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
-import { buildFileTree } from '../../utils/projects-utils'
+import { buildFileTree } from 'shared/src/utils/projects-utils'
 import { FileTreeRef, FileTree } from '../file-tree/file-tree'
 import { SelectedFilesListDisplay } from './selected-files-list-display'
 import { NoResultsScreen } from './no-results-screen'

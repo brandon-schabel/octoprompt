@@ -8,24 +8,25 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@ui"
-import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
 import { SelectedFilesList } from "@/components/projects/selected-files-list"
 import { useState } from "react"
 import { FormatTokenCount } from "../format-token-count"
 import { Badge } from "@ui"
 import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
 import { ProjectFile } from "@/hooks/generated"
+import { ProjectFileMap } from "shared/src/schemas/project.schemas"
+import { estimateTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
 
 type SelectedFilesDrawerProps = {
   selectedFiles: string[]
-  fileMap: Map<string, ProjectFile>
+  fileMap: ProjectFileMap
   onRemoveFile: (fileId: string) => void
   trigger?: React.ReactNode
   projectTabId: string
 }
 
 
-const getTotalFileTokens = ({ files, fileMap }: { files: string[], fileMap: Map<string, ProjectFile> }) => {
+const getTotalFileTokens = ({ files, fileMap }: { files: string[], fileMap: ProjectFileMap }) => {
   return files.reduce((total, fileId) => {
     const file = fileMap.get(fileId)
     if (file?.content) {

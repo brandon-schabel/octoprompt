@@ -7,7 +7,7 @@ import {
     ProviderKeyResponseSchema,
     ProviderKeyListResponseSchema,
 } from "shared/src/schemas/provider-key.schemas";
-import { providerKeyService } from "@/services/model-providers/providers/provider-key-service";
+import { providerKeyService } from "@/services/model-providers/provider-key-service";
 import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas';
 

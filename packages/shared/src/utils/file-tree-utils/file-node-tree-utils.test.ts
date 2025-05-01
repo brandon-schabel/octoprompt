@@ -10,7 +10,7 @@ import {
     toggleFile,
     toggleFolder
 } from './file-node-tree-utils'
-import type { ProjectFile } from '../../../../../hooks/generated'
+import type { ProjectFile } from '../../schemas/project.schemas'
 
 describe('estimateTokenCount', () => {
     test('should correctly estimate tokens for normal text', () => {
@@ -36,11 +36,11 @@ describe('countTotalFiles', () => {
                     children: {
                         'file1.ts': {
                             _folder: false,
-                            file: { id: '1', path: 'src/components/file1.ts' }
+                            file: { id: '1', path: 'src/components/file1.ts' } as ProjectFile
                         },
                         'file2.ts': {
                             _folder: false,
-                            file: { id: '2', path: 'src/components/file2.ts' }
+                            file: { id: '2', path: 'src/components/file2.ts' } as ProjectFile
                         }
                     }
                 },
@@ -49,7 +49,7 @@ describe('countTotalFiles', () => {
                     children: {
                         'file3.ts': {
                             _folder: false,
-                            file: { id: '3', path: 'src/utils/file3.ts' }
+                            file: { id: '3', path: 'src/utils/file3.ts' } as ProjectFile
                         }
                     }
                 }
@@ -68,14 +68,14 @@ describe('collectFiles', () => {
         children: {
             'file1.ts': {
                 _folder: false,
-                file: { id: '1', path: 'file1.ts' }
+                file: { id: '1', path: 'file1.ts' } as ProjectFile
             },
             'nested': {
                 _folder: true,
                 children: {
                     'file2.ts': {
                         _folder: false,
-                        file: { id: '2', path: 'nested/file2.ts' }
+                        file: { id: '2', path: 'nested/file2.ts' } as ProjectFile
                     }
                 }
             }
@@ -94,14 +94,14 @@ describe('calculateFolderTokens', () => {
         children: {
             'file1.ts': {
                 _folder: false,
-                file: { id: '1', path: 'file1.ts', content: 'hello world' }
+                file: { id: '1', path: 'file1.ts', content: 'hello world' } as ProjectFile
             },
             'nested': {
                 _folder: true,
                 children: {
                     'file2.ts': {
                         _folder: false,
-                        file: { id: '2', path: 'nested/file2.ts', content: 'test content' }
+                        file: { id: '2', path: 'nested/file2.ts', content: 'test content' } as ProjectFile
                     }
                 }
             }
@@ -122,11 +122,11 @@ describe('areAllFolderFilesSelected and isFolderPartiallySelected', () => {
         children: {
             'file1.ts': {
                 _folder: false,
-                file: { id: '1', path: 'file1.ts' }
+                file: { id: '1', path: 'file1.ts' } as ProjectFile
             },
             'file2.ts': {
                 _folder: false,
-                file: { id: '2', path: 'file2.ts' }
+                file: { id: '2', path: 'file2.ts' } as ProjectFile
             }
         }
     }
@@ -144,8 +144,8 @@ describe('areAllFolderFilesSelected and isFolderPartiallySelected', () => {
 
 describe('toggleFile', () => {
     const mockFileMap = new Map<string, ProjectFile>([
-        ['1', { id: '1', path: 'file1.ts' }],
-        ['2', { id: '2', path: 'file2.ts' }]
+        ['1', { id: '1', path: 'file1.ts' } as ProjectFile],
+        ['2', { id: '2', path: 'file2.ts' } as ProjectFile]
     ])
 
     const mockGetRecursiveImports = () => ['2']
@@ -184,11 +184,11 @@ describe('toggleFolder', () => {
         children: {
             'file1.ts': {
                 _folder: false,
-                file: { id: '1', path: 'file1.ts' }
+                file: { id: '1', path: 'file1.ts' } as ProjectFile
             },
             'file2.ts': {
                 _folder: false,
-                file: { id: '2', path: 'file2.ts' }
+                file: { id: '2', path: 'file2.ts' } as ProjectFile
             }
         }
     }

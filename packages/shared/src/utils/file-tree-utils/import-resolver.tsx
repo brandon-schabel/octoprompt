@@ -15,7 +15,7 @@
 // - If a file cannot be resolved, it's skipped. Package imports are also skipped.
 // - Returns a list of all fileIds that are imported by a given file, recursively.
 
-import { ProjectFile } from "@/hooks/generated/types.gen";
+import type { ProjectFile } from "../../schemas/project.schemas";
 
 interface AliasMap {
   [aliasPrefix: string]: string[];
@@ -65,7 +65,7 @@ export function gatherAliasesFromTsconfigs(allFiles: ProjectFile[], projectRoot:
 
     const { paths } = tsconfig.compilerOptions;
     if (paths) {
-  
+
       for (const key of Object.keys(paths)) {
         aliasMap[key] = paths[key];
       }
@@ -113,7 +113,7 @@ export function buildTsconfigAliasMap(allFiles: ProjectFile[]): TsconfigCache {
   for (const file of tsconfigFiles) {
     const tsconfig = parseTsConfig(file?.content ?? '');
     if (!tsconfig || !tsconfig.compilerOptions || !tsconfig.compilerOptions.paths) {
-  
+
       continue;
     }
     const dir = file.path.slice(0, file.path.lastIndexOf('/'));
@@ -185,7 +185,7 @@ function resolveImportPath(
     const tsconfigDir = findNearestTsconfigDir(currentFile.path, tsconfigCache);
     const aliases = tsconfigDir ? tsconfigCache.get(tsconfigDir) : undefined;
     if (!aliases || !isAliasImport(importPath, aliases)) {
-  
+
       return null;
     }
   }
@@ -207,7 +207,7 @@ function resolveImportPath(
       const candidate = base + ext;
       const found = allFiles.find((f) => normalizePath(f.path) === candidate);
       if (found) {
-    
+
         return found;
       }
     }
@@ -290,7 +290,7 @@ export function getRecursiveImports(
     const resolvedFile = resolveImportPath(imp, file, allFiles, tsconfigCache);
     if (resolvedFile && resolvedFile.id !== fileId) {
       if (!visitedIds.has(resolvedFile.id)) {
-    
+
         result.push(resolvedFile.id);
         const subImports = getRecursiveImports(resolvedFile.id, allFiles, tsconfigCache, visitedIds);
         for (const si of subImports) {

@@ -348,6 +348,7 @@ export function AdaptiveChatInput({
           ref={textareaRef}
           rows={1} // Start with minimum rows
           style={{
+             // @ts-ignore
              fieldSizing: 'content', // CSS for auto-resizing based on content
              overflowY: 'auto' // Ensure scrollbar appears if max-height is reached
           }}

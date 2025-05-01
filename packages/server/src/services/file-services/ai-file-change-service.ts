@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { readFile } from "fs/promises";
 import { Database } from "bun:sqlite";
-import { generateStructuredData } from "../model-providers/providers/gen-ai-interface-services";
+import { generateStructuredData } from "../gen-ai-services";
 import { resolvePath } from "@/utils/path-utils";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 import { MEDIUM_MODEL_CONFIG } from "shared/src/constants/model-default-configs";

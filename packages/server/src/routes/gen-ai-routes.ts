@@ -25,11 +25,11 @@ import {
 } from "shared/src/schemas/gen-ai.schemas";
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { generateSingleText, generateStructuredData, genTextStream } from '@/services/model-providers/providers/gen-ai-interface-services'; // Import the service instance
+import { generateSingleText, generateStructuredData, genTextStream } from '@/services/gen-ai-services'; // Import the service instance
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
-import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-providers/providers/model-fetcher-service';
-import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/providers/provider-defaults';
-import { providerKeyService } from '@/services/model-providers/providers/provider-key-service';
+import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-providers/model-fetcher-service';
+import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/provider-defaults';
+import { providerKeyService } from '@/services/model-providers/provider-key-service';
 import { getFullProjectSummary } from '@/utils/get-full-project-summary';
 import { ProjectIdParamsSchema, SuggestFilesBodySchema, GetFileSummariesQuerySchema, RemoveSummariesBodySchema, SummarizeFilesBodySchema } from 'shared/src/schemas/project.schemas';
 import { stream } from 'hono/streaming';

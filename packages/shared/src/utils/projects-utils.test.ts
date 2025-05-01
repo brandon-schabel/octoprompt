@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test'
-import { buildPromptContent, calculateTotalTokens, buildFileTree } from './projects-utils'
-import type { ProjectFile } from '../../../hooks/generated'
+import { buildPromptContent, calculateTotalTokens, buildFileTree } from '../../../client/src/components/projects/utils/projects-utils'
+import type { ProjectFile } from '../schemas/project.schemas'
 // Mock data
 const mockPrompts = {
     data: [

@@ -12,7 +12,7 @@ import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-list'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
-import { buildPromptContent, calculateTotalTokens, promptSchema } from '@/components/projects/utils/projects-utils'
+import { buildPromptContent, calculateTotalTokens, promptSchema } from 'shared/src/utils/projects-utils'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useUpdateActiveProjectTab } from '@/hooks/api/global-state/updaters'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
@@ -27,7 +27,8 @@ import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
 import { Chat, ProjectFile } from '@/hooks/generated'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Binoculars, Copy, Icon, MessageCircleCode, Search } from 'lucide-react'
+import { Binoculars, Bot, Copy, MessageCircleCode, Search } from 'lucide-react'
+import { useRunAgentCoder } from '@/hooks/api/use-agent-coder-api'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -83,7 +84,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const updatePromptMutation = useUpdatePrompt(activeProjectTabState?.selectedProjectId || '')
 
         // Read selected files
-        const { selectedFiles, projectFileMap } = useSelectedFiles()
+        const { selectedFiles, projectFileMap, } = useSelectedFiles()
+
 
         // Calculate total tokens
         const totalTokens = useMemo(() => {
@@ -108,7 +110,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
         const [showSuggestions, setShowSuggestions] = useState(false)
 
-
+        const runAgentCoderMutation = useRunAgentCoder(activeProjectTabState?.selectedProjectId || '');
 
         const buildFullProjectContext = () => {
             const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
@@ -201,7 +203,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             setPromptDialogOpen(false)
         }
 
-
         async function handleChatWithContext() {
             const defaultTitle = `New Chat ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
             setInitialChatContent(buildFullProjectContext())
@@ -246,6 +247,20 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 promptInputRef.current?.focus()
             },
         }))
+
+        // --- NEW: Agent Coder Handler ---
+        const handleRunAgentCoder = () => {
+            const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt;
+            const selectedFileIds = selectedFiles
+
+            if (!activeProjectTabState?.selectedProjectId) { toast.error("No project selected."); return; }
+            if (!finalUserPrompt.trim()) { toast.warning("Please enter a user prompt/instruction."); promptInputRef.current?.focus(); return; }
+            if (selectedFileIds.length === 0) { toast.warning("Please select at least one file for context."); return; }
+
+            console.log("Running Agent Coder with:", { projectId: activeProjectTabState.selectedProjectId, userInput: finalUserPrompt, selectedFileIds, runTests: false });
+            runAgentCoderMutation.mutate({ userInput: finalUserPrompt, selectedFileIds, runTests: false });
+        };
+        // --- End Agent Coder Handler ---
 
         return (
             <div className={cn("flex flex-col h-full overflow-hidden", className)}>
@@ -316,6 +331,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                         </Button>
                                         <Button onClick={handleChatWithContext}>
                                             <MessageCircleCode /> Chat
+                                        </Button>
+                                        <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
+                                            {runAgentCoderMutation.isPending ? <><Bot className="h-3.5 w-3.5 mr-1 animate-spin" /> Running...</> : <> <Bot className="h-3.5 w-3.5 mr-1" />Run Agent</>}
                                         </Button>
                                     </div>
                                 </div>

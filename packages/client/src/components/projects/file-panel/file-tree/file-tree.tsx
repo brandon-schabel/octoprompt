@@ -34,7 +34,7 @@ import {
 
 import { useHotkeys } from "react-hotkeys-hook";
 import { cn } from "@/lib/utils";
-import { buildTsconfigAliasMap, getRecursiveImports } from "./file-tree-utils/import-resolver";
+import { buildTsconfigAliasMap, getRecursiveImports } from "shared/src/utils/file-tree-utils/import-resolver";
 import {
     toggleFile as toggleFileUtil,
     toggleFolder as toggleFolderUtil,
@@ -45,14 +45,14 @@ import {
     formatTokenCount,
     FileNode,
     estimateTokenCount,
-} from "./file-tree-utils/file-node-tree-utils";
-import { buildNodeContent, buildNodeSummaries } from "@/components/projects/utils/projects-utils";
+} from "shared/src/utils/file-tree-utils/file-node-tree-utils";
+import { buildNodeContent, buildNodeSummaries } from "shared/src/utils/projects-utils";
 
 import { getEditorUrl } from "@/utils/editor-urls";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
 import { useRefreshProject } from "@/hooks/api/use-projects-api";
-import { ProjectFile } from "@/hooks/generated/types.gen";
 import { useActiveProjectTab } from "@/hooks/api/use-state-api";
+import { ProjectFile } from "shared/src/schemas/project.schemas";
 
 /**
  * The user's preferred external editor.

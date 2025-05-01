@@ -127,6 +127,6 @@ export const PromptProjectSchema = z.object({
 // Export types if needed elsewhere
 export type OptimizePromptRequest = z.infer<typeof OptimizePromptRequestSchema>;
 export type Prompt = z.infer<typeof PromptSchema>;
-export type PromptList = z.infer<typeof PromptListResponseSchema>;
+export type PromptListResponse = z.infer<typeof PromptListResponseSchema>;
 export type PromptResponse = z.infer<typeof PromptResponseSchema>;
 export type PromptProject = z.infer<typeof PromptProjectSchema>;
