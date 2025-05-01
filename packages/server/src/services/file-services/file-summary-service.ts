@@ -2,7 +2,7 @@ import { db } from "@/utils/database";
 import { LOW_MODEL_CONFIG } from "shared";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
-import { generateSingleText } from "@/services/model-providers/providers/gen-ai-interface-services";
+import { generateSingleText } from "@/services/gen-ai-services";
 import { getProjectFiles } from "../project-service";
 
 // --- Import necessary items from file-sync-service ---

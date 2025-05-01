@@ -29,10 +29,6 @@ export type ChatResponse = {
 export type CreateChatRequestBody = {
     title: string;
     /**
-     * Starting content for the chat
-     */
-    startingContent?: string;
-    /**
      * Copy messages from currentChatId if true
      */
     copyExisting?: boolean;
@@ -757,6 +753,87 @@ export type RemoveSummariesResponse = {
 
 export type RemoveSummariesRequestBody = {
     fileIds: Array<string>;
+};
+
+export type AgentCoderRunSuccessData = {
+    /**
+     * The state of the project files after the agent's execution.
+     */
+    updatedFiles: Array<ProjectFile>;
+    /**
+     * The final task plan executed by the agent (includes task statuses).
+     */
+    taskPlan?: {
+        /**
+         * The ID of the project context in which these tasks operate.
+         */
+        projectId: string;
+        /**
+         * A concise summary of the original user request being addressed by this plan.
+         */
+        overallGoal: string;
+        /**
+         * An ordered list of tasks designed to collectively achieve the overall goal. Order implies execution sequence unless overridden by dependencies.
+         */
+        tasks: Array<{
+            /**
+             * A unique ID automatically generated for tracking this specific task.
+             */
+            id: string;
+            /**
+             * A brief, human-readable title summarizing the task's objective (e.g., 'Refactor User Authentication Logic').
+             */
+            title: string;
+            /**
+             * A detailed description of the changes required for the target file. This will be used as the primary instruction for the LLM rewrite.
+             */
+            description: string;
+            /**
+             * The unique ID (from ProjectFileSchema) of the primary source file to be modified or created by this task. Will be populated by orchestrator for new files.
+             */
+            targetFileId?: string;
+            /**
+             * The relative path of the primary source file (e.g., 'src/utils/auth.ts'). Required for all tasks. Used for creation path.
+             */
+            targetFilePath: string;
+            /**
+             * Tracks the progress of the task through the workflow.
+             */
+            status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+            /**
+             * Optional: The unique ID (from ProjectFileSchema) of the corresponding unit test file (e.g., 'src/utils/auth.test.ts'), if applicable.
+             */
+            relatedTestFileId?: string;
+            /**
+             * Optional: AI's estimation of the task's complexity.
+             */
+            estimatedComplexity?: 'LOW' | 'MEDIUM' | 'HIGH';
+            /**
+             * Optional: A list of other Task IDs that must be completed before this task can start.
+             */
+            dependencies?: Array<string>;
+        }>;
+    };
+    /**
+     * The unique ID for retrieving the execution logs for this run.
+     */
+    logId: string;
+};
+
+export type AgentCoderRunResponse = {
+    success: true;
+    data: AgentCoderRunSuccessData;
+};
+
+export type AgentCoderRunRequest = {
+    /**
+     * The main instruction or goal for the agent.
+     */
+    userInput: string;
+    /**
+     * Array of ProjectFile IDs to provide as initial context.
+     */
+    selectedFileIds: Array<string>;
 };
 
 export type GetChatsData = {
@@ -3005,6 +3082,114 @@ export type PostApiProjectsByProjectIdRemoveSummariesResponses = {
 };
 
 export type PostApiProjectsByProjectIdRemoveSummariesResponse = PostApiProjectsByProjectIdRemoveSummariesResponses[keyof PostApiProjectsByProjectIdRemoveSummariesResponses];
+
+export type PostApiProjectsByProjectIdAgentCoderData = {
+    body: AgentCoderRunRequest & {
+        /**
+         * Whether to attempt running tests after code generation
+         */
+        runTests?: boolean;
+    };
+    path: {
+        /**
+         * The ID of the project
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/agent-coder';
+};
+
+export type PostApiProjectsByProjectIdAgentCoderErrors = {
+    /**
+     * Project or specified files not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation Error (invalid input)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error or Agent Coder execution failed
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiProjectsByProjectIdAgentCoderError = PostApiProjectsByProjectIdAgentCoderErrors[keyof PostApiProjectsByProjectIdAgentCoderErrors];
+
+export type PostApiProjectsByProjectIdAgentCoderResponses = {
+    /**
+     * Agent Coder executed successfully
+     */
+    200: AgentCoderRunResponse;
+};
+
+export type PostApiProjectsByProjectIdAgentCoderResponse = PostApiProjectsByProjectIdAgentCoderResponses[keyof PostApiProjectsByProjectIdAgentCoderResponses];
+
+export type GetApiAgentCoderLogsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * The unique ID of the log file to retrieve. If omitted, the latest log will be returned.
+         */
+        logId?: string;
+    };
+    url: '/api/agent-coder/logs';
+};
+
+export type GetApiAgentCoderLogsErrors = {
+    /**
+     * Log file not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Internal Server Error reading log file
+     */
+    500: ApiErrorResponse;
+};
+
+export type GetApiAgentCoderLogsError = GetApiAgentCoderLogsErrors[keyof GetApiAgentCoderLogsErrors];
+
+export type GetApiAgentCoderLogsResponses = {
+    /**
+     * Agent Coder log file content as an array of JSON objects
+     */
+    200: Array<{}>;
+};
+
+export type GetApiAgentCoderLogsResponse = GetApiAgentCoderLogsResponses[keyof GetApiAgentCoderLogsResponses];
+
+export type GetApiAgentCoderLogsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/agent-coder/logs/list';
+};
+
+export type GetApiAgentCoderLogsListErrors = {
+    /**
+     * Internal Server Error retrieving log list
+     */
+    500: ApiErrorResponse;
+};
+
+export type GetApiAgentCoderLogsListError = GetApiAgentCoderLogsListErrors[keyof GetApiAgentCoderLogsListErrors];
+
+export type GetApiAgentCoderLogsListResponses = {
+    /**
+     * List of available agent log filenames
+     */
+    200: {
+        success: boolean;
+        /**
+         * List of available agent log filenames
+         */
+        data: Array<string>;
+    };
+};
+
+export type GetApiAgentCoderLogsListResponse = GetApiAgentCoderLogsListResponses[keyof GetApiAgentCoderLogsListResponses];
 
 export type ClientOptions = {
     baseUrl: 'http://localhost:3147' | (string & {});

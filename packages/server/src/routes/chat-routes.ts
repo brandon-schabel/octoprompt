@@ -28,7 +28,7 @@ import {
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas';
 import { stream } from 'hono/streaming';
-import { handleChatMessage } from '@/services/model-providers/providers/gen-ai-interface-services';
+import { handleChatMessage } from '@/services/gen-ai-services';
 
 const chatService = createChatService();
 

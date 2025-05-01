@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.4.2",
+  "version": "0.5.0-alpha",
   "type": "module",
   "scripts": {
     "setup": "bun run scripts/setup.ts",
@@ -47,7 +47,8 @@
     "openai": "^4.78.1",
     "picomatch": "^4.0.2",
     "shared": "workspace:*",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "zod-validation-error": "^3.4.0"
   },
   "private": true
 }

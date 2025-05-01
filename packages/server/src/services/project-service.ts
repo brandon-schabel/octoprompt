@@ -1,9 +1,11 @@
 import { db } from "@/utils/database";
 import { normalizeToIsoString } from "@/utils/parse-timestamp";
+import { normalizePathForDb as normalizePathForDbUtil, resolvePath } from '@/utils/path-utils';
 
 import { forceSummarizeFiles, summarizeFiles } from "./file-services/file-summary-service";
 import { syncProject } from "./file-services/file-sync-service";
 import { CreateProjectBody, Project, ProjectFile, ProjectFileSchema, ProjectSchema, UpdateProjectBody } from "shared/src/schemas/project.schemas";
+import path from 'path';
 
 // --- Internal DB Types and Mapping Functions Removed ---
 
@@ -349,7 +351,7 @@ export async function forceResummarizeSelectedFiles(
 /**
  * Summarizes a specific list of file IDs within a project (skipping already summarized).
  */
-export async function summarizeSelectedFiles(projectId: string, fileIds: string[], ) {
+export async function summarizeSelectedFiles(projectId: string, fileIds: string[],) {
     if (fileIds.length === 0) {
         return { included: 0, skipped: 0, message: "No file IDs provided" };
     }
@@ -424,4 +426,165 @@ export async function removeSummariesFromFiles(projectId: string, fileIds: strin
         removedCount: updated.length,
         message: `Removed summaries from ${updated.length} files`,
     };
+}
+
+// Helper function to map DB row to ProjectFile schema
+function mapDbRowToProjectFile(row: any): ProjectFile | null {
+    if (!row) return null;
+    try {
+        const mapped = {
+            id: row.id,
+            projectId: row.project_id,
+            path: row.path,
+            content: row.content ?? '', // Ensure content is string, default to empty
+            size: row.size ?? 0, // Default size
+            checksum: row.checksum,
+            summary: row.summary, // Allow null/undefined
+            createdAt: normalizeToIsoString(row.created_at) ?? new Date(0).toISOString(), // Default date
+            updatedAt: normalizeToIsoString(row.updated_at) ?? new Date(0).toISOString(), // Default date
+            lastIndexed: normalizeToIsoString(row.last_indexed) // Allow null/undefined
+        };
+
+        // Use safeParse for robustness
+        const result = ProjectFileSchema.safeParse(mapped);
+        if (!result.success) {
+            console.error(`Failed to parse project file data (ID: ${row.id}, Path: ${row.path}): ${result.error.message}`, mapped);
+            return null; // Return null on parse failure
+        }
+        return result.data;
+    } catch (e) {
+        console.error(`Error mapping DB row to ProjectFile (ID: ${row.id}):`, e);
+        return null;
+    }
+}
+
+// Helper function to map DB row to Project schema
+function mapDbRowToProject(row: any): Project | null {
+    if (!row) return null;
+    try {
+        const mapped = {
+            id: row.id,
+            name: row.name,
+            rootPath: row.root_path,
+            createdAt: normalizeToIsoString(row.created_at) ?? new Date(0).toISOString(),
+            updatedAt: normalizeToIsoString(row.updated_at) ?? new Date(0).toISOString(),
+            lastIndexed: normalizeToIsoString(row.last_indexed)
+        };
+        const result = ProjectSchema.safeParse(mapped);
+        if (!result.success) {
+            console.error(`Failed to parse project data (ID: ${row.id}): ${result.error.message}`, mapped);
+            return null;
+        }
+        return result.data;
+    } catch (e) {
+        console.error(`Error mapping DB row to Project (ID: ${row.id}):`, e);
+        return null;
+    }
+}
+
+export async function getProjectFilesByIds(projectId: string, fileIds: string[]): Promise<ProjectFile[]> {
+    if (!fileIds || fileIds.length === 0) {
+        return [];
+    }
+    const uniqueFileIds = [...new Set(fileIds)];
+    const placeholders = uniqueFileIds.map(() => '?').join(',');
+
+    const stmt = db.prepare(`
+        SELECT * FROM project_files
+        WHERE project_id = ? AND id IN (${placeholders})
+    `);
+
+    try {
+        const rows = stmt.all(projectId, ...uniqueFileIds) as any[];
+        return rows.map(mapDbRowToProjectFile).filter((file): file is ProjectFile => file !== null);
+        // Note: We removed the check/throw here; the route handler will check if all files were found.
+    } catch (error) {
+        console.error(`Error fetching project files by IDs for project ${projectId}:`, error);
+        throw new Error(`Database error fetching files: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+
+/**
+ * Creates a new file record in the database associated with a project.
+ * Intended for placeholder creation before content generation/modification.
+ */
+export async function createProjectFileRecord(
+    projectId: string,
+    filePath: string,
+    initialContent: string = '' // Default to empty content
+): Promise<ProjectFile> {
+    const project = await getProjectById(projectId);
+    if (!project) {
+        throw new Error(`[ProjectService] Cannot create file record: Project not found with ID ${projectId}`);
+    }
+
+    // Resolve and normalize the path *before* using it
+    // Assuming filePath might be relative to project.path or contain ~
+    const absoluteProjectPath = resolvePath(project.path);
+    const absoluteFilePath = resolvePath(filePath.startsWith('/') || filePath.startsWith('~') ? filePath : path.join(absoluteProjectPath, filePath));
+    const normalizedFilePath = normalizePathForDbUtil(path.relative(absoluteProjectPath, absoluteFilePath)); // Store path relative to project root
+
+    // Use the normalized path for DB operations and deriving name/extension
+    const fileName = path.basename(normalizedFilePath);
+    const fileExtension = path.extname(normalizedFilePath);
+    const size = Buffer.byteLength(initialContent, 'utf8');
+    const nowTimestamp = Date.now(); // Use a single timestamp for consistency
+
+    // Use SQLite's randomblob for ID generation consistent with createProject
+    const stmt = db.prepare(`
+        INSERT INTO files (
+            id, project_id, name, path, extension,
+            size, content, summary, summary_last_updated_at,
+            meta, checksum, created_at, updated_at
+        )
+        VALUES (
+            lower(hex(randomblob(16))), ?, ?, ?, ?,
+            ?, ?, NULL, 0, -- size, content, summary, summary_last_updated_at (Changed NULL to 0)
+            '{}', NULL, ?, ?    -- meta, checksum, created_at, updated_at
+        )
+        RETURNING *
+    `);
+
+    // Fetch raw row using normalized path
+    const row = stmt.get(
+        projectId, fileName, normalizedFilePath, fileExtension, // Use normalizedFilePath
+        size, initialContent, // Use initialContent here
+        nowTimestamp, nowTimestamp // Use the same timestamp for created/updated initially
+    ) as {
+        id: string; project_id: string; name: string; path: string; extension: string;
+        size: number; content: string | null; summary: string | null;
+        summary_last_updated_at: number | null; meta: string | null; checksum: string | null;
+        created_at: number; updated_at: number;
+    } | undefined;
+
+    if (!row) {
+        throw new Error(`[ProjectService] Failed to create file record for path: ${filePath} in project ${projectId}`);
+    }
+
+    try {
+        // Transform raw DB data to API shape and validate using existing pattern
+        const fileData = {
+            id: row.id,
+            projectId: row.project_id,
+            name: row.name,
+            path: row.path, // This should be the normalized path from the DB
+            extension: row.extension,
+            size: row.size,
+            content: row.content, // Should match initialContent or be null if stored differently
+            summary: row.summary,
+            summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
+            meta: row.meta ?? '{}', // Ensure meta is not null if schema requires string
+            checksum: row.checksum,
+            createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
+            updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
+        };
+        // IMPORTANT: Ensure ProjectFileSchema aligns with the fields being inserted/returned
+        // Especially nullability of 'content', 'meta', 'checksum' etc.
+        return ProjectFileSchema.parse(fileData);
+    } catch (error) {
+        console.error(`[ProjectService] Data validation error creating file record ${row.id} (${filePath}):`, error);
+        // Consider cleaning up the inserted row if validation fails? Transaction might be better.
+        throw new Error(`Failed to validate file data after creation for ID ${row.id} (${filePath})`);
+    }
 }

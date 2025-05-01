@@ -36,7 +36,7 @@ describe("Ticket Service", () => {
         await resetDatabase();
 
         summaryMock = mock(async () => "Fake project summary content");
-        mock.module("@/services/model-providers/providers/gen-ai-interface-services", () => {
+        mock.module("@/services/gen-ai-services.ts/", () => {
             return {
                 generateStructuredData: generateStructuredDataMock
             }

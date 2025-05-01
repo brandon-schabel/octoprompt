@@ -6,6 +6,8 @@ import { useProjectTabField } from '@/hooks/api/global-state/global-state-utilit
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
 import { useActiveProjectTab } from '../api/use-state-api'
+import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
+import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
 
 const MAX_HISTORY_SIZE = 50
 
@@ -38,12 +40,7 @@ export function useSelectedFiles({
 
   // Get all project files and build the file map
   const { data: fileData } = useGetProjectFiles(activeProjectTabState?.selectedProjectId || '')
-  const fileMap = useMemo(() => {
-    const m = new Map<string, ProjectFile>()
-
-    fileData?.data?.forEach(f => m.set(f.id, f))
-    return m
-  }, [fileData?.data])
+  const fileMap: ProjectFileMap = useMemo(() => buildProjectFileMap(fileData?.data ?? []), [fileData?.data])
 
   // Query for getting the undo/redo state
   const { data: undoRedoState } = useQuery({
@@ -195,12 +192,7 @@ export function useSelectedFiles({
     return selectedFiles.includes(fileId)
   }
 
-  // Get data for selected files
-  const getSelectedFilesData = (fileMap: Map<string, ProjectFile>) => {
-    return selectedFiles
-      .map(id => fileMap.get(id))
-      .filter((file): file is ProjectFile => file !== undefined)
-  }
+
 
   // Check if we can undo/redo
   const canUndo = undoRedoState !== null && (undoRedoState?.index ?? 0) > 0
@@ -218,7 +210,6 @@ export function useSelectedFiles({
     selectFiles,
     clearSelectedFiles,
     isFileSelected,
-    getSelectedFilesData,
     canUndo,
     canRedo,
   }

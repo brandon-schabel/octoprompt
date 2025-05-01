@@ -2,7 +2,6 @@ import { db } from "@/utils/database";
 import { ApiError, MEDIUM_MODEL_CONFIG } from "shared";
 import { getFullProjectSummary } from "@/utils/get-full-project-summary";
 import { z } from "zod";
-import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 import {
   CreateTicketBody, UpdateTicketBody,
   TicketReadSchema,
@@ -18,7 +17,7 @@ import {
   TaskSuggestionsZodSchema,
 } from "shared/src/schemas/ticket.schemas";
 import { randomUUID } from "crypto";
-import { generateStructuredData } from "./model-providers/providers/gen-ai-interface-services";
+import { generateStructuredData } from "./gen-ai-services";
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {

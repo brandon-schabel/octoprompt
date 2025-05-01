@@ -113,6 +113,11 @@ export const ProjectSummaryResponseSchema = z.object({
     summary: z.string()
 }).openapi('ProjectSummaryResponse');
 
+// Define ProjectFileMapSchema using z.map
+export const ProjectFileMapSchema = z.map(z.string(), ProjectFileSchema)
+    .describe("A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects.")
+    .openapi('ProjectFileMap');
+
 export const projectsApiValidation = {
     create: { body: CreateProjectBodySchema },
     getOrDelete: { params: ProjectIdParamsSchema },
@@ -126,3 +131,7 @@ export const projectsApiValidation = {
     removeSummaries: { params: ProjectIdParamsSchema, body: RemoveSummariesBodySchema },
     suggestFiles: { params: ProjectIdParamsSchema, body: SuggestFilesBodySchema }
 } as const;
+
+
+// a key/value map by id of all project object (content, file name, path, extension, etc)
+export type ProjectFileMap = z.infer<typeof ProjectFileMapSchema>;

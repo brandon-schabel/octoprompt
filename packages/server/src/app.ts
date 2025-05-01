@@ -1,6 +1,7 @@
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { ApiError } from 'shared';
+import { agentCoderRoutes } from './routes/agent-coder-routes'; // Import the new routes
 import { chatRoutes } from './routes/chat-routes';
 import { genAiRoutes } from './routes/gen-ai-routes';
 import { ticketRoutes } from './routes/ticket-routes';
@@ -57,6 +58,7 @@ app.route('/', adminRoutes)
 app.route('/', aiFileChangeRoutes)
 app.route('/', promptRoutes)
 app.route('/', genAiRoutes)
+app.route('/', agentCoderRoutes)
 // Global error handler
 app.onError((err, c) => {
     console.error("[ErrorHandler]", err);

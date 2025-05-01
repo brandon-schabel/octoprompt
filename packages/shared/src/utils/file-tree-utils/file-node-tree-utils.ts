@@ -1,5 +1,6 @@
-import { ProjectFile } from '@/hooks/generated'
-import { TsconfigCache } from './import-resolver'
+import type { ProjectFile, ProjectFileMap } from '../../schemas/project.schemas'
+import type { TsconfigCache } from './import-resolver'
+
 
 export type FileNode = {
     _folder: boolean
@@ -94,7 +95,7 @@ export function toggleFile(
     fileId: string,
     selectedFiles: string[],
     resolveImports: boolean,
-    fileMap: Map<string, ProjectFile>,
+    fileMap: ProjectFileMap,
     getRecursiveImports: (fileId: string, allFiles: ProjectFile[], tsconfigCache: TsconfigCache) => string[],
     buildTsconfigAliasMap: (allFiles: ProjectFile[]) => TsconfigCache
 ): string[] {

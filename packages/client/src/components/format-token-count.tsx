@@ -1,7 +1,7 @@
-import { estimateTokenCount } from "./projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
+import { estimateTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
 import { useMemo } from "react"
 import { clsx } from "clsx"
-import { formatTokenCount } from "./projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
+import { formatTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
 
 /**
  * 

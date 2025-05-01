@@ -1,4 +1,4 @@
-import type { ProjectFile } from '../../../../../hooks/generated'
+import type { ProjectFile } from '../../../../client/src/hooks/generated'
 import { gatherAliasesFromTsconfigs, getRecursiveImports, buildTsconfigAliasMap, type TsconfigCache } from './import-resolver'
 import { describe, it, expect, beforeAll } from 'bun:test'
 

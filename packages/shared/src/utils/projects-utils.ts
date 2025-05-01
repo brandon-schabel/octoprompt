@@ -1,7 +1,9 @@
-import { estimateTokenCount } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
+import { estimateTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
 import { z } from 'zod'
-import { FileNode } from "@/components/projects/file-panel/file-tree/file-tree-utils/file-node-tree-utils"
-import { ProjectFile, PromptListResponse } from "@/hooks/generated/types.gen"
+import type { FileNode } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
+import type { ProjectFile } from "../schemas/project.schemas"
+import type { ProjectFileMap } from "../schemas/project.schemas"
+import type { PromptListResponse } from "../schemas/prompt.schemas"
 
 export const projectSchema = z.object({
     name: z.string().min(1, 'Project name is required'),
@@ -20,7 +22,7 @@ export function buildPromptContent(
         selectedPrompts: string[],
         userPrompt: string,
         selectedFiles: string[],
-        fileMap: Map<string, ProjectFile>
+        fileMap: ProjectFileMap
     }
 ): string {
     let contentToCopy = ''
@@ -167,4 +169,9 @@ export function buildNodeSummaries(
     }
 
     return summariesToCopy.trim(); // Trim trailing newlines if any
+}
+
+
+export const buildProjectFileMap = (files: ProjectFile[]): ProjectFileMap => {
+    return new Map(files.map(file => [file.id, file]));
 }
