@@ -378,6 +378,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                         <Button onClick={handleOpenAgentRuns} size="sm" variant="ghost">
                                             <History className="h-3.5 w-3.5 mr-1" /> Agent Runs
                                         </Button>
+                                        <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
+                                            {runAgentCoderMutation.isPending ? <><Bot className="h-3.5 w-3.5 mr-1 animate-spin" /> Running...</> : <> <Bot className="h-3.5 w-3.5 mr-1" />Run Agent</>}
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -608,7 +611,7 @@ function AgentCoderLogDialog({
                                         </span>
                                         {entry.data && <pre className="mt-1 p-1 bg-background/50 rounded text-[11px] overflow-x-auto">{JSON.stringify(entry.data, null, 2)}</pre>}
                                         {entry.error && <pre className="mt-1 p-1 bg-destructive/10 rounded text-destructive text-[11px]">{entry.error}
-{entry.raw ? `\nRaw: ${JSON.stringify(entry.raw)}` : ''}</pre>}
+                                            {entry.raw ? `\nRaw: ${JSON.stringify(entry.raw)}` : ''}</pre>}
                                     </div>
                                 ))}
                             </div>
