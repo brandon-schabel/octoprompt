@@ -19,44 +19,6 @@ import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
 
-function LoadingScreen() {
-  const [showError, setShowError] = useState(false)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowError(true)
-    }, 5000) // Show error message after 5 seconds
-
-    return () => clearTimeout(timer)
-  }, [])
-
-
-
-  return (
-    <div className='h-screen w-screen flex flex-col items-center justify-center bg-background'>
-      <div className='relative'>
-        <img src='/android-chrome-512x512.png' alt='Logo' className='w-24 h-24 animate-pulse' />
-        <div className='absolute -bottom-8 left-1/2 -translate-x-1/2'>
-          <div className='h-2 w-24 bg-muted rounded-full overflow-hidden'>
-            <div className='h-full w-1/2 bg-primary animate-[move_1s_ease-in-out_infinite]' />
-          </div>
-        </div>
-        <div className='absolute -bottom-20 left-1/2 -translate-x-1/2 whitespace-nowrap'>
-          <p className='text-muted-foreground text-sm'>
-            {!showError ? (
-              <span className='animate-pulse'>Establishing websocket connection</span>
-            ) : (
-              <span className='text-destructive'>
-                Having trouble connecting. Please check if the server is running.
-              </span>
-            )}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -191,8 +153,8 @@ function RootComponent() {
           </ComponentErrorBoundary>
         </header>
 
-        {/* Main content area with proper overflow handling */}
-        <main className='flex-1 min-h-0 overflow-auto'>
+        {/* Main content area with proper overflow handling and top safe-area */}
+        <main className='flex-1 min-h-0 overflow-auto pt-[env(safe-area-inset-top)]'>
           <ComponentErrorBoundary componentName='Main Content'>
             <Outlet />
           </ComponentErrorBoundary>
