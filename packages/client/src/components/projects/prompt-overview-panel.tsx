@@ -5,6 +5,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useNavigate } from "@tanstack/react-router"
+import { v4 as uuidv4 } from 'uuid'
 
 import { Button } from '@ui'
 import { Progress } from '@ui'
@@ -27,9 +28,10 @@ import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
 import { Chat, ProjectFile } from '@/hooks/generated'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Binoculars, Bot, Copy, ListChecks, MessageCircleCode, RefreshCw, Search } from 'lucide-react'
-import { useRunAgentCoder, useGetAgentCoderLog } from '@/hooks/api/use-agent-coder-api'
+import { Binoculars, Bot, Copy, History, ListChecks, MessageCircleCode, RefreshCw, Search } from 'lucide-react'
+import { useRunAgentCoder, useGetAgentCoderRunLogs, useListAgentCoderRuns, useGetAgentCoderRunData } from '@/hooks/api/use-agent-coder-api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -46,7 +48,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         // Log Dialog State
         const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
-        const [currentLogId, setCurrentLogId] = useState<string | undefined>(undefined);
+        const [currentAgentJobId, setCurrentAgentJobId] = useState<string | undefined>(undefined);
+
+        // Agent Runs Dialog State
+        const [isAgentRunsDialogOpen, setIsAgentRunsDialogOpen] = useState(false);
 
         // Read selected prompts & user prompt from store
         const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId || '')
@@ -117,11 +122,17 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         const runAgentCoderMutation = useRunAgentCoder(activeProjectTabState?.selectedProjectId || '');
 
+        const isAgentRunning = useMemo(() => {
+            return runAgentCoderMutation.isPending
+        }, [runAgentCoderMutation.isPending])
+
         // Fetch Agent Logs - Only enable when the dialog is open
-        const { data: logData, isLoading: isLogLoading, isError: isLogError, error: logError, refetch: refetchLogs } = useGetAgentCoderLog(
-            currentLogId,
-            { enabled: isLogDialogOpen }
+        const { data: logData, isLoading: isLogLoading, isError: isLogError, error: logError, refetch: refetchLogs } = useGetAgentCoderRunLogs(
+            currentAgentJobId,
+            { enabled: isLogDialogOpen , isAgentRunning }
         );
+
+
 
         const buildFullProjectContext = () => {
             const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
@@ -263,49 +274,39 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const handleRunAgentCoder = () => {
             const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt;
             const selectedFileIds = selectedFiles
+            const newAgentJobId = uuidv4();
 
             if (!activeProjectTabState?.selectedProjectId) { toast.error("No project selected."); return; }
             if (!finalUserPrompt.trim()) { toast.warning("Please enter a user prompt/instruction."); promptInputRef.current?.focus(); return; }
             if (selectedFileIds.length === 0) { toast.warning("Please select at least one file for context."); return; }
 
-            console.log("Running Agent Coder with:", { projectId: activeProjectTabState.selectedProjectId, userInput: finalUserPrompt, selectedFileIds, runTests: false });
+            console.log("Running Agent Coder with:", { projectId: activeProjectTabState.selectedProjectId, userInput: finalUserPrompt, selectedFileIds, runTests: false, agentJobId: newAgentJobId });
 
-            // Reset log state and open dialog before mutation starts
-            setCurrentLogId(undefined);
+            // Set the new job ID and open dialog before mutation starts
+            setCurrentAgentJobId(newAgentJobId);
             setIsLogDialogOpen(true);
             // Trigger initial fetch for latest logs
             refetchLogs();
 
             runAgentCoderMutation.mutate({
-                userInput: finalUserPrompt, selectedFileIds, // runTests: false
-            }, {
-                onSuccess: (response) => {
-                    // On success, update logId to the specific one for this run
-                    const logId = response?.data?.logId;
-                    if (logId) {
-                        setCurrentLogId(logId);
-                        // Hook will refetch automatically due to state change
-                    } else {
-                        console.warn("Agent Coder succeeded but no logId returned.");
-                        // Keep logId undefined, log viewer will show latest
-                    }
-                },
-                onError: (error) => {
-                    // Attempt to get logId from error details (depends on backend implementation)
-                    // Assuming error.details might contain { logId: '...' }
-                    // @ts-expect-error - accessing potential property
-                    const logIdFromError = error?.response?.data?.error?.details?.logId as string | undefined;
-                    if (logIdFromError) {
-                        setCurrentLogId(logIdFromError);
-                        // Hook will refetch automatically due to state change
-                    } else {
-                        console.warn("Agent Coder failed, logId not found in error details.");
-                        // Keep logId undefined, log viewer will show latest
-                    }
-                }
+                userInput: finalUserPrompt,
+                selectedFileIds,
+                agentJobId: newAgentJobId
             });
         };
         // --- End Agent Coder Handler ---
+
+        // Handler to open agent runs
+        const handleOpenAgentRuns = () => {
+            setIsAgentRunsDialogOpen(true);
+        };
+
+        // Handler for when a run is selected from the runs dialog
+        const handleSelectAgentRun = (agentJobId: string) => {
+            setCurrentAgentJobId(agentJobId);
+            setIsAgentRunsDialogOpen(false);
+            setIsLogDialogOpen(true);
+        };
 
         return (
             <div className={cn("flex flex-col h-full overflow-hidden", className)}>
@@ -378,9 +379,12 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                         <Button onClick={handleChatWithContext} size="sm">
                                             <MessageCircleCode className="h-3.5 w-3.5 mr-1" /> Chat
                                         </Button>
-                                        {false && <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
+                                        <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
                                             {runAgentCoderMutation.isPending ? <><Bot className="h-3.5 w-3.5 mr-1 animate-spin" /> Running...</> : <> <Bot className="h-3.5 w-3.5 mr-1" />Run Agent</>}
-                                        </Button>}
+                                        </Button>
+                                        <Button onClick={handleOpenAgentRuns} size="sm" variant="ghost">
+                                            <History className="h-3.5 w-3.5 mr-1" /> Agent Runs
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -411,87 +415,237 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 <AgentCoderLogDialog
                     open={isLogDialogOpen}
                     onOpenChange={setIsLogDialogOpen}
-                    logId={currentLogId}
+                    agentJobId={currentAgentJobId}
                     logData={logData}
                     isLoading={isLogLoading}
                     isError={isLogError}
                     error={logError}
                     refetch={refetchLogs}
+                    isAgentRunning={isAgentRunning}
                 />
-            </div>
+
+                <AgentRunsDialog
+                    open={isAgentRunsDialogOpen}
+                    onOpenChange={setIsAgentRunsDialogOpen}
+                    onSelectRun={handleSelectAgentRun}
+                />
+            </div >
         )
     }
 )
+
+// --- Agent Runs Dialog Component ---
+interface AgentRunsDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSelectRun: (agentJobId: string) => void;
+}
+
+function AgentRunsDialog({
+    open,
+    onOpenChange,
+    onSelectRun
+}: AgentRunsDialogProps) {
+    const { data, isLoading, isError, error, refetch } = useListAgentCoderRuns();
+    // Fix the data structure access based on the API response shape
+    const runIds = data?.data || [];
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center justify-between">
+                        <span>Agent Runs</span>
+                        <Button onClick={() => refetch()} size="sm" variant="ghost" disabled={isLoading}>
+                            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                        </Button>
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 min-h-0 overflow-y-auto max-h-[400px] border rounded-md p-2 bg-muted/20">
+                    {isLoading && <p className="text-center p-4 text-muted-foreground">Loading runs...</p>}
+                    {isError && (
+                        <div className="text-center p-4 text-destructive">
+                            <p>Error loading runs:</p>
+                            <pre className="text-xs whitespace-pre-wrap">{error?.message || 'Unknown error'}</pre>
+                        </div>
+                    )}
+                    {!isLoading && !isError && runIds.length === 0 && (
+                        <p className="text-center p-4 text-muted-foreground">No agent runs found.</p>
+                    )}
+                    {!isLoading && !isError && runIds.length > 0 && (
+                        <div className="space-y-1">
+                            {runIds.map((jobId: string, index: number) => (
+                                <Button
+                                    key={jobId}
+                                    variant="ghost"
+                                    className="w-full justify-start text-left text-xs font-mono"
+                                    onClick={() => onSelectRun(jobId)}
+                                >
+                                    <Bot className="h-3.5 w-3.5 mr-2" /> {jobId}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">
+                            Close
+                        </Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 // --- Agent Coder Log Dialog Component ---
 interface AgentCoderLogDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    logId: string | undefined;
+    agentJobId: string | undefined;
     logData: any; // Type according to actual API response structure
     isLoading: boolean;
     isError: boolean;
     error: Error | null;
     refetch: () => void;
+    isAgentRunning: boolean;
 }
 
 function AgentCoderLogDialog({
     open,
     onOpenChange,
-    logId,
+    agentJobId,
     logData,
-    isLoading,
-    isError,
-    error,
-    refetch
+    isLoading: isLogLoading,
+    isError: isLogError,
+    error: logError,
+    refetch: refetchLogs,
+    isAgentRunning
 }: AgentCoderLogDialogProps) {
+
+    // Fetch agent run data when the dialog is open and jobId is present
+    const { data: agentRunData, isLoading: isDataLoading, isError: isDataError, error: dataError, refetch: refetchData } = useGetAgentCoderRunData({ agentJobId: agentJobId ?? '', enabled: open, isAgentRunning });
+
+    // Get copy function
+    const { copyToClipboard } = useCopyClipboard();
 
     const logEntries = useMemo(() => {
         if (!logData) return [];
-        // Assuming logData is an array of log objects
-        // If it's JSONL string, parse it here
+        // Assuming logData comes back as an array from the API now
         if (Array.isArray(logData)) {
             return logData;
-        } else {
-            console.warn("Log data is not an array:", logData);
-            return []; // Handle unexpected format
         }
+        // Handle case where it might still be raw JSONL text (less likely with backend changes)
+        if (typeof logData === 'string') {
+            try {
+                return logData.split('\n').filter(line => line.trim()).map(line => JSON.parse(line));
+            } catch (e) {
+                console.error("Failed to parse log data string:", e);
+                return [{ error: "Failed to parse log data", raw: logData }];
+            }
+        }
+        console.warn("Log data is not an array or string:", logData);
+        return [{ error: "Unexpected log data format", raw: logData }]; // Handle unexpected format
     }, [logData]);
+
+    const handleRefresh = () => {
+        refetchLogs();
+        if (agentJobId) {
+            refetchData(); // Refetch data as well
+        }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[80%] md:max-w-[70%] lg:max-w-[60%] max-h-[85vh] flex flex-col">
+            {/* Increased width and kept height constraints */}
+            <DialogContent className="sm:max-w-[85%] md:max-w-[80%] lg:max-w-[75%] xl:max-w-[70%] max-h-[85vh] flex flex-col">
                 <DialogHeader className="shrink-0">
                     <DialogTitle className="flex items-center justify-between">
-                        <span>Agent Coder Logs {logId ? `(${logId.substring(0, 8)}...)` : '(Latest)'}</span>
-                        <Button onClick={refetch} size="sm" variant="ghost" disabled={isLoading}>
-                            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                        <span className="flex items-center gap-2">
+                            <span>Agent Coder Run</span>
+                            {agentJobId && (
+                                <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded flex items-center">
+                                    {agentJobId} {/* Display full ID */}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5 ml-1 text-muted-foreground hover:text-foreground"
+                                        onClick={() => copyToClipboard(agentJobId, { successMessage: 'Run ID copied!' })}
+                                    >
+                                        <Copy className="h-3 w-3" />
+                                        <span className="sr-only">Copy Run ID</span>
+                                    </Button>
+                                </span>
+                            )}
+                        </span>
+                        <Button onClick={handleRefresh} size="sm" variant="ghost" disabled={isLogLoading || isDataLoading}>
+                            <RefreshCw className={cn("h-4 w-4", (isLogLoading || isDataLoading) && "animate-spin")} />
                         </Button>
                     </DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 min-h-0 overflow-y-auto border rounded-md my-2 p-2 bg-muted/20">
-                    {isLoading && <p className="text-center p-4 text-muted-foreground">Loading logs...</p>}
-                    {isError && (
-                        <div className="text-center p-4 text-destructive">
-                            <p>Error loading logs:</p>
-                            <pre className="text-xs whitespace-pre-wrap">{error?.message || 'Unknown error'}</pre>
-                        </div>
-                    )}
-                    {!isLoading && !isError && logEntries.length === 0 && (
-                        <p className="text-center p-4 text-muted-foreground">No log entries found.</p>
-                    )}
-                    {!isLoading && !isError && logEntries.length > 0 && (
-                        <div className="space-y-1 font-mono text-xs">
-                            {logEntries.map((entry, index) => (
-                                // Basic rendering - enhance as needed
-                                <div key={index} className="whitespace-pre-wrap break-words">
-                                    {JSON.stringify(entry)}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <DialogFooter className="shrink-0">
+
+                {/* Use Tabs for Logs and Data */}
+                <Tabs defaultValue="logs" className="flex-1 flex flex-col min-h-0">
+                    <TabsList className="shrink-0 mb-2">
+                        <TabsTrigger value="logs">Logs</TabsTrigger>
+                        <TabsTrigger value="data">Data</TabsTrigger>
+                    </TabsList>
+
+                    {/* Logs Tab Content */}
+                    <TabsContent value="logs" className="flex-1 min-h-0 overflow-y-auto border rounded-md p-2 bg-muted/20">
+                        {isLogLoading && <p className="text-center p-4 text-muted-foreground">Loading logs...</p>}
+                        {isLogError && (
+                            <div className="text-center p-4 text-destructive">
+                                <p>Error loading logs:</p>
+                                <pre className="text-xs whitespace-pre-wrap">{logError?.message || 'Unknown error'}</pre>
+                            </div>
+                        )}
+                        {!isLogLoading && !isLogError && logEntries.length === 0 && (
+                            <p className="text-center p-4 text-muted-foreground">No log entries found.</p>
+                        )}
+                        {!isLogLoading && !isLogError && logEntries.length > 0 && (
+                            <div className="space-y-1 font-mono text-xs">
+                                {logEntries.map((entry, index) => (
+                                    <div key={index} className="whitespace-pre-wrap break-words border-b border-muted/50 pb-1 mb-1">
+                                        {/* Improved rendering - customize as needed */}
+                                        {entry.timestamp && <span className="text-muted-foreground mr-2">[{new Date(entry.timestamp).toLocaleTimeString()}]</span>}
+                                        <span className={cn(
+                                            entry.level === 'error' && 'text-destructive',
+                                            entry.level === 'warn' && 'text-yellow-500'
+                                        )}>
+                                            {entry.level?.toUpperCase()}: {entry.message}
+                                        </span>
+                                        {entry.data && <pre className="mt-1 p-1 bg-background/50 rounded text-[11px] overflow-x-auto">{JSON.stringify(entry.data, null, 2)}</pre>}
+                                        {entry.error && <pre className="mt-1 p-1 bg-destructive/10 rounded text-destructive text-[11px]">{entry.error}
+                                            {entry.raw ? `\nRaw: ${JSON.stringify(entry.raw)}` : ''}</pre>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    {/* Data Tab Content */}
+                    <TabsContent value="data" className="flex-1 min-h-0 overflow-y-auto border rounded-md p-2 bg-muted/20">
+                        {isDataLoading && <p className="text-center p-4 text-muted-foreground">Loading data...</p>}
+                        {isDataError && (
+                            <div className="text-center p-4 text-destructive">
+                                <p>Error loading data:</p>
+                                <pre className="text-xs whitespace-pre-wrap">{dataError?.message || 'Unknown error'}</pre>
+                            </div>
+                        )}
+                        {!isDataLoading && !isDataError && !agentRunData && (
+                            <p className="text-center p-4 text-muted-foreground">No data found for this run.</p>
+                        )}
+                        {!isDataLoading && !isDataError && agentRunData && (
+                            <pre className="font-mono text-xs whitespace-pre-wrap break-words">
+                                {JSON.stringify(agentRunData, null, 2)} {/* Display formatted JSON */}
+                            </pre>
+                        )}
+                    </TabsContent>
+                </Tabs>
+
+                <DialogFooter className="shrink-0 mt-2">
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             Close

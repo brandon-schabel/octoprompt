@@ -1,87 +1,112 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 import {
     postApiProjectsByProjectIdAgentCoderMutation,
     getApiProjectsByProjectIdFilesQueryKey,
-    getApiAgentCoderLogsOptions,
-    getApiAgentCoderLogsListOptions
+    getApiAgentCoderRunsOptions,
+    getApiAgentCoderRunsByAgentJobIdLogsOptions,
+    getApiAgentCoderRunsByAgentJobIdDataOptions,
 } from '../generated/@tanstack/react-query.gen';
 import { toast } from 'sonner';
 import {
     type PostApiProjectsByProjectIdAgentCoderError,
     type PostApiProjectsByProjectIdAgentCoderData,
-    type AgentCoderRunRequest,
-    type AgentCoderRunResponse,
+    type AgentCoderRunRequest as AgentCoderRunRequestBody,
+    type ProjectFile,
     type GetApiProjectsByProjectIdFilesData,
-    GetApiAgentCoderLogsData
-} from '../generated';
+    type GetApiAgentCoderRunsByAgentJobIdLogsData,
+    type GetApiAgentCoderRunsByAgentJobIdDataData,
+    type ApiErrorResponse,
+} from '../generated/types.gen';
 import { type Options } from '../generated/sdk.gen';
 import { commonErrorHandler } from './common-mutation-error-handler';
+import { type TaskPlan } from 'shared/src/schemas/agent-coder.schemas';
 
-export const useRunAgentCoder = (projectId?: string) => {
+// Corresponds to AgentCoderRunDataSchema in agent-coder-routes.ts
+type AgentCoderRunData = {
+    updatedFiles: ProjectFile[];
+    taskPlan?: TaskPlan | null;
+    agentJobId: string;
+};
+
+// Corresponds to AgentCoderRunResponseSchema in agent-coder-routes.ts
+type AgentCoderRunResponse = {
+    success: boolean;
+    data?: AgentCoderRunData;
+    error?: ApiErrorResponse['error'];
+};
+
+export const useRunAgentCoder = (projectId: string) => {
     const queryClient = useQueryClient();
     const mutationOptionsFn = postApiProjectsByProjectIdAgentCoderMutation();
 
-    return useMutation<AgentCoderRunResponse, PostApiProjectsByProjectIdAgentCoderError, AgentCoderRunRequest>({
-        // Define the mutation function explicitly
-        mutationFn: async (variables: AgentCoderRunRequest) => {
-            if (!projectId) {
-                throw new Error('Project ID is required to run the agent coder.');
-            }
-            // Construct the options object expected by the generated mutation function
+    return useMutation<AgentCoderRunResponse, PostApiProjectsByProjectIdAgentCoderError, AgentCoderRunRequestBody>({
+        mutationFn: async (variables: AgentCoderRunRequestBody) => {
             const options: Options<PostApiProjectsByProjectIdAgentCoderData> = {
                 path: { projectId },
                 body: variables
             };
-
-            // Get the actual mutation function from the generated options
             const mutationFn = mutationOptionsFn.mutationFn;
             if (!mutationFn) {
                 throw new Error('Generated mutation function is not available.');
             }
-            // Call the generated function
-            return mutationFn(options);
+            const result = await mutationFn(options) as AgentCoderRunResponse;
+            return result;
         },
-        onSuccess: (data, variables) => {
-            toast.success('Agent Coder finished successfully!');
-            console.log('Agent Coder success response:', data);
-
-            // Invalidate project files query using the generated key
-            if (projectId) {
-                const queryKey = getApiProjectsByProjectIdFilesQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdFilesData>);
-                queryClient.invalidateQueries({ queryKey });
+        onSuccess: (data: AgentCoderRunResponse, variables) => {
+            if (data.success && data.data?.agentJobId) {
+                toast.success(`Agent Coder job ${data.data.agentJobId} finished successfully!`);
+                console.log('Agent Coder success response:', data);
+            } else if (data.success) {
+                toast.success('Agent Coder finished successfully!');
+                console.log('Agent Coder success response (jobId missing?):', data);
+            } else {
+                const errorMessage = data.error?.message || 'Agent Coder reported failure.';
+                toast.error(`Agent Coder Failed: ${errorMessage}`);
+                console.error('Agent Coder failure response:', data.error);
             }
+
+            const queryKey = getApiProjectsByProjectIdFilesQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdFilesData>);
+            queryClient.invalidateQueries({ queryKey });
+            const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
+            queryClient.invalidateQueries({ queryKey: runsListQueryKey });
         },
-        // Use the common error handler
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 };
-// Hook to get the list of available agent coder log files
-export const useGetAgentCoderLogList = () => {
-    const queryOptions = getApiAgentCoderLogsListOptions();
+
+export const useListAgentCoderRuns = () => {
+    return useQuery(getApiAgentCoderRunsOptions());
+};
+
+export const useGetAgentCoderRunLogs = (agentJobId?: string, options: { enabled?: boolean, isAgentRunning?: boolean } = {}) => {
+    const pathParams: Options<GetApiAgentCoderRunsByAgentJobIdLogsData>['path'] = { agentJobId: agentJobId ?? '' };
+
     return useQuery({
-        ...queryOptions,
-        // Optional: Add staleTime or other options if needed
-        // staleTime: 5 * 60 * 1000, // 5 minutes
+        ...getApiAgentCoderRunsByAgentJobIdLogsOptions({
+            path: pathParams,
+        }),
+        enabled: !!agentJobId && (options.enabled ?? true),
+        refetchOnWindowFocus: false,
+        refetchOnMount: true,
+        refetchInterval: options.isAgentRunning ? 250 : false,
     });
 };
 
-// Hook to get a specific agent coder log file by ID (or the latest if ID is omitted)
-export const useGetAgentCoderLog = (logId?: string, options: { enabled?: boolean } = {}) => {
-    // Construct query parameters: only include logId if it's provided
-    const queryParams: Options<GetApiAgentCoderLogsData>['query'] = logId ? { logId } : undefined;
+export const useGetAgentCoderRuns = () => {
+    return useQuery(getApiAgentCoderRunsOptions());
+}
 
-    // Get the generated query options, including the dynamic query parameters
-    const queryOptions = getApiAgentCoderLogsOptions({
-        query: queryParams,
-    } as Options<GetApiAgentCoderLogsData>); // Need to cast because query can be undefined
+export const useGetAgentCoderRunData = ({
+    agentJobId,
+    enabled = true,
+    isAgentRunning = false,
+}: { agentJobId: string, enabled: boolean, isAgentRunning: boolean }) => {
+    const queryOptions = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId } });
 
     return useQuery({
         ...queryOptions,
-        // Control fetching based on the passed `enabled` option
-        enabled: options.enabled ?? true, // Default to true if not provided
-        refetchOnWindowFocus: false, // Example: disable refetch on focus for logs
-        refetchOnMount: true, // Example: refetch when component mounts
-        // if there is no log id, this is live, refetch every 250ms
-        refetchInterval: !logId && (options.enabled ?? true) ? 250 : false, // Only refetch latest if enabled
+        refetchInterval: isAgentRunning ? 250 : false,
+        enabled: enabled,
     });
-};
+}
