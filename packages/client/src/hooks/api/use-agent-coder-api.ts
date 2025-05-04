@@ -40,7 +40,7 @@ export const useRunAgentCoder = (projectId: string) => {
     const queryClient = useQueryClient();
     const mutationOptionsFn = postApiProjectsByProjectIdAgentCoderMutation();
 
-    return useMutation<AgentCoderRunResponse, PostApiProjectsByProjectIdAgentCoderError, Omit<AgentCoderRunRequestBody, 'agentJobId'>>({
+    return useMutation<AgentCoderRunResponse, PostApiProjectsByProjectIdAgentCoderError, AgentCoderRunRequestBody>({
         mutationFn: async (variables: AgentCoderRunRequestBody) => {
             const options: Options<PostApiProjectsByProjectIdAgentCoderData> = {
                 path: { projectId },
@@ -79,7 +79,7 @@ export const useListAgentCoderRuns = () => {
     return useQuery(getApiAgentCoderRunsOptions());
 };
 
-export const useGetAgentCoderRunLogs = (agentJobId?: string, options: { enabled?: boolean } = {}) => {
+export const useGetAgentCoderRunLogs = (agentJobId?: string, options: { enabled?: boolean, isAgentRunning?: boolean } = {}) => {
     const pathParams: Options<GetApiAgentCoderRunsByAgentJobIdLogsData>['path'] = { agentJobId: agentJobId ?? '' };
 
     return useQuery({
@@ -89,7 +89,7 @@ export const useGetAgentCoderRunLogs = (agentJobId?: string, options: { enabled?
         enabled: !!agentJobId && (options.enabled ?? true),
         refetchOnWindowFocus: false,
         refetchOnMount: true,
-        refetchInterval: false,
+        refetchInterval: options.isAgentRunning ? 250 : false,
     });
 };
 
@@ -97,8 +97,16 @@ export const useGetAgentCoderRuns = () => {
     return useQuery(getApiAgentCoderRunsOptions());
 }
 
-export const useGetAgentCoderRunData = (agentJobId: string) => {
+export const useGetAgentCoderRunData = ({
+    agentJobId,
+    enabled = true,
+    isAgentRunning = false,
+}: { agentJobId: string, enabled: boolean, isAgentRunning: boolean }) => {
     const queryOptions = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId } });
 
-    return useQuery(queryOptions);
+    return useQuery({
+        ...queryOptions,
+        refetchInterval: isAgentRunning ? 250 : false,
+        enabled: enabled,
+    });
 }

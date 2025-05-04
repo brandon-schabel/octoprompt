@@ -122,11 +122,17 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
         const runAgentCoderMutation = useRunAgentCoder(activeProjectTabState?.selectedProjectId || '');
 
+        const isAgentRunning = useMemo(() => {
+            return runAgentCoderMutation.isPending
+        }, [runAgentCoderMutation.isPending])
+
         // Fetch Agent Logs - Only enable when the dialog is open
         const { data: logData, isLoading: isLogLoading, isError: isLogError, error: logError, refetch: refetchLogs } = useGetAgentCoderRunLogs(
             currentAgentJobId,
-            { enabled: isLogDialogOpen }
+            { enabled: isLogDialogOpen , isAgentRunning }
         );
+
+
 
         const buildFullProjectContext = () => {
             const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
@@ -284,7 +290,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
             runAgentCoderMutation.mutate({
                 userInput: finalUserPrompt,
-                selectedFileIds
+                selectedFileIds,
+                agentJobId: newAgentJobId
             });
         };
         // --- End Agent Coder Handler ---
@@ -378,9 +385,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                         <Button onClick={handleOpenAgentRuns} size="sm" variant="ghost">
                                             <History className="h-3.5 w-3.5 mr-1" /> Agent Runs
                                         </Button>
-                                        <Button onClick={handleRunAgentCoder} disabled={runAgentCoderMutation.isPending} variant="outline" size="sm" className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50">
-                                            {runAgentCoderMutation.isPending ? <><Bot className="h-3.5 w-3.5 mr-1 animate-spin" /> Running...</> : <> <Bot className="h-3.5 w-3.5 mr-1" />Run Agent</>}
-                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -417,6 +421,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     isError={isLogError}
                     error={logError}
                     refetch={refetchLogs}
+                    isAgentRunning={isAgentRunning}
                 />
 
                 <AgentRunsDialog
@@ -504,6 +509,7 @@ interface AgentCoderLogDialogProps {
     isError: boolean;
     error: Error | null;
     refetch: () => void;
+    isAgentRunning: boolean;
 }
 
 function AgentCoderLogDialog({
@@ -514,11 +520,12 @@ function AgentCoderLogDialog({
     isLoading: isLogLoading,
     isError: isLogError,
     error: logError,
-    refetch: refetchLogs
+    refetch: refetchLogs,
+    isAgentRunning
 }: AgentCoderLogDialogProps) {
 
     // Fetch agent run data when the dialog is open and jobId is present
-    const { data: agentRunData, isLoading: isDataLoading, isError: isDataError, error: dataError, refetch: refetchData } = useGetAgentCoderRunData(agentJobId ?? '');
+    const { data: agentRunData, isLoading: isDataLoading, isError: isDataError, error: dataError, refetch: refetchData } = useGetAgentCoderRunData({ agentJobId: agentJobId ?? '', enabled: open, isAgentRunning });
 
     // Get copy function
     const { copyToClipboard } = useCopyClipboard();
