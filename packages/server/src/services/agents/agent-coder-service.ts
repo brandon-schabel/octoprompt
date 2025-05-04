@@ -391,24 +391,34 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
 
         await writeDataLog()
 
-        const { success: planImplementationSuccess, files: filesFromTaskPlan, tasks: tasksFromTaskPlan } = await createFileChangeDiffFromTaskPlan(agentContext, finalTaskPlan);
+        const { success: planImplementationSuccess, files: allFinalFiles, tasks: tasksFromTaskPlan } = await createFileChangeDiffFromTaskPlan(agentContext, finalTaskPlan);
 
+        // --- Filter for changed files ---
+        const initialFileMap = agentContext.projectFileMap;
+        const changedFiles: ProjectFile[] = allFinalFiles.filter(finalFile => {
+            const initialFile = initialFileMap.get(finalFile.id);
+            // Include if it's a new file (not in initial map) or if checksum differs
+            return !initialFile || initialFile.checksum !== finalFile.checksum;
+        });
+        // --- End Filter ---
 
-        await log(`Orchestrator finished. Overall Success: ${planImplementationSuccess}`, 'info');
-        await log(`Final Orchestrator State`, 'verbose', { success: planImplementationSuccess, fileCount: filesFromTaskPlan.length, tasks: tasksFromTaskPlan });
+        await log(`Orchestrator finished. Overall Success: ${planImplementationSuccess}. Changed files: ${changedFiles.length}`, 'info');
+        await log(`Final Orchestrator State`, 'verbose', { success: planImplementationSuccess, changedFileCount: changedFiles.length, tasks: tasksFromTaskPlan });
 
         agentDataLog.finalStatus = planImplementationSuccess ? 'Success' : 'Failed';
         agentDataLog.finalTaskPlan = tasksFromTaskPlan; // Log final task state
         agentDataLog.agentJobEndTime = new Date().toISOString();
+        agentDataLog.proposedFileChanges = changedFiles;
 
         await writeDataLog()
 
         return {
             success: planImplementationSuccess,
-            files: filesFromTaskPlan,
+            files: changedFiles, // Return only changed files
             tasks: tasksFromTaskPlan,
             agentJobId, // Use agentJobId
-            agentDataLog
+            agentDataLog,
+            
         };
 
     } catch (error) {
@@ -425,10 +435,17 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
 
         await writeDataLog()
 
-        // Return failure state
+        // Filter for changed files even in error case (might have partial changes)
+        const initialFileMapOnError = agentContext.projectFileMap;
+        const changedFilesOnError: ProjectFile[] = filesFromTaskPlan.filter(finalFile => {
+            const initialFile = initialFileMapOnError.get(finalFile.id);
+            return !initialFile || initialFile.checksum !== finalFile.checksum;
+        });
+
+        // Return failure state with potentially changed files
         return {
             success: false,
-            files: filesFromTaskPlan,
+            files: changedFilesOnError, // Return changed files identified before the error
             tasks: tasksFromTaskPlan,
             agentJobId, // Use agentJobId
             agentDataLog
