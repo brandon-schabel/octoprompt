@@ -19,7 +19,7 @@ export const ALLOWED_FILE_CONFIGS = [
     '.zig', '.lua', '.r', '.kt', '.swift', '.m', '.mm', '.scala', '.clj', '.ex', '.exs', 'ino',
 
     // Environment & Version
-    '.env', '.env.example', '.python-version', '.nvmrc', '.ruby-version',
+    ".cursor",
 
     // Docker & Container
     'Dockerfile', '.dockerignore', 'docker-compose.yml',
@@ -52,5 +52,11 @@ export const DEFAULT_FILE_EXCLUSIONS = [
     '*.swp',
     '*.bak',
     '*.tmp',
-
 ];
+
+
+const testFileChange = {
+    fileId: '123',
+    content: 'Hello, world!',
+    updatedAt: new Date(),
+}

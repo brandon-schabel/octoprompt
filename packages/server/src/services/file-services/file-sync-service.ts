@@ -138,7 +138,7 @@ export async function syncFileSet(
   absoluteFilePaths: string[], // Files found on disk *after* initial ignore filtering
   ignore: Ignore // Ignore instance for checking deletions
 ): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
-  console.log(`[FileSync] Starting sync for project <span class="math-inline">\{project\.id\} \(</span>{project.name}) with ${absoluteFilePaths.length} discovered files.`);
+  console.log(`[FileSync] Starting sync for project ${project.id} ${project.name} with ${absoluteFilePaths.length} discovered files.`);
 
   let filesToCreate: FileSyncData[] = [];
   let filesToUpdate: { fileId: string; data: FileSyncData }[] = [];
@@ -279,7 +279,7 @@ export async function syncProject(project: Project): Promise<{ created: number; 
     // Load ignore rules
     const ignore = await loadIgnoreRules(absoluteProjectPath);
 
-    console.log(`[FileSync] Starting full sync for project '<span class="math-inline">\{project\.name\}' \(</span>{project.id}) at path: ${absoluteProjectPath}`);
+    console.log(`[FileSync] Starting full sync for project ${project.name} (${project.id}) at path: ${absoluteProjectPath}`);
 
     // Find all relevant files respecting ignore rules
     const projectFiles = getTextFiles(absoluteProjectPath, absoluteProjectPath, ignore, ALLOWED_FILE_CONFIGS);
@@ -292,7 +292,7 @@ export async function syncProject(project: Project): Promise<{ created: number; 
     return results;
 
   } catch (error: any) {
-    console.error(`[FileSync] Failed to sync project <span class="math-inline">\{project\.id\} \(</span>{project.name}): ${error.message}`);
+    console.error(`[FileSync] Failed to sync project ${project.id} ${project.name}: ${error.message}`);
     throw error; // Re-throw the error for higher-level handling
   }
 }
@@ -313,7 +313,7 @@ export async function syncProjectFolder(project: Project, folderPath: string): P
     // Load ignore rules for the *entire project*
     const ignore = await loadIgnoreRules(absoluteProjectPath);
 
-    console.log(`[FileSync] Starting sync for folder '<span class="math-inline">\{folderPath\}' in project '</span>{project.name}' (${project.id}) at path: ${absoluteFolderToSync}`);
+    console.log(`[FileSync] Starting sync for project folder ${absoluteProjectPath}, project ${project.name} (${project.id}) at path: ${absoluteFolderToSync}`);
 
     // Find files *within the specific folder*, using the project root's ignore rules
     const folderFiles = getTextFiles(absoluteFolderToSync, absoluteProjectPath, ignore, ALLOWED_FILE_CONFIGS);
@@ -329,7 +329,7 @@ export async function syncProjectFolder(project: Project, folderPath: string): P
     return results;
 
   } catch (error: any) {
-    console.error(`[FileSync] Failed to sync folder '${folderPath}' for project <span class="math-inline">\{project\.id\} \(</span>{project.name}): ${error.message}`);
+    console.error(`[FileSync] Failed to sync folder '${folderPath}' for project ${project.id} ${project.name}: ${error.message}`);
     throw error; // Re-throw the error
   }
 }

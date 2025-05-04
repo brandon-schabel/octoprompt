@@ -5,9 +5,7 @@ import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 import { generateSingleText } from "@/services/gen-ai-services";
 import { getProjectFiles } from "../project-service";
 
-// --- Import necessary items from file-sync-service ---
-import {
-} from './file-sync-service'; // Adjust path if needed
+
 import { basename, extname, sep } from 'node:path'; // Added 'sep' for path splitting
 import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from "shared/src/constants/file-sync-options";
 // --- End imports ---
