@@ -28,8 +28,8 @@ import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
 import { Chat, ProjectFile } from '@/hooks/generated'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Binoculars, Bot, Copy, History, ListChecks, MessageCircleCode, RefreshCw, Search } from 'lucide-react'
-import { useRunAgentCoder, useGetAgentCoderRunLogs, useListAgentCoderRuns, useGetAgentCoderRunData } from '@/hooks/api/use-agent-coder-api'
+import { Binoculars, Bot, CheckCircle, Copy, History, ListChecks, MessageCircleCode, RefreshCw, Search } from 'lucide-react'
+import { useRunAgentCoder, useGetAgentCoderRunLogs, useListAgentCoderRuns, useGetAgentCoderRunData, useConfirmAgentRunChanges, type AgentRunData } from '@/hooks/api/use-agent-coder-api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -524,8 +524,11 @@ function AgentCoderLogDialog({
     isAgentRunning
 }: AgentCoderLogDialogProps) {
 
-    // Fetch agent run data when the dialog is open and jobId is present
+    // Fetch agent run data - ensure the type is correct
     const { data: agentRunData, isLoading: isDataLoading, isError: isDataError, error: dataError, refetch: refetchData } = useGetAgentCoderRunData({ agentJobId: agentJobId ?? '', enabled: open, isAgentRunning });
+
+    // --- Instantiate the confirm mutation hook ---
+    const confirmChangesMutation = useConfirmAgentRunChanges();
 
     // Get copy function
     const { copyToClipboard } = useCopyClipboard();
@@ -556,6 +559,22 @@ function AgentCoderLogDialog({
         }
     };
 
+    // --- Handler for the confirm button ---
+    const handleConfirmChanges = () => {
+        if (!agentJobId) {
+            toast.error("Agent Job ID is missing.");
+            return;
+        }
+        confirmChangesMutation.mutate({ agentJobId });
+    };
+
+    // --- Determine if confirmation is possible (using AgentRunData type) ---
+    const canConfirm = useMemo(() => {
+        // Use the correct type and check for array and length
+        return agentRunData?.updatedFiles && Array.isArray(agentRunData.updatedFiles) && agentRunData.updatedFiles.length > 0;
+    }, [agentRunData]);
+
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             {/* Increased width and kept height constraints */}
@@ -566,7 +585,6 @@ function AgentCoderLogDialog({
                             <span>Agent Coder Run</span>
                             {agentJobId && (
                                 <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded flex items-center">
-                                    {agentJobId} {/* Display full ID */}
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -626,7 +644,7 @@ function AgentCoderLogDialog({
                     </TabsContent>
 
                     {/* Data Tab Content */}
-                    <TabsContent value="data" className="flex-1 min-h-0 overflow-y-auto border rounded-md p-2 bg-muted/20">
+                    <TabsContent value="data" className="flex-1 flex flex-col min-h-0 overflow-y-auto border rounded-md p-2 bg-muted/20">
                         {isDataLoading && <p className="text-center p-4 text-muted-foreground">Loading data...</p>}
                         {isDataError && (
                             <div className="text-center p-4 text-destructive">
@@ -638,9 +656,36 @@ function AgentCoderLogDialog({
                             <p className="text-center p-4 text-muted-foreground">No data found for this run.</p>
                         )}
                         {!isDataLoading && !isDataError && agentRunData && (
-                            <pre className="font-mono text-xs whitespace-pre-wrap break-words">
-                                {JSON.stringify(agentRunData, null, 2)} {/* Display formatted JSON */}
-                            </pre>
+                            // --- Wrap data display and button ---
+                            <div className="flex flex-col h-full">
+                                <pre className="font-mono text-xs whitespace-pre-wrap break-words flex-1 overflow-auto mb-2">
+                                    {JSON.stringify(agentRunData, null, 2)} {/* Display formatted JSON */}
+                                </pre>
+                                {/* --- Confirmation Button --- */}
+                                {canConfirm && (
+                                    <div className="shrink-0 mt-auto pt-2 border-t">
+                                        <Button
+                                            onClick={handleConfirmChanges}
+                                            disabled={confirmChangesMutation.isPending || isDataLoading}
+                                            // Use a default variant if 'success' doesn't exist
+                                            variant="default" // Changed from "success"
+                                            size="sm"
+                                            className="w-full bg-green-600 hover:bg-green-700 text-white" // Keep custom styling
+                                        >
+                                            {confirmChangesMutation.isPending ? (
+                                                <><RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" /> Applying...</>
+                                            ) : (
+                                                <><CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirm & Apply Changes</>
+                                            )}
+                                        </Button>
+                                        {/* Optionally show the list of files to be changed */}
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                            {/* Ensure type safety when accessing updatedFiles */}
+                                            Proposed changes ({agentRunData.updatedFiles.length} files): {agentRunData.updatedFiles.map((f: ProjectFile) => f.path).join(', ')}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </TabsContent>
                 </Tabs>

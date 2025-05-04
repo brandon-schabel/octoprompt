@@ -5,11 +5,11 @@ import { mkdir, readdir, stat } from 'node:fs/promises';
 
 import { ApiError } from 'shared';
 import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas';
-import { ProjectFileSchema, ProjectIdParamsSchema, type ProjectFile } from 'shared/src/schemas/project.schemas';
+import { ProjectFileMap, ProjectFileSchema, ProjectIdParamsSchema, type ProjectFile } from 'shared/src/schemas/project.schemas';
 import { v4 as uuidv4 } from 'uuid';
 
 import { mainOrchestrator, } from '@/services/agents/agent-coder-service';
-import { AgentCoderRunRequestSchema, AgentCoderRunResponseSchema, AgentTaskPlanSchema, TaskPlan, AgentCoderRunSuccessDataSchema } from 'shared/src/schemas/agent-coder.schemas';
+import { AgentCoderRunRequestSchema, AgentCoderRunResponseSchema, AgentTaskPlanSchema, TaskPlan, AgentCoderRunSuccessDataSchema, CoderAgentDataContext, AgentCoderRunSuccessData, AgentDataLogSchema } from 'shared/src/schemas/agent-coder.schemas';
 import { AGENT_LOGS_DIR, getOrchestratorLogFilePaths, listAgentJobs, writeAgentDataLog, getAgentDataLogFilePath } from '@/services/agents/agent-logger';
 
 
@@ -17,6 +17,9 @@ import { getProjectById, getProjectFiles, getProjectFilesByIds } from '@/service
 import { buildProjectFileMap } from 'shared/src/utils/projects-utils';
 import { getFullProjectSummary } from '@/utils/get-full-project-summary';
 import { resolvePath } from '@/utils/path-utils';
+import { fromZodError } from 'zod-validation-error';
+import { ContentfulStatusCode } from 'hono/utils/http-status';
+
 
 // --- Run Agent Coder Route ---
 const runAgentCoderRoute = createRoute({
@@ -124,7 +127,7 @@ const getAgentRunDataRoute = createRoute({
     },
     responses: {
         200: {
-            content: { 'application/json': { schema: AgentRunDataResponseSchema } }, // Reference the data schema
+            content: { 'application/json': { schema: AgentDataLogSchema } }, // Reference the data schema
             description: 'Agent data log content as a JSON object',
         },
         404: {
@@ -162,6 +165,101 @@ const listAgentRunsRoute = createRoute({
     },
 });
 
+
+
+// --- Add these near other schema definitions ---
+
+// Schema for the confirmation response
+const ConfirmAgentRunChangesResponseSchema = z.object({
+    success: z.literal(true),
+    message: z.string().openapi({ example: 'Agent run changes successfully written to filesystem.' }),
+    writtenFiles: z.array(z.string()).openapi({ description: 'Relative paths of files proposed for writing (actual writes depend on checksums).', example: ['src/new-feature.ts', 'test/new-feature.test.ts'] })
+}).openapi('ConfirmAgentRunChangesResponse');
+
+
+// --- Route Definition for Confirming Changes ---
+const confirmAgentRunChangesRoute = createRoute({
+    method: 'post', // POST because it changes the state of the filesystem
+    path: '/api/agent-coder/runs/{agentJobId}/confirm',
+    tags: ['AI', 'Agent', 'Filesystem'],
+    summary: 'Confirm and write agent-generated file changes to the filesystem',
+    request: {
+        params: AgentJobIdParamsSchema, // Reuse existing schema for agentJobId
+    },
+    responses: {
+        200: {
+            content: { 'application/json': { schema: ConfirmAgentRunChangesResponseSchema } },
+            description: 'Agent run changes successfully written to filesystem.',
+        },
+        404: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Agent run data, project, or original files not found',
+        },
+        500: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Internal Server Error reading data log or writing files',
+        },
+    },
+});
+
+
+
+export const writeFilesToFileSystem = async ({
+    agentJobId,
+    projectFileMap,
+    absoluteProjectPath,
+    updatedFiles
+}: {
+    agentJobId: string,
+    projectFileMap: ProjectFileMap,
+    absoluteProjectPath: string,
+    updatedFiles: ProjectFile[]
+}) => {
+    try {
+        const writePromises = updatedFiles.map(async (updatedFile) => {
+            if (updatedFile.content === null || updatedFile.content === undefined) {
+                console.warn(`[Agent Coder Route ${agentJobId}] Skipping write for ${updatedFile.path} (null content).`);
+                return;
+            }
+            const originalFile = projectFileMap.get(updatedFile.id);
+            const originalChecksum = originalFile?.checksum;
+            const newChecksum = (updatedFile.content !== null && updatedFile.content !== undefined)
+                ? (updatedFile.checksum ?? Bun.hash(updatedFile.content).toString(16))
+                : updatedFile.checksum;
+
+            const needsWrite = !originalFile || (isValidChecksum(originalChecksum) && isValidChecksum(newChecksum) && originalChecksum !== newChecksum);
+            if (!needsWrite) {
+                // console.log(`[Agent Coder Route ${agentJobId}] Skipping unchanged file: ${updatedFile.path}`);
+                return;
+            }
+
+            const absoluteFilePath = join(absoluteProjectPath, updatedFile.path);
+            const directoryPath = dirname(absoluteFilePath);
+
+            try {
+                await mkdir(directoryPath, { recursive: true });
+                await Bun.write(absoluteFilePath, updatedFile.content);
+                console.log(`[Agent Coder Route ${agentJobId}] Wrote code file: ${updatedFile.path}`);
+            } catch (writeError: any) {
+                console.error(`[Agent Coder Route ${agentJobId}] Failed to write ${updatedFile.path}: ${writeError.message}`);
+                throw new Error(`Failed write: ${updatedFile.path}`); // For Promise.allSettled
+            }
+        });
+
+        const writeResults = await Promise.allSettled(writePromises);
+        const failedWrites = writeResults.filter(r => r.status === 'rejected');
+        if (failedWrites.length > 0) {
+            console.error(`[Agent Coder Route ${agentJobId}] ${failedWrites.length} file write(s) failed:`);
+            failedWrites.forEach((f) => console.error(`- ${(f as PromiseRejectedResult).reason}`));
+            // Optional: Add warning to response or status 207
+        } else {
+            console.log(`[Agent Coder Route ${agentJobId}] All necessary code file writes completed.`);
+        }
+    } catch (fileWriteSetupError: any) {
+        console.error(`[Agent Coder Route ${agentJobId}] Error setting up code file writing: ${fileWriteSetupError.message}`);
+    }
+}
+
 export const agentCoderRoutes = new OpenAPIHono()
     // --- Agent Coder Run Handler ---
     .openapi(runAgentCoderRoute, async (c) => {
@@ -190,142 +288,67 @@ export const agentCoderRoutes = new OpenAPIHono()
 
             // 2. Call the orchestrator (pass agentJobId)
             console.log(`[Agent Coder Route ${agentJobId}] Calling main orchestrator...`);
-            const orchestratorResult = await mainOrchestrator({
+            const coderAgentDataContext: CoderAgentDataContext = {
                 userInput,
                 projectFiles,
                 projectFileMap,
                 projectSummaryContext,
                 agentJobId,
-                projectId,
-            });
+                project
+            }
+            const orchestratorResult = await mainOrchestrator(coderAgentDataContext);
 
             console.log(`[Agent Coder Route ${agentJobId}] Orchestrator finished. Success: ${orchestratorResult.success}`);
 
-            // Assume orchestratorResult includes an `agentDataLog` object for the data file
-            // Let's define a more specific type for the expected successful result
-            type OrchestratorSuccessResult = {
-                success: true;
-                files: ProjectFile[];
-                tasks: TaskPlan | null;
-                agentJobId: string; // Expect agentJobId back, though we already have it
-                agentDataLog: Record<string, any>; // The data to be saved
-            };
 
-            // Type guard for success
-            function isSuccessResult(result: any): result is OrchestratorSuccessResult {
-                return result && result.success === true && typeof result.agentJobId === 'string' && typeof result.agentDataLog === 'object';
-            }
 
             // 3. Write Agent Data Log (if successful)
-            if (isSuccessResult(orchestratorResult)) {
+            if (orchestratorResult.success) {
                 await writeAgentDataLog(agentJobId, orchestratorResult.agentDataLog);
             } else {
                 // Handle failure before file writes
-                const failedTasks = orchestratorResult.tasks?.tasks.filter(t => t.status === 'FAILED').map(t => t.title).join(', ') || 'unknown tasks';
+                const failedTasks = orchestratorResult?.tasks?.tasks.filter(t => t.status === 'FAILED').map(t => t.title).join(', ') || 'unknown tasks';
                 const message = `Agent Coder execution failed (run ${agentJobId}). Failed tasks: ${failedTasks}`;
                 console.error(`[Agent Coder Route ${agentJobId}] ${message}`, orchestratorResult.tasks);
                 throw new ApiError(500, message, 'AGENT_CODER_FAILED', { tasks: orchestratorResult.tasks, agentJobId });
             }
 
             // Type assertion after check
-            const successfulResult = orchestratorResult as OrchestratorSuccessResult;
 
-            // --- 4. Write updated/new code files to filesystem ---
-            if (successfulResult.files.length > 0) {
-                console.log(`[Agent Coder Route ${agentJobId}] Writing ${successfulResult.files.length} updated/new code files...`);
-                try {
-                    const absoluteProjectPath = resolvePath(project.path);
-                    const originalFileMap = projectFileMap;
-
-                    const writePromises = successfulResult.files.map(async (updatedFile) => {
-                        if (updatedFile.content === null || updatedFile.content === undefined) {
-                            console.warn(`[Agent Coder Route ${agentJobId}] Skipping write for ${updatedFile.path} (null content).`);
-                            return;
-                        }
-                        const originalFile = originalFileMap.get(updatedFile.id);
-                        const originalChecksum = originalFile?.checksum;
-                        const newChecksum = (updatedFile.content !== null && updatedFile.content !== undefined)
-                            ? (updatedFile.checksum ?? Bun.hash(updatedFile.content).toString(16))
-                            : updatedFile.checksum;
-
-                        const needsWrite = !originalFile || (isValidChecksum(originalChecksum) && isValidChecksum(newChecksum) && originalChecksum !== newChecksum);
-                        if (!needsWrite) {
-                            // console.log(`[Agent Coder Route ${agentJobId}] Skipping unchanged file: ${updatedFile.path}`);
-                            return;
-                        }
-
-                        const absoluteFilePath = join(absoluteProjectPath, updatedFile.path);
-                        const directoryPath = dirname(absoluteFilePath);
-
-                        try {
-                            await mkdir(directoryPath, { recursive: true });
-                            await Bun.write(absoluteFilePath, updatedFile.content);
-                            console.log(`[Agent Coder Route ${agentJobId}] Wrote code file: ${updatedFile.path}`);
-                        } catch (writeError: any) {
-                            console.error(`[Agent Coder Route ${agentJobId}] Failed to write ${updatedFile.path}: ${writeError.message}`);
-                            throw new Error(`Failed write: ${updatedFile.path}`); // For Promise.allSettled
-                        }
-                    });
-
-                    const writeResults = await Promise.allSettled(writePromises);
-                    const failedWrites = writeResults.filter(r => r.status === 'rejected');
-                    if (failedWrites.length > 0) {
-                        console.error(`[Agent Coder Route ${agentJobId}] ${failedWrites.length} file write(s) failed:`);
-                        failedWrites.forEach((f) => console.error(`- ${(f as PromiseRejectedResult).reason}`));
-                        // Optional: Add warning to response or status 207
-                    } else {
-                        console.log(`[Agent Coder Route ${agentJobId}] All necessary code file writes completed.`);
-                    }
-                } catch (fileWriteSetupError: any) {
-                    console.error(`[Agent Coder Route ${agentJobId}] Error setting up code file writing: ${fileWriteSetupError.message}`);
-                    // Log and continue, data is already saved, response indicates success but maybe with warnings?
-                }
-            } else {
-                console.log(`[Agent Coder Route ${agentJobId}] Orchestrator returned no code files to write.`);
-            }
-            // --- End Code File Writing ---
+            // // --- 4. Write updated/new code files to filesystem ---
+            //  We no longer write files to the filesystem here.
+            //  We now write files to the filesystem in the confirm route.
+            // if (orchestratorResult.updatedFiles.length > 0) {
+            //     console.log(`[Agent Coder Route ${agentJobId}] Writing ${orchestratorResult.updatedFiles.length} updated/new code files...`);
+            //     await writeFilesToFileSystem(coderAgentDataContext, orchestratorResult);
+            // } else {
+            //     console.log(`[Agent Coder Route ${agentJobId}] Orchestrator returned no code files to write.`);
+            // }
+            // // --- End Code File Writing ---
 
             // 5. Format and Send Success Response
             const responsePayload: z.infer<typeof AgentCoderRunResponseSchema> = {
                 success: true,
                 data: {
-                    updatedFiles: successfulResult.files,
-                    taskPlan: successfulResult.tasks as TaskPlan,
+                    updatedFiles: orchestratorResult.updatedFiles,
+                    taskPlan: orchestratorResult.tasks as TaskPlan,
                     agentJobId: agentJobId, // Return the ID
                 }
             };
             return c.json(responsePayload, 200);
-
         } catch (error: any) {
             console.error(`[Agent Coder Route ${agentJobId}] Error during execution:`, error);
-            // Close logger if it was initialized and an error occurred
-            // await closeLogger(); // Consider adding this if errors leave logger open
-
-            if (error instanceof ApiError) {
-                const status = [404, 422, 500].includes(error.status) ? error.status : 500;
-                const errorDetails = (typeof error.details === 'object' && error.details !== null)
-                    ? { ...error.details, agentJobId } // Add agentJobId to error details
-                    : { agentJobId };
-                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
-                    success: false,
-                    error: { code: error.code, message: error.message, details: errorDetails }
-                };
-                return c.json(errorPayload, status as 404 | 422 | 500);
-            } else {
-                // Generic error
-                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
-                    success: false,
-                    error: {
-                        code: 'AGENT_CODER_EXECUTION_ERROR',
-                        message: `Agent Coder failed (run ${agentJobId}): ${error.message}`,
-                        details: { agentJobId }
-                    }
-                };
-                return c.json(errorPayload, 500);
-            }
+            const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                success: false,
+                error: {
+                    code: 'RUN_ERROR',
+                    message: `Failed to run agent coder: ${error instanceof Error ? error.message : String(error)}`
+                }
+            };
+            return c.json(errorPayload, 500);
         }
     })
- 
+
     // --- List Agent Runs Handler ---
     .openapi(listAgentRunsRoute, async (c) => { // KEEP THIS ROUTE
         console.log(`[Agent Runs List Route] Request received.`);
@@ -384,7 +407,7 @@ export const agentCoderRoutes = new OpenAPIHono()
                 };
                 return c.json(errorPayload, 404);
             } else if (error.code === 'ENOENT') { // Handle file not found specifically if getOrchestratorLogFilePaths doesn't throw ApiError
-                 const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
                     success: false,
                     error: { code: 'LOGS_NOT_FOUND', message: `Log file for agent run ${agentJobId} not found.`, details: { agentJobId } }
                 };
@@ -439,13 +462,13 @@ export const agentCoderRoutes = new OpenAPIHono()
                 };
                 return c.json(errorPayload, 404);
             } else if (error instanceof SyntaxError) { // Handle JSON parsing error
-                 const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
                     success: false,
                     error: { code: 'DATA_PARSE_ERROR', message: `Failed to parse data file for agent run ${agentJobId}. Invalid JSON.`, details: { agentJobId, error: error.message } }
                 };
                 return c.json(errorPayload, 500);
             } else if (error.code === 'ENOENT') { // Handle file system error more explicitly
-                 const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
                     success: false,
                     error: { code: 'DATA_NOT_FOUND', message: `Data file for agent run ${agentJobId} not found.`, details: { agentJobId } }
                 };
@@ -463,7 +486,123 @@ export const agentCoderRoutes = new OpenAPIHono()
                 return c.json(errorPayload, 500);
             }
         }
-    });
+    })
+    .openapi(confirmAgentRunChangesRoute, async (c) => {
+        const { agentJobId } = c.req.valid('param');
+        console.log(`[Agent Confirm Route] Request received for job ID: ${agentJobId}`);
+
+        try {
+            // 1. Get data file path
+            const dataFilePath = getAgentDataLogFilePath(agentJobId);
+            console.log(`[Agent Confirm Route] Reading data file path: ${dataFilePath}`);
+
+            // 2. Read and parse data file content
+            const dataFile = Bun.file(dataFilePath);
+            if (!(await dataFile.exists())) {
+                console.error(`[Agent Confirm Route] Data file not found at path: ${dataFilePath}`);
+                throw new ApiError(404, `Agent run ${agentJobId} data log not found.`);
+            }
+
+            const agentDataLogRaw = await dataFile.json();
+
+            const validationResult = AgentDataLogSchema.safeParse(agentDataLogRaw);
+
+
+            // 3. Validate and Extract required data from the log
+            if (!validationResult.success) {
+                const error = fromZodError(validationResult.error);
+                console.error(`[Agent Confirm Route] Invalid data log structure for ${agentJobId}: ${error.message}`, validationResult.error.format());
+                // Use the specific schema name in the error code if desired
+                throw new ApiError(500, `Invalid agent data log structure for agent run ${agentJobId}.`, 'AGENT_DATA_LOG_INVALID', { agentJobId, details: error.message });
+            }
+
+            // Extract data - field names 'projectId' and 'updatedFiles' are the same
+            const { projectId, updatedFiles } = validationResult.data;
+
+
+            console.log(`[Agent Confirm Route] Found ${updatedFiles.length} proposed file changes in data log for project ${projectId}.`);
+
+            // 4. Fetch Original Project Data (needed for comparison in writeFilesToFileSystem)
+            const project = await getProjectById(projectId);
+            if (!project) {
+                throw new ApiError(404, `Project ${projectId} associated with agent run ${agentJobId} not found.`);
+            }
+            // Ensure you have a way to resolve the project's base path
+            // Assuming 'project.path' holds the relative or absolute path stored
+            // You might need a configuration variable for the base directory if it's relative
+            const absoluteProjectPath = resolvePath(project.path); // Use your path resolution logic
+            if (!absoluteProjectPath) {
+                throw new ApiError(500, `Could not determine absolute path for project ${projectId}.`);
+            }
+            console.log(`[Agent Confirm Route] Absolute project path: ${absoluteProjectPath}`);
+
+
+            const originalProjectFiles = await getProjectFiles(projectId);
+            if (!originalProjectFiles) {
+                throw new ApiError(404, `Original files for project ${projectId} could not be fetched.`);
+            }
+            const originalProjectFileMap = buildProjectFileMap(originalProjectFiles);
+            console.log(`[Agent Confirm Route] Built original project file map with ${originalProjectFileMap.size} files.`);
+
+
+            // 5. Call the write function
+            console.log(`[Agent Confirm Route ${agentJobId}] Calling writeFilesToFileSystem...`);
+            await writeFilesToFileSystem({
+                agentJobId,
+                projectFileMap: originalProjectFileMap, // Pass the ORIGINAL map
+                absoluteProjectPath,
+                updatedFiles // Pass the files proposed by the agent run
+            });
+            console.log(`[Agent Confirm Route ${agentJobId}] writeFilesToFileSystem completed.`);
+            // NOTE: writeFilesToFileSystem logs errors internally but doesn't throw for individual file failures.
+            // We assume success here if the overall function didn't throw.
+
+            // 6. Return Success Response
+            const successPayload: z.infer<typeof ConfirmAgentRunChangesResponseSchema> = {
+                success: true,
+                message: 'Agent run changes successfully written to filesystem.',
+                // Return the paths that were *intended* to be written.
+                writtenFiles: updatedFiles.map(f => f.path)
+            };
+            return c.json(successPayload, 200);
+
+        } catch (error: any) {
+            console.error(`[Agent Confirm Route] Error confirming changes for ${agentJobId}:`, error);
+
+            // Handle specific known errors (like 404)
+            if (error instanceof ApiError) {
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: { code: error.code ?? 'CONFIRM_ERROR', message: error.message, details: { agentJobId, ...(error.details as Record<string, any>) } }
+                };
+                return c.json(errorPayload, error.status as ContentfulStatusCode);
+            } else if (error instanceof SyntaxError) { // JSON parsing error
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: { code: 'DATA_PARSE_ERROR', message: `Failed to parse data log file for agent run ${agentJobId}. Invalid JSON.`, details: { agentJobId, error: error.message } }
+                };
+                return c.json(errorPayload, 500);
+            } else if (error.code === 'ENOENT') { // File system error (e.g., Bun.file not found)
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: { code: 'DATA_NOT_FOUND', message: `Data log file for agent run ${agentJobId} not found.`, details: { agentJobId } }
+                };
+                return c.json(errorPayload, 404);
+            }
+            else { // Generic server error
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: {
+                        code: 'CONFIRM_FAILED',
+                        message: `Failed to confirm agent run changes for ${agentJobId}: ${error.message}`,
+                        details: { agentJobId }
+                    }
+                };
+                return c.json(errorPayload, 500);
+            }
+        }
+    }) // Add this closing parenthesis and potentially a semicolon if it's the last route
+
 
 // Helper function (remains the same)
 function isValidChecksum(checksum: string | null | undefined): checksum is string {

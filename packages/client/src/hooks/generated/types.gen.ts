@@ -859,6 +859,15 @@ export type AgentRunData = {
     agentJobId: string;
 };
 
+export type ConfirmAgentRunChangesResponse = {
+    success: true;
+    message: string;
+    /**
+     * Relative paths of files proposed for writing (actual writes depend on checksums).
+     */
+    writtenFiles: Array<string>;
+};
+
 export type GetChatsData = {
     body?: never;
     path?: never;
@@ -3242,6 +3251,40 @@ export type GetApiAgentCoderRunsByAgentJobIdDataResponses = {
 };
 
 export type GetApiAgentCoderRunsByAgentJobIdDataResponse = GetApiAgentCoderRunsByAgentJobIdDataResponses[keyof GetApiAgentCoderRunsByAgentJobIdDataResponses];
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmData = {
+    body?: never;
+    path: {
+        /**
+         * The unique ID of the agent run.
+         */
+        agentJobId: string;
+    };
+    query?: never;
+    url: '/api/agent-coder/runs/{agentJobId}/confirm';
+};
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmErrors = {
+    /**
+     * Agent run data, project, or original files not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Internal Server Error reading data log or writing files
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmError = PostApiAgentCoderRunsByAgentJobIdConfirmErrors[keyof PostApiAgentCoderRunsByAgentJobIdConfirmErrors];
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmResponses = {
+    /**
+     * Agent run changes successfully written to filesystem.
+     */
+    200: ConfirmAgentRunChangesResponse;
+};
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmResponse = PostApiAgentCoderRunsByAgentJobIdConfirmResponses[keyof PostApiAgentCoderRunsByAgentJobIdConfirmResponses];
 
 export type ClientOptions = {
     baseUrl: 'http://localhost:3147' | (string & {});

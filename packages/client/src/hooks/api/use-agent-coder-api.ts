@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import {
     postApiProjectsByProjectIdAgentCoderMutation,
@@ -6,6 +6,7 @@ import {
     getApiAgentCoderRunsOptions,
     getApiAgentCoderRunsByAgentJobIdLogsOptions,
     getApiAgentCoderRunsByAgentJobIdDataOptions,
+    postApiAgentCoderRunsByAgentJobIdConfirmMutation,
 } from '../generated/@tanstack/react-query.gen';
 import { toast } from 'sonner';
 import {
@@ -17,22 +18,24 @@ import {
     type GetApiAgentCoderRunsByAgentJobIdLogsData,
     type GetApiAgentCoderRunsByAgentJobIdDataData,
     type ApiErrorResponse,
+    type PostApiAgentCoderRunsByAgentJobIdConfirmData,
+    type PostApiAgentCoderRunsByAgentJobIdConfirmError,
+    type PostApiAgentCoderRunsByAgentJobIdConfirmResponse,
 } from '../generated/types.gen';
 import { type Options } from '../generated/sdk.gen';
 import { commonErrorHandler } from './common-mutation-error-handler';
-import { type TaskPlan } from 'shared/src/schemas/agent-coder.schemas';
+import { type TaskPlan, AgentCoderRunSuccessDataSchema, type AgentCoderRunSuccessData } from 'shared/src/schemas/agent-coder.schemas';
 
-// Corresponds to AgentCoderRunDataSchema in agent-coder-routes.ts
-type AgentCoderRunData = {
-    updatedFiles: ProjectFile[];
-    taskPlan?: TaskPlan | null;
-    agentJobId: string;
-};
+// Use the specific Zod-derived type for the data endpoint
+export type AgentRunData = AgentCoderRunSuccessData;
+
+// Define the query key type explicitly for clarity
+type AgentRunDataQueryKey = ReturnType<typeof getApiAgentCoderRunsByAgentJobIdDataOptions>['queryKey'];
 
 // Corresponds to AgentCoderRunResponseSchema in agent-coder-routes.ts
 type AgentCoderRunResponse = {
     success: boolean;
-    data?: AgentCoderRunData;
+    data?: AgentRunData & { agentJobId: string, taskPlan?: TaskPlan | null }; // Combine types for the run response
     error?: ApiErrorResponse['error'];
 };
 
@@ -50,10 +53,12 @@ export const useRunAgentCoder = (projectId: string) => {
             if (!mutationFn) {
                 throw new Error('Generated mutation function is not available.');
             }
+            // Cast the result to the more specific frontend type
             const result = await mutationFn(options) as AgentCoderRunResponse;
             return result;
         },
         onSuccess: (data: AgentCoderRunResponse, variables) => {
+            // Check against the more specific AgentCoderRunResponse type
             if (data.success && data.data?.agentJobId) {
                 toast.success(`Agent Coder job ${data.data.agentJobId} finished successfully!`);
                 console.log('Agent Coder success response:', data);
@@ -70,6 +75,15 @@ export const useRunAgentCoder = (projectId: string) => {
             queryClient.invalidateQueries({ queryKey });
             const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
             queryClient.invalidateQueries({ queryKey: runsListQueryKey });
+
+            // Invalidate specific run data/logs if the job ID is available
+            if (data.success && data.data?.agentJobId) {
+                const agentJobId = data.data.agentJobId;
+                const dataQueryKey = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId } }).queryKey;
+                const logsQueryKey = getApiAgentCoderRunsByAgentJobIdLogsOptions({ path: { agentJobId } }).queryKey;
+                queryClient.invalidateQueries({ queryKey: dataQueryKey });
+                queryClient.invalidateQueries({ queryKey: logsQueryKey });
+            }
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });
@@ -86,9 +100,10 @@ export const useGetAgentCoderRunLogs = (agentJobId?: string, options: { enabled?
         ...getApiAgentCoderRunsByAgentJobIdLogsOptions({
             path: pathParams,
         }),
+        // Ensure enabled respects both agentJobId presence and the passed option
         enabled: !!agentJobId && (options.enabled ?? true),
         refetchOnWindowFocus: false,
-        refetchOnMount: true,
+        refetchOnMount: true, // Refetch when component mounts or enabled state changes
         refetchInterval: options.isAgentRunning ? 250 : false,
     });
 };
@@ -101,12 +116,60 @@ export const useGetAgentCoderRunData = ({
     agentJobId,
     enabled = true,
     isAgentRunning = false,
-}: { agentJobId: string, enabled: boolean, isAgentRunning: boolean }) => {
-    const queryOptions = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId } });
+}: { agentJobId: string, enabled?: boolean, isAgentRunning?: boolean }) => {
+    // Use the specific query key type here
+    const queryOptions = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId } }) as UseQueryOptions<AgentRunData, Error, AgentRunData, AgentRunDataQueryKey>;
 
-    return useQuery({
+    return useQuery<AgentRunData, Error, AgentRunData, AgentRunDataQueryKey>({ // Specify the type parameters including the query key
         ...queryOptions,
         refetchInterval: isAgentRunning ? 250 : false,
-        enabled: enabled,
+        enabled: !!agentJobId && enabled, // Ensure job ID exists and enabled is true
     });
 }
+
+// --- NEW Hook: Confirm Agent Run Changes ---
+export const useConfirmAgentRunChanges = () => {
+    const queryClient = useQueryClient();
+    const mutationOptionsFn = postApiAgentCoderRunsByAgentJobIdConfirmMutation();
+
+    return useMutation<PostApiAgentCoderRunsByAgentJobIdConfirmResponse, PostApiAgentCoderRunsByAgentJobIdConfirmError, { agentJobId: string }>({
+        mutationFn: async ({ agentJobId }) => {
+            const options: Options<PostApiAgentCoderRunsByAgentJobIdConfirmData> = {
+                path: { agentJobId },
+            };
+            const mutationFn = mutationOptionsFn.mutationFn;
+            if (!mutationFn) {
+                throw new Error('Generated confirmation mutation function is not available.');
+            }
+            const result = await mutationFn(options);
+            // The generated type PostApiAgentCoderRunsByAgentJobIdConfirmResponse should be correct
+            return result as PostApiAgentCoderRunsByAgentJobIdConfirmResponse;
+        },
+        onSuccess: (data, variables) => {
+            if (data.success) {
+                toast.success(data.message || `Agent run ${variables.agentJobId} changes confirmed and applied!`);
+                console.log('Confirm Agent Run Success:', data);
+
+                // Invalidate project files to reflect changes
+                // We need the projectId, which isn't directly available here.
+                // A broader invalidation might be needed, or pass projectId if possible.
+                // For now, let's invalidate *all* project file queries as a simple approach.
+                queryClient.invalidateQueries({ queryKey: ['getApiProjectsByProjectIdFiles'] }); // Invalidate based on query key prefix
+
+                // Optionally, refetch the specific run data to show it no longer needs confirmation (if applicable)
+                const dataQueryKey = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId: variables.agentJobId } }).queryKey;
+                queryClient.invalidateQueries({ queryKey: dataQueryKey });
+
+                // Invalidate runs list in case status changes (though less likely needed here)
+                const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
+                queryClient.invalidateQueries({ queryKey: runsListQueryKey });
+            } else {
+                // Assuming the generated response includes an error object on failure
+                const errorMessage = (data as any)?.error?.message || 'Failed to confirm agent run changes.';
+                toast.error(`Confirmation Failed: ${errorMessage}`);
+                console.error('Confirm Agent Run Failure:', data);
+            }
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+};
