@@ -7,6 +7,8 @@ import {
     getApiAgentCoderRunsByAgentJobIdLogsOptions,
     getApiAgentCoderRunsByAgentJobIdDataOptions,
     postApiAgentCoderRunsByAgentJobIdConfirmMutation,
+    deleteApiAgentCoderRunsByAgentJobIdMutation,
+    
 } from '../generated/@tanstack/react-query.gen';
 import { toast } from 'sonner';
 import {
@@ -21,6 +23,9 @@ import {
     type PostApiAgentCoderRunsByAgentJobIdConfirmData,
     type PostApiAgentCoderRunsByAgentJobIdConfirmError,
     type PostApiAgentCoderRunsByAgentJobIdConfirmResponse,
+    type DeleteApiAgentCoderRunsByAgentJobIdResponse,
+    type DeleteApiAgentCoderRunsByAgentJobIdError,
+    type DeleteApiAgentCoderRunsByAgentJobIdData,
 } from '../generated/types.gen';
 import { type Options } from '../generated/sdk.gen';
 import { commonErrorHandler } from './common-mutation-error-handler';
@@ -171,5 +176,61 @@ export const useConfirmAgentRunChanges = () => {
             }
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+};
+
+// --- NEW Hook: Delete Agent Run ---
+export const useDeleteAgentCoderRun = () => {
+    const queryClient = useQueryClient();
+    // Get the options generator function from the generated code
+    const mutationOptionsFn = deleteApiAgentCoderRunsByAgentJobIdMutation();
+
+    return useMutation<
+        DeleteApiAgentCoderRunsByAgentJobIdResponse, // Success response type
+        DeleteApiAgentCoderRunsByAgentJobIdError,   // Error type
+        { agentJobId: string }                      // Variables type ({ agentJobId })
+    >({
+        mutationFn: async ({ agentJobId }) => {
+            const options: Options<DeleteApiAgentCoderRunsByAgentJobIdData> = { // Use the correct Options type
+                path: { agentJobId },
+            };
+            const mutationFn = mutationOptionsFn.mutationFn;
+            if (!mutationFn) {
+                throw new Error('Generated delete mutation function is not available.');
+            }
+            // The result type should align with DeleteApiAgentCoderRunsByAgentJobIdResponse
+            const result = await mutationFn(options);
+            return result as DeleteApiAgentCoderRunsByAgentJobIdResponse; // Cast for certainty
+        },
+        onSuccess: (data, variables) => {
+            // Check the structure of 'data' based on your actual response schema (DeleteAgentRunResponseSchema)
+            if (data.success) {
+                toast.success(data.message || `Agent run ${variables.agentJobId} deleted successfully!`);
+                console.log('Delete Agent Run Success:', data);
+
+                // --- IMPORTANT: Invalidate the list of agent runs ---
+                const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
+                queryClient.invalidateQueries({ queryKey: runsListQueryKey });
+
+                // Optionally invalidate specific run data/logs if they were cached, though they shouldn't exist anymore
+                const dataQueryKey = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId: variables.agentJobId } }).queryKey;
+                const logsQueryKey = getApiAgentCoderRunsByAgentJobIdLogsOptions({ path: { agentJobId: variables.agentJobId } }).queryKey;
+                queryClient.removeQueries({ queryKey: dataQueryKey }); // Remove cached data/logs for the deleted run
+                queryClient.removeQueries({ queryKey: logsQueryKey });
+
+            } else {
+                // Handle cases where the backend might return success: false in a 200 (should ideally be a 4xx/5xx)
+                const errorMessage = (data as any)?.error?.message || 'Failed to delete agent run.';
+                toast.error(`Deletion Failed: ${errorMessage}`);
+                console.error('Delete Agent Run Failure Response:', data);
+            }
+        },
+        onError: (error) => {
+            // Use the specific error type if available for better handling
+            const apiError = error as DeleteApiAgentCoderRunsByAgentJobIdError;
+            const message = apiError?.payload?.error?.message || 'An unknown error occurred during deletion.';
+            toast.error(`Deletion Failed: ${message}`);
+            commonErrorHandler(error as unknown as Error); // Use common handler for logging etc.
+        },
     });
 };

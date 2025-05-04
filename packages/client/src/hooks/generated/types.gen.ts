@@ -847,16 +847,45 @@ export type AgentCoderRunRequest = {
     agentJobId?: string;
 };
 
-export type AgentRunData = {
+export type AgentDataLog = {
     /**
-     * The state of the project files after the agent's execution.
+     * Absolute path to the directory containing logs for this job.
      */
-    updatedFiles: Array<ProjectFile>;
-    taskPlan?: AgentTaskPlan;
+    agentJobDirPath: string;
     /**
-     * The unique ID for retrieving the execution logs and data for this run.
+     * The ID of the project this agent run targeted.
+     */
+    projectId: string;
+    /**
+     * The unique ID for this agent run.
      */
     agentJobId: string;
+    /**
+     * ISO 8601 timestamp when the agent job started.
+     */
+    agentJobStartTime: string;
+    taskPlan?: AgentTaskPlan & unknown;
+    /**
+     * The final outcome status of the agent run.
+     */
+    finalStatus: 'Success' | 'Failed' | 'No tasks generated' | 'Error';
+    finalTaskPlan: AgentTaskPlan & unknown;
+    /**
+     * ISO 8601 timestamp when the agent job finished or errored.
+     */
+    agentJobEndTime: string;
+    /**
+     * Error message if the agent run failed.
+     */
+    errorMessage?: string;
+    /**
+     * Stack trace if the agent run failed.
+     */
+    errorStack?: string;
+    /**
+     * List of files with proposed changes (new files or modified files with different checksums).
+     */
+    updatedFiles?: Array<ProjectFile>;
 };
 
 export type ConfirmAgentRunChangesResponse = {
@@ -866,6 +895,11 @@ export type ConfirmAgentRunChangesResponse = {
      * Relative paths of files proposed for writing (actual writes depend on checksums).
      */
     writtenFiles: Array<string>;
+};
+
+export type DeleteAgentRunResponse = {
+    success: true;
+    message: string;
 };
 
 export type GetChatsData = {
@@ -3247,7 +3281,7 @@ export type GetApiAgentCoderRunsByAgentJobIdDataResponses = {
     /**
      * Agent data log content as a JSON object
      */
-    200: AgentRunData;
+    200: AgentDataLog;
 };
 
 export type GetApiAgentCoderRunsByAgentJobIdDataResponse = GetApiAgentCoderRunsByAgentJobIdDataResponses[keyof GetApiAgentCoderRunsByAgentJobIdDataResponses];
@@ -3285,6 +3319,40 @@ export type PostApiAgentCoderRunsByAgentJobIdConfirmResponses = {
 };
 
 export type PostApiAgentCoderRunsByAgentJobIdConfirmResponse = PostApiAgentCoderRunsByAgentJobIdConfirmResponses[keyof PostApiAgentCoderRunsByAgentJobIdConfirmResponses];
+
+export type DeleteApiAgentCoderRunsByAgentJobIdData = {
+    body?: never;
+    path: {
+        /**
+         * The unique ID of the agent run.
+         */
+        agentJobId: string;
+    };
+    query?: never;
+    url: '/api/agent-coder/runs/{agentJobId}';
+};
+
+export type DeleteApiAgentCoderRunsByAgentJobIdErrors = {
+    /**
+     * Agent run directory not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Internal Server Error during deletion
+     */
+    500: ApiErrorResponse;
+};
+
+export type DeleteApiAgentCoderRunsByAgentJobIdError = DeleteApiAgentCoderRunsByAgentJobIdErrors[keyof DeleteApiAgentCoderRunsByAgentJobIdErrors];
+
+export type DeleteApiAgentCoderRunsByAgentJobIdResponses = {
+    /**
+     * Agent run successfully deleted.
+     */
+    200: DeleteAgentRunResponse;
+};
+
+export type DeleteApiAgentCoderRunsByAgentJobIdResponse = DeleteApiAgentCoderRunsByAgentJobIdResponses[keyof DeleteApiAgentCoderRunsByAgentJobIdResponses];
 
 export type ClientOptions = {
     baseUrl: 'http://localhost:3147' | (string & {});

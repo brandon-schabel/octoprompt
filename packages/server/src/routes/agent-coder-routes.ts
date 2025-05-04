@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { z } from 'zod';
 import { dirname, join } from 'node:path';
-import { mkdir, readdir, stat } from 'node:fs/promises';
+import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 
 import { ApiError } from 'shared';
 import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas';
@@ -202,6 +202,37 @@ const confirmAgentRunChangesRoute = createRoute({
     },
 });
 
+// --- Schema for Delete Response ---
+const DeleteAgentRunResponseSchema = z.object({
+    success: z.literal(true),
+    message: z.string().openapi({ example: 'Agent run job-xyz-123 deleted successfully.' })
+}).openapi('DeleteAgentRunResponse');
+
+
+// --- Route Definition for Deleting an Agent Run ---
+const deleteAgentRunRoute = createRoute({
+    method: 'delete',
+    path: '/api/agent-coder/runs/{agentJobId}', // Use DELETE on the specific run resource
+    tags: ['AI', 'Agent', 'Admin'], // Add 'Admin' or similar tag
+    summary: 'Delete an Agent Coder run and its associated logs/data',
+    request: {
+        params: AgentJobIdParamsSchema, // Reuse existing schema for agentJobId
+    },
+    responses: {
+        200: {
+            content: { 'application/json': { schema: DeleteAgentRunResponseSchema } },
+            description: 'Agent run successfully deleted.',
+        },
+        404: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Agent run directory not found',
+        },
+        500: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Internal Server Error during deletion',
+        },
+    },
+});
 
 
 export const writeFilesToFileSystem = async ({
@@ -520,7 +551,7 @@ export const agentCoderRoutes = new OpenAPIHono()
             const { projectId, updatedFiles } = validationResult.data;
 
 
-            console.log(`[Agent Confirm Route] Found ${updatedFiles.length} proposed file changes in data log for project ${projectId}.`);
+            console.log(`[Agent Confirm Route] Found ${updatedFiles?.length ?? 0} proposed file changes in data log for project ${projectId}.`);
 
             // 4. Fetch Original Project Data (needed for comparison in writeFilesToFileSystem)
             const project = await getProjectById(projectId);
@@ -551,7 +582,7 @@ export const agentCoderRoutes = new OpenAPIHono()
                 agentJobId,
                 projectFileMap: originalProjectFileMap, // Pass the ORIGINAL map
                 absoluteProjectPath,
-                updatedFiles // Pass the files proposed by the agent run
+                updatedFiles: updatedFiles ?? [] // Pass the files proposed by the agent run
             });
             console.log(`[Agent Confirm Route ${agentJobId}] writeFilesToFileSystem completed.`);
             // NOTE: writeFilesToFileSystem logs errors internally but doesn't throw for individual file failures.
@@ -562,7 +593,7 @@ export const agentCoderRoutes = new OpenAPIHono()
                 success: true,
                 message: 'Agent run changes successfully written to filesystem.',
                 // Return the paths that were *intended* to be written.
-                writtenFiles: updatedFiles.map(f => f.path)
+                writtenFiles: updatedFiles?.map(f => f.path) ?? []
             };
             return c.json(successPayload, 200);
 
@@ -575,18 +606,21 @@ export const agentCoderRoutes = new OpenAPIHono()
                     success: false,
                     error: { code: error.code ?? 'CONFIRM_ERROR', message: error.message, details: { agentJobId, ...(error.details as Record<string, any>) } }
                 };
-                return c.json(errorPayload, error.status as ContentfulStatusCode);
+                // Return using the correct schema and declared status
+                return c.json(errorPayload, error.status as (404 | 500));
             } else if (error instanceof SyntaxError) { // JSON parsing error
                 const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
                     success: false,
                     error: { code: 'DATA_PARSE_ERROR', message: `Failed to parse data log file for agent run ${agentJobId}. Invalid JSON.`, details: { agentJobId, error: error.message } }
                 };
+                // Return using the correct schema and declared status (500)
                 return c.json(errorPayload, 500);
             } else if (error.code === 'ENOENT') { // File system error (e.g., Bun.file not found)
                 const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
                     success: false,
                     error: { code: 'DATA_NOT_FOUND', message: `Data log file for agent run ${agentJobId} not found.`, details: { agentJobId } }
                 };
+                // Return using the correct schema and declared status (404)
                 return c.json(errorPayload, 404);
             }
             else { // Generic server error
@@ -601,7 +635,60 @@ export const agentCoderRoutes = new OpenAPIHono()
                 return c.json(errorPayload, 500);
             }
         }
-    }) // Add this closing parenthesis and potentially a semicolon if it's the last route
+    })
+    .openapi(deleteAgentRunRoute, async (c) => {
+        const { agentJobId } = c.req.valid('param');
+        console.log(`[Agent Delete Route] Request received for job ID: ${agentJobId}`);
+
+        const agentRunDirectory = join(AGENT_LOGS_DIR, agentJobId);
+
+        try {
+            // 1. Check if the directory exists first (optional but good practice for 404)
+            try {
+                await stat(agentRunDirectory); // Check if path exists and is accessible
+            } catch (checkError: any) {
+                if (checkError.code === 'ENOENT') {
+                    console.warn(`[Agent Delete Route] Directory not found for ${agentJobId}: ${agentRunDirectory}`);
+                    throw new ApiError(404, `Agent run ${agentJobId} not found.`);
+                }
+                // Re-throw other errors during the check
+                throw checkError;
+            }
+
+            // 2. Delete the directory recursively
+            console.log(`[Agent Delete Route] Attempting to delete directory: ${agentRunDirectory}`);
+            await rm(agentRunDirectory, { recursive: true, force: true }); // Use recursive and force
+            console.log(`[Agent Delete Route] Successfully deleted directory for ${agentJobId}`);
+
+            // 3. Return Success Response
+            const successPayload: z.infer<typeof DeleteAgentRunResponseSchema> = {
+                success: true,
+                message: `Agent run ${agentJobId} deleted successfully.`,
+            };
+            return c.json(successPayload, 200);
+
+        } catch (error: any) {
+            console.error(`[Agent Delete Route] Error deleting run ${agentJobId}:`, error);
+
+            if (error instanceof ApiError && error.status === 404) {
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: { code: 'RUN_NOT_FOUND', message: error.message, details: { agentJobId } }
+                };
+                return c.json(errorPayload, 404);
+            } else { // Generic server error
+                const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
+                    success: false,
+                    error: {
+                        code: 'DELETE_FAILED',
+                        message: `Failed to delete agent run ${agentJobId}: ${error.message}`,
+                        details: { agentJobId }
+                    }
+                };
+                return c.json(errorPayload, 500);
+            }
+        }
+    })
 
 
 // Helper function (remains the same)

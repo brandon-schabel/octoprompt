@@ -358,7 +358,7 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
         errorMessage: '',
         errorStack: '',
         agentJobEndTime: '',
-        updatedFiles: []
+        updatedFiles: [],
     }
 
     const writeDataLog = async () => {
