@@ -5,7 +5,7 @@ import {
     resummarizeAllFiles, forceResummarizeSelectedFiles,
     summarizeSelectedFiles, removeSummariesFromFiles
 } from "@/services/project-service";
-import { randomString } from "./test-utils";
+import { randomString } from "../tests/test-utils";
 import { db, resetDatabase } from "@db";
 
 /**

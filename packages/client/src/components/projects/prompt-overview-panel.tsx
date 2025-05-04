@@ -28,7 +28,7 @@ import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
 import { Chat, ProjectFile } from '@/hooks/generated'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Binoculars, Bot, CheckCircle, Copy, History, ListChecks, MessageCircleCode, RefreshCw, Search, Trash2, Activity } from 'lucide-react'
+import { Binoculars, Bot, CheckCircle, Copy, MessageCircleCode, RefreshCw, Search, Trash2, Activity } from 'lucide-react'
 import { useRunAgentCoder, useGetAgentCoderRunLogs, useListAgentCoderRuns, useGetAgentCoderRunData, useConfirmAgentRunChanges, type AgentRunData, useDeleteAgentCoderRun } from '@/hooks/api/use-agent-coder-api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"

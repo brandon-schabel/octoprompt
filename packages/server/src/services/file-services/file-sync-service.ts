@@ -1,12 +1,16 @@
-import { join, extname, resolve, relative } from 'node:path';
-import { readdirSync, readFileSync, statSync, Dirent, existsSync } from 'node:fs'; // Removed existsSync as it wasn't used
-import { db } from "@/utils/database";
-// Import Project type from the single source of truth
+import { join, extname, resolve, relative, basename } from 'node:path';
+import { readdirSync, readFileSync, statSync, Dirent, existsSync } from 'node:fs';
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '@/utils/path-utils';
-import { Project } from 'shared/src/schemas/project.schemas';
+import { Project, ProjectFile } from 'shared/src/schemas/project.schemas';
 import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from 'shared/src/constants/file-sync-options';
-import ignore, { Ignore } from 'ignore';
-
+import ignorePackage, { Ignore } from 'ignore';
+import {
+  getProjectFiles,
+  bulkCreateProjectFiles,
+  bulkUpdateProjectFiles,
+  bulkDeleteProjectFiles,
+  FileSyncData
+} from '@/services/project-service';
 
 // --- Utility functions (normalizePathForDb, computeChecksum, isValidChecksum) remain the same ---
 export function normalizePathForDb(pathStr: string): string {
@@ -14,32 +18,34 @@ export function normalizePathForDb(pathStr: string): string {
 }
 
 export function computeChecksum(content: string): string {
-  return Bun.hash(content).toString(16);
+  // Use Bun's built-in hashing
+  const hash = new Bun.CryptoHasher("sha256"); // Use a standard algorithm like SHA-256
+  hash.update(content);
+  return hash.digest("hex");
+  // return Bun.hash(content).toString(16); // Keep original if preferred, but SHA256 is more standard
 }
 
 export function isValidChecksum(checksum: string | null): boolean {
-  return typeof checksum === 'string' && /^[a-f0-9]+$/.test(checksum);
+  // Adjust regex if using SHA256 (64 hex chars)
+  return typeof checksum === 'string' && /^[a-f0-9]{64}$/.test(checksum);
+  // return typeof checksum === 'string' && /^[a-f0-9]+$/.test(checksum); // Original regex
 }
 
+// --- loadIgnoreRules remains the same ---
+export async function loadIgnoreRules(projectRoot: string): Promise<Ignore> {
+  const ignoreInstance = ignorePackage();
+  ignoreInstance.add(DEFAULT_FILE_EXCLUSIONS);
+  console.log(
+    "DEFAULT_FILE_EXCLUSIONS added to ignore rules."
+  )
 
-/**
- * Loads ignore rules from .gitignore and combines with default exclusions.
- * @param projectRoot Absolute path to the project root directory.
- * @returns An Ignore instance configured with the rules.
- */
-async function loadIgnoreRules(projectRoot: string): Promise<Ignore> {
-  const ig = ignore();
-
-  // 1. Add default exclusions (only uncommented ones matter now)
-  ig.add(DEFAULT_FILE_EXCLUSIONS);
-
-  // 2. Load .gitignore from the project root
   const gitignorePath = join(projectRoot, '.gitignore');
 
   try {
     if (existsSync(gitignorePath)) {
+      // Use Bun's file reading
       const gitignoreContent = await Bun.file(gitignorePath).text();
-      ig.add(gitignoreContent);
+      ignoreInstance.add(gitignoreContent);
       console.log(`[FileSync] Loaded .gitignore rules from: ${gitignorePath}`);
     } else {
       console.log(`[FileSync] No .gitignore file found at: ${gitignorePath}. Using only default exclusions.`);
@@ -47,90 +53,66 @@ async function loadIgnoreRules(projectRoot: string): Promise<Ignore> {
   } catch (error: any) {
     console.error(`[FileSync] Error reading .gitignore file at ${gitignorePath}: ${error.message}. Using only default exclusions.`);
   }
-
-  // Optionally add patterns that should *always* be ignored, regardless of .gitignore
-  // ig.add('.git'); // Example: ensure .git is always ignored
-
-  return ig;
+  return ignoreInstance;
 }
 
 
-/**
- * Recursively finds text files in a directory, respecting ignore rules and allowed configurations.
- * @param dir Absolute path to the directory to scan.
- * @param projectRoot Absolute path to the project root (for relative path calculations).
- * @param ig An Ignore instance pre-configured with exclusion rules.
- * @param allowedConfigs List of allowed file extensions and specific filenames.
- * @returns An array of absolute paths to the allowed files found.
- */
-const CRITICAL_EXCLUDED_DIRS = new Set(['node_modules', '.git']);
+// --- getTextFiles remains the same ---
+const CRITICAL_EXCLUDED_DIRS = new Set(['node_modules', '.git', 'dist', 'build']); // Added common ones
 
 export function getTextFiles(
   dir: string,
   projectRoot: string,
-  ig: Ignore,
+  ignore: Ignore,
   allowedConfigs: string[] = ALLOWED_FILE_CONFIGS
 ): string[] {
   let filesFound: string[] = [];
   let entries: Dirent[];
 
   try {
-    // Check if directory exists before reading
-    if (!statSync(dir).isDirectory()) {
+    if (!existsSync(dir) || !statSync(dir).isDirectory()) { // Check existence first
       console.warn(`[FileSync] Path is not a directory or doesn't exist: ${dir}`);
       return [];
     }
     entries = readdirSync(dir, { withFileTypes: true });
   } catch (error: any) {
-    // Avoid crashing if permissions are denied for a subdirectory
     if (error.code === 'EACCES' || error.code === 'EPERM') {
       console.warn(`[FileSync] Permission denied reading directory ${dir}. Skipping.`);
+    } else if (error.code === 'ENOENT') {
+      console.warn(`[FileSync] Directory disappeared before reading: ${dir}. Skipping.`);
     } else {
       console.error(`[FileSync] Error reading directory ${dir}: ${error.message}`);
     }
-    return []; // Skip this directory on error
+    return [];
   }
 
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
-    // Calculate path relative to project root for ignore checking
     const relativePath = relative(projectRoot, fullPath);
-    const normalizedRelativePath = normalizePathForDb(relativePath); // Use normalized path consistently
+    const normalizedRelativePath = normalizePathForDb(relativePath);
 
-    // --- START HARDCODED CHECK ---
-    // Optimization and Safety: Absolutely prevent descending into critical directories
+    // Optimization: Check critical excludes *before* ignore instance for performance
     if (entry.isDirectory() && CRITICAL_EXCLUDED_DIRS.has(entry.name)) {
       // console.log(`[FileSync] Critically ignoring directory descent: ${relativePath}`);
-      continue; // Skip this directory entirely
+      continue;
     }
-    // --- END HARDCODED CHECK ---
 
-    // Use the ignore instance to check if the path should be excluded
-    // Pass the *normalized relative path* for accurate .gitignore rule matching
-    if (ig.ignores(normalizedRelativePath)) {
-      // console.log(`[FileSync] Ignoring (via ig.ignores): ${relativePath}`);
+    // Check ignore rules using normalized relative path
+    if (ignore.ignores(normalizedRelativePath)) {
+      // console.log(`[FileSync] Ignoring (via ig.ignores): ${normalizedRelativePath}`);
       continue;
     }
 
     if (entry.isDirectory()) {
-      // Recursively search in subdirectories (already checked it's not critically excluded)
-      filesFound.push(...getTextFiles(fullPath, projectRoot, ig, allowedConfigs));
+      filesFound.push(...getTextFiles(fullPath, projectRoot, ignore, allowedConfigs));
     } else if (entry.isFile()) {
       const entryName = entry.name;
-      const extension = extname(entryName).toLowerCase(); // Use lowercase for comparison
-      // Check if the extension or the full filename is in the allowed list
+      const extension = extname(entryName).toLowerCase();
       if (allowedConfigs.includes(extension) || allowedConfigs.includes(entryName)) {
         try {
-          // Optional: Add size check if needed (uncomment if desired)
-          // const stats = statSync(fullPath);
-          // const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB Example
-          // if (stats.size > MAX_FILE_SIZE) {
-          //     console.warn(`[FileSync] Skipping large file: ${fullPath} (size: ${stats.size})`);
-          //     continue;
-          // }
+          // Optional size check can remain here if needed
           filesFound.push(fullPath);
         } catch (statError: any) {
-          // Handle cases where file might disappear between readdir and stat
           if (statError.code === 'ENOENT') {
             console.warn(`[FileSync] File disappeared before stating: ${fullPath}`);
           } else {
@@ -138,185 +120,216 @@ export function getTextFiles(
           }
         }
       } else {
-        // console.log(`[FileSync] Skipping (disallowed type): ${relativePath}`);
+        // console.log(`[FileSync] Skipping (disallowed type): ${normalizedRelativePath}`);
       }
     }
-    // Silently ignore other entry types (symlinks, etc.)
   }
   return filesFound;
 }
 
 /**
- * Synchronizes a specific set of absolute file paths with the database for a given project.
- * Handles inserts, updates (based on checksum), and deletions.
- * Assumes the provided file paths have already been filtered by ignore rules.
+ * Determines the necessary database operations (create, update, delete)
+ * by comparing disk files with database records and delegates these operations
+ * to the project-service.
  */
 export async function syncFileSet(
   project: Project,
   absoluteProjectPath: string,
-  absoluteFilePaths: string[],
-  ig: Ignore // Pass the ignore instance for deletion check
-): Promise<void> { // <-- Added ig parameter
-  console.log(`[FileSync] Starting sync for project ${project.id} (${project.name}) with ${absoluteFilePaths.length} discovered files.`);
-  const dbTransaction = db.transaction(async (filesToProcess: string[]) => {
-    // Prepare statements once for efficiency within the transaction
-    const selectStmt = db.prepare<any, [string, string]>(`
-          SELECT id, checksum FROM files
-          WHERE project_id = ? AND path = ?
-          LIMIT 1
-      `);
-    const updateStmt = db.prepare<any, [string, string, number, string, string]>(`
-          UPDATE files
-          SET content = ?, extension = ?, size = ?, checksum = ?, updated_at = strftime('%s', 'now') * 1000
-          WHERE id = ?
-      `); // RETURNING * removed - not needed here
-    const insertStmt = db.prepare<any, [string, string, string, string, number, string, string]>(`
-          INSERT INTO files (project_id, name, path, extension, size, content, checksum, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now') * 1000, strftime('%s', 'now') * 1000)
-      `); // RETURNING * removed - not needed here
+  absoluteFilePaths: string[], // Files found on disk *after* initial ignore filtering
+  ignore: Ignore // Ignore instance for checking deletions
+): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
+  console.log(`[FileSync] Starting sync for project <span class="math-inline">\{project\.id\} \(</span>{project.name}) with ${absoluteFilePaths.length} discovered files.`);
 
+  let filesToCreate: FileSyncData[] = [];
+  let filesToUpdate: { fileId: string; data: FileSyncData }[] = [];
+  let fileIdsToDelete: string[] = [];
+  let skippedCount = 0;
 
-    let updatedCount = 0;
-    let insertedCount = 0;
-    let skippedCount = 0;
+  // 1. Get existing files from the database via ProjectService
+  const existingDbFiles = await getProjectFiles(project.id);
+  if (existingDbFiles === null) {
+    // This case should ideally be handled (e.g., project deleted mid-sync?), but for now, we'll error out.
+    console.error(`[FileSync] Failed to retrieve existing files for project ${project.id}. Aborting sync.`);
+    throw new Error(`Could not retrieve existing files for project ${project.id}`);
+  }
 
-    // 1) Insert or update for each file found on disk (already filtered)
-    for (const filePath of filesToProcess) { // filesToProcess are the ones NOT ignored by getTextFiles
-      try {
-        const content = readFileSync(filePath, 'utf-8');
-        const relativePath = normalizePathForDb(relative(absoluteProjectPath, filePath));
-        const fileName = relativePath.split('/').pop() ?? '';
-        const extension = extname(fileName).toLowerCase() || (fileName.startsWith('.') ? fileName : '');
-        const size = statSync(filePath).size;
-        const checksum = computeChecksum(content);
+  // Create a map for quick lookup of DB files by their normalized relative path
+  const dbFileMap = new Map<string, ProjectFile>(
+    existingDbFiles.map(f => [normalizePathForDb(f.path), f])
+  );
 
-        const existingFile = selectStmt.get(project.id, relativePath) as { id: string; checksum: string | null; } | undefined;
+  // 2. Process files found on disk
+  const currentDiskFilesSet = new Set<string>(); // Store normalized relative paths found on disk
 
-        if (existingFile) {
-          if (!isValidChecksum(existingFile.checksum) || existingFile.checksum !== checksum) {
-            updateStmt.run(content, extension, size, checksum, existingFile.id);
-            updatedCount++;
-          } else {
-            skippedCount++;
-          }
-        } else {
-          insertStmt.run(project.id, fileName, relativePath, extension, size, content, checksum);
-          insertedCount++;
-        }
-      } catch (fileError: any) {
-        console.error(`[FileSync] Error processing file ${filePath}: ${fileError.message}. Skipping file.`);
+  for (const absFilePath of absoluteFilePaths) {
+    const relativePath = relative(absoluteProjectPath, absFilePath);
+    const normalizedRelativePath = normalizePathForDb(relativePath);
+    currentDiskFilesSet.add(normalizedRelativePath); // Track this file as present
+
+    try {
+      const content = readFileSync(absFilePath, 'utf-8');
+      const stats = statSync(absFilePath);
+      const checksum = computeChecksum(content);
+      const fileName = basename(normalizedRelativePath);
+      // Ensure extension is correctly extracted, handle dotfiles
+      let extension = extname(fileName).toLowerCase();
+      if (!extension && fileName.startsWith('.')) {
+        extension = fileName; // Treat e.g., '.env' as the extension
       }
+
+
+      const fileData: FileSyncData = {
+        path: normalizedRelativePath,
+        name: fileName,
+        extension: extension,
+        content: content,
+        size: stats.size,
+        checksum: checksum,
+      };
+
+      const existingDbFile = dbFileMap.get(normalizedRelativePath);
+
+      if (existingDbFile) {
+        // File exists in DB, check if update needed
+        if (!isValidChecksum(existingDbFile.checksum) || existingDbFile.checksum !== checksum) {
+          // Checksum mismatch or invalid, queue for update
+          filesToUpdate.push({ fileId: existingDbFile.id, data: fileData });
+        } else {
+          // Checksum matches, skip
+          skippedCount++;
+        }
+        // Remove from map to track processed DB files
+        dbFileMap.delete(normalizedRelativePath);
+      } else {
+        // File not in DB, queue for creation
+        filesToCreate.push(fileData);
+      }
+
+    } catch (fileError: any) {
+      console.error(`[FileSync] Error processing file ${absFilePath} (relative: ${normalizedRelativePath}): ${fileError.message}. Skipping file.`);
+      // Remove from map if it existed, as we couldn't process it
+      dbFileMap.delete(normalizedRelativePath);
     }
-    console.log(`[FileSync] Processed disk files - Inserted: ${insertedCount}, Updated: ${updatedCount}, Skipped (Unchanged): ${skippedCount}`);
+  }
 
-    // 2) Handle deletions: Find files in DB that are NOT in the current valid set OR are ignored now
-    // Fetch all files from DB for this project
-    const dbFiles = db.prepare<{ path: string; id: string }, [string]>(`
-          SELECT id, path FROM files WHERE project_id = ?
-      `).all(project.id);
-
-    // Create a set of *normalized relative paths* of files currently valid on disk
-    const currentValidFilePathsSet = new Set(
-      filesToProcess.map(fp => normalizePathForDb(relative(absoluteProjectPath, fp)))
-    );
-
-    const filesToDelete = dbFiles.filter(dbFile => {
-      const normalizedDbPath = normalizePathForDb(dbFile.path);
-      // Delete if EITHER:
-      // 1. The file is no longer present in the valid set found on disk.
-      // 2. The file path IS ignored according to the current rules (e.g., added to .gitignore later).
-      const shouldDelete = !currentValidFilePathsSet.has(normalizedDbPath) || ig.ignores(normalizedDbPath);
-      // if (shouldDelete && !currentValidFilePathsSet.has(normalizedDbPath) && ig.ignores(normalizedDbPath)) {
-      //   console.log(`[FileSync] Deleting ${normalizedDbPath} because it is now ignored.`);
-      // } else if (shouldDelete && !currentValidFilePathsSet.has(normalizedDbPath)) {
-      //   console.log(`[FileSync] Deleting ${normalizedDbPath} because it is no longer on disk.`);
-      // }
-      return shouldDelete;
-    });
-
-
-    if (filesToDelete.length > 0) {
-      console.log(`[FileSync] Deleting ${filesToDelete.length} files from DB that no longer exist on disk or are now ignored.`);
-      const placeholders = filesToDelete.map(() => '?').join(', ');
-      const deleteStmt = db.prepare(`DELETE FROM files WHERE id IN (${placeholders})`);
-      deleteStmt.run(...filesToDelete.map(f => f.id));
+  // 3. Determine files to delete
+  // Files remaining in dbFileMap are those in the DB but NOT found on disk OR those explicitly ignored now.
+  for (const [normalizedDbPath, dbFile] of dbFileMap.entries()) {
+    // Check if the file is now ignored OR if it wasn't found on disk (already handled by it remaining in the map)
+    // The check `!currentDiskFilesSet.has(normalizedDbPath)` is implicitly true here because we removed found files.
+    // We just need to double-check the ignore rules in case a file exists but was added to .gitignore.
+    if (ignore.ignores(normalizedDbPath)) {
+      console.log(`[FileSync] Queuing for deletion (now ignored): ${normalizedDbPath}`);
+      fileIdsToDelete.push(dbFile.id);
     } else {
-      console.log(`[FileSync] No files needed deletion from DB.`);
+      console.log(`[FileSync] Queuing for deletion (not found on disk): ${normalizedDbPath}`);
+      fileIdsToDelete.push(dbFile.id); // File in DB, not in currentDiskFilesSet -> delete
     }
-  });
+  }
+
+
+  // 4. Execute batch operations via ProjectService
+  let createdCount = 0;
+  let updatedCount = 0;
+  let deletedCount = 0;
 
   try {
-    await dbTransaction(absoluteFilePaths);
-    console.log(`[FileSync] Successfully completed sync for project ${project.id}.`);
+    if (filesToCreate.length > 0) {
+      console.log(`[FileSync] Creating ${filesToCreate.length} new file records...`);
+      const createdResult = await bulkCreateProjectFiles(project.id, filesToCreate);
+      createdCount = createdResult.length; // Count successfully created files
+    }
+    if (filesToUpdate.length > 0) {
+      console.log(`[FileSync] Updating ${filesToUpdate.length} existing file records...`);
+      const updatedResult = await bulkUpdateProjectFiles(filesToUpdate);
+      updatedCount = updatedResult.length; // Count successfully updated files
+    }
+    if (fileIdsToDelete.length > 0) {
+      console.log(`[FileSync] Deleting ${fileIdsToDelete.length} file records...`);
+      const deleteResult = await bulkDeleteProjectFiles(project.id, fileIdsToDelete);
+      if (deleteResult.success) {
+        deletedCount = deleteResult.deletedCount;
+      } else {
+        console.error(`[FileSync] Bulk deletion failed for project ${project.id}.`);
+        // Potentially throw or handle differently
+      }
+    }
+
+    console.log(`[FileSync] Sync results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped (Unchanged): ${skippedCount}`);
+    return { created: createdCount, updated: updatedCount, deleted: deletedCount, skipped: skippedCount };
+
   } catch (error) {
-    console.error(`[FileSync] Error during sync transaction for project ${project.id}:`, error);
-    throw new Error(`Sync failed for project ${project.id}`);
+    console.error(`[FileSync] Error during database batch operations for project ${project.id}:`, error);
+    // Rethrow or handle error appropriately
+    throw new Error(`Sync failed during DB operations for project ${project.id}`);
   }
 }
 
 /**
- * Synchronizes all allowed text files in a project's directory with the database.
+ * Orchestrates the synchronization process for an entire project.
  */
-export async function syncProject(project: Project /* Removed exclusions param */): Promise<void> {
+export async function syncProject(project: Project): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
   try {
     const absoluteProjectPath = resolvePath(project.path);
-    if (!statSync(absoluteProjectPath).isDirectory()) {
+    if (!existsSync(absoluteProjectPath) || !statSync(absoluteProjectPath).isDirectory()) {
       console.error(`[FileSync] Project path is not a valid directory: ${absoluteProjectPath}`);
       throw new Error(`Project path is not a valid directory: ${project.path}`);
     }
 
-    // Load ignore rules ONCE for the project
-    const ig = await loadIgnoreRules(absoluteProjectPath);
+    // Load ignore rules
+    const ignore = await loadIgnoreRules(absoluteProjectPath);
 
-    console.log(`[FileSync] Starting full sync for project '${project.name}' (${project.id}) at path: ${absoluteProjectPath}`);
-    // Pass the ignore instance and project root to getTextFiles
-    const projectFiles = getTextFiles(absoluteProjectPath, absoluteProjectPath, ig, ALLOWED_FILE_CONFIGS);
-    console.log(`[FileSync] Found ${projectFiles.length} files to potentially sync after applying ignore rules.`);
+    console.log(`[FileSync] Starting full sync for project '<span class="math-inline">\{project\.name\}' \(</span>{project.id}) at path: ${absoluteProjectPath}`);
 
-    // Pass ignore instance to syncFileSet for deletion checks
-    await syncFileSet(project, absoluteProjectPath, projectFiles, ig);
+    // Find all relevant files respecting ignore rules
+    const projectFiles = getTextFiles(absoluteProjectPath, absoluteProjectPath, ignore, ALLOWED_FILE_CONFIGS);
+    console.log(`[FileSync] Found ${projectFiles.length} files on disk to potentially sync after applying ignore rules.`);
+
+    // Delegate the comparison and DB operations to syncFileSet
+    const results = await syncFileSet(project, absoluteProjectPath, projectFiles, ignore);
+
+    console.log(`[FileSync] Successfully completed sync for project ${project.id}.`);
+    return results;
 
   } catch (error: any) {
-    console.error(`[FileSync] Failed to sync project ${project.id} (${project.name}): ${error.message}`);
-    throw error;
+    console.error(`[FileSync] Failed to sync project <span class="math-inline">\{project\.id\} \(</span>{project.name}): ${error.message}`);
+    throw error; // Re-throw the error for higher-level handling
   }
 }
 
 /**
- * Synchronizes allowed text files within a specific subfolder of a project.
- * Also removes database entries for files that were previously in this folder but are now gone or ignored.
+ * Orchestrates the synchronization process for a specific subfolder within a project.
  */
-export async function syncProjectFolder(project: Project, folderPath: string /* Removed exclusions param */): Promise<void> {
+export async function syncProjectFolder(project: Project, folderPath: string): Promise<{ created: number; updated: number; deleted: number; skipped: number }> {
   try {
     const absoluteProjectPath = resolvePath(project.path);
     const absoluteFolderToSync = resolve(absoluteProjectPath, folderPath);
 
-    if (!statSync(absoluteFolderToSync).isDirectory()) {
+    if (!existsSync(absoluteFolderToSync) || !statSync(absoluteFolderToSync).isDirectory()) {
       console.error(`[FileSync] Folder path is not a valid directory: ${absoluteFolderToSync}`);
       throw new Error(`Folder path is not a valid directory: ${folderPath}`);
     }
 
-    // Load ignore rules ONCE for the project root
-    const ig = await loadIgnoreRules(absoluteProjectPath);
+    // Load ignore rules for the *entire project*
+    const ignore = await loadIgnoreRules(absoluteProjectPath);
 
-    console.log(`[FileSync] Starting sync for folder '${folderPath}' in project '${project.name}' (${project.id}) at path: ${absoluteFolderToSync}`);
-    // Find files within the specific folder, using the project root's ignore rules
-    const folderFiles = getTextFiles(absoluteFolderToSync, absoluteProjectPath, ig, ALLOWED_FILE_CONFIGS);
+    console.log(`[FileSync] Starting sync for folder '<span class="math-inline">\{folderPath\}' in project '</span>{project.name}' (${project.id}) at path: ${absoluteFolderToSync}`);
+
+    // Find files *within the specific folder*, using the project root's ignore rules
+    const folderFiles = getTextFiles(absoluteFolderToSync, absoluteProjectPath, ignore, ALLOWED_FILE_CONFIGS);
     console.log(`[FileSync] Found ${folderFiles.length} files in folder ${folderPath} to potentially sync after applying ignore rules.`);
 
-    // Sync the files found within the folder (handles updates/inserts using the main sync logic)
-    // We still pass absoluteFilePaths (which contains only files within the target folder)
-    // and the project-wide 'ig' instance for consistency in deletion checks.
-    await syncFileSet(project, absoluteProjectPath, folderFiles, ig);
+    // Delegate the comparison and DB operations to syncFileSet
+    // NOTE: syncFileSet now handles deletions correctly by comparing the list of files *passed to it*
+    // (folderFiles in this case) against the *entire* DB list for the project, and applying ignore rules.
+    // It will correctly identify files within this folder that were deleted or became ignored.
+    const results = await syncFileSet(project, absoluteProjectPath, folderFiles, ignore);
 
-    // --- Deletion logic specific to the folder ---
-    // The deletion logic within syncFileSet now correctly handles files removed from *or* ignored within this folder,
-    // because it compares the full DB list against the `folderFiles` (the valid ones remaining in this folder)
-    // and checks against the `ig` instance. No separate deletion logic is strictly needed here anymore.
     console.log(`[FileSync] Successfully completed sync for folder '${folderPath}' in project ${project.id}.`);
+    return results;
 
   } catch (error: any) {
-    console.error(`[FileSync] Failed to sync folder '${folderPath}' for project ${project.id} (${project.name}): ${error.message}`);
-    throw error;
+    console.error(`[FileSync] Failed to sync folder '${folderPath}' for project <span class="math-inline">\{project\.id\} \(</span>{project.name}): ${error.message}`);
+    throw error; // Re-throw the error
   }
 }

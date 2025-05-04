@@ -8,7 +8,7 @@ import {
     getApiAgentCoderRunsByAgentJobIdDataOptions,
     postApiAgentCoderRunsByAgentJobIdConfirmMutation,
     deleteApiAgentCoderRunsByAgentJobIdMutation,
-    
+
 } from '../generated/@tanstack/react-query.gen';
 import { toast } from 'sonner';
 import {
@@ -228,7 +228,7 @@ export const useDeleteAgentCoderRun = () => {
         onError: (error) => {
             // Use the specific error type if available for better handling
             const apiError = error as DeleteApiAgentCoderRunsByAgentJobIdError;
-            const message = apiError?.payload?.error?.message || 'An unknown error occurred during deletion.';
+            const message = apiError?.error?.message || 'An unknown error occurred during deletion.';
             toast.error(`Deletion Failed: ${message}`);
             commonErrorHandler(error as unknown as Error); // Use common handler for logging etc.
         },

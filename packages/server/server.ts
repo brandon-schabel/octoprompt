@@ -15,6 +15,8 @@ const cleanupService = createCleanupService({
   intervalMs: 5 * 60 * 1000,
 });
 
+// in dev client dist is relative to the server file so it would be server/client-dist
+// in build it is relative to the root so it would be dist/client-dist
 const CLIENT_PATH = isDevEnv
   ? join(import.meta.dir, "client-dist")
   : "./client-dist";
@@ -90,6 +92,7 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
   (async () => {
     const allProjects = await listProjects();
     for (const project of allProjects) {
+      // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
       watchersManager.startWatchingProject(project, [
         "node_modules",
         "dist",

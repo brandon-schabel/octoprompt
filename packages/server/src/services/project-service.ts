@@ -428,29 +428,49 @@ export async function removeSummariesFromFiles(projectId: string, fileIds: strin
     };
 }
 
-// Helper function to map DB row to ProjectFile schema
 function mapDbRowToProjectFile(row: any): ProjectFile | null {
     if (!row) return null;
     try {
-        const mapped = {
+        // Map DB fields directly to schema fields
+        const mapped: Omit<ProjectFile, 'summaryLastUpdatedAt' | 'createdAt' | 'updatedAt'> & {
+            summary_last_updated_at: number | null;
+            created_at: number;
+            updated_at: number;
+        } = {
             id: row.id,
-            projectId: row.project_id,
+            projectId: row.project_id, // DB uses project_id
+            name: row.name,             // Add name if missing in original helper
             path: row.path,
-            content: row.content ?? '', // Ensure content is string, default to empty
-            size: row.size ?? 0, // Default size
-            checksum: row.checksum,
-            summary: row.summary, // Allow null/undefined
-            createdAt: normalizeToIsoString(row.created_at) ?? new Date(0).toISOString(), // Default date
-            updatedAt: normalizeToIsoString(row.updated_at) ?? new Date(0).toISOString(), // Default date
-            lastIndexed: normalizeToIsoString(row.last_indexed) // Allow null/undefined
+            extension: row.extension,   // Add extension if missing
+            size: row.size,
+            content: row.content,      // DB content is nullable
+            summary: row.summary,      // DB summary defaults to "", Zod allows string | null
+            meta: row.meta,            // DB meta defaults to "", Zod allows string | null
+            checksum: row.checksum,    // DB checksum defaults to "", Zod allows string | null
+            // Raw numeric timestamps from DB
+            summary_last_updated_at: row.summary_last_updated_at,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        };
+
+        // Transform timestamps and validate
+        const fileData = {
+            ...mapped,
+            // Use normalizeToIsoString for timestamps
+            summaryLastUpdatedAt: normalizeToIsoString(mapped.summary_last_updated_at) ?? null,
+            createdAt: normalizeToIsoString(mapped.created_at) ?? 'ErrorParsingDate', // Handle potential parse error
+            updatedAt: normalizeToIsoString(mapped.updated_at) ?? 'ErrorParsingDate'  // Handle potential parse error
         };
 
         // Use safeParse for robustness
-        const result = ProjectFileSchema.safeParse(mapped);
+        const result = ProjectFileSchema.safeParse(fileData);
+
+
         if (!result.success) {
-            console.error(`Failed to parse project file data (ID: ${row.id}, Path: ${row.path}): ${result.error.message}`, mapped);
+            console.error(`Failed to parse project file data (ID: ${row.id}, Path: ${row.path}): ${result.error.message}`, fileData);
             return null; // Return null on parse failure
         }
+
         return result.data;
     } catch (e) {
         console.error(`Error mapping DB row to ProjectFile (ID: ${row.id}):`, e);
@@ -479,28 +499,6 @@ function mapDbRowToProject(row: any): Project | null {
     } catch (e) {
         console.error(`Error mapping DB row to Project (ID: ${row.id}):`, e);
         return null;
-    }
-}
-
-export async function getProjectFilesByIds(projectId: string, fileIds: string[]): Promise<ProjectFile[]> {
-    if (!fileIds || fileIds.length === 0) {
-        return [];
-    }
-    const uniqueFileIds = [...new Set(fileIds)];
-    const placeholders = uniqueFileIds.map(() => '?').join(',');
-
-    const stmt = db.prepare(`
-        SELECT * FROM project_files
-        WHERE project_id = ? AND id IN (${placeholders})
-    `);
-
-    try {
-        const rows = stmt.all(projectId, ...uniqueFileIds) as any[];
-        return rows.map(mapDbRowToProjectFile).filter((file): file is ProjectFile => file !== null);
-        // Note: We removed the check/throw here; the route handler will check if all files were found.
-    } catch (error) {
-        console.error(`Error fetching project files by IDs for project ${projectId}:`, error);
-        throw new Error(`Database error fetching files: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
@@ -588,3 +586,201 @@ export async function createProjectFileRecord(
         throw new Error(`Failed to validate file data after creation for ID ${row.id} (${filePath})`);
     }
 }
+
+
+/**
+ * Represents the data needed to create or update a file record during sync.
+ */
+export interface FileSyncData {
+    path: string; // Normalized relative path
+    name: string;
+    extension: string;
+    content: string;
+    size: number;
+    checksum: string;
+}
+
+/**
+ * Creates multiple file records in the database for a project.
+ * Uses a transaction for efficiency.
+ */
+export async function bulkCreateProjectFiles(projectId: string, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
+    if (filesToCreate.length === 0) return [];
+
+    const createdFiles: ProjectFile[] = [];
+    const nowTimestamp = Date.now();
+
+    const createTransaction = db.transaction((files: FileSyncData[]) => {
+        const insertStmt = db.prepare<any, [string, string, string, string, number, string, string, number, number, string, number, number]>(`
+            INSERT INTO files (id, project_id, name, path, extension, size, content, checksum, created_at, updated_at, meta, summary, summary_last_updated_at)
+            VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, NULL)
+            RETURNING *
+        `); // Added meta, summary, summary_last_updated_at defaults
+
+        for (const fileData of files) {
+            // Note: RETURNING * might return DB types (numbers for dates).
+            const row = insertStmt.get(
+                projectId,
+                fileData.name,
+                fileData.path,
+                fileData.extension,
+                fileData.size,
+                fileData.content,
+                fileData.checksum,
+                nowTimestamp,
+                nowTimestamp,
+                '{}',
+                0,
+                0
+            ) as any; // Raw row
+
+            if (row) {
+                // Transform and validate *each* created file
+                try {
+                    const mappedFile = mapDbRowToProjectFile(row); // Use existing helper
+                    if (mappedFile) {
+                        createdFiles.push(mappedFile);
+                    } else {
+                        console.warn(`[ProjectService] Failed to map/validate file created for path: ${fileData.path}`);
+                        // Decide if we should throw or just log
+                    }
+                } catch (validationError) {
+                    console.error(`[ProjectService] Validation error for newly created file <span class="math-inline">\{row\.id\} \(</span>{fileData.path}):`, validationError);
+                    // Decide if we should throw or just log
+                }
+            } else {
+                console.error(`[ProjectService] Failed to create or retrieve file record for path: ${fileData.path}`);
+                // Potentially throw an error here to abort the transaction if critical
+            }
+        }
+    });
+
+    try {
+        createTransaction(filesToCreate);
+        return createdFiles;
+    } catch (error) {
+        console.error(`[ProjectService] Error during bulk file creation transaction for project ${projectId}:`, error);
+        throw new Error(`Bulk file creation failed for project ${projectId}`);
+    }
+}
+
+/**
+ * Updates multiple existing file records based on their IDs.
+ * Uses a transaction for efficiency.
+ */
+export async function bulkUpdateProjectFiles(updates: { fileId: string; data: FileSyncData }[]): Promise<ProjectFile[]> {
+    if (updates.length === 0) return [];
+
+    const updatedFiles: ProjectFile[] = [];
+    const nowTimestamp = Date.now();
+
+    const updateTransaction = db.transaction((filesToUpdate: { fileId: string; data: FileSyncData }[]) => {
+        const updateStmt = db.prepare<any, [string, string, number, string, number, string]>(`
+             UPDATE files
+             SET content = ?, extension = ?, size = ?, checksum = ?, updated_at = ?
+             WHERE id = ?
+             RETURNING *
+         `); // Added RETURNING *
+
+        for (const { fileId, data } of filesToUpdate) {
+            const row = updateStmt.get(
+                data.content,
+                data.extension,
+                data.size,
+                data.checksum,
+                nowTimestamp,
+                fileId
+            ) as any; // Raw row
+
+            if (row) {
+                try {
+                    const mappedFile = mapDbRowToProjectFile(row); // Use existing helper
+                    if (mappedFile) {
+                        updatedFiles.push(mappedFile);
+                    } else {
+                        console.warn(`[ProjectService] Failed to map/validate file updated with ID: ${fileId}`);
+                    }
+                } catch (validationError) {
+                    console.error(`[ProjectService] Validation error for updated file ${fileId}:`, validationError);
+                }
+            } else {
+                console.warn(`[ProjectService] Failed to update or retrieve file record with ID: ${fileId}. It might have been deleted.`);
+                // Don't throw, just warn, as the file might have been deleted concurrently
+            }
+        }
+    });
+
+    try {
+        updateTransaction(updates);
+        return updatedFiles;
+    } catch (error) {
+        console.error(`[ProjectService] Error during bulk file update transaction:`, error);
+        throw new Error(`Bulk file update failed`);
+    }
+}
+
+
+/**
+ * Deletes multiple files by their IDs for a specific project.
+ * Uses a transaction for efficiency (though less critical for deletes).
+ */
+export async function bulkDeleteProjectFiles(projectId: string, fileIdsToDelete: string[]): Promise<{ success: boolean, deletedCount: number }> {
+    if (fileIdsToDelete.length === 0) {
+        return { success: true, deletedCount: 0 };
+    }
+
+    let deletedCount = 0;
+    const deleteTransaction = db.transaction((ids: string[]) => {
+        const placeholders = ids.map(() => '?').join(', ');
+        const deleteStmt = db.prepare(`
+            DELETE FROM files
+            WHERE project_id = ? AND id IN (${placeholders})
+        `);
+        // run() returns changes info
+        const result = deleteStmt.run(projectId, ...ids);
+        deletedCount = result.changes ?? 0;
+    });
+
+    try {
+        deleteTransaction(fileIdsToDelete);
+        return { success: true, deletedCount };
+    } catch (error) {
+        console.error(`[ProjectService] Error during bulk file deletion transaction for project ${projectId}:`, error);
+        return { success: false, deletedCount: 0 }; // Indicate failure
+    }
+}
+
+
+// (Keep helper functions mapDbRowToProjectFile, mapDbRowToProject)
+// ...
+
+// --- Remove or modify createProjectFileRecord if it's now redundant ---
+// Option 1: Keep createProjectFileRecord for single, manual additions (e.g., user creates a new file via UI)
+// Option 2: Remove it if bulkCreateProjectFiles covers all creation scenarios.
+// Let's keep it for now, but it won't be used by the core sync logic.
+
+// Make sure `getProjectFilesByIds` uses mapDbRowToProjectFile
+export async function getProjectFilesByIds(projectId: string, fileIds: string[]): Promise<ProjectFile[]> {
+    if (!fileIds || fileIds.length === 0) {
+        return [];
+    }
+    const uniqueFileIds = [...new Set(fileIds)];
+    const placeholders = uniqueFileIds.map(() => '?').join(',');
+
+    // Ensure the table name is correct ('files' not 'project_files')
+    const stmt = db.prepare(`
+        SELECT * FROM files
+        WHERE project_id = ? AND id IN (${placeholders})
+    `);
+
+    try {
+        const rows = stmt.all(projectId, ...uniqueFileIds) as any[];
+        // Use the mapping function and filter out nulls
+        return rows.map(mapDbRowToProjectFile).filter((file): file is ProjectFile => file !== null);
+    } catch (error) {
+        console.error(`Error fetching project files by IDs for project ${projectId}:`, error);
+        throw new Error(`Database error fetching files: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+

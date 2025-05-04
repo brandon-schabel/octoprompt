@@ -4,7 +4,7 @@ import {
   getPromptById, listAllPrompts, listPromptsByProject,
   updatePrompt, deletePrompt
 } from "@/services/prompt-service";
-import { randomString } from "./test-utils";
+import { randomString } from "../tests/test-utils";
 import { db, resetDatabase } from "@db";
 
 describe("Prompt Service", () => {
