@@ -380,118 +380,28 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 <AgentCoderControlDialog
                     open={isLogDialogOpen}
                     onOpenChange={setIsLogDialogOpen}
-                    // agentJobId={currentAgentJobId}
                     userInput={localUserPrompt}
                     selectedFiles={selectedFiles}
                     projectId={activeProjectTabState?.selectedProjectId || ''}
                     selectedPrompts={selectedPrompts}
                     promptData={promptData?.data}
                     totalTokens={totalTokens}
-                // isAgentRunning={isAgentRunning}
                 />
 
-                {/* <AgentRunsDialog
-                    open={isAgentRunsDialogOpen}
-                    onOpenChange={setIsAgentRunsDialogOpen}
-                    onSelectRun={handleSelectAgentRun}
-                /> */}
+
             </div >
         )
     }
 )
 
-// // --- Agent Runs Dialog Component ---
-// interface AgentRunsDialogProps {
-//     open: boolean;
-//     onOpenChange: (open: boolean) => void;
-//     onSelectRun: (agentJobId: string) => void;
-// }
-
-// function AgentRunsDialog({
-//     open,
-//     onOpenChange,
-//     onSelectRun
-// }: AgentRunsDialogProps) {
-//     const { data, isLoading, isError, error, refetch } = useListAgentCoderRuns();
-//     const deleteRunMutation = useDeleteAgentCoderRun(); // Use the delete hook
-
-//     const handleDeleteRun = (e: React.MouseEvent, jobId: string) => {
-//         e.stopPropagation(); // Prevent the click from selecting the run as well
-//         if (window.confirm(`Are you sure you want to permanently delete agent run "${jobId}"? This cannot be undone.`)) {
-//             deleteRunMutation.mutate({ agentJobId: jobId });
-//         }
-//     };
-
-//     // Fix the data structure access based on the API response shape
-//     const runIds = data?.data || [];
-
-//     return (
-//         <Dialog open={open} onOpenChange={onOpenChange}>
-//             <DialogContent className="sm:max-w-md">
-//                 <DialogHeader>
-//                     <DialogTitle className="flex items-center justify-between">
-//                         <span>Agent Runs</span>
-//                         <Button onClick={() => refetch()} size="sm" variant="secondary" disabled={isLoading}>
-//                             <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-//                         </Button>
-//                     </DialogTitle>
-//                 </DialogHeader>
-//                 <div className="flex-1 min-h-0 overflow-y-auto max-h-[400px] border rounded-md p-2 bg-muted/20">
-
-//                     {!isLoading && !isError && runIds.length > 0 && (
-//                         <div className="space-y-1">
-//                             {runIds.map((jobId: string) => (
-//                                 <div key={jobId} className="flex items-center justify-between group hover:bg-muted/50 rounded-md pr-1">
-//                                     <Button
-//                                         variant="ghost"
-//                                         className="flex-1 justify-start text-left text-xs font-mono h-8 px-2" // Adjusted padding/height
-//                                         onClick={() => onSelectRun(jobId)}
-//                                         disabled={deleteRunMutation.isPending && deleteRunMutation.variables?.agentJobId === jobId} // Disable row button during its deletion
-//                                     >
-//                                         <Bot className="h-3.5 w-3.5 mr-2 shrink-0" />
-//                                         <span className="truncate">{jobId}</span>
-//                                     </Button>
-//                                     <Button
-//                                         variant="ghost"
-//                                         size="icon"
-//                                         className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0" // Show on hover
-//                                         onClick={(e) => handleDeleteRun(e, jobId)}
-//                                         disabled={deleteRunMutation.isPending && deleteRunMutation.variables?.agentJobId === jobId} // Disable delete button during its deletion
-//                                         title={`Delete run ${jobId}`}
-//                                     >
-//                                         {deleteRunMutation.isPending && deleteRunMutation.variables?.agentJobId === jobId ? (
-//                                             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-//                                         ) : (
-//                                             <Trash2 className="h-3.5 w-3.5" />
-//                                         )}
-//                                         <span className="sr-only">Delete run {jobId}</span>
-//                                     </Button>
-//                                 </div>
-//                             ))}
-//                         </div>
-//                     )}
-//                 </div>
-//                 <DialogFooter>
-//                     <DialogClose asChild>
-//                         <Button type="button" variant="outline">
-//                             Close
-//                         </Button>
-//                     </DialogClose>
-//                 </DialogFooter>
-//             </DialogContent>
-//         </Dialog>
-//     );
-// }
 
 // --- Agent Coder Log Dialog Component ---
 interface AgentCoderLogDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    // agentJobId: string | undefined;
     userInput: string;
     selectedFiles: string[];
     projectId: string;
-    // isAgentRunning: boolean;
     selectedPrompts: string[];
     promptData: Prompt[] | undefined;
     totalTokens: number;
@@ -673,7 +583,7 @@ function AgentCoderControlDialog({
 
         return Array.from(allRuns).sort().reverse().map((jobId: string) => ({
             value: jobId,
-            label: `${jobId.substring(0, 8)}...${jobId.substring(jobId.length - 4)}${jobId === selectedJobId ? ' (Selected)' : ''}${jobId === currentMutationJobId && runAgentCoderMutation.isPending ? ' (Running...)' : ''}`
+            label: `${jobId}${jobId === currentMutationJobId && runAgentCoderMutation.isPending ? ' (Running...)' : ''}`
         }));
     }, [listData, selectedJobId, runAgentCoderMutation.variables?.agentJobId, runAgentCoderMutation.isPending]);
 
@@ -866,57 +776,54 @@ function AgentCoderControlDialog({
                         </div>
                     </TabsContent>
 
-                    {/* Logs Tab Content */}
-                    <TabsContent value="logs" className="flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 overflow-hidden">
-                        {/* Add padding inside the scroll area */}
-                        <ScrollArea className="flex-1 p-2">
-                            {isLogLoading && <p className="text-center p-4 text-muted-foreground">Loading logs...</p>}
-                            {isLogError && (
-                                <div className="text-center p-4 text-destructive">
-                                    <p>Error loading logs:</p>
-                                    <pre className="text-xs whitespace-pre-wrap">{logError?.message || 'Unknown error'}</pre>
-                                </div>
-                            )}
-                            {!isLogLoading && !isLogError && logEntries.length === 0 && selectedJobId && selectedJobId !== "NO_JOB_ID" && !isAgentRunning && (
-                                <p className="text-center p-4 text-muted-foreground">No log entries found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.</p>
-                            )}
-                            {/* Show message if agent is running but no logs yet */}
-                            {!isLogLoading && !isLogError && logEntries.length === 0 && isAgentRunning && (
-                                <p className="text-center p-4 text-muted-foreground flex items-center justify-center gap-2">
-                                    <RefreshCw className="h-4 w-4 animate-spin" /> Waiting for agent logs...
-                                </p>
-                            )}
-                            {/* Show message if no run is selected */}
-                            {(!selectedJobId || selectedJobId === "NO_JOB_ID") && (
-                                <p className="text-center p-4 text-muted-foreground">Select or start an agent run to view logs.</p>
-                            )}
-                            {!isLogLoading && !isLogError && logEntries.length > 0 && (
-                                <div className="space-y-1 font-mono text-xs">
-                                    {logEntries.map((entry: LogEntry, index: number) => (
-                                        <div key={index} className="whitespace-pre-wrap break-words border-b border-muted/50 pb-1 mb-1 last:border-b-0">
-                                            {entry.timestamp && <span className="text-muted-foreground mr-2">[{new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>}
-                                            <span className={cn(
-                                                'font-medium',
-                                                entry.level === 'error' && 'text-destructive',
-                                                entry.level === 'warn' && 'text-yellow-500',
-                                                entry.level === 'info' && 'text-blue-500', // Example for info
-                                                entry.level === 'debug' && 'text-gray-500' // Example for debug
-                                            )}>
-                                                {entry.level?.toUpperCase() || 'LOG'}:
-                                            </span>
-                                            <span className="ml-1">{entry.message}</span>
-                                            {entry.data && <pre className="mt-1 p-1 bg-background/50 rounded text-[11px] overflow-x-auto">{JSON.stringify(entry.data, null, 2)}</pre>}
-                                            {entry.error && <pre className="mt-1 p-1 bg-destructive/10 rounded text-destructive text-[11px]">{entry.error}
-                                                {entry.raw ? `\nRaw: ${JSON.stringify(entry.raw)}` : ''}</pre>}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </ScrollArea>
+                    {/* Logs Tab Content - Add overflow-y-auto, remove internal ScrollArea */}
+                    <TabsContent value="logs" className="flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 overflow-y-auto p-2">
+                        {isLogLoading && <p className="text-center py-4 text-muted-foreground">Loading logs...</p>}
+                        {isLogError && (
+                            <div className="text-center py-4 text-destructive">
+                                <p>Error loading logs:</p>
+                                <pre className="text-xs whitespace-pre-wrap">{logError?.message || 'Unknown error'}</pre>
+                            </div>
+                        )}
+                        {!isLogLoading && !isLogError && logEntries.length === 0 && selectedJobId && selectedJobId !== "NO_JOB_ID" && !isAgentRunning && (
+                            <p className="text-center p-4 text-muted-foreground">No log entries found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.</p>
+                        )}
+                        {/* Show message if agent is running but no logs yet */}
+                        {!isLogLoading && !isLogError && logEntries.length === 0 && isAgentRunning && (
+                            <p className="text-center p-4 text-muted-foreground flex items-center justify-center gap-2">
+                                <RefreshCw className="h-4 w-4 animate-spin" /> Waiting for agent logs...
+                            </p>
+                        )}
+                        {/* Show message if no run is selected */}
+                        {(!selectedJobId || selectedJobId === "NO_JOB_ID") && (
+                            <p className="text-center p-4 text-muted-foreground">Select or start an agent run to view logs.</p>
+                        )}
+                        {!isLogLoading && !isLogError && logEntries.length > 0 && (
+                            <div className="space-y-1 font-mono text-xs">
+                                {logEntries.map((entry: LogEntry, index: number) => (
+                                    <div key={index} className="whitespace-pre-wrap break-words border-b border-muted/50 pb-1 mb-1 last:border-b-0">
+                                        {entry.timestamp && <span className="text-muted-foreground mr-2">[{new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>}
+                                        <span className={cn(
+                                            'font-medium',
+                                            entry.level === 'error' && 'text-destructive',
+                                            entry.level === 'warn' && 'text-yellow-500',
+                                            entry.level === 'info' && 'text-blue-500', // Example for info
+                                            entry.level === 'debug' && 'text-gray-500' // Example for debug
+                                        )}>
+                                            {entry.level?.toUpperCase() || 'LOG'}:
+                                        </span>
+                                        <span className="ml-1">{entry.message}</span>
+                                        {entry.data && <pre className="mt-1 p-1 bg-background/50 rounded text-[11px] overflow-x-auto">{JSON.stringify(entry.data, null, 2)}</pre>}
+                                        {entry.error && <pre className="mt-1 p-1 bg-destructive/10 rounded text-destructive text-[11px]">{entry.error}
+                                            {entry.raw ? `\nRaw: ${JSON.stringify(entry.raw)}` : ''}</pre>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
 
-                    {/* Data Tab Content */}
-                    <TabsContent value="data" className="flex-1 flex flex-col min-h-0 overflow-hidden border rounded-md bg-muted/20">
+                    {/* Data Tab Content - Add overflow-y-auto, remove internal ScrollArea */}
+                    <TabsContent value="data" className="flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 overflow-y-auto">
                         {isDataLoading && <p className="text-center p-4 text-muted-foreground">Loading data...</p>}
                         {isDataError && (
                             <div className="text-center p-4 text-destructive">
@@ -932,13 +839,12 @@ function AgentCoderControlDialog({
                             <p className="text-center p-4 text-muted-foreground">Select or start an agent run to view data.</p>
                         )}
                         {!isDataLoading && !isDataError && agentRunData && (
-                            <div className="flex flex-col h-full">
-                                {/* Wrap data display in ScrollArea */}
-                                <ScrollArea className="flex-1 p-2">
+                            <div className="flex flex-col flex-1 h-full p-2">
+                                <div className="flex-1 overflow-y-auto">
                                     <pre className="font-mono text-xs whitespace-pre-wrap break-words">
                                         {JSON.stringify(agentRunData, null, 2)}
                                     </pre>
-                                </ScrollArea>
+                                </div>
                                 {canConfirm && (
                                     <div className="shrink-0 mt-auto p-2 border-t">
                                         <Button
