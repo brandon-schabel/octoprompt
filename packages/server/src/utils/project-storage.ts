@@ -2,7 +2,7 @@
 import { z, ZodError, type ZodTypeAny } from 'zod';
 import path from 'node:path';
 import fs from 'node:fs/promises'; // Using Node's fs promises
-import { ProjectSchema, ProjectFileSchema, type Project, type ProjectFile } from 'shared/src/schemas/project.schemas';
+import { ProjectSchema, ProjectFileSchema } from 'shared/src/schemas/project.schemas';
 
 // Define the base directory for storing project data
 // Adjust this path as needed, e.g., use an environment variable
@@ -10,11 +10,11 @@ const DATA_DIR = path.resolve(process.cwd(), 'data', 'project_storage');
 
 // --- Schemas for Storage ---
 // Store projects as a map (Record) keyed by projectId
-const ProjectsStorageSchema = z.record(z.string(), ProjectSchema);
+export const ProjectsStorageSchema = z.record(z.string(), ProjectSchema);
 export type ProjectsStorage = z.infer<typeof ProjectsStorageSchema>;
 
 // Store files within a project as a map (Record) keyed by fileId
-const ProjectFilesStorageSchema = z.record(z.string(), ProjectFileSchema);
+export const ProjectFilesStorageSchema = z.record(z.string(), ProjectFileSchema);
 export type ProjectFilesStorage = z.infer<typeof ProjectFilesStorageSchema>;
 
 

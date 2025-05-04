@@ -241,7 +241,7 @@ export async function syncFileSet(
     }
     if (filesToUpdate.length > 0) {
       console.log(`[FileSync] Updating ${filesToUpdate.length} existing file records...`);
-      const updatedResult = await bulkUpdateProjectFiles(filesToUpdate);
+      const updatedResult = await bulkUpdateProjectFiles(project.id, filesToUpdate);
       updatedCount = updatedResult.length; // Count successfully updated files
     }
     if (fileIdsToDelete.length > 0) {
@@ -261,7 +261,7 @@ export async function syncFileSet(
   } catch (error) {
     console.error(`[FileSync] Error during database batch operations for project ${project.id}:`, error);
     // Rethrow or handle error appropriately
-    throw new Error(`Sync failed during DB operations for project ${project.id}`);
+    throw new Error(`Sync failed during storage operations for project ${project.id}`);
   }
 }
 

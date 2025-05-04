@@ -194,3 +194,6 @@ kv-store.json
 kv-store.json.*.backup
 
 **/agent-logs/*
+
+
+packages/server/data/*
