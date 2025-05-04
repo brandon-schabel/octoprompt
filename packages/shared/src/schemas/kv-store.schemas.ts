@@ -32,6 +32,7 @@ export const KvSchemas = {
     [KVKeyEnum.userProfile]: userProfileSchema,
     [KVKeyEnum.featureFlags]: featureFlagsSchema,
     [KVKeyEnum.counter]: counterSchema,
+    
 } as const;
 
 export type KVValue<K extends KVKey> = z.infer<typeof KvSchemas[K]>;
@@ -83,6 +84,7 @@ export const KvSetResponseSchema = z.object({
         example: ['new-feature', 'beta-test'],
     }),
 }).openapi('KvSetResponse');
+
 
 // Using common success schema for DELETE
 export const KvDeleteResponseSchema = OperationSuccessResponseSchema.openapi('KvDeleteResponse');

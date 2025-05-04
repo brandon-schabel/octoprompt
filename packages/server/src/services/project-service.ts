@@ -611,9 +611,9 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
     const nowTimestamp = Date.now();
 
     const createTransaction = db.transaction((files: FileSyncData[]) => {
-        const insertStmt = db.prepare<any, [string, string, string, string, number, string, string, number, number]>(`
+        const insertStmt = db.prepare<any, [string, string, string, string, number, string, string | null, number, number, string, string | null, number]>(`
             INSERT INTO files (id, project_id, name, path, extension, size, content, checksum, created_at, updated_at, meta, summary, summary_last_updated_at)
-            VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', NULL, NULL)
+            VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) -- Added placeholders for meta, summary, summary_last_updated_at
             RETURNING *
         `); // Added meta, summary, summary_last_updated_at defaults
 
@@ -628,8 +628,11 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
                 fileData.content,
                 fileData.checksum,
                 nowTimestamp,
-                nowTimestamp,
-            ) as any; // Raw row
+                nowTimestamp, 
+                '{}',         
+                null,         
+                nowTimestamp 
+            ) as any; 
 
             if (row) {
                 // Transform and validate *each* created file

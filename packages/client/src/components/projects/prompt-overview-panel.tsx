@@ -149,7 +149,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 alert('Please enter a prompt!')
                 return
             }
-            findSuggestedFilesMutation.mutate({ userInput: `Please suggest files for the following prompt: ${localUserPrompt}` }, {
+            findSuggestedFilesMutation.mutate({ userInput: `Please find the relevant files for the following prompt: ${localUserPrompt}` }, {
                 onSuccess: (resp) => {
                     console.log('resp', resp)
                     if (resp?.data?.success && resp.data?.recommendedFileIds) {
@@ -333,7 +333,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                                     <Binoculars className="h-3.5 w-3.5 mr-1 animate-spin" />
                                                     Finding...
                                                 </>
-                                                : <> <Search className="h-3.5 w-3.5 mr-1" />Suggest Files</>}
+                                                : <> <Search className="h-3.5 w-3.5 mr-1" />Files</>}
                                         </Button>
                                         <Button onClick={handleChatWithContext} size="sm">
                                             <MessageCircleCode className="h-3.5 w-3.5 mr-1" /> Chat
