@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useMemo, useOptimistic, useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { Button } from '@ui'
 import { Input } from "@ui"
 import { Switch } from "@ui"
@@ -33,7 +33,6 @@ import { FormatTokenCount } from "@/components/format-token-count"
 import { estimateTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
 
 import { toast } from "sonner"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@ui"
 import { ProjectFile } from "@/generated"
 import { useActiveProjectTab, useAppSettings, } from "@/hooks/api/use-kv-api"
 
@@ -41,23 +40,14 @@ export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
 })
 
-// Type for sorting
 type SortOption = "nameAsc" | "nameDesc"
     | "lastSummarizedAsc" | "lastSummarizedDesc"
     | "fileTokenAsc" | "fileTokenDesc"
     | "summaryTokenAsc" | "summaryTokenDesc"
     | "sizeAsc" | "sizeDesc"
 
-// Add new type for optimistic state
-type OptimisticState = {
-    selectedFileIds: string[]
-    summarizedFileIds: string[]
-}
 
-/**
- * We no longer import a separate "FileSummary" type because file records now store
- * their summaries directly on the `files` table. We simply use `ProjectFile` and read `.summary`.
- */
+
 function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string, fileId: string, disabled: boolean }) {
     const summarizeMutation = useSummarizeProjectFiles(projectId)
 
@@ -568,9 +558,8 @@ export function ProjectSummarizationSettingsPage() {
                                     return (
                                         <li
                                             key={file.id}
-                                            className={`group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0 ${
-                                                hasSummary ? "bg-green-50 dark:bg-green-900/30" : "" // Highlight summarized files
-                                            }`}
+                                            className={`group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0 ${hasSummary ? "bg-green-50 dark:bg-green-900/30" : "" // Highlight summarized files
+                                                }`}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <Checkbox
