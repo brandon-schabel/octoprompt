@@ -10,9 +10,8 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon } from "lucide-react"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useUpdateActiveProjectTab } from "@/hooks/api/global-state/updaters"
-import { useSettings } from "@/hooks/api/global-state/selectors"
-import { useActiveProjectTab } from "@/hooks/api/use-state-api"
+import { useActiveProjectTab, useSelectSetting } from "@/hooks/api/use-kv-api"
+import { useUpdateActiveProjectTab } from "@/hooks/api/use-kv-api"
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -31,7 +30,7 @@ export function AppNavbar() {
     const isOnPromptsRoute = matches.some(match => match.routeId === "/prompts")
     const isOnAdminRoute = matches.some(match => match.routeId === "/admin")
 
-    const { theme = 'dark' } = useSettings()
+    const theme = useSelectSetting('theme')
 
     const updateActiveProjectTab = useUpdateActiveProjectTab();
     const [activeProjectTabState] = useActiveProjectTab()

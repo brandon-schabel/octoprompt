@@ -5,9 +5,8 @@ import { InfoTooltip } from "@/components/info-tooltip"
 import { Badge } from '@ui'
 import { ScrollArea } from "@ui"
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
-import { useActiveProjectTab } from "@/hooks/api/use-state-api"
-import { ProjectFile } from "@/hooks/generated"
 import { ProjectFileMap } from "shared/src/schemas/project.schemas"
+import { useActiveProjectTab } from "@/hooks/api/use-kv-api"
 
 type SelectedFilesSidebarProps = {
     allFilesMap: ProjectFileMap
@@ -19,7 +18,7 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
     selectedFilesListRef,
     onNavigateToFileTree,
 }: SelectedFilesSidebarProps) {
-    const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
+    const [, , activeProjectTabId] = useActiveProjectTab()
     const { selectedFiles, removeSelectedFile } = useSelectedFiles()
 
     return (

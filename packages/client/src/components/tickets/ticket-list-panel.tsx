@@ -1,6 +1,5 @@
 import React, { useMemo, useCallback } from "react";
 import { useListTicketsWithTasks, useDeleteTicket } from "@/hooks/api/use-tickets-api";
-import { useUpdateProjectTabState, } from "@/hooks/api/global-state/updaters";
 import { Button } from "@ui";
 import { Input } from '@ui';
 import { Badge } from "@ui";
@@ -23,8 +22,9 @@ import {
 } from "@ui";
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
-import { useProjectTab } from "@/hooks/api/global-state/selectors";
 import { TicketWithTasks } from "@/hooks/generated";
+import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
+import { useProjectTabById, useUpdateProjectTabState } from "@/hooks/api/use-kv-api";
 
 interface TicketListPanelProps {
     projectTabId: string;
@@ -52,9 +52,9 @@ const PRIORITY_COLORS = {
 export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPanelProps) {
     const navigate = useNavigate();
     const updateProjectTabState = useUpdateProjectTabState(projectTabId);
-    const tabState = useProjectTab(projectTabId)
+    const tabState = useProjectTabById(projectTabId)
     const projectId = tabState?.selectedProjectId || "";
-
+    const { copyToClipboard } = useCopyClipboard()
     // Read from the global tabState
     const ticketSearch = tabState?.ticketSearch ?? "";
     const ticketSort = tabState?.ticketSort ?? "created_desc";
@@ -86,8 +86,10 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
         e.stopPropagation();
         try {
             const content = buildTicketContent(ticket.ticket, ticket.tasks);
-            await navigator.clipboard.writeText(content);
-            toast.success("Copied ticket content!");
+            copyToClipboard(content, {
+                successMessage: "Copied ticket content!",
+                errorMessage: "Failed to copy ticket content"
+            });
         } catch (err) {
             toast.error("Failed to copy ticket content");
             console.error(err);
@@ -99,7 +101,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
         if (!ticketSearch.trim()) return tickets;
         const lower = ticketSearch.toLowerCase();
         return tickets.filter(t => {
-            
+
             return (
                 t.ticket.title.toLowerCase().includes(lower) ||
                 t.ticket.overview?.toLowerCase().includes(lower)
@@ -145,8 +147,9 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
     // Copy function
     const copyOverview = useCallback((e: React.MouseEvent, overview: string) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(overview).then(() => {
-            toast.success("Copied ticket overview!");
+        copyToClipboard(overview, {
+            successMessage: "Copied ticket overview!",
+            errorMessage: "Failed to copy ticket overview"
         });
     }, []);
 
@@ -268,7 +271,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
                                             )}
                                         >
                                             {ticket.ticket.status?.replace("_", " ").toUpperCase()}
-                                        </Badge>    
+                                        </Badge>
                                     </div>
                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Button

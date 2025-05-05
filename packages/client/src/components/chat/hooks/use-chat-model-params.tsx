@@ -1,5 +1,4 @@
-import { useSettings } from '@/hooks/api/global-state/selectors';
-import { useUpdateSettings } from '@/hooks/api/global-state/updaters';
+import { useAppSettings,  } from '@/hooks/api/use-kv-api';
 import { AiSdkOptions } from '@/hooks/generated';
 import { useCallback, useMemo } from 'react';
 import { modelsTempNotAllowed } from 'shared';
@@ -7,8 +6,7 @@ import { modelsTempNotAllowed } from 'shared';
 type ModelParamMutationFn = (value: number) => void;
 
 export function useChatModelParams() {
-    const settings = useSettings();
-    const updateSettings = useUpdateSettings();
+    const [settings, updateSettings] = useAppSettings();
 
     const {
         temperature,

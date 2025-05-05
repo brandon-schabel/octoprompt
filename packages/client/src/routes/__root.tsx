@@ -1,6 +1,6 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 import { AppNavbar } from '@/components/navigation/app-navbar'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
   CommandDialog,
@@ -18,6 +18,7 @@ import { ComponentErrorBoundary } from '@/components/error-boundary/component-er
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
+import { useGetActiveProjectTabId, useGetAppSettings, useGetProjectTab, useGetProjectTabs } from '@/hooks/api/use-kv-api'
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
@@ -136,13 +137,18 @@ export const Route = createRootRouteWithContext()({
 })
 
 function RootComponent() {
-  // const { data: data, isLoading: isLoadingState, } = useGetState()
+  const { data: clientAppSettings, isPending: isAppSettingsPending } = useGetAppSettings()
+  const { activeProjectTabId, isPending: isActiveProjectTabIdPending } = useGetActiveProjectTabId()
+  const { data: projectTabs, isPending: isProjectTabsPending } = useGetProjectTabs()
+  const { projectTab, isPending: isProjectTabByIdPending } = useGetProjectTab(activeProjectTabId ?? '')
 
 
-  // Show loading screen until both WebSocket is connected AND initial state is received
-  // if (isLoadingState) {
-  //   return <LoadingScreen />
-  // }
+  console.log({ clientAppSettings })
+  const isPending = isAppSettingsPending || isActiveProjectTabIdPending || isProjectTabsPending || isProjectTabByIdPending
+
+  if (isPending) {
+    return <div>Loading...</div>
+  }
 
   return (
     <ErrorBoundary>

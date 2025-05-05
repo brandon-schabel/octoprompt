@@ -1,11 +1,13 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import { LightAsync as SyntaxHighlighter } from "react-syntax-highlighter";
-import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs";
 import ts from "react-syntax-highlighter/dist/esm/languages/hljs/typescript";
 import js from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
 // @ts-ignore
 import * as languages from "react-syntax-highlighter/dist/esm/languages/hljs";
-import { useThemeSettings } from "@/hooks/api/global-state/global-state-utility-hooks";
+import { useSelectSetting,  } from "@/hooks/api/use-kv-api";
+import { useMemo } from "react";
+import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
+
 
 Object.entries(languages).forEach(([name, lang]) => {
     SyntaxHighlighter.registerLanguage(name, lang);
@@ -25,7 +27,16 @@ export function MarkdownRenderer({
     copyToClipboard,
 }: MarkdownRendererProps) {
 
-    const { isDarkMode, selectedSyntaxTheme } = useThemeSettings()
+    const isDarkMode = useSelectSetting('theme') === 'dark'
+    const codeThemeDark = useSelectSetting('codeThemeDark')
+    const codeThemeLight = useSelectSetting('codeThemeLight')
+
+
+    const selectedSyntaxTheme = useMemo(() => {
+        const themeName = isDarkMode ? codeThemeDark : codeThemeLight;
+        // @ts-ignore
+        return themes[themeName] ?? themes.atomOneLight;
+    }, [isDarkMode, codeThemeDark, codeThemeLight]);
 
     const components: Components = {
         // @ts-ignore

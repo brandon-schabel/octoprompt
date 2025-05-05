@@ -1,10 +1,8 @@
-import { useSettings } from '@/hooks/api/global-state/selectors';
-import { useUpdateSettings } from '@/hooks/api/global-state/updaters';
+import { useAppSettings } from "@/hooks/api/use-kv-api";
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 
 export const useChatModelControl = () => {
-    const settings = useSettings();
-    const updateSettings = useUpdateSettings();
+    const [settings, updateSettings] = useAppSettings();
 
     const provider = settings.provider;
     const model = settings.model;

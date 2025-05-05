@@ -7,14 +7,13 @@ import { Textarea } from "@ui";
 import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
-import { useCreateProjectTab } from "@/hooks/api/global-state/updaters";
-import { Ticket, TicketWithTasks } from "@/hooks/generated";
+import type { TicketWithTasks } from "@/hooks/generated";
 
 interface TicketDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    ticketWithTasks: TicketWithTasks | null;     // If non-null, we are editing an existing ticket
-    projectId: string;         // The project ID to which the ticket belongs
+    ticketWithTasks: TicketWithTasks | null;
+    projectId: string;
 }
 
 
@@ -22,7 +21,6 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
     const createTicket = useCreateTicket(projectId);
     const updateTicket = useUpdateTicket(projectId);
 
-    // Local form state
     const [title, setTitle] = useState("");
     const [overview, setOverview] = useState("");
     const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
@@ -30,7 +28,6 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // On open/edit, populate form with existing ticket data or reset
     useEffect(() => {
         if (ticketWithTasks) {
             setTitle(ticketWithTasks.ticket.title);

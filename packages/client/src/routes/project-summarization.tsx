@@ -24,7 +24,6 @@ import { buildCombinedFileSummariesXml } from "shared/src/utils/summary-formatte
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
 import {
     Select,
     SelectContent,
@@ -44,11 +43,10 @@ import {
 } from "@ui"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@ui"
-import { useSettings } from "@/hooks/api/global-state/selectors"
 import { ProjectFile } from "@/hooks/generated"
 import { AppSettings } from "shared/src/schemas/global-state-schema"
-import { useActiveProjectTab } from "@/hooks/api/use-state-api"
 import { useSummarizeProjectFiles } from "@/hooks/api/use-gen-ai-api"
+import { useActiveProjectTab, useAppSettings, } from "@/hooks/api/use-kv-api"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
@@ -101,10 +99,10 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 
 
 export function ProjectSummarizationSettingsPage() {
-    const { summarizationEnabledProjectIds = [] } = useSettings()
-    const { summarizationIgnorePatterns = [] } = useSettings()
+    const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
+    const [{ summarizationIgnorePatterns = [] }] = useAppSettings()
+
     const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
-    const updateSettings = useUpdateSettings()
 
     const selectedProjectId = activeProjectTabState?.selectedProjectId
     const isProjectSummarizationEnabled = selectedProjectId
@@ -114,7 +112,6 @@ export function ProjectSummarizationSettingsPage() {
     const [isPending, startTransition] = useTransition()
 
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
-    const [expandedSummaryFileId, setExpandedSummaryFileId] = useState<string | null>(null)
     const [summaryDialogOpen, setSummaryDialogOpen] = useState(false)
     const [selectedFileRecord, setSelectedFileRecord] = useState<ProjectFile | null>(null)
     const [sortBy, setSortBy] = useState<SortOption>("nameAsc")
@@ -301,20 +298,18 @@ export function ProjectSummarizationSettingsPage() {
 
 
     function handleExcludeFileOptimistic(filePath: string) {
-        // ... (implementation remains the same)
         startTransition(() => {
             addOptimisticEntry((current: OptimisticState) => ({
                 ...current,
                 excludedPatterns: [...current.excludedPatterns, filePath]
             }))
 
-            updateSettings((prev: AppSettings) => ({
-                ...prev,
+            updateSettings({
                 summarizationIgnorePatterns: [
-                    ...(prev.summarizationIgnorePatterns ?? []), // Ensure it's an array
+                    ...(summarizationIgnorePatterns ?? []), // Ensure it's an array
                     filePath,
                 ],
-            }))
+            })
         })
     }
 
@@ -540,14 +535,13 @@ export function ProjectSummarizationSettingsPage() {
                                 checked={isProjectSummarizationEnabled}
                                 onCheckedChange={(check) => {
                                     if (!selectedProjectId) return
-                                    updateSettings((prev: AppSettings) => ({
-                                        ...prev,
+                                    updateSettings({
                                         summarizationEnabledProjectIds: check
-                                            ? [...(prev.summarizationEnabledProjectIds ?? []), selectedProjectId] // Ensure array exists
-                                            : (prev.summarizationEnabledProjectIds ?? []).filter( // Ensure array exists
+                                            ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId] // Ensure array exists
+                                            : (summarizationEnabledProjectIds ?? []).filter( // Ensure array exists
                                                 (id: string) => id !== selectedProjectId
                                             ),
-                                    }))
+                                    })
                                 }}
                             />
                         </div>
@@ -934,8 +928,7 @@ export function ProjectSummarizationSettingsPage() {
  * Extracted pattern-list component for ignore patterns.
  */
 function IgnorePatternList({ disabled }: { disabled: boolean }) {
-    const updateSettings = useUpdateSettings()
-    const { summarizationIgnorePatterns = [] } = useSettings()
+    const [{ summarizationIgnorePatterns = [] }, updateSettings] = useAppSettings()
     const [newPattern, setNewPattern] = useState("")
 
     function handleAdd() {
@@ -946,19 +939,17 @@ function IgnorePatternList({ disabled }: { disabled: boolean }) {
             return;
         }
 
-        updateSettings((prev: AppSettings) => ({
-            ...prev,
-            summarizationIgnorePatterns: [...(prev.summarizationIgnorePatterns ?? []), trimmed],
-        }))
+        updateSettings({
+            summarizationIgnorePatterns: [...(summarizationIgnorePatterns ?? []), trimmed],
+        })
         setNewPattern("")
         toast.success(`Added ignore pattern: ${trimmed}`)
     }
 
     function handleRemove(pattern: string) {
-        updateSettings((prev: AppSettings) => ({
-            ...prev,
-            summarizationIgnorePatterns: (prev.summarizationIgnorePatterns ?? []).filter((p: string) => p !== pattern),
-        }))
+        updateSettings({
+            summarizationIgnorePatterns: (summarizationIgnorePatterns ?? []).filter((p: string) => p !== pattern),
+        })
         toast.success(`Removed ignore pattern: ${pattern}`)
     }
 

@@ -24,62 +24,41 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useActiveProjectTab, useCreateProjectTab, useDeleteProjectTabById, useGetActiveProjectTabId, useGetProjectTabs, useSetActiveProjectTabId, useUpdateProjectTabById } from '@/hooks/api/use-kv-api';
+import { toast } from 'sonner';
 
-// Import Zustand hooks and selectors
-import {
-  useProjectTabsState, // Using the refactored hook
-  useActiveProjectTab
-} from '@/hooks/api/use-state-api';
-// Keep API call hooks separate
-import { useCreateProject } from '@/hooks/api/use-projects-api';
-
-// Define props for the simplified component (mainly className now)
 export type ProjectsTabManagerProps = {
   className?: string;
 };
 
-// Combined and Simplified Component
 export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
-  // --- State Management Hooks ---
-  // Get all needed state and actions from the refactored hook
-  const {
-    tabs, // This is Record<string, ProjectTab>
-    activeTabId,
-    setActiveTabId: setActiveProjectTab, // Rename for consistency if preferred
-    createTab: createProjectTab, // Rename for consistency if preferred
-    updateTab: updateProjectTab, // Rename for consistency if preferred
-    deleteTab: deleteProjectTab, // Rename for consistency if preferred
-    // replaceTabs // Not currently used in this component
-  } = useProjectTabsState();
+  const { data: tabs } = useGetProjectTabs();
+  const { deleteTab } = useDeleteProjectTabById();
+  const [activeProjectTabState,] = useActiveProjectTab();
 
-  // Get active tab specific data and the memoized updater
-  const [activeProjectTabState, setActiveProjectTabData] = useActiveProjectTab(); // activeTabId is already available from useProjectTabsState
-
-  // --- Component State ---
   const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null);
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [dialogEditingTab, setDialogEditingTab] = useState<string | null>(null);
   const [dialogEditingName, setDialogEditingName] = useState('');
-
-  // --- Data Preparation ---
+  const { updateProjectTabById } = useUpdateProjectTabById();
+  const { setActiveProjectTabId } = useSetActiveProjectTabId();
+  const { activeProjectTabId: activeTabId } = useGetActiveProjectTabId();
+  const { createProjectTab } = useCreateProjectTab();
   const projectId = activeProjectTabState?.selectedProjectId;
 
-  // Calculate initial order based on sortOrder from Zustand state
   const calculateInitialOrder = (): string[] => {
     if (!tabs) return [];
     return Object.keys(tabs).sort((a, b) => {
-      const orderA = tabs[a]?.sortOrder ?? Infinity; // Default to end if no sortOrder
+      const orderA = tabs[a]?.sortOrder ?? Infinity;
       const orderB = tabs[b]?.sortOrder ?? Infinity;
       return orderA - orderB;
     });
   };
 
   const initialTabOrderFromState = calculateInitialOrder();
-  // Use localOrder if set (during drag), otherwise use order from state
   const finalTabOrder = localOrder ?? initialTabOrderFromState;
 
-  // --- Drag and Drop ---
   const sensors = useSensors(useSensor(PointerSensor));
 
   function handleDragEnd(event: DragEndEvent) {
@@ -88,40 +67,37 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 
     const oldIndex = finalTabOrder.indexOf(active.id as string);
     const newIndex = finalTabOrder.indexOf(over.id as string);
-    if (oldIndex === -1 || newIndex === -1) return; // Should not happen
+    if (oldIndex === -1 || newIndex === -1) return;
 
     const newOrder = arrayMove(finalTabOrder, oldIndex, newIndex);
 
     console.debug('[ProjectsTabManager] handleDragEnd -> New Order:', newOrder);
-    setLocalOrder(newOrder); // Update local state immediately for responsiveness
+    setLocalOrder(newOrder);
 
-    // Persist the new order to Zustand state
     newOrder.forEach((tabId, index) => {
-      // Only update if the order actually changed for this tab
+
       if (tabs[tabId]?.sortOrder !== index) {
-        updateProjectTab(tabId, { sortOrder: index });
+        updateProjectTabById(tabId, { sortOrder: index });
       }
     });
   }
 
-  // --- Hotkeys ---
-  const hotkeyPrefix = "t"; // Hardcoded for Project Tabs
+  const hotkeyPrefix = "t";
   for (let i = 1; i <= 9; i++) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     useHotkeys(`${hotkeyPrefix}+${i}`, () => {
       const targetTabId = finalTabOrder[i - 1];
-      if (targetTabId) setActiveProjectTab(targetTabId);
-    }, { preventDefault: true }, [finalTabOrder, setActiveProjectTab]); // Dependencies seem correct (order array, stable action)
+      if (targetTabId) setActiveProjectTabId(targetTabId);
+    }, { preventDefault: true }, [finalTabOrder, setActiveProjectTabId]);
   }
 
   useHotkeys(`${hotkeyPrefix}+tab`, (e) => {
     e.preventDefault();
-    if (!activeTabId || finalTabOrder.length < 2) return; // Need at least 2 tabs to cycle
+    if (!activeTabId || finalTabOrder.length < 2) return;
     const currentIndex = finalTabOrder.indexOf(activeTabId);
-    if (currentIndex === -1) return; // Active tab not in order? Should not happen
+    if (currentIndex === -1) return;
     const nextIndex = (currentIndex + 1) % finalTabOrder.length;
-    setActiveProjectTab(finalTabOrder[nextIndex]);
-  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTab]); // Dependencies seem correct (active id, order array, stable action)
+    setActiveProjectTabId(finalTabOrder[nextIndex]);
+  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTabId]);
 
   useHotkeys(`${hotkeyPrefix}+shift+tab`, (e) => {
     e.preventDefault();
@@ -129,58 +105,45 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     const currentIndex = finalTabOrder.indexOf(activeTabId);
     if (currentIndex === -1) return;
     const prevIndex = (currentIndex - 1 + finalTabOrder.length) % finalTabOrder.length;
-    setActiveProjectTab(finalTabOrder[prevIndex]);
-  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTab]); // Dependencies seem correct (active id, order array, stable action)
+    setActiveProjectTabId(finalTabOrder[prevIndex]);
+  }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTabId]);
 
-  // --- Event Handlers ---
   const handleCreateTab = () => {
-    // Add Guard Clause: Ensure we have a valid projectId from the active tab
     if (!projectId) {
-      console.error("Cannot create project tab: No active project ID selected.");
-      // TODO: Consider adding a user-facing notification (e.g., toast)
-      // import { toast } from 'sonner';
-      // toast.error("Please select an active project before creating a new tab.");
-      return; // Prevent the API call if no valid project ID
+      toast.error("Cannot create project tab: No active project ID selected.");
+      return;
     }
 
-    // If projectId is valid, proceed with the API call
     console.log(`Creating new project tab for projectId: ${projectId}`);
-    createProjectTab({ projectId: projectId, selectedFiles: [] });
+    createProjectTab({ selectedProjectId: projectId, selectedFiles: [] });
   };
 
   const handleRenameTab = (tabId: string, newName: string) => {
-    updateProjectTab(tabId, { displayName: newName });
+    updateProjectTabById(tabId, { displayName: newName });
     setEditingTabName(null);
   };
 
   const handleDeleteTab = (tabId: string) => {
-    // Consider what happens if the active tab is deleted
-    // Maybe set the next/previous tab active, or the first one.
-    // This logic might reside within the `deleteProjectTab` updater in Zustand.
-    deleteProjectTab(tabId);
-    // Close dialog if the deleted tab was being edited
+    deleteTab(tabId);
     if (dialogEditingTab === tabId) {
       setDialogEditingTab(null);
       setDialogEditingName('');
     }
-    // Close settings dialog if no tabs remain
-    if (Object.keys(tabs ?? {}).length <= 1) { // Check length *before* potential state update
+    if (Object.keys(tabs ?? {}).length <= 1) {
       setShowSettingsDialog(false);
     }
   };
 
-  // Dialog Rename handlers
   const startDialogRename = (tabId: string) => {
-    const currentName = tabs?.[tabId]?.displayName || `Tab ${tabId.substring(0, 4)}`; // Default name
+    const currentName = tabs?.[tabId]?.displayName || `Tab ${tabId.substring(0, 4)}`;
     setDialogEditingTab(tabId);
     setDialogEditingName(currentName);
   };
 
   const saveDialogRename = () => {
     if (!dialogEditingTab || !tabs) return;
-    // Only update if name changed
     if (tabs[dialogEditingTab]?.displayName !== dialogEditingName) {
-      updateProjectTab(dialogEditingTab, { displayName: dialogEditingName });
+      updateProjectTabById(dialogEditingTab, { displayName: dialogEditingName });
     }
     setDialogEditingTab(null);
     setDialogEditingName('');
@@ -191,7 +154,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     setDialogEditingName('');
   };
 
-  // --- Helper Functions ---
   function getTabStats(tabId: string): string {
     const tabData = tabs?.[tabId];
     if (!tabData) return "No data";
@@ -201,9 +163,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     return `Files: ${fileCount} | Prompts: ${promptCount} | User Input: ${userPromptLength}`;
   }
 
-  // --- Render Logic ---
-
-  // Empty State
   if (!tabs || Object.keys(tabs).length === 0) {
     return (
       <div className={cn("flex flex-col gap-2 p-2", className)}> {/* Added padding */}
@@ -215,7 +174,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     );
   }
 
-  // Tooltip Content
+
   const shortcutInfo = (
     <ul className="list-disc list-inside text-xs space-y-1">
       <li>Navigate between tabs:</li>
@@ -236,18 +195,18 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     </div>
   );
 
-  // Main Render
+
   return (
     <>
       <Tabs
-        value={activeTabId ?? ""} // Ensure value is always a string
-        // onValueChange={setActiveProjectTab}
+        value={activeTabId ?? ""}
+
         onValueChange={(value) => {
           console.log('[ProjectsTabManager] onValueChange -> value:', value);
-          setActiveProjectTab(value);
+          setActiveProjectTabId(value);
         }}
-        className={cn("flex flex-col justify-start rounded-none border-b", className)} // Added border-b from original ProjectTabsManager
-      // activationMode="manual" // Consider adding if clicking shouldn't activate immediately while dragging
+        className={cn("flex flex-col justify-start rounded-none border-b", className)}
+
       >
         <TabsList className="h-auto bg-background justify-start rounded-none p-1"> {/* Adjusted padding/height */}
           {/* Title and Settings Button */}
@@ -275,7 +234,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
               <div className="flex gap-1"> {/* Add gap for spacing */}
                 {finalTabOrder.map((tabId, index) => {
                   const tabData = tabs[tabId];
-                  if (!tabData) return null; // Skip if tab data somehow missing
+                  if (!tabData) return null;
                   const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`;
 
                   return (
@@ -284,7 +243,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                       tabId={tabId}
                       index={index}
                       displayName={displayName}
-                      hasLink={false} // Pass specific prop if needed
+                      hasLink={false}
                       isEditingInline={editingTabName?.id === tabId}
                       editingInlineName={editingTabName?.name ?? ''}
                       setEditingInlineName={(name) => setEditingTabName({ id: tabId, name })}
@@ -304,9 +263,9 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
             <Button
               onClick={handleCreateTab}
               size="icon"
-              className="w-6 h-6" // Consistent size
-              variant="ghost" // Changed variant
-              title={`New Project Tab (${hotkeyPrefix}+?)`} // Add tooltip hint if desired
+              className="w-6 h-6"
+              variant="ghost"
+              title={`New Project Tab (${hotkeyPrefix}+?)`}
             >
               <Plus className="h-4 w-4" /> {/* Use standard Plus */}
             </Button>
@@ -323,15 +282,15 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
           <div className="mt-4 space-y-2 max-h-[60vh] overflow-y-auto pr-2"> {/* Added max-height scroll */}
             {finalTabOrder.map((tabId) => {
               const tabData = tabs[tabId];
-              if (!tabData) return null; // Skip if tab data missing
+              if (!tabData) return null;
               const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`;
               const isEditing = dialogEditingTab === tabId;
 
-              // Use the specific rendering logic directly here
+
               return (
                 <div
                   key={tabId}
-                  className="group flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-accent/10" // Adjusted padding/hover
+                  className="group flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-accent/10"
                 >
                   {/* Left Side: Name and Stats */}
                   <div className="flex flex-col flex-1 truncate min-w-0"> {/* Ensure truncation works */}
@@ -343,15 +302,15 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                           if (e.key === 'Enter') saveDialogRename();
                           if (e.key === 'Escape') cancelDialogRename();
                         }}
-                        onBlur={saveDialogRename} // Save on blur
-                        className="h-7 text-sm" // Adjust size
+                        onBlur={saveDialogRename}
+                        className="h-7 text-sm"
                         autoFocus
                       />
                     ) : (
                       <span
-                        className="truncate font-medium text-sm cursor-pointer" // Make clickable to edit
+                        className="truncate font-medium text-sm cursor-pointer"
                         onClick={() => startDialogRename(tabId)}
-                        title={displayName} // Show full name on hover
+                        title={displayName}
                       >
                         {displayName}
                       </span>
@@ -388,7 +347,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive" // Use theme color
+                      className="h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => handleDeleteTab(tabId)}
                       title="Delete Tab"
                     >
@@ -413,7 +372,7 @@ function SortableTab(props: {
   tabId: string;
   index: number;
   displayName: string;
-  hasLink: boolean; // Keep if needed, otherwise remove
+  hasLink: boolean;
   isEditingInline: boolean;
   editingInlineName: string;
   setEditingInlineName: (name: string) => void;
@@ -442,22 +401,22 @@ function SortableTab(props: {
 
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
-    transition: transition || 'transform 250ms ease', // Ensure transition
-    opacity: isDragging ? 0.4 : 1, // Make more obvious when dragging
-    zIndex: isDragging ? 10 : 1, // Ensure dragging tab is on top
-    cursor: isDragging ? 'grabbing' : 'grab', // Indicate draggable
+    transition: transition || 'transform 250ms ease',
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
   };
 
   const showShortcut = index < 9;
   const shortcutNumber = index + 1;
 
   const handleSave = () => {
-    // Trim and save only if name is not empty and potentially changed
+
     const trimmedName = editingInlineName.trim();
     if (trimmedName && trimmedName !== displayName) {
       onSaveInlineRename(tabId, trimmedName);
     } else {
-      onCancelInlineRename(); // Cancel if empty or unchanged
+      onCancelInlineRename();
     }
   };
 
@@ -466,29 +425,25 @@ function SortableTab(props: {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "inline-flex group relative rounded-md", // Add rounding and relative for potential absolute elements later
-        // Add focus-visible styles for keyboard navigation/dragging
+        "inline-flex group relative rounded-md",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       )}
-      {...attributes} // Drag handles applied here
+      {...attributes}
     >
       <TabsTrigger
         value={tabId}
         className={cn(
-          'flex-1 flex items-center gap-1.5 px-2.5 py-1.5 h-full text-sm rounded-md', // Adjusted padding/sizing
-          'data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-inner', // Active state styles
-          'hover:bg-accent/50', // Hover state
-          isDragging ? 'shadow-lg' : '', // Style when dragging
+          'flex-1 flex items-center gap-1.5 px-2.5 py-1.5 h-full text-sm rounded-md',
+          'data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-inner',
+          'hover:bg-accent/50',
+          isDragging ? 'shadow-lg' : '',
         )}
         onDoubleClick={(e) => {
-          e.preventDefault(); // Prevent potential text selection
-          setEditingInlineName(displayName); // Start editing with current name
+          e.preventDefault();
+          setEditingInlineName(displayName);
         }}
-        // Apply listeners selectively if needed (e.g., only on a drag handle icon)
-        // For now, the whole tab is draggable via {...listeners} on the outer div
-        {...listeners} // Apply drag listeners here IF the outer div doesn't have them
-        // title={`Project Tab: ${displayName}${showShortcut ? ` (Shortcut: ${hotkeyPrefix}+${shortcutNumber})` : ''}`}
-        title={displayName} // Simpler title
+        {...listeners}
+        title={displayName}
       >
         {isEditingInline ? (
           <Input
@@ -498,10 +453,10 @@ function SortableTab(props: {
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') onCancelInlineRename();
             }}
-            onBlur={handleSave} // Save when focus is lost
-            className="h-6 w-28 text-sm" // Adjust size/styling
+            onBlur={handleSave}
+            className="h-6 w-28 text-sm"
             autoFocus
-            onClick={(e) => e.stopPropagation()} // Prevent trigger activation when clicking input
+            onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <>
@@ -521,24 +476,7 @@ function SortableTab(props: {
           </>
         )}
       </TabsTrigger>
-      {/* Optional: Add close button directly on tab ( uncomment if needed)
-             <Button
-                 variant="ghost"
-                 size="icon"
-                 className={cn(
-                     "absolute top-1/2 right-1 -translate-y-1/2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100",
-                     "hover:bg-muted/50",
-                     isActive ? "opacity-100" : "" // Show on active tab too
-                 )}
-                 onClick={(e) => {
-                     e.stopPropagation(); // Prevent tab activation
-                     // Add delete handler here: onDeleteTab(tabId);
-                 }}
-                 title="Close Tab"
-             >
-                 <X className="h-3 w-3" />
-             </Button>
-            */}
+
     </div>
   );
 }

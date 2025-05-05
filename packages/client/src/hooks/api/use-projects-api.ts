@@ -1,4 +1,3 @@
-// File: packages/client/src/hooks/api/use-project-api.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import {

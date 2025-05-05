@@ -1,4 +1,3 @@
-// SlidingSidebar.tsx - No changes needed here, just using the code you provided.
 import React, {
     useEffect,
     useRef,

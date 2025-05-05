@@ -6,24 +6,21 @@ import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
-import { useCreateProjectTab } from '@/hooks/api/global-state/updaters'
-import { useAllProjectTabs } from '@/hooks/api/global-state/selectors'
 import { ResizablePanel } from '@ui'
 import { ProjectResponse } from '@/hooks/generated'
-import { useActiveProjectTab } from '@/hooks/api/use-state-api'
+import { useActiveProjectTab, useGetProjectTabs } from '@/hooks/api/use-kv-api'
 
+import { useCreateProjectTab } from '@/hooks/api/use-kv-api'
 export function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
 
     // All tabs + active tab
-    const tabs = useAllProjectTabs()
     const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
     const selectedProjectId = activeProjectTabState?.selectedProjectId
     const { data: projects } = useGetProjects()
-
-    // Create a new tab from WebSocket side
-    const createNewTab = useCreateProjectTab()
+    const tabs = useGetProjectTabs()
+    const { createProjectTab } = useCreateProjectTab()
 
     const noTabsYet = Object.keys(tabs || {}).length === 0
 
@@ -31,7 +28,7 @@ export function ProjectsPage() {
         return (
             <NoTabsYetView
                 projects={projects?.data || []}
-                createNewTab={createNewTab}
+                createNewTab={() => createProjectTab({})}
             />
         )
     }
@@ -114,10 +111,6 @@ function MainProjectsLayout({
     )
 }
 
-// -------------------------------------------------------------------------
-// NoTabsYetView + NoActiveTabView + WelcomeDialog (unchanged except removing
-// references to selectedFiles, etc.)
-// -------------------------------------------------------------------------
 type NoTabsYetViewProps = {
     projects: ProjectResponse['data'][]
     createNewTab: (args: { projectId: string }) => void

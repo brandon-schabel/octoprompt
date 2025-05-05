@@ -1,88 +1,269 @@
-import { KeyValueStore, FileAdapter, type ValueValidator } from '@bnk/kv-store';
-import { KVKey, KvSchemas, KVValue } from 'shared/src/schemas/kv-store.schemas';
+import { z, ZodError } from 'zod';
+import path from 'node:path';
+import { ApiError } from 'shared'; // Assuming you have this
+import { KVKey, KvSchemas, KVValue } from 'shared/src/schemas/kv-store.schemas'; // Assuming paths
+import { mergeDeep } from 'shared/src/utils/merge-deep'; // Assuming path
+import { jsonScribe } from '../utils/json-scribe'; // Assuming jsonScribe is in the same directory or adjust path
+
+// --- Configuration ---
+
+const KV_STORE_FILE_PATH = ['data', 'kv-store.json']; // Or 'data/kv-store.json'
+const KV_STORE_BASE_PATH = process.cwd(); // Or specify another base directory
+
+// --- In-Memory State ---
+
+// Using Record for simplicity, Map could also be used.
+// Holds the entire KV state. Initialized empty, loaded by initKvStore.
+// Using `unknown` because values have different types based on the key.
+// Type safety is enforced by get/set helpers using KvSchemas.
+let memoryStore: Record<string, unknown> = {};
+
+// --- Internal Helper Functions ---
 
 /**
- * 1) Create FileAdapter for on-disk JSON persistence.
- *    E.g., 'data/kv-store.json' (choose any path).
+ * Persists the current in-memory store to the JSON file.
+ * This writes the *entire* state.
  */
-const fileAdapter = new FileAdapter({ filePath: 'data/kv-store.json' });
-
-/**
- * 2) Instantiate the KeyValueStore with versioning and a sync interval.
- *    The store is typed "loosely" for general usage — we apply
- *    strict typing in the convenience functions below.
- */
-export const kvStore = new KeyValueStore({
-    adapter: fileAdapter,
-    enableVersioning: true,
-    syncIntervalMs: 10_000, // auto-sync every 10s
-    hooks: {
-        onUpdate(key, newValue) {
-            console.log(`[KV] Updated key "${key}" =>`, newValue);
-        },
-        onDelete(key) {
-            console.log(`[KV] Deleted key "${key}"`);
-        },
-        onBackup(timestamp, version) {
-            console.log(`[KV] Backup created at ${timestamp}, version=${version}`);
-        },
-    },
-});
-
-/**
- * 3) You must call store.init() once during server startup to load existing data from file.
- */
-export async function initKvStore() {
-    await kvStore.init();
-    console.log(`[KV] KeyValueStore initialized. Current version: ${kvStore.getVersion()}`);
+async function syncStoreToFile(): Promise<void> {
+    try {
+        // No schema needed here, as individual values are validated on set/update.
+        // We are writing the entire known valid state from memory.
+        await jsonScribe.write({
+            path: KV_STORE_FILE_PATH,
+            basePath: KV_STORE_BASE_PATH,
+            data: memoryStore,
+        });
+        console.log(`[KV] Synced state to ${path.resolve(KV_STORE_BASE_PATH, ...KV_STORE_FILE_PATH.map(String))}`);
+    } catch (error) {
+        console.error("[KV] Error syncing store to file:", error);
+        // Depending on requirements, you might want to throw or handle this differently
+        // For example, implement retry logic or mark the store as dirty.
+        throw new ApiError(500, `Internal Error: Failed to save KV store state.`, 'KV_SYNC_FAILED');
+    }
 }
 
+// --- Service Initialization ---
+
 /**
- * 4) A helper to get typed data from the store. We look up the correct Zod schema and parse.
+ * Initializes the KV service by loading data from the JSON file into memory.
+ * Must be called once during server startup.
+ */
+export async function initKvStore(): Promise<void> {
+    try {
+        const loadedData = await jsonScribe.read<Record<string, unknown>>({
+            path: KV_STORE_FILE_PATH,
+            basePath: KV_STORE_BASE_PATH,
+        });
+
+        if (loadedData) {
+            // Basic validation: ensure it's an object
+            if (typeof loadedData === 'object' && loadedData !== null && !Array.isArray(loadedData)) {
+                memoryStore = loadedData;
+                console.log(`[KV] KeyValueStore initialized. Loaded ${Object.keys(memoryStore).length} keys from file.`);
+            } else {
+                console.warn(`[KV] Invalid data format found in ${path.resolve(KV_STORE_BASE_PATH, ...KV_STORE_FILE_PATH.map(String))}. Initializing with empty store.`);
+                memoryStore = {};
+                // Optionally, attempt to write the empty store back to fix the file
+                // await syncStoreToFile();
+            }
+        } else {
+            console.log(`[KV] No existing store file found. Initializing with empty store.`);
+            memoryStore = {};
+            // Optionally create the file with an empty object on first init
+            // await syncStoreToFile();
+        }
+    } catch (error) {
+        console.error("[KV] Error initializing KeyValueStore:", error);
+        // Decide how to handle initialization errors (e.g., throw, exit, default state)
+        memoryStore = {}; // Default to empty store on error
+        throw new Error(`Failed to initialize KV store: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+// --- Core KV Operations ---
+
+/**
+ * Gets typed and validated data from the store.
+ * Reads from the in-memory cache and validates the result.
  */
 export async function getKvValue<K extends KVKey>(
     key: K
 ): Promise<KVValue<K> | undefined> {
-    // Optionally supply a validator to store.get():
-    const zodValidator: ValueValidator<KVValue<K>> = (val) => {
-        // We parse with the relevant schema; this will throw if invalid
-        return KvSchemas[key].parse(val);
-    };
+    const value = memoryStore[key];
 
-    // get() returns unknown | undefined, so parse if present
-    const value = kvStore.get<KVValue<K>>(key, { validator: zodValidator });
-    return value;
+    if (value === undefined) {
+        return undefined;
+    }
+
+    try {
+        // Validate the value retrieved from memory against the schema
+        const schema = KvSchemas[key];
+        // Use safeParse to handle potential validation errors gracefully
+        const validationResult = await schema.safeParseAsync(value);
+
+        if (!validationResult.success) {
+            console.error(`[KV] Zod validation failed for key "${key}" on get:`, validationResult.error.errors);
+            // Decide how to handle invalid data found in the store (e.g., return undefined, throw, log)
+            // Returning undefined might be safest to prevent propagation of invalid data.
+            return undefined;
+        }
+        return validationResult.data as KVValue<K>;
+    } catch (error) { // Catch potential errors during Zod parsing itself
+        console.error(`[KV] Error during Zod parsing for key "${key}" on get:`, error);
+        return undefined; // Return undefined on parsing errors
+    }
 }
 
 /**
- * 5) A helper to set typed data in the store. We'll parse with Zod to ensure correctness.
- *    This will also be validated on the server side before saving.
+ * Sets typed data in the store. Validates the data, updates the in-memory
+ * cache, and persists the entire store to disk.
  */
 export async function setKvValue<K extends KVKey>(
     key: K,
     newValue: KVValue<K>
 ): Promise<void> {
-    // Validate newValue with the correct schema
-    const validated = KvSchemas[key].parse(newValue);
+    let validatedValue: KVValue<K>;
+    try {
+        // 1. Validate newValue with the correct schema before storing
+        const schema = KvSchemas[key];
+        // Use parseAsync for potential async refinements/transforms in Zod schemas
 
-    // Store it
-    kvStore.set<KVValue<K>>(key, validated);
 
-    // Force immediate sync to disk (optional, you could rely on auto syncInterval)
-    await kvStore.sync();
+        validatedValue = await schema.parseAsync(newValue);
+    } catch (error) {
+        console.error(`[KV] Zod validation failed for key "${key}" on set:`, error);
+        if (error instanceof ZodError) {
+            // Re-throw Zod errors or convert to ApiError for controller handling
+            throw new ApiError(400, `Invalid data provided for key "${key}": ${error.errors.map(e => e.message).join(', ')}`, 'VALIDATION_ERROR', { issues: error.errors });
+        }
+        throw new ApiError(500, `Internal Error: Validation failed unexpectedly for key "${key}".`, 'INTERNAL_VALIDATION_ERROR');
+    }
+
+    // 2. Update the in-memory cache
+    memoryStore[key] = validatedValue;
+    console.log(`[KV] Updated key "${key}" in memory =>`, validatedValue);
+
+
+    // 3. Persist the entire store to disk
+    await syncStoreToFile();
 }
 
 /**
- * 6) A helper to delete a key
+ * Deep merges a partial object into an existing object value in the store.
+ * Throws if the key doesn't exist or the existing value isn't an object.
+ */
+export async function updateKVStore<K extends KVKey>(
+    key: K,
+    newValue: Partial<KVValue<K>>
+): Promise<KVValue<K>> {
+    // Use getKvValue to ensure we're working with validated data if it exists
+    // Note: This performs an unnecessary validation read if the data is already valid in memory,
+    // but ensures we don't merge into potentially invalid data.
+    // Alternatively, read directly from memoryStore and validate *after* merge.
+    // Let's read directly from memory first for efficiency, then validate post-merge.
+
+    const currentValue = memoryStore[key];
+
+    console.log({
+        memoryStore,
+        key,
+        currentValue,
+        partial: newValue,
+    })
+
+    if (currentValue === undefined) {
+        throw new ApiError(404, `Cannot update: Key "${key}" not found.`, 'KV_KEY_NOT_FOUND');
+    }
+
+    // Perform deep merge
+    // We cast currentValue because we've checked it's an object,
+    // but TS doesn't narrow it down from `unknown` sufficiently without complex type guards.
+    let updatedValue: KVValue<K>;
+    if (typeof currentValue === 'object') {
+        updatedValue = mergeDeep(currentValue as Record<string, any>, newValue);
+    } else {
+        updatedValue = newValue as KVValue<K>;
+    }
+
+    // Set the merged value (this will handle validation and persistence)
+    // Cast is necessary here because mergeDeep returns a broad type.
+    // setKvValue will validate against the specific KvSchemas[key].
+    await setKvValue(key, updatedValue as KVValue<K>);
+
+    // Return the validated, updated value (setKvValue ensures validation)
+    // Re-read from memoryStore as setKvValue might transform data via Zod schema
+    return memoryStore[key] as KVValue<K>;
+}
+
+/**
+ * Deletes a key from the store and persists the change.
  */
 export async function deleteKvKey(key: KVKey): Promise<void> {
-    kvStore.delete(key);
-    await kvStore.sync();
+    if (memoryStore.hasOwnProperty(key)) {
+        delete memoryStore[key];
+        console.log(`[KV] Deleted key "${key}" from memory`);
+        await syncStoreToFile();
+    } else {
+        console.log(`[KV] Attempted to delete non-existent key "${key}"`);
+        // Optionally throw an error if deleting a non-existent key is an issue
+        // throw new ApiError(404, `Cannot delete: Key "${key}" not found.`, 'KV_KEY_NOT_FOUND');
+    }
 }
 
 /**
- * 7) Extra convenience: backup the entire store on demand
+ * Creates a backup of the current KV store file.
  */
 export async function backupKvStore(): Promise<void> {
-    await kvStore.createBackup();
+    const sourcePath = path.resolve(KV_STORE_BASE_PATH, ...KV_STORE_FILE_PATH.map(String));
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupDir = path.join(KV_STORE_BASE_PATH, 'data', 'backups'); // Example backup directory
+    const backupFilename = `kv-store-backup-${timestamp}.json`;
+    const backupPath = path.join(backupDir, backupFilename);
+
+    try {
+        const sourceFile = Bun.file(sourcePath);
+        if (!(await sourceFile.exists())) {
+            console.warn(`[KV] Backup skipped: Source file not found at ${sourcePath}`);
+            return;
+        }
+
+        // Ensure backup directory exists (Bun.write handles directory creation)
+        await Bun.write(backupPath, sourceFile); // Efficiently copies the file content
+
+        console.log(`[KV] Backup created successfully at ${backupPath}`);
+    } catch (error) {
+        console.error(`[KV] Error creating backup:`, error);
+        throw new ApiError(500, `Internal Error: Failed to create KV store backup. Reason: ${error instanceof Error ? error.message : String(error)}`, 'KV_BACKUP_FAILED');
+    }
 }
+
+// Example Usage (ensure initKvStore is called at startup)
+/*
+async function main() {
+    await initKvStore();
+
+    // Example: Set a simple value
+    await setKvValue('appVersion', '1.2.0');
+
+    // Example: Get a value
+    const version = await getKvValue('appVersion');
+    console.log('Current App Version:', version);
+
+    // Example: Set an object
+    type UserPreferences = { theme: string; notifications: boolean };
+    await setKvValue('userPrefs:123', { theme: 'dark', notifications: true });
+
+    // Example: Update an object
+    const updatedPrefs = await updateKvValueObject('userPrefs:123', { notifications: false });
+    console.log('Updated User Prefs:', updatedPrefs);
+
+
+    // Example: Delete a key
+    await deleteKvKey('appVersion');
+
+    // Example: Backup
+    await backupKvStore();
+}
+
+main().catch(console.error);
+*/

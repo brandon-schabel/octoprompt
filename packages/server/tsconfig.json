@@ -36,5 +36,5 @@
     "server.ts",
     "build.ts",
     "src/utils/database.ts"
-, "../shared/src/constants/file-sync-options.ts"  ]
+, "../shared/src/constants/file-sync-options.ts", "../shared/src/utils/zod-utils.ts"  ]
 }

@@ -15,13 +15,9 @@ export function SuggestedFilesDialog({
     onClose,
     suggestedFiles,
 }: SuggestedFilesDialogProps) {
-    // Access the selectedFiles + ability to commit new selection
     const { selectedFiles, selectFiles } = useSelectedFiles()
-
-    // Keep a local Set of IDs while this dialog is open
     const [localSelectedFiles, setLocalSelectedFiles] = useState<Set<string>>(new Set())
 
-    // When the dialog *opens*, initialize local selection from the global store
     useEffect(() => {
         if (open) {
             setLocalSelectedFiles(new Set(selectedFiles))

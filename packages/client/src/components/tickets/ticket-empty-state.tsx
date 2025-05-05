@@ -6,10 +6,7 @@ interface TicketEmptyStateProps {
     onCreateTicket: () => void;
 }
 
-/**
- * Displays a friendly, minimal empty-state UI
- * for when no tickets exist.
- */
+
 export function TicketEmptyState({ onCreateTicket }: TicketEmptyStateProps) {
     return (
         <div className="w-full flex flex-col items-center justify-center text-center py-16 space-y-4 border rounded bg-card">

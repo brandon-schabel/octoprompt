@@ -2,8 +2,7 @@ import { HelpCircle, LucideIcon } from "lucide-react"
 import { ReactNode } from "react"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@ui"
-import { useSettings } from "@/hooks/api/global-state/selectors"
-
+import { useSelectSetting } from "@/hooks/api/use-kv-api"
 type InfoTooltipProps = {
     children: ReactNode
     icon?: LucideIcon
@@ -11,7 +10,7 @@ type InfoTooltipProps = {
 }
 
 export const InfoTooltip = ({ children, icon: Icon = HelpCircle, className }: InfoTooltipProps) => {
-    const { hideInformationalTooltips = false } = useSettings()
+    const hideInformationalTooltips = useSelectSetting('hideInformationalTooltips')
 
     if (hideInformationalTooltips) return null
 

@@ -21,13 +21,13 @@ import {
   DropdownMenuShortcut
 } from '@ui'
 import { toast } from "sonner"
-import { useUpdateProjectTabState } from "@/hooks/api/global-state/updaters"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useProjectTab } from "@/hooks/api/global-state/selectors"
 import { FileViewerDialog } from "../navigation/file-viewer-dialog"
 import { ProjectFile } from "@/hooks/generated"
+import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard"
+import { useProjectTabById, useUpdateProjectTabState } from "@/hooks/api/use-kv-api"
 type SelectedFilesListProps = {
   onRemoveFile: (fileId: string) => void
   onNavigateLeft?: () => void
@@ -62,8 +62,9 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
   const updateProjectTabState = useUpdateProjectTabState(projectTabId)
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
   const closeFileViewer = () => setViewedFile(null)
+  const { copyToClipboard } = useCopyClipboard()
 
-  const projectTab = useProjectTab(projectTabId)
+  const projectTab = useProjectTabById(projectTabId)
   const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
 
   const copyAllSelectedFiles = async () => {
@@ -75,8 +76,9 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
         combined += `/* ${f.name} */\n${f.content ?? ""}\n\n`
       }
     })
-    await navigator.clipboard.writeText(combined.trim())
-    toast.success("Copied all selected files content.")
+    await copyToClipboard(combined.trim(), {
+      successMessage: "Copied all selected files content.",
+    })
   }
 
   const handleCreateBookmark = () => {

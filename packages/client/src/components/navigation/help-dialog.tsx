@@ -3,8 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ui"
 import { Badge } from '@ui'
 import { ScrollArea } from "@ui"
 import { AppShortcutDisplay, ShortcutDisplay } from "../app-shortcut-display"
-import { useSettings } from "@/hooks/api/global-state/selectors"
-import { useActiveChatId } from "@/hooks/api/use-state-api"
+import { useActiveChatId, useAppSettings, useSelectSetting } from "@/hooks/api/use-kv-api"
 
 export type HelpDialogProps = {
     open?: boolean
@@ -12,13 +11,11 @@ export type HelpDialogProps = {
 }
 
 export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
-    // Get active chat from Zustand
     const [activeChatId] = useActiveChatId();
 
     // Get model info from global settings
-    const settings = useSettings();
-    const provider = settings?.provider;
-    const model = settings?.model;
+    const provider = useSelectSetting('provider');
+    const model = useSelectSetting('model');
 
     // Toggle help dialog with mod + /
     useHotkeys("mod+/", (e) => {

@@ -1,5 +1,4 @@
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-// Import the refactored hooks
 import { Input } from '@ui'
 import { Button } from '@ui'
 import { Badge } from '@ui'
@@ -11,7 +10,7 @@ import { formatShortcut } from '@/lib/shortcuts'
 import { X } from 'lucide-react'
 import { ResizablePanel } from '@ui'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
+import { useActiveProjectTab, useProjectTabField } from '@/hooks/api/use-kv-api'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useClickAway } from '@/hooks/utility-hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
@@ -26,7 +25,6 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@/hooks/generated/types.gen'
-import { useActiveProjectTab } from '@/hooks/api/use-state-api'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 type ExplorerRefs = {

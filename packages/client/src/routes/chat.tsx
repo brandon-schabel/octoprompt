@@ -7,10 +7,9 @@ import { Message } from "@ai-sdk/react";
 
 import { useAIChat } from '@/hooks/use-ai-chat';
 import { useChatModelParams } from '@/components/chat/hooks/use-chat-model-params';
-import { useActiveChatId } from '@/hooks/api/use-state-api';
 import { SlidingSidebar } from '@/components/sliding-sidebar'; // Assuming this component exists
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
-import { Chat } from '@/hooks/generated';
+import { AiSdkOptions, Chat } from '@/hooks/generated';
 import { cn } from '@/lib/utils';
 import {
   Command, CommandEmpty, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
@@ -25,12 +24,11 @@ import {
 } from '@ui'; // Assuming '@ui' exports necessary components
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useSettings } from "@/hooks/api/global-state/selectors";
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas'; // Ensure path is correct
-import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control';
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce';
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants';
-import { useSynchronizedState } from '@/hooks/api/global-state/global-state-utility-hooks';
+import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage';
+import { useActiveChatId, useSelectSetting } from '@/hooks/api/use-kv-api';
 
 // --- Model Settings Popover (No changes needed) ---
 export function ModelSettingsPopover() {
@@ -45,17 +43,38 @@ export function ModelSettingsPopover() {
     isTempDisabled,
   } = useChatModelParams();
 
-  const [temperature, updateTemperature] = useSynchronizedState(settings.temperature ?? 0.7, setTemperature, 300, isTempDisabled);
-  const [maxTokens, updateMaxTokens] = useSynchronizedState(settings.maxTokens ?? 100000, setMaxTokens);
-  const [topP, updateTopP] = useSynchronizedState(settings.topP ?? 0.9, setTopP);
-  const [freqPenalty, updateFreqPenalty] = useSynchronizedState(settings.frequencyPenalty ?? 0, setFreqPenalty);
-  const [presPenalty, updatePresPenalty] = useSynchronizedState(settings.presencePenalty ?? 0, setPresPenalty);
+  const [temperature, updateTemperature] = useLocalStorage("MODEL_TEMPERATURE", settings.temperature ?? 0.7);
+  const [maxTokens, updateMaxTokens] = useLocalStorage("MODEL_MAX_TOKENS", settings.maxTokens ?? 100000,);
+  const [topP, updateTopP] = useLocalStorage("MODEL_TOP_P", settings.topP ?? 0.9,);
+  const [freqPenalty, updateFreqPenalty] = useLocalStorage("MODEL_FREQ_PENALTY", settings.frequencyPenalty ?? 0,);
+  const [presPenalty, updatePresPenalty] = useLocalStorage("MODEL_PRES_PENALTY", settings.presencePenalty ?? 0,);
+  const [provider, setProvider] = useLocalStorage("MODEL_PROVIDER", settings.provider ?? 'openrouter');
+  const [currentModel, setCurrentModel] = useLocalStorage("MODEL_CURRENT_MODEL", 'gpt-4o');
+
+
+  // const modelSettings: AiSdkOptions = useMemo(() => ({
+  //   temperature,
+  //   top_p,
+  //   frequency_penalty,
+  //   presence_penalty,
+  //   max_tokens,
+  //   model,
+  //   provider,
+  // }), [
+  //   temperature,
+  //   topP,
+  //   freqPenalty,
+  //   presPenalty,
+  //   maxTokens,
+  //   currentModel,
+  //   provider
+  // ]);
 
   const handleSliderChange = useCallback((updater: (val: number) => void) => (value: number[]) => {
     updater(value[0]);
   }, []);
 
-  const { provider, setProvider, currentModel, setCurrentModel } = useChatModelControl();
+  // const { provider, setProvider, currentModel, setCurrentModel } = useChatModelControl();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -219,7 +238,7 @@ export function AdaptiveChatInput({
   disabled = false,
   preserveFormatting = true,
 }: AdaptiveChatInputProps) {
-  const [localValue, setLocalValue] = useState(value);
+  const [localValue, setLocalValue] = useLocalStorage("CHAT_INPUT_VALUE", value);
   const [isMultiline, setIsMultiline] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -227,27 +246,15 @@ export function AdaptiveChatInput({
   const debouncedOnChange = useDebounceCallback(onChange, 200);
 
   useEffect(() => {
-    if (value !== localValue) {
-      setLocalValue(value);
-    }
-    const shouldBeMultilineInitially = value?.includes('\n') || (value?.length ?? 0) > 100;
+    const shouldBeMultilineInitially = localValue?.includes('\n') || (localValue?.length ?? 0) > 100;
     if (shouldBeMultilineInitially !== isMultiline) {
       setIsMultiline(shouldBeMultilineInitially);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [localValue]);
 
-  useEffect(() => {
-    const shouldBeMultiline = localValue?.includes('\n') || (localValue?.length ?? 0) > 80;
-    if (shouldBeMultiline !== isMultiline) {
-      setIsMultiline(shouldBeMultiline);
-    }
-  }, [localValue, isMultiline]);
-
-  const handleLocalChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
-    debouncedOnChange(newValue);
   }, [debouncedOnChange]);
 
   const handlePaste = useCallback((e: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -298,7 +305,7 @@ export function AdaptiveChatInput({
 
   const baseProps = {
     value: localValue,
-    onChange: handleLocalChange,
+    onChange: handleInputChange,
     onKeyDown: handleKeyDown,
     onPaste: handlePaste,
     placeholder,
@@ -491,7 +498,7 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
   const deleteMessageMutation = useDeleteMessage();
   const forkChatMutation = useForkChatFromMessage();
   const [rawMessageIds, setRawMessageIds] = useState<Set<string>>(new Set());
-  const { autoScrollEnabled = true } = useSettings();
+  const autoScrollEnabled = useSelectSetting('autoScrollEnabled')
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -859,7 +866,7 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
       </div>
 
       {/* Right: Model Settings or Placeholder */}
-      <div className="flex-shrink-0 w-8"> {/* Ensure right side takes up same space as left button */} 
+      <div className="flex-shrink-0 w-8"> {/* Ensure right side takes up same space as left button */}
         {activeChatId && <ModelSettingsPopover />}
       </div>
     </div>

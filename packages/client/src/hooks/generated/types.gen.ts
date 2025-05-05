@@ -902,6 +902,46 @@ export type DeleteAgentRunResponse = {
     message: string;
 };
 
+export type KvGetResponse = {
+    success: true;
+    /**
+     * The key whose value was retrieved.
+     */
+    key: 'userProfile' | 'featureFlags' | 'counter' | 'appSettings' | 'projectTabs';
+    /**
+     * The retrieved value associated with the key.
+     */
+    value?: unknown;
+};
+
+export type KvSetResponse = {
+    success: true;
+    /**
+     * The key that was set.
+     */
+    key: 'userProfile' | 'featureFlags' | 'counter' | 'appSettings' | 'projectTabs';
+    /**
+     * The value that was stored.
+     */
+    value?: unknown;
+};
+
+export type KvSetBody = {
+    /**
+     * The key to set.
+     */
+    key: 'userProfile' | 'featureFlags' | 'counter' | 'appSettings' | 'projectTabs';
+    /**
+     * The value to store for the key. Must conform to the key's specific schema.
+     */
+    value?: unknown;
+};
+
+export type KvDeleteResponse = {
+    success: true;
+    message: string;
+};
+
 export type GetChatsData = {
     body?: never;
     path?: never;
@@ -3353,6 +3393,111 @@ export type DeleteApiAgentCoderRunsByAgentJobIdResponses = {
 };
 
 export type DeleteApiAgentCoderRunsByAgentJobIdResponse = DeleteApiAgentCoderRunsByAgentJobIdResponses[keyof DeleteApiAgentCoderRunsByAgentJobIdResponses];
+
+export type DeleteApiKvData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * The key to retrieve or delete.
+         */
+        key: 'userProfile' | 'featureFlags' | 'counter' | 'appSettings' | 'projectTabs';
+    };
+    url: '/api/kv';
+};
+
+export type DeleteApiKvErrors = {
+    /**
+     * Validation Error (Invalid Key Format)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type DeleteApiKvError = DeleteApiKvErrors[keyof DeleteApiKvErrors];
+
+export type DeleteApiKvResponses = {
+    /**
+     * Successfully deleted the key
+     */
+    200: KvDeleteResponse;
+};
+
+export type DeleteApiKvResponse = DeleteApiKvResponses[keyof DeleteApiKvResponses];
+
+export type GetApiKvData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * The key to retrieve or delete.
+         */
+        key: 'userProfile' | 'featureFlags' | 'counter' | 'appSettings' | 'projectTabs';
+    };
+    url: '/api/kv';
+};
+
+export type GetApiKvErrors = {
+    /**
+     * Key not found (though current service returns null)
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation Error (Invalid Key Format)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type GetApiKvError = GetApiKvErrors[keyof GetApiKvErrors];
+
+export type GetApiKvResponses = {
+    /**
+     * Successfully retrieved the value
+     */
+    200: KvGetResponse;
+};
+
+export type GetApiKvResponse = GetApiKvResponses[keyof GetApiKvResponses];
+
+export type PostApiKvData = {
+    body?: KvSetBody;
+    path?: never;
+    query?: never;
+    url: '/api/kv';
+};
+
+export type PostApiKvErrors = {
+    /**
+     * Validation Error (Value doesn't match schema for the key)
+     */
+    400: ApiErrorResponse;
+    /**
+     * Validation Error (Invalid Request Body/Key Format)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiKvError = PostApiKvErrors[keyof PostApiKvErrors];
+
+export type PostApiKvResponses = {
+    /**
+     * Successfully set the value
+     */
+    200: KvSetResponse;
+};
+
+export type PostApiKvResponse = PostApiKvResponses[keyof PostApiKvResponses];
 
 export type ClientOptions = {
     baseUrl: 'http://localhost:3147' | (string & {});

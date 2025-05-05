@@ -1,4 +1,5 @@
 # OctoPrompt
+
 Vibe code with precision
 
 ## Introduction
@@ -99,7 +100,7 @@ Operates entirely on your local machine—no mandatory cloud dependencies—lett
 
 ### **🔌 Customizable**  
 
-Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Zustand, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
+Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
 
 ### **🛟 Type Safe & Modular**  
 
