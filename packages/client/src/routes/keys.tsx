@@ -13,7 +13,7 @@ import {
 } from "@ui"
 import { ExternalLinkIcon, Copy } from 'lucide-react'
 import { PROVIDERS } from '@/constants/providers-constants'
-import { InfoTooltip } from '@/components/info-tooltip'
+import { OctoTooltip } from '@/components/octo/octo-tooltip'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 export const Route = createFileRoute('/keys')({
@@ -45,9 +45,9 @@ function KeysPage() {
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <CardTitle>Provider Keys</CardTitle>
-                        <InfoTooltip>
+                        <OctoTooltip>
                             {`Provider keys let you tap into external AI services (e.g. OpenAI, OpenRouter). Adding these keys unlocks extra features like file suggestions, summarizations, generating ticket tasks. If no key is added, you can still use local LLMs in the chat.`}
-                        </InfoTooltip>
+                        </OctoTooltip>
                     </div>
                     <CardDescription>
                         Add API keys for different AI providers here.

@@ -1,18 +1,18 @@
 import { ChangeEvent, KeyboardEvent, ClipboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { MessageSquareIcon, PlusIcon, Check, X, Edit2, Trash2, Expand, Settings2Icon, Copy, GitFork, Trash, SendIcon, PanelLeftOpen } from 'lucide-react'; // Added PanelLeftOpen
+import { MessageSquareIcon, PlusIcon, Check, X, Edit2, Trash2, Expand, Settings2Icon, Copy, GitFork, Trash, SendIcon, PanelLeftOpen, MessageSquareText } from 'lucide-react'; // Added PanelLeftOpen
 import { toast } from 'sonner';
 import { Message } from "@ai-sdk/react";
 
-import { useAIChat } from '@/hooks/use-ai-chat';
-import { useChatModelParams } from '@/components/chat/hooks/use-chat-model-params';
+import { useAIChat } from '@/hooks/api/use-ai-chat';
+import { useChatModelParams } from '@/hooks/chat/use-chat-model-params';
 import { SlidingSidebar } from '@/components/sliding-sidebar'; // Assuming this component exists
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
-import { AiSdkOptions, Chat } from '@/generated';
+import { Chat } from '@/generated';
 import { cn } from '@/lib/utils';
 import {
-  Command, CommandEmpty, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
+  ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
   Button,
   Popover,
   PopoverTrigger,
@@ -21,14 +21,16 @@ import {
   Input,
   Label,
   Slider,
-} from '@ui'; // Assuming '@ui' exports necessary components
+} from '@ui';
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { APIProviders } from 'shared/src/schemas/provider-key.schemas'; // Ensure path is correct
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce';
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants';
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage';
 import { useActiveChatId, useSelectSetting } from '@/hooks/api/use-kv-api';
+import { OctoCombobox } from '@/components/octo/octo-combobox';
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary';
 
 // --- Model Settings Popover (No changes needed) ---
 export function ModelSettingsPopover() {
@@ -40,6 +42,8 @@ export function ModelSettingsPopover() {
     setTopP,
     setFreqPenalty,
     setPresPenalty,
+    setProvider,
+    setModel,
     isTempDisabled,
   } = useChatModelParams();
 
@@ -48,33 +52,44 @@ export function ModelSettingsPopover() {
   const [topP, updateTopP] = useLocalStorage("MODEL_TOP_P", settings.topP ?? 0.9,);
   const [freqPenalty, updateFreqPenalty] = useLocalStorage("MODEL_FREQ_PENALTY", settings.frequencyPenalty ?? 0,);
   const [presPenalty, updatePresPenalty] = useLocalStorage("MODEL_PRES_PENALTY", settings.presencePenalty ?? 0,);
-  const [provider, setProvider] = useLocalStorage("MODEL_PROVIDER", settings.provider ?? 'openrouter');
-  const [currentModel, setCurrentModel] = useLocalStorage("MODEL_CURRENT_MODEL", 'gpt-4o');
+  const [provider, updateProvider] = useLocalStorage("MODEL_PROVIDER", settings.provider ?? 'openrouter');
+  const [currentModel, updateCurrentModel] = useLocalStorage("MODEL_CURRENT_MODEL", 'gpt-4o');
 
 
-  // const modelSettings: AiSdkOptions = useMemo(() => ({
-  //   temperature,
-  //   top_p,
-  //   frequency_penalty,
-  //   presence_penalty,
-  //   max_tokens,
-  //   model,
-  //   provider,
-  // }), [
-  //   temperature,
-  //   topP,
-  //   freqPenalty,
-  //   presPenalty,
-  //   maxTokens,
-  //   currentModel,
-  //   provider
-  // ]);
+  const handleUpdateTemperature = (value: number) => {
+    setTemperature(value)
+    updateTemperature(value)
+  }
 
-  const handleSliderChange = useCallback((updater: (val: number) => void) => (value: number[]) => {
-    updater(value[0]);
-  }, []);
+  const handleUpdateMaxTokens = (value: number) => {
+    setMaxTokens(value)
+    updateMaxTokens(value)
+  }
 
-  // const { provider, setProvider, currentModel, setCurrentModel } = useChatModelControl();
+  const handleUpdateTopP = (value: number) => {
+    setTopP(value)
+    updateTopP(value)
+  }
+
+  const handleUpdateFreqPenalty = (value: number) => {
+    setFreqPenalty(value)
+    updateFreqPenalty(value)
+  }
+
+  const handleUpdatePresPenalty = (value: number) => {
+    setPresPenalty(value)
+    updatePresPenalty(value)
+  }
+
+  const handleUpdateProvider = (value: APIProviders) => {
+    setProvider(value)
+    updateProvider(value)
+  }
+
+  const handleUpdateCurrentModel = (value: string) => {
+    setModel(value)
+    updateCurrentModel(value)
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -87,33 +102,35 @@ export function ModelSettingsPopover() {
       <PopoverContent className="w-80">
         <div className="space-y-4">
           <h4 className="font-medium leading-none mb-3">Model Settings</h4>
-          <ModelSelector
-            provider={provider as APIProviders}
-            currentModel={currentModel}
-            onProviderChange={setProvider}
-            onModelChange={setCurrentModel}
-            className="flex-col !gap-2"
-          />
+          <ErrorBoundary >
+            <ProviderModelSector
+              provider={provider as APIProviders}
+              currentModel={currentModel}
+              onProviderChange={handleUpdateProvider}
+              onModelChange={handleUpdateCurrentModel}
+              className="flex-col !gap-2"
+            />
+          </ErrorBoundary>
           <hr />
           <div className="space-y-2">
             <Label htmlFor="temperature">Temperature: {temperature.toFixed(2)}</Label>
-            <Slider id="temperature" disabled={isTempDisabled} min={0} max={2} step={0.01} value={[temperature]} onValueChange={handleSliderChange(updateTemperature)} />
+            <Slider id="temperature" disabled={isTempDisabled} min={0} max={1} step={0.01} value={[temperature]} onValueChange={temps => handleUpdateTemperature(temps[0])} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="max_tokens">Max Tokens: {maxTokens}</Label>
-            <Slider id="max_tokens" min={256} max={4096} step={1} value={[maxTokens]} onValueChange={handleSliderChange(updateMaxTokens)} />
+            <Slider id="max_tokens" min={1000} max={1000000} step={1000} value={[maxTokens]} onValueChange={maxTokens => handleUpdateMaxTokens(maxTokens[0])} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="top_p">Top P: {topP.toFixed(2)}</Label>
-            <Slider id="top_p" min={0} max={1} step={0.01} value={[topP]} onValueChange={handleSliderChange(updateTopP)} />
+            <Slider id="top_p" min={0} max={1} step={0.01} value={[topP]} onValueChange={topP => handleUpdateTopP(topP[0])} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="frequency_penalty">Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
-            <Slider id="frequency_penalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={handleSliderChange(updateFreqPenalty)} />
+            <Slider id="frequency_penalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={freqPenalty => handleUpdateFreqPenalty(freqPenalty[0])} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="presence_penalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
-            <Slider id="presence_penalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={handleSliderChange(updatePresPenalty)} />
+            <Slider id="presence_penalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={presPenalty => handleUpdatePresPenalty(presPenalty[0])} />
           </div>
         </div>
       </PopoverContent>
@@ -130,31 +147,28 @@ type ModelSelectorProps = {
   className?: string;
 };
 
-export function ModelSelector({ provider, currentModel, onProviderChange, onModelChange, className }: ModelSelectorProps) {
-  const [modelComboboxOpen, setModelComboboxOpen] = useState(false);
+export function ProviderModelSector({ provider, currentModel, onProviderChange, onModelChange, className }: ModelSelectorProps) {
   const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider);
 
-  const modelOptions = useMemo(() => (
+  const comboboxOptions = useMemo(() => (
     modelsData?.data.map((m) => ({
-      id: m.id,
-      displayName: m.name,
+      value: m.id,
+      label: m.name,
     })) ?? []
   ), [modelsData]);
 
   useEffect(() => {
-    const isCurrentModelValid = modelOptions.some(model => model.id === currentModel);
-    if ((!currentModel || !isCurrentModelValid) && modelOptions.length > 0) {
-      onModelChange(modelOptions[0].id);
+    const isCurrentModelValid = comboboxOptions.some(model => model.value === currentModel);
+    if ((!currentModel || !isCurrentModelValid) && comboboxOptions.length > 0) {
+      onModelChange(comboboxOptions[0].value);
     }
-  }, [modelOptions, currentModel, onModelChange]);
+  }, [comboboxOptions, currentModel, onModelChange]);
 
-  const truncateText = (text: string, maxLength = 24): string => {
-    return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
-  };
-
-  const selectedModelName = useMemo(() => {
-    return modelOptions.find((m) => m.id === currentModel)?.displayName ?? '';
-  }, [modelOptions, currentModel]);
+  const handleModelChange = useCallback((value: string | null) => {
+    if (value !== null) {
+      onModelChange(value);
+    }
+  }, [onModelChange]);
 
   return (
     <div className={cn("flex gap-4", className)}>
@@ -171,47 +185,16 @@ export function ModelSelector({ provider, currentModel, onProviderChange, onMode
         </SelectContent>
       </Select>
 
-      <Popover open={modelComboboxOpen} onOpenChange={setModelComboboxOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full justify-between min-w-[150px]"
-            disabled={isLoadingModels || modelOptions.length === 0}
-            aria-label="Select model"
-          >
-            {isLoadingModels
-              ? 'Loading...'
-              : modelOptions.length === 0
-                ? 'No models'
-                : selectedModelName
-                  ? truncateText(selectedModelName)
-                  : 'Select model'}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="p-0 w-[300px]">
-          <Command>
-            <CommandInput placeholder="Search models..." />
-            <CommandList>
-              <CommandEmpty>
-                {isLoadingModels ? 'Loading models...' : 'No models available.'}
-              </CommandEmpty>
-              {modelOptions.map((model) => (
-                <CommandItem
-                  key={model.id}
-                  value={model.displayName}
-                  onSelect={() => {
-                    onModelChange(model.id);
-                    setModelComboboxOpen(false);
-                  }}
-                  className="flex flex-col items-start cursor-pointer"
-                >
-                  <span className="font-medium">{model.displayName}</span>
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <OctoCombobox
+        options={comboboxOptions}
+        value={currentModel}
+        onValueChange={handleModelChange}
+        placeholder={isLoadingModels ? "Loading..." : comboboxOptions.length === 0 ? "No models" : "Select model"}
+        searchPlaceholder="Search models..."
+        className="w-full min-w-[150px]"
+        popoverClassName="w-[300px]"
+        disabled={isLoadingModels || comboboxOptions.length === 0}
+      />
     </div>
   );
 }
@@ -241,8 +224,6 @@ export function AdaptiveChatInput({
   const [localValue, setLocalValue] = useLocalStorage("CHAT_INPUT_VALUE", value);
   const [isMultiline, setIsMultiline] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debouncedOnChange = useDebounceCallback(onChange, 200);
 
   useEffect(() => {
@@ -319,7 +300,6 @@ export function AdaptiveChatInput({
       {isMultiline ? (
         <Textarea
           {...baseProps}
-          ref={textareaRef}
           rows={1}
           style={{
             // @ts-ignore
@@ -338,7 +318,6 @@ export function AdaptiveChatInput({
       ) : (
         <Input
           {...baseProps}
-          ref={inputRef}
           className={cn(baseProps.className, "overflow-hidden whitespace-nowrap")}
         />
       )}
@@ -827,7 +806,6 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   );
 }
 
-// --- Chat Header (MODIFIED) ---
 // Added onToggleSidebar prop
 export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [activeChatId] = useActiveChatId();
@@ -850,7 +828,7 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
           className="h-8 w-8"
           aria-label="Toggle chat sidebar"
         >
-          <PanelLeftOpen className="h-4 w-4" />
+          <MessageSquareText className="h-4 w-4" />
         </Button>
       </div>
 

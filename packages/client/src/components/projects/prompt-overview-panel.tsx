@@ -15,7 +15,7 @@ import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetProjectPrompts
 import { buildPromptContent, calculateTotalTokens, promptSchema } from 'shared/src/utils/projects-utils'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
-import { InfoTooltip } from '@/components/info-tooltip'
+import { OctoTooltip } from '@/components/octo/octo-tooltip'
 import { useActiveProjectTab, useUpdateActiveProjectTab, useProjectTabField, useActiveChatId } from '@/hooks/api/use-kv-api'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { z } from 'zod'
@@ -29,7 +29,7 @@ import { Binoculars, Bot, CheckCircle, Copy, MessageCircleCode, RefreshCw, Searc
 import { useRunAgentCoder, useGetAgentCoderRunLogs, useListAgentCoderRuns, useGetAgentCoderRunData, useConfirmAgentRunChanges, type AgentRunData, useDeleteAgentCoderRun } from '@/hooks/api/use-agent-coder-api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { OctoCombobox } from '../octo-combobox'
+import { OctoCombobox } from '../octo/octo-combobox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { type Prompt } from 'shared/src/schemas/prompt.schemas'
@@ -295,7 +295,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             <div className="flex flex-col h-full w-full">
                                 <div className="flex items-center gap-2 mb-2 shrink-0">
                                     <span className="text-sm font-medium">User Input</span>
-                                    <InfoTooltip>
+                                    <OctoTooltip>
                                         <div className="space-y-2">
                                             <p>Shortcuts:</p>
                                             <ul>
@@ -305,7 +305,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                                                 </li>
                                             </ul>
                                         </div>
-                                    </InfoTooltip>
+                                    </OctoTooltip>
                                 </div>
                                 <div className="flex-1 min-h-0 flex flex-col">
                                     <ExpandableTextarea

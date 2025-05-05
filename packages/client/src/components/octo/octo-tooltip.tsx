@@ -9,7 +9,7 @@ type InfoTooltipProps = {
     className?: string
 }
 
-export const InfoTooltip = ({ children, icon: Icon = HelpCircle, className }: InfoTooltipProps) => {
+export const OctoTooltip = ({ children, icon: Icon = HelpCircle, className }: InfoTooltipProps) => {
     const hideInformationalTooltips = useSelectSetting('hideInformationalTooltips')
 
     if (hideInformationalTooltips) return null

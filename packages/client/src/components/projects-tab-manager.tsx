@@ -6,7 +6,7 @@ import { Button } from '@ui';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui';
 import { Input } from '@ui';
 import { Badge } from '@ui';
-import { InfoTooltip } from './info-tooltip';
+import { OctoTooltip } from './octo/octo-tooltip';
 import { ShortcutDisplay } from './app-shortcut-display';
 import { LinkIcon, Plus, Pencil, Trash2, Settings, Icon } from 'lucide-react';
 import {
@@ -212,7 +212,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
           {/* Title and Settings Button */}
           <div className="text-xs lg:text-sm px-2 font-semibold flex items-center gap-1 mr-2 whitespace-nowrap"> {/* Adjusted padding/gap */}
             Project Tabs
-            <InfoTooltip >{titleTooltipContent}</InfoTooltip>
+            <OctoTooltip >{titleTooltipContent}</OctoTooltip>
             <Button
               variant="ghost"
               size="icon"

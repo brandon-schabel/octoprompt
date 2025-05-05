@@ -4,7 +4,7 @@ import { Button } from '@ui'
 import { Badge } from '@ui'
 import { ScrollArea } from '@ui'
 import { Skeleton } from '@ui'
-import { InfoTooltip } from '@/components/info-tooltip'
+import { OctoTooltip } from '@/components/octo/octo-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { formatShortcut } from '@/lib/shortcuts'
 import { X } from 'lucide-react'
@@ -242,7 +242,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           {searchByContent ? 'Search Content' : 'Search Names'}
         </Button>
 
-        <InfoTooltip>
+        <OctoTooltip>
           <div className='space-y-2'>
             <p>File Search Keyboard Shortcuts:</p>
             <ul>
@@ -267,7 +267,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               </li>
             </ul>
           </div>
-        </InfoTooltip>
+        </OctoTooltip>
 
         <div className='flex lg:hidden items-center justify-between'>{renderMobileSelectedFilesDrawerButton()}</div>
         {showAutocomplete && (localFileSearch || '').trim() && suggestions.length > 0 && (

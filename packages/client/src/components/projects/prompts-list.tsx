@@ -18,7 +18,7 @@ import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@ui'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '@ui'
-import { InfoTooltip } from '../info-tooltip'
+import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { ProjectFile } from '@/generated'
 import { promptSchema } from 'shared/src/utils/projects-utils'
@@ -243,7 +243,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                     <div>
                         <div className="text-md font-medium flex items-center gap-2">
                             <span><Badge>{selectedPrompts.length}</Badge> Project Prompts</span>
-                            <InfoTooltip>
+                            <OctoTooltip>
                                 <div className="space-y-2">
                                     <p>Prompts are reusable instructions that will be included with your chat. Each selected prompt will be added to the final prompt sent to the AI.</p>
                                     <p>You can:</p>
@@ -260,7 +260,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                         <li>- <ShortcutDisplay shortcut={['mod', 'p']} /> Focus prompts list</li>
                                     </ul>
                                 </div>
-                            </InfoTooltip>
+                            </OctoTooltip>
                         </div>
                         <div className="hidden lg:text-xs text-muted-foreground">
                             Press Space to select, Enter to view

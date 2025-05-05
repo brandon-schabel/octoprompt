@@ -137,13 +137,12 @@ export const Route = createRootRouteWithContext()({
 })
 
 function RootComponent() {
-  const { data: clientAppSettings, isPending: isAppSettingsPending } = useGetAppSettings()
+  const { isPending: isAppSettingsPending } = useGetAppSettings()
   const { activeProjectTabId, isPending: isActiveProjectTabIdPending } = useGetActiveProjectTabId()
-  const { data: projectTabs, isPending: isProjectTabsPending } = useGetProjectTabs()
-  const { projectTab, isPending: isProjectTabByIdPending } = useGetProjectTab(activeProjectTabId ?? '')
+  const { isPending: isProjectTabsPending } = useGetProjectTabs()
+  const { isPending: isProjectTabByIdPending } = useGetProjectTab(activeProjectTabId ?? '')
 
 
-  console.log({ clientAppSettings })
   const isPending = isAppSettingsPending || isActiveProjectTabIdPending || isProjectTabsPending || isProjectTabByIdPending
 
   if (isPending) {

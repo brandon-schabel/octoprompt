@@ -1,4 +1,3 @@
-// File: packages/server/src/tests/file-sync-service.test.ts
 import { describe, test, expect, spyOn, beforeEach, afterEach, Mock } from "bun:test";
 import * as fileSyncService from "@/services/file-services/file-sync-service"; // Import the module itself
 import * as projectService from "@/services/project-service"; // Import for bulk operations

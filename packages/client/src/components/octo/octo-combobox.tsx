@@ -32,16 +32,18 @@ interface OctoComboboxProps {
     searchPlaceholder?: string
     className?: string
     popoverClassName?: string
+    disabled?: boolean
 }
 
-export function OctoCombobox({ 
-    options, 
-    value, 
-    onValueChange, 
-    placeholder = "Select...", 
+export function OctoCombobox({
+    options,
+    value,
+    onValueChange,
+    placeholder = "Select...",
     searchPlaceholder = "Search...",
     className,
-    popoverClassName
+    popoverClassName,
+    disabled
 }: OctoComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -51,12 +53,13 @@ export function OctoCombobox({
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+            <PopoverTrigger asChild disabled={disabled}>
                 <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
                     className={cn("w-[200px] justify-between", className, !value && "text-muted-foreground")}
+                    disabled={disabled}
                 >
                     <span className="truncate">{selectedLabel}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -70,6 +73,7 @@ export function OctoCombobox({
                         <CommandGroup>
                             {options.map((option) => (
                                 <CommandItem
+                                    disabled={disabled}
                                     key={option.value}
                                     value={option.value}
                                     onSelect={(currentValue) => {

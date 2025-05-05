@@ -1,7 +1,7 @@
 import { SelectedFilesListRef } from "../../selected-files-list"
 import { SelectedFilesList } from "../../selected-files-list"
 import { ShortcutDisplay } from "@/components/app-shortcut-display"
-import { InfoTooltip } from "@/components/info-tooltip"
+import { OctoTooltip } from "@/components/octo/octo-tooltip"
 import { Badge } from '@ui'
 import { ScrollArea } from "@ui"
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files"
@@ -27,7 +27,7 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
                 <div className="flex text-sm font-medium items-center space-x-2">
                     <Badge variant="secondary">{selectedFiles.length}</Badge>
                     <span>Selected Files</span>
-                    <InfoTooltip>
+                    <OctoTooltip>
                         Selected files will be included with your prompt.
                         <ul className="mt-2 list-disc list-inside">
                             <li>
@@ -42,7 +42,7 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
                                 Press <ShortcutDisplay shortcut={['mod', 'b']} /> to show/hide this panel.
                             </li>
                         </ul>
-                    </InfoTooltip>
+                    </OctoTooltip>
                 </div>
             </div>
             <ScrollArea

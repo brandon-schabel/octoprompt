@@ -5,7 +5,7 @@ import { Input } from '@ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui";
 import { Textarea } from "@ui";
 import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
-import { InfoTooltip } from "../info-tooltip";
+import { OctoTooltip } from "../octo/octo-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
 import type { TicketWithTasks } from "@/generated";
 
@@ -116,9 +116,9 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
                 <DialogHeader>
                     <DialogTitle className="flex space-x-2 items-center">
                         <span>{ticketWithTasks ? "Edit Ticket" : "Create New Ticket"}</span>
-                        <InfoTooltip className="max-w-xs">
+                        <OctoTooltip className="max-w-xs">
                             Providing a detailed overview helps auto-generate tasks & file suggestions!
-                        </InfoTooltip>
+                        </OctoTooltip>
                     </DialogTitle>
                 </DialogHeader>
 

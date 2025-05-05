@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<PropsWithChildren, ErrorBoundarySta
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className=" flex items-center justify-center p-4">
           <div className="max-w-md w-full space-y-4 text-center">
             <AlertCircle className="w-12 h-12 mx-auto text-destructive" />
             <h2 className="text-2xl font-bold">Something went wrong</h2>
