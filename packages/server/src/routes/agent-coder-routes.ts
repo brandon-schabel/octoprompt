@@ -260,7 +260,6 @@ export const writeFilesToFileSystem = async ({
 
             const needsWrite = !originalFile || (isValidChecksum(originalChecksum) && isValidChecksum(newChecksum) && originalChecksum !== newChecksum);
             if (!needsWrite) {
-                // console.log(`[Agent Coder Route ${agentJobId}] Skipping unchanged file: ${updatedFile.path}`);
                 return;
             }
 
@@ -344,18 +343,7 @@ export const agentCoderRoutes = new OpenAPIHono()
                 throw new ApiError(500, message, 'AGENT_CODER_FAILED', { tasks: orchestratorResult.tasks, agentJobId });
             }
 
-            // Type assertion after check
 
-            // // --- 4. Write updated/new code files to filesystem ---
-            //  We no longer write files to the filesystem here.
-            //  We now write files to the filesystem in the confirm route.
-            // if (orchestratorResult.updatedFiles.length > 0) {
-            //     console.log(`[Agent Coder Route ${agentJobId}] Writing ${orchestratorResult.updatedFiles.length} updated/new code files...`);
-            //     await writeFilesToFileSystem(coderAgentDataContext, orchestratorResult);
-            // } else {
-            //     console.log(`[Agent Coder Route ${agentJobId}] Orchestrator returned no code files to write.`);
-            // }
-            // // --- End Code File Writing ---
 
             // 5. Format and Send Success Response
             const responsePayload: z.infer<typeof AgentCoderRunResponseSchema> = {
@@ -559,7 +547,6 @@ export const agentCoderRoutes = new OpenAPIHono()
                 throw new ApiError(404, `Project ${projectId} associated with agent run ${agentJobId} not found.`);
             }
             // Ensure you have a way to resolve the project's base path
-            // Assuming 'project.path' holds the relative or absolute path stored
             // You might need a configuration variable for the base directory if it's relative
             const absoluteProjectPath = resolvePath(project.path); // Use your path resolution logic
             if (!absoluteProjectPath) {

@@ -1,14 +1,13 @@
 import { resolvePath } from '@/utils/path-utils';
 import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@/utils/project-storage';
-import { forceSummarizeFiles, summarizeFiles } from "./file-services/file-summary-service";
 import { syncProject } from "./file-services/file-sync-service";
 import { CreateProjectBody, Project, ProjectFile, ProjectFileSchema, ProjectSchema, UpdateProjectBody } from "shared/src/schemas/project.schemas";
 import path from 'path';
-import { ZodError } from "zod"
+import { z, ZodError } from "zod"
+import { LOW_MODEL_CONFIG } from 'shared';
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
+import { generateStructuredData } from './gen-ai-services';
 
-/**
- * Creates a new project stored in JSON.
- */
 export async function createProject(data: CreateProjectBody): Promise<Project> {
     const projectId = projectStorage.generateId('proj');
     const now = new Date().toISOString();
@@ -47,9 +46,6 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
     }
 }
 
-/**
- * Retrieves a project by its ID from JSON.
- */
 export async function getProjectById(projectId: string): Promise<Project | null> {
     try {
         const projects = await projectStorage.readProjects();
@@ -62,9 +58,6 @@ export async function getProjectById(projectId: string): Promise<Project | null>
     }
 }
 
-/**
- * Lists all projects from JSON.
- */
 export async function listProjects(): Promise<Project[]> {
     try {
         const projects = await projectStorage.readProjects();
@@ -78,9 +71,6 @@ export async function listProjects(): Promise<Project[]> {
     }
 }
 
-/**
- * Updates an existing project in JSON.
- */
 export async function updateProject(projectId: string, data: UpdateProjectBody): Promise<Project | null> {
     try {
         const projects = await projectStorage.readProjects();
@@ -115,9 +105,6 @@ export async function updateProject(projectId: string, data: UpdateProjectBody):
     }
 }
 
-/**
- * Deletes a project from JSON and its associated file data.
- */
 export async function deleteProject(projectId: string): Promise<boolean> {
     try {
         const projects = await projectStorage.readProjects();
@@ -139,9 +126,6 @@ export async function deleteProject(projectId: string): Promise<boolean> {
     }
 }
 
-/**
- * Retrieves all files associated with a project from JSON.
- */
 export async function getProjectFiles(projectId: string): Promise<ProjectFile[] | null> {
     try {
         // Optional: Check if project exists first (could be redundant if file read handles it)
@@ -162,10 +146,6 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[] 
     }
 }
 
-/**
- * Updates the content and timestamp of a specific file within a project's JSON.
- * NOTE: Requires projectId context now.
- */
 export async function updateFileContent(
     projectId: string, // Added projectId
     fileId: string,
@@ -207,20 +187,16 @@ export async function updateFileContent(
     }
 }
 
-/**
- * Fetches project, syncs files, gets files, and forces summarization for all files.
- * NOTE: forceSummarizeFiles needs access to modify/save file data now.
- */
 export async function resummarizeAllFiles(projectId: string): Promise<void> {
     const project = await getProjectById(projectId);
     if (!project) {
         throw new Error(`[ProjectService] Project not found with ID ${projectId} for resummarize all.`);
     }
 
-    // Sync files first (assuming syncProject is adapted to use JSON or works independently)
-    await syncProject(project); // syncProject might internally call bulk create/update/delete using the new JSON methods
+    // Sync files to ensure projects files are up to date before creating the summaries
+    await syncProject(project);
 
-    const allFiles = await getProjectFiles(projectId); // Get potentially updated list
+    const allFiles = await getProjectFiles(projectId);
     if (!allFiles || allFiles.length === 0) {
         console.warn(`[ProjectService] No files found for project ${projectId} after sync during resummarize all.`);
         return;
@@ -229,7 +205,7 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
     try {
         // forceSummarizeFiles should ideally return the modified files or handle saving internally
         // Option 1: Assume it modifies the passed array objects directly
-        await forceSummarizeFiles(allFiles); // Pass the array
+        await summarizeFiles(projectId, allFiles.map(f => f.id)); // Pass the array
 
         // If forceSummarizeFiles modified the objects, we need to reconstruct the map and save
         const updatedFilesMap = allFiles.reduce((acc, file) => {
@@ -250,124 +226,8 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
     }
 }
 
-/**
- * Forces re-summarization for a specific list of file IDs within a project.
- */
-export async function forceResummarizeSelectedFiles(
-    projectId: string,
-    fileIds: string[]
-): Promise<{ included: number; skipped: number; message: string }> {
-    if (fileIds.length === 0) {
-        return { included: 0, skipped: 0, message: "No file IDs provided" };
-    }
-
-    try {
-        const allFilesMap = await projectStorage.readProjectFiles(projectId);
-        const selectedFiles: ProjectFile[] = [];
-        for (const fileId of fileIds) {
-            if (allFilesMap[fileId]) {
-                selectedFiles.push(allFilesMap[fileId]);
-            } else {
-                console.warn(`[ProjectService] File ID ${fileId} not found in project ${projectId} for force resummarize.`);
-            }
-        }
-
-        if (selectedFiles.length === 0) {
-            return { included: 0, skipped: 0, message: "No matching files found for the provided IDs" };
-        }
-
-        // Assume forceSummarizeFiles modifies the objects in the selectedFiles array
-        await forceSummarizeFiles(selectedFiles);
-
-        // Update the main map with modified files
-        let modifiedCount = 0;
-        selectedFiles.forEach(file => {
-            if (allFilesMap[file.id]) { // Ensure it still exists (unlikely to change here)
-                // Re-validate *each* modified file before putting back in map
-                try {
-                    const validatedFile = ProjectFileSchema.parse(file);
-                    allFilesMap[file.id] = validatedFile;
-                    modifiedCount++;
-                } catch (validationError) {
-                    console.error(`[ProjectService] Validation failed for file ${file.id} after forceSummarizeFiles:`, validationError);
-                    // Option: skip this file or throw error? Let's skip for now.
-                }
-            }
-        });
-
-        // Validate the whole map again before writing
-        const validatedMap = ProjectFilesStorageSchema.parse(allFilesMap);
-
-        await projectStorage.writeProjectFiles(projectId, validatedMap);
-
-        return {
-            included: modifiedCount, // Report how many were actually processed and saved
-            skipped: fileIds.length - modifiedCount, // How many were provided but not found or failed validation
-            message: `Selected ${modifiedCount} files processed for force re-summarization.` + (fileIds.length - modifiedCount > 0 ? ` Skipped ${fileIds.length - modifiedCount}.` : '')
-        };
-    } catch (error) {
-        console.error(`[ProjectService] Error during forceResummarizeSelectedFiles for project ${projectId}:`, error);
-        throw new Error(`Failed during force re-summarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
-    }
-}
-
-/**
- * Summarizes a specific list of file IDs within a project (potentially skipping already summarized).
- * NOTE: summarizeFiles needs similar adaptation as forceSummarizeFiles regarding data modification/saving.
- */
-export async function summarizeSelectedFiles(projectId: string, fileIds: string[]): Promise<{ included: number; skipped: number; message: string }> {
-    if (fileIds.length === 0) {
-        return { included: 0, skipped: 0, message: "No file IDs provided" };
-    }
-    try {
-        const allFilesMap = await projectStorage.readProjectFiles(projectId);
-        const selectedFileIdsForSummarize: string[] = []; // Only IDs are needed by summarizeFiles
-        const fileObjectsMap: Record<string, ProjectFile> = {}; // Keep objects for update later
-
-        for (const fileId of fileIds) {
-            if (allFilesMap[fileId]) {
-                selectedFileIdsForSummarize.push(fileId);
-                fileObjectsMap[fileId] = allFilesMap[fileId]; // Store object locally
-            } else {
-                console.warn(`[ProjectService] File ID ${fileId} not found in project ${projectId} for summarize.`);
-            }
-        }
-
-        if (selectedFileIdsForSummarize.length === 0) {
-            return { included: 0, skipped: 0, message: "No matching files found for the provided IDs" };
-        }
-
-        // summarizeFiles likely needs adaptation. Let's assume it returns which IDs were processed.
-        // It might need the full file objects if it checks content/timestamps.
-        // Let's pass the objects map for now.
-        const result = await summarizeFiles(projectId, selectedFileIdsForSummarize /* or potentially fileObjectsMap */);
-        // --> summarizeFiles needs refactoring <--
-        // Assume summarizeFiles *somehow* updates the summaries in the main store or returns updated data.
-        // For now, let's simulate a read-after-write or assume it did its job.
-        // A more robust approach would involve summarizeFiles returning updated objects
-        // or taking a callback to save updated files.
-
-        // Refresh the data to reflect changes made by summarizeFiles (simplistic approach)
-        const potentiallyUpdatedFilesMap = await projectStorage.readProjectFiles(projectId);
-
-        const finalIncluded = result.included; // Use result from summarizeFiles
-        const finalSkipped = result.skipped; // Use result from summarizeFiles
-
-        return {
-            included: finalIncluded,
-            skipped: finalSkipped,
-            message: `Summarization process completed for ${selectedFileIdsForSummarize.length} requested files. Included: ${finalIncluded}, Skipped: ${finalSkipped}.`
-        };
-    } catch (error) {
-        console.error(`[ProjectService] Error during summarizeSelectedFiles for project ${projectId}:`, error);
-        throw new Error(`Failed during summarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
-    }
-}
 
 
-/**
- * Removes summaries and their update timestamps from selected files in JSON.
- */
 export async function removeSummariesFromFiles(projectId: string, fileIds: string[]) {
     if (fileIds.length === 0) {
         return { success: true, removedCount: 0, message: "No file IDs provided" };
@@ -422,9 +282,7 @@ export async function removeSummariesFromFiles(projectId: string, fileIds: strin
     }
 }
 
-/**
- * Creates a new file record in the project's JSON file.
- */
+
 export async function createProjectFileRecord(
     projectId: string,
     filePath: string, // This should be relative to project root or absolute
@@ -451,14 +309,15 @@ export async function createProjectFileRecord(
         id: fileId,
         projectId: projectId,
         name: fileName,
-        path: normalizedRelativePath, // Store the relative path
+        path: normalizedRelativePath, // stores relative path to project root, because we store project file root
+        // so we can get the full path with project root path + file path
         extension: fileExtension,
         size: size,
-        content: initialContent, // Store initial content
+        content: initialContent,
         summary: null,
         summaryLastUpdatedAt: null,
-        meta: '{}', // Default meta, ensure schema allows string
-        checksum: null, // Calculate checksum if needed: calculateChecksum(initialContent),
+        meta: '{}',
+        checksum: null,
         createdAt: now,
         updatedAt: now,
     };
@@ -696,5 +555,103 @@ export async function getProjectFilesByIds(projectId: string, fileIds: string[])
     }
 }
 
-// --- Keep FileSyncData interface if used by sync service ---
-// export interface FileSyncData { ... }
+
+
+
+
+/**
+ * Exposed for unit testing. Summarizes a single file if it meets conditions
+ * and updates the project's file storage.
+ */
+export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFile> {
+    const fileContent = file.content || "";
+
+    // --- Initial checks remain the same ---
+    if (!fileContent.trim()) {
+        console.warn(`[SummarizeSingleFile] File ${file.path} is empty, skipping summarization.`);
+        // No DB update needed here, just return
+        throw new Error(`File ${file.path} is empty, skipping summarization.`);
+    }
+
+    // --- AI Generation Logic (remains mostly the same) ---
+    const systemPrompt = `
+  ## You are a coding assistant specializing in concise code summaries.
+  1. Provide a short overview of what the file does.
+  2. Outline main exports (functions/classes).
+  3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
+  `;
+
+    const cfg = LOW_MODEL_CONFIG;
+    const provider = cfg.provider as APIProviders || 'openai';
+    const modelId = cfg.model;
+
+    if (!modelId) {
+        console.error(`[SummarizeSingleFile] Model not configured for summarize-file task for file ${file.path}.`);
+        throw new Error(`Model not configured for summarize-file task for file ${file.path}.`);
+    }
+
+    try {
+        const result = await generateStructuredData({
+            prompt: fileContent,
+            options: cfg,
+            schema: z.object({
+                summary: z.string()
+            }),
+            systemMessage: systemPrompt
+        });
+
+        const summary = result.object.summary;
+        const trimmedSummary = summary.trim();
+
+        // --- Update Project File Storage ---
+        const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
+            summary: trimmedSummary,
+        });
+
+
+        console.log(`[SummarizeSingleFile] Successfully summarized and updated file: ${file.path} in project ${file.projectId}`);
+        return updatedFile;
+    } catch (error) {
+        console.error(`[SummarizeSingleFile] Error summarizing file ${file.path} (project ${file.projectId}) using ${provider}/${modelId}:`, error);
+        // Optionally mark as failed in storage?
+        // await updateFileSummaryStatus(file.projectId, file.id, null, 'failed_error');
+        // handle error quietly or rethrow/log based on desired behavior
+        throw new Error(`Failed to summarize file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Summarize multiple files, respecting summarization rules.
+ * Processes files sequentially to avoid storage write conflicts.
+ */
+export async function summarizeFiles(
+    projectId: string,
+    fileIdsToSummarize: string[],
+): Promise<{ included: number; skipped: number, updatedFiles: ProjectFile[] }> {
+    // Use the project-service function to get files
+    const allProjectFiles = await getProjectFiles(projectId);
+
+    if (!allProjectFiles) {
+        console.warn(`[BatchSummarize] No files found for project ${projectId}.`);
+        return { included: 0, skipped: 0, updatedFiles: [] };
+    }
+
+    // Filter the fetched files based on the provided IDs
+    const filesToProcess = allProjectFiles.filter((f) => fileIdsToSummarize.includes(f.id));
+    const totalFiles = filesToProcess.length;
+
+
+    const updatedFiles: ProjectFile[] = [];
+
+    // --- Process Sequentially ---
+    for (const file of filesToProcess) {
+        const updatedFile = await summarizeSingleFile(file); // This handles internal checks and storage update
+        updatedFiles.push(updatedFile);
+
+    }
+
+    console.log(`[BatchSummarize] File summarization batch complete for project ${projectId}. Included: ${totalFiles}, Skipped: ${totalFiles - updatedFiles.length}`);
+    return { included: totalFiles, skipped: totalFiles - updatedFiles.length, updatedFiles };
+}
+
+

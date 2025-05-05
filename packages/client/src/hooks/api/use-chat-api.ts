@@ -175,16 +175,6 @@ export function useDeleteMessage() {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: (data, variables, context) => {
-            // How to invalidate depends on how messages are fetched.
-            // If fetched per-chat, need to find the chat ID associated with the messageId.
-            // This might require more complex cache updates or fetching chat ID beforehand.
-            // A simpler approach might be to refetch all messages for the relevant chat
-            // if the chatId is known here or passed as part of variables.
-            // Example (assuming chatId was passed somehow or available in context):
-            // const chatId = context?.chatId || getChatIdFromMessageId(variables); // Pseudo-code
-            // if (chatId) {
-            //     queryClient.invalidateQueries({ queryKey: CHAT_KEYS.messages(chatId) });
-            // }
             console.warn("Message deleted, but cache invalidation might need specific logic based on chatId.");
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),

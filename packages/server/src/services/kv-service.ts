@@ -1,16 +1,13 @@
 import { z, ZodError } from 'zod';
 import path from 'node:path';
-import { ApiError } from 'shared'; // Assuming you have this
-import { KVKey, KvSchemas, KVValue } from 'shared/src/schemas/kv-store.schemas'; // Assuming paths
-import { mergeDeep } from 'shared/src/utils/merge-deep'; // Assuming path
-import { jsonScribe } from '../utils/json-scribe'; // Assuming jsonScribe is in the same directory or adjust path
+import { ApiError } from 'shared';
+import { KVKey, KvSchemas, KVValue } from 'shared/src/schemas/kv-store.schemas';
+import { mergeDeep } from 'shared/src/utils/merge-deep';
+import { jsonScribe } from '../utils/json-scribe';
 
-// --- Configuration ---
+const KV_STORE_FILE_PATH = ['data', 'kv-store.json'];
+const KV_STORE_BASE_PATH = process.cwd();
 
-const KV_STORE_FILE_PATH = ['data', 'kv-store.json']; // Or 'data/kv-store.json'
-const KV_STORE_BASE_PATH = process.cwd(); // Or specify another base directory
-
-// --- In-Memory State ---
 
 // Using Record for simplicity, Map could also be used.
 // Holds the entire KV state. Initialized empty, loaded by initKvStore.
@@ -164,13 +161,6 @@ export async function updateKVStore<K extends KVKey>(
 
     const currentValue = memoryStore[key];
 
-    console.log({
-        memoryStore,
-        key,
-        currentValue,
-        partial: newValue,
-    })
-
     if (currentValue === undefined) {
         throw new ApiError(404, `Cannot update: Key "${key}" not found.`, 'KV_KEY_NOT_FOUND');
     }
@@ -237,33 +227,3 @@ export async function backupKvStore(): Promise<void> {
     }
 }
 
-// Example Usage (ensure initKvStore is called at startup)
-/*
-async function main() {
-    await initKvStore();
-
-    // Example: Set a simple value
-    await setKvValue('appVersion', '1.2.0');
-
-    // Example: Get a value
-    const version = await getKvValue('appVersion');
-    console.log('Current App Version:', version);
-
-    // Example: Set an object
-    type UserPreferences = { theme: string; notifications: boolean };
-    await setKvValue('userPrefs:123', { theme: 'dark', notifications: true });
-
-    // Example: Update an object
-    const updatedPrefs = await updateKvValueObject('userPrefs:123', { notifications: false });
-    console.log('Updated User Prefs:', updatedPrefs);
-
-
-    // Example: Delete a key
-    await deleteKvKey('appVersion');
-
-    // Example: Backup
-    await backupKvStore();
-}
-
-main().catch(console.error);
-*/

@@ -72,14 +72,6 @@ export const RefreshQuerySchema = z.object({
     })
 }).openapi('RefreshQuery');
 
-export const GetFileSummariesQuerySchema = z.object({
-    fileIds: z.string().optional().openapi({
-        param: { name: 'fileIds', in: 'query' },
-        example: 'file_1a2b3c4d,file_e5f6g7h8',
-        description: 'Optional comma-separated list of file IDs to retrieve summaries for'
-    })
-}).openapi('GetFileSummariesQuery');
-
 // Response Schemas
 export const ProjectResponseSchema = z.object({
     success: z.literal(true),
@@ -117,20 +109,6 @@ export const ProjectSummaryResponseSchema = z.object({
 export const ProjectFileMapSchema = z.map(z.string(), ProjectFileSchema)
     .describe("A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects.")
     .openapi('ProjectFileMap');
-
-export const projectsApiValidation = {
-    create: { body: CreateProjectBodySchema },
-    getOrDelete: { params: ProjectIdParamsSchema },
-    update: { params: ProjectIdParamsSchema, body: UpdateProjectBodySchema },
-    sync: { params: ProjectIdParamsSchema },
-    refresh: { params: ProjectIdParamsSchema, query: RefreshQuerySchema },
-    getFiles: { params: ProjectIdParamsSchema },
-    getFileSummaries: { params: ProjectIdParamsSchema, query: GetFileSummariesQuerySchema },
-    summarizeFiles: { params: ProjectIdParamsSchema, body: SummarizeFilesBodySchema },
-    resummarizeAll: { params: ProjectIdParamsSchema },
-    removeSummaries: { params: ProjectIdParamsSchema, body: RemoveSummariesBodySchema },
-    suggestFiles: { params: ProjectIdParamsSchema, body: SuggestFilesBodySchema }
-} as const;
 
 
 // a key/value map by id of all project object (content, file name, path, extension, etc)

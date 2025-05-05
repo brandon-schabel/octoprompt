@@ -114,7 +114,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
       return;
     }
 
-    console.log(`Creating new project tab for projectId: ${projectId}`);
     createProjectTab({ selectedProjectId: projectId, selectedFiles: [] });
   };
 
@@ -202,7 +201,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
         value={activeTabId ?? ""}
 
         onValueChange={(value) => {
-          console.log('[ProjectsTabManager] onValueChange -> value:', value);
           setActiveProjectTabId(value);
         }}
         className={cn("flex flex-col justify-start rounded-none border-b", className)}

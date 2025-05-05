@@ -47,7 +47,6 @@ describe("mergeDeep", () => {
         const obj1 = { a: [1, 2, 3] };
         const obj2 = { a: [4, 5] };
         const result = mergeDeep(obj1, obj2);
-        // Assuming arrays are not merged element-wise but overwritten.
         expect(result).toEqual({ a: [4, 5] });
     });
 
@@ -76,7 +75,6 @@ describe("mergeDeep", () => {
     });
 
     it("should return an empty object if no arguments are provided", () => {
-        // Assuming mergeDeep supports no-argument call and returns an empty object.
         const result = mergeDeep();
         expect(result).toEqual({});
     });

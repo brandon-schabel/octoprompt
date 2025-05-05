@@ -199,6 +199,7 @@ export const SummarizeFilesResponseSchema = z.object({
     success: z.literal(true),
     included: z.number().int().openapi({ example: 5 }),
     skipped: z.number().int().openapi({ example: 2 }),
+    updatedFiles: z.array(ProjectFileSchema),
     message: z.string().openapi({ example: 'Files summarized successfully.' })
 }).openapi('SummarizeFilesResponse');
 

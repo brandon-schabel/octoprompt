@@ -100,34 +100,3 @@ export function buildCombinedFileSummariesXml(
     return output;
 }
 
-// --- Example Usage (assuming you have ProjectFile defined elsewhere) ---
-
-/*
-// Define the ProjectFile type/interface if not already imported
-interface ProjectFile {
-    name: string;
-    summary?: string;
-    // other properties...
-}
-
-const sampleFiles: ProjectFile[] = [
-    { name: "src/index.ts", summary: "Main entry point & setup." },
-    { name: "src/schemas/project.schemas.ts", summary: "Defines the ProjectFile type." },
-    { name: "README.md", summary: " Contains <important> project info & usage instructions. " }, // Example with special chars & whitespace
-    { name: "config.json" } // Example with no summary
-];
-
-// Example 1: Default behavior (skip empty summaries)
-const xmlOutputDefault = buildCombinedFileSummariesXml(sampleFiles);
-console.log("--- Default Output ---");
-console.log(xmlOutputDefault);
-
-// Example 2: Include empty summaries with custom placeholder
-const xmlOutputIncludeEmpty = buildCombinedFileSummariesXml(sampleFiles, {
-    includeEmptySummaries: true,
-    emptySummaryText: "[No Summary Available]"
-});
-console.log("\n--- Output Including Empty ---");
-console.log(xmlOutputIncludeEmpty);
-
-*/

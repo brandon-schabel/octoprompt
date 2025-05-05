@@ -7,7 +7,7 @@ import { Message } from "@ai-sdk/react";
 
 import { useAIChat } from '@/hooks/api/use-ai-chat';
 import { useChatModelParams } from '@/hooks/chat/use-chat-model-params';
-import { SlidingSidebar } from '@/components/sliding-sidebar'; // Assuming this component exists
+import { SlidingSidebar } from '@/components/sliding-sidebar';
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
 import { Chat } from '@/generated';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,6 @@ import { useActiveChatId, useSelectSetting } from '@/hooks/api/use-kv-api';
 import { OctoCombobox } from '@/components/octo/octo-combobox';
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary';
 
-// --- Model Settings Popover (No changes needed) ---
 export function ModelSettingsPopover() {
   const [open, setOpen] = useState(false);
   const {
@@ -227,11 +226,21 @@ export function AdaptiveChatInput({
   const debouncedOnChange = useDebounceCallback(onChange, 200);
 
   useEffect(() => {
-    const shouldBeMultilineInitially = localValue?.includes('\n') || (localValue?.length ?? 0) > 100;
+    // call onChange to set the local value
+    onChange(localValue);
+  }, []);
+
+  // update using onChange when localValue changes
+  useEffect(() => {
+    onChange(localValue);
+  }, [localValue, onChange]);
+
+  useEffect(() => {
+    const shouldBeMultilineInitially = value?.includes('\n') || (value?.length ?? 0) > 100;
     if (shouldBeMultilineInitially !== isMultiline) {
       setIsMultiline(shouldBeMultilineInitially);
     }
-  }, [localValue]);
+  }, [value]);
 
   const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -259,7 +268,6 @@ export function AdaptiveChatInput({
         .replace(/\n{3,}/g, "\n\n");
     }
 
-    setLocalValue(newValue);
     onChange(newValue);
 
     requestAnimationFrame(() => {
@@ -270,12 +278,12 @@ export function AdaptiveChatInput({
   }, [preserveFormatting, onChange]);
 
   const triggerSubmit = useCallback(() => {
-    const finalValue = localValue;
+    const finalValue = value;
     if (finalValue !== value) {
       onChange(finalValue);
     }
     onSubmit?.();
-  }, [localValue, onChange, onSubmit, value]);
+  }, [value, onChange, onSubmit, value]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isMultiline) {
@@ -285,7 +293,7 @@ export function AdaptiveChatInput({
   }, [isMultiline, triggerSubmit]);
 
   const baseProps = {
-    value: localValue,
+    value: value,
     onChange: handleInputChange,
     onKeyDown: handleKeyDown,
     onPaste: handlePaste,
@@ -966,13 +974,12 @@ function ChatPage() {
                   value={input ?? ''}
                   onChange={handleChatInputChange}
                   placeholder="Type your message..."
-                  disabled={isAiLoading || !model || !activeChatId}
                   preserveFormatting
                   className="flex-grow rounded-lg"
                 />
                 <Button
                   type="submit"
-                  disabled={isAiLoading || !input?.trim() || !model || !activeChatId}
+                  disabled={input?.trim() === ''}
                   size="icon"
                   className="self-end sm:h-10 sm:w-10 flex-shrink-0"
                   aria-label="Send message"

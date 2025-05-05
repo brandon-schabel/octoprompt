@@ -7,17 +7,14 @@ import {
     getApiProjectsByProjectIdQueryKey,
     getApiProjectsByProjectIdFilesOptions,
     getApiProjectsByProjectIdFilesQueryKey,
-    getApiProjectsByProjectIdFileSummariesOptions,
-    getApiProjectsByProjectIdFileSummariesQueryKey,
     postApiProjectsMutation,
     patchApiProjectsByProjectIdMutation,
     deleteApiProjectsByProjectIdMutation,
     postApiProjectsByProjectIdSyncMutation,
-    postApiProjectsByProjectIdSummarizeMutation,
-    postApiProjectsByProjectIdResummarizeAllMutation,
     postApiProjectsByProjectIdRemoveSummariesMutation,
     postApiProjectsByProjectIdSuggestFilesMutation,
     postApiProjectsByProjectIdRefreshMutation,
+    postApiProjectsByProjectIdSummarizeMutation,
 
 } from '../../generated/@tanstack/react-query.gen';
 import type {
@@ -35,13 +32,8 @@ import type {
     PostApiProjectsByProjectIdSyncData,
     PostApiProjectsByProjectIdSyncError,
     PostApiProjectsByProjectIdSyncResponse,
-    GetApiProjectsByProjectIdFileSummariesData,
     PostApiProjectsByProjectIdSummarizeData,
-    PostApiProjectsByProjectIdSummarizeError,
-    PostApiProjectsByProjectIdSummarizeResponse,
-    PostApiProjectsByProjectIdResummarizeAllData,
-    PostApiProjectsByProjectIdResummarizeAllError,
-    PostApiProjectsByProjectIdResummarizeAllResponse,
+
     PostApiProjectsByProjectIdRemoveSummariesData,
     PostApiProjectsByProjectIdRemoveSummariesError,
     PostApiProjectsByProjectIdRemoveSummariesResponse,
@@ -51,8 +43,11 @@ import type {
     PostApiProjectsByProjectIdRefreshData,
     PostApiProjectsByProjectIdRefreshError,
     PostApiProjectsByProjectIdRefreshResponse,
+    PostApiProjectsByProjectIdSummarizeError,
+    PostApiProjectsByProjectIdSummarizeResponse,
+    SuggestFilesRequestBody,
 } from '../../generated/types.gen';
-import { Options } from '../../generated/sdk.gen';
+import { Options, postApiProjectsByProjectIdSuggestFiles } from '../../generated/sdk.gen';
 
 export type CreateProjectInput = PostApiProjectsData['body'];
 export type UpdateProjectInput = PatchApiProjectsByProjectIdData['body'];
@@ -65,7 +60,6 @@ const PROJECT_KEYS = {
     lists: () => getApiProjectsQueryKey(),
     details: () => [...getApiProjectsQueryKey(), 'detail'] as const, // Custom structure if needed, but direct ID key is better
     detail: (projectId: string) => getApiProjectsByProjectIdQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdData>), // Corresponds to old ['projects', 'detail', id]
-    summaries: (projectId: string) => getApiProjectsByProjectIdFileSummariesQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdFileSummariesData>), // Corresponds to old ['projects', 'file-summaries', projectId]
 } as const;
 
 const PROJECT_FILES_KEYS = {
@@ -97,20 +91,6 @@ export const useGetProjectFiles = (projectId: string) => {
     });
 };
 
-export const useGetFileSummaries = (projectId: string, fileIds?: string[]) => {
-    const queryParams: Options<GetApiProjectsByProjectIdFileSummariesData>['query'] =
-        fileIds && fileIds.length > 0 ? { fileIds: fileIds.join(',') } : undefined;
-
-    const queryOptions = getApiProjectsByProjectIdFileSummariesOptions({
-        path: { projectId },
-        query: queryParams,
-    } as Options<GetApiProjectsByProjectIdFileSummariesData>);
-
-    return useQuery({
-        ...queryOptions,
-        enabled: !!projectId,
-    });
-};
 
 export const useCreateProject = () => {
     const queryClient = useQueryClient();
@@ -163,7 +143,6 @@ export const useDeleteProject = () => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.lists() });
             queryClient.removeQueries({ queryKey: PROJECT_KEYS.detail(projectId) });
             queryClient.removeQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
-            queryClient.removeQueries({ queryKey: PROJECT_KEYS.summaries(projectId) });
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });
@@ -201,22 +180,7 @@ export const useFindSuggestedFiles = (projectId: string) => {
     });
 };
 
-export const useResummarizeAllFiles = (projectId: string) => {
-    const queryClient = useQueryClient();
-    const mutationOptions = postApiProjectsByProjectIdResummarizeAllMutation();
 
-    return useMutation<PostApiProjectsByProjectIdResummarizeAllResponse, PostApiProjectsByProjectIdResummarizeAllError, void>({
-        mutationFn: () => {
-            const opts: Options<PostApiProjectsByProjectIdResummarizeAllData> = { path: { projectId } };
-            return mutationOptions.mutationFn!(opts);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summaries(projectId) });
-            queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
-        },
-        onError: (error) => commonErrorHandler(error as unknown as Error)
-    });
-};
 
 export const useRemoveSummariesFromFiles = (projectId: string) => {
     const queryClient = useQueryClient();
@@ -229,7 +193,6 @@ export const useRemoveSummariesFromFiles = (projectId: string) => {
             return mutationOptions.mutationFn!(opts);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summaries(projectId) });
             queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
         },
         onError: (error) => commonErrorHandler(error as unknown as Error)
@@ -255,3 +218,43 @@ export function useRefreshProject(projectId: string) {
         onError: (error) => commonErrorHandler(error as unknown as Error),
     });
 }
+
+
+export const useSuggestFiles = (projectId: string) => {
+    return useMutation({
+        mutationFn: async (requestBody: SuggestFilesRequestBody) => {
+            return await postApiProjectsByProjectIdSuggestFiles({
+                path: {
+                    projectId: projectId,
+                },
+                body: {
+                    userInput: requestBody.userInput,
+                },
+            });
+        },
+    });
+}
+
+
+export const useSummarizeProjectFiles = (projectId: string) => {
+    const mutationOptions = postApiProjectsByProjectIdSummarizeMutation();
+    const queryClient = useQueryClient();
+
+    return useMutation<PostApiProjectsByProjectIdSummarizeResponse, PostApiProjectsByProjectIdSummarizeError, SummarizeFilesInput>({
+        mutationFn: (body: SummarizeFilesInput) => {
+            const opts: Options<PostApiProjectsByProjectIdSummarizeData> = { path: { projectId }, body };
+            return mutationOptions.mutationFn!(opts);
+        },
+        onSuccess: () => {
+            // TODO: invalidate project files
+            queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
+            queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(projectId) });
+
+            // queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summaries(projectId) });
+            // queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
+
+            // TODO: invalidate project files
+        },
+        onError: (error) => commonErrorHandler(error as unknown as Error),
+    });
+};

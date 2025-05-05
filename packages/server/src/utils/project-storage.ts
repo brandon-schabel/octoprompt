@@ -2,7 +2,7 @@
 import { z, ZodError, type ZodTypeAny } from 'zod';
 import path from 'node:path';
 import fs from 'node:fs/promises'; // Using Node's fs promises
-import { ProjectSchema, ProjectFileSchema } from 'shared/src/schemas/project.schemas';
+import { ProjectSchema, ProjectFileSchema, type ProjectFile } from 'shared/src/schemas/project.schemas';
 
 // Define the base directory for storing project data
 // Adjust this path as needed, e.g., use an environment variable
@@ -76,7 +76,6 @@ async function readValidatedJson<T extends ZodTypeAny>(
             return defaultValue;
             // Or: throw new ZodError(validationResult.error.errors);
         }
-        // console.log(`Successfully read and validated JSON from: ${filePath}`);
         return validationResult.data;
     } catch (error: any) {
         if (error.code === 'ENOENT') {
@@ -154,6 +153,49 @@ export const projectStorage = {
         return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema);
     },
 
+    /**
+     * Updates a specific file within a project.
+     * Reads the project's files, validates the new data, updates the entry, and writes back.
+     * @param projectId The ID of the project containing the file.
+     * @param fileId The ID of the file to update.
+     * @param fileData The new data for the file (will be validated).
+     * @returns The validated and saved ProjectFile data.
+     * @throws ZodError if validation fails.
+     * @throws Error if reading/writing fails.
+     */
+    async updateProjectFile(projectId: string, fileId: string, fileData: Partial<Omit<ProjectFile, 'updatedAt' | 'createdAt'>>): Promise<ProjectFile> {
+        //  get current file data
+        const currentFile = await this.readProjectFile(projectId, fileId);
+        if (!currentFile) {
+            throw new Error(`File not found: ${fileId} in project ${projectId}`);
+        }
+        // 1. Validate the incoming data first
+        const validationResult = await ProjectFileSchema.safeParseAsync({ ...currentFile, ...fileData, updatedAt: new Date().toISOString() });
+        if (!validationResult.success) {
+            console.error(`Zod validation failed for file ${fileId} in project ${projectId}:`, validationResult.error.errors);
+            throw new ZodError(validationResult.error.errors);
+        }
+        const validatedFileData = validationResult.data;
+
+        // 2. Read the existing files for the project
+        const currentFiles = await this.readProjectFiles(projectId);
+
+        // 3. Update the specific file entry
+        currentFiles[fileId] = validatedFileData;
+
+        // 4. Write the updated file storage back
+        // Note: writeProjectFiles already handles validation of the *entire* storage object
+        await this.writeProjectFiles(projectId, currentFiles);
+
+        // 5. Return the validated data that was just saved
+        return validatedFileData;
+    },
+
+    async readProjectFile(projectId: string, fileId: string): Promise<ProjectFile | undefined> {
+        const files = await this.readProjectFiles(projectId);
+        return files[fileId];
+    },
+
     /** Deletes a project's data directory. */
     async deleteProjectData(projectId: string): Promise<void> {
         const dirPath = getProjectDataDir(projectId);
@@ -161,7 +203,6 @@ export const projectStorage = {
             // Check if directory exists before attempting removal
             await fs.access(dirPath); // Throws if doesn't exist
             await fs.rm(dirPath, { recursive: true, force: true }); // Remove dir and contents
-            console.log(`Successfully deleted project data directory: ${dirPath}`);
         } catch (error: any) {
             if (error.code === 'ENOENT') {
                 console.warn(`Project data directory not found, nothing to delete: ${dirPath}`);

@@ -66,14 +66,11 @@ export const useRunAgentCoder = (projectId: string) => {
             // Check against the more specific AgentCoderRunResponse type
             if (data.success && data.data?.agentJobId) {
                 toast.success(`Agent Coder job ${data.data.agentJobId} finished successfully!`);
-                console.log('Agent Coder success response:', data);
             } else if (data.success) {
                 toast.success('Agent Coder finished successfully!');
-                console.log('Agent Coder success response (jobId missing?):', data);
             } else {
                 const errorMessage = data.error?.message || 'Agent Coder reported failure.';
                 toast.error(`Agent Coder Failed: ${errorMessage}`);
-                console.error('Agent Coder failure response:', data.error);
             }
 
             const queryKey = getApiProjectsByProjectIdFilesQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdFilesData>);
@@ -169,7 +166,6 @@ export const useConfirmAgentRunChanges = () => {
                 const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
                 queryClient.invalidateQueries({ queryKey: runsListQueryKey });
             } else {
-                // Assuming the generated response includes an error object on failure
                 const errorMessage = (data as any)?.error?.message || 'Failed to confirm agent run changes.';
                 toast.error(`Confirmation Failed: ${errorMessage}`);
                 console.error('Confirm Agent Run Failure:', data);

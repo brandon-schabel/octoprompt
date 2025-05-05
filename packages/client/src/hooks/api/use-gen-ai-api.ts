@@ -1,28 +1,13 @@
-import { useMutation, useQueryClient, type UseMutationOptions, } from '@tanstack/react-query';
-import { postApiGenAiText, postApiGenAiStructured, postApiProjectsByProjectIdSuggestFiles, Options } from '@/generated/sdk.gen';
+import { useMutation, type UseMutationOptions, } from '@tanstack/react-query';
+import { postApiGenAiStructured } from '@/generated/sdk.gen';
 import type {
-    PostApiGenAiTextResponse,
-    PostApiGenAiTextError,
-    PostApiGenAiStructuredResponse,
     PostApiGenAiStructuredError,
-    PostApiProjectsByProjectIdSuggestFilesData,
 
-    SuggestFilesResponse,
-    SuggestFilesRequestBody,
-    SuggestFilesBody,
-    PostApiProjectsByProjectIdSummarizeData,
-    PostApiProjectsByProjectIdSummarizeError,
-    PostApiProjectsByProjectIdSummarizeResponse,
 } from '@/generated/types.gen';
 import {
-    type AiGenerateTextRequest,
-    type AiGenerateStructuredRequest,
     structuredDataSchemas
 } from 'shared/src/schemas/gen-ai.schemas';
 import { z } from 'zod';
-import { postApiProjectsByProjectIdSummarizeMutation } from '../../generated/@tanstack/react-query.gen';
-import { commonErrorHandler } from './common-mutation-error-handler';
-import { SummarizeFilesInput } from './use-projects-api';
 
 
 export type StructuredSchemaGenericResponse<
@@ -142,37 +127,3 @@ export const useGenerateStructuredData = <
 };
 
 
-export const useSuggestFiles = (projectId: string) => {
-    return useMutation({
-        mutationFn: async (requestBody: SuggestFilesRequestBody) => {
-            return await postApiProjectsByProjectIdSuggestFiles({
-                path: {
-                    projectId: projectId,
-                },
-                body: {
-                    userInput: requestBody.userInput,
-                },
-            });
-        },
-    });
-}
-
-
-
-export const useSummarizeProjectFiles = (projectId: string) => {
-    const mutationOptions = postApiProjectsByProjectIdSummarizeMutation();
-
-    return useMutation<PostApiProjectsByProjectIdSummarizeResponse, PostApiProjectsByProjectIdSummarizeError, SummarizeFilesInput>({
-        mutationFn: (body: SummarizeFilesInput) => {
-            const opts: Options<PostApiProjectsByProjectIdSummarizeData> = { path: { projectId }, body };
-            return mutationOptions.mutationFn!(opts);
-        },
-        onSuccess: () => {
-            // queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summaries(projectId) });
-            // queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
-
-            // TODO: invalidate project files
-        },
-        onError: (error) => commonErrorHandler(error as unknown as Error),
-    });
-};

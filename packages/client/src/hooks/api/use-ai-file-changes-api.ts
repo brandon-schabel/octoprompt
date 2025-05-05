@@ -23,7 +23,7 @@ export type GenerateChangeInput = {
   prompt: string;
 };
 
-type FileChangeDetailsResponse = GetApiFileAiChangeByFileChangeIdResponse; // Assuming direct response or adjust as needed
+type FileChangeDetailsResponse = GetApiFileAiChangeByFileChangeIdResponse; 
 
 const FILE_CHANGE_KEYS = {
   all: ['fileChange'] as const,

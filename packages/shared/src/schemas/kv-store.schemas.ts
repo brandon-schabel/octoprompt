@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from './common.schemas'; // Assuming common schemas exist
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from './common.schemas'; 
 import { appSettingsSchema, createInitialGlobalState, projectTabsStateRecordSchema } from './global-state-schema';
 
 export const KVKeyEnum = {
@@ -45,7 +45,7 @@ export const KvKeyQuerySchema = z.object({
 }).openapi('KvKeyQuery');
 
 export const KvSetBodySchema = z.object({
-    value: z.any().openapi({ // Specific validation happens in the route handler
+    value: z.any().openapi({ 
         description: 'The value to store for the key. Must conform to the key\'s specific schema.',
         example: { theme: 'dark', language: 'en' },
     }),

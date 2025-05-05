@@ -21,7 +21,6 @@ import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { z } from 'zod'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '@ui'
-import { useSuggestFiles } from '@/hooks/api/use-gen-ai-api'
 import { ProjectFile } from '@/generated'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
@@ -33,6 +32,7 @@ import { OctoCombobox } from '../octo/octo-combobox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { type Prompt } from 'shared/src/schemas/prompt.schemas'
+import { useSuggestFiles } from '@/hooks/api/use-projects-api'
 
 export type PromptOverviewPanelRef = {
     focusPrompt: () => void
@@ -147,12 +147,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             }
             findSuggestedFilesMutation.mutate({ userInput: `Please find the relevant files for the following prompt: ${localUserPrompt}` }, {
                 onSuccess: (resp) => {
-                    console.log('resp', resp)
                     if (resp?.data?.success && resp.data?.recommendedFileIds) {
                         const files = resp.data.recommendedFileIds.map(id => {
                             const file = projectFileMap.get(id)
-                            console.log('file', file)
-                            console.log('projectFileMap', projectFileMap)
                             if (file) {
                                 return file
                             }
@@ -160,8 +157,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             return null
                         }).filter(Boolean) as ProjectFile[]
 
-                        console.log('files', files)
-                        console.log('suggestedFiles', suggestedFiles)
                         setSuggestedFiles(files)
                         setShowSuggestions(true)
                     }

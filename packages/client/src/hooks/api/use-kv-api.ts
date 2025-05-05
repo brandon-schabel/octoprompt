@@ -402,7 +402,6 @@ export function useDeleteProjectTab() {
             return;
         }
 
-        console.log(`Attempting to delete project tab ${tabIdToDelete} via KV`);
 
         // Determine potential next active tab *before* deleting
         let nextActiveTabId: string | null = null;
@@ -410,16 +409,13 @@ export function useDeleteProjectTab() {
             const remainingTabIds = Object.keys(tabs ?? {}).filter(id => id !== tabIdToDelete);
             // Simple logic: activate the first remaining tab. Could be more sophisticated.
             nextActiveTabId = remainingTabIds[0] ?? null;
-            console.log(`Deleted tab was active. Next active tab will be: ${nextActiveTabId}`);
         }
 
         // Call the delete action from the store
         deleteTab(tabIdToDelete);
-        console.log(`Tab ${tabIdToDelete} deleted from KV.`);
 
         // Activate the next tab *after* successful deletion
         if (activeTabId === tabIdToDelete) {
-            console.log(`Setting next active tab to ${nextActiveTabId} via KV`);
             setActiveProjectTabId(nextActiveTabId ?? ''); // Call the activation action
         }
     };
@@ -451,11 +447,9 @@ export function useUpdateProjectTabState(projectTabId: string) {
         const finalPartial = getPartial(projectTab ?? {} as ProjectTabState, partialOrFn); // Use helper
 
         if (Object.keys(finalPartial).length === 0) {
-            console.log(`Skipping update for tab ${projectTabId}: partial is empty.`);
             return;
         }
 
-        console.log(`Updating specific project tab ${projectTabId} via KV with partial:`, finalPartial);
         updateProjectTabById(projectTabId, finalPartial); // Call the core KV action
     };
 }

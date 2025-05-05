@@ -21,6 +21,7 @@ import {
     Wand2,
     RefreshCw,
     ClipboardList,
+    Sparkles,
 } from "lucide-react";
 import clsx from "clsx";
 import { toast } from "sonner";
@@ -51,6 +52,7 @@ import { buildNodeContent, buildNodeSummaries } from "shared/src/utils/projects-
 import { getEditorUrl } from "@/utils/editor-urls";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
 import { useRefreshProject } from "@/hooks/api/use-projects-api";
+import { useSummarizeProjectFiles } from "@/hooks/api/use-projects-api";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useActiveProjectTab } from "@/hooks/api/use-kv-api";
@@ -135,14 +137,17 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
     },
     ref
 ) {
-    const [projectTabState, , selectedProjectId] = useActiveProjectTab();
+    const [projectTabState, , projectTabId] = useActiveProjectTab();
     const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
     const resolveImports = projectTabState?.resolveImports ?? false;
     const preferredEditor = projectTabState?.preferredEditor ?? "vscode";
     const { copyToClipboard } = useCopyClipboard()
+    const projectId = projectTabState?.selectedProjectId ?? "";
 
     // New refresh functionality
-    const { mutate: refreshProject } = useRefreshProject(selectedProjectId ?? "");
+    const { mutate: refreshProject } = useRefreshProject(projectId ?? "");
+    // Hook for summarizing files
+    const summarizeMutation = useSummarizeProjectFiles(projectId ?? "")
 
     const isFolder = item.node._folder === true;
 
@@ -302,6 +307,51 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                         {/* Inline icons for single file */}
                         {!isFolder && item.node.file && (
                             <>
+                                {/* Summary indicator icons */}
+                                {hasSummary ? (
+                                    // <ClipboardList
+                                    //     className="h-4 w-4 text-blue-500 flex-shrink-0 ml-auto mr-1"
+                                    // // title="Summary exists"
+                                    // />
+                                    <div className="h-1 w-1 bg-blue-500 flex-shrink-0 ml-auto mr-1 rounded-full">
+                                    </div>
+                                ) : (
+                                    // red dot
+                                    <div className="h-1 w-1 bg-yellow-300 flex-shrink-0 ml-auto mr-1 rounded-full" title="No summary" >
+                                    </div>
+                                )}
+
+                                {/* Conditionally show Summarize button */}
+                                {!hasSummary && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        title="Summarize this file"
+                                        className="h-6 w-6 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        disabled={summarizeMutation.isPending && summarizeMutation.variables?.fileIds.includes(item.node.file.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+
+                                            console.log("summarizing file", item.node.file!.id)
+
+                                            summarizeMutation.mutate(
+                                                { fileIds: [item.node.file!.id], force: false }, // force: false initially
+                                                {
+                                                    onSuccess: (resp) => {
+                                                        toast.success(resp.message || "File summary started.")
+                                                    },
+                                                    onError: (error: any) => { // Added 'any' type temporarily
+                                                        toast.error(error?.error?.message || "Failed to start summarization.")
+                                                    }
+                                                }
+                                            )
+                                        }}
+                                    >
+
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                    </Button>
+                                )}
+
                                 {onViewFile && (
                                     <Button
                                         variant="ghost"
