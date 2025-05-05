@@ -1,6 +1,6 @@
 import React from "react";
 import { useLinkFilesToTicket } from "../../hooks/api/use-tickets-api";
-import { ProjectFile } from "@/hooks/generated";
+import { ProjectFile } from "@/generated";
 
 interface TicketAttachmentsPanelProps {
     ticketId: string;

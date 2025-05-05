@@ -5,7 +5,7 @@ import {
   getApiFileAiChangeByFileChangeIdQueryKey,
   postApiFileAiChangeMutation,
   postApiFileAiChangeByFileChangeIdConfirmMutation,
-} from '../generated/@tanstack/react-query.gen';
+} from '../../generated/@tanstack/react-query.gen';
 import type {
   GetApiFileAiChangeByFileChangeIdData,
   GetApiFileAiChangeByFileChangeIdResponse,
@@ -15,8 +15,8 @@ import type {
   PostApiFileAiChangeByFileChangeIdConfirmData,
   PostApiFileAiChangeByFileChangeIdConfirmError,
   PostApiFileAiChangeByFileChangeIdConfirmResponse,
-} from '../generated/types.gen';
-import { Options } from '../generated/sdk.gen';
+} from '../../generated/types.gen';
+import { Options } from '../../generated/sdk.gen';
 
 export type GenerateChangeInput = {
   filePath: string;

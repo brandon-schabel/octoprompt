@@ -12,7 +12,7 @@ import {
     postChatsByChatIdForkByMessageIdMutation,
     deleteMessagesByMessageIdMutation,
     getModelsOptions,
-} from '../generated/@tanstack/react-query.gen';
+} from '../../generated/@tanstack/react-query.gen';
 import type {
     PostChatsData,
     PostChatsError,
@@ -36,8 +36,8 @@ import type {
     PostChatsByChatIdForkResponse,
     PostChatsByChatIdForkByMessageIdResponse,
     DeleteMessagesByMessageIdResponse,
-} from '../generated/types.gen';
-import { Options } from '../generated/sdk.gen';
+} from '../../generated/types.gen';
+import { Options } from '../../generated/sdk.gen';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 
 export type CreateChatInput = PostChatsData['body'];

@@ -22,7 +22,7 @@ import {
 } from "@ui";
 import { useState } from "react";
 import { useNavigate } from '@tanstack/react-router';
-import { TicketWithTasks } from "@/hooks/generated";
+import { TicketWithTasks } from "@/generated";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useProjectTabById, useUpdateProjectTabState } from "@/hooks/api/use-kv-api";
 

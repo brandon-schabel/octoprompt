@@ -1,4 +1,4 @@
-import { Ticket, Task, TicketWithTasks } from "@/hooks/generated/types.gen";
+import { Ticket, Task, TicketWithTasks } from "@/generated/types.gen";
 
 export function buildTicketContent(
     ticket: Ticket,

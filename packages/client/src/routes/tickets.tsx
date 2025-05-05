@@ -6,7 +6,7 @@ import { Plus } from "lucide-react";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
-import { Ticket, TicketWithTasks } from "@/hooks/generated";
+import { Ticket, TicketWithTasks } from "@/generated";
 import { useActiveProjectTab } from "@/hooks/api/use-kv-api";
 
 export const Route = createFileRoute("/tickets")({

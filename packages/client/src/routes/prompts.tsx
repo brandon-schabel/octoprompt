@@ -13,7 +13,7 @@ import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
 import { Badge } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
-import { Prompt } from '@/hooks/generated'
+import { Prompt } from '@/generated'
 
 // Utility function to estimate token count
 function estimateTokenCount(text: string, charsPerToken: number = 4): number {

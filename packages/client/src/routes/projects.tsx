@@ -7,7 +7,7 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { ResizablePanel } from '@ui'
-import { ProjectResponse } from '@/hooks/generated'
+import { ProjectResponse } from '@/generated'
 import { useActiveProjectTab, useGetProjectTabs } from '@/hooks/api/use-kv-api'
 
 import { useCreateProjectTab } from '@/hooks/api/use-kv-api'

@@ -16,7 +16,7 @@ import {
     postApiProjectsByProjectIdPromptsByPromptIdMutation,
     deleteApiProjectsByProjectIdPromptsByPromptIdMutation,
     postApiPromptOptimizeMutation,
-} from '../generated/@tanstack/react-query.gen';
+} from '../../generated/@tanstack/react-query.gen';
 import type {
     // Query Data Types
     GetApiPromptsData,
@@ -42,8 +42,8 @@ import type {
     PostApiPromptOptimizeData,
     PostApiPromptOptimizeError,
     PostApiPromptOptimizeResponse,
-} from '../generated/types.gen';
-import { Options } from '../generated/sdk.gen';
+} from '../../generated/types.gen';
+import { Options } from '../../generated/sdk.gen';
 
 
 // Input Types based on generated mutation data types

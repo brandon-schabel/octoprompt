@@ -13,7 +13,7 @@ import { Pencil, Trash2, Icon } from "lucide-react"
 import { tab } from '@lucide/lab'
 import { useListTicketsWithTasks } from "@/hooks/api/use-tickets-api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@ui"
-import { ProjectResponse } from "@/hooks/generated"
+import { ProjectResponse } from "@/generated"
 import { useActiveProjectTab, useDeleteProjectTabById, useGetActiveProjectTabId, useGetProjectTab, useUpdateProjectTabById } from "@/hooks/api/use-kv-api"
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard"
 

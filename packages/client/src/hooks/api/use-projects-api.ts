@@ -19,7 +19,7 @@ import {
     postApiProjectsByProjectIdSuggestFilesMutation,
     postApiProjectsByProjectIdRefreshMutation,
 
-} from '../generated/@tanstack/react-query.gen';
+} from '../../generated/@tanstack/react-query.gen';
 import type {
     PostApiProjectsData,
     PostApiProjectsError,
@@ -51,8 +51,8 @@ import type {
     PostApiProjectsByProjectIdRefreshData,
     PostApiProjectsByProjectIdRefreshError,
     PostApiProjectsByProjectIdRefreshResponse,
-} from '../generated/types.gen';
-import { Options } from '../generated/sdk.gen';
+} from '../../generated/types.gen';
+import { Options } from '../../generated/sdk.gen';
 
 export type CreateProjectInput = PostApiProjectsData['body'];
 export type UpdateProjectInput = PatchApiProjectsByProjectIdData['body'];

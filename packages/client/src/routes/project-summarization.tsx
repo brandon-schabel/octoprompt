@@ -43,7 +43,7 @@ import {
 } from "@ui"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@ui"
-import { ProjectFile } from "@/hooks/generated"
+import { ProjectFile } from "@/generated"
 import { AppSettings } from "shared/src/schemas/global-state-schema"
 import { useSummarizeProjectFiles } from "@/hooks/api/use-gen-ai-api"
 import { useActiveProjectTab, useAppSettings, } from "@/hooks/api/use-kv-api"

@@ -24,7 +24,7 @@ import { AIFileChangeDialog } from '@/components/file-changes/ai-file-change-dia
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
-import { ProjectFile } from '@/hooks/generated/types.gen'
+import { ProjectFile } from '@/generated/types.gen'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 type ExplorerRefs = {

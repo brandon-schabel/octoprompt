@@ -9,7 +9,7 @@ import { useAIChat } from '@/hooks/use-ai-chat';
 import { useChatModelParams } from '@/components/chat/hooks/use-chat-model-params';
 import { SlidingSidebar } from '@/components/sliding-sidebar'; // Assuming this component exists
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
-import { AiSdkOptions, Chat } from '@/hooks/generated';
+import { AiSdkOptions, Chat } from '@/generated';
 import { cn } from '@/lib/utils';
 import {
   Command, CommandEmpty, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,

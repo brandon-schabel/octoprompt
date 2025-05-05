@@ -7,7 +7,7 @@ import { Textarea } from "@ui";
 import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
 import { InfoTooltip } from "../info-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
-import type { TicketWithTasks } from "@/hooks/generated";
+import type { TicketWithTasks } from "@/generated";
 
 interface TicketDialogProps {
     isOpen: boolean;

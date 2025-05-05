@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient, type UseMutationOptions, } from '@tanstack/react-query';
-import { postApiGenAiText, postApiGenAiStructured, postApiProjectsByProjectIdSuggestFiles, Options } from '@/hooks/generated/sdk.gen';
+import { postApiGenAiText, postApiGenAiStructured, postApiProjectsByProjectIdSuggestFiles, Options } from '@/generated/sdk.gen';
 import type {
     PostApiGenAiTextResponse,
     PostApiGenAiTextError,
@@ -13,14 +13,14 @@ import type {
     PostApiProjectsByProjectIdSummarizeData,
     PostApiProjectsByProjectIdSummarizeError,
     PostApiProjectsByProjectIdSummarizeResponse,
-} from '@/hooks/generated/types.gen';
+} from '@/generated/types.gen';
 import {
     type AiGenerateTextRequest,
     type AiGenerateStructuredRequest,
     structuredDataSchemas
 } from 'shared/src/schemas/gen-ai.schemas';
 import { z } from 'zod';
-import { postApiProjectsByProjectIdSummarizeMutation } from '../generated/@tanstack/react-query.gen';
+import { postApiProjectsByProjectIdSummarizeMutation } from '../../generated/@tanstack/react-query.gen';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import { SummarizeFilesInput } from './use-projects-api';
 

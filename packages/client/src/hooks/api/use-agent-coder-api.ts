@@ -9,7 +9,7 @@ import {
     postApiAgentCoderRunsByAgentJobIdConfirmMutation,
     deleteApiAgentCoderRunsByAgentJobIdMutation,
 
-} from '../generated/@tanstack/react-query.gen';
+} from '../../generated/@tanstack/react-query.gen';
 import { toast } from 'sonner';
 import {
     type PostApiProjectsByProjectIdAgentCoderError,
@@ -26,8 +26,8 @@ import {
     type DeleteApiAgentCoderRunsByAgentJobIdResponse,
     type DeleteApiAgentCoderRunsByAgentJobIdError,
     type DeleteApiAgentCoderRunsByAgentJobIdData,
-} from '../generated/types.gen';
-import { type Options } from '../generated/sdk.gen';
+} from '../../generated/types.gen';
+import { type Options } from '../../generated/sdk.gen';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import { type TaskPlan, AgentCoderRunSuccessDataSchema, type AgentCoderRunSuccessData } from 'shared/src/schemas/agent-coder.schemas';
 

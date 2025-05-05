@@ -1,5 +1,5 @@
 import { useAppSettings,  } from '@/hooks/api/use-kv-api';
-import { AiSdkOptions } from '@/hooks/generated';
+import { AiSdkOptions } from '@/generated';
 import { useCallback, useMemo } from 'react';
 import { modelsTempNotAllowed } from 'shared';
 
