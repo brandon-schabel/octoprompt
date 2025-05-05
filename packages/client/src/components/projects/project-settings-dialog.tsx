@@ -18,10 +18,8 @@ import {
 } from '@ui'
 import { Input } from '@ui'
 import { Slider } from '@ui'
-import { useUpdateActiveProjectTab, useUpdateSettings } from '@/hooks/api/global-state/updaters'
 import { useSyncProject, } from '@/hooks/api/use-projects-api'
-import { useSettings } from '@/hooks/api/global-state/selectors'
-import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
+import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@/hooks/api/use-kv-api'
 import { EDITOR_OPTIONS } from 'shared/src/schemas/global-state-schema'
 import { EditorType } from 'shared/src/schemas/global-state-schema'
 import { useEffect } from 'react'
@@ -29,14 +27,13 @@ import { useEffect } from 'react'
 export function ProjectSettingsDialog() {
     const updateActiveProjectTab = useUpdateActiveProjectTab()
     const { data: contextLimit } = useProjectTabField('contextLimit')
-    const { summarizationEnabledProjectIds = [] } = useSettings()
+    const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
     const { data: resolveImports } = useProjectTabField('resolveImports')
     const { data: preferredEditor } = useProjectTabField('preferredEditor')
     const { data: projectId } = useProjectTabField('selectedProjectId')
 
     const isProjectSummarizationEnabled = projectId ? summarizationEnabledProjectIds?.includes(projectId) : false
     const { isPending: isSyncing, mutate: syncProject } = useSyncProject(projectId ?? '')
-    const updateSettings = useUpdateSettings()
 
 
     // call sync project on interval

@@ -1,6 +1,4 @@
 import { test, expect } from "bun:test";
-// Assuming the refactored function is in './summary-formatter-xml.ts'
-// Adjust the import path as necessary
 import { buildCombinedFileSummariesXml, type SummaryXmlOptions } from "./summary-formatter";
 import type { ProjectFile } from "../schemas/project.schemas"; // Assuming this path is correct
 

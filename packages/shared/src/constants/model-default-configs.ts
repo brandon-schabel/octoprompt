@@ -14,6 +14,7 @@ export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
     top_k: 1,
     provider: "openrouter",
     model: "google/gemini-2.5-flash-preview",
+    // model: "qwen/qwen3-235b-a22b",
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {

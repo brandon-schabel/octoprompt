@@ -1,4 +1,4 @@
- import React from "react";
+import React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { TicketDialog } from "../components/tickets/ticket-dialog";
 import { Button } from "../components/ui/button";
@@ -6,8 +6,8 @@ import { Plus } from "lucide-react";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 
-import { Ticket, TicketWithTasks } from "@/hooks/generated";
-import { useActiveProjectTab } from "@/hooks/api/use-state-api";
+import { Ticket, TicketWithTasks } from "@/generated";
+import { useActiveProjectTab } from "@/hooks/api/use-kv-api";
 
 export const Route = createFileRoute("/tickets")({
     component: TicketsPage,

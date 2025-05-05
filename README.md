@@ -1,4 +1,5 @@
 # OctoPrompt
+
 Vibe code with precision
 
 ## Introduction
@@ -99,7 +100,7 @@ Operates entirely on your local machine—no mandatory cloud dependencies—lett
 
 ### **🔌 Customizable**  
 
-Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Zustand, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
+Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
 
 ### **🛟 Type Safe & Modular**  
 
@@ -276,7 +277,7 @@ OctoPrompt is designed with a streamlined production build process where the cli
    - All test files are automatically excluded from the production build
 
 2. **Server Build**  
-   The server's build process (`build.ts`) handles several key steps:
+   The server's build process (`build-binaries.ts`) handles several key steps:
    - Builds the client first and includes it in the server distribution
    - Bundles the server as a minimized JS bundle
    - Creates and migrates a fresh SQLite database for production

@@ -1,12 +1,11 @@
-import { forwardRef, useImperativeHandle, useRef, memo, RefObject } from 'react'
+import { forwardRef, useImperativeHandle, useRef, RefObject } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { ProjectHeader } from './project-header'
 import { FileExplorer } from './file-explorer/file-explorer'
-import { useSettings } from '@/hooks/api/global-state/selectors'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useGetProject } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab } from '@/hooks/api/use-state-api'
+import { useActiveProjectTab, useSelectSetting } from '@/hooks/api/use-kv-api'
 
 export type FilePanelRef = {
     focusSearch: () => void
@@ -16,15 +15,13 @@ export type FilePanelRef = {
 
 type FilePanelProps = {
     className?: string
-    /** Called when user wants to open a file in the "global" viewer modal. */
-
 }
 
 // TODO: invalidate project files when ai file editor is used (to refresh after it changes files)
 export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
     function FilePanel({ className }, ref) {
         // If not passed in, get from store
-        const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
+        const [activeProjectTabState,] = useActiveProjectTab()
         const projectId = activeProjectTabState?.selectedProjectId
         const { data: projectData } = useGetProject(activeProjectTabState?.selectedProjectId ?? '')
 
@@ -33,8 +30,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(
         const fileTreeRef = useRef<any>(null) // or FileTreeRef
         const selectedFilesListRef = useRef<any>(null)
 
-        const settings = useSettings()
-        const allowSpacebarToSelect = settings?.useSpacebarToSelectAutocomplete ?? true
+        const allowSpacebarToSelect = useSelectSetting('useSpacebarToSelectAutocomplete')
 
         // Access our undo/redo hooks from useSelectedFiles (no more prop drilling)
         const { undo, redo, canUndo, canRedo } = useSelectedFiles()

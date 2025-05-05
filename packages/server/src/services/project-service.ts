@@ -1,590 +1,657 @@
-import { db } from "@/utils/database";
-import { normalizeToIsoString } from "@/utils/parse-timestamp";
-import { normalizePathForDb as normalizePathForDbUtil, resolvePath } from '@/utils/path-utils';
-
-import { forceSummarizeFiles, summarizeFiles } from "./file-services/file-summary-service";
+import { resolvePath } from '@/utils/path-utils';
+import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@/utils/project-storage';
 import { syncProject } from "./file-services/file-sync-service";
 import { CreateProjectBody, Project, ProjectFile, ProjectFileSchema, ProjectSchema, UpdateProjectBody } from "shared/src/schemas/project.schemas";
 import path from 'path';
+import { z, ZodError } from "zod"
+import { LOW_MODEL_CONFIG } from 'shared';
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
+import { generateStructuredData } from './gen-ai-services';
 
-// --- Internal DB Types and Mapping Functions Removed ---
-
-/**
- * Creates a new project in the database.
- * Transforms and validates the created row against ProjectSchema.
- */
 export async function createProject(data: CreateProjectBody): Promise<Project> {
-    const stmt = db.prepare(`
-        INSERT INTO projects (id, name, path, description, created_at, updated_at)
-        VALUES (lower(hex(randomblob(16))), ?, ?, ?, strftime('%s', 'now') * 1000, strftime('%s', 'now') * 1000) -- Store as milliseconds Unix timestamp
-        RETURNING *
-    `);
-    // Fetch raw row - Note: SQLite CURRENT_TIMESTAMP might return string, use strftime for consistent number
-    const row = stmt.get(data.name, data.path, data.description || '') as { id: string; name: string; path: string; description: string; created_at: number; updated_at: number; } | undefined;
+    const projectId = projectStorage.generateId('proj');
+    const now = new Date().toISOString();
 
-    if (!row) {
-        // This should theoretically not happen with RETURNING * on successful insert
-        throw new Error("Failed to create project or retrieve the created row.");
-    }
+    const newProjectData: Project = {
+        id: projectId,
+        name: data.name,
+        path: data.path, // Store the path as provided initially
+        description: data.description || '',
+        createdAt: now,
+        updatedAt: now,
+    };
 
     try {
-        // Transform raw DB data to API shape and validate
-        const projectData = {
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            path: row.path,
-            createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-            updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
-        };
-        return ProjectSchema.parse(projectData);
+        // Validate the new project data structure itself
+        const validatedProject = ProjectSchema.parse(newProjectData);
+
+        const projects = await projectStorage.readProjects();
+        if (projects[projectId]) {
+            // Extremely unlikely with timestamp/random ID, but good practice
+            throw new Error(`Project ID conflict for ${projectId}`);
+        }
+        projects[projectId] = validatedProject;
+        await projectStorage.writeProjects(projects);
+
+        // Create the project's file storage (empty initially)
+        await projectStorage.writeProjectFiles(projectId, {}); // Ensures directory is created
+
+        return validatedProject;
     } catch (error) {
-        console.error(`[ProjectService] Data validation error creating project ${row.id}:`, error);
-        throw new Error(`Failed to validate project data after creation for ID ${row.id}`);
+        console.error(`[ProjectService] Error creating project ${data.name}:`, error);
+        if (error instanceof ZodError) {
+            throw new Error(`Validation failed creating project: ${error.message}`);
+        }
+        throw new Error(`Failed to create project ${data.name}. Reason: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
-/**
- * Retrieves a project by its ID.
- * Transforms and validates the found row against ProjectSchema.
- */
 export async function getProjectById(projectId: string): Promise<Project | null> {
-    const stmt = db.prepare(`
-        SELECT * FROM projects
-        WHERE id = ?
-        LIMIT 1
-    `);
-    // Fetch raw row
-    const row = stmt.get(projectId) as { id: string; name: string; path: string; description: string; created_at: number; updated_at: number; } | undefined;
-
-    if (!row) return null;
-
     try {
-        // Transform raw DB data to API shape and validate
-        const projectData = {
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            path: row.path,
-            createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-            updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
-        };
-        return ProjectSchema.parse(projectData);
+        const projects = await projectStorage.readProjects();
+        // The read function already validates against ProjectSchema
+        return projects[projectId] || null;
     } catch (error) {
-        console.error(`[ProjectService] Data validation error for project ${projectId}:`, error);
-        throw new Error(`Failed to validate project data for ID ${projectId}`);
+        console.error(`[ProjectService] Error getting project ${projectId}:`, error);
+        // Don't throw, return null as per original logic possibility
+        return null;
     }
 }
 
-/**
- * Lists all projects.
- * Transforms and validates each row against ProjectSchema.
- */
 export async function listProjects(): Promise<Project[]> {
-    const stmt = db.prepare(`
-        SELECT * FROM projects ORDER BY updated_at DESC
-    `);
-    // Fetch raw rows
-    const rows = stmt.all() as { id: string; name: string; path: string; description: string; created_at: number; updated_at: number; }[];
-
     try {
-        // Transform and validate each row
-        return rows.map(row => {
-            const projectData = {
-                id: row.id,
-                name: row.name,
-                description: row.description,
-                path: row.path,
-                createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
-            };
-            return ProjectSchema.parse(projectData);
-        });
+        const projects = await projectStorage.readProjects();
+        const projectList = Object.values(projects);
+        // Sort by updatedAt descending, assuming ISO strings compare correctly
+        projectList.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+        return projectList;
     } catch (error) {
-        console.error(`[ProjectService] Data validation error listing projects:`, error);
-        throw new Error("Failed to validate project list data");
+        console.error(`[ProjectService] Error listing projects:`, error);
+        throw new Error(`Failed to list projects. Reason: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
-/**
- * Updates an existing project.
- * Transforms and validates the updated row against ProjectSchema.
- */
 export async function updateProject(projectId: string, data: UpdateProjectBody): Promise<Project | null> {
-    const stmt = db.prepare(`
-        UPDATE projects
-        SET name = COALESCE(?, name),
-            description = COALESCE(?, description),
-            path = COALESCE(?, path),
-            updated_at = strftime('%s', 'now') * 1000
-        WHERE id = ?
-        RETURNING *
-    `);
-    // Fetch raw updated row
-    const updatedRow = stmt.get(
-        data.name ?? null, // Use ?? for clarity over || for potentially empty strings
-        data.description ?? null,
-        data.path ?? null,
-        projectId
-    ) as { id: string; name: string; path: string; description: string; created_at: number; updated_at: number; } | undefined;
-
-    if (!updatedRow) return null;
-
     try {
-        // Transform and validate
-        const projectData = {
-            id: updatedRow.id,
-            name: updatedRow.name,
-            description: updatedRow.description,
-            path: updatedRow.path,
-            createdAt: normalizeToIsoString(updatedRow.created_at) ?? 'ErrorParsingDate',
-            updatedAt: normalizeToIsoString(updatedRow.updated_at) ?? 'ErrorParsingDate'
+        const projects = await projectStorage.readProjects();
+        const existingProject = projects[projectId];
+
+        if (!existingProject) {
+            return null; // Project not found
+        }
+
+        // Create updated project data, merging fields
+        const updatedProjectData: Project = {
+            ...existingProject,
+            name: data.name ?? existingProject.name,
+            path: data.path ?? existingProject.path,
+            description: data.description ?? existingProject.description,
+            updatedAt: new Date().toISOString(), // Update timestamp
         };
-        return ProjectSchema.parse(projectData);
+
+        // Validate the final structure
+        const validatedProject = ProjectSchema.parse(updatedProjectData);
+
+        projects[projectId] = validatedProject;
+        await projectStorage.writeProjects(projects);
+
+        return validatedProject;
     } catch (error) {
-        console.error(`[ProjectService] Data validation error updating project ${projectId}:`, error);
-        throw new Error(`Failed to validate project data after update for ID ${projectId}`);
+        console.error(`[ProjectService] Error updating project ${projectId}:`, error);
+        if (error instanceof ZodError) {
+            throw new Error(`Validation failed updating project ${projectId}: ${error.message}`);
+        }
+        throw new Error(`Failed to update project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
-/**
- * Deletes a project by its ID.
- * Returns true if deletion was successful, false otherwise.
- */
 export async function deleteProject(projectId: string): Promise<boolean> {
-    // CASCADE delete handles related files, tickets, etc. defined in DB schema
-    const stmt = db.prepare(`
-        DELETE FROM projects
-        WHERE id = ?
-        RETURNING id -- Only need to know if something was returned
-    `);
-    const deleted = stmt.get(projectId) as { id: string } | undefined;
-    return !!deleted; // Return true if an ID was returned (meaning a row was deleted)
-}
-
-/**
- * Retrieves all files associated with a project.
- * Transforms and validates each file row against ProjectFileSchema.
- */
-export async function getProjectFiles(projectId: string): Promise<ProjectFile[] | null> {
-    // Optional: Check if project exists first if needed, getProjectById is already refactored
-    const project = await getProjectById(projectId);
-    if (!project) {
-        console.warn(`[ProjectService] Attempted to get files for non-existent project: ${projectId}`);
-        return null; // Return null if project doesn't exist
-    }
-
-    const stmt = db.prepare(`
-        SELECT * FROM files
-        WHERE project_id = ?
-    `);
-    // Fetch raw file rows
-    const rows = stmt.all(projectId) as {
-        id: string; project_id: string; name: string; path: string; extension: string;
-        size: number; content: string | null; summary: string | null;
-        summary_last_updated_at: number | null; meta: string | null; checksum: string | null;
-        created_at: number; updated_at: number;
-    }[];
-
     try {
-        // Transform and validate each file row
-        return rows.map(row => {
-            const fileData = {
-                id: row.id,
-                projectId: row.project_id,
-                name: row.name,
-                path: row.path,
-                extension: row.extension,
-                size: row.size,
-                content: row.content,
-                summary: row.summary,
-                summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
-                meta: row.meta,
-                checksum: row.checksum,
-                createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
-            };
-            return ProjectFileSchema.parse(fileData);
-        });
+        const projects = await projectStorage.readProjects();
+        if (!projects[projectId]) {
+            return false; // Project didn't exist
+        }
+
+        delete projects[projectId];
+        await projectStorage.writeProjects(projects);
+
+        // Also delete the project's file data directory
+        await projectStorage.deleteProjectData(projectId);
+
+        return true;
     } catch (error) {
-        console.error(`[ProjectService] Data validation error listing files for project ${projectId}:`, error);
-        throw new Error(`Failed to validate file list data for project ${projectId}`);
+        console.error(`[ProjectService] Error deleting project ${projectId}:`, error);
+        // Return false on failure to maintain boolean signature
+        return false;
     }
 }
 
-/**
- * Updates the content and optionally the updated_at timestamp of a file.
- * Transforms and validates the updated file row against ProjectFileSchema.
- */
+export async function getProjectFiles(projectId: string): Promise<ProjectFile[] | null> {
+    try {
+        // Optional: Check if project exists first (could be redundant if file read handles it)
+        const projectExists = await getProjectById(projectId);
+        if (!projectExists) {
+            console.warn(`[ProjectService] Attempted to get files for non-existent project: ${projectId}`);
+            return null;
+        }
+
+        const files = await projectStorage.readProjectFiles(projectId);
+        // readProjectFiles validates each file against ProjectFileSchema
+        return Object.values(files);
+    } catch (error) {
+        console.error(`[ProjectService] Error getting files for project ${projectId}:`, error);
+        // Return null or throw depending on desired behavior on error
+        // Let's throw, as failure here is likely more critical than project get/list
+        throw new Error(`Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
 export async function updateFileContent(
+    projectId: string, // Added projectId
     fileId: string,
     content: string,
-    options?: { updatedAt?: Date } // Keep Date object for potential external setting
+    options?: { updatedAt?: Date }
 ): Promise<ProjectFile> {
-    const setUpdatedAtClause = options?.updatedAt ? '?' : "strftime('%s', 'now') * 1000";
-    const stmt = db.prepare(`
-        UPDATE files
-        SET content = ?,
-            updated_at = ${setUpdatedAtClause}
-        WHERE id = ?
-        RETURNING *
-    `);
-    const params: (string | number)[] = options?.updatedAt
-        ? [content, options.updatedAt.valueOf(), fileId] // Pass timestamp as number
-        : [content, fileId];
-
-    // Fetch raw updated row
-    const updatedRow = stmt.get(...params) as {
-        id: string; project_id: string; name: string; path: string; extension: string;
-        size: number; content: string | null; summary: string | null;
-        summary_last_updated_at: number | null; meta: string | null; checksum: string | null;
-        created_at: number; updated_at: number;
-    } | undefined;
-
-    if (!updatedRow) {
-        throw new Error(`[ProjectService] File not found with ID ${fileId} during content update.`);
-    }
-
     try {
-        // Transform and validate
-        const fileData = {
-            id: updatedRow.id,
-            projectId: updatedRow.project_id,
-            name: updatedRow.name,
-            path: updatedRow.path,
-            extension: updatedRow.extension,
-            size: updatedRow.size,
-            content: updatedRow.content,
-            summary: updatedRow.summary,
-            summaryLastUpdatedAt: normalizeToIsoString(updatedRow.summary_last_updated_at) ?? null,
-            meta: updatedRow.meta,
-            checksum: updatedRow.checksum,
-            createdAt: normalizeToIsoString(updatedRow.created_at) ?? 'ErrorParsingDate',
-            updatedAt: normalizeToIsoString(updatedRow.updated_at) ?? 'ErrorParsingDate'
+        const files = await projectStorage.readProjectFiles(projectId);
+        const existingFile = files[fileId];
+
+        if (!existingFile) {
+            throw new Error(`[ProjectService] File not found with ID ${fileId} in project ${projectId} during content update.`);
+        }
+
+        const newUpdatedAt = options?.updatedAt?.toISOString() ?? new Date().toISOString();
+
+        const updatedFileData: ProjectFile = {
+            ...existingFile,
+            content: content,
+            size: Buffer.byteLength(content, 'utf8'), // Recalculate size
+            updatedAt: newUpdatedAt,
+            // Consider if checksum needs update here too, depends on how checksums are used
+            // checksum: calculateChecksum(content),
         };
-        return ProjectFileSchema.parse(fileData);
+
+        // Validate the updated file structure
+        const validatedFile = ProjectFileSchema.parse(updatedFileData);
+
+        files[fileId] = validatedFile;
+        await projectStorage.writeProjectFiles(projectId, files);
+
+        return validatedFile;
     } catch (error) {
-        console.error(`[ProjectService] Data validation error updating file content for ${fileId}:`, error);
-        throw new Error(`Failed to validate file data after content update for ID ${fileId}`);
+        console.error(`[ProjectService] Error updating file content for ${fileId} in project ${projectId}:`, error);
+        if (error instanceof ZodError) {
+            throw new Error(`Validation failed updating file content for ${fileId}: ${error.message}`);
+        }
+        throw new Error(`Failed to update file content for ${fileId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
-/**
- * Fetches project, syncs files, gets files, and forces summarization for all files.
- */
 export async function resummarizeAllFiles(projectId: string): Promise<void> {
     const project = await getProjectById(projectId);
     if (!project) {
         throw new Error(`[ProjectService] Project not found with ID ${projectId} for resummarize all.`);
     }
-    // Sync files first to ensure we have the latest state
+
+    // Sync files to ensure projects files are up to date before creating the summaries
     await syncProject(project);
 
-    // Get the validated list of files
     const allFiles = await getProjectFiles(projectId);
     if (!allFiles || allFiles.length === 0) {
         console.warn(`[ProjectService] No files found for project ${projectId} after sync during resummarize all.`);
-        // Decide behavior: maybe return silently or throw specific error?
-        // For now, let's assume forceSummarizeFiles handles empty list gracefully or throws.
-        return; // Or throw new Error('No files found for project to resummarize');
+        return;
     }
 
-    // Pass the validated ProjectFile array
-    await forceSummarizeFiles(allFiles); // Pass only the files array
-}
-
-/**
- * Forces re-summarization for a specific list of file IDs within a project.
- */
-export async function forceResummarizeSelectedFiles(
-    projectId: string,
-    fileIds: string[]
-): Promise<{ included: number; skipped: number; message: string }> {
-    if (fileIds.length === 0) {
-        return { included: 0, skipped: 0, message: "No file IDs provided" };
-    }
-    const placeholders = fileIds.map(() => '?').join(', ');
-    const stmt = db.prepare(`
-        SELECT * FROM files
-        WHERE project_id = ? AND id IN (${placeholders})
-    `);
-    // Fetch raw rows for selected files
-    const selectedRawFiles = stmt.all(projectId, ...fileIds) as {
-        id: string; project_id: string; name: string; path: string; extension: string;
-        size: number; content: string | null; summary: string | null;
-        summary_last_updated_at: number | null; meta: string | null; checksum: string | null;
-        created_at: number; updated_at: number;
-    }[];
-
-    if (selectedRawFiles.length === 0) {
-        return { included: 0, skipped: 0, message: "No matching files found for the provided IDs" };
-    }
-
-    let selectedFiles: ProjectFile[];
     try {
-        // Transform and validate the fetched raw files
-        selectedFiles = selectedRawFiles.map(row => {
-            const fileData = {
-                id: row.id, projectId: row.project_id, name: row.name, path: row.path,
-                extension: row.extension, size: row.size, content: row.content, summary: row.summary,
-                summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
-                meta: row.meta, checksum: row.checksum, createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
-            };
-            return ProjectFileSchema.parse(fileData)
-        });
+        // forceSummarizeFiles should ideally return the modified files or handle saving internally
+        // Option 1: Assume it modifies the passed array objects directly
+        await summarizeFiles(projectId, allFiles.map(f => f.id)); // Pass the array
+
+        // If forceSummarizeFiles modified the objects, we need to reconstruct the map and save
+        const updatedFilesMap = allFiles.reduce((acc, file) => {
+            acc[file.id] = file; // Re-create the map
+            return acc;
+        }, {} as ProjectFilesStorage);
+
+        // Validate the *entire map* before saving to catch inconsistencies
+        const validatedMap = ProjectFilesStorageSchema.parse(updatedFilesMap);
+
+        await projectStorage.writeProjectFiles(projectId, validatedMap);
+        console.log(`[ProjectService] Completed resummarizeAllFiles and saved updates for project ${projectId}`);
+
     } catch (error) {
-        console.error(`[ProjectService] Data validation error preparing files for forced re-summarization (Project: ${projectId}):`, error);
-        throw new Error(`Failed to validate file data for forced re-summarization`);
+        console.error(`[ProjectService] Error during file summarization or saving for project ${projectId} in resummarizeAllFiles:`, error);
+        // Decide if partial success is acceptable or if the whole operation should fail
+        throw new Error(`Failed during resummarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    // Pass the validated ProjectFile array
-    await forceSummarizeFiles(selectedFiles); // Pass only the selected files array
-
-    return {
-        included: selectedFiles.length,
-        skipped: 0, // This function forces, so skipping isn't the primary outcome here
-        message: `Selected ${selectedFiles.length} files have been queued for force re-summarization`
-    };
 }
 
-/**
- * Summarizes a specific list of file IDs within a project (skipping already summarized).
- */
-export async function summarizeSelectedFiles(projectId: string, fileIds: string[],) {
-    if (fileIds.length === 0) {
-        return { included: 0, skipped: 0, message: "No file IDs provided" };
-    }
-    const placeholders = fileIds.map(() => '?').join(', ');
-    const stmt = db.prepare(`
-        SELECT * FROM files
-        WHERE project_id = ? AND id IN (${placeholders})
-    `);
-    // Fetch raw rows for selected files
-    const selectedRawFiles = stmt.all(projectId, ...fileIds) as {
-        id: string; project_id: string; name: string; path: string; extension: string;
-        size: number; content: string | null; summary: string | null;
-        summary_last_updated_at: number | null; meta: string | null; checksum: string | null;
-        created_at: number; updated_at: number;
-    }[];
-
-    if (selectedRawFiles.length === 0) {
-        return { included: 0, skipped: 0, message: "No matching files found for the provided IDs" };
-    }
-
-    let selectedFiles: ProjectFile[];
-    try {
-        // Transform and validate the fetched raw files
-        selectedFiles = selectedRawFiles.map(row => {
-            const fileData = {
-                id: row.id, projectId: row.project_id, name: row.name, path: row.path,
-                extension: row.extension, size: row.size, content: row.content, summary: row.summary,
-                summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
-                meta: row.meta, checksum: row.checksum, createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-                updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
-            };
-            return ProjectFileSchema.parse(fileData)
-        });
-    } catch (error) {
-        console.error(`[ProjectService] Data validation error preparing files for summarization (Project: ${projectId}):`, error);
-        throw new Error(`Failed to validate file data for summarization`);
-    }
-
-    // const globalState = await getCurrentState();
-    // Pass the validated ProjectFile array
 
 
-
-    const result = await summarizeFiles(projectId, selectedFiles.map((f) => f.id));
-
-    return {
-        ...result, // { included: number, skipped: number }
-        message: `Requested ${selectedFiles.length} files have been processed for summarization`,
-    };
-}
-
-/**
- * Removes summaries and their update timestamps from selected files.
- */
 export async function removeSummariesFromFiles(projectId: string, fileIds: string[]) {
     if (fileIds.length === 0) {
-        return { success: true, removedCount: 0, message: "No file IDs provided to remove summaries from" };
+        return { success: true, removedCount: 0, message: "No file IDs provided" };
     }
-    const placeholders = fileIds.map(() => '?').join(', ');
-    const stmt = db.prepare(`
-        UPDATE files
-        SET summary = NULL, summary_last_updated_at = NULL,
-            updated_at = strftime('%s', 'now') * 1000 -- Also update the main timestamp
-        WHERE project_id = ? AND id IN (${placeholders})
-        RETURNING id -- Only need count, so just return ID
-    `);
-    const updated = stmt.all(projectId, ...fileIds) as { id: string }[]; // Only need the count
-
-    // No parsing needed here, just returning counts/status
-    return {
-        success: true,
-        removedCount: updated.length,
-        message: `Removed summaries from ${updated.length} files`,
-    };
-}
-
-// Helper function to map DB row to ProjectFile schema
-function mapDbRowToProjectFile(row: any): ProjectFile | null {
-    if (!row) return null;
     try {
-        const mapped = {
-            id: row.id,
-            projectId: row.project_id,
-            path: row.path,
-            content: row.content ?? '', // Ensure content is string, default to empty
-            size: row.size ?? 0, // Default size
-            checksum: row.checksum,
-            summary: row.summary, // Allow null/undefined
-            createdAt: normalizeToIsoString(row.created_at) ?? new Date(0).toISOString(), // Default date
-            updatedAt: normalizeToIsoString(row.updated_at) ?? new Date(0).toISOString(), // Default date
-            lastIndexed: normalizeToIsoString(row.last_indexed) // Allow null/undefined
-        };
+        const files = await projectStorage.readProjectFiles(projectId);
+        let removedCount = 0;
+        const now = new Date().toISOString();
 
-        // Use safeParse for robustness
-        const result = ProjectFileSchema.safeParse(mapped);
-        if (!result.success) {
-            console.error(`Failed to parse project file data (ID: ${row.id}, Path: ${row.path}): ${result.error.message}`, mapped);
-            return null; // Return null on parse failure
+        for (const fileId of fileIds) {
+            if (files[fileId]) {
+                const file = files[fileId];
+                // Check if modification is needed
+                if (file.summary !== null || file.summaryLastUpdatedAt !== null) {
+                    const updatedFileData: ProjectFile = {
+                        ...file,
+                        summary: null,
+                        summaryLastUpdatedAt: null,
+                        updatedAt: now // Also update the main timestamp
+                    };
+                    // Validate the change
+                    files[fileId] = ProjectFileSchema.parse(updatedFileData); // Update in map after validation
+                    removedCount++;
+                }
+            } else {
+                console.warn(`[ProjectService] File ID ${fileId} not found in project ${projectId} for remove summary.`);
+            }
         }
-        return result.data;
-    } catch (e) {
-        console.error(`Error mapping DB row to ProjectFile (ID: ${row.id}):`, e);
-        return null;
-    }
-}
 
-// Helper function to map DB row to Project schema
-function mapDbRowToProject(row: any): Project | null {
-    if (!row) return null;
-    try {
-        const mapped = {
-            id: row.id,
-            name: row.name,
-            rootPath: row.root_path,
-            createdAt: normalizeToIsoString(row.created_at) ?? new Date(0).toISOString(),
-            updatedAt: normalizeToIsoString(row.updated_at) ?? new Date(0).toISOString(),
-            lastIndexed: normalizeToIsoString(row.last_indexed)
-        };
-        const result = ProjectSchema.safeParse(mapped);
-        if (!result.success) {
-            console.error(`Failed to parse project data (ID: ${row.id}): ${result.error.message}`, mapped);
-            return null;
+        if (removedCount > 0) {
+            // Validate the whole map before writing only if changes were made
+            const validatedMap = ProjectFilesStorageSchema.parse(files);
+            await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
-        return result.data;
-    } catch (e) {
-        console.error(`Error mapping DB row to Project (ID: ${row.id}):`, e);
-        return null;
-    }
-}
 
-export async function getProjectFilesByIds(projectId: string, fileIds: string[]): Promise<ProjectFile[]> {
-    if (!fileIds || fileIds.length === 0) {
-        return [];
-    }
-    const uniqueFileIds = [...new Set(fileIds)];
-    const placeholders = uniqueFileIds.map(() => '?').join(',');
-
-    const stmt = db.prepare(`
-        SELECT * FROM project_files
-        WHERE project_id = ? AND id IN (${placeholders})
-    `);
-
-    try {
-        const rows = stmt.all(projectId, ...uniqueFileIds) as any[];
-        return rows.map(mapDbRowToProjectFile).filter((file): file is ProjectFile => file !== null);
-        // Note: We removed the check/throw here; the route handler will check if all files were found.
+        return {
+            success: true,
+            removedCount: removedCount,
+            message: `Removed summaries from ${removedCount} files.`,
+        };
     } catch (error) {
-        console.error(`Error fetching project files by IDs for project ${projectId}:`, error);
-        throw new Error(`Database error fetching files: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(`[ProjectService] Error removing summaries for project ${projectId}:`, error);
+        if (error instanceof ZodError) {
+            throw new Error(`Validation failed removing summaries for project ${projectId}: ${error.message}`);
+        }
+        // Return success: false on general errors
+        return {
+            success: false,
+            removedCount: 0,
+            message: `Error removing summaries: ${error instanceof Error ? error.message : String(error)}`
+        };
     }
 }
 
 
-/**
- * Creates a new file record in the database associated with a project.
- * Intended for placeholder creation before content generation/modification.
- */
 export async function createProjectFileRecord(
     projectId: string,
-    filePath: string,
-    initialContent: string = '' // Default to empty content
+    filePath: string, // This should be relative to project root or absolute
+    initialContent: string = ''
 ): Promise<ProjectFile> {
     const project = await getProjectById(projectId);
     if (!project) {
         throw new Error(`[ProjectService] Cannot create file record: Project not found with ID ${projectId}`);
     }
 
-    // Resolve and normalize the path *before* using it
-    // Assuming filePath might be relative to project.path or contain ~
-    const absoluteProjectPath = resolvePath(project.path);
-    const absoluteFilePath = resolvePath(filePath.startsWith('/') || filePath.startsWith('~') ? filePath : path.join(absoluteProjectPath, filePath));
-    const normalizedFilePath = normalizePathForDbUtil(path.relative(absoluteProjectPath, absoluteFilePath)); // Store path relative to project root
+    // Resolve paths similar to original logic
+    const absoluteProjectPath = resolvePath(project.path); // Make sure resolvePath handles potential errors
+    const absoluteFilePath = resolvePath(filePath.startsWith('/') || filePath.startsWith('~') || path.isAbsolute(filePath) ? filePath : path.join(absoluteProjectPath, filePath));
+    // Store path relative to project root for consistency within the project's files.json
+    const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath);
 
-    // Use the normalized path for DB operations and deriving name/extension
-    const fileName = path.basename(normalizedFilePath);
-    const fileExtension = path.extname(normalizedFilePath);
+    const fileId = projectStorage.generateId('file');
+    const now = new Date().toISOString();
+    const fileName = path.basename(normalizedRelativePath);
+    const fileExtension = path.extname(normalizedRelativePath);
     const size = Buffer.byteLength(initialContent, 'utf8');
-    const nowTimestamp = Date.now(); // Use a single timestamp for consistency
 
-    // Use SQLite's randomblob for ID generation consistent with createProject
-    const stmt = db.prepare(`
-        INSERT INTO files (
-            id, project_id, name, path, extension,
-            size, content, summary, summary_last_updated_at,
-            meta, checksum, created_at, updated_at
-        )
-        VALUES (
-            lower(hex(randomblob(16))), ?, ?, ?, ?,
-            ?, ?, NULL, 0, -- size, content, summary, summary_last_updated_at (Changed NULL to 0)
-            '{}', NULL, ?, ?    -- meta, checksum, created_at, updated_at
-        )
-        RETURNING *
-    `);
+    const newFileData: ProjectFile = {
+        id: fileId,
+        projectId: projectId,
+        name: fileName,
+        path: normalizedRelativePath, // stores relative path to project root, because we store project file root
+        // so we can get the full path with project root path + file path
+        extension: fileExtension,
+        size: size,
+        content: initialContent,
+        summary: null,
+        summaryLastUpdatedAt: null,
+        meta: '{}',
+        checksum: null,
+        createdAt: now,
+        updatedAt: now,
+    };
 
-    // Fetch raw row using normalized path
-    const row = stmt.get(
-        projectId, fileName, normalizedFilePath, fileExtension, // Use normalizedFilePath
-        size, initialContent, // Use initialContent here
-        nowTimestamp, nowTimestamp // Use the same timestamp for created/updated initially
-    ) as {
-        id: string; project_id: string; name: string; path: string; extension: string;
-        size: number; content: string | null; summary: string | null;
-        summary_last_updated_at: number | null; meta: string | null; checksum: string | null;
-        created_at: number; updated_at: number;
-    } | undefined;
+    try {
+        // Validate the new file data
+        const validatedFile = ProjectFileSchema.parse(newFileData);
 
-    if (!row) {
-        throw new Error(`[ProjectService] Failed to create file record for path: ${filePath} in project ${projectId}`);
+        const files = await projectStorage.readProjectFiles(projectId);
+        if (files[fileId]) {
+            throw new Error(`File ID conflict for ${fileId} in project ${projectId}`);
+        }
+        files[fileId] = validatedFile;
+
+        // Validate the whole map before writing
+        const validatedMap = ProjectFilesStorageSchema.parse(files);
+        await projectStorage.writeProjectFiles(projectId, validatedMap);
+
+        return validatedFile;
+
+    } catch (error) {
+        console.error(`[ProjectService] Error creating file record for ${filePath} in project ${projectId}:`, error);
+        if (error instanceof ZodError) {
+            throw new Error(`Validation failed creating file record for ${filePath}: ${error.message}`);
+        }
+        throw new Error(`Failed to create file record for ${filePath}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+
+// --- Bulk Operations ---
+// Note: These lose the transactional safety of the database. Errors in the middle
+// might leave the JSON file in a partially updated state.
+
+/** Represents the data needed to create or update a file record during sync. */
+export interface FileSyncData {
+    path: string; // Normalized relative path
+    name: string;
+    extension: string;
+    content: string;
+    size: number;
+    checksum: string; // Assuming checksum is provided by sync logic
+}
+
+/** Creates multiple file records in the project's JSON file. */
+export async function bulkCreateProjectFiles(projectId: string, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
+    if (filesToCreate.length === 0) return [];
+
+    const createdFiles: ProjectFile[] = [];
+    const now = new Date().toISOString();
+    let files: ProjectFilesStorage | null = null; // Read only once
+
+    try {
+        files = await projectStorage.readProjectFiles(projectId);
+
+        for (const fileData of filesToCreate) {
+            const fileId = projectStorage.generateId('file');
+
+            // Basic check for duplicates based on path within this batch
+            const existingInMap = Object.values(files).find(f => f.path === fileData.path);
+            if (existingInMap) {
+                console.warn(`[ProjectService] Skipping duplicate path in bulk create: ${fileData.path} in project ${projectId}`);
+                continue; // Skip this file
+            }
+
+            const newFileData: ProjectFile = {
+                id: fileId,
+                projectId: projectId,
+                name: fileData.name,
+                path: fileData.path,
+                extension: fileData.extension,
+                size: fileData.size,
+                content: fileData.content, // Storing content from sync
+                summary: null,
+                summaryLastUpdatedAt: null,
+                meta: '{}',
+                checksum: fileData.checksum, // Store checksum from sync
+                createdAt: now,
+                updatedAt: now,
+            };
+
+            try {
+                // Validate *each* new file individually
+                const validatedFile = ProjectFileSchema.parse(newFileData);
+                if (files[fileId]) {
+                    console.error(`[ProjectService] File ID conflict during bulk create: ${fileId}. Skipping.`);
+                    continue;
+                }
+                files[fileId] = validatedFile;
+                createdFiles.push(validatedFile);
+            } catch (validationError) {
+                console.error(`[ProjectService] Validation failed for file ${fileData.path} during bulk create:`, validationError);
+                // Decide: skip this file or abort the whole bulk operation?
+                // Let's skip this file for now.
+                continue;
+            }
+        }
+
+        if (createdFiles.length > 0) {
+            // Validate the final map before writing
+            const validatedMap = ProjectFilesStorageSchema.parse(files);
+            await projectStorage.writeProjectFiles(projectId, validatedMap);
+        }
+
+        return createdFiles;
+
+    } catch (error) {
+        console.error(`[ProjectService] Error during bulk file creation for project ${projectId}:`, error);
+        // Rethrow the error, indicating partial success might have occurred
+        throw new Error(`Bulk file creation failed for project ${projectId}. Some files might be created. Reason: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/** Updates multiple existing file records based on their IDs. */
+export async function bulkUpdateProjectFiles(projectId: string, updates: { fileId: string; data: FileSyncData }[]): Promise<ProjectFile[]> {
+    if (updates.length === 0) return [];
+
+    const updatedFilesResult: ProjectFile[] = [];
+    const now = new Date().toISOString();
+    let files: ProjectFilesStorage | null = null;
+
+    try {
+        files = await projectStorage.readProjectFiles(projectId);
+        let changesMade = false;
+
+        for (const { fileId, data } of updates) {
+            const existingFile = files[fileId];
+            if (!existingFile) {
+                console.warn(`[ProjectService] File ID ${fileId} not found during bulk update for project ${projectId}. Skipping.`);
+                continue;
+            }
+
+            const updatedFileData: ProjectFile = {
+                ...existingFile,
+                content: data.content,
+                extension: data.extension, // Keep extension? Sync might detect changes.
+                size: data.size,
+                checksum: data.checksum,
+                updatedAt: now,
+                // Important: Do NOT overwrite createdAt, name, path, projectId, id
+                // Optionally reset summary? Depends on sync logic.
+                // summary: null,
+                // summaryLastUpdatedAt: null,
+            };
+
+            try {
+                // Validate each update
+                const validatedFile = ProjectFileSchema.parse(updatedFileData);
+                files[fileId] = validatedFile;
+                updatedFilesResult.push(validatedFile);
+                changesMade = true;
+            } catch (validationError) {
+                console.error(`[ProjectService] Validation failed for file ${fileId} (${existingFile.path}) during bulk update:`, validationError);
+                // Skip this update
+                continue;
+            }
+        }
+
+        if (changesMade) {
+            // Validate the final map before writing
+            const validatedMap = ProjectFilesStorageSchema.parse(files);
+            await projectStorage.writeProjectFiles(projectId, validatedMap);
+        }
+
+        return updatedFilesResult;
+
+    } catch (error) {
+        console.error(`[ProjectService] Error during bulk file update for project ${projectId}:`, error);
+        throw new Error(`Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+
+/** Deletes multiple files by their IDs for a specific project. */
+export async function bulkDeleteProjectFiles(projectId: string, fileIdsToDelete: string[]): Promise<{ success: boolean, deletedCount: number }> {
+    if (fileIdsToDelete.length === 0) {
+        return { success: true, deletedCount: 0 };
+    }
+
+    let files: ProjectFilesStorage | null = null;
+    let deletedCount = 0;
+    let changesMade = false;
+
+    try {
+        files = await projectStorage.readProjectFiles(projectId);
+
+        for (const fileId of fileIdsToDelete) {
+            if (files[fileId]) {
+                delete files[fileId];
+                deletedCount++;
+                changesMade = true;
+            } else {
+                console.warn(`[ProjectService] File ID ${fileId} not found during bulk delete for project ${projectId}.`);
+            }
+        }
+
+        if (changesMade) {
+            // No individual validation needed for deletes, just write the result
+            // Optional: could still validate the remaining map structure
+            const validatedMap = ProjectFilesStorageSchema.parse(files);
+            await projectStorage.writeProjectFiles(projectId, validatedMap);
+        }
+
+        return { success: true, deletedCount };
+
+    } catch (error) {
+        console.error(`[ProjectService] Error during bulk file deletion for project ${projectId}:`, error);
+        // Return failure but report count based on attempted deletes before error if possible
+        return { success: false, deletedCount };
+    }
+}
+
+
+/** Retrieves specific files by ID for a project */
+export async function getProjectFilesByIds(projectId: string, fileIds: string[]): Promise<ProjectFile[]> {
+    if (!fileIds || fileIds.length === 0) {
+        return [];
+    }
+    const uniqueFileIds = [...new Set(fileIds)]; // Avoid duplicate lookups
+
+    try {
+        const filesMap = await projectStorage.readProjectFiles(projectId);
+        const resultFiles: ProjectFile[] = [];
+
+        for (const id of uniqueFileIds) {
+            if (filesMap[id]) {
+                resultFiles.push(filesMap[id]);
+            }
+        }
+        // Data is already validated on read by projectStorage.readProjectFiles
+        return resultFiles;
+    } catch (error) {
+        console.error(`[ProjectService] Error fetching project files by IDs for project ${projectId}:`, error);
+        throw new Error(`Failed to fetch files by IDs for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+
+
+
+
+/**
+ * Exposed for unit testing. Summarizes a single file if it meets conditions
+ * and updates the project's file storage.
+ */
+export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFile> {
+    const fileContent = file.content || "";
+
+    // --- Initial checks remain the same ---
+    if (!fileContent.trim()) {
+        console.warn(`[SummarizeSingleFile] File ${file.path} is empty, skipping summarization.`);
+        // No DB update needed here, just return
+        throw new Error(`File ${file.path} is empty, skipping summarization.`);
+    }
+
+    // --- AI Generation Logic (remains mostly the same) ---
+    const systemPrompt = `
+  ## You are a coding assistant specializing in concise code summaries.
+  1. Provide a short overview of what the file does.
+  2. Outline main exports (functions/classes).
+  3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
+  `;
+
+    const cfg = LOW_MODEL_CONFIG;
+    const provider = cfg.provider as APIProviders || 'openai';
+    const modelId = cfg.model;
+
+    if (!modelId) {
+        console.error(`[SummarizeSingleFile] Model not configured for summarize-file task for file ${file.path}.`);
+        throw new Error(`Model not configured for summarize-file task for file ${file.path}.`);
     }
 
     try {
-        // Transform raw DB data to API shape and validate using existing pattern
-        const fileData = {
-            id: row.id,
-            projectId: row.project_id,
-            name: row.name,
-            path: row.path, // This should be the normalized path from the DB
-            extension: row.extension,
-            size: row.size,
-            content: row.content, // Should match initialContent or be null if stored differently
-            summary: row.summary,
-            summaryLastUpdatedAt: normalizeToIsoString(row.summary_last_updated_at) ?? null,
-            meta: row.meta ?? '{}', // Ensure meta is not null if schema requires string
-            checksum: row.checksum,
-            createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-            updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
-        };
-        // IMPORTANT: Ensure ProjectFileSchema aligns with the fields being inserted/returned
-        // Especially nullability of 'content', 'meta', 'checksum' etc.
-        return ProjectFileSchema.parse(fileData);
+        const result = await generateStructuredData({
+            prompt: fileContent,
+            options: cfg,
+            schema: z.object({
+                summary: z.string()
+            }),
+            systemMessage: systemPrompt
+        });
+
+        const summary = result.object.summary;
+        const trimmedSummary = summary.trim();
+
+        // --- Update Project File Storage ---
+        const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
+            summary: trimmedSummary,
+        });
+
+
+        console.log(`[SummarizeSingleFile] Successfully summarized and updated file: ${file.path} in project ${file.projectId}`);
+        return updatedFile;
     } catch (error) {
-        console.error(`[ProjectService] Data validation error creating file record ${row.id} (${filePath}):`, error);
-        // Consider cleaning up the inserted row if validation fails? Transaction might be better.
-        throw new Error(`Failed to validate file data after creation for ID ${row.id} (${filePath})`);
+        console.error(`[SummarizeSingleFile] Error summarizing file ${file.path} (project ${file.projectId}) using ${provider}/${modelId}:`, error);
+        // Optionally mark as failed in storage?
+        // await updateFileSummaryStatus(file.projectId, file.id, null, 'failed_error');
+        // handle error quietly or rethrow/log based on desired behavior
+        throw new Error(`Failed to summarize file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
+
+/**
+ * Summarize multiple files, respecting summarization rules.
+ * Processes files sequentially to avoid storage write conflicts.
+ */
+export async function summarizeFiles(
+    projectId: string,
+    fileIdsToSummarize: string[],
+): Promise<{ included: number; skipped: number, updatedFiles: ProjectFile[] }> {
+    // Use the project-service function to get files
+    const allProjectFiles = await getProjectFiles(projectId);
+
+    if (!allProjectFiles) {
+        console.warn(`[BatchSummarize] No files found for project ${projectId}.`);
+        return { included: 0, skipped: 0, updatedFiles: [] };
+    }
+
+    // Filter the fetched files based on the provided IDs
+    const filesToProcess = allProjectFiles.filter((f) => fileIdsToSummarize.includes(f.id));
+    const totalFiles = filesToProcess.length;
+
+
+    const updatedFiles: ProjectFile[] = [];
+
+    // --- Process Sequentially ---
+    for (const file of filesToProcess) {
+        const updatedFile = await summarizeSingleFile(file); // This handles internal checks and storage update
+        updatedFiles.push(updatedFile);
+
+    }
+
+    console.log(`[BatchSummarize] File summarization batch complete for project ${projectId}. Included: ${totalFiles}, Skipped: ${totalFiles - updatedFiles.length}`);
+    return { included: totalFiles, skipped: totalFiles - updatedFiles.length, updatedFiles };
+}
+
+

@@ -9,7 +9,7 @@
     "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
     "dev:server": "bun run scripts/start-server-dev.ts",
     "stop": "bun run scripts/stop.ts",
-    "build": "bun run scripts/build.ts",
+    "build-binaries": "bun run scripts/build-binaries.ts",
     "format": "prettier --write .",
     "test": "bun test",
     "pretest": "DB_FILENAME=test.db bun run src/utils/migrate-db.ts",

@@ -122,10 +122,9 @@ export const aiFileChangeRoutes = new OpenAPIHono()
           id: changeRecord.id,
           filePath: changeRecord.file_path,
           originalContent: changeRecord.original_content,
-          // Map explanation to diff, and use stored suggested_content
           suggestedContent: changeRecord.suggested_content ?? '',
-          diff: changeRecord.suggested_diff ?? '', // Assuming explanation is stored here
-          prompt: changeRecord.prompt ?? '', // Use stored prompt
+          diff: changeRecord.suggested_diff ?? '',
+          prompt: changeRecord.prompt ?? '',
           status: changeRecord.status,
           createdAt: new Date(changeRecord.timestamp * 1000).toISOString() // Convert Unix timestamp
         }

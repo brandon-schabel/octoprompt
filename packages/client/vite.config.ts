@@ -1,13 +1,9 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { resolve } from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-// babel.config.js
-const ReactCompilerConfig = {
-  target: '19' // '17' | '18' | '19'
-};
 
 
 // https://vitejs.dev/config/
@@ -16,11 +12,7 @@ export default defineConfig({
     port: 5173
   },
   plugins: [TanStackRouterVite({}), react({
-    babel: {
-      plugins: [
-        ["babel-plugin-react-compiler", ReactCompilerConfig],
-      ],
-    },
+
   }),
   tsconfigPaths()
 

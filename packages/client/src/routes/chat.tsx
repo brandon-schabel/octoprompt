@@ -1,19 +1,18 @@
 import { ChangeEvent, KeyboardEvent, ClipboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { MessageSquareIcon, PlusIcon, Check, X, Edit2, Trash2, Expand, Settings2Icon, Copy, GitFork, Trash } from 'lucide-react';
+import { MessageSquareIcon, PlusIcon, Check, X, Edit2, Trash2, Expand, Settings2Icon, Copy, GitFork, Trash, SendIcon, PanelLeftOpen, MessageSquareText } from 'lucide-react'; // Added PanelLeftOpen
 import { toast } from 'sonner';
 import { Message } from "@ai-sdk/react";
 
-import { useAIChat } from '@/hooks/use-ai-chat';
-import { useChatModelParams } from '@/components/chat/hooks/use-chat-model-params';
-import { useActiveChatId } from '@/hooks/api/use-state-api';
+import { useAIChat } from '@/hooks/api/use-ai-chat';
+import { useChatModelParams } from '@/hooks/chat/use-chat-model-params';
 import { SlidingSidebar } from '@/components/sliding-sidebar';
 import { useGetChats, useDeleteChat, useUpdateChat, useCreateChat, useGetModels, useDeleteMessage, useForkChatFromMessage } from '@/hooks/api/use-chat-api';
-import { Chat } from '@/hooks/generated';
+import { Chat } from '@/generated';
 import { cn } from '@/lib/utils';
 import {
-  Command, CommandEmpty, CommandInput, CommandItem, CommandList, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
+  ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Card,
   Button,
   Popover,
   PopoverTrigger,
@@ -25,15 +24,13 @@ import {
 } from '@ui';
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
-import { useSettings } from "@/hooks/api/global-state/selectors";
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
-import { useChatModelControl } from '@/components/chat/hooks/use-chat-model-control';
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce';
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants';
-import { useSynchronizedState } from '@/hooks/api/global-state/global-state-utility-hooks';
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage';
-
-// --- Model Settings Popover ---
+import { useActiveChatId, useSelectSetting } from '@/hooks/api/use-kv-api';
+import { OctoCombobox } from '@/components/octo/octo-combobox';
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary';
 
 export function ModelSettingsPopover() {
   const [open, setOpen] = useState(false);
@@ -44,21 +41,54 @@ export function ModelSettingsPopover() {
     setTopP,
     setFreqPenalty,
     setPresPenalty,
+    setProvider,
+    setModel,
     isTempDisabled,
   } = useChatModelParams();
 
-  // Use synchronized state hooks for debounced updates
-  const [temperature, updateTemperature] = useSynchronizedState(settings.temperature ?? 0.7, setTemperature, 300, isTempDisabled);
-  const [maxTokens, updateMaxTokens] = useSynchronizedState(settings.maxTokens ?? 100000, setMaxTokens);
-  const [topP, updateTopP] = useSynchronizedState(settings.topP ?? 0.9, setTopP);
-  const [freqPenalty, updateFreqPenalty] = useSynchronizedState(settings.frequencyPenalty ?? 0, setFreqPenalty);
-  const [presPenalty, updatePresPenalty] = useSynchronizedState(settings.presencePenalty ?? 0, setPresPenalty);
+  const [temperature, updateTemperature] = useLocalStorage("MODEL_TEMPERATURE", settings.temperature ?? 0.7);
+  const [maxTokens, updateMaxTokens] = useLocalStorage("MODEL_MAX_TOKENS", settings.maxTokens ?? 100000,);
+  const [topP, updateTopP] = useLocalStorage("MODEL_TOP_P", settings.topP ?? 0.9,);
+  const [freqPenalty, updateFreqPenalty] = useLocalStorage("MODEL_FREQ_PENALTY", settings.frequencyPenalty ?? 0,);
+  const [presPenalty, updatePresPenalty] = useLocalStorage("MODEL_PRES_PENALTY", settings.presencePenalty ?? 0,);
+  const [provider, updateProvider] = useLocalStorage("MODEL_PROVIDER", settings.provider ?? 'openrouter');
+  const [currentModel, updateCurrentModel] = useLocalStorage("MODEL_CURRENT_MODEL", 'gpt-4o');
 
-  // Using useCallback for handlers, although potentially overkill for simple updates
-  const handleSliderChange = useCallback((updater: (val: number) => void) => (value: number[]) => {
-    updater(value[0]);
-  }, []);
 
+  const handleUpdateTemperature = (value: number) => {
+    setTemperature(value)
+    updateTemperature(value)
+  }
+
+  const handleUpdateMaxTokens = (value: number) => {
+    setMaxTokens(value)
+    updateMaxTokens(value)
+  }
+
+  const handleUpdateTopP = (value: number) => {
+    setTopP(value)
+    updateTopP(value)
+  }
+
+  const handleUpdateFreqPenalty = (value: number) => {
+    setFreqPenalty(value)
+    updateFreqPenalty(value)
+  }
+
+  const handleUpdatePresPenalty = (value: number) => {
+    setPresPenalty(value)
+    updatePresPenalty(value)
+  }
+
+  const handleUpdateProvider = (value: APIProviders) => {
+    setProvider(value)
+    updateProvider(value)
+  }
+
+  const handleUpdateCurrentModel = (value: string) => {
+    setModel(value)
+    updateCurrentModel(value)
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -71,81 +101,78 @@ export function ModelSettingsPopover() {
       <PopoverContent className="w-80">
         <div className="space-y-4">
           <h4 className="font-medium leading-none mb-3">Model Settings</h4>
-          {/* Temperature */}
+          <ErrorBoundary >
+            <ProviderModelSector
+              provider={provider as APIProviders}
+              currentModel={currentModel}
+              onProviderChange={handleUpdateProvider}
+              onModelChange={handleUpdateCurrentModel}
+              className="flex-col !gap-2"
+            />
+          </ErrorBoundary>
+          <hr />
           <div className="space-y-2">
             <Label htmlFor="temperature">Temperature: {temperature.toFixed(2)}</Label>
-            <Slider id="temperature" disabled={isTempDisabled} min={0} max={2} step={0.01} value={[temperature]} onValueChange={handleSliderChange(updateTemperature)} />
+            <Slider id="temperature" disabled={isTempDisabled} min={0} max={1} step={0.01} value={[temperature]} onValueChange={temps => handleUpdateTemperature(temps[0])} />
           </div>
-          {/* Max Tokens */}
           <div className="space-y-2">
             <Label htmlFor="max_tokens">Max Tokens: {maxTokens}</Label>
-            <Slider id="max_tokens" min={256} max={4096} step={1} value={[maxTokens]} onValueChange={handleSliderChange(updateMaxTokens)} />
+            <Slider id="max_tokens" min={1000} max={1000000} step={1000} value={[maxTokens]} onValueChange={maxTokens => handleUpdateMaxTokens(maxTokens[0])} />
           </div>
-          {/* Top P */}
           <div className="space-y-2">
             <Label htmlFor="top_p">Top P: {topP.toFixed(2)}</Label>
-            <Slider id="top_p" min={0} max={1} step={0.01} value={[topP]} onValueChange={handleSliderChange(updateTopP)} />
+            <Slider id="top_p" min={0} max={1} step={0.01} value={[topP]} onValueChange={topP => handleUpdateTopP(topP[0])} />
           </div>
-          {/* Frequency Penalty */}
           <div className="space-y-2">
             <Label htmlFor="frequency_penalty">Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
-            <Slider id="frequency_penalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={handleSliderChange(updateFreqPenalty)} />
+            <Slider id="frequency_penalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={freqPenalty => handleUpdateFreqPenalty(freqPenalty[0])} />
           </div>
-          {/* Presence Penalty */}
           <div className="space-y-2">
             <Label htmlFor="presence_penalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
-            <Slider id="presence_penalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={handleSliderChange(updatePresPenalty)} />
+            <Slider id="presence_penalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={presPenalty => handleUpdatePresPenalty(presPenalty[0])} />
           </div>
-
         </div>
       </PopoverContent>
     </Popover>
   );
 }
 
-// --- Model Selector ---
-
+// --- Model Selector (No changes needed) ---
 type ModelSelectorProps = {
-  provider: APIProviders; // Using generated type
+  provider: APIProviders;
   currentModel: string;
   onProviderChange: (provider: APIProviders) => void;
   onModelChange: (modelId: string) => void;
   className?: string;
 };
 
-export function ModelSelector({ provider, currentModel, onProviderChange, onModelChange, className }: ModelSelectorProps) {
-  const [modelComboboxOpen, setModelComboboxOpen] = useState(false);
+export function ProviderModelSector({ provider, currentModel, onProviderChange, onModelChange, className }: ModelSelectorProps) {
   const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider);
 
-  const modelOptions = useMemo(() => (
+  const comboboxOptions = useMemo(() => (
     modelsData?.data.map((m) => ({
-      id: m.id,
-      displayName: m.name,
+      value: m.id,
+      label: m.name,
     })) ?? []
   ), [modelsData]);
 
-  // Auto-select first model if needed
   useEffect(() => {
-    const isCurrentModelValid = modelOptions.some(model => model.id === currentModel);
-    if ((!currentModel || !isCurrentModelValid) && modelOptions.length > 0) {
-      onModelChange(modelOptions[0].id);
+    const isCurrentModelValid = comboboxOptions.some(model => model.value === currentModel);
+    if ((!currentModel || !isCurrentModelValid) && comboboxOptions.length > 0) {
+      onModelChange(comboboxOptions[0].value);
     }
-  }, [modelOptions, currentModel, onModelChange]);
+  }, [comboboxOptions, currentModel, onModelChange]);
 
-  // Truncate helper (could be moved to a utils file if used elsewhere)
-  const truncateText = (text: string, maxLength = 24): string => {
-    return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
-  };
-
-  const selectedModelName = useMemo(() => {
-    return modelOptions.find((m) => m.id === currentModel)?.displayName ?? '';
-  }, [modelOptions, currentModel]);
+  const handleModelChange = useCallback((value: string | null) => {
+    if (value !== null) {
+      onModelChange(value);
+    }
+  }, [onModelChange]);
 
   return (
     <div className={cn("flex gap-4", className)}>
-      {/* Provider Selection */}
       <Select value={provider} onValueChange={(val) => onProviderChange(val as APIProviders)}>
-        <SelectTrigger>
+        <SelectTrigger className="w-full">
           <SelectValue placeholder="Select provider" />
         </SelectTrigger>
         <SelectContent>
@@ -157,62 +184,29 @@ export function ModelSelector({ provider, currentModel, onProviderChange, onMode
         </SelectContent>
       </Select>
 
-      {/* Model Selection */}
-      <Popover open={modelComboboxOpen} onOpenChange={setModelComboboxOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full justify-between min-w-[150px]" // Added min-width for consistency
-            disabled={isLoadingModels || modelOptions.length === 0}
-            aria-label="Select model"
-          >
-            {isLoadingModels
-              ? 'Loading...'
-              : modelOptions.length === 0
-                ? 'No models'
-                : selectedModelName
-                  ? truncateText(selectedModelName)
-                  : 'Select model'}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="p-0 w-[300px]">
-          <Command>
-            <CommandInput placeholder="Search models..." />
-            <CommandList>
-              <CommandEmpty>
-                {isLoadingModels ? 'Loading models...' : 'No models available.'}
-              </CommandEmpty>
-              {modelOptions.map((model) => (
-                <CommandItem
-                  key={model.id}
-                  value={model.displayName} // Add value for better search/filtering
-                  onSelect={() => {
-                    onModelChange(model.id);
-                    setModelComboboxOpen(false);
-                  }}
-                  className="flex flex-col items-start cursor-pointer"
-                >
-                  <span className="font-medium">{model.displayName}</span>
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <OctoCombobox
+        options={comboboxOptions}
+        value={currentModel}
+        onValueChange={handleModelChange}
+        placeholder={isLoadingModels ? "Loading..." : comboboxOptions.length === 0 ? "No models" : "Select model"}
+        searchPlaceholder="Search models..."
+        className="w-full min-w-[150px]"
+        popoverClassName="w-[300px]"
+        disabled={isLoadingModels || comboboxOptions.length === 0}
+      />
     </div>
   );
 }
 
 
-// --- Adaptive Chat Input ---
-
+// --- Adaptive Chat Input (No changes needed) ---
 type AdaptiveChatInputProps = {
   value: string;
   onChange: (value: string) => void;
   onSubmit?: () => void;
   placeholder?: string;
   className?: string;
-  title?: string; // Title for the expanded dialog
+  title?: string;
   disabled?: boolean;
   preserveFormatting?: boolean;
 };
@@ -226,50 +220,33 @@ export function AdaptiveChatInput({
   disabled = false,
   preserveFormatting = true,
 }: AdaptiveChatInputProps) {
-  const [localValue, setLocalValue] = useState(value);
-  const [isMultiline, setIsMultiline] = useState(false); // Keep track of mode
+  const [localValue, setLocalValue] = useLocalStorage("CHAT_INPUT_VALUE", value);
+  const [isMultiline, setIsMultiline] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debouncedOnChange = useDebounceCallback(onChange, 200);
 
-  // Sync local state ONLY when the value prop changes EXTERNALLY
-  // and set initial multiline state based on the incoming prop value
   useEffect(() => {
-    // Avoid feedback loop: Only update localValue if the prop is different
-    if (value !== localValue) {
-      setLocalValue(value);
-    }
-    // Determine initial multiline state based on the prop
+    // call onChange to set the local value
+    onChange(localValue);
+  }, []);
+
+  // update using onChange when localValue changes
+  useEffect(() => {
+    onChange(localValue);
+  }, [localValue, onChange]);
+
+  useEffect(() => {
     const shouldBeMultilineInitially = value?.includes('\n') || (value?.length ?? 0) > 100;
     if (shouldBeMultilineInitially !== isMultiline) {
-        setIsMultiline(shouldBeMultilineInitially);
+      setIsMultiline(shouldBeMultilineInitially);
     }
-    // Intentionally only depending on 'value' prop for this effect
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // Determine if input should be multiline BASED ON LOCAL VALUE changes
-  useEffect(() => {
-    // Thresholds for switching to multiline
-    const shouldBeMultiline = localValue?.includes('\n') || (localValue?.length ?? 0) > 80; // Adjusted threshold slightly
-
-    // Only update state if the mode needs to change
-    if (shouldBeMultiline !== isMultiline) {
-      setIsMultiline(shouldBeMultiline);
-    }
-    // Note: We generally don't automatically switch BACK to single-line
-    // as it can be jarring. Once multiline, it stays multiline for this input session.
-  }, [localValue, isMultiline]);
-
-  // Handler for input changes (updates local state and calls debounced parent onChange)
-  const handleLocalChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
-    debouncedOnChange(newValue);
   }, [debouncedOnChange]);
 
-  // Paste handler
   const handlePaste = useCallback((e: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!preserveFormatting) return;
     e.preventDefault();
@@ -283,8 +260,7 @@ export function AdaptiveChatInput({
     newValue = newValue.slice(0, start) + pasteText + newValue.slice(end);
 
     const html = e.clipboardData?.getData("text/html") ?? "";
-    // Lightly trim newlines if not pasting code blocks
-    if (!html.includes("</code>")) { // Simple check for code block presence
+    if (!html.includes("</code>")) {
       newValue = newValue
         .split("\n")
         .map((line) => line.trim())
@@ -292,10 +268,8 @@ export function AdaptiveChatInput({
         .replace(/\n{3,}/g, "\n\n");
     }
 
-    setLocalValue(newValue);
-    onChange(newValue); // Update parent immediately on paste
+    onChange(newValue);
 
-    // Recalculate cursor position and focus after state update
     requestAnimationFrame(() => {
       const cursorPos = start + pasteText.length;
       target.setSelectionRange(cursorPos, cursorPos);
@@ -303,40 +277,29 @@ export function AdaptiveChatInput({
     });
   }, [preserveFormatting, onChange]);
 
-  // Submit handler (reads value directly from ref if available)
   const triggerSubmit = useCallback(() => {
-    // Use the most up-to-date localValue for submission
-    const finalValue = localValue;
-
-    // Ensure parent has the latest value before submitting
+    const finalValue = value;
     if (finalValue !== value) {
-      onChange(finalValue); // Send final value immediately
+      onChange(finalValue);
     }
-    // Parent component (ChatPage) should clear the input via its state/props
-    // setLocalValue(''); // Don't clear localValue here, let parent handle it
     onSubmit?.();
-  }, [localValue, onChange, onSubmit, value]);
+  }, [value, onChange, onSubmit, value]);
 
-  // Keydown handler
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    // Submit on Enter ONLY if NOT multiline and Shift is not pressed
     if (e.key === 'Enter' && !e.shiftKey && !isMultiline) {
       e.preventDefault();
       triggerSubmit();
     }
-    // Default behavior for Enter in textarea (newline) is allowed because isMultiline will be true
   }, [isMultiline, triggerSubmit]);
 
-  // Base props for input/textarea
   const baseProps = {
-    value: localValue,
-    onChange: handleLocalChange,
+    value: value,
+    onChange: handleInputChange,
     onKeyDown: handleKeyDown,
     onPaste: handlePaste,
     placeholder,
     disabled,
     spellCheck: false,
-    // Base styling applied to both
     className: cn("pl-10 font-mono w-full", className)
   };
 
@@ -345,68 +308,57 @@ export function AdaptiveChatInput({
       {isMultiline ? (
         <Textarea
           {...baseProps}
-          ref={textareaRef}
-          rows={1} // Start with minimum rows
+          rows={1}
           style={{
-             // @ts-ignore
-             fieldSizing: 'content', // CSS for auto-resizing based on content
-             overflowY: 'auto' // Ensure scrollbar appears if max-height is reached
+            // @ts-ignore
+            fieldSizing: 'content',
+            overflowY: 'auto'
           }}
           className={cn(
-              baseProps.className,
-              "min-h-[60px]", // Minimum height equivalent to ~2-3 lines
-              "max-h-[250px]", // Maximum height before scrolling activates
-              "pr-8",         // Padding for potential internal elements or styling
-              "resize-none"   // Disable manual resizing handle
-           )}
+            baseProps.className,
+            "min-h-[60px]",
+            "max-h-[250px]",
+            "pr-8",
+            "resize-none",
+            "bg-muted"
+          )}
         />
       ) : (
         <Input
           {...baseProps}
-          ref={inputRef}
-          // Ensure single-line input doesn't wrap unexpectedly
           className={cn(baseProps.className, "overflow-hidden whitespace-nowrap")}
         />
       )}
-      {/* Potential Expand Button (Optional) - Currently handled automatically */}
-      {/* {isMultiline && (
-          <button className="absolute right-2 top-2">...</button>
-      )} */}
     </div>
   );
 }
 
 
-// --- Think Block Parser ---
-
+// --- Think Block Parser (No changes needed) ---
 function parseThinkBlock(content: string) {
-  if (!content?.startsWith("<think>")) { // Added nullish check for safety
+  if (!content?.startsWith("<think>")) {
     return { hasThinkBlock: false, isThinking: false, thinkContent: "", mainContent: content ?? "" };
   }
 
   const endIndex = content.indexOf("</think>");
   if (endIndex === -1) {
-    // No closing tag -> still thinking
-    return { hasThinkBlock: true, isThinking: true, thinkContent: content.slice(7), mainContent: "" }; // 7 is length of "<think>"
+    return { hasThinkBlock: true, isThinking: true, thinkContent: content.slice(7), mainContent: "" };
   }
 
-  // Complete think block found
   return {
     hasThinkBlock: true,
     isThinking: false,
-    thinkContent: content.slice(7, endIndex).trim(), // Trim think content
-    mainContent: content.slice(endIndex + 8).trimStart(), // 8 is length of "</think>", trim start of main content
+    thinkContent: content.slice(7, endIndex).trim(),
+    mainContent: content.slice(endIndex + 8).trimStart(),
   };
 }
 
-// --- Chat Message Item ---
-
-// Memoize ChatMessageItem to prevent re-renders if props haven't changed
+// --- Chat Message Item (No changes needed) ---
 const ChatMessageItem = React.memo((props: {
-  msg: Message; // Using imported Message type
+  msg: Message;
   excluded: boolean;
   rawView: boolean;
-  onCopyMessage: (content: string) => void; // Pass content directly
+  onCopyMessage: (content: string) => void;
   onForkMessage: (messageId: string) => void;
   onDeleteMessage: (messageId: string) => void;
   onToggleExclude: (messageId: string) => void;
@@ -417,17 +369,16 @@ const ChatMessageItem = React.memo((props: {
     onDeleteMessage, onToggleExclude, onToggleRawView,
   } = props;
 
-  const { copyToClipboard } = useCopyClipboard(); // Use hook internally for think block copy
+  const { copyToClipboard } = useCopyClipboard();
 
   if (!msg.id) {
     console.warn("ChatMessageItem: Message missing ID", msg);
-    return null; // Don't render messages without an ID
+    return null;
   }
 
   const isUser = msg.role === "user";
   const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(msg.content);
 
-  // Handlers specific to this message instance
   const handleCopy = useCallback(() => onCopyMessage(mainContent || msg.content), [mainContent, msg.content, onCopyMessage]);
   const handleFork = useCallback(() => onForkMessage(msg.id!), [msg.id, onForkMessage]);
   const handleDelete = useCallback(() => onDeleteMessage(msg.id!), [msg.id, onDeleteMessage]);
@@ -437,7 +388,11 @@ const ChatMessageItem = React.memo((props: {
 
 
   const MessageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <div className={cn("relative rounded-lg p-3", isUser ? "bg-muted" : "bg-muted/50", excluded && "opacity-50")}>
+    <div className={cn(
+      "relative rounded-lg p-3 break-words",
+      isUser ? "bg-muted" : "bg-muted/50",
+      excluded && "opacity-50"
+    )}>
       {children}
     </div>
   );
@@ -470,7 +425,7 @@ const ChatMessageItem = React.memo((props: {
     return (
       <MessageWrapper>
         <MessageHeader />
-        <pre className="whitespace-pre-wrap  font-mono p-2 bg-background/50 rounded text-xs sm:text-sm">
+        <pre className="whitespace-pre-wrap font-mono p-2 bg-background/50 rounded text-xs sm:text-sm overflow-x-auto">
           {msg.content}
         </pre>
       </MessageWrapper>
@@ -500,26 +455,28 @@ const ChatMessageItem = React.memo((props: {
               </Button>
             </details>
           )}
-          <MarkdownRenderer content={mainContent} copyToClipboard={onCopyMessage} />
+          <div className="overflow-x-auto">
+            <MarkdownRenderer content={mainContent} copyToClipboard={onCopyMessage} />
+          </div>
         </div>
       ) : (
-        <MarkdownRenderer content={msg.content} copyToClipboard={onCopyMessage} />
+        <div className="overflow-x-auto">
+          <MarkdownRenderer content={msg.content} copyToClipboard={onCopyMessage} />
+        </div>
       )}
     </MessageWrapper>
   );
 });
-ChatMessageItem.displayName = 'ChatMessageItem'; // Add display name for React DevTools
+ChatMessageItem.displayName = 'ChatMessageItem';
 
 
-// --- Chat Messages List ---
-
+// --- Chat Messages List (No changes needed) ---
 interface ChatMessagesProps {
   chatId: string | null;
-  messages: Message[]; // Using imported Message type
+  messages: Message[];
   isLoading: boolean;
-  excludedMessageIds?: string[]; // Optional prop
-  onToggleExclude: (messageId: string) => void; // Needs to be passed down
-  // Consider adding other mutation callbacks if needed directly here
+  excludedMessageIds?: string[];
+  onToggleExclude: (messageId: string) => void;
 }
 
 export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds = [], onToggleExclude }: ChatMessagesProps) {
@@ -528,25 +485,23 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
   const deleteMessageMutation = useDeleteMessage();
   const forkChatMutation = useForkChatFromMessage();
   const [rawMessageIds, setRawMessageIds] = useState<Set<string>>(new Set());
-  const { autoScrollEnabled = true } = useSettings();
+  const autoScrollEnabled = useSelectSetting('autoScrollEnabled')
   const bottomRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null); // Ref for the ScrollArea viewport
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll effect
   useEffect(() => {
     if (autoScrollEnabled && bottomRef.current) {
-      // Check if user is scrolled up significantly
       const scrollViewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]');
       if (scrollViewport) {
-        const isScrolledUp = scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150; // Threshold
-        if (!isScrolledUp || messages.length <= 2) { // Scroll if near bottom or very few messages
+        const isScrolledUp = scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150;
+        if (!isScrolledUp || messages.length <= 2) {
           bottomRef.current.scrollIntoView({ behavior: "smooth", block: 'end' });
         }
       } else {
         bottomRef.current.scrollIntoView({ behavior: "smooth", block: 'end' });
       }
     }
-  }, [messages, autoScrollEnabled]); // Rerun when messages change
+  }, [messages, autoScrollEnabled]);
 
 
   const handleCopyMessage = useCallback((content: string) => {
@@ -566,7 +521,6 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
         body: { excludedMessageIds: Array.from(excludedSet) }
       });
       toast.success("Chat forked successfully");
-      // Optional: Navigate to the new chat or update UI state
     } catch (error) {
       console.error("Error forking chat:", error);
       toast.error("Failed to fork chat");
@@ -593,16 +547,11 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
     });
   }, []);
 
-  // Placeholder or actual implementation for exclude toggle passed from parent
   const handleToggleExclude = useCallback((messageId: string) => {
     onToggleExclude(messageId);
-    // Example: Maybe show a toast or visual feedback
-    // toast.info(`Message ${excludedSet.has(messageId) ? 'included' : 'excluded'}`);
-  }, [onToggleExclude]); // Removed excludedSet dependency if parent handles the state change
+  }, [onToggleExclude]);
 
-  // --- Render Logic ---
-
-  if (!chatId && !isLoading) { // Show "No Chat Selected" only if not loading and no ID
+  if (!chatId && !isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="p-6 max-w-md text-center">
@@ -642,7 +591,7 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
       <div className="space-y-4 p-4">
         {messages.map((msg) => (
           <ChatMessageItem
-            key={msg.id || `temp-${Math.random()}`} // Use temp key if ID is missing transiently
+            key={msg.id || `temp-${Math.random()}`}
             msg={msg}
             excluded={excludedSet.has(msg.id!)}
             rawView={rawMessageIds.has(msg.id!)}
@@ -653,34 +602,31 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
             onToggleRawView={handleToggleRawView}
           />
         ))}
-        <div ref={bottomRef} className="h-px" /> {/* Sentinel element for scrolling */}
+        <div ref={bottomRef} className="h-px" />
       </div>
     </ScrollArea>
   );
 }
 
 
-// --- Chat Sidebar ---
-
-export function ChatSidebar() {
+// --- Chat Sidebar (MODIFIED) ---
+// Added props for controlled state: isOpen, onClose
+export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [activeChatId, setActiveChatId] = useActiveChatId();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  const [visibleCount, setVisibleCount] = useState(50); // Initial visible count
+  const [visibleCount, setVisibleCount] = useState(50);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const activeChatRef = useRef<HTMLDivElement>(null);
 
-  // API Hooks
   const { data: chatsData, isLoading: isLoadingChats } = useGetChats();
   const deleteChatMutation = useDeleteChat();
   const updateChatMutation = useUpdateChat();
   const createChatMutation = useCreateChat();
 
-  // Memoized sorted chats
   const sortedChats = useMemo(() => {
     const chats: Chat[] = chatsData?.data ?? [];
-    // Sort by createdAt descending
     return [...chats].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [chatsData]);
 
@@ -691,15 +637,14 @@ export function ChatSidebar() {
     try {
       const newChat = await createChatMutation.mutateAsync({
         title: defaultTitle,
-        // copyExisting: false, // Assuming this is default or handled by API
       });
-      // Ensure newChat has an ID (adjust based on actual return type)
-      const newChatId = (newChat)?.data.id; // Type assertion might be needed
+      const newChatId = (newChat)?.data.id;
       if (newChatId) {
         setActiveChatId(newChatId);
         toast.success('New chat created');
-        setEditingTitle(''); // Clear any lingering edit title
-        setEditingChatId(null); // Ensure not in editing mode
+        setEditingTitle('');
+        setEditingChatId(null);
+        onClose(); // Close sidebar after creating new chat
       } else {
         throw new Error("Created chat did not return an ID.");
       }
@@ -707,21 +652,23 @@ export function ChatSidebar() {
       console.error('Error creating chat:', error);
       toast.error('Failed to create chat');
     }
-  }, [createChatMutation, setActiveChatId]);
+  }, [createChatMutation, setActiveChatId, onClose]);
 
   const handleDeleteChat = useCallback(async (chatId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent click from selecting the chat
+    e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this chat?')) return;
     try {
       await deleteChatMutation.mutateAsync(chatId);
       toast.success("Chat deleted");
       if (activeChatId === chatId) {
-        setActiveChatId(null); // Clear active chat if it was deleted
+        setActiveChatId(null);
       }
-      if (editingChatId === chatId) { // Cancel edit if deleted chat was being edited
+      if (editingChatId === chatId) {
         setEditingChatId(null);
         setEditingTitle('');
       }
+      // Optionally close sidebar if the active chat was deleted?
+      // if (activeChatId === chatId) onClose();
     } catch (error) {
       console.error('Error deleting chat:', error);
       toast.error("Failed to delete chat");
@@ -729,15 +676,15 @@ export function ChatSidebar() {
   }, [deleteChatMutation, activeChatId, setActiveChatId, editingChatId]);
 
   const startEditingChat = useCallback((chat: Chat, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent click from selecting the chat
+    e.stopPropagation();
     setEditingChatId(chat.id);
-    setEditingTitle(chat.title ?? ''); // Use empty string if title is null/undefined
+    setEditingTitle(chat.title ?? '');
   }, []);
 
   const handleUpdateChat = useCallback(async (chatId: string) => {
     if (!editingTitle.trim()) {
       toast.error("Chat title cannot be empty.");
-      return; // Prevent saving empty title
+      return;
     }
     try {
       await updateChatMutation.mutateAsync({
@@ -758,17 +705,22 @@ export function ChatSidebar() {
     setEditingTitle('');
   }, []);
 
-  // Scroll active chat into view
+  const handleSelectChat = useCallback((chatId: string) => {
+    if (!editingChatId) {
+      setActiveChatId(chatId);
+      onClose(); // Close sidebar after selecting chat
+    }
+  }, [setActiveChatId, editingChatId, onClose]); // Added onClose dependency
+
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]');
     if (activeChatRef.current && viewport && viewport.contains(activeChatRef.current)) {
-      // Check if the active item is actually within the scroll viewport before scrolling
       activeChatRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
       });
     }
-  }, [activeChatId, visibleChats]); // Rerun when active chat or visible list changes
+  }, [activeChatId, visibleChats]);
 
   const handleKeyDownEdit = (e: React.KeyboardEvent<HTMLInputElement>, chatId: string) => {
     if (e.key === 'Enter') {
@@ -783,7 +735,14 @@ export function ChatSidebar() {
   }, []);
 
   return (
-    <SlidingSidebar width={300} icons={{ openIcon: MessageSquareIcon }}>
+    // Use the controlled SlidingSidebar
+    <SlidingSidebar
+      width={300}
+      side="left"
+      isOpen={isOpen} // Pass state down
+      onClose={onClose} // Pass callback down
+    >
+      {/* Sidebar content remains the same */}
       <div className="p-2 border-b mb-2 flex flex-col gap-2">
         <Button variant="outline" className="w-full justify-start gap-2" onClick={handleCreateNewChat}>
           <PlusIcon className="h-4 w-4" /> New Chat
@@ -806,12 +765,12 @@ export function ChatSidebar() {
                 <div
                   key={chat.id}
                   ref={isActive ? activeChatRef : null}
-                  onClick={() => !isEditing && setActiveChatId(chat.id)} // Select only if not editing
+                  onClick={() => handleSelectChat(chat.id)}
                   className={cn(
                     'flex items-center p-2 rounded-md group text-sm relative cursor-pointer',
                     'hover:bg-muted dark:hover:bg-muted/50',
                     isActive && 'bg-muted dark:bg-muted/50',
-                    isEditing && 'bg-transparent hover:bg-transparent' // Don't highlight background when editing
+                    isEditing && 'bg-transparent hover:bg-transparent'
                   )}
                 >
                   {isEditing ? (
@@ -822,7 +781,7 @@ export function ChatSidebar() {
                         onChange={(e) => setEditingTitle(e.target.value)}
                         className="h-7 text-sm flex-1"
                         onKeyDown={(e) => handleKeyDownEdit(e, chat.id)}
-                        onClick={(e) => e.stopPropagation()} // Prevent click through
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleUpdateChat(chat.id)}><Check className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEditing}><X className="h-4 w-4" /></Button>
@@ -855,108 +814,86 @@ export function ChatSidebar() {
   );
 }
 
-
-// --- Chat Header ---
-
-export function ChatHeader() {
+// Added onToggleSidebar prop
+export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [activeChatId] = useActiveChatId();
-  const { data: chatsData } = useGetChats(); // Use data, not the whole object unless needed
+  const { data: chatsData } = useGetChats();
 
-  // Memoize finding the active chat data
   const activeChat = useMemo(() =>
     chatsData?.data?.find((c) => c.id === activeChatId),
     [chatsData, activeChatId]
   );
 
-  const { provider, setProvider, currentModel, setCurrentModel } = useChatModelControl();
-
-  // Render nothing if no chat is active (or still loading)
-  if (!activeChatId) {
-    return null; // Or a placeholder/loading state if preferred
-  }
 
   return (
-    <div className="flex flex-wrap justify-between items-center gap-y-2 gap-x-4 bg-background px-4 py-2 border-b">
-      {/* Left side: Chat Title */}
-      <div className="flex-1 min-w-0">
-        <span className="font-semibold text-lg truncate" title={activeChat?.title || 'Loading...'}>
-          {activeChat?.title || "Loading Chat..."}
-        </span>
+    <div className="flex items-center justify-between gap-x-4 bg-background px-4 py-2 border-b h-14 w-full max-w-7xl xl:rounded-b xl:border-x">
+      {/* Left: Sidebar Toggle Button */}
+      <div className="flex-shrink-0">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onToggleSidebar}
+          className="h-8 w-8"
+          aria-label="Toggle chat sidebar"
+        >
+          <MessageSquareText className="h-4 w-4" />
+        </Button>
       </div>
 
-      {/* Right side: Model Controls */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <ModelSelector
-          // No className needed if layout handled by parent flex
-          provider={provider as APIProviders} // Assert type if hook doesn't guarantee it
-          currentModel={currentModel}
-          onProviderChange={setProvider}
-          onModelChange={setCurrentModel}
-        />
-        <ModelSettingsPopover />
+      {/* Middle: Chat Title (takes up remaining space, centered text, truncated) */}
+      <div className="flex-1 min-w-0 text-center">
+        {activeChatId ? (
+          <span className="font-semibold text-lg truncate block" title={activeChat?.title || 'Loading...'}>
+            {activeChat?.title || "Loading Chat..."}
+          </span>
+        ) : (
+          <span className="font-semibold text-lg text-muted-foreground">No Chat Selected</span>
+        )}
+      </div>
+
+      {/* Right: Model Settings or Placeholder */}
+      <div className="flex-shrink-0 w-8"> {/* Ensure right side takes up same space as left button */}
+        {activeChatId && <ModelSettingsPopover />}
       </div>
     </div>
   );
 }
 
 
-// --- Chat Page (Route Component) ---
-
-// Define Search Schema for type safety with router search params
-// interface ChatSearch { prefill?: boolean } // Example, adjust if needed
+// --- Chat Page (Route Component - MODIFIED) ---
 
 export const Route = createFileRoute("/chat")({
   component: ChatPage,
-  // validateSearch: (search: Record<string, unknown>): ChatSearch => ({ // Example validation
-  //   prefill: Boolean(search.prefill),
-  // })
 });
 
 function ChatPage() {
-  const [activeChatId, setActiveChatId] = useActiveChatId();
-  const { settings: modelSettings } = useChatModelParams(); // Get the latest model settings
-  // Provide default values directly if settings might be undefined initially
+  // --- State for sidebar visibility ---
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // --- Other Hooks ---
+  const [activeChatId] = useActiveChatId();
+  const { settings: modelSettings } = useChatModelParams();
   const provider = modelSettings.provider ?? 'openrouter';
-  // --- IMPORTANT: Get model from modelSettings, not a hardcoded default ---
-  const model = modelSettings.model; // Use the model selected via useChatModelParams/useChatModelControl
-  const [initialChatContent, setInitialChatContent] = useLocalStorage('initial-chat-content', '')
-
-
-  useEffect(() => {
-    console.log('initialChatContent', initialChatContent)
-    console.log('activeChatId', activeChatId)
-    // if initial chat content is set, set the input to the initial chat content, clear initial chat content
-    if (initialChatContent.length > 0) {
-
-      setInput(initialChatContent)
-      // setInitialChatContent('')
-    }
-
-  }, [initialChatContent])
-
-  const {
-    messages,
-    input,
-    handleInputChange: sdkHandleInputChange,
-    // handleSubmit: sdkHandleSubmit, // We won't use the hook's default submit directly for form submission
-    isLoading: isAiLoading,
-    error,
-    setInput,
-    sendMessage,
-    // reload,
-    // stop,
-  } = useAIChat({
-    chatId: activeChatId || '', // Pass empty string if no active chat ID to satisfy type, though hook might handle null better
-    // Pass the *current* provider and model from settings
-    provider,
-    model: model ?? '', // Pass empty string if model is not yet set
-    // Pass other relevant settings that might be needed for initialization or context
-    systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.',
-    // Note: The main model parameters (temp, top_p etc.) are passed *per message* via sendMessage
-  });
-
-  // State for excluded messages (remains the same)
+  const model = modelSettings.model;
+  const { data: modelsData } = useGetModels(provider as APIProviders);
+  const { copyToClipboard } = useCopyClipboard();
   const [excludedMessageIds, setExcludedMessageIds] = useState<string[]>([]);
+
+  // --- Call useAIChat ---
+  const { messages, input, isLoading: isAiLoading, error, setInput, sendMessage }
+    = useAIChat({
+      chatId: activeChatId || '', // Use chatId, pass empty string if null/undefined
+      provider,
+      model: model ?? '',
+      systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.',
+    });
+
+
+  // --- Callbacks & Memoizations ---
+  const selectedModelName = useMemo(() => {
+    return modelsData?.data.find(m => m.id === model)?.name ?? model ?? '...';
+  }, [modelsData, model]);
+
   const handleToggleExclude = useCallback((messageId: string) => {
     setExcludedMessageIds(prev =>
       prev.includes(messageId)
@@ -965,80 +902,100 @@ function ChatPage() {
     );
   }, []);
 
-  // --- This function correctly updates the input state via the hook's setInput ---
   const handleChatInputChange = useCallback((value: string) => {
-    // The useAIChat hook expects a ChangeEvent, but we only have the value.
-    // We can directly use the `setInput` function returned by useAIChat.
     setInput(value);
-    // sdkHandleInputChange might still be useful if it does more than just setInput,
-    // but often setInput is sufficient. If sdkHandleInputChange is needed:
-    // if (sdkHandleInputChange) {
-    //   const event = { target: { value } } as ChangeEvent<HTMLInputElement>;
-    //   sdkHandleInputChange(event);
-    // }
-  }, [setInput]); // Dependency is setInput
+  }, [setInput]);
 
-  // --- UPDATE: Modify handleFormSubmit to use sendMessage with modelSettings ---
-  const handleFormSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input?.trim() || isAiLoading) {
-      console.log("Submission prevented: Input empty or AI loading", { input, isAiLoading });
+    if (!input?.trim() || isAiLoading || !activeChatId) {
       return;
     }
-
-    // Call the sendMessage function from useAIChat, passing the current input
-    // AND the current modelSettings object.
-    sendMessage(input, modelSettings);
-
-    // No need to call sdkHandleSubmit directly anymore for this form.
-    // setInput('') is handled within sendMessage now.
-
-  }, [input, isAiLoading, sendMessage, modelSettings]); // <-- Add sendMessage and modelSettings dependencies
+    try {
+      // Pass modelSettings directly in the options object
+      await sendMessage(input, { ...modelSettings });
+      setInput(''); // Clear input after sending
+    } catch (err) {
+      console.error("Error sending message:", err);
+      toast.error("Failed to send message.");
+    }
+  }, [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId]);
 
   const hasActiveChat = !!activeChatId;
 
+  const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
+
+
+  // --- JSX Render ---
   return (
-    <div className='flex h-full overflow-hidden'>
-      <ChatSidebar />
-      <div className='flex-1 flex flex-col min-w-0 h-full'>
-        {hasActiveChat && model ? ( // <-- Also check if model is loaded/set
+    <div className='flex flex-col md:flex-row overflow-hidden h-full'>
+      <ChatSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+      <div className='flex-1 flex flex-col min-w-0 h-full items-center w-full'>
+        <ChatHeader onToggleSidebar={toggleSidebar} />
+
+        {hasActiveChat && model ? (
           <>
-            <ChatHeader />
-            <div className='flex-1 min-h-0 overflow-hidden'>
-              <ChatMessages
-                chatId={activeChatId}
-                messages={messages ?? []}
-                isLoading={isAiLoading}
-                excludedMessageIds={excludedMessageIds}
-                onToggleExclude={handleToggleExclude}
-              />
-            </div>
-            {/* Form submission now correctly triggers the updated handleFormSubmit */}
-            <form onSubmit={handleFormSubmit} className='p-2 sm:p-4 border-t bg-background'>
-              <div className='flex gap-2 items-end'>
+            <ScrollArea className='flex-1 w-full min-h-0 overflow-y-auto'>
+              <div className='mx-auto w-full max-w-[72rem] px-4 pb-4'>
+                <ChatMessages
+                  chatId={activeChatId}
+                  messages={messages ?? []}
+                  isLoading={isAiLoading}
+                  excludedMessageIds={excludedMessageIds}
+                  onToggleExclude={handleToggleExclude}
+                />
+              </div>
+            </ScrollArea>
+
+            <form
+              onSubmit={handleFormSubmit}
+              className='border-t border-l border-r bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-[env(safe-area-inset-bottom)] max-w-[80rem] rounded-t-lg shadow-md w-full'
+            >
+              <div className="mx-auto w-full max-w-[72rem] px-4 pt-2 pb-1 text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+                Using: {provider} /
+                <span className="inline-flex items-center gap-1">
+                  {selectedModelName}
+                  {model && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 text-muted-foreground hover:text-foreground"
+                      title={`Copy model ID: ${model}`}
+                      onClick={() => copyToClipboard(model, { successMessage: 'Model ID copied!' })}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  )}
+                </span>
+              </div>
+              <div className='mx-auto flex w-full max-w-[72rem] items-end gap-2 px-4 py-3'>
                 <AdaptiveChatInput
                   value={input ?? ''}
-                  onChange={handleChatInputChange} // Uses setInput via the callback
+                  onChange={handleChatInputChange}
                   placeholder="Type your message..."
-                  disabled={isAiLoading || !model} // Disable if loading or no model selected
                   preserveFormatting
-
+                  className="flex-grow rounded-lg"
                 />
                 <Button
                   type="submit"
-                  disabled={isAiLoading || !input?.trim() || !model} // Disable if loading, input empty, or no model
-                  className="flex-shrink-0"
+                  disabled={input?.trim() === ''}
+                  size="icon"
+                  className="self-end sm:h-10 sm:w-10 flex-shrink-0"
                   aria-label="Send message"
                 >
-                  {isAiLoading ? "Sending..." : "Send"}
+                  {isAiLoading ? "..." : <SendIcon className="h-4 w-4" />}
                 </Button>
               </div>
-              {error && <p className="text-xs text-destructive mt-1">Error: {error.message}</p>}
+              {error && (
+                <p className="mx-auto mb-3 w-full max-w-[72rem] px-4 text-xs text-destructive">
+                  Error: {error.message}
+                </p>
+              )}
             </form>
           </>
         ) : (
-          // Show "No Chat Selected" or a loading/initial state if no active chat or model
-          <div className='flex-1 flex items-center justify-center p-4'>
+          <div className='flex-1 flex items-center justify-center p-4 w-full'>
             <Card className="p-6 max-w-md text-center">
               <MessageSquareIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h2 className='text-xl font-semibold text-foreground mb-2'>
@@ -1047,10 +1004,15 @@ function ChatPage() {
               <p className='text-sm text-muted-foreground mb-4'>
                 {activeChatId
                   ? "Loading model information and messages."
-                  : "Select a chat from the sidebar or start a new conversation."}
+                  : "Select a chat from the sidebar or start a new conversation."
+                }
               </p>
-              {/* Optionally show loading indicator if model is missing but chat id exists */}
               {activeChatId && !model && <p className="text-sm text-muted-foreground">Initializing model...</p>}
+              {!activeChatId && (
+                <Button variant="outline" size="sm" onClick={toggleSidebar}>
+                  <PlusIcon className="mr-2 h-4 w-4" /> Create or Select Chat
+                </Button>
+              )}
             </Card>
           </div>
         )}

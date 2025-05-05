@@ -1,4 +1,4 @@
-import { Ticket } from "@/hooks/generated";
+import { Ticket } from "@/generated";
 import { Badge } from '@ui';
 
 interface TicketListProps {

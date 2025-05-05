@@ -404,6 +404,41 @@ export type ProjectSummaryResponse = {
     summary: string;
 };
 
+export type SuggestFilesResponse = {
+    success: true;
+    recommendedFileIds: Array<string>;
+};
+
+export type SuggestFilesRequestBody = {
+    userInput: string;
+};
+
+export type SummarizeFilesResponse = {
+    success: true;
+    included: number;
+    skipped: number;
+    updatedFiles: Array<ProjectFile>;
+    message: string;
+};
+
+export type SummarizeFilesRequestBody = {
+    fileIds: Array<string>;
+    /**
+     * Force re-summarization even if summary exists
+     */
+    force?: boolean;
+};
+
+export type RemoveSummariesResponse = {
+    success: true;
+    removedCount: number;
+    message: string;
+};
+
+export type RemoveSummariesRequestBody = {
+    fileIds: Array<string>;
+};
+
 export type ProviderKey = {
     /**
      * Provider Key ID
@@ -716,45 +751,6 @@ export type ModelsListResponse = {
     data: Array<UnifiedModel>;
 };
 
-export type SuggestFilesResponse = {
-    success: true;
-    recommendedFileIds: Array<string>;
-};
-
-export type SuggestFilesRequestBody = {
-    userInput: string;
-};
-
-export type FileSummaryListResponse = {
-    success: true;
-    data: Array<ProjectFile>;
-};
-
-export type SummarizeFilesResponse = {
-    success: true;
-    included: number;
-    skipped: number;
-    message: string;
-};
-
-export type SummarizeFilesRequestBody = {
-    fileIds: Array<string>;
-    /**
-     * Force re-summarization even if summary exists
-     */
-    force?: boolean;
-};
-
-export type RemoveSummariesResponse = {
-    success: true;
-    removedCount: number;
-    message: string;
-};
-
-export type RemoveSummariesRequestBody = {
-    fileIds: Array<string>;
-};
-
 /**
  * Represents a single, well-defined unit of work required to fulfill part of the user's overall request, typically focused on one file.
  */
@@ -847,16 +843,76 @@ export type AgentCoderRunRequest = {
     agentJobId?: string;
 };
 
-export type AgentRunData = {
+export type AgentDataLog = {
     /**
-     * The state of the project files after the agent's execution.
+     * Absolute path to the directory containing logs for this job.
      */
-    updatedFiles: Array<ProjectFile>;
-    taskPlan?: AgentTaskPlan;
+    agentJobDirPath: string;
     /**
-     * The unique ID for retrieving the execution logs and data for this run.
+     * The ID of the project this agent run targeted.
+     */
+    projectId: string;
+    /**
+     * The unique ID for this agent run.
      */
     agentJobId: string;
+    /**
+     * ISO 8601 timestamp when the agent job started.
+     */
+    agentJobStartTime: string;
+    taskPlan?: AgentTaskPlan & unknown;
+    /**
+     * The final outcome status of the agent run.
+     */
+    finalStatus: 'Success' | 'Failed' | 'No tasks generated' | 'Error';
+    finalTaskPlan: AgentTaskPlan & unknown;
+    /**
+     * ISO 8601 timestamp when the agent job finished or errored.
+     */
+    agentJobEndTime: string;
+    /**
+     * Error message if the agent run failed.
+     */
+    errorMessage?: string;
+    /**
+     * Stack trace if the agent run failed.
+     */
+    errorStack?: string;
+    /**
+     * List of files with proposed changes (new files or modified files with different checksums).
+     */
+    updatedFiles?: Array<ProjectFile>;
+};
+
+export type ConfirmAgentRunChangesResponse = {
+    success: true;
+    message: string;
+    /**
+     * Relative paths of files proposed for writing (actual writes depend on checksums).
+     */
+    writtenFiles: Array<string>;
+};
+
+export type DeleteAgentRunResponse = {
+    success: true;
+    message: string;
+};
+
+export type KvGetResponse = {
+    success: true;
+    /**
+     * The key whose value was retrieved.
+     */
+    key: 'appSettings' | 'projectTabs' | 'activeProjectTabId' | 'activeChatId';
+    /**
+     * The retrieved value associated with the key.
+     */
+    value?: unknown;
+};
+
+export type KvDeleteResponse = {
+    success: true;
+    message: string;
 };
 
 export type GetChatsData = {
@@ -2110,6 +2166,120 @@ export type GetApiProjectsByProjectIdSummaryResponses = {
 
 export type GetApiProjectsByProjectIdSummaryResponse = GetApiProjectsByProjectIdSummaryResponses[keyof GetApiProjectsByProjectIdSummaryResponses];
 
+export type PostApiProjectsByProjectIdSuggestFilesData = {
+    body?: SuggestFilesRequestBody;
+    path: {
+        /**
+         * The ID of the project
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/suggest-files';
+};
+
+export type PostApiProjectsByProjectIdSuggestFilesErrors = {
+    /**
+     * Project not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation Error
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error or AI processing error
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiProjectsByProjectIdSuggestFilesError = PostApiProjectsByProjectIdSuggestFilesErrors[keyof PostApiProjectsByProjectIdSuggestFilesErrors];
+
+export type PostApiProjectsByProjectIdSuggestFilesResponses = {
+    /**
+     * Successfully suggested files
+     */
+    200: SuggestFilesResponse;
+};
+
+export type PostApiProjectsByProjectIdSuggestFilesResponse = PostApiProjectsByProjectIdSuggestFilesResponses[keyof PostApiProjectsByProjectIdSuggestFilesResponses];
+
+export type PostApiProjectsByProjectIdSummarizeData = {
+    body?: SummarizeFilesRequestBody;
+    path: {
+        /**
+         * The ID of the project
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/summarize';
+};
+
+export type PostApiProjectsByProjectIdSummarizeErrors = {
+    /**
+     * Project or some files not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation Error
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error during summarization
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiProjectsByProjectIdSummarizeError = PostApiProjectsByProjectIdSummarizeErrors[keyof PostApiProjectsByProjectIdSummarizeErrors];
+
+export type PostApiProjectsByProjectIdSummarizeResponses = {
+    /**
+     * File summarization process completed
+     */
+    200: SummarizeFilesResponse;
+};
+
+export type PostApiProjectsByProjectIdSummarizeResponse = PostApiProjectsByProjectIdSummarizeResponses[keyof PostApiProjectsByProjectIdSummarizeResponses];
+
+export type PostApiProjectsByProjectIdRemoveSummariesData = {
+    body?: RemoveSummariesRequestBody;
+    path: {
+        /**
+         * The ID of the project
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/api/projects/{projectId}/remove-summaries';
+};
+
+export type PostApiProjectsByProjectIdRemoveSummariesErrors = {
+    /**
+     * Project or some files not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation Error
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiProjectsByProjectIdRemoveSummariesError = PostApiProjectsByProjectIdRemoveSummariesErrors[keyof PostApiProjectsByProjectIdRemoveSummariesErrors];
+
+export type PostApiProjectsByProjectIdRemoveSummariesResponses = {
+    /**
+     * Summaries removed successfully
+     */
+    200: RemoveSummariesResponse;
+};
+
+export type PostApiProjectsByProjectIdRemoveSummariesResponse = PostApiProjectsByProjectIdRemoveSummariesResponses[keyof PostApiProjectsByProjectIdRemoveSummariesResponses];
+
 export type GetApiKeysData = {
     body?: never;
     path?: never;
@@ -2911,201 +3081,6 @@ export type PostAiGenerateTextResponses = {
 
 export type PostAiGenerateTextResponse = PostAiGenerateTextResponses[keyof PostAiGenerateTextResponses];
 
-export type PostApiProjectsByProjectIdSuggestFilesData = {
-    body?: SuggestFilesRequestBody;
-    path: {
-        /**
-         * The ID of the project
-         */
-        projectId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/suggest-files';
-};
-
-export type PostApiProjectsByProjectIdSuggestFilesErrors = {
-    /**
-     * Project not found
-     */
-    404: ApiErrorResponse;
-    /**
-     * Validation Error
-     */
-    422: ApiErrorResponse;
-    /**
-     * Internal Server Error or AI processing error
-     */
-    500: ApiErrorResponse;
-};
-
-export type PostApiProjectsByProjectIdSuggestFilesError = PostApiProjectsByProjectIdSuggestFilesErrors[keyof PostApiProjectsByProjectIdSuggestFilesErrors];
-
-export type PostApiProjectsByProjectIdSuggestFilesResponses = {
-    /**
-     * Successfully suggested files
-     */
-    200: SuggestFilesResponse;
-};
-
-export type PostApiProjectsByProjectIdSuggestFilesResponse = PostApiProjectsByProjectIdSuggestFilesResponses[keyof PostApiProjectsByProjectIdSuggestFilesResponses];
-
-export type GetApiProjectsByProjectIdFileSummariesData = {
-    body?: never;
-    path: {
-        /**
-         * The ID of the project
-         */
-        projectId: string;
-    };
-    query?: {
-        /**
-         * Optional comma-separated list of file IDs to retrieve summaries for
-         */
-        fileIds?: string;
-    };
-    url: '/api/projects/{projectId}/file-summaries';
-};
-
-export type GetApiProjectsByProjectIdFileSummariesErrors = {
-    /**
-     * Project not found
-     */
-    404: ApiErrorResponse;
-    /**
-     * Validation Error
-     */
-    422: ApiErrorResponse;
-    /**
-     * Internal Server Error
-     */
-    500: ApiErrorResponse;
-};
-
-export type GetApiProjectsByProjectIdFileSummariesError = GetApiProjectsByProjectIdFileSummariesErrors[keyof GetApiProjectsByProjectIdFileSummariesErrors];
-
-export type GetApiProjectsByProjectIdFileSummariesResponses = {
-    /**
-     * Successfully retrieved file summaries
-     */
-    200: FileSummaryListResponse;
-};
-
-export type GetApiProjectsByProjectIdFileSummariesResponse = GetApiProjectsByProjectIdFileSummariesResponses[keyof GetApiProjectsByProjectIdFileSummariesResponses];
-
-export type PostApiProjectsByProjectIdSummarizeData = {
-    body?: SummarizeFilesRequestBody;
-    path: {
-        /**
-         * The ID of the project
-         */
-        projectId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/summarize';
-};
-
-export type PostApiProjectsByProjectIdSummarizeErrors = {
-    /**
-     * Project or some files not found
-     */
-    404: ApiErrorResponse;
-    /**
-     * Validation Error
-     */
-    422: ApiErrorResponse;
-    /**
-     * Internal Server Error during summarization
-     */
-    500: ApiErrorResponse;
-};
-
-export type PostApiProjectsByProjectIdSummarizeError = PostApiProjectsByProjectIdSummarizeErrors[keyof PostApiProjectsByProjectIdSummarizeErrors];
-
-export type PostApiProjectsByProjectIdSummarizeResponses = {
-    /**
-     * File summarization process completed
-     */
-    200: SummarizeFilesResponse;
-};
-
-export type PostApiProjectsByProjectIdSummarizeResponse = PostApiProjectsByProjectIdSummarizeResponses[keyof PostApiProjectsByProjectIdSummarizeResponses];
-
-export type PostApiProjectsByProjectIdResummarizeAllData = {
-    body?: never;
-    path: {
-        /**
-         * The ID of the project
-         */
-        projectId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/resummarize-all';
-};
-
-export type PostApiProjectsByProjectIdResummarizeAllErrors = {
-    /**
-     * Project not found
-     */
-    404: ApiErrorResponse;
-    /**
-     * Validation Error
-     */
-    422: ApiErrorResponse;
-    /**
-     * Internal Server Error
-     */
-    500: ApiErrorResponse;
-};
-
-export type PostApiProjectsByProjectIdResummarizeAllError = PostApiProjectsByProjectIdResummarizeAllErrors[keyof PostApiProjectsByProjectIdResummarizeAllErrors];
-
-export type PostApiProjectsByProjectIdResummarizeAllResponses = {
-    /**
-     * Process to re-summarize all files started/completed
-     */
-    200: OperationSuccessResponse;
-};
-
-export type PostApiProjectsByProjectIdResummarizeAllResponse = PostApiProjectsByProjectIdResummarizeAllResponses[keyof PostApiProjectsByProjectIdResummarizeAllResponses];
-
-export type PostApiProjectsByProjectIdRemoveSummariesData = {
-    body?: RemoveSummariesRequestBody;
-    path: {
-        /**
-         * The ID of the project
-         */
-        projectId: string;
-    };
-    query?: never;
-    url: '/api/projects/{projectId}/remove-summaries';
-};
-
-export type PostApiProjectsByProjectIdRemoveSummariesErrors = {
-    /**
-     * Project or some files not found
-     */
-    404: ApiErrorResponse;
-    /**
-     * Validation Error
-     */
-    422: ApiErrorResponse;
-    /**
-     * Internal Server Error
-     */
-    500: ApiErrorResponse;
-};
-
-export type PostApiProjectsByProjectIdRemoveSummariesError = PostApiProjectsByProjectIdRemoveSummariesErrors[keyof PostApiProjectsByProjectIdRemoveSummariesErrors];
-
-export type PostApiProjectsByProjectIdRemoveSummariesResponses = {
-    /**
-     * Summaries removed successfully
-     */
-    200: RemoveSummariesResponse;
-};
-
-export type PostApiProjectsByProjectIdRemoveSummariesResponse = PostApiProjectsByProjectIdRemoveSummariesResponses[keyof PostApiProjectsByProjectIdRemoveSummariesResponses];
-
 export type PostApiProjectsByProjectIdAgentCoderData = {
     body: AgentCoderRunRequest;
     path: {
@@ -3238,10 +3213,150 @@ export type GetApiAgentCoderRunsByAgentJobIdDataResponses = {
     /**
      * Agent data log content as a JSON object
      */
-    200: AgentRunData;
+    200: AgentDataLog;
 };
 
 export type GetApiAgentCoderRunsByAgentJobIdDataResponse = GetApiAgentCoderRunsByAgentJobIdDataResponses[keyof GetApiAgentCoderRunsByAgentJobIdDataResponses];
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmData = {
+    body?: never;
+    path: {
+        /**
+         * The unique ID of the agent run.
+         */
+        agentJobId: string;
+    };
+    query?: never;
+    url: '/api/agent-coder/runs/{agentJobId}/confirm';
+};
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmErrors = {
+    /**
+     * Agent run data, project, or original files not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Internal Server Error reading data log or writing files
+     */
+    500: ApiErrorResponse;
+};
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmError = PostApiAgentCoderRunsByAgentJobIdConfirmErrors[keyof PostApiAgentCoderRunsByAgentJobIdConfirmErrors];
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmResponses = {
+    /**
+     * Agent run changes successfully written to filesystem.
+     */
+    200: ConfirmAgentRunChangesResponse;
+};
+
+export type PostApiAgentCoderRunsByAgentJobIdConfirmResponse = PostApiAgentCoderRunsByAgentJobIdConfirmResponses[keyof PostApiAgentCoderRunsByAgentJobIdConfirmResponses];
+
+export type DeleteApiAgentCoderRunsByAgentJobIdData = {
+    body?: never;
+    path: {
+        /**
+         * The unique ID of the agent run.
+         */
+        agentJobId: string;
+    };
+    query?: never;
+    url: '/api/agent-coder/runs/{agentJobId}';
+};
+
+export type DeleteApiAgentCoderRunsByAgentJobIdErrors = {
+    /**
+     * Agent run directory not found
+     */
+    404: ApiErrorResponse;
+    /**
+     * Internal Server Error during deletion
+     */
+    500: ApiErrorResponse;
+};
+
+export type DeleteApiAgentCoderRunsByAgentJobIdError = DeleteApiAgentCoderRunsByAgentJobIdErrors[keyof DeleteApiAgentCoderRunsByAgentJobIdErrors];
+
+export type DeleteApiAgentCoderRunsByAgentJobIdResponses = {
+    /**
+     * Agent run successfully deleted.
+     */
+    200: DeleteAgentRunResponse;
+};
+
+export type DeleteApiAgentCoderRunsByAgentJobIdResponse = DeleteApiAgentCoderRunsByAgentJobIdResponses[keyof DeleteApiAgentCoderRunsByAgentJobIdResponses];
+
+export type DeleteApiKvData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * The key to retrieve or delete.
+         */
+        key: 'appSettings' | 'projectTabs' | 'activeProjectTabId' | 'activeChatId';
+    };
+    url: '/api/kv';
+};
+
+export type DeleteApiKvErrors = {
+    /**
+     * Validation Error (Invalid Key Format)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type DeleteApiKvError = DeleteApiKvErrors[keyof DeleteApiKvErrors];
+
+export type DeleteApiKvResponses = {
+    /**
+     * Successfully deleted the key
+     */
+    200: KvDeleteResponse;
+};
+
+export type DeleteApiKvResponse = DeleteApiKvResponses[keyof DeleteApiKvResponses];
+
+export type GetApiKvData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * The key to retrieve or delete.
+         */
+        key: 'appSettings' | 'projectTabs' | 'activeProjectTabId' | 'activeChatId';
+    };
+    url: '/api/kv';
+};
+
+export type GetApiKvErrors = {
+    /**
+     * Key not found (though current service returns null)
+     */
+    404: ApiErrorResponse;
+    /**
+     * Validation Error (Invalid Key Format)
+     */
+    422: ApiErrorResponse;
+    /**
+     * Internal Server Error
+     */
+    500: ApiErrorResponse;
+};
+
+export type GetApiKvError = GetApiKvErrors[keyof GetApiKvErrors];
+
+export type GetApiKvResponses = {
+    /**
+     * Successfully retrieved the value
+     */
+    200: KvGetResponse;
+};
+
+export type GetApiKvResponse = GetApiKvResponses[keyof GetApiKvResponses];
 
 export type ClientOptions = {
     baseUrl: 'http://localhost:3147' | (string & {});

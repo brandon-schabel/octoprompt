@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useOptimistic, useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { Button } from '@ui'
 import { Input } from "@ui"
 import { Switch } from "@ui"
@@ -12,19 +12,16 @@ import {
     CardFooter,
 } from "@ui"
 import { Checkbox } from "@ui"
-import { X, Info, FileText, ChevronDown } from "lucide-react"
+import { Info, FileText } from "lucide-react"
 import {
     useGetProjectFiles,
-    useGetFileSummaries,
-    useResummarizeAllFiles,
-    useRemoveSummariesFromFiles
+    useRemoveSummariesFromFiles,
+    useSummarizeProjectFiles
 } from "@/hooks/api/use-projects-api"
-import { matchesAnyPattern } from "shared/src/utils/pattern-matcher"
 import { buildCombinedFileSummariesXml } from "shared/src/utils/summary-formatter"
 
 import { FileViewerDialog } from "@/components/navigation/file-viewer-dialog"
 import { SummaryDialog } from "@/components/projects/summary-dialog"
-import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
 import {
     Select,
     SelectContent,
@@ -34,46 +31,24 @@ import {
 } from "@ui"
 import { FormatTokenCount } from "@/components/format-token-count"
 import { estimateTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@ui"
+
 import { toast } from "sonner"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@ui"
-import { useSettings } from "@/hooks/api/global-state/selectors"
-import { ProjectFile } from "@/hooks/generated"
-import { AppSettings } from "shared/src/schemas/global-state-schema"
-import { useActiveProjectTab } from "@/hooks/api/use-state-api"
-import { useSummarizeProjectFiles } from "@/hooks/api/use-gen-ai-api"
+import { ProjectFile } from "@/generated"
+import { useActiveProjectTab, useAppSettings, } from "@/hooks/api/use-kv-api"
 
 export const Route = createFileRoute("/project-summarization")({
     component: ProjectSummarizationSettingsPage,
 })
 
-// Type for sorting
 type SortOption = "nameAsc" | "nameDesc"
     | "lastSummarizedAsc" | "lastSummarizedDesc"
     | "fileTokenAsc" | "fileTokenDesc"
     | "summaryTokenAsc" | "summaryTokenDesc"
     | "sizeAsc" | "sizeDesc"
 
-// Add new type for optimistic state
-type OptimisticState = {
-    selectedFileIds: string[]
-    summarizedFileIds: string[]
-    excludedPatterns: string[]
-}
 
-/**
- * We no longer import a separate "FileSummary" type because file records now store
- * their summaries directly on the `files` table. We simply use `ProjectFile` and read `.summary`.
- */
+
 function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string, fileId: string, disabled: boolean }) {
-    // ... (ResummarizeButton implementation remains the same)
     const summarizeMutation = useSummarizeProjectFiles(projectId)
 
     return (
@@ -101,10 +76,9 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string,
 
 
 export function ProjectSummarizationSettingsPage() {
-    const { summarizationEnabledProjectIds = [] } = useSettings()
-    const { summarizationIgnorePatterns = [] } = useSettings()
-    const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
-    const updateSettings = useUpdateSettings()
+    const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
+
+    const [activeProjectTabState] = useActiveProjectTab()
 
     const selectedProjectId = activeProjectTabState?.selectedProjectId
     const isProjectSummarizationEnabled = selectedProjectId
@@ -114,32 +88,19 @@ export function ProjectSummarizationSettingsPage() {
     const [isPending, startTransition] = useTransition()
 
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
-    const [expandedSummaryFileId, setExpandedSummaryFileId] = useState<string | null>(null)
     const [summaryDialogOpen, setSummaryDialogOpen] = useState(false)
     const [selectedFileRecord, setSelectedFileRecord] = useState<ProjectFile | null>(null)
     const [sortBy, setSortBy] = useState<SortOption>("nameAsc")
     const [minTokensFilter, setMinTokensFilter] = useState<number | null>(null)
     const [maxTokensFilter, setMaxTokensFilter] = useState<number | null>(null)
-    const [isResummarizeDialogOpen, setIsResummarizeDialogOpen] = useState(false)
     const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false)
-
-    const [optimisticState, addOptimisticEntry] = useOptimistic<OptimisticState>(
-        {
-            selectedFileIds,
-            summarizedFileIds: [],
-            excludedPatterns: summarizationIgnorePatterns ?? [],
-        }
-    )
-
 
     const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? "")
     const projectFiles = (data?.data || []) as ProjectFile[]
 
-    const { data: summariesData } = useGetFileSummaries(selectedProjectId ?? "")
-    const summaries = summariesData?.data || [] // These are ProjectFile records with summaries populated
 
     const summariesMap = new Map<string, ProjectFile>()
-    for (const f of summaries) {
+    for (const f of data?.data || []) {
         // Only add files that actually have a summary string to the map
         // This ensures !summariesMap.get(id)?.summary correctly identifies unsummarized files
         if (f.summary) {
@@ -149,23 +110,10 @@ export function ProjectSummarizationSettingsPage() {
 
     const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? "")
     const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? "")
-    const resummarizeAllMutation = useResummarizeAllFiles(selectedProjectId ?? "")
 
-    const ignorePatterns = summarizationIgnorePatterns ?? []
-    const includedFiles: ProjectFile[] = []
-    const excludedFiles: ProjectFile[] = []
-
-    for (const file of projectFiles) {
-        const isIgnored = matchesAnyPattern(file.path, ignorePatterns)
-        if (isIgnored) {
-            excludedFiles.push(file)
-        } else {
-            includedFiles.push(file)
-        }
-    }
 
     const tokensMap = new Map<string, number>()
-    for (const file of includedFiles) {
+    for (const file of projectFiles) {
         if (file.content) {
             tokensMap.set(file.id, estimateTokenCount(file.content))
         } else {
@@ -174,7 +122,7 @@ export function ProjectSummarizationSettingsPage() {
     }
 
     const summaryTokensMap = new Map<string, number>()
-    for (const file of includedFiles) {
+    for (const file of projectFiles) {
         // Use summariesMap to get the summary for included files
         const fileSummary = summariesMap.get(file.id)?.summary
         if (fileSummary) {
@@ -184,14 +132,14 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    const filteredIncludedFiles = includedFiles.filter((file) => {
+    const filteredProjectFiles = useMemo(() => projectFiles.filter((file) => {
         const tokenCount = tokensMap.get(file.id) ?? 0
         if (minTokensFilter !== null && tokenCount < minTokensFilter) return false
         if (maxTokensFilter !== null && tokenCount > maxTokensFilter) return false
         return true
-    })
+    }), [projectFiles, tokensMap, minTokensFilter, maxTokensFilter])
 
-    const sortedIncludedFiles = [...filteredIncludedFiles].sort((a, b) => {
+    const sortedProjectFiles = [...filteredProjectFiles].sort((a, b) => {
         const fileAData = summariesMap.get(a.id) // Might be undefined if no summary
         const fileBData = summariesMap.get(b.id) // Might be undefined if no summary
 
@@ -247,19 +195,6 @@ export function ProjectSummarizationSettingsPage() {
         }
     })
 
-    // Similarly for excluded files, if you want them sorted:
-    const sortedExcludedFiles = [...excludedFiles].sort((a, b) => {
-        // Use the same logic as sortedIncludedFiles for consistency if needed
-        // For simplicity, only sorting by name here:
-        const nameA = a.path ?? ""
-        const nameB = b.path ?? ""
-        switch (sortBy) {
-            case "nameDesc": return nameB.localeCompare(nameA);
-            case "nameAsc": // fallthrough
-            default: return nameA.localeCompare(nameB);
-        }
-    })
-
     function toggleFileSelection(fileId: string) {
         setSelectedFileIds((prev) =>
             prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]
@@ -276,11 +211,6 @@ export function ProjectSummarizationSettingsPage() {
         }
 
         startTransition(() => {
-            addOptimisticEntry((current: OptimisticState) => ({
-                ...current,
-                summarizedFileIds: selectedFileIds
-            }))
-
             summarizeMutation.mutate(
                 { fileIds: selectedFileIds },
                 {
@@ -288,33 +218,9 @@ export function ProjectSummarizationSettingsPage() {
                         toast.success(resp.message || "Selected files have been summarized")
                     },
                     onError: () => {
-                        // Reset optimistic state on error
-                        addOptimisticEntry((current: OptimisticState) => ({
-                            ...current,
-                            summarizedFileIds: []
-                        }))
                     }
                 }
             )
-        })
-    }
-
-
-    function handleExcludeFileOptimistic(filePath: string) {
-        // ... (implementation remains the same)
-        startTransition(() => {
-            addOptimisticEntry((current: OptimisticState) => ({
-                ...current,
-                excludedPatterns: [...current.excludedPatterns, filePath]
-            }))
-
-            updateSettings((prev: AppSettings) => ({
-                ...prev,
-                summarizationIgnorePatterns: [
-                    ...(prev.summarizationIgnorePatterns ?? []), // Ensure it's an array
-                    filePath,
-                ],
-            }))
         })
     }
 
@@ -371,31 +277,8 @@ export function ProjectSummarizationSettingsPage() {
         }
     }
 
-    function handleResummarizeAll() {
-        // ... (implementation remains the same)
-        if (!selectedProjectId) return
-        setIsResummarizeDialogOpen(true)
-    }
-
-
-    function handleConfirmResummarize() {
-        // ... (implementation remains the same)
-        if (!selectedProjectId) return
-        resummarizeAllMutation.mutate(undefined, { // Pass undefined or {} if mutate expects no args
-            onSuccess: (resp) => {
-                toast.success(resp.message || "Re-summarize all files job started.")
-            },
-            onError: (error) => {
-                toast.error(error?.error?.message || "Failed to start re-summarize all job.")
-            }
-        })
-        setIsResummarizeDialogOpen(false)
-    }
-
-
-    // --- NEW FUNCTION ---
     function handleSelectUnsummarized() {
-        const unsummarizedIds = sortedIncludedFiles
+        const unsummarizedIds = sortedProjectFiles
             .filter(file => !summariesMap.has(file.id)) // Check existence in the map is enough
             .map(file => file.id)
         setSelectedFileIds(unsummarizedIds)
@@ -406,11 +289,9 @@ export function ProjectSummarizationSettingsPage() {
         }
 
     }
-    // --- END NEW FUNCTION ---
-
 
     let totalContentLength = 0
-    for (const file of includedFiles) {
+    for (const file of projectFiles) {
         if (file.content) {
             totalContentLength += file.content.length
         }
@@ -419,16 +300,13 @@ export function ProjectSummarizationSettingsPage() {
     let totalTokensInSummaries = 0
     // Iterate over the *values* in summariesMap to count tokens only for actual summaries
     for (const fileWithSummary of summariesMap.values()) {
-        if (fileWithSummary.summary && !matchesAnyPattern(fileWithSummary.path, ignorePatterns)) {
+        if (fileWithSummary.summary) {
             totalTokensInSummaries += estimateTokenCount(fileWithSummary.summary)
         }
     }
 
-
-    // Calculate combined summary based on files that *actually* have summaries AND are included
-    const includedFilesWithSummaries = Array.from(summariesMap.values()).filter(file =>
-        !matchesAnyPattern(file.path, ignorePatterns)
-    );
+    // Calculate combined summary based on files that *actually* have summaries
+    const includedFilesWithSummaries = Array.from(summariesMap.values()); // No pattern filtering needed
 
     const combinedSummary = includedFilesWithSummaries
         .map(f => f.summary) // We know summary exists here
@@ -437,7 +315,7 @@ export function ProjectSummarizationSettingsPage() {
     const combinedSummaryTokens = estimateTokenCount(combinedSummary)
 
     let totalTokensInContent = 0
-    for (const file of includedFiles) {
+    for (const file of projectFiles) {
         if (file.content) {
             totalTokensInContent += estimateTokenCount(file.content)
         }
@@ -445,7 +323,7 @@ export function ProjectSummarizationSettingsPage() {
 
     // Use the filtered list for formatted summary generation
     const formattedCombinedSummary = buildCombinedFileSummariesXml(
-        includedFilesWithSummaries, // Pass the pre-filtered list
+        includedFilesWithSummaries, // Pass the pre-filtered list (now all files with summaries)
         {
             includeEmptySummaries: false, // Already filtered, but good practice
             emptySummaryText: "NO_SUMMARY",
@@ -460,8 +338,8 @@ export function ProjectSummarizationSettingsPage() {
     }
 
     // Calculate counts based on the final sorted/filtered list and summariesMap
-    const includedFilesCount = sortedIncludedFiles.length;
-    const includedWithSummariesCount = sortedIncludedFiles.filter(f => summariesMap.has(f.id)).length;
+    const includedFilesCount = sortedProjectFiles.length; // Now just the total filtered files
+    const includedWithSummariesCount = sortedProjectFiles.filter(f => summariesMap.has(f.id)).length;
     const allSummariesCount = summariesMap.size; // Total files *with* summaries
 
     return (
@@ -476,7 +354,7 @@ export function ProjectSummarizationSettingsPage() {
                             size="sm"
                             className="gap-2"
                             onClick={() => setCombinedSummaryDialogOpen(true)}
-                            // Disable if no *included* files have summaries
+                            // Disable if no files have summaries
                             disabled={!isProjectSummarizationEnabled || includedFilesWithSummaries.length === 0}
                         >
                             <FileText className="h-4 w-4" />
@@ -484,7 +362,7 @@ export function ProjectSummarizationSettingsPage() {
                         </Button>
                     </CardTitle>
                     <CardDescription>
-                        A combined view of summaries for files currently included by ignore patterns.
+                        A combined view of summaries for all files with summaries in the project.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -498,9 +376,6 @@ export function ProjectSummarizationSettingsPage() {
                         <p className="text-sm">
                             <strong>Included files with summaries:</strong>{" "}
                             {includedWithSummariesCount} / {includedFilesCount}
-                            <span className="text-xs ml-2 text-muted-foreground">
-                                (files not matching ignore patterns)
-                            </span>
                         </p>
                         {/* Content length might be less useful than token counts */}
                         {/* <p className="text-sm">
@@ -523,7 +398,7 @@ export function ProjectSummarizationSettingsPage() {
                 <CardHeader>
                     <CardTitle>Project Summarization Settings</CardTitle>
                     <CardDescription>
-                        Configure ignore patterns, view file summaries, and manage summarization tasks.
+                        View file summaries and manage summarization tasks.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -540,14 +415,13 @@ export function ProjectSummarizationSettingsPage() {
                                 checked={isProjectSummarizationEnabled}
                                 onCheckedChange={(check) => {
                                     if (!selectedProjectId) return
-                                    updateSettings((prev: AppSettings) => ({
-                                        ...prev,
+                                    updateSettings({
                                         summarizationEnabledProjectIds: check
-                                            ? [...(prev.summarizationEnabledProjectIds ?? []), selectedProjectId] // Ensure array exists
-                                            : (prev.summarizationEnabledProjectIds ?? []).filter( // Ensure array exists
+                                            ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId] // Ensure array exists
+                                            : (summarizationEnabledProjectIds ?? []).filter( // Ensure array exists
                                                 (id: string) => id !== selectedProjectId
                                             ),
-                                    }))
+                                    })
                                 }}
                             />
                         </div>
@@ -557,30 +431,18 @@ export function ProjectSummarizationSettingsPage() {
                         <p>
                             Found <strong>{projectFiles.length}</strong> total files in the project.
                         </p>
-                        <p>
-                            <span className="text-green-600">{includedFiles.length}</span> files included after filtering.
-                            <br />
-                            <span className="text-red-600">{excludedFiles.length}</span> files excluded by patterns.
-                        </p>
                     </div>
 
-                    {/* Patterns */}
-                    <h3 className="text-sm font-medium mb-1">Ignore Patterns</h3>
-                    <IgnorePatternList
-                        // Disable pattern editing if main feature is off? Or allow always?
-                        // Let's allow editing patterns even if summarization is disabled for the project.
-                        disabled={false} // Or: !isProjectSummarizationEnabled
-                    />
                     {/* Sort-by dropdown */}
                     <div className="my-4 flex flex-wrap items-center gap-2">
-                        <label className="text-sm font-medium">Sort Included Files By:</label>
+                        <label className="text-sm font-medium">Sort Files By:</label>
                         <Select
                             value={sortBy}
                             onValueChange={(value) =>
                                 setSortBy(value as SortOption)
                             }
                             // Disable sorting if the main feature is off or no files
-                            disabled={!isProjectSummarizationEnabled || sortedIncludedFiles.length === 0}
+                            disabled={!isProjectSummarizationEnabled || sortedProjectFiles.length === 0}
                         >
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Sort by..." />
@@ -608,7 +470,7 @@ export function ProjectSummarizationSettingsPage() {
                                 placeholder="Min"
                                 className="w-20"
                                 value={minTokensFilter ?? ""}
-                                disabled={!isProjectSummarizationEnabled || includedFiles.length === 0}
+                                disabled={!isProjectSummarizationEnabled || projectFiles.length === 0}
                                 onChange={(e) =>
                                     setMinTokensFilter(e.target.value ? Math.max(0, Number(e.target.value)) : null)
                                 }
@@ -620,7 +482,7 @@ export function ProjectSummarizationSettingsPage() {
                                 placeholder="Max"
                                 className="w-20"
                                 value={maxTokensFilter ?? ""}
-                                disabled={!isProjectSummarizationEnabled || includedFiles.length === 0}
+                                disabled={!isProjectSummarizationEnabled || projectFiles.length === 0}
                                 onChange={(e) =>
                                     setMaxTokensFilter(e.target.value ? Math.max(0, Number(e.target.value)) : null)
                                 }
@@ -629,11 +491,11 @@ export function ProjectSummarizationSettingsPage() {
                     </div>
 
                     {/* Included/Excluded Files Sections */}
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="mt-6 grid grid-cols-1 gap-6">
                         {/* Included Files Section */}
                         <div className={!isProjectSummarizationEnabled ? "opacity-60 pointer-events-none" : ""}>
                             <h3 className="text-base font-semibold mb-2">
-                                Included Files ({sortedIncludedFiles.length})
+                                Project Files ({sortedProjectFiles.length})
                             </h3>
                             {/* Selection Controls */}
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -641,13 +503,13 @@ export function ProjectSummarizationSettingsPage() {
                                     <Checkbox
                                         id="select-all"
                                         checked={
-                                            sortedIncludedFiles.length > 0 && // Only checked if there are files
-                                            selectedFileIds.length === sortedIncludedFiles.length
+                                            sortedProjectFiles.length > 0 && // Only checked if there are files
+                                            selectedFileIds.length === sortedProjectFiles.length
                                         }
-                                        disabled={!isProjectSummarizationEnabled || sortedIncludedFiles.length === 0}
+                                        disabled={!isProjectSummarizationEnabled || sortedProjectFiles.length === 0}
                                         onCheckedChange={(checked) => {
                                             if (checked) {
-                                                setSelectedFileIds(sortedIncludedFiles.map((f) => f.id))
+                                                setSelectedFileIds(sortedProjectFiles.map((f) => f.id))
                                             } else {
                                                 setSelectedFileIds([])
                                             }
@@ -663,7 +525,7 @@ export function ProjectSummarizationSettingsPage() {
                                     size="sm"
                                     className="text-xs h-auto p-0"
                                     onClick={handleSelectUnsummarized}
-                                    disabled={!isProjectSummarizationEnabled || sortedIncludedFiles.length === 0}
+                                    disabled={!isProjectSummarizationEnabled || sortedProjectFiles.length === 0}
                                 >
                                     Select Unsummarized
                                 </Button>
@@ -679,12 +541,12 @@ export function ProjectSummarizationSettingsPage() {
                             <ul
                                 className={`mt-2 space-y-1 border rounded p-2 h-72 overflow-y-auto bg-background ${!isProjectSummarizationEnabled ? "opacity-50" : ""}`}
                             >
-                                {sortedIncludedFiles.length === 0 && (
+                                {sortedProjectFiles.length === 0 && (
                                     <li className="text-sm text-muted-foreground text-center py-4">
                                         No files match the current filters.
                                     </li>
                                 )}
-                                {sortedIncludedFiles.map((file) => {
+                                {sortedProjectFiles.map((file) => {
                                     const fileRecordWithSummary = summariesMap.get(file.id) // Check if summary exists
                                     const hasSummary = !!fileRecordWithSummary
                                     const lastSummarized = fileRecordWithSummary?.summaryLastUpdatedAt
@@ -696,7 +558,8 @@ export function ProjectSummarizationSettingsPage() {
                                     return (
                                         <li
                                             key={file.id}
-                                            className="group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0"
+                                            className={`group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0 ${hasSummary ? "bg-green-50 dark:bg-green-900/30" : "" // Highlight summarized files
+                                                }`}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <Checkbox
@@ -755,14 +618,6 @@ export function ProjectSummarizationSettingsPage() {
                                                         fileId={file.id}
                                                         disabled={!isProjectSummarizationEnabled || summarizeMutation.isPending}
                                                     />
-                                                    <Button
-                                                        variant="ghost" size="icon" className="h-5 w-5"
-                                                        title="Exclude File (using path)"
-                                                        onClick={() => handleExcludeFileOptimistic(file.path)}
-                                                        disabled={!isProjectSummarizationEnabled}
-                                                    >
-                                                        <X className="h-3.5 w-3.5 text-red-600" />
-                                                    </Button>
                                                 </div>
                                             </div>
 
@@ -817,94 +672,18 @@ export function ProjectSummarizationSettingsPage() {
                                         ? "Removing..."
                                         : "Remove Summaries"} ({selectedFileIds.filter(id => summariesMap.has(id)).length})
                                 </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={handleResummarizeAll}
-                                    disabled={!isProjectSummarizationEnabled || resummarizeAllMutation.isPending}
-                                    size="sm"
-                                >
-                                    {resummarizeAllMutation.isPending
-                                        ? "Queuing All..."
-                                        : "Re-summarize All"}
-                                </Button>
                             </div>
-                        </div>
-
-                        {/* Excluded Files Section */}
-                        <div
-                            className={
-                                // No need to disable interaction if patterns are always editable
-                                // !isProjectSummarizationEnabled ? "opacity-50 pointer-events-none" : ""
-                                ""
-                            }
-                        >
-                            <Collapsible defaultOpen={excludedFiles.length < 10}> {/* Keep open if few excluded */}
-                                <div className="flex items-center gap-2 mb-2">
-                                    <CollapsibleTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="p-0 h-6 w-6">
-                                            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                            <span className="sr-only">Toggle Excluded Files</span>
-                                        </Button>
-                                    </CollapsibleTrigger>
-                                    <h3 className="text-base font-semibold">
-                                        Excluded Files ({sortedExcludedFiles.length})
-                                    </h3>
-                                </div>
-                                <CollapsibleContent>
-                                    <ul className="mt-1 space-y-1 border rounded p-2 h-72 overflow-y-auto bg-muted/30 text-xs">
-                                        {sortedExcludedFiles.length === 0 && (
-                                            <li className="text-sm text-muted-foreground text-center py-4">
-                                                No files are excluded by ignore patterns.
-                                            </li>
-                                        )}
-                                        {sortedExcludedFiles.map((file) => (
-                                            <li key={file.id} className="truncate" title={file.path}>
-                                                {file.path}
-                                                {/* Add button to remove exclusion? Maybe too complex here */}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </CollapsibleContent>
-                            </Collapsible>
                         </div>
                     </div>
                 </CardContent>
                 <CardFooter className="text-sm text-muted-foreground">
                     <p>
-                        Use glob patterns (e.g., <code>*.log</code>, <code>dist/**</code>, <code>**/__tests__/**</code>) to exclude files from summarization.
+                        Manage which files are summarized and view aggregate statistics.
                     </p>
                 </CardFooter>
             </Card>
 
-            {/* Dialogs */}
-            <Dialog open={isResummarizeDialogOpen} onOpenChange={setIsResummarizeDialogOpen}>
-                {/* ... (Dialog remains the same) */}
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Confirm Re-summarize All Included Files</DialogTitle>
-                        <DialogDescription>
-                            This action will queue a job to re-summarize all currently included files ({includedFiles.length} files).
-                            Files that already have up-to-date summaries might be skipped unless forced.
-                            This may consume significant resources. Are you sure?
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsResummarizeDialogOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="default"
-                            onClick={handleConfirmResummarize}
-                            disabled={resummarizeAllMutation.isPending}
-                        >
-                            {resummarizeAllMutation.isPending ? "Queuing..." : "Yes, Re-summarize All"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+
 
 
             <FileViewerDialog
@@ -925,114 +704,6 @@ export function ProjectSummarizationSettingsPage() {
                 summaryContent={formattedCombinedSummary || "*No included file summaries available.*"}
                 tokenCount={combinedSummaryTokens} // Pass token count
             />
-        </div>
-    )
-}
-
-
-/**
- * Extracted pattern-list component for ignore patterns.
- */
-function IgnorePatternList({ disabled }: { disabled: boolean }) {
-    const updateSettings = useUpdateSettings()
-    const { summarizationIgnorePatterns = [] } = useSettings()
-    const [newPattern, setNewPattern] = useState("")
-
-    function handleAdd() {
-        const trimmed = newPattern.trim()
-        if (!trimmed) return
-        if (summarizationIgnorePatterns.includes(trimmed)) {
-            toast.info("Pattern already exists.")
-            return;
-        }
-
-        updateSettings((prev: AppSettings) => ({
-            ...prev,
-            summarizationIgnorePatterns: [...(prev.summarizationIgnorePatterns ?? []), trimmed],
-        }))
-        setNewPattern("")
-        toast.success(`Added ignore pattern: ${trimmed}`)
-    }
-
-    function handleRemove(pattern: string) {
-        updateSettings((prev: AppSettings) => ({
-            ...prev,
-            summarizationIgnorePatterns: (prev.summarizationIgnorePatterns ?? []).filter((p: string) => p !== pattern),
-        }))
-        toast.success(`Removed ignore pattern: ${pattern}`)
-    }
-
-    function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-        if (event.key === 'Enter') {
-            handleAdd();
-        }
-    }
-
-
-    return (
-        <div className={!disabled ? "" : "opacity-50 pointer-events-none"}>
-            {/* Input and Add Button remain the same */}
-            <div className="flex items-center gap-2 mt-1">
-                <Input
-                    placeholder="Add glob pattern (e.g., node_modules/**)"
-                    value={newPattern}
-                    onChange={(e) => setNewPattern(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    disabled={disabled}
-                    className="h-9"
-                />
-                <Button onClick={handleAdd} disabled={disabled || !newPattern.trim()} size="sm">Add</Button>
-            </div>
-
-            {/* Refactored Collapsible Trigger Area */}
-            <Collapsible className="mt-2" defaultOpen={summarizationIgnorePatterns.length > 0}>
-                {/* Use asChild on the CollapsibleTrigger */}
-                <CollapsibleTrigger asChild disabled={disabled}>
-                    {/* Make the entire div the trigger */}
-                    <div className="flex items-center gap-2 group cursor-pointer py-1" role="button" >
-                        {/* The Button is now mostly visual/structural within the trigger area */}
-                        <Button variant="ghost" size="sm" className="p-0 h-6 w-6 flex-shrink-0" tabIndex={-1} aria-hidden="true">
-                            {/* The Chevron itself indicates the toggle state */}
-                            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            <span className="sr-only">Toggle Current Patterns</span>
-                        </Button>
-                        {/* The span is now part of the clickable trigger area */}
-                        <span className="text-sm font-medium text-muted-foreground select-none">
-                            Current Patterns ({summarizationIgnorePatterns?.length ?? 0})
-                        </span>
-                    </div>
-                </CollapsibleTrigger>
-
-                {/* CollapsibleContent remains the same */}
-                <CollapsibleContent>
-                    {summarizationIgnorePatterns?.length > 0 ? (
-                        <ul className="mt-1 space-y-1 max-h-32 overflow-y-auto pr-2"> {/* Adjusted margin-top */}
-                            {summarizationIgnorePatterns?.map((pattern, idx) => (
-                                <li
-                                    key={`${pattern}-${idx}`}
-                                    className="flex items-center justify-between rounded p-1 hover:bg-accent/50"
-                                >
-                                    <span className="font-mono text-xs flex-1 truncate" title={pattern}>{pattern}</span>
-                                    {/* Ensure remove button works correctly */}
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 flex-shrink-0"
-                                        // Prevent click propagation to the collapsible trigger if necessary
-                                        onClick={(e) => { e.stopPropagation(); handleRemove(pattern); }}
-                                        disabled={disabled}
-                                    >
-                                        <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                                        <span className="sr-only">Remove pattern {pattern}</span>
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-xs text-muted-foreground mt-1 pl-8">No ignore patterns defined.</p> // Adjusted margin/padding
-                    )}
-                </CollapsibleContent>
-            </Collapsible>
         </div>
     )
 }

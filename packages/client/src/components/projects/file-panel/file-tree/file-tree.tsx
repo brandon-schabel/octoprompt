@@ -21,6 +21,7 @@ import {
     Wand2,
     RefreshCw,
     ClipboardList,
+    Sparkles,
 } from "lucide-react";
 import clsx from "clsx";
 import { toast } from "sonner";
@@ -51,15 +52,16 @@ import { buildNodeContent, buildNodeSummaries } from "shared/src/utils/projects-
 import { getEditorUrl } from "@/utils/editor-urls";
 import { useSelectedFiles } from "@/hooks/utility-hooks/use-selected-files";
 import { useRefreshProject } from "@/hooks/api/use-projects-api";
-import { useActiveProjectTab } from "@/hooks/api/use-state-api";
+import { useSummarizeProjectFiles } from "@/hooks/api/use-projects-api";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
+import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
+import { useActiveProjectTab } from "@/hooks/api/use-kv-api";
 
 /**
  * The user's preferred external editor.
  */
 export type EditorType = "vscode" | "webstorm" | "cursor" | "other";
 
-type SetSelectedFilesFunction = (updater: (prev: string[]) => string[]) => void;
 
 export type VisibleItem = {
     path: string;
@@ -135,13 +137,17 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
     },
     ref
 ) {
-    const [projectTabState, , selectedProjectId] = useActiveProjectTab();
+    const [projectTabState, , projectTabId] = useActiveProjectTab();
     const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
     const resolveImports = projectTabState?.resolveImports ?? false;
     const preferredEditor = projectTabState?.preferredEditor ?? "vscode";
+    const { copyToClipboard } = useCopyClipboard()
+    const projectId = projectTabState?.selectedProjectId ?? "";
 
     // New refresh functionality
-    const { mutate: refreshProject } = useRefreshProject(selectedProjectId ?? "");
+    const { mutate: refreshProject } = useRefreshProject(projectId ?? "");
+    // Hook for summarizing files
+    const summarizeMutation = useSummarizeProjectFiles(projectId ?? "")
 
     const isFolder = item.node._folder === true;
 
@@ -301,6 +307,51 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                         {/* Inline icons for single file */}
                         {!isFolder && item.node.file && (
                             <>
+                                {/* Summary indicator icons */}
+                                {hasSummary ? (
+                                    // <ClipboardList
+                                    //     className="h-4 w-4 text-blue-500 flex-shrink-0 ml-auto mr-1"
+                                    // // title="Summary exists"
+                                    // />
+                                    <div className="h-1 w-1 bg-blue-500 flex-shrink-0 ml-auto mr-1 rounded-full">
+                                    </div>
+                                ) : (
+                                    // red dot
+                                    <div className="h-1 w-1 bg-yellow-300 flex-shrink-0 ml-auto mr-1 rounded-full" title="No summary" >
+                                    </div>
+                                )}
+
+                                {/* Conditionally show Summarize button */}
+                                {!hasSummary && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        title="Summarize this file"
+                                        className="h-6 w-6 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        disabled={summarizeMutation.isPending && summarizeMutation.variables?.fileIds.includes(item.node.file.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+
+                                            console.log("summarizing file", item.node.file!.id)
+
+                                            summarizeMutation.mutate(
+                                                { fileIds: [item.node.file!.id], force: false }, // force: false initially
+                                                {
+                                                    onSuccess: (resp) => {
+                                                        toast.success(resp.message || "File summary started.")
+                                                    },
+                                                    onError: (error: any) => { // Added 'any' type temporarily
+                                                        toast.error(error?.error?.message || "Failed to start summarization.")
+                                                    }
+                                                }
+                                            )
+                                        }}
+                                    >
+
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                    </Button>
+                                )}
+
                                 {onViewFile && (
                                     <Button
                                         variant="ghost"
@@ -338,13 +389,10 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={async (e) => {
                                         e.stopPropagation();
-                                        try {
-                                            await navigator.clipboard.writeText(contents);
-                                            toast.success("File contents copied to clipboard");
-                                        } catch (err) {
-                                            toast.error("Failed to copy file contents");
-                                            console.error(err);
-                                        }
+                                        await copyToClipboard(contents, {
+                                            successMessage: "File contents copied to clipboard",
+                                            errorMessage: "Failed to copy file contents"
+                                        });
                                     }}
                                 >
                                     <Copy className="h-4 w-4" />
@@ -362,13 +410,10 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                                             // Use false for isFolder when copying single file summary
                                             const summary = buildNodeSummaries(item.node, false);
                                             if (summary) {
-                                                try {
-                                                    await navigator.clipboard.writeText(summary);
-                                                    toast.success("File summary copied to clipboard");
-                                                } catch (err) {
-                                                    toast.error("Failed to copy file summary");
-                                                    console.error(err);
-                                                }
+                                                copyToClipboard(summary, {
+                                                    successMessage: "File summary copied to clipboard",
+                                                    errorMessage: "Failed to copy file summary"
+                                                })
                                             } else {
                                                 toast.info("No summary available for this file.");
                                             }
@@ -424,17 +469,10 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 {/* Copy contents for both files and folders */}
                 <ContextMenuItem
                     onClick={async () => {
-                        try {
-                            await navigator.clipboard.writeText(contents);
-                            toast.success(
-                                `${isFolder ? "Folder" : "File"} contents copied to clipboard`
-                            );
-                        } catch (err) {
-                            toast.error(
-                                `Failed to copy ${isFolder ? "folder" : "file"} contents`
-                            );
-                            console.error(err);
-                        }
+                        copyToClipboard(contents, {
+                            successMessage: `${isFolder ? "Folder" : "File"} contents copied to clipboard`,
+                            errorMessage: `Failed to copy ${isFolder ? "folder" : "file"} contents`
+                        })
                     }}
                 >
                     Copy {isFolder ? "Folder" : "File"} Contents ({estimateTokenCount(contents)} Tokens)
@@ -448,13 +486,10 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                         <ContextMenuItem
                             onClick={async () => {
                                 if (summaries) {
-                                    try {
-                                        await navigator.clipboard.writeText(summaries);
-                                        toast.success("Folder summaries copied to clipboard");
-                                    } catch (err) {
-                                        toast.error("Failed to copy folder summaries");
-                                        console.error(err);
-                                    }
+                                    copyToClipboard(summaries, {
+                                        successMessage: "Folder summaries copied to clipboard",
+                                        errorMessage: "Failed to copy folder summaries"
+                                    })
                                 } else {
                                     toast.info("No file summaries found in this folder.");
                                 }
@@ -467,13 +502,10 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
                         <ContextMenuItem /* Copy Folder Tree */
                             onClick={async () => {
-                                try {
-                                    await navigator.clipboard.writeText(tree);
-                                    toast.success("Folder tree copied to clipboard");
-                                } catch (err) {
-                                    toast.error("Failed to copy folder tree");
-                                    console.error(err);
-                                }
+                                await copyToClipboard(tree, {
+                                    successMessage: "Folder tree copied to clipboard",
+                                    errorMessage: "Failed to copy folder tree"
+                                })
                             }}
                         >
                             Copy Folder Tree ({estimateTokenCount(tree)} Tokens)
@@ -730,6 +762,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
         ]
     );
 
+
     // Handle space toggling the current file/folder
     useHotkeys(
         "space",
@@ -759,6 +792,8 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
         [visibleItems, focusedIndex, selectFiles, isFocused]
     );
 
+    const { copyToClipboard } = useCopyClipboard()
+
     /**
      * Copy the entire root folder tree structure.
      */
@@ -770,8 +805,10 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                 lines.push(buildTreeStructure(node, "  "));
             }
         }
-        void navigator.clipboard.writeText(lines.join("\n"));
-        toast.success("Full file tree copied to clipboard");
+        copyToClipboard(lines.join("\n"), {
+            successMessage: "Full file tree copied to clipboard",
+            errorMessage: "Failed to copy full file tree"
+        });
     }
 
     return (

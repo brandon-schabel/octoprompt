@@ -5,7 +5,7 @@ import {
     useForkChat,
 } from "@/hooks/api/use-chat-api";
 import type { CreateChatInput, } from "@/hooks/api/use-chat-api";
-import { ForkChatRequestBody } from "@/hooks/generated/types.gen";
+import { ForkChatRequestBody } from "@/generated/types.gen";
 
 
 export function useCreateChatHandler() {

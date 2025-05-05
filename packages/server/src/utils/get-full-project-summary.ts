@@ -1,7 +1,6 @@
 import { ApiError } from "shared";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
-import { getProjectById } from "@/services/project-service";
-import { getFileSummaries } from "@/services/file-services/file-summary-service";
+import { getProjectById, getProjectFiles } from "@/services/project-service";
 import { buildCombinedFileSummariesXml } from "shared/src/utils/summary-formatter";
 
 const buildProjectSummary = (includedFiles: ProjectFile[]) => {
@@ -18,7 +17,7 @@ export const getFullProjectSummary = async (projectId: string) => {
     }
 
     // Fetch all file summaries from the database
-    const allFiles = await getFileSummaries(projectId);
+    const allFiles = await getProjectFiles(projectId) || []
     if (!allFiles.length) {
         return {
             success: false,

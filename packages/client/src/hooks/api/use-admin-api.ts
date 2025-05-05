@@ -4,11 +4,11 @@ import {
   getApiAdminSystemStatusOptions,
   getApiAdminEnvInfoQueryKey,
   getApiAdminSystemStatusQueryKey
-} from '../generated/@tanstack/react-query.gen';
+} from '../../generated/@tanstack/react-query.gen';
 import type {
   GetApiAdminEnvInfoResponse,
   GetApiAdminSystemStatusResponse,
-} from '../generated/types.gen';
+} from '../../generated/types.gen';
 
 export interface TableCount {
   count: number;

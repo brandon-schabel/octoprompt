@@ -1,4 +1,3 @@
-// File: packages/client/src/hooks/api/use-prompt-api.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import {
@@ -17,7 +16,7 @@ import {
     postApiProjectsByProjectIdPromptsByPromptIdMutation,
     deleteApiProjectsByProjectIdPromptsByPromptIdMutation,
     postApiPromptOptimizeMutation,
-} from '../generated/@tanstack/react-query.gen';
+} from '../../generated/@tanstack/react-query.gen';
 import type {
     // Query Data Types
     GetApiPromptsData,
@@ -43,8 +42,8 @@ import type {
     PostApiPromptOptimizeData,
     PostApiPromptOptimizeError,
     PostApiPromptOptimizeResponse,
-} from '../generated/types.gen';
-import { Options } from '../generated/sdk.gen';
+} from '../../generated/types.gen';
+import { Options } from '../../generated/sdk.gen';
 
 
 // Input Types based on generated mutation data types

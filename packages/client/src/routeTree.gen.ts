@@ -12,7 +12,6 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as TicketsImport } from './routes/tickets'
-import { Route as StructuredOutputDemoImport } from './routes/structured-output-demo'
 import { Route as PromptsImport } from './routes/prompts'
 import { Route as ProjectsImport } from './routes/projects'
 import { Route as ProjectSummarizationImport } from './routes/project-summarization'
@@ -26,12 +25,6 @@ import { Route as IndexImport } from './routes/index'
 const TicketsRoute = TicketsImport.update({
   id: '/tickets',
   path: '/tickets',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const StructuredOutputDemoRoute = StructuredOutputDemoImport.update({
-  id: '/structured-output-demo',
-  path: '/structured-output-demo',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -130,13 +123,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PromptsImport
       parentRoute: typeof rootRoute
     }
-    '/structured-output-demo': {
-      id: '/structured-output-demo'
-      path: '/structured-output-demo'
-      fullPath: '/structured-output-demo'
-      preLoaderRoute: typeof StructuredOutputDemoImport
-      parentRoute: typeof rootRoute
-    }
     '/tickets': {
       id: '/tickets'
       path: '/tickets'
@@ -157,7 +143,6 @@ export interface FileRoutesByFullPath {
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
-  '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
 }
 
@@ -169,7 +154,6 @@ export interface FileRoutesByTo {
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
-  '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
 }
 
@@ -182,7 +166,6 @@ export interface FileRoutesById {
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
-  '/structured-output-demo': typeof StructuredOutputDemoRoute
   '/tickets': typeof TicketsRoute
 }
 
@@ -196,7 +179,6 @@ export interface FileRouteTypes {
     | '/project-summarization'
     | '/projects'
     | '/prompts'
-    | '/structured-output-demo'
     | '/tickets'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -207,7 +189,6 @@ export interface FileRouteTypes {
     | '/project-summarization'
     | '/projects'
     | '/prompts'
-    | '/structured-output-demo'
     | '/tickets'
   id:
     | '__root__'
@@ -218,7 +199,6 @@ export interface FileRouteTypes {
     | '/project-summarization'
     | '/projects'
     | '/prompts'
-    | '/structured-output-demo'
     | '/tickets'
   fileRoutesById: FileRoutesById
 }
@@ -231,7 +211,6 @@ export interface RootRouteChildren {
   ProjectSummarizationRoute: typeof ProjectSummarizationRoute
   ProjectsRoute: typeof ProjectsRoute
   PromptsRoute: typeof PromptsRoute
-  StructuredOutputDemoRoute: typeof StructuredOutputDemoRoute
   TicketsRoute: typeof TicketsRoute
 }
 
@@ -243,7 +222,6 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
   PromptsRoute: PromptsRoute,
-  StructuredOutputDemoRoute: StructuredOutputDemoRoute,
   TicketsRoute: TicketsRoute,
 }
 
@@ -264,7 +242,6 @@ export const routeTree = rootRoute
         "/project-summarization",
         "/projects",
         "/prompts",
-        "/structured-output-demo",
         "/tickets"
       ]
     },
@@ -288,9 +265,6 @@ export const routeTree = rootRoute
     },
     "/prompts": {
       "filePath": "prompts.tsx"
-    },
-    "/structured-output-demo": {
-      "filePath": "structured-output-demo.tsx"
     },
     "/tickets": {
       "filePath": "tickets.tsx"

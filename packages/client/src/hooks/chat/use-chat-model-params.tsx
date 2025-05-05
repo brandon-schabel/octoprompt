@@ -1,14 +1,13 @@
-import { useSettings } from '@/hooks/api/global-state/selectors';
-import { useUpdateSettings } from '@/hooks/api/global-state/updaters';
-import { AiSdkOptions } from '@/hooks/generated';
+import { useAppSettings, } from '@/hooks/api/use-kv-api';
+import { AiSdkOptions } from '@/generated';
 import { useCallback, useMemo } from 'react';
 import { modelsTempNotAllowed } from 'shared';
+import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 
 type ModelParamMutationFn = (value: number) => void;
 
 export function useChatModelParams() {
-    const settings = useSettings();
-    const updateSettings = useUpdateSettings();
+    const [settings, updateSettings] = useAppSettings();
 
     const {
         temperature,
@@ -47,6 +46,15 @@ export function useChatModelParams() {
     }, [updateSettings]);
 
 
+    const setModel = useCallback((value: string) => {
+        updateSettings({ model: value });
+    }, [updateSettings]);
+
+    const setProvider = useCallback((value: APIProviders) => {
+        updateSettings({ provider: value });
+    }, [updateSettings]);
+
+
     const modelSettings: AiSdkOptions = useMemo(() => ({
         temperature,
         top_p,
@@ -75,5 +83,7 @@ export function useChatModelParams() {
         setFreqPenalty,
         setPresPenalty,
         isTempDisabled,
+        setModel,
+        setProvider,
     };
 }

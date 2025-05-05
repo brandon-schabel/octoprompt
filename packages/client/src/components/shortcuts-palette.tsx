@@ -7,10 +7,6 @@ import {
 } from '@ui'
 import { ChevronUp } from 'lucide-react'
 
-/**
- * Wrap your shortcuts in this component. 
- * It uses shadcn/ui Popover and a custom scaling animation.
- */
 export function ChatShortcutsPalette({ children
 }: { children: React.ReactNode, icon?: React.ReactNode }) {
     const [open, setOpen] = useState(false)

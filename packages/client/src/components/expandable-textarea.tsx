@@ -20,6 +20,8 @@ import { toast } from "sonner"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { formatShortcut } from "@/lib/shortcuts"
 import { useOptimizePrompt } from "@/hooks/api/use-prompts-api"
+import exp from "constants"
+import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard"
 
 type ExpandableTextareaProps = {
   value: string
@@ -42,6 +44,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
   const textareaRef = (ref || internalRef) as React.RefObject<HTMLTextAreaElement>
   const [selectionStart, setSelectionStart] = useState<number | null>(null)
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null)
+  const { copyToClipboard } = useCopyClipboard()
 
   // Promptimizer state and mutation
   const [promptimizeDialogOpen, setPromptimizeDialogOpen] = useState(false)
@@ -66,12 +69,10 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
   }
 
   const handleCopyContent = async () => {
-    try {
-      await navigator.clipboard.writeText(expandedValue)
-      toast.success("Content copied to clipboard")
-    } catch (error) {
-      toast.error("Failed to copy content")
-    }
+    copyToClipboard(expandedValue, {
+      successMessage: "Content copied to clipboard",
+      errorMessage: "Failed to copy content",
+    })
   }
 
   useEffect(() => {

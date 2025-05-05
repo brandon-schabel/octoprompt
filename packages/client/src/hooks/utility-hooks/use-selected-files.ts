@@ -1,11 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useUpdateActiveProjectTab, useUpdateProjectTab } from '@/hooks/api/global-state/updaters'
-import { ProjectFile } from '@/hooks/generated/types.gen'
-
-import { useProjectTabField } from '@/hooks/api/global-state/global-state-utility-hooks'
+import { useActiveProjectTab, useProjectTabField, useUpdateActiveProjectTab, useUpdateProjectTabById } from '@/hooks/api/use-kv-api'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
-import { useActiveProjectTab } from '../api/use-state-api'
 import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
 import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
 
@@ -30,9 +26,9 @@ export function useSelectedFiles({
   tabId?: string | null
 } = {}) {
   const queryClient = useQueryClient()
-  const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
+  const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
   const updateActiveProjectTab = useUpdateActiveProjectTab()
-  const updateProjectTab = useUpdateProjectTab()
+  const { updateProjectTabById } = useUpdateProjectTabById()
 
   // Use the passed tabId if available, otherwise fall back to active tab
   const effectiveTabId = tabId ?? activeProjectTabId
@@ -83,7 +79,7 @@ export function useSelectedFiles({
 
     // Update global store's selection based on which tab we're working with
     if (tabId) {
-      updateProjectTab(tabId, {
+      updateProjectTabById(tabId, {
         selectedFiles: newSelected,
       })
     } else {

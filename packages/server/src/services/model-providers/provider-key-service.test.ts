@@ -1,4 +1,3 @@
-// File: packages/server/src/tests/provider-key-service.test.ts
 import { describe, test, expect, beforeEach } from "bun:test";
 import { db, resetDatabase } from "@db";
 import { createProviderKeyService } from "@/services/model-providers/provider-key-service";

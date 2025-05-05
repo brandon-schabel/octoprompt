@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useChat, Message } from '@ai-sdk/react';
-import type { AiChatStreamRequest, AiSdkOptions, } from './generated';
-import { useGetMessages } from './api/use-chat-api';
+import type { AiChatStreamRequest, AiSdkOptions, } from '../../generated';
+import { useGetMessages } from './use-chat-api';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 import { nanoid } from 'nanoid';
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants';

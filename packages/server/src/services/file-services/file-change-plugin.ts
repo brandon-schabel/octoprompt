@@ -1,8 +1,7 @@
 import { createFileChangeWatcher, FileChangeEvent } from './file-change-watcher';
-import { getProjectFiles } from '../project-service';
+import { getProjectFiles, summarizeSingleFile } from '../project-service';
 import { Project } from 'shared/src/schemas/project.schemas';
 import { relative } from 'node:path';
-import { summarizeFiles } from './file-summary-service';
 import { syncProject } from './file-sync-service';
 import { resolvePath } from '@/utils/path-utils';
 
@@ -30,9 +29,8 @@ export function createFileChangePlugin(
                     if (!updatedFile) {
                         return;
                     }
-                    await summarizeFiles(
-                        project.id,
-                        [updatedFile],
+                    await summarizeSingleFile(
+                        updatedFile,
                     );
                 } catch (err) {
                     console.error('[FileChangePlugin] Error handling change:', err);

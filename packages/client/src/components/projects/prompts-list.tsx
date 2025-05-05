@@ -14,16 +14,16 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
 
-import { useUpdateProjectTabState } from '@/hooks/api/global-state/updaters'
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@ui'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '@ui'
-import { InfoTooltip } from '../info-tooltip'
+import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { useProjectTab } from '@/hooks/api/global-state/selectors'
-import { ProjectFile } from '@/hooks/generated'
+import { ProjectFile } from '@/generated'
 import { promptSchema } from 'shared/src/utils/projects-utils'
+import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/api/use-kv-api'
+import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 export type PromptsListRef = {
     focusPrompts: () => void;
@@ -38,40 +38,35 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     projectTabId,
     className = '',
 }, ref) => {
-    // Access global state
     const updateProjectTabState = useUpdateProjectTabState(projectTabId)
-    const projectTab = useProjectTab(projectTabId)
+    const { projectTab } = useGetProjectTabById(projectTabId)
     const selectedPrompts = projectTab?.selectedPrompts || []
     const selectedProjectId = projectTab?.selectedProjectId || ''
+    const { copyToClipboard } = useCopyClipboard()
 
-    // Fetch the actual prompt data from the server
     const { data: promptData } = useGetProjectPrompts(selectedProjectId)
     const prompts = promptData?.data || []
 
-    // Mutations
     const createPromptMutation = useCreatePrompt(selectedProjectId)
     const updatePromptMutation = useUpdatePrompt(selectedProjectId)
     const deletePromptMutation = useDeletePrompt(selectedProjectId)
 
-    // local UI state
     const [focusedIndex, setFocusedIndex] = useState<number>(-1)
     const promptRefs = useRef<(HTMLDivElement | null)[]>([])
     const [viewedPrompt, setViewedPrompt] = useState<ProjectFile | null>(null)
 
-    // For prompt dialog (create/edit)
     const [promptDialogOpen, setPromptDialogOpen] = useState(false)
     const [editPromptId, setEditPromptId] = useState<string | null>(null)
 
-    // Sorting
     const [sortOrder, setSortOrder] = useState<"alphabetical" | "default" | "size_asc" | "size_desc">("alphabetical")
 
     let sortedPrompts = [...prompts]
     if (sortOrder === "alphabetical") {
         sortedPrompts.sort((a, b) => a.name.localeCompare(b.name))
     } else if (sortOrder === "size_desc") {
-        sortedPrompts.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0)) // Sort by size descending
+        sortedPrompts.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0))
     } else if (sortOrder === "size_asc") {
-        sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0)) // Sort by size ascending
+        sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0))
     }
 
     const copySelectedPrompts = () => {
@@ -80,8 +75,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
             const p = promptData?.data?.find((x: { id: string }) => x.id === id)
             return p ? `# ${p.name}\n${p.content}\n` : ""
         }).join("\n")
-        navigator.clipboard.writeText(allPrompts)
-        toast.success("Copied all selected prompts.")
+        copyToClipboard(allPrompts, {
+            successMessage: "Copied all selected prompts.",
+            errorMessage: "Failed to copy prompts"
+        })
     }
 
     /** NEW: state for opening the all-prompts dialog */
@@ -118,9 +115,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
         }
     }
 
-    // ---------------
-    // Update prompt
-    // ---------------
+
     const handleUpdatePrompt = async (updates: { name: string; content: string }) => {
         if (!editPromptId) return
         await updatePromptMutation.mutateAsync({
@@ -131,9 +126,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
         setPromptDialogOpen(false)
     }
 
-    // ---------------
-    // Delete prompt
-    // ---------------
+
     const handleDeletePrompt = async (promptId: string) => {
         if (!selectedProjectId) return
         await deletePromptMutation.mutateAsync({
@@ -227,7 +220,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const handleSavePrompt = (newContent: string) => {
         if (!viewedPrompt) return
         // TODO: IMPLEMENT SAVE Prompt
-        console.log('handleSavePrompt, new content = ', newContent)
+        console.log('TODOhandleSavePrompt, new content = ', newContent)
     }
 
     // Expose a focus method
@@ -250,7 +243,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                     <div>
                         <div className="text-md font-medium flex items-center gap-2">
                             <span><Badge>{selectedPrompts.length}</Badge> Project Prompts</span>
-                            <InfoTooltip>
+                            <OctoTooltip>
                                 <div className="space-y-2">
                                     <p>Prompts are reusable instructions that will be included with your chat. Each selected prompt will be added to the final prompt sent to the AI.</p>
                                     <p>You can:</p>
@@ -267,7 +260,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                         <li>- <ShortcutDisplay shortcut={['mod', 'p']} /> Focus prompts list</li>
                                     </ul>
                                 </div>
-                            </InfoTooltip>
+                            </OctoTooltip>
                         </div>
                         <div className="hidden lg:text-xs text-muted-foreground">
                             Press Space to select, Enter to view
@@ -393,13 +386,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                                 className="h-8 w-8"
                                                 onClick={async (e) => {
                                                     e.stopPropagation();
-                                                    try {
-                                                        await navigator.clipboard.writeText(prompt.content || '');
-                                                        toast.success('Prompt content copied to clipboard');
-                                                    } catch (err) {
-                                                        console.error('Failed to copy prompt content', err);
-                                                        toast.error('Failed to copy prompt content');
-                                                    }
+                                                    await copyToClipboard(prompt.content || '', {
+                                                        successMessage: 'Prompt content copied to clipboard',
+                                                        errorMessage: 'Failed to copy prompt content'
+                                                    });
                                                 }}
                                             >
                                                 <Copy className="h-4 w-4" />
@@ -431,13 +421,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         onClick={async () => {
-                                                            try {
-                                                                await navigator.clipboard.writeText(prompt.content || '');
-                                                                toast.success('Prompt content copied to clipboard');
-                                                            } catch (err) {
-                                                                console.error('Failed to copy prompt content', err);
-                                                                toast.error('Failed to copy prompt content');
-                                                            }
+                                                            await copyToClipboard(prompt.content || '', {
+                                                                successMessage: 'Prompt content copied to clipboard',
+                                                                errorMessage: 'Failed to copy prompt content'
+                                                            });
                                                         }}
                                                     >
                                                         <Copy className="mr-2 h-4 w-4" />
@@ -482,18 +469,19 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
                         <p className="text-sm text-muted-foreground p-4">No prompts yet. Create one above.</p>
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* A "viewer" dialog for prompts, if needed */}
-            <FileViewerDialog
-                open={!!viewedPrompt}
+            < FileViewerDialog
+                open={!!viewedPrompt
+                }
                 viewedFile={viewedPrompt}
                 onClose={handleClosePromptViewer}
                 onSave={handleSavePrompt}
             />
 
             {/* Prompt dialog for create/update */}
-            <PromptDialog
+            < PromptDialog
                 open={promptDialogOpen}
                 editPromptId={editPromptId}
                 promptForm={promptForm}

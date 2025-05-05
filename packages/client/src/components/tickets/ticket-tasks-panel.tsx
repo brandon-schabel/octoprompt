@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Cir
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui';
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { toast } from "sonner";
-import { Task } from "@/hooks/generated";
+import { Task } from "@/generated";
 
 interface TicketTasksPanelProps {
     ticketId: string;

@@ -10,11 +10,10 @@ import {
 } from "@ui"
 import { Label } from "@ui"
 import { Input } from "@ui"
-import { useUpdateSettings } from "@/hooks/api/global-state/updaters"
 import { ScrollArea } from "@ui"
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Theme } from "shared/src/schemas/global-state-schema"
-import { useSettings } from "@/hooks/api/global-state/selectors"
+import { useAppSettings } from "@/hooks/api/use-kv-api"
 
 type ThemeOption = {
     label: string;
@@ -37,38 +36,35 @@ type SettingsDialogProps = {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const { useSpacebarToSelectAutocomplete: spacebarToSelectAutocomplete = true, hideInformationalTooltips, autoScrollEnabled, ollamaGlobalUrl, lmStudioGlobalUrl, codeThemeDark, codeThemeLight, theme } = useSettings()
+    const [settings, updateSettings] = useAppSettings()
+    const { useSpacebarToSelectAutocomplete: spacebarToSelectAutocomplete = true, hideInformationalTooltips, autoScrollEnabled, ollamaGlobalUrl, lmStudioGlobalUrl, codeThemeDark, codeThemeLight, theme } = settings
     const isDarkMode = theme === 'dark'
 
-    const updateSettings = useUpdateSettings()
     const [autoRefreshEnabled, setAutoRefreshEnabled] = useLocalStorage('autoRefreshEnabled', true)
 
     const handleThemeToggle = () => {
         const newTheme: Theme = isDarkMode ? 'light' : 'dark'
-        updateSettings(prev => ({
-            ...prev,
+        updateSettings({
             theme: newTheme as Theme,
-        }))
+        })
     }
 
     const handleSetCodeTheme = (value: string, isDark: boolean) => {
         const theme = themeOptions.find(t => t.value === value);
         if (!theme) return;
 
-        updateSettings(prev => ({
-            ...prev,
+        updateSettings({
             ...(isDark ? { codeThemeDark: value } : { codeThemeLight: value }),
-        }))
+        })
     }
 
     const handleUrlChange = (
         key: 'ollamaGlobalUrl' | 'lmStudioGlobalUrl',
         value: string
     ) => {
-        updateSettings(prev => ({
-            ...prev,
+        updateSettings({
             [key]: value,
-        }))
+        })
     }
 
     return (
@@ -109,10 +105,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                                 id="auto-scroll"
                                 checked={autoScrollEnabled}
                                 onCheckedChange={(checked) => {
-                                    updateSettings(prev => ({
-                                        ...prev,
+                                    updateSettings({
                                         autoScrollEnabled: checked,
-                                    }))
+                                    })
                                 }}
                             />
                         </div>
@@ -125,10 +120,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                                 id="spacebar-select"
                                 checked={spacebarToSelectAutocomplete}
                                 onCheckedChange={(checked) => {
-                                    updateSettings(prev => ({
-                                        ...prev,
+                                    updateSettings({
                                         useSpacebarToSelectAutocomplete: checked,
-                                    }))
+                                    })
                                 }}
                             />
                         </div>
@@ -141,10 +135,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                                 id="hide-informational-tooltips"
                                 checked={hideInformationalTooltips}
                                 onCheckedChange={(checked) => {
-                                    updateSettings(prev => ({
-                                        ...prev,
+                                    updateSettings({
                                         hideInformationalTooltips: checked,
-                                    }))
+                                    })
                                 }}
                             />
                         </div>

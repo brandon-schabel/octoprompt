@@ -5,36 +5,29 @@ import { Input } from '@ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui";
 import { Textarea } from "@ui";
 import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
-import { InfoTooltip } from "../info-tooltip";
+import { OctoTooltip } from "../octo/octo-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
-import { useCreateProjectTab } from "@/hooks/api/global-state/updaters";
-import { Ticket, TicketWithTasks } from "@/hooks/generated";
+import type { TicketWithTasks } from "@/generated";
 
 interface TicketDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    ticketWithTasks: TicketWithTasks | null;     // If non-null, we are editing an existing ticket
-    projectId: string;         // The project ID to which the ticket belongs
+    ticketWithTasks: TicketWithTasks | null;
+    projectId: string;
 }
 
 
 export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks, projectId }: TicketDialogProps) {
     const createTicket = useCreateTicket(projectId);
     const updateTicket = useUpdateTicket(projectId);
-    // TODO: reimplment this
-    // const updateSuggestedFiles = useUpdateTicketSuggestedFiles();
-    const createProjectTab = useCreateProjectTab();
 
-    // Local form state
     const [title, setTitle] = useState("");
     const [overview, setOverview] = useState("");
     const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
     const [status, setStatus] = useState<"open" | "in_progress" | "closed">("open");
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const suggestFilesMutation = useSuggestFilesForTicket(ticketWithTasks?.ticket.id ?? "");
 
-    // On open/edit, populate form with existing ticket data or reset
     useEffect(() => {
         if (ticketWithTasks) {
             setTitle(ticketWithTasks.ticket.title);
@@ -72,15 +65,6 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
                         status,
                     },
                 });
-                // TODO: reimplment this
-                // Also update suggested files if they've changed
-                // const currentFiles = JSON.parse(ticket.suggestedFileIds || "[]");
-                // if (JSON.stringify(currentFiles) !== JSON.stringify(selectedFileIds)) {
-                //     await updateSuggestedFiles.mutateAsync({
-                //         ticketId: ticket.id,
-                //         suggestedFileIds: selectedFileIds,
-                //     });
-                // }
             } else {
                 // Creating a new ticket
                 await createTicket.mutateAsync({
@@ -108,55 +92,6 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
         }
     };
 
-    function toggleFile(fileId: string) {
-        setSelectedFileIds((prev) => {
-            if (prev.includes(fileId)) {
-                return prev.filter((id) => id !== fileId);
-            } else {
-                return [...prev, fileId];
-            }
-        });
-    }
-
-    // 2) Handle "Suggest Files" response
-    async function handleSuggestFiles() {
-        if (!ticketWithTasks) return;
-        try {
-            const res = await suggestFilesMutation.mutateAsync({ extraUserInput: overview });
-            if (res?.recommendedFileIds) {
-                setSelectedFileIds(res.recommendedFileIds);
-            }
-        } catch (err) {
-            console.error("Failed to suggest files:", err);
-        }
-    }
-
-    // 3) Open in Project Tab
-    // TODO: reimplment this
-    function handleOpenInProjectTab() {
-        if (!ticketWithTasks) return;
-        // Build a default userPrompt – e.g. the ticket's title & overview
-        const userPrompt = `
-        <ticket_title>
-            ${ticketWithTasks.ticket.title}
-        </ticket_title>
-        <ticket_overview>
-            ${ticketWithTasks.ticket.overview}
-        </ticket_overview>
-        `;
-        // Or include tasks from <TicketTasksPanel> if you want
-
-        // Actually create the tab:
-        createProjectTab({
-            projectId: ticketWithTasks.ticket.projectId,
-            userPrompt,
-            selectedFiles: selectedFileIds,     // from this ticket
-            displayName: ticketWithTasks.ticket.title ?? "New Tab"
-        });
-        // You could also close the dialog if desired:
-        onClose();
-    }
-
     return (
         <Dialog
             open={isOpen}
@@ -181,9 +116,9 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
                 <DialogHeader>
                     <DialogTitle className="flex space-x-2 items-center">
                         <span>{ticketWithTasks ? "Edit Ticket" : "Create New Ticket"}</span>
-                        <InfoTooltip className="max-w-xs">
+                        <OctoTooltip className="max-w-xs">
                             Providing a detailed overview helps auto-generate tasks & file suggestions!
-                        </InfoTooltip>
+                        </OctoTooltip>
                     </DialogTitle>
                 </DialogHeader>
 

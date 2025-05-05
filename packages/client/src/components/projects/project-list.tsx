@@ -10,7 +10,7 @@ import {
     DropdownMenuTrigger,
 } from "@ui"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
-import { Project } from '@/hooks/generated'
+import { Project } from '@/generated'
 
 
 interface ProjectListProps {

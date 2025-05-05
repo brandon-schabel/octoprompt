@@ -132,11 +132,6 @@ vertical-resizable-panel
    - In `packages/client/hooks/generated` there is `client.gen.ts`, `index.ts`, `sdk.gen.ts`, `types.gen`, and `@tanstack/react-query.gen.ts`
    - For any server data fetch or mutation, define a custom React Query hook (e.g., `useGetProjects`) that calls your server’s API (`fetch` or Axios) and returns the typed response.  
    - Let React Query handle caching, invalidation, refetch intervals, and concurrency safety.  
-
-3. **Zustand for UI State**  
-   - For ephemeral UI toggles (like “prompt panel open or closed”), use a small Zustand slice.  
-   - Do **not** store large server-sourced lists in Zustand. That belongs in React Query.  
-
 ---
 
 ## 6. Testing & Accessibility
@@ -157,7 +152,6 @@ vertical-resizable-panel
 The `projects.tsx` file (shown in your code snippet) demonstrates how we integrate:
 
 - **React Query** (`useGetProjects()`) to fetch project data from `packages/client/hooks/api/use-projects-api.ts`.  
-- **Zustand** store slices to manage “active tab” or ephemeral states `packages/client/stores/global-store.ts`
 
 ---
 

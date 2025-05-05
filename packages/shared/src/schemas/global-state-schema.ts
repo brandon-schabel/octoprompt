@@ -113,17 +113,17 @@ export const chatLinkSettingsSchema = z.record(
 
 // Global State Schema - The main object
 export const globalStateSchema = z.object({
-    settings: appSettingsSchema.openapi({ description: "Application-wide settings." }),
+    appSettings: appSettingsSchema.openapi({ description: "Application-wide settings." }),
     projectTabs: projectTabsStateRecordSchema.openapi({ description: "State of all open project tabs, keyed by tab ID." }),
-    projectActiveTabId: z.string().nullable().optional().default(null).openapi({ description: "The ID of the currently active project tab, or null if none is active.", example: "tab_abc123" }),
-    activeChatId: z.string().nullable().optional().default(null).openapi({ description: "The ID of the currently active chat session, or null.", example: "chat_xyz789" }),
+    projectActiveTabId: z.string().optional().default('defaultTab').openapi({ description: "The ID of the currently active project tab, or null if none is active.", example: "tab_abc123" }),
+    activeChatId: z.string().optional().default('').openapi({ description: "The ID of the currently active chat session, or null.", example: "chat_xyz789" }),
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: "Link settings specific to each chat session." })
 }).openapi('GlobalState', { description: 'Represents the entire persistent application state.' });
 
-
+// this is the best place to set the default values for the global state
 // Initial Global State - Simplified (Function doesn't need OpenAPI spec, but uses the schemas)
 export const createInitialGlobalState = (): GlobalState => ({
-    settings: appSettingsSchema.parse({}), // Use parse with empty object to get defaults
+    appSettings: appSettingsSchema.parse({}), // Use parse with empty object to get defaults
     projectTabs: {
         // Keep default project tab if project tabs are still used
         defaultTab: projectTabStateSchema.parse({ // Use parse to get defaults
@@ -132,7 +132,7 @@ export const createInitialGlobalState = (): GlobalState => ({
         }),
     },
     projectActiveTabId: "defaultTab", // Assuming project tabs remain
-    activeChatId: null,
+    activeChatId: "",
     chatLinkSettings: {}
 });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
 import { Button } from '@ui'
 import { Edit, Save, XCircle, Copy, FileText, FileCode } from 'lucide-react'
@@ -7,9 +7,10 @@ import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
-import { useThemeSettings } from '@/hooks/api/global-state/global-state-utility-hooks'
-import { toast } from 'sonner'
-import { ProjectFile } from '@/hooks/generated'
+import { useSelectSetting } from '@/hooks/api/use-kv-api'
+import { ProjectFile } from '@/generated'
+import * as themes from "react-syntax-highlighter/dist/esm/styles/hljs"
+
 
 type FileViewerDialogProps = {
     open: boolean
@@ -17,7 +18,7 @@ type FileViewerDialogProps = {
     markdownText?: string
     onClose?: () => void
     onSave?: (content: string) => void
-    filePath?: string   
+    filePath?: string
 }
 
 function getLanguageByExtension(extension?: string): string {
@@ -48,9 +49,17 @@ export function FileViewerDialog({
     const [isEditingFile, setIsEditingFile] = useState(false)
     const [editedContent, setEditedContent] = useState<string>('')
     const [showRawMarkdown, setShowRawMarkdown] = useState(false)
-    const { isDarkMode, selectedSyntaxTheme } = useThemeSettings()
 
     const { copyToClipboard } = useCopyClipboard()
+    const isDarkMode = useSelectSetting('theme') === 'dark'
+    const codeThemeDark = useSelectSetting('codeThemeDark')
+    const codeThemeLight = useSelectSetting('codeThemeLight')
+
+    const selectedSyntaxTheme = useMemo(() => {
+        const themeName = isDarkMode ? codeThemeDark : codeThemeLight;
+        // @ts-ignore
+        return themes[themeName] ?? themes.atomOneLight;
+    }, [isDarkMode, codeThemeDark, codeThemeLight]);
 
     useEffect(() => {
         if (open) {
@@ -74,25 +83,19 @@ export function FileViewerDialog({
 
     const copyContent = async () => {
         const content = viewedFile?.content || markdownText || ''
-        try {
-            await navigator.clipboard.writeText(content)
-            toast.success('Content copied to clipboard')
-        } catch (err) {
-            console.error('Failed to copy content', err)
-            toast.error('Failed to copy content')
-        }
+        copyToClipboard(content, {
+            successMessage: "Content copied to clipboard",
+            errorMessage: "Failed to copy content"
+        })
     }
 
     const copyPath = async (fullPath: boolean = false) => {
         if (!viewedFile?.path) return
-        try {
-            const path = fullPath ? `${window.location.origin}/${viewedFile.path}` : viewedFile.path
-            await navigator.clipboard.writeText(path)
-            toast.success(`${fullPath ? 'Full' : 'Relative'} path copied to clipboard`)
-        } catch (err) {
-            console.error('Failed to copy path', err)
-            toast.error('Failed to copy path')
-        }
+        const path = fullPath ? `${window.location.origin}/${viewedFile.path}` : viewedFile.path
+        copyToClipboard(path, {
+            successMessage: `${fullPath ? 'Full' : 'Relative'} path copied to clipboard`,
+            errorMessage: 'Failed to copy path'
+        })
     }
 
     if (!viewedFile && !markdownText) return null

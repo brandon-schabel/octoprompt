@@ -13,7 +13,7 @@ import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
 import { Badge } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
-import { Prompt } from '@/hooks/generated'
+import { Prompt } from '@/generated'
 
 // Utility function to estimate token count
 function estimateTokenCount(text: string, charsPerToken: number = 4): number {
@@ -217,7 +217,7 @@ function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
     }
 
     return (
-        <Card>
+        <Card className="group">
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <CardTitle>{prompt.name}</CardTitle>
@@ -230,7 +230,7 @@ function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
             <CardContent>
                 <p className="text-sm text-muted-foreground line-clamp-3">{prompt.content}</p>
             </CardContent>
-            <CardFooter className="flex justify-end space-x-2">
+            <CardFooter className="flex justify-end space-x-2 md:invisible md:group-hover:visible">
                 <Button
                     variant="ghost"
                     size="icon"
