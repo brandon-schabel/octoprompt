@@ -2,6 +2,7 @@ import { db } from "@/utils/database";
 import { normalizeToIsoString } from "@/utils/parse-timestamp";
 import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage } from "shared/src/schemas/chat.schemas";
 import { randomUUID } from "crypto";
+import { ApiError } from 'shared'; // Import ApiError
 
 export type CreateChatOptions = {
     copyExisting?: boolean;
@@ -24,36 +25,46 @@ type RawChatMessage = {
 };
 
 // Helper function to map DB row to Chat schema
-function mapDbRowToChat(row: any): Chat | null {
-    if (!row) return null;
+function mapDbRowToChat(row: RawChat): Chat { // Expects a valid RawChat object
     const mapped = {
         id: row.id,
         title: row.title,
-        createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate',
-        updatedAt: normalizeToIsoString(row.updated_at) ?? 'ErrorParsingDate'
+        createdAt: normalizeToIsoString(row.created_at),
+        updatedAt: normalizeToIsoString(row.updated_at)
     };
+
+    if (mapped.createdAt === null || mapped.updatedAt === null) {
+        console.error('Failed to normalize date for chat:', row);
+        throw new ApiError(500, `Data integrity issue: Failed to parse date for chat ${row.id}.`, 'CHAT_DATE_CORRUPT', { id: row.id, createdAtRaw: row.created_at, updatedAtRaw: row.updated_at });
+    }
+
     const result = ChatSchema.safeParse(mapped);
     if (!result.success) {
-        console.error(`Failed to parse chat data: ${result.error.message}`, mapped);
-        return null;
+        console.error(`Failed to parse chat data for ID ${row.id}: ${result.error.message}`, { raw: row, mapped, errors: result.error.flatten().fieldErrors });
+        throw new ApiError(500, `Data integrity issue: Failed to parse chat data for ID ${row.id}.`, 'CHAT_DATA_CORRUPT', result.error.flatten().fieldErrors);
     }
     return result.data;
 }
 
 // Helper function to map DB row to ChatMessage schema
-function mapDbRowToChatMessage(row: any): ChatMessage | null {
-    if (!row) return null;
+function mapDbRowToChatMessage(row: RawChatMessage): ChatMessage { // Expects a valid RawChatMessage object
     const mapped = {
         id: row.id,
-        chatId: row.chat_id, // Map db column name
+        chatId: row.chat_id,
         role: row.role,
         content: row.content,
-        createdAt: normalizeToIsoString(row.created_at) ?? 'ErrorParsingDate'
+        createdAt: normalizeToIsoString(row.created_at)
     };
+
+    if (mapped.createdAt === null) {
+        console.error('Failed to normalize date for chat message:', row);
+        throw new ApiError(500, `Data integrity issue: Failed to parse date for message ${row.id}.`, 'MESSAGE_DATE_CORRUPT', { id: row.id, createdAtRaw: row.created_at });
+    }
+
     const result = ChatMessageSchema.safeParse(mapped);
     if (!result.success) {
-        console.error(`Failed to parse chat message data: ${result.error.message}`, mapped);
-        return null;
+        console.error(`Failed to parse chat message data for ID ${row.id}: ${result.error.message}`, { raw: row, mapped, errors: result.error.flatten().fieldErrors });
+        throw new ApiError(500, `Data integrity issue: Failed to parse chat message data for ID ${row.id}.`, 'MESSAGE_DATA_CORRUPT', result.error.flatten().fieldErrors);
     }
     return result.data;
 }
@@ -63,6 +74,13 @@ function mapDbRowToChatMessage(row: any): ChatMessage | null {
  */
 export function createChatService() {
     async function createChat(title: string, options?: CreateChatOptions): Promise<Chat> {
+        if (options?.copyExisting && options?.currentChatId) {
+            const sourceChatExists = db.prepare('SELECT id FROM chats WHERE id = ?').get(options.currentChatId) as { id: string } | undefined;
+            if (!sourceChatExists) {
+                throw new ApiError(404, `Referenced chat with ID ${options.currentChatId} not found for copying.`, 'REFERENCED_CHAT_NOT_FOUND');
+            }
+        }
+
         const chatId = randomUUID();
         const stmt = db.prepare(`
             INSERT INTO chats (id, title) 
@@ -70,11 +88,11 @@ export function createChatService() {
             RETURNING *
         `);
         const rawChat = stmt.get(chatId, title) as RawChat | undefined;
-        const chat = mapDbRowToChat(rawChat);
 
-        if (!chat) {
-            throw new Error("Failed to create or parse chat.");
+        if (!rawChat) {
+            throw new ApiError(500, "Failed to create chat: database did not return chat data.", 'CHAT_CREATION_FAILED');
         }
+        const chat = mapDbRowToChat(rawChat); // mapDbRowToChat now throws on parsing error
 
         if (options?.copyExisting && options?.currentChatId) {
             const sourceStmt = db.prepare(`
@@ -89,12 +107,12 @@ export function createChatService() {
                     INSERT INTO chat_messages (id, chat_id, role, content)
                     VALUES (?, ?, ?, ?)
                 `);
+                // Consider batch insert if supported and beneficial for performance
                 for (const msg of sourceMessages) {
                     insertStmt.run(randomUUID(), chat.id, msg.role, msg.content);
                 }
             }
         }
-
         return chat;
     }
 
@@ -104,20 +122,31 @@ export function createChatService() {
             SET updated_at = CURRENT_TIMESTAMP 
             WHERE id = ?
         `);
-        stmt.run(chatId);
+        const info = stmt.run(chatId);
+        if (info.changes === 0) {
+            throw new ApiError(404, `Chat with ID ${chatId} not found for timestamp update.`, 'CHAT_NOT_FOUND');
+        }
     }
 
     async function saveMessage(message: ExtendedChatMessage): Promise<ExtendedChatMessage> {
+        const chatExists = db.prepare('SELECT id FROM chats WHERE id = ?').get(message.chatId) as { id: string } | undefined;
+        if (!chatExists) {
+            throw new ApiError(404, `Chat with ID ${message.chatId} not found. Cannot save message.`, 'CHAT_NOT_FOUND_FOR_MESSAGE');
+        }
+
+        const messageId = message.id || randomUUID(); // Use provided ID or generate new
         const stmt = db.prepare(`
             INSERT INTO chat_messages (id, chat_id, role, content)
             VALUES (?, ?, ?, ?)
             RETURNING *
         `);
-        const rawSaved = stmt.get(randomUUID(), message.chatId, message.role, message.content) as RawChatMessage | undefined;
-        const saved = mapDbRowToChatMessage(rawSaved);
-        if (!saved) {
-            throw new Error("Failed to save or parse chat message.");
+        // Ensure timestamp is handled if new message vs updating existing
+        const rawSaved = stmt.get(messageId, message.chatId, message.role, message.content) as RawChatMessage | undefined;
+
+        if (!rawSaved) {
+            throw new ApiError(500, "Failed to save chat message: database did not return message data.", 'MESSAGE_SAVE_FAILED');
         }
+        const saved = mapDbRowToChatMessage(rawSaved);
         return { ...saved, tempId: message.tempId };
     }
 
@@ -127,58 +156,66 @@ export function createChatService() {
             SET content = ? 
             WHERE id = ?
         `);
-        stmt.run(content, messageId);
+        const info = stmt.run(content, messageId);
+        if (info.changes === 0) {
+            throw new ApiError(404, `Message with ID ${messageId} not found for update.`, 'MESSAGE_NOT_FOUND');
+        }
     }
 
     async function getAllChats(): Promise<Chat[]> {
         const stmt = db.prepare(`
             SELECT * FROM chats 
-            ORDER BY updated_at
-        `);
+            ORDER BY updated_at DESC 
+        `); // Often more useful to have newest first
         const rows = stmt.all() as RawChat[];
-        return rows.map(mapDbRowToChat).filter((chat): chat is Chat => chat !== null);
+        return rows.map(mapDbRowToChat); // mapDbRowToChat throws if an individual chat parsing fails
     }
 
     async function getChatMessages(chatId: string): Promise<ChatMessage[]> {
+        const chatExists = db.prepare('SELECT id FROM chats WHERE id = ?').get(chatId) as { id: string } | undefined;
+        if (!chatExists) {
+            throw new ApiError(404, `Chat with ID ${chatId} not found.`, 'CHAT_NOT_FOUND');
+        }
+
         const stmt = db.prepare(`
             SELECT * FROM chat_messages 
             WHERE chat_id = ? 
             ORDER BY created_at
         `);
         const messages = stmt.all(chatId) as RawChatMessage[];
-        return messages.map(mapDbRowToChatMessage).filter((msg): msg is ChatMessage => msg !== null);
+        return messages.map(mapDbRowToChatMessage); // mapDbRowToChatMessage throws on parsing error
     }
 
     async function updateChat(chatId: string, title: string): Promise<Chat> {
         const stmt = db.prepare(`
             UPDATE chats 
-            SET title = ? 
+            SET title = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             RETURNING *
         `);
         const rawUpdated = stmt.get(title, chatId) as RawChat | undefined;
-        const updated = mapDbRowToChat(rawUpdated);
-        if (!updated) {
-            throw new Error("Chat not found or failed to parse after update.");
+        if (!rawUpdated) {
+            throw new ApiError(404, `Chat with ID ${chatId} not found for update.`, 'CHAT_NOT_FOUND');
         }
-        return updated;
+        return mapDbRowToChat(rawUpdated);
     }
 
     async function deleteChat(chatId: string): Promise<void> {
+        // It's good practice to ensure the chat exists before attempting deletion,
+        // or rely on the DB to report 0 changes if it doesn't.
         const deleteMessagesStmt = db.prepare(`
             DELETE FROM chat_messages 
             WHERE chat_id = ?
         `);
-        deleteMessagesStmt.run(chatId);
+        deleteMessagesStmt.run(chatId); // Deletes related messages, might affect 0 rows if no messages
 
         const deleteChatStmt = db.prepare(`
             DELETE FROM chats 
             WHERE id = ?
-            RETURNING *
         `);
-        const result = deleteChatStmt.get(chatId) as Chat | undefined;
-        if (!result) {
-            throw new Error("Chat not found");
+        const info = deleteChatStmt.run(chatId);
+        if (info.changes === 0) {
+            throw new ApiError(404, `Chat with ID ${chatId} not found for deletion.`, 'CHAT_NOT_FOUND');
         }
     }
 
@@ -186,35 +223,33 @@ export function createChatService() {
         const stmt = db.prepare(`
             DELETE FROM chat_messages 
             WHERE id = ?
-            RETURNING *
         `);
-        const result = stmt.get(messageId) as RawChatMessage | undefined;
-        if (!result) {
-            throw new Error("Message not found");
+        const info = stmt.run(messageId);
+        if (info.changes === 0) {
+            throw new ApiError(404, `Message with ID ${messageId} not found for deletion.`, 'MESSAGE_NOT_FOUND');
         }
     }
 
     async function forkChat(sourceChatId: string, excludedMessageIds: string[] = []): Promise<Chat> {
-        const sourceChatStmt = db.prepare(`
-            SELECT * FROM chats 
-            WHERE id = ?
-        `);
-        const sourceChat = sourceChatStmt.get(sourceChatId) as RawChat;
-        if (!sourceChat) {
-            throw new Error("Source chat not found");
+        const sourceChatStmt = db.prepare(`SELECT * FROM chats WHERE id = ?`);
+        const rawSourceChat = sourceChatStmt.get(sourceChatId) as RawChat | undefined;
+        if (!rawSourceChat) {
+            throw new ApiError(404, `Source chat with ID ${sourceChatId} not found for forking.`, 'SOURCE_CHAT_NOT_FOUND');
         }
+        const sourceChat = mapDbRowToChat(rawSourceChat); // Ensure source chat data is valid
 
-        const newTitle = `Fork of ${sourceChat.title} (${new Date().toLocaleTimeString()})`;
+        const newTitle = `Fork of ${sourceChat.title} (${new Date().toLocaleTimeString()})`; // Or a more robust title
+        const newChatId = randomUUID();
         const createStmt = db.prepare(`
-            INSERT INTO chats (title)
-            VALUES (?)
+            INSERT INTO chats (id, title)
+            VALUES (?, ?)
             RETURNING *
         `);
-        const rawNewChat = createStmt.get(newTitle) as RawChat | undefined;
-        const newChat = mapDbRowToChat(rawNewChat);
-        if (!newChat) {
-            throw new Error("Failed to create or parse forked chat.");
+        const rawNewChat = createStmt.get(newChatId, newTitle) as RawChat | undefined;
+        if (!rawNewChat) {
+            throw new ApiError(500, "Failed to create forked chat: database did not return new chat data.", 'CHAT_FORK_CREATION_FAILED');
         }
+        const newChat = mapDbRowToChat(rawNewChat);
 
         const sourceMessagesStmt = db.prepare(`
             SELECT * FROM chat_messages 
@@ -225,15 +260,21 @@ export function createChatService() {
         const messagesToCopy = sourceMessages.filter(m => !excludedMessageIds.includes(m.id));
 
         if (messagesToCopy.length > 0) {
-            const insertStmt = db.prepare(`
-                INSERT INTO chat_messages (id, chat_id, role, content)
-                VALUES (?, ?, ?, ?)
-            `);
-            for (const msg of messagesToCopy) {
-                insertStmt.run(randomUUID(), newChat.id, msg.role, msg.content);
-            }
+            const insertMsgStmt = db.prepare(`
+                INSERT INTO chat_messages (id, chat_id, role, content, created_at) 
+                VALUES (?, ?, ?, ?, ?) 
+            `); // Copy created_at to maintain order if desired, or use current time
+            // Note: SQLite's CURRENT_TIMESTAMP gives seconds. JS new Date().getTime() is millis.
+            // Be careful if you copy created_at directly from different sources or want new timestamps.
+            // For simplicity, let's assume we copy the original content including its original creation time if relevant for ordering.
+            // Or better, let DB handle new created_at for new messages.
+            const insertMessageTx = db.transaction((msgs: RawChatMessage[]) => {
+                for (const msg of msgs) {
+                    insertMsgStmt.run(randomUUID(), newChat.id, msg.role, msg.content, msg.created_at);
+                }
+            });
+            insertMessageTx(messagesToCopy);
         }
-
         return newChat;
     }
 
@@ -242,39 +283,35 @@ export function createChatService() {
         messageId: string,
         excludedMessageIds: string[] = []
     ): Promise<Chat> {
-        const sourceChatStmt = db.prepare(`
-            SELECT * FROM chats 
-            WHERE id = ?
-        `);
-        const sourceChat = sourceChatStmt.get(sourceChatId) as RawChat;
-        if (!sourceChat) {
-            throw new Error("Source chat not found");
+        const sourceChatStmt = db.prepare(`SELECT * FROM chats WHERE id = ?`);
+        const rawSourceChat = sourceChatStmt.get(sourceChatId) as RawChat | undefined;
+        if (!rawSourceChat) {
+            throw new ApiError(404, `Source chat with ID ${sourceChatId} not found.`, 'SOURCE_CHAT_NOT_FOUND');
+        }
+        const sourceChat = mapDbRowToChat(rawSourceChat);
+
+
+        const startMessageStmt = db.prepare(`SELECT * FROM chat_messages WHERE id = ?`);
+        const rawStartMessage = startMessageStmt.get(messageId) as RawChatMessage | undefined;
+        if (!rawStartMessage) {
+            throw new ApiError(404, `Starting message with ID ${messageId} not found.`, 'MESSAGE_NOT_FOUND');
+        }
+        if (rawStartMessage.chat_id !== sourceChatId) {
+            throw new ApiError(400, `Message ${messageId} does not belong to the specified chat ${sourceChatId}.`, 'MESSAGE_CHAT_MISMATCH');
         }
 
-        const startMessageStmt = db.prepare(`
-            SELECT * FROM chat_messages 
-            WHERE id = ?
-        `);
-        const startMessage = startMessageStmt.get(messageId) as RawChatMessage;
-        if (!startMessage) {
-            throw new Error("Starting message not found");
-        }
-
-        if (startMessage.chat_id !== sourceChatId) {
-            throw new Error("Message does not belong to the specified chat");
-        }
-
-        const newTitle = `Fork from ${sourceChat.title} at ${new Date().toLocaleTimeString()}`;
+        const newTitle = `Fork from ${sourceChat.title} at message (${messageId.substring(0, 8)})`;
+        const newChatId = randomUUID();
         const createStmt = db.prepare(`
-            INSERT INTO chats (title)
-            VALUES (?)
+            INSERT INTO chats (id, title)
+            VALUES (?, ?)
             RETURNING *
         `);
-        const rawNewChat = createStmt.get(newTitle) as RawChat | undefined;
-        const newChat = mapDbRowToChat(rawNewChat);
-        if (!newChat) {
-            throw new Error("Failed to create or parse forked chat from message.");
+        const rawNewChat = createStmt.get(newChatId, newTitle) as RawChat | undefined;
+        if (!rawNewChat) {
+            throw new ApiError(500, "Failed to create forked chat from message: database did not return new chat data.", 'CHAT_FORK_MESSAGE_CREATION_FAILED');
         }
+        const newChat = mapDbRowToChat(rawNewChat);
 
         const sourceMessagesStmt = db.prepare(`
             SELECT * FROM chat_messages 
@@ -283,23 +320,27 @@ export function createChatService() {
         `);
         const sourceMessages = sourceMessagesStmt.all(sourceChatId) as RawChatMessage[];
         const indexOfStart = sourceMessages.findIndex(m => m.id === messageId);
+
         if (indexOfStart === -1) {
-            throw new Error("Could not find the starting message in the chat sequence");
+            // This should ideally not happen if startMessage was found and belongs to chat
+            throw new ApiError(500, `Internal error: Could not re-find the starting message ${messageId} in chat sequence.`, 'MESSAGE_SEQUENCE_ERROR');
         }
 
-        let messagesToCopy = sourceMessages.slice(0, indexOfStart + 1)
+        const messagesToCopy = sourceMessages.slice(0, indexOfStart + 1)
             .filter(m => !excludedMessageIds.includes(m.id));
 
         if (messagesToCopy.length > 0) {
-            const insertStmt = db.prepare(`
-                INSERT INTO chat_messages (id, chat_id, role, content)
-                VALUES (?, ?, ?, ?)
+            const insertMsgStmt = db.prepare(`
+                INSERT INTO chat_messages (id, chat_id, role, content, created_at)
+                VALUES (?, ?, ?, ?, ?)
             `);
-            for (const msg of messagesToCopy) {
-                insertStmt.run(randomUUID(), newChat.id, msg.role, msg.content);
-            }
+            const insertMessageTx = db.transaction((msgs: RawChatMessage[]) => {
+                for (const msg of msgs) {
+                    insertMsgStmt.run(randomUUID(), newChat.id, msg.role, msg.content, msg.created_at);
+                }
+            });
+            insertMessageTx(messagesToCopy);
         }
-
         return newChat;
     }
 

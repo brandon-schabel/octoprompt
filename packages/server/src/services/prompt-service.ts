@@ -2,6 +2,7 @@ import { db } from "@/utils/database";
 import { CreatePromptBody, UpdatePromptBody, Prompt, PromptSchema, PromptProject, PromptProjectSchema } from "shared/src/schemas/prompt.schemas";
 import { promptsMap } from '../utils/prompts-map';
 import { generateSingleText } from './gen-ai-services';
+import { ApiError } from 'shared';
 
 const formatToISO = (sqlDate: string) => new Date(sqlDate).toISOString();
 
@@ -33,11 +34,14 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
     VALUES (lower(hex(randomblob(16))), ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     RETURNING *
   `);
-    const created = insertStmt.get(data.name, data.content) as RawPrompt;
+    const createdRaw = insertStmt.get(data.name, data.content) as RawPrompt | undefined;
+    if (!createdRaw) {
+        throw new ApiError(500, "Failed to create prompt", "PROMPT_CREATE_FAILED");
+    }
     const newPrompt = PromptSchema.parse({
-        ...created,
-        createdAt: formatToISO(created.created_at),
-        updatedAt: formatToISO(created.updated_at)
+        ...createdRaw,
+        createdAt: formatToISO(createdRaw.created_at),
+        updatedAt: formatToISO(createdRaw.updated_at)
     });
 
     if (data.projectId) {
@@ -48,24 +52,38 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
 }
 
 export async function addPromptToProject(promptId: string, projectId: string): Promise<void> {
-    // Remove any existing association for the prompt
-    const deleteStmt = db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ?");
-    deleteStmt.run(promptId);
+    const promptExists = db.prepare("SELECT id FROM prompts WHERE id = ?").get(promptId);
+    if (!promptExists) {
+        throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND');
+    }
 
-    // Insert the new association
+    db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ?").run(promptId);
+
     const insertStmt = db.prepare("INSERT INTO prompt_projects (id, prompt_id, project_id) VALUES (lower(hex(randomblob(16))), ?, ?)");
-    insertStmt.run(promptId, projectId);
+    const info = insertStmt.run(promptId, projectId);
+    if (info.changes === 0) {
+        throw new ApiError(500, `Failed to link prompt ${promptId} to project ${projectId}.`, 'PROMPT_LINK_FAILED');
+    }
 }
 
 export async function removePromptFromProject(promptId: string, projectId: string): Promise<void> {
-    const deleteStmt = db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ? AND project_id = ?");
-    deleteStmt.run(promptId, projectId);
+    const stmt = db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ? AND project_id = ?");
+    const info = stmt.run(promptId, projectId);
+    if (info.changes === 0) {
+        const promptExists = await getPromptById(promptId);
+        if (!promptExists) {
+             throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND');
+        }
+        throw new ApiError(404, `Association between prompt ${promptId} and project ${projectId} not found.`, 'PROMPT_PROJECT_LINK_NOT_FOUND');
+    }
 }
 
-export async function getPromptById(promptId: string): Promise<Prompt | null> {
+export async function getPromptById(promptId: string): Promise<Prompt> {
     const stmt = db.prepare("SELECT * FROM prompts WHERE id = ? LIMIT 1");
     const found = stmt.get(promptId) as RawPrompt | undefined;
-    if (!found) return null;
+    if (!found) {
+        throw new ApiError(404, `Prompt with ID ${promptId} not found.`, "PROMPT_NOT_FOUND");
+    }
     return PromptSchema.parse({
         ...found,
         createdAt: formatToISO(found.created_at),
@@ -76,6 +94,9 @@ export async function getPromptById(promptId: string): Promise<Prompt | null> {
 export async function listAllPrompts(): Promise<Prompt[]> {
     const stmt = db.prepare("SELECT * FROM prompts");
     const rows = stmt.all() as RawPrompt[];
+    if (!rows) {
+        return [];
+    }
     return rows.map(row => PromptSchema.parse({
         ...row,
         createdAt: formatToISO(row.created_at),
@@ -98,9 +119,8 @@ export async function listPromptsByProject(projectId: string): Promise<Prompt[]>
     }));
 }
 
-export async function updatePrompt(promptId: string, data: UpdatePromptBody): Promise<Prompt | null> {
+export async function updatePrompt(promptId: string, data: UpdatePromptBody): Promise<Prompt> {
     const existing = await getPromptById(promptId);
-    if (!existing) return null;
 
     const updateStmt = db.prepare(`
     UPDATE prompts 
@@ -108,23 +128,30 @@ export async function updatePrompt(promptId: string, data: UpdatePromptBody): Pr
     WHERE id = ?
     RETURNING *
   `);
-    const updated = updateStmt.get(
+    const updatedRaw = updateStmt.get(
         data.name ?? existing.name,
         data.content ?? existing.content,
         promptId
-    ) as RawPrompt;
-    // Fix 6: Convert dates before parsing
+    ) as RawPrompt | undefined;
+
+    if (!updatedRaw) {
+        throw new ApiError(500, `Failed to update prompt ${promptId} after confirming existence.`, "PROMPT_UPDATE_FAILED");
+    }
     return PromptSchema.parse({
-        ...updated,
-        createdAt: formatToISO(updated.created_at),
-        updatedAt: formatToISO(updated.updated_at)
+        ...updatedRaw,
+        createdAt: formatToISO(updatedRaw.created_at),
+        updatedAt: formatToISO(updatedRaw.updated_at)
     });
 }
 
-export async function deletePrompt(promptId: string): Promise<boolean> {
-    const deleteStmt = db.prepare("DELETE FROM prompts WHERE id = ? RETURNING *");
-    const deleted = deleteStmt.get(promptId) as RawPrompt | undefined;
-    return !!deleted;
+export async function deletePrompt(promptId: string): Promise<void> {
+    db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ?").run(promptId);
+
+    const deleteStmt = db.prepare("DELETE FROM prompts WHERE id = ?");
+    const info = deleteStmt.run(promptId);
+    if (info.changes === 0) {
+        throw new ApiError(404, `Prompt with ID ${promptId} not found for deletion.`, "PROMPT_NOT_FOUND");
+    }
 }
 
 export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {
@@ -149,7 +176,7 @@ No additional commentary, no extraneous text, no markdown formatting.
 Follow the style guidelines and key requirements below:
 ${promptsMap.contemplativePrompt}
 </Reasoning>
-`; // Ensure promptsMap.contemplativePrompt is loaded
+`;
 
     const userMessage = userContext.trim();
     if (!userMessage) {
@@ -157,17 +184,18 @@ ${promptsMap.contemplativePrompt}
     }
 
     try {
-        // Use generateSingleText for non-streaming prompt generation
         const optimizedPrompt = await generateSingleText({
             systemMessage: systemMessage,
-            prompt: userMessage, // User context is the prompt here
+            prompt: userMessage,
         });
 
         return optimizedPrompt.trim();
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('[PromptimizerService] Failed to optimize prompt:', error);
-        // Fallback to the original user message on error
-        return userMessage;
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new ApiError(500, `Failed to optimize prompt: ${error.message || 'AI provider error'}`, 'PROMPT_OPTIMIZE_ERROR', { originalError: error });
     }
 }

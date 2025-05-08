@@ -20,6 +20,7 @@ import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schem
 import { AiChatStreamRequest } from 'shared/src/schemas/chat.schemas';
 import { AiSdkOptions } from 'shared/src/schemas/gen-ai.schemas';
 import { LOW_MODEL_CONFIG } from 'shared';
+import { ApiError } from 'shared';
 
 // --- Constants for Base URLs (Can be overridden by settings) ---
 // Use the base URLs defined in the user's guide's .env section
@@ -197,7 +198,7 @@ async function getProviderLanguageModelInterface(
     const modelId = finalOptions.model || LOW_MODEL_CONFIG.model || '';
 
     if (!modelId) {
-        throw new Error(`Model ID must be specified for provider ${provider} either in options or defaults.`);
+        throw new ApiError(400, `Model ID must be specified for provider ${provider} either in options or defaults.`, 'MODEL_ID_MISSING');
     }
 
     if (debug) {
@@ -207,72 +208,63 @@ async function getProviderLanguageModelInterface(
     switch (provider) {
         case "openai": {
             const apiKey = await getKey("openai", debug);
-            // The openai() factory automatically checks process.env.OPENAI_API_KEY if apiKey is undefined
-            return createOpenAI({ apiKey, })(modelId)
+            return createOpenAI({ apiKey, })(modelId);
         }
         case "anthropic": {
             const apiKey = await getKey("anthropic", debug);
-            // anthropic() factory checks process.env.ANTHROPIC_API_KEY if apiKey is undefined
-            if (!apiKey && !process.env.ANTHROPIC_API_KEY) throw new Error("Anthropic API Key not found in DB or environment.");
+            if (!apiKey && !process.env.ANTHROPIC_API_KEY) throw new ApiError(400, "Anthropic API Key not found in DB or environment.", 'ANTHROPIC_KEY_MISSING');
             return createAnthropic({ apiKey })(modelId);
         }
         case "google_gemini": {
             const apiKey = await getKey("google_gemini", debug);
-            // google() factory checks process.env.GOOGLE_GENERATIVE_AI_API_KEY if apiKey is undefined
-            if (!apiKey && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) throw new Error("Google Gemini API Key not found in DB or environment.");
+            if (!apiKey && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) throw new ApiError(400, "Google Gemini API Key not found in DB or environment.", 'GOOGLE_KEY_MISSING');
             return createGoogleGenerativeAI({ apiKey })(modelId);
         }
         case "groq": {
             const apiKey = await getKey("groq", debug);
-            // groq() factory checks process.env.GROQ_API_KEY if apiKey is undefined
-            if (!apiKey && !process.env.GROQ_API_KEY) throw new Error("Groq API Key not found in DB or environment.");
+            if (!apiKey && !process.env.GROQ_API_KEY) throw new ApiError(400, "Groq API Key not found in DB or environment.", 'GROQ_KEY_MISSING');
             return createGroq({ apiKey })(modelId);
         }
         case "openrouter": {
             const apiKey = await getKey("openrouter", debug);
-            // createOpenRouter factory checks process.env.OPENROUTER_API_KEY if apiKey is undefined
-            if (!apiKey && !process.env.OPENROUTER_API_KEY) throw new Error("OpenRouter API Key not found in DB or environment.");
-            // Note: Pass config to createOpenRouter, then modelId to the result
+            if (!apiKey && !process.env.OPENROUTER_API_KEY) throw new ApiError(400, "OpenRouter API Key not found in DB or environment.", 'OPENROUTER_KEY_MISSING');
             return createOpenRouter({ apiKey })(modelId);
         }
         // --- OpenAI Compatible Providers ---
         case "lmstudio": {
             const lmStudioUrl = DEFAULT_LMSTUDIO_BASE_URL;
-            if (!lmStudioUrl) throw new Error("LMStudio Base URL not configured.");
-            // Use the generic createOpenAI factory for compatible endpoints
+            if (!lmStudioUrl) throw new ApiError(500, "LMStudio Base URL not configured.", 'LMSTUDIO_URL_MISSING');
             return createOpenAI({
                 baseURL: lmStudioUrl,
-                apiKey: 'lm-studio-ignored-key', // Often ignored by local servers, but required by SDK type
+                apiKey: 'lm-studio-ignored-key',
             })(modelId);
         }
-        // Add cases for xai, together if they use OpenAI compatible endpoints
         case "xai": {
             const apiKey = await getKey("xai", debug);
-            if (!apiKey) throw new Error("XAI API Key not found in DB.");
-            // Confirm the exact baseURL for XAI
+            if (!apiKey) throw new ApiError(400, "XAI API Key not found in DB.", 'XAI_KEY_MISSING');
             return createOpenAI({ baseURL: "https://api.x.ai/v1", apiKey })(modelId);
         }
         case "together": {
             const apiKey = await getKey("together", debug);
-            if (!apiKey) throw new Error("Together API Key not found in DB.");
+            if (!apiKey) throw new ApiError(400, "Together API Key not found in DB.", 'TOGETHER_KEY_MISSING');
             return createOpenAI({ baseURL: "https://api.together.xyz/v1", apiKey })(modelId);
         }
         // --- Local Providers ---
         case "ollama": {
             const ollamaUrl = DEFAULT_OLLAMA_BASE_URL;
-            if (!ollamaUrl) throw new Error("Ollama Base URL not configured.");
-            // Ensure ollama-ai-provider follows the Vercel SDK factory pattern
-            // It might be `ollama({ baseURL: ollamaUrl })(modelId)` or similar
-            // Check the specific package documentation for createOllama usage
-            return createOllama({ baseURL: ollamaUrl })(modelId); // Adjust if needed based on package docs
+            if (!ollamaUrl) throw new ApiError(500, "Ollama Base URL not configured.", 'OLLAMA_URL_MISSING');
+            return createOllama({ baseURL: ollamaUrl })(modelId);
         }
         default:
-            console.error(`[UnifiedProviderService] Unsupported provider: ${provider}. Falling back to OpenAI.`);
-            // Fallback logic (optional)
-            const fallbackApiKey = await getKey("openai", debug);
-            const fallbackModel = LOW_MODEL_CONFIG.model
-            return createOpenAI({ apiKey: fallbackApiKey })(fallbackModel ?? 'gpt-4o');
-        // OR: throw new Error(`Unsupported provider configured: ${provider}`);
+            console.error(`[UnifiedProviderService] Unsupported provider: ${provider}. Attempting fallback to OpenAI.`);
+            // Fallback logic
+            try {
+                const fallbackApiKey = await getKey("openai", debug);
+                const fallbackModel = LOW_MODEL_CONFIG.model ?? 'gpt-4o';
+                return createOpenAI({ apiKey: fallbackApiKey })(fallbackModel);
+            } catch (fallbackError: any) {
+                throw new ApiError(500, `Unsupported provider: ${provider} and fallback to OpenAI also failed.`, 'UNSUPPORTED_PROVIDER_AND_FALLBACK_FAILED', { originalProvider: provider, fallbackError: fallbackError.message });
+            }
     }
 }
 
@@ -297,45 +289,52 @@ export async function generateSingleText({
     const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
     const provider = finalOptions.provider as APIProviders
     if (!prompt && (!messages || messages.length === 0)) {
-        throw new Error("Either 'prompt' or 'messages' must be provided for generateSingleText.");
+        throw new ApiError(400, "Either 'prompt' or 'messages' must be provided for generateSingleText.", 'MISSING_PROMPT_OR_MESSAGES');
     }
 
-    const modelInstance = await getProviderLanguageModelInterface(provider, finalOptions);
+    try {
+        const modelInstance = await getProviderLanguageModelInterface(provider, finalOptions);
 
-    let messagesToProcess: CoreMessage[] = [];
-    if (systemMessage) {
-        messagesToProcess.push({ role: 'system', content: systemMessage });
+        let messagesToProcess: CoreMessage[] = [];
+        if (systemMessage) {
+            messagesToProcess.push({ role: 'system', content: systemMessage });
+        }
+        if (messages) {
+            messagesToProcess.push(...messages);
+        }
+        if (prompt) {
+            // If using prompt, ensure it's the last message and typically from 'user'
+            // If history (`messages`) is also provided, decide how to combine them.
+            // Simplest: assume `prompt` is the primary input if provided.
+            messagesToProcess.push({ role: 'user', content: prompt });
+        }
+
+
+
+        const { text, usage, finishReason } = await generateText({
+            model: modelInstance,
+            messages: messagesToProcess,
+            // Map options - Use new names from AiSdkOptionsSchema
+            temperature: finalOptions.temperature,
+            maxTokens: finalOptions.maxTokens,
+            topP: finalOptions.topP,
+            frequencyPenalty: finalOptions.frequencyPenalty,
+            presencePenalty: finalOptions.presencePenalty,
+            topK: finalOptions.topK,
+            // stop: options.stop,           
+        });
+
+        if (debug) {
+            console.log(`[UnifiedProviderService] generateText finished for ${provider}/${modelInstance.modelId}. Reason: ${finishReason}. Usage: ${JSON.stringify(usage)}`);
+        }
+
+        return text;
+    } catch (error: any) {
+        if (error instanceof ApiError) throw error;
+        // Catch errors from getProviderLanguageModelInterface or generateText
+        console.error(`[UnifiedProviderService - generateSingleText] Error for ${provider}:`, error);
+        throw new ApiError(500, `Failed to generate single text for provider ${provider}: ${error.message}`, 'GENERATE_SINGLE_TEXT_FAILED', { originalError: error.message });
     }
-    if (messages) {
-        messagesToProcess.push(...messages);
-    }
-    if (prompt) {
-        // If using prompt, ensure it's the last message and typically from 'user'
-        // If history (`messages`) is also provided, decide how to combine them.
-        // Simplest: assume `prompt` is the primary input if provided.
-        messagesToProcess.push({ role: 'user', content: prompt });
-    }
-
-
-
-    const { text, usage, finishReason } = await generateText({
-        model: modelInstance,
-        messages: messagesToProcess,
-        // Map options - Use new names from AiSdkOptionsSchema
-        temperature: finalOptions.temperature,
-        maxTokens: finalOptions.maxTokens,
-        topP: finalOptions.topP,
-        frequencyPenalty: finalOptions.frequencyPenalty,
-        presencePenalty: finalOptions.presencePenalty,
-        topK: finalOptions.topK,
-        // stop: options.stop,           
-    });
-
-    if (debug) {
-        console.log(`[UnifiedProviderService] generateText finished for ${provider}/${modelInstance.modelId}. Reason: ${finishReason}. Usage: ${JSON.stringify(usage)}`);
-    }
-
-    return text;
 }
 
 /**
@@ -360,7 +359,7 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
     const model = finalOptions.model
 
     if (!prompt) {
-        throw new Error("'prompt' must be provided for generateStructuredData.");
+        throw new ApiError(400, "'prompt' must be provided for generateStructuredData.", 'MISSING_PROMPT_FOR_STRUCTURED');
     }
     // Pass model in options
     const modelInstance = await getProviderLanguageModelInterface(provider, { ...finalOptions, model: model });
@@ -421,7 +420,7 @@ export async function genTextStream({
 
     // 1. Input Validation
     if (!prompt && (!messages || messages.length === 0)) {
-        throw new Error("Either 'prompt' or 'messages' must be provided for genTextStream.");
+        throw new ApiError(400, "Either 'prompt' or 'messages' must be provided for genTextStream.", 'MISSING_PROMPT_OR_MESSAGES_STREAM');
     }
 
     try {
@@ -490,19 +489,21 @@ export async function genTextStream({
         });
 
     } catch (error: any) {
+        if (error instanceof ApiError) throw error;
+        // Catch errors from getProviderLanguageModelInterface or genTextStream
         console.error(`[UnifiedProviderService - genTextStream] Error setting up stream for ${provider}:`, error);
-        // How to handle errors before the stream starts?
         // Option 1: Re-throw the error to be handled by the caller
-        // throw error;
+        // This will be caught by the route and handled by app.onError
+        throw new ApiError(500, `Error setting up stream for ${provider}: ${error.message}`, 'STREAM_SETUP_FAILED', { originalError: error.message });
 
-        // Option 2: Return a stream that immediately errors out
-        const errorStream = new ReadableStream({
-            start(controller) {
-                controller.error(error);
-            }
-        });
-        // Cast needed because the direct return type doesn't match perfectly
-        // without the generic constraints of StreamTextResult, but it works functionally.
-        return errorStream as unknown as ReturnType<typeof streamText>;
+        // Option 2: Return a stream that immediately errors out (commented out as direct throw is preferred for ApiError)
+        // const errorStream = new ReadableStream({
+        //     start(controller) {
+        //         controller.error(error);
+        //     }
+        // });
+        // // Cast needed because the direct return type doesn't match perfectly
+        // // without the generic constraints of StreamTextResult, but it works functionally.
+        // return errorStream as unknown as ReturnType<typeof streamText>;
     }
 }

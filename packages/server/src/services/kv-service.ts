@@ -61,19 +61,19 @@ export async function initKvStore(): Promise<void> {
                 console.warn(`[KV] Invalid data format found in ${path.resolve(KV_STORE_BASE_PATH, ...KV_STORE_FILE_PATH.map(String))}. Initializing with empty store.`);
                 memoryStore = {};
                 // Optionally, attempt to write the empty store back to fix the file
-                // await syncStoreToFile();
+                // await syncStoreToFile(); // Be cautious with auto-fixing as it might hide underlying issues
             }
         } else {
             console.log(`[KV] No existing store file found. Initializing with empty store.`);
             memoryStore = {};
             // Optionally create the file with an empty object on first init
-            // await syncStoreToFile();
+            // await syncStoreToFile(); 
         }
     } catch (error) {
         console.error("[KV] Error initializing KeyValueStore:", error);
-        // Decide how to handle initialization errors (e.g., throw, exit, default state)
         memoryStore = {}; // Default to empty store on error
-        throw new Error(`Failed to initialize KV store: ${error instanceof Error ? error.message : String(error)}`);
+        // Consider re-throwing a more specific error if this is critical for startup
+        throw new ApiError(500, `Failed to initialize KV store: ${error instanceof Error ? error.message : String(error)}`, "KV_INIT_FAILED");
     }
 }
 
@@ -85,29 +85,28 @@ export async function initKvStore(): Promise<void> {
  */
 export async function getKvValue<K extends KVKey>(
     key: K
-): Promise<KVValue<K> | undefined> {
+): Promise<KVValue<K>> {
     const value = memoryStore[key];
 
     if (value === undefined) {
-        return undefined;
+        // Key not found in the store
+        throw new ApiError(404, `Key "${key}" not found in KV store.`, 'KV_KEY_NOT_FOUND');
     }
 
     try {
-        // Validate the value retrieved from memory against the schema
         const schema = KvSchemas[key];
-        // Use safeParse to handle potential validation errors gracefully
         const validationResult = await schema.safeParseAsync(value);
 
         if (!validationResult.success) {
-            console.error(`[KV] Zod validation failed for key "${key}" on get:`, validationResult.error.errors);
-            // Decide how to handle invalid data found in the store (e.g., return undefined, throw, log)
-            // Returning undefined might be safest to prevent propagation of invalid data.
-            return undefined;
+            console.error(`[KV] Zod validation failed for key "${key}" on get (data in store is corrupt):`, validationResult.error.errors);
+            // Data in the store is corrupt and doesn't match its schema
+            throw new ApiError(500, `Corrupt data found in KV store for key "${key}".`, 'KV_VALUE_CORRUPT_IN_STORE', { issues: validationResult.error.errors });
         }
         return validationResult.data as KVValue<K>;
-    } catch (error) { // Catch potential errors during Zod parsing itself
+    } catch (error) { 
         console.error(`[KV] Error during Zod parsing for key "${key}" on get:`, error);
-        return undefined; // Return undefined on parsing errors
+        // Unexpected error during the parsing process itself
+        throw new ApiError(500, `Internal error parsing data for key "${key}" from KV store.`, 'KV_VALUE_PARSE_ERROR_IN_STORE', { originalError: error });
     }
 }
 
@@ -154,35 +153,35 @@ export async function updateKVStore<K extends KVKey>(
     newValue: Partial<KVValue<K>>
 ): Promise<KVValue<K>> {
     // Use getKvValue to ensure we're working with validated data if it exists
-    // Note: This performs an unnecessary validation read if the data is already valid in memory,
-    // but ensures we don't merge into potentially invalid data.
-    // Alternatively, read directly from memoryStore and validate *after* merge.
-    // Let's read directly from memory first for efficiency, then validate post-merge.
-
-    const currentValue = memoryStore[key];
-
-    if (currentValue === undefined) {
-        throw new ApiError(404, `Cannot update: Key "${key}" not found.`, 'KV_KEY_NOT_FOUND');
-    }
+    // This will throw if the key is not found, which is desired behavior for an update.
+    const currentValue = await getKvValue(key); 
 
     // Perform deep merge
-    // We cast currentValue because we've checked it's an object,
-    // but TS doesn't narrow it down from `unknown` sufficiently without complex type guards.
     let updatedValue: KVValue<K>;
-    if (typeof currentValue === 'object') {
+    if (typeof currentValue === 'object' && currentValue !== null && typeof newValue === 'object' && newValue !== null) {
         updatedValue = mergeDeep(currentValue as Record<string, any>, newValue);
     } else {
+        // If either current or new value is not an object, treat newValue as a complete replacement.
+        // This might need adjustment based on desired behavior for non-object types.
+        // Forcing newValue to be a complete KVValue<K> if not merging objects.
         updatedValue = newValue as KVValue<K>;
     }
-
+    
     // Set the merged value (this will handle validation and persistence)
-    // Cast is necessary here because mergeDeep returns a broad type.
-    // setKvValue will validate against the specific KvSchemas[key].
-    await setKvValue(key, updatedValue as KVValue<K>);
+    await setKvValue(key, updatedValue); // setKvValue re-validates the fully merged object
 
-    // Return the validated, updated value (setKvValue ensures validation)
-    // Re-read from memoryStore as setKvValue might transform data via Zod schema
-    return memoryStore[key] as KVValue<K>;
+    // Return the validated, updated value. Read from memoryStore as setKvValue updates it.
+    // This assumes setKvValue was successful and the data in memoryStore is the transformed one.
+    const finalValue = memoryStore[key];
+    if (finalValue === undefined) {
+        // This should not happen if setKvValue completed successfully.
+        throw new ApiError(500, `Internal Error: Value for key "${key}" disappeared after update.`, 'KV_UPDATE_INTERNAL_ERROR');
+    }
+    // Final validation pass or trust setKvValue's validation
+    // For safety, can re-validate, but might be redundant if setKvValue is trusted.
+    // const schema = KvSchemas[key];
+    // return schema.parseAsync(finalValue) as Promise<KVValue<K>>;
+    return finalValue as KVValue<K>;
 }
 
 /**
@@ -192,11 +191,11 @@ export async function deleteKvKey(key: KVKey): Promise<void> {
     if (memoryStore.hasOwnProperty(key)) {
         delete memoryStore[key];
         console.log(`[KV] Deleted key "${key}" from memory`);
-        await syncStoreToFile();
+        await syncStoreToFile(); // syncStoreToFile can throw ApiError
     } else {
         console.log(`[KV] Attempted to delete non-existent key "${key}"`);
-        // Optionally throw an error if deleting a non-existent key is an issue
-        // throw new ApiError(404, `Cannot delete: Key "${key}" not found.`, 'KV_KEY_NOT_FOUND');
+        // Throw an error if deleting a non-existent key is an issue
+        throw new ApiError(404, `Cannot delete: Key "${key}" not found.`, 'KV_KEY_NOT_FOUND');
     }
 }
 

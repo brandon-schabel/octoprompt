@@ -3,15 +3,15 @@ import { AiSdkOptions } from 'shared/src/schemas/gen-ai.schemas';
 import { ProjectFile, } from 'shared/src/schemas/project.schemas';
 import { buildProjectFileMap } from 'shared/src/utils/projects-utils';
 import { generateStructuredData } from '../gen-ai-services';
-import { createProjectFileRecord } from '../project-service'; // Assuming this interacts with your DB/storage
-import { computeChecksum } from '../file-services/file-sync-service';
+import { computeChecksum } from '../file-services/file-sync-service-unified';
 import { fromZodError } from 'zod-validation-error';
 import { normalizePathForDb } from '@/utils/path-utils';
-import { AGENT_LOGS_DIR, getOrchestratorLogFilePaths, initializeLogger, log, writeAgentDataLog } from './agent-logger';
+import { AGENT_LOGS_DIR, getOrchestratorLogFilePaths, initializeLogger, log, writeAgentDataLog, getAgentDataLogFilePath } from './agent-logger';
 import { join } from 'node:path';
 import { AgentTaskPlanSchema, CoderAgentDataContext, AgentFileRewriteResponseSchema, Task, TaskPlan, FileRewriteResponse, AgentTaskSchema, AgentContextSchema, AgentCoderRunRequestSchema, AgentCoderRunSuccessDataSchema, AgentDataLog } from 'shared/src/schemas/agent-coder.schemas';
 import { FileSyncData, bulkCreateProjectFiles } from '../project-service';
 import { basename, extname } from 'path';
+import { ApiError } from 'shared';
 
 const agentCoderPrompts = {
     planningAgent: {
@@ -124,7 +124,7 @@ async function runPlanningAgent(agentContext: CoderAgentDataContext): Promise<Ta
         const error = fromZodError(validationResult.error);
         const errorMsg = `Planning Agent failed to produce a valid TaskPlan: ${error.message} `;
         await log(`Planning Agent Output Validation Failed: ${error.message} `, 'error', { validationError: validationResult.error.format(), rawOutput: result.object });
-        throw new Error(errorMsg);
+        throw new ApiError(500, errorMsg, 'PLANNING_AGENT_VALIDATION_FAILED', validationResult.error.format());
     }
 
     // Ensure projectId is set
@@ -136,7 +136,7 @@ async function runPlanningAgent(agentContext: CoderAgentDataContext): Promise<Ta
         if (!task.targetFilePath) {
             const errorMsg = `Planning Agent generated a task(ID: ${task.id}, Title: ${task.title}) without a targetFilePath.`;
             await log(errorMsg, 'error', { task });
-            throw new Error(errorMsg);
+            throw new ApiError(500, errorMsg, 'PLANNING_AGENT_INVALID_TASK', { task });
         }
         task.targetFilePath = normalizePathForDb(task.targetFilePath); // Normalize path early
     }
@@ -172,7 +172,7 @@ async function runFileRewriteAgent(
             const error = fromZodError(validationResult.error);
             const errorMsg = `File Rewrite Agent failed to produce a valid response: ${error.message}`;
             await log(`File Rewrite Agent Output Validation Failed: ${error.message}`, 'error', { taskId: task.id, validationError: validationResult.error.format(), rawOutput: result.object });
-            throw new Error(errorMsg);
+            throw new ApiError(500, errorMsg, 'FILE_REWRITE_AGENT_VALIDATION_FAILED', validationResult.error.format());
         }
 
         await log(`File Rewrite Agent finished successfully for task: ${task.title}`, 'info', { taskId: task.id });
@@ -181,15 +181,15 @@ async function runFileRewriteAgent(
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         await log(`File Rewrite Agent failed for task ${task.id}: ${errorMessage}`, 'error', { taskId: task.id, error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
-        throw new Error(`AI file rewrite failed for task ${task.id} (${task.title}) on file ${task.targetFilePath}: ${errorMessage}`);
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(500, `AI file rewrite failed for task ${task.id} (${task.title}) on file ${task.targetFilePath}: ${errorMessage}`, 'FILE_REWRITE_AI_ERROR', { taskId: task.id });
     }
 }
 
 
 // this basically takes all the tasks and project files, creates modifications, it will there return the full modified project files
 // then we will parse the diferences and write the changes to the filesystem.
-export async function createFileChangeDiffFromTaskPlan(agentContext: CoderAgentDataContext, taskPlan: TaskPlan) {
-    let overallSuccess = true;
+export async function createFileChangeDiffFromTaskPlan(agentContext: CoderAgentDataContext, taskPlan: TaskPlan): Promise<{ files: ProjectFile[], tasks: TaskPlan }> {
     let currentFileMapState = new Map<string, ProjectFile>(agentContext.projectFileMap);
 
 
@@ -203,8 +203,7 @@ export async function createFileChangeDiffFromTaskPlan(agentContext: CoderAgentD
             const errorMsg = `Invalid task structure encountered at index ${i}: ${validationError.message}. Task Title: ${task.title || 'N/A'}`;
             await log(errorMsg, 'error', { taskIndex: i, taskTitle: task.title || 'N/A', validationError: taskValidation.error.format() });
             task.status = 'FAILED';
-            overallSuccess = false;
-            break; // Stop processing
+            throw new ApiError(400, errorMsg, 'INVALID_TASK_STRUCTURE', { taskIndex: i, taskTitle: task.title, validationError: taskValidation.error.format() });
         }
 
         if (task.status !== 'PENDING') { // Skip non-pending tasks
@@ -332,34 +331,30 @@ export async function createFileChangeDiffFromTaskPlan(agentContext: CoderAgentD
             const errorMsg = `Error processing task ${task.id} (${task.title}) for file ${task.targetFilePath}: ${errorMessage}`;
             await log(errorMsg, 'error', { taskId: task.id, taskTitle: task.title, file: task.targetFilePath, error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
             task.status = 'FAILED';
-            overallSuccess = false;
             await log(`Task ${task.id} failed. Stopping workflow.`, 'error', { taskId: task.id });
-            break; // Halt the process on first task failure
+            if (error instanceof ApiError) throw error;
+            throw new ApiError(500, errorMsg, 'TASK_PROCESSING_FAILED', { taskId: task.id, taskTitle: task.title, file: task.targetFilePath });
         }
 
         await log(`--- Finished Task ${i + 1}: ${task.title} (Status: ${task.status}) ---`, 'info', { taskId: task.id, status: task.status });
 
     }
 
-    return { success: overallSuccess, files: Array.from(currentFileMapState.values()), tasks: taskPlan };
+    return { files: Array.from(currentFileMapState.values()), tasks: taskPlan };
 }
 
 export type CoderAgentOrchestratorSuccessResult = {
-    success: boolean;
-    tasks: TaskPlan | null;
-    agentJobId: string; // Expect agentJobId back, though we already have it
-    agentDataLog: Record<string, any>; // The data to be saved
-    // since files are rewritten, these are the fully updated files, which will be written to the filesystem once the user confirms the changes.
     updatedFiles: ProjectFile[];
-}
-
-
-
+    taskPlan: TaskPlan | null;
+    agentJobId: string;
+    agentDataLog: AgentDataLog; // Use the specific type here
+};
 
 
 export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): Promise<CoderAgentOrchestratorSuccessResult> {
     const agentJobId = rawAgentContext.agentJobId;
     const agentJobDirPath = join(AGENT_LOGS_DIR, agentJobId);
+    let { filePath: logFilePath } = { filePath: '' }; // Initialize to prevent uninitialized errors
 
     const agentDataLog: AgentDataLog = {
         agentJobDirPath,
@@ -375,17 +370,28 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
         updatedFiles: [],
     }
 
-    const writeDataLog = async () => {
-        return writeAgentDataLog(agentJobId, agentDataLog);
+    // Get the log file path using the agentJobId
+    try {
+        const paths = await getOrchestratorLogFilePaths(agentJobId);
+        logFilePath = paths.filePath;
+        await initializeLogger(logFilePath);
+        await log(`[Orchestrator] Starting run ${agentJobId} for project ${rawAgentContext.project.id}. Logging to: ${logFilePath}`, 'info');
+    } catch (initError: any) {
+        // If logger initialization fails, we can't log much more.
+        // Populate basic data log and rethrow as a critical error.
+        agentDataLog.finalStatus = 'Error';
+        agentDataLog.errorMessage = `Logger initialization failed: ${initError.message}`;
+        agentDataLog.errorStack = initError.stack;
+        agentDataLog.agentJobEndTime = new Date().toISOString();
+        // Attempt to write the data log even if logger init failed
+        try {
+            await writeAgentDataLog(agentJobId, agentDataLog);
+        } catch (dataLogWriteError: any) {
+            console.error(`[Orchestrator CRITICAL] Failed to write AgentDataLog after logger init failure for ${agentJobId}: ${dataLogWriteError.message}`);
+        }
+        throw new ApiError(500, `Orchestrator logger initialization failed for ${agentJobId}: ${initError.message}`, 'ORCHESTRATOR_LOG_INIT_FAILED');
     }
 
-
-    await writeDataLog()
-
-    // Get the log file path using the agentJobId
-    const { filePath } = await getOrchestratorLogFilePaths(agentJobId);
-    await initializeLogger(filePath);
-    log(`[Orchestrator] Starting run ${agentJobId} for project ${rawAgentContext.project.id}. Logging to: ${filePath}`, 'info');
 
     // 1. Validate Agent Context
     const contextValidation = AgentContextSchema.safeParse({
@@ -397,15 +403,17 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
         const error = fromZodError(contextValidation.error);
         const errorMsg = `Invalid agent context: ${error.message}`;
         await log(`Orchestrator initial context validation failed: ${error.message}`, 'error', { validationError: contextValidation.error.format() });
-        throw new Error(errorMsg);
+        // Populate AgentDataLog before throwing
+        agentDataLog.finalStatus = 'Error';
+        agentDataLog.errorMessage = errorMsg;
+        agentDataLog.errorStack = JSON.stringify(contextValidation.error.format()); // Or some other serialization
+        throw new ApiError(422, errorMsg, 'INVALID_AGENT_CONTEXT', contextValidation.error.format());
     }
     const agentContext: CoderAgentDataContext = contextValidation.data;
 
     // Initialize state
     const initialProjectId = agentContext.projectFiles[0].projectId;
     let finalTaskPlan: TaskPlan | null = null;
-    let filesFromTaskPlan: ProjectFile[] = [];
-    let tasksFromTaskPlan: TaskPlan | null = null;
 
     try {
         // Planning Agent
@@ -414,19 +422,21 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
 
         if (!finalTaskPlan || finalTaskPlan.tasks.length === 0) {
             await log("No tasks generated by Planning Agent. Exiting.", 'info');
-            agentDataLog.agentJobEndTime = new Date().toISOString();
             agentDataLog.finalStatus = 'No tasks generated';
-            await writeDataLog()
-            return { success: true, updatedFiles: [], tasks: finalTaskPlan, agentJobId, agentDataLog }; // Use agentJobId
+            return {
+                updatedFiles: [],
+                taskPlan: finalTaskPlan,
+                agentJobId,
+                agentDataLog
+            };
         }
         // Ensure plan projectId matches context projectId
         if (finalTaskPlan.projectId !== initialProjectId) {
             await log(`Project ID mismatch between context (${initialProjectId}) and plan (${finalTaskPlan.projectId}). Using plan ID.`, 'warn');
         }
 
-        await writeDataLog()
-
-        const { success: planImplementationSuccess, files: allFinalFiles, tasks: tasksFromTaskPlan } = await createFileChangeDiffFromTaskPlan(agentContext, finalTaskPlan);
+        const { files: allFinalFiles, tasks: executedTaskPlan } = await createFileChangeDiffFromTaskPlan(agentContext, finalTaskPlan);
+        finalTaskPlan = executedTaskPlan; // Update finalTaskPlan with statuses from execution
 
         // --- Filter for changed files ---
         const initialFileMap = agentContext.projectFileMap;
@@ -437,54 +447,51 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
         });
         // --- End Filter ---
 
-        await log(`Orchestrator finished. Overall Success: ${planImplementationSuccess}. Changed files: ${changedFiles.length}`, 'info');
-        await log(`Final Orchestrator State`, 'verbose', { success: planImplementationSuccess, changedFileCount: changedFiles.length, tasks: tasksFromTaskPlan });
+        await log(`Orchestrator finished successfully. Changed files: ${changedFiles.length}`, 'info');
 
-        agentDataLog.finalStatus = planImplementationSuccess ? 'Success' : 'Failed';
-        agentDataLog.finalTaskPlan = tasksFromTaskPlan; // Log final task state
-        agentDataLog.agentJobEndTime = new Date().toISOString();
+        agentDataLog.finalStatus = 'Success';
+        agentDataLog.finalTaskPlan = finalTaskPlan;
         agentDataLog.updatedFiles = changedFiles;
 
-        await writeDataLog()
-
         return {
-            success: planImplementationSuccess,
-            updatedFiles: changedFiles, // Return only changed files
-            tasks: tasksFromTaskPlan,
-            agentJobId, // Use agentJobId
+            updatedFiles: changedFiles,
+            taskPlan: finalTaskPlan,
+            agentJobId,
             agentDataLog,
-
         };
 
-    } catch (error) {
+    } catch (error: any) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorMsg = `Orchestrator failed with unhandled error: ${errorMessage}`;
-        await log(errorMsg, 'error', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
-        await log(`Final Orchestrator State (on error)`, 'verbose', { success: false, fileCount: filesFromTaskPlan.length, tasks: tasksFromTaskPlan });
+        await log(`Orchestrator failed: ${errorMessage}`, 'error', { error: errorMessage, stack: error instanceof Error ? error.stack : undefined });
 
         agentDataLog.finalStatus = 'Error';
         agentDataLog.errorMessage = errorMessage;
         agentDataLog.errorStack = error instanceof Error ? error.stack : undefined;
+        agentDataLog.finalTaskPlan = finalTaskPlan; // Log the task plan state at point of failure
+
+        // If updatedFiles were partially computed before error, decide if they should be logged
+        // For now, updatedFiles in agentDataLog will only be set on full success path.
+        // Or, if createFileChangeDiffFromTaskPlan throws, changedFilesOnError logic would be here.
+        // However, createFileChangeDiffFromTaskPlan now throws immediately.
+
+        if (error instanceof ApiError) {
+            throw error; // Re-throw ApiError after logging it to AgentDataLog
+        }
+        // For other errors, wrap them in a new ApiError
+        throw new ApiError(500, `Orchestrator failed: ${errorMessage}`, 'ORCHESTRATOR_UNHANDLED_ERROR', { agentJobId, originalError: errorMessage });
+    } finally {
         agentDataLog.agentJobEndTime = new Date().toISOString();
-        agentDataLog.finalTaskPlan = tasksFromTaskPlan;
-
-        await writeDataLog()
-
-        // Filter for changed files even in error case (might have partial changes)
-        const initialFileMapOnError = agentContext.projectFileMap;
-        const changedFilesOnError: ProjectFile[] = filesFromTaskPlan.filter(finalFile => {
-            const initialFile = initialFileMapOnError.get(finalFile.id);
-            return !initialFile || initialFile.checksum !== finalFile.checksum;
-        });
-
-        // Return failure state with potentially changed files
-        return {
-            success: false,
-            updatedFiles: changedFilesOnError, // Return changed files identified before the error
-            tasks: tasksFromTaskPlan,
-            agentJobId, // Use agentJobId
-            agentDataLog
-        };
+        try {
+            await writeAgentDataLog(agentJobId, agentDataLog);
+            if (logFilePath) { // Check if logFilePath was initialized
+                 await log(`[Orchestrator] Run ${agentJobId} processing finished. Final status: ${agentDataLog.finalStatus}. Orchestrator logs at: ${logFilePath}. Data log at: ${getAgentDataLogFilePath(agentJobId)}`, 'info');
+            } else {
+                console.error(`[Orchestrator CRITICAL] logFilePath not available in finally block for ${agentJobId}. AgentDataLog written to: ${getAgentDataLogFilePath(agentJobId)}`);
+            }
+        } catch (finalLogWriteError: any) {
+            console.error(`[Orchestrator CRITICAL] Failed to write final AgentDataLog for ${agentJobId}: ${finalLogWriteError.message}`);
+            // Not throwing here to avoid masking the original error if one occurred
+        }
     }
 }
 

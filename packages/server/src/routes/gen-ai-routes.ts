@@ -242,124 +242,84 @@ export const genAiRoutes = new OpenAPIHono()
         const body = c.req.valid('json');
         const { prompt, options, systemMessage } = body;
 
-        try {
-            const aiSDKStream = await genTextStream({
-                prompt,
-                ...(options && {
-                    options: options
-                }),
-                systemMessage,
-            });
+        const aiSDKStream = await genTextStream({
+            prompt,
+            ...(options && {
+                options: options
+            }),
+            systemMessage,
+        });
 
-            return stream(c, async (stream) => {
-                await stream.pipe(aiSDKStream.toDataStream());
-            });
-        } catch (error: any) {
-            console.error("[GenAI Route Error - /stream]:", error);
-            throw new ApiError(500, `Failed to generate text: ${error.message}`, 'TEXT_GENERATION_FAILED');
-        }
+        return stream(c, async (streamInstance) => {
+            await streamInstance.pipe(aiSDKStream.toDataStream());
+        });
     })
-    // --- NEW: Simple Text Generation Handler ---
     .openapi(generateTextRoute, async (c) => {
         const body = c.req.valid('json');
 
-        try {
-            const generatedText = await generateSingleText({
-                prompt: body.prompt,
-                ...(body.options && {
-                    options: body.options
-                }),
-                systemMessage: body.systemMessage,
-                // debug: true // Optionally enable debug logging
-            });
+        const generatedText = await generateSingleText({
+            prompt: body.prompt,
+            ...(body.options && {
+                options: body.options
+            }),
+            systemMessage: body.systemMessage,
+        });
 
-            // Structure matches AiGenerateTextResponseSchema
-            return c.json({
-                success: true,
-                data: { text: generatedText }
-            } satisfies z.infer<typeof AiGenerateTextResponseSchema>, 200);
-
-        } catch (error: any) {
-            console.error("[GenAI Route Error - /text]:", error);
-            // Throw a structured error for the global handler
-            throw new ApiError(500, `Failed to generate text: ${error.message}`, 'TEXT_GENERATION_FAILED');
-        }
+        return c.json({
+            success: true,
+            data: { text: generatedText }
+        } satisfies z.infer<typeof AiGenerateTextResponseSchema>, 200);
     })
-
-    // --- NEW: Structured Data Generation Handler ---
     .openapi(generateStructuredRoute, async (c) => {
         const body = c.req.valid('json');
         const { schemaKey, userInput, options } = body;
-        // 1. Find the configuration for the requested schemaKey
-        const config: StructuredDataSchemaConfig<z.ZodTypeAny> = structuredDataSchemas[schemaKey as keyof typeof structuredDataSchemas]
+
+        const config: StructuredDataSchemaConfig<z.ZodTypeAny> = structuredDataSchemas[schemaKey as keyof typeof structuredDataSchemas];
         if (!config) {
             throw new ApiError(400, `Invalid schemaKey provided: ${schemaKey}. Valid keys are: ${Object.keys(structuredDataSchemas).join(', ')}`, 'INVALID_SCHEMA_KEY');
         }
 
-        // 2. Prepare parameters for the AI service
         const finalPrompt = config?.promptTemplate?.replace('{userInput}', userInput);
-        const finalModel = options?.model ?? config?.modelSettings?.model ?? 'gpt-4o'; // Define default model logic
-        const finalOptions = { ...config.modelSettings, ...options, model: finalModel }; // Merge options, override wins
+        const finalModel = options?.model ?? config?.modelSettings?.model ?? 'gpt-4o';
+        const finalOptions = { ...config.modelSettings, ...options, model: finalModel };
         const finalSystemPrompt = config.systemPrompt;
 
-        try {
-            const result = await generateStructuredData({
-                prompt: finalPrompt ?? '',
-                schema: config.schema, // Pass the Zod schema from config
-                options: finalOptions,
-                systemMessage: finalSystemPrompt,
-            });
+        const result = await generateStructuredData({
+            prompt: finalPrompt ?? '',
+            schema: config.schema,
+            options: finalOptions,
+            systemMessage: finalSystemPrompt,
+        });
 
-            // 3. Return the generated object
-            // Structure matches AiGenerateStructuredResponseSchema
-            return c.json({
-                success: true,
-                data: { output: result.object } // Extract the 'object' part from the service response
-            } satisfies z.infer<typeof AiGenerateStructuredResponseSchema>, 200);
-
-        } catch (error: any) {
-            console.error(`[GenAI Route Error - /structured - ${schemaKey}]:`, error);
-            // More specific error reporting
-            const message = error.response?.data?.error?.message || error.message || String(error);
-            throw new ApiError(500, `Failed to generate structured data for '${config.name}': ${message}`, 'STRUCTURED_GENERATION_FAILED');
-        }
+        return c.json({
+            success: true,
+            data: { output: result.object }
+        } satisfies z.infer<typeof AiGenerateStructuredResponseSchema>, 200);
     })
     .openapi(getModelsRoute, async (c) => {
         const { provider } = c.req.valid('query');
 
-        try {
-            const keys: ProviderKey[] = await providerKeyService.listKeys();
-            const providerKeysConfig: ProviderKeysConfig = keys.reduce((acc, key) => {
-                acc[`${key.provider}Key`] = key.key;
-                return acc;
-            }, {} as any);
+        const keys: ProviderKey[] = await providerKeyService.listKeys();
+        const providerKeysConfig: ProviderKeysConfig = keys.reduce((acc, key) => {
+            acc[`${key.provider}Key`] = key.key;
+            return acc;
+        }, {} as any);
 
-            const modelFetcherService = new ModelFetcherService(providerKeysConfig);
-            const listOptions = { ollamaBaseUrl: OLLAMA_BASE_URL, lmstudioBaseUrl: LMSTUDIO_BASE_URL };
-            const models = await modelFetcherService.listModels(provider as APIProviders, listOptions);
+        const modelFetcherService = new ModelFetcherService(providerKeysConfig);
+        const listOptions = { ollamaBaseUrl: OLLAMA_BASE_URL, lmstudioBaseUrl: LMSTUDIO_BASE_URL };
+        
+        const models = await modelFetcherService.listModels(provider as APIProviders, listOptions);
 
-            // Create properly typed model data for response
-            const modelData = models.map(model => ({
-                id: model.id,
-                name: model.name,
-                provider, // Add the provider from the query parameter
-                // context_length: model.context_length
-            }));
+        const modelData = models.map(model => ({
+            id: model.id,
+            name: model.name,
+            provider, 
+        }));
 
-            return c.json({
-                success: true,
-                data: modelData
-            } satisfies z.infer<typeof ModelsListResponseSchema>, 200);
-        } catch (error: any) {
-            console.error(`[GET /models?provider=${provider}] Error:`, error);
-            const isApiKeyError = error.message?.includes('API key not found');
-
-            if (isApiKeyError) {
-                throw new ApiError(400, error.message || 'API key not found', 'MISSING_API_KEY');
-            } else {
-                throw new ApiError(500, error.message || 'Error fetching models', 'PROVIDER_ERROR');
-            }
-        }
+        return c.json({
+            success: true,
+            data: modelData
+        } satisfies z.infer<typeof ModelsListResponseSchema>, 200);
     })
     .openapi(postAiGenerateTextRoute, async (c) => {
         const {
@@ -370,33 +330,17 @@ export const genAiRoutes = new OpenAPIHono()
 
         console.log(`[Hono AI Generate] /ai/generate/text request: Provider=${options?.provider}, Model=${options?.model}`);
 
-        try {
-            // Combine model and other options
+        const generatedText = await generateSingleText({
+            prompt,
+            ...(options && {
+                options: options
+            }),
+            systemMessage,
+        });
 
-            // Call the unified provider's non-streaming text generation function
-            const generatedText = await generateSingleText({
-                prompt,
-                ...(options && {
-                    options: options
-                }),
-                systemMessage,
-                // messages: undefined, // Not passing history for this simple route
-            });
-
-            // Return the result in the defined JSON structure
-            const responsePayload: z.infer<typeof AiGenerateTextResponseSchema> = {
-                success: true,
-                data: { text: generatedText }
-            };
-            return c.json(responsePayload, 200);
-
-        } catch (error: any) {
-            console.error(`[Hono AI Generate] /ai/generate/text Error:`, error);
-            if (error instanceof ApiError) throw error;
-            if (error.message?.toLowerCase().includes('api key')) {
-                throw new ApiError(400, error.message, 'MISSING_API_KEY');
-            }
-            // Add more specific error handling if needed (e.g., model not found by provider)
-            throw new ApiError(500, error.message || 'Error generating AI text response');
-        }
-    })
+        const responsePayload: z.infer<typeof AiGenerateTextResponseSchema> = {
+            success: true,
+            data: { text: generatedText }
+        };
+        return c.json(responsePayload, 200);
+    });

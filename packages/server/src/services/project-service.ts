@@ -1,12 +1,13 @@
 import { resolvePath } from '@/utils/path-utils';
 import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@/utils/project-storage';
-import { syncProject } from "./file-services/file-sync-service";
 import { CreateProjectBody, Project, ProjectFile, ProjectFileSchema, ProjectSchema, UpdateProjectBody } from "shared/src/schemas/project.schemas";
 import path from 'path';
 import { z, ZodError } from "zod"
 import { LOW_MODEL_CONFIG } from 'shared';
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas';
 import { generateStructuredData } from './gen-ai-services';
+import { syncProject } from './file-services/file-sync-service-unified';
+import { ApiError } from 'shared';
 
 export async function createProject(data: CreateProjectBody): Promise<Project> {
     const projectId = projectStorage.generateId('proj');
@@ -28,7 +29,7 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
         const projects = await projectStorage.readProjects();
         if (projects[projectId]) {
             // Extremely unlikely with timestamp/random ID, but good practice
-            throw new Error(`Project ID conflict for ${projectId}`);
+            throw new ApiError(409, `Project ID conflict for ${projectId}`, 'PROJECT_ID_CONFLICT');
         }
         projects[projectId] = validatedProject;
         await projectStorage.writeProjects(projects);
@@ -38,11 +39,11 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
 
         return validatedProject;
     } catch (error) {
-        console.error(`[ProjectService] Error creating project ${data.name}:`, error);
+        if (error instanceof ApiError) throw error;
         if (error instanceof ZodError) {
-            throw new Error(`Validation failed creating project: ${error.message}`);
+            throw new ApiError(500, `Internal validation failed creating project: ${error.message}`, 'PROJECT_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
-        throw new Error(`Failed to create project ${data.name}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        throw new ApiError(500, `Failed to create project ${data.name}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_CREATION_FAILED');
     }
 }
 
@@ -52,9 +53,8 @@ export async function getProjectById(projectId: string): Promise<Project | null>
         // The read function already validates against ProjectSchema
         return projects[projectId] || null;
     } catch (error) {
-        console.error(`[ProjectService] Error getting project ${projectId}:`, error);
-        // Don't throw, return null as per original logic possibility
-        return null;
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(500, `Error getting project ${projectId}: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_GET_FAILED_STORAGE');
     }
 }
 
@@ -66,8 +66,8 @@ export async function listProjects(): Promise<Project[]> {
         projectList.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
         return projectList;
     } catch (error) {
-        console.error(`[ProjectService] Error listing projects:`, error);
-        throw new Error(`Failed to list projects. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(500, `Failed to list projects. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_LIST_FAILED');
     }
 }
 
@@ -77,7 +77,7 @@ export async function updateProject(projectId: string, data: UpdateProjectBody):
         const existingProject = projects[projectId];
 
         if (!existingProject) {
-            return null; // Project not found
+            return null; // Project not found, handled by route which will throw 404 if this returns null
         }
 
         // Create updated project data, merging fields
@@ -97,11 +97,11 @@ export async function updateProject(projectId: string, data: UpdateProjectBody):
 
         return validatedProject;
     } catch (error) {
-        console.error(`[ProjectService] Error updating project ${projectId}:`, error);
+        if (error instanceof ApiError) throw error;
         if (error instanceof ZodError) {
-            throw new Error(`Validation failed updating project ${projectId}: ${error.message}`);
+            throw new ApiError(500, `Internal validation failed updating project ${projectId}: ${error.message}`, 'PROJECT_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
-        throw new Error(`Failed to update project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        throw new ApiError(500, `Failed to update project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_UPDATE_FAILED');
     }
 }
 
@@ -109,7 +109,7 @@ export async function deleteProject(projectId: string): Promise<boolean> {
     try {
         const projects = await projectStorage.readProjects();
         if (!projects[projectId]) {
-            return false; // Project didn't exist
+            throw new ApiError(404, `Project not found with ID ${projectId} for deletion.`, 'PROJECT_NOT_FOUND');
         }
 
         delete projects[projectId];
@@ -120,9 +120,8 @@ export async function deleteProject(projectId: string): Promise<boolean> {
 
         return true;
     } catch (error) {
-        console.error(`[ProjectService] Error deleting project ${projectId}:`, error);
-        // Return false on failure to maintain boolean signature
-        return false;
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(500, `Failed to delete project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_DELETE_FAILED');
     }
 }
 
@@ -139,10 +138,8 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[] 
         // readProjectFiles validates each file against ProjectFileSchema
         return Object.values(files);
     } catch (error) {
-        console.error(`[ProjectService] Error getting files for project ${projectId}:`, error);
-        // Return null or throw depending on desired behavior on error
-        // Let's throw, as failure here is likely more critical than project get/list
-        throw new Error(`Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(500, `Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_FILES_GET_FAILED');
     }
 }
 
@@ -157,7 +154,7 @@ export async function updateFileContent(
         const existingFile = files[fileId];
 
         if (!existingFile) {
-            throw new Error(`[ProjectService] File not found with ID ${fileId} in project ${projectId} during content update.`);
+            throw new ApiError(404, `File not found with ID ${fileId} in project ${projectId} during content update.`, 'FILE_NOT_FOUND');
         }
 
         const newUpdatedAt = options?.updatedAt?.toISOString() ?? new Date().toISOString();
@@ -179,18 +176,18 @@ export async function updateFileContent(
 
         return validatedFile;
     } catch (error) {
-        console.error(`[ProjectService] Error updating file content for ${fileId} in project ${projectId}:`, error);
+        if (error instanceof ApiError) throw error;
         if (error instanceof ZodError) {
-            throw new Error(`Validation failed updating file content for ${fileId}: ${error.message}`);
+            throw new ApiError(500, `Internal validation failed for file content ${fileId}: ${error.message}`, 'FILE_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
-        throw new Error(`Failed to update file content for ${fileId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        throw new ApiError(500, `Failed to update file content for ${fileId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'FILE_CONTENT_UPDATE_FAILED');
     }
 }
 
 export async function resummarizeAllFiles(projectId: string): Promise<void> {
     const project = await getProjectById(projectId);
     if (!project) {
-        throw new Error(`[ProjectService] Project not found with ID ${projectId} for resummarize all.`);
+        throw new ApiError(404, `Project not found with ID ${projectId} for resummarize all.`, 'PROJECT_NOT_FOUND');
     }
 
     // Sync files to ensure projects files are up to date before creating the summaries
@@ -220,22 +217,25 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
         console.log(`[ProjectService] Completed resummarizeAllFiles and saved updates for project ${projectId}`);
 
     } catch (error) {
-        console.error(`[ProjectService] Error during file summarization or saving for project ${projectId} in resummarizeAllFiles:`, error);
+        if (error instanceof ApiError) throw error;
         // Decide if partial success is acceptable or if the whole operation should fail
-        throw new Error(`Failed during resummarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        throw new ApiError(500, `Failed during resummarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'RESUMMARIZE_ALL_FAILED');
     }
 }
 
-
-
-export async function removeSummariesFromFiles(projectId: string, fileIds: string[]) {
+export async function removeSummariesFromFiles(projectId: string, fileIds: string[]): Promise<{ removedCount: number; message: string }> {
     if (fileIds.length === 0) {
-        return { success: true, removedCount: 0, message: "No file IDs provided" };
+        return { removedCount: 0, message: "No file IDs provided" };
     }
     try {
+        const project = await getProjectById(projectId);
+        if (!project) {
+            throw new ApiError(404, `Project not found with ID ${projectId} for removing summaries.`, 'PROJECT_NOT_FOUND');
+        }
         const files = await projectStorage.readProjectFiles(projectId);
         let removedCount = 0;
         const now = new Date().toISOString();
+        let changesMade = false;
 
         for (const fileId of fileIds) {
             if (files[fileId]) {
@@ -251,37 +251,31 @@ export async function removeSummariesFromFiles(projectId: string, fileIds: strin
                     // Validate the change
                     files[fileId] = ProjectFileSchema.parse(updatedFileData); // Update in map after validation
                     removedCount++;
+                    changesMade = true;
                 }
             } else {
                 console.warn(`[ProjectService] File ID ${fileId} not found in project ${projectId} for remove summary.`);
             }
         }
 
-        if (removedCount > 0) {
+        if (changesMade) {
             // Validate the whole map before writing only if changes were made
             const validatedMap = ProjectFilesStorageSchema.parse(files);
             await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
 
         return {
-            success: true,
             removedCount: removedCount,
             message: `Removed summaries from ${removedCount} files.`,
         };
     } catch (error) {
-        console.error(`[ProjectService] Error removing summaries for project ${projectId}:`, error);
+        if (error instanceof ApiError) throw error;
         if (error instanceof ZodError) {
-            throw new Error(`Validation failed removing summaries for project ${projectId}: ${error.message}`);
+            throw new ApiError(500, `Internal validation failed removing summaries for project ${projectId}: ${error.message}`, 'PROJECT_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
-        // Return success: false on general errors
-        return {
-            success: false,
-            removedCount: 0,
-            message: `Error removing summaries: ${error instanceof Error ? error.message : String(error)}`
-        };
+        throw new ApiError(500, `Error removing summaries: ${error instanceof Error ? error.message : String(error)}`, 'REMOVE_SUMMARIES_FAILED');
     }
 }
-
 
 export async function createProjectFileRecord(
     projectId: string,
@@ -290,7 +284,7 @@ export async function createProjectFileRecord(
 ): Promise<ProjectFile> {
     const project = await getProjectById(projectId);
     if (!project) {
-        throw new Error(`[ProjectService] Cannot create file record: Project not found with ID ${projectId}`);
+        throw new ApiError(404, `Project not found with ID ${projectId}`, 'PROJECT_NOT_FOUND');
     }
 
     // Resolve paths similar to original logic
@@ -328,7 +322,7 @@ export async function createProjectFileRecord(
 
         const files = await projectStorage.readProjectFiles(projectId);
         if (files[fileId]) {
-            throw new Error(`File ID conflict for ${fileId} in project ${projectId}`);
+            throw new ApiError(409, `File ID conflict for ${fileId} in project ${projectId}`, 'FILE_ID_CONFLICT');
         }
         files[fileId] = validatedFile;
 
@@ -339,14 +333,13 @@ export async function createProjectFileRecord(
         return validatedFile;
 
     } catch (error) {
-        console.error(`[ProjectService] Error creating file record for ${filePath} in project ${projectId}:`, error);
+        if (error instanceof ApiError) throw error;
         if (error instanceof ZodError) {
-            throw new Error(`Validation failed creating file record for ${filePath}: ${error.message}`);
+            throw new ApiError(500, `Internal validation failed creating file record for ${filePath}: ${error.message}`, 'FILE_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
-        throw new Error(`Failed to create file record for ${filePath}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        throw new ApiError(500, `Failed to create file record for ${filePath}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_FILE_CREATE_FAILED');
     }
 }
-
 
 // --- Bulk Operations ---
 // Note: These lose the transactional safety of the database. Errors in the middle
@@ -365,19 +358,23 @@ export interface FileSyncData {
 /** Creates multiple file records in the project's JSON file. */
 export async function bulkCreateProjectFiles(projectId: string, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
     if (filesToCreate.length === 0) return [];
+    const project = await getProjectById(projectId);
+    if (!project) {
+        throw new ApiError(404, `Project not found with ID ${projectId} for bulk file creation.`, 'PROJECT_NOT_FOUND');
+    }
 
     const createdFiles: ProjectFile[] = [];
     const now = new Date().toISOString();
-    let files: ProjectFilesStorage | null = null; // Read only once
+    let filesMap: ProjectFilesStorage;
 
     try {
-        files = await projectStorage.readProjectFiles(projectId);
+        filesMap = await projectStorage.readProjectFiles(projectId);
 
         for (const fileData of filesToCreate) {
             const fileId = projectStorage.generateId('file');
 
             // Basic check for duplicates based on path within this batch
-            const existingInMap = Object.values(files).find(f => f.path === fileData.path);
+            const existingInMap = Object.values(filesMap).find(f => f.path === fileData.path);
             if (existingInMap) {
                 console.warn(`[ProjectService] Skipping duplicate path in bulk create: ${fileData.path} in project ${projectId}`);
                 continue; // Skip this file
@@ -402,14 +399,14 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
             try {
                 // Validate *each* new file individually
                 const validatedFile = ProjectFileSchema.parse(newFileData);
-                if (files[fileId]) {
+                if (filesMap[fileId]) {
                     console.error(`[ProjectService] File ID conflict during bulk create: ${fileId}. Skipping.`);
                     continue;
                 }
-                files[fileId] = validatedFile;
+                filesMap[fileId] = validatedFile;
                 createdFiles.push(validatedFile);
             } catch (validationError) {
-                console.error(`[ProjectService] Validation failed for file ${fileData.path} during bulk create:`, validationError);
+                console.error(`[ProjectService] Validation failed for file ${fileData.path} during bulk create:`, validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError);
                 // Decide: skip this file or abort the whole bulk operation?
                 // Let's skip this file for now.
                 continue;
@@ -418,30 +415,36 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
 
         if (createdFiles.length > 0) {
             // Validate the final map before writing
-            const validatedMap = ProjectFilesStorageSchema.parse(files);
+            const validatedMap = ProjectFilesStorageSchema.parse(filesMap);
             await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
 
         return createdFiles;
 
     } catch (error) {
-        console.error(`[ProjectService] Error during bulk file creation for project ${projectId}:`, error);
-        // Rethrow the error, indicating partial success might have occurred
-        throw new Error(`Bulk file creation failed for project ${projectId}. Some files might be created. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof ApiError) throw error;
+        if (error instanceof ZodError) { // From ProjectFilesStorageSchema.parse
+            throw new ApiError(500, `Internal validation of project files map failed during bulk create for project ${projectId}: ${error.message}`, 'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
+        }
+        throw new ApiError(500, `Bulk file creation failed for project ${projectId}. Some files might be created. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_BULK_CREATE_FAILED');
     }
 }
 
 /** Updates multiple existing file records based on their IDs. */
 export async function bulkUpdateProjectFiles(projectId: string, updates: { fileId: string; data: FileSyncData }[]): Promise<ProjectFile[]> {
     if (updates.length === 0) return [];
+    const project = await getProjectById(projectId);
+    if (!project) {
+        throw new ApiError(404, `Project not found with ID ${projectId} for bulk file update.`, 'PROJECT_NOT_FOUND');
+    }
 
     const updatedFilesResult: ProjectFile[] = [];
     const now = new Date().toISOString();
-    let files: ProjectFilesStorage | null = null;
+    let files: ProjectFilesStorage;
+    let changesMade = false;
 
     try {
         files = await projectStorage.readProjectFiles(projectId);
-        let changesMade = false;
 
         for (const { fileId, data } of updates) {
             const existingFile = files[fileId];
@@ -470,7 +473,7 @@ export async function bulkUpdateProjectFiles(projectId: string, updates: { fileI
                 updatedFilesResult.push(validatedFile);
                 changesMade = true;
             } catch (validationError) {
-                console.error(`[ProjectService] Validation failed for file ${fileId} (${existingFile.path}) during bulk update:`, validationError);
+                console.error(`[ProjectService] Validation failed for file ${fileId} (${existingFile.path}) during bulk update:`, validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError);
                 // Skip this update
                 continue;
             }
@@ -485,19 +488,25 @@ export async function bulkUpdateProjectFiles(projectId: string, updates: { fileI
         return updatedFilesResult;
 
     } catch (error) {
-        console.error(`[ProjectService] Error during bulk file update for project ${projectId}:`, error);
-        throw new Error(`Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof ApiError) throw error;
+        if (error instanceof ZodError) { // From ProjectFilesStorageSchema.parse
+            throw new ApiError(500, `Internal validation of project files map failed during bulk update for project ${projectId}: ${error.message}`, 'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
+        }
+        throw new ApiError(500, `Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_BULK_UPDATE_FAILED');
     }
 }
 
-
 /** Deletes multiple files by their IDs for a specific project. */
-export async function bulkDeleteProjectFiles(projectId: string, fileIdsToDelete: string[]): Promise<{ success: boolean, deletedCount: number }> {
+export async function bulkDeleteProjectFiles(projectId: string, fileIdsToDelete: string[]): Promise<{ deletedCount: number }> {
     if (fileIdsToDelete.length === 0) {
-        return { success: true, deletedCount: 0 };
+        return { deletedCount: 0 };
+    }
+    const project = await getProjectById(projectId);
+    if (!project) {
+        throw new ApiError(404, `Project not found with ID ${projectId} for bulk file deletion.`, 'PROJECT_NOT_FOUND');
     }
 
-    let files: ProjectFilesStorage | null = null;
+    let files: ProjectFilesStorage;
     let deletedCount = 0;
     let changesMade = false;
 
@@ -521,21 +530,27 @@ export async function bulkDeleteProjectFiles(projectId: string, fileIdsToDelete:
             await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
 
-        return { success: true, deletedCount };
+        return { deletedCount };
 
     } catch (error) {
-        console.error(`[ProjectService] Error during bulk file deletion for project ${projectId}:`, error);
-        // Return failure but report count based on attempted deletes before error if possible
-        return { success: false, deletedCount };
+        if (error instanceof ApiError) throw error;
+        if (error instanceof ZodError) { // From ProjectFilesStorageSchema.parse
+            throw new ApiError(500, `Internal validation of project files map failed during bulk delete for project ${projectId}: ${error.message}`, 'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
+        }
+        throw new ApiError(500, `Bulk file deletion failed for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_BULK_DELETE_FAILED');
     }
 }
-
 
 /** Retrieves specific files by ID for a project */
 export async function getProjectFilesByIds(projectId: string, fileIds: string[]): Promise<ProjectFile[]> {
     if (!fileIds || fileIds.length === 0) {
         return [];
     }
+    const project = await getProjectById(projectId); // Ensures project exists
+    if (!project) {
+        throw new ApiError(404, `Project not found with ID ${projectId} when fetching files by IDs.`, 'PROJECT_NOT_FOUND');
+    }
+
     const uniqueFileIds = [...new Set(fileIds)]; // Avoid duplicate lookups
 
     try {
@@ -550,14 +565,10 @@ export async function getProjectFilesByIds(projectId: string, fileIds: string[])
         // Data is already validated on read by projectStorage.readProjectFiles
         return resultFiles;
     } catch (error) {
-        console.error(`[ProjectService] Error fetching project files by IDs for project ${projectId}:`, error);
-        throw new Error(`Failed to fetch files by IDs for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(500, `Failed to fetch files by IDs for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_FILES_GET_BY_IDS_FAILED');
     }
 }
-
-
-
-
 
 /**
  * Exposed for unit testing. Summarizes a single file if it meets conditions
@@ -570,16 +581,16 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
     if (!fileContent.trim()) {
         console.warn(`[SummarizeSingleFile] File ${file.path} is empty, skipping summarization.`);
         // No DB update needed here, just return
-        throw new Error(`File ${file.path} is empty, skipping summarization.`);
+        throw new ApiError(400, `File ${file.path} is empty, skipping summarization.`, 'FILE_EMPTY_FOR_SUMMARY', { projectId: file.projectId, fileId: file.id });
     }
 
     // --- AI Generation Logic (remains mostly the same) ---
     const systemPrompt = `
-  ## You are a coding assistant specializing in concise code summaries.
-  1. Provide a short overview of what the file does.
-  2. Outline main exports (functions/classes).
-  3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
-  `;
+  ## You are a coding assistant specializing in concise code summaries.
+  1. Provide a short overview of what the file does.
+  2. Outline main exports (functions/classes).
+  3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
+  `;
 
     const cfg = LOW_MODEL_CONFIG;
     const provider = cfg.provider as APIProviders || 'openai';
@@ -587,7 +598,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
 
     if (!modelId) {
         console.error(`[SummarizeSingleFile] Model not configured for summarize-file task for file ${file.path}.`);
-        throw new Error(`Model not configured for summarize-file task for file ${file.path}.`);
+        throw new ApiError(500, `AI Model not configured for summarize-file task (file ${file.path}).`, 'AI_MODEL_NOT_CONFIGURED', { projectId: file.projectId, fileId: file.id });
     }
 
     try {
@@ -608,22 +619,19 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
             summary: trimmedSummary,
         });
 
-
         console.log(`[SummarizeSingleFile] Successfully summarized and updated file: ${file.path} in project ${file.projectId}`);
         return updatedFile;
     } catch (error) {
-        console.error(`[SummarizeSingleFile] Error summarizing file ${file.path} (project ${file.projectId}) using ${provider}/${modelId}:`, error);
-        // Optionally mark as failed in storage?
-        // await updateFileSummaryStatus(file.projectId, file.id, null, 'failed_error');
-        // handle error quietly or rethrow/log based on desired behavior
-        throw new Error(`Failed to summarize file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof ApiError) throw error;
+        // Error from generateStructuredData or projectStorage.updateProjectFile
+        throw new ApiError(500, `Failed to summarize file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'FILE_SUMMARIZE_FAILED', { originalError: error, projectId: file.projectId, fileId: file.id });
     }
 }
 
 /**
- * Summarize multiple files, respecting summarization rules.
- * Processes files sequentially to avoid storage write conflicts.
- */
+* Summarize multiple files, respecting summarization rules.
+* Processes files sequentially to avoid storage write conflicts.
+*/
 export async function summarizeFiles(
     projectId: string,
     fileIdsToSummarize: string[],
@@ -653,5 +661,3 @@ export async function summarizeFiles(
     console.log(`[BatchSummarize] File summarization batch complete for project ${projectId}. Included: ${totalFiles}, Skipped: ${totalFiles - updatedFiles.length}`);
     return { included: totalFiles, skipped: totalFiles - updatedFiles.length, updatedFiles };
 }
-
-

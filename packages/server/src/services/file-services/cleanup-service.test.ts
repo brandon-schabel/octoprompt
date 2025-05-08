@@ -1,11 +1,10 @@
 import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
-import { createCleanupService } from "@/services/file-services/cleanup-service";
+import { createCleanupService } from "./file-sync-service-unified";
+import { Project } from "shared/src/schemas/project.schemas";
 // No direct DB usage here, so no raw queries needed
 // This file only tests the cleanup service logic/mocks
 
-import { schema } from "shared";
 
-type Project = schema.Project;
 
 const listProjectsMock = mock(async () => [
     { id: "p1", path: "/some/fake/path" },
@@ -19,7 +18,7 @@ spyOn(
 
 const syncProjectMock = mock(async () => { });
 spyOn(
-    await import("@/services/file-services/file-sync-service"),
+    await import("@/services/file-services/file-sync-service-unified"),
     "syncProject"
 ).mockImplementation(syncProjectMock);
 

@@ -5,9 +5,8 @@ import { app } from "./src/app";
 import { initKvStore } from "@/services/kv-service";
 
 import { listProjects } from "@/services/project-service";
-import { watchersManager } from "@/services/shared-services";
-import { createCleanupService } from "@/services/file-services/cleanup-service";
 import { isDevEnv, SERVER_PORT } from "@/constants/server-config";
+import { watchersManager, createCleanupService } from "@/services/file-services/file-sync-service-unified";
 
 
 // Use the imported watchersManager, remove the local creation
@@ -134,7 +133,7 @@ if (import.meta.main) {
     const server = await instantiateServer();
     function handleShutdown() {
       console.log("Received kill signal. Shutting down gracefully...");
-      watchersManager.stopAll?.();
+      watchersManager.stopAllWatchers?.();
       server.stop();
       process.exit(0);
     }
