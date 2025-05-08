@@ -6,9 +6,10 @@ import {
     ProviderKeyIdParamsSchema,
     ProviderKeyResponseSchema,
     ProviderKeyListResponseSchema,
+    ProviderKey, // Import the type if needed for casting, though service now returns it directly
 } from "shared/src/schemas/provider-key.schemas";
 import { providerKeyService } from "@/services/model-providers/provider-key-service";
-import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas';
+// import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas'; // Redundant if imported above
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas';
 
 const createProviderKeyRoute = createRoute({
@@ -146,105 +147,39 @@ const deleteProviderKeyRoute = createRoute({
 // --- Hono App Instance ---
 export const providerKeyRoutes = new OpenAPIHono()
     .openapi(createProviderKeyRoute, async (c) => {
-        const body = c.req.valid('json'); // <--- Get validated data
-        try {
-            return c.json({ success: true, data: await providerKeyService.createKey(body) } satisfies z.infer<typeof ProviderKeyResponseSchema>, 201);
-        } catch (error) {
-            console.error("Error creating key:", error);
-            // Let global handler manage, or add specific checks (e.g., duplicate provider?)
-            throw error;
-        }
+        const body = c.req.valid('json');
+        // No try-catch: providerKeyService.createKey now throws ApiError on failure.
+        const newKey = await providerKeyService.createKey(body);
+        return c.json({ success: true, data: newKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 201);
     })
 
     .openapi(listProviderKeysRoute, async (c) => {
-        try {
-            return c.json({ success: true, data: await providerKeyService.listKeys() } satisfies z.infer<typeof ProviderKeyListResponseSchema>, 200);
-        } catch (error) {
-            console.error("Error listing keys:", error);
-            throw error; // Let global handler manage
-        }
+        // No try-catch: providerKeyService.listKeys handles its errors or returns data.
+        // If individual row parsing fails, it's logged by the service and excluded.
+        const keys = await providerKeyService.listKeys();
+        return c.json({ success: true, data: keys } satisfies z.infer<typeof ProviderKeyListResponseSchema>, 200);
     })
 
     .openapi(getProviderKeyByIdRoute, async (c) => {
         const { keyId } = c.req.valid('param');
-        try {
-            const k = await providerKeyService.getKeyById(keyId);
-            // Check for null *before* mapping
-            if (k === null) {
-                throw new ApiError(404, "Key not found", "KEY_NOT_FOUND");
-            }
-            // 'k' is guaranteed non-null here, assert it for TS
-            return c.json({ success: true, data: k as ProviderKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
-        } catch (error: any) {
-            console.error(`Error getting key ${keyId}:`, error);
-            // Catch the specific ApiError for 404
-            if (error instanceof ApiError && error.status === 404) {
-                return c.json({
-                    success: false, error: {
-                        message: error.message,
-                        code: error.code,
-                        details: error.details ?? error.message
-                    }
-                } satisfies z.infer<typeof ApiErrorResponseSchema>, 404);
-            }
-            // Handle other errors (could be validation 422 or internal 500)
-            return c.json({
-                success: false, error: {
-                    message: "Internal Server Error",
-                    code: "INTERNAL_ERROR",
-                    details: {}
-                }
-            } satisfies z.infer<typeof ApiErrorResponseSchema>, 500);
-        }
+        // No try-catch: providerKeyService.getKeyById now throws ApiError if not found or parse fails.
+        const key = await providerKeyService.getKeyById(keyId);
+        return c.json({ success: true, data: key } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
     })
 
     .openapi(updateProviderKeyRoute, async (c) => {
         const { keyId } = c.req.valid('param');
         const body = c.req.valid('json');
-        try {
-            const updated = await providerKeyService.updateKey(keyId, body);
-            // Check for null *before* mapping
-            if (updated === null) {
-                throw new ApiError(404, "Key not found", "KEY_NOT_FOUND");
-            }
-            // 'updated' is guaranteed non-null here, assert it for TS
-            return c.json({ success: true, data: updated as ProviderKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
-        } catch (error: any) {
-            console.error(`Error updating key ${keyId}:`, error);
-            // Catch the specific ApiError for 404
-            if (error instanceof ApiError && error.status === 404) {
-                return c.json({
-                    success: false, error: {
-                        message: error.message,
-                        code: error.code,
-                        details: error.details ?? error.message
-                    }
-                } satisfies z.infer<typeof ApiErrorResponseSchema>, 404);
-            }
-            // Handle other errors (could be validation 422 or internal 500)
-            return c.json({
-                success: false, error: {
-                    message: "Internal Server Error",
-                    code: "INTERNAL_ERROR",
-                    details: {}
-                }
-            } satisfies z.infer<typeof ApiErrorResponseSchema>, 500);
-        }
+        // No try-catch: providerKeyService.updateKey throws ApiError if not found or on failure.
+        const updatedKey = await providerKeyService.updateKey(keyId, body);
+        return c.json({ success: true, data: updatedKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
     })
 
     .openapi(deleteProviderKeyRoute, async (c) => {
         const { keyId } = c.req.valid('param');
-        try {
-            await providerKeyService.deleteKey(keyId);
-            // Service should handle not found appropriately (e.g., throw)
-            return c.json({ success: true, message: "Key deleted successfully." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
-        } catch (error: any) {
-            console.error(`Error deleting key ${keyId}:`, error);
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-                throw new ApiError(404, "Key not found", "KEY_NOT_FOUND");
-            }
-            throw error;
-        }
+        // No try-catch: providerKeyService.deleteKey throws ApiError if not found.
+        await providerKeyService.deleteKey(keyId);
+        return c.json({ success: true, message: "Key deleted successfully." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     });
 
 // Export the type for the frontend client

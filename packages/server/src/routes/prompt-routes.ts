@@ -275,32 +275,13 @@ export const promptRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
     // Create new prompt
     .openapi(createPromptRoute, async (c) => { // <--- Use .openapi() and route name
         const body = c.req.valid('json'); // <--- Get validated data
-
-        try {
-            // 1) Create the prompt
-            const createdPrompt = await createPrompt({
-                name: body.name,
-                content: body.content
-            });
-
-            // 2) If projectId was given, link it to the project:
-            if (body.projectId) {
-                try {
-                    await addPromptToProject(createdPrompt.id, body.projectId);
-                } catch (linkError: any) {
-                    // If linking fails (e.g., project not found), we might still consider prompt creation successful,
-                    // but log the error or potentially roll back / delete the prompt if atomicity is crucial.
-                    console.error(`Failed to link prompt ${createdPrompt.id} to project ${body.projectId}: ${linkError.message}`);
-                    // Depending on requirements, you might throw an error here
-                    // throw new ApiError(404, `Referenced project with ID ${body.projectId} not found`, 'PROJECT_NOT_FOUND');
-                }
-            }
-            return c.json({ success: true, data: createdPrompt } satisfies z.infer<typeof PromptResponseSchema>, 201);
-        } catch (error: any) {
-            console.error("Error creating prompt:", error);
-            // Handle specific errors if needed, otherwise let global handler manage
-            throw error; // Re-throw for global handler
-        }
+        // Service will throw ApiError if project (referenced by body.projectId) or prompt creation fails.
+        const createdPrompt = await createPrompt({
+            name: body.name,
+            content: body.content,
+            projectId: body.projectId // Pass projectId directly to service
+        });
+        return c.json({ success: true, data: createdPrompt } satisfies z.infer<typeof PromptResponseSchema>, 201);
     })
 
     // List all prompts
@@ -312,57 +293,35 @@ export const promptRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
     // List prompts for a project
     .openapi(listProjectPromptsRoute, async (c) => {
         const { projectId } = c.req.valid('param');
-        try {
-            const projectPrompts = await listPromptsByProject(projectId);
-            return c.json({ success: true, data: projectPrompts } satisfies z.infer<typeof PromptListResponseSchema>, 200);
-        } catch (error: any) {
-            // Handle potential "project not found" errors from the service
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-                throw new ApiError(404, `Project with ID ${projectId} not found`, 'PROJECT_NOT_FOUND');
-            }
-            throw error; // Re-throw for global handler
-        }
+        // listPromptsByProject can return empty array if project exists but has no prompts.
+        // If project itself doesn't exist, this should ideally be checked before, 
+        // or the service should throw if it's meant to validate project existence.
+        // For now, assuming project existence is handled or service allows it.
+        const projectPrompts = await listPromptsByProject(projectId);
+        return c.json({ success: true, data: projectPrompts } satisfies z.infer<typeof PromptListResponseSchema>, 200);
     })
 
     // Add prompt to project
     .openapi(addPromptToProjectRoute, async (c) => {
         const { promptId, projectId } = c.req.valid('param');
-        try {
-            await addPromptToProject(promptId, projectId);
-            return c.json({ success: true, message: "Prompt linked to project." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
-        } catch (error: any) {
-            // Handle potential "not found" errors
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-                // Could be either prompt or project
-                throw new ApiError(404, `Prompt or Project not found Prompt ID: `, 'NOT_FOUND');
-            }
-            throw error;
-        }
+        // Service now throws ApiError if prompt or project not found, or linking fails.
+        await addPromptToProject(promptId, projectId);
+        return c.json({ success: true, message: "Prompt linked to project." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     })
 
     // Remove prompt from project
     .openapi(removePromptFromProjectRoute, async (c) => {
         const { promptId, projectId } = c.req.valid('param');
-        try {
-            await removePromptFromProject(promptId, projectId);
-            return c.json({ success: true, message: "Prompt unlinked from project." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
-        } catch (error: any) {
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-                // Could be either prompt or project or the link itself
-                throw new ApiError(404, `Prompt or Project not found, or link does not exist`, 'NOT_FOUND');
-            }
-            throw error;
-        }
+        // Service now throws ApiError if prompt/project not found or link doesn't exist.
+        await removePromptFromProject(promptId, projectId);
+        return c.json({ success: true, message: "Prompt unlinked from project." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     })
 
     // Get prompt by ID
     .openapi(getPromptByIdRoute, async (c) => {
         const { promptId } = c.req.valid('param');
+        // getPromptById service now throws ApiError if not found.
         const prompt = await getPromptById(promptId);
-        if (!prompt) {
-            throw new ApiError(404, "Prompt not found", "PROMPT_NOT_FOUND");
-        }
-        // TODO: Decide if we need to fetch associated project ID here, or if it's okay to omit/be null
         return c.json({ success: true, data: prompt } satisfies z.infer<typeof PromptResponseSchema>, 200);
     })
 
@@ -370,48 +329,24 @@ export const promptRoutes = new OpenAPIHono() // <--- Use OpenAPIHono
     .openapi(updatePromptRoute, async (c) => {
         const { promptId } = c.req.valid('param');
         const body = c.req.valid('json');
-        try {
-            const updatedPrompt = await updatePrompt(promptId, body);
-            // Ensure updatedPrompt is not null before calling mapPromptToResponse
-            if (!updatedPrompt) {
-                throw new ApiError(404, `Prompt with ID ${promptId} not found`, 'PROMPT_NOT_FOUND');
-            }
-            return c.json({ success: true, data: updatedPrompt } satisfies z.infer<typeof PromptResponseSchema>, 200);
-        } catch (error: any) {
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-                throw new ApiError(404, `Prompt with ID ${promptId} not found`, 'PROMPT_NOT_FOUND');
-            }
-            throw error;
-        }
+        // updatePrompt service now throws ApiError if not found or update fails.
+        const updatedPrompt = await updatePrompt(promptId, body);
+        return c.json({ success: true, data: updatedPrompt } satisfies z.infer<typeof PromptResponseSchema>, 200);
     })
 
     // Delete a prompt
     .openapi(deletePromptRoute, async (c) => {
         const { promptId } = c.req.valid('param');
-        try {
-            await deletePrompt(promptId);
-            // deletePrompt service should handle not found (e.g., return false or throw)
-            return c.json({ success: true, message: "Prompt deleted successfully." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
-        } catch (error: any) {
-            if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-                throw new ApiError(404, `Prompt with ID ${promptId} not found`, 'PROMPT_NOT_FOUND');
-            }
-            throw error;
-        }
+        // deletePrompt service now throws ApiError if not found.
+        await deletePrompt(promptId);
+        return c.json({ success: true, message: "Prompt deleted successfully." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     })
     .openapi(optimizePromptRoute, async (c) => { // <--- Use .openapi()
         const { userContext } = c.req.valid('json'); // <--- Get validated data
-        try {
-            const optimized = await optimizePrompt(userContext);
-            // Structure the response according to OptimizePromptResponseSchema
-            const responseData = { optimizedPrompt: optimized };
-            return c.json({ success: true, data: responseData } satisfies z.infer<typeof OptimizePromptResponseSchema>, 200);
-        } catch (error) {
-            console.error('Prompt optimize route error:', error);
-            // Throw a structured ApiError for the global handler
-            const message = error instanceof Error ? error.message : String(error);
-            throw new ApiError(500, `Failed to optimize prompt: ${message}`, 'PROMPT_OPTIMIZE_ERROR');
-        }
+        // optimizePrompt service now throws ApiError on failure.
+        const optimized = await optimizePrompt(userContext);
+        const responseData = { optimizedPrompt: optimized };
+        return c.json({ success: true, data: responseData } satisfies z.infer<typeof OptimizePromptResponseSchema>, 200);
     });
 
 export type PromptRouteTypes = typeof promptRoutes;

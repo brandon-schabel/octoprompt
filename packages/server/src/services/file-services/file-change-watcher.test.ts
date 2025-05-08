@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from "bun:test";
-import { isIgnored, inferChangeType } from "@/services/file-services/file-change-watcher";
+import { isIgnored, inferChangeType } from "./file-sync-service-unified";
 
 describe("file-change-watcher", () => {
     beforeEach(() => {
