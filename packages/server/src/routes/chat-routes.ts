@@ -323,260 +323,129 @@ const deleteChatRoute = createRoute({
         },
     },
 });
-
 export const chatRoutes = new OpenAPIHono()
-    // GET /chats
     .openapi(getAllChatsRoute, async (c) => {
         const userChats = await chatService.getAllChats();
-        const responseData = userChats.map(chat => ({
-            ...chat,
-            createdAt: chat.createdAt,
-            updatedAt: chat.updatedAt,
-        }));
-
+        // Assuming chatService.getAllChats now returns Chat[] with correct date strings
+        // or mapDbRowToChat correctly formats them.
         return c.json({
             success: true,
-            data: responseData,
+            data: userChats, // No need to remap if service formats correctly
         } satisfies z.infer<typeof ChatListResponseSchema>, 200);
     })
-
-    // POST /chats
     .openapi(createChatRoute, async (c) => {
         const body = c.req.valid('json');
-
-        if (body.copyExisting && body.currentChatId) {
-            // Check if the chat exists by trying to get messages
-            try {
-                await chatService.getChatMessages(body.currentChatId);
-            } catch (error) {
-                throw new ApiError(404, `Referenced chat with ID ${body.currentChatId} not found`, 'REFERENCED_CHAT_NOT_FOUND');
-            }
-        }
-
         const chat = await chatService.createChat(body.title, {
             copyExisting: body.copyExisting,
             currentChatId: body.currentChatId
         });
-
         return c.json({
             success: true,
-            data: {
-                ...chat,
-                createdAt: chat.createdAt,
-                updatedAt: chat.updatedAt
-            }
+            data: chat
         } satisfies z.infer<typeof ChatResponseSchema>, 201);
     })
-
-    // GET /chats/:chatId/messages
     .openapi(getChatMessagesRoute, async (c) => {
         const { chatId } = c.req.valid('param');
+        const messages = await chatService.getChatMessages(chatId);
+        return c.json({
+            success: true,
 
-        try {
-            const messages = await chatService.getChatMessages(chatId);
-            return c.json({
-                success: true,
-                data: messages.map(msg => ({
-                    ...msg,
-                    createdAt: msg.createdAt,
-                    role: msg.role as z.infer<typeof MessageRoleEnum>,
-                }))
-            } satisfies z.infer<typeof MessageListResponseSchema>, 200);
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('not found')) {
-                throw new ApiError(404, `Chat with ID ${chatId} not found`, 'CHAT_NOT_FOUND');
-            }
-            throw error;
-        }
+            data: messages.map(msg => ({
+                ...msg,
+                role: msg.role as z.infer<typeof MessageRoleEnum>,
+            }))
+        } satisfies z.infer<typeof MessageListResponseSchema>, 200);
     })
-
-    // GET /models
-
-
-
-    // POST /ai/chat
-    // Get All Provider Keys
-    // Get Provider Keys Config
-    // Right now it is getting the open router instance, however I need to swap this out for the 
-    // unified provider service,
-    // no matter what model or provider I'm using, the service should be updated
-    // to use the aisdk for streaming and then just like i do in the route below 
-    // pipe the result from the aisdk to the client to be compatible with react ai sdk
     .openapi(postAiChatSdkRoute, async (c) => {
         const {
             chatId,
             userMessage,
-            options, // Contains optional temp, maxTokens, etc.
-            systemMessage, // Optional system message override
-            tempId // Optional tempId for UI
+            options,
+            systemMessage,
+            tempId
         } = c.req.valid('json');
 
-        const provider = options?.provider as APIProviders
-        const model = options?.model as string
+        const provider = options?.provider as APIProviders;
+        const model = options?.model as string;
 
         console.log(`[Hono AI Chat] /ai/chat request: ChatID=${chatId}, Provider=${provider}, Model=${model}`);
 
         try {
-            // Ensure the chat exists (optional, unifiedProvider might handle it)
-            // You could add a quick check here using chatService if needed:
-            // await chatService.getChatMessages(chatId); // Throws if chat not found
+            const unifiedOptions = { ...options, model };
 
-            // Combine model and other options for the unified service
-            const unifiedOptions = { ...options, model }; // Pass model within options
-
-            // Set headers for SSE
             c.header('Content-Type', 'text/event-stream; charset=utf-8');
             c.header('Cache-Control', 'no-cache');
             c.header('Connection', 'keep-alive');
 
-            // Call the unified provider's processMessage function
-            // This handles history fetching, message saving, AI call, and final update
             const readableStream = await handleChatMessage({
                 chatId,
                 userMessage,
                 options: unifiedOptions,
-                // TODO: System Message should be on the chat, and not 
-                // need to be passed in on each request 
                 systemMessage,
                 tempId,
-                // messages: undefined, // History fetched internally by processMessage
-                // schema: undefined, // Not using structured output in this basic streaming route
             });
 
-
-            // Use Hono's stream helper to pipe the ReadableStream from the AI SDK
-            return stream(c, async (stream) => {
-                await stream.pipe(readableStream.toDataStream());
+            return stream(c, async (streamInstance) => {
+                await streamInstance.pipe(readableStream.toDataStream());
             });
 
         } catch (error: any) {
             console.error(`[Hono AI Chat] /ai/chat Error:`, error);
-
-            if (error instanceof ApiError) { // Handle custom API errors
+            if (error instanceof ApiError) {
                 throw error;
             }
-            // Check for specific error types if needed (e.g., chat not found)
-            if (error.message?.includes('not found')) { // Example check
-                throw new ApiError(404, `Chat session with ID ${chatId} not found.`, 'CHAT_NOT_FOUND');
+            if (error.message?.includes('not found') || error.code === 'CHAT_NOT_FOUND') { // Check code too
+                throw new ApiError(404, `Chat session with ID ${chatId} not found. Details: ${error.message}`, 'CHAT_NOT_FOUND', { originalError: error.message });
             }
-            // Check for API key errors (unifiedProvider might throw these)
-            if (error.message?.toLowerCase().includes('api key')) {
-                throw new ApiError(400, error.message, 'MISSING_API_KEY');
+            if (error.message?.toLowerCase().includes('api key') || error.code === 'MISSING_API_KEY') {
+                throw new ApiError(400, error.message, 'MISSING_API_KEY', { originalError: error.message });
             }
-
-            // Default to 500 for other errors
-            throw new ApiError(500, error.message || 'Error processing AI chat stream');
+            // Add more specific error conversions if identifiable from `handleChatMessage`
+            throw new ApiError(500, error.message || 'Error processing AI chat stream', 'AI_STREAM_ERROR', { originalError: error.message });
         }
     })
-
-
-    // POST /chats/:chatId/fork
     .openapi(forkChatRoute, async (c) => {
         const { chatId } = c.req.valid('param');
         const { excludedMessageIds } = c.req.valid('json');
-
-        try {
-            const newChat = await chatService.forkChat(chatId, excludedMessageIds);
-            return c.json({
-                success: true,
-                data: {
-                    ...newChat,
-                    createdAt: newChat.createdAt,
-                    updatedAt: newChat.updatedAt
-                }
-            } satisfies z.infer<typeof ChatResponseSchema>, 201);
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('not found')) {
-                throw new ApiError(404, `Chat with ID ${chatId} not found`, 'CHAT_NOT_FOUND');
-            }
-            throw error;
-        }
+        const newChat = await chatService.forkChat(chatId, excludedMessageIds);
+        return c.json({
+            success: true,
+            data: newChat
+        } satisfies z.infer<typeof ChatResponseSchema>, 201);
     })
-
-    // POST /chats/:chatId/fork/:messageId
     .openapi(forkChatFromMessageRoute, async (c) => {
         const { chatId, messageId } = c.req.valid('param');
         const { excludedMessageIds } = c.req.valid('json');
-
-        try {
-            const newChat = await chatService.forkChatFromMessage(chatId, messageId, excludedMessageIds);
-            return c.json({
-                success: true,
-                data: {
-                    ...newChat,
-                    createdAt: newChat.createdAt,
-                    updatedAt: newChat.updatedAt
-                }
-            } satisfies z.infer<typeof ChatResponseSchema>, 201);
-        } catch (error) {
-            if (error instanceof Error) {
-                if (error.message.includes('Chat not found')) {
-                    throw new ApiError(404, `Chat with ID ${chatId} not found`, 'CHAT_NOT_FOUND');
-                } else if (error.message.includes('Message not found')) {
-                    throw new ApiError(404, `Message with ID ${messageId} not found`, 'MESSAGE_NOT_FOUND');
-                }
-            }
-            throw error;
-        }
+        const newChat = await chatService.forkChatFromMessage(chatId, messageId, excludedMessageIds);
+        return c.json({
+            success: true,
+            data: newChat
+        } satisfies z.infer<typeof ChatResponseSchema>, 201);
     })
-
-    // DELETE /messages/:messageId
     .openapi(deleteMessageRoute, async (c) => {
         const { messageId } = c.req.valid('param');
-
-        try {
-            await chatService.deleteMessage(messageId);
-            return c.json({
-                success: true,
-                message: 'Message deleted successfully'
-            } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('not found')) {
-                throw new ApiError(404, `Message with ID ${messageId} not found`, 'MESSAGE_NOT_FOUND');
-            }
-            throw error;
-        }
+        await chatService.deleteMessage(messageId);
+        return c.json({
+            success: true,
+            message: 'Message deleted successfully'
+        } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     })
-
-    // PATCH /chats/:chatId
     .openapi(updateChatRoute, async (c) => {
         const { chatId } = c.req.valid('param');
         const { title } = c.req.valid('json');
-
-        try {
-            const updatedChat = await chatService.updateChat(chatId, title);
-            return c.json({
-                success: true,
-                data: {
-                    ...updatedChat,
-                    createdAt: updatedChat.createdAt,
-                    updatedAt: updatedChat.updatedAt
-                }
-            } satisfies z.infer<typeof ChatResponseSchema>, 200);
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('not found')) {
-                throw new ApiError(404, `Chat with ID ${chatId} not found`, 'CHAT_NOT_FOUND');
-            }
-            throw error;
-        }
+        const updatedChat = await chatService.updateChat(chatId, title);
+        return c.json({
+            success: true,
+            data: updatedChat
+        } satisfies z.infer<typeof ChatResponseSchema>, 200);
     })
-
-    // DELETE /chats/:chatId
     .openapi(deleteChatRoute, async (c) => {
         const { chatId } = c.req.valid('param');
-
-        try {
-            await chatService.deleteChat(chatId);
-            return c.json({
-                success: true,
-                message: 'Chat deleted successfully'
-            } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('not found')) {
-                throw new ApiError(404, `Chat with ID ${chatId} not found`, 'CHAT_NOT_FOUND');
-            }
-            throw error;
-        }
+        await chatService.deleteChat(chatId);
+        return c.json({
+            success: true,
+            message: 'Chat deleted successfully'
+        } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     });
 
 export type ChatRouteTypes = typeof chatRoutes;

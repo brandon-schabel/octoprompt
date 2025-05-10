@@ -1,4 +1,3 @@
-// model-fetcher-service.ts
 import { APIProviders } from "shared/src/schemas/provider-key.schemas";
 import {
     GEMINI_BASE_URL,
@@ -17,7 +16,6 @@ export type UnifiedModel = {
     description: string;
 };
 
-/** For your SSE event chunk shape */
 export type OpenRouterStreamResponse = {
     choices: {
         delta?: { content?: string };
@@ -25,7 +23,6 @@ export type OpenRouterStreamResponse = {
     }[];
 };
 
-/** Example shape of OpenRouter model data */
 export type OpenRouterModelContext = {
     description: string;
     tokens: number;
@@ -158,7 +155,6 @@ export type OllamaModel = {
 }
 
 
-// provider-config.ts
 export interface ProviderKeysConfig {
     openaiKey?: string;
     anthropicKey?: string;
@@ -175,18 +171,13 @@ export type ListModelsOptions = {
 }
 
 export class ModelFetcherService {
-    // store your config
     constructor(private config: ProviderKeysConfig) { }
 
-    // Helper: throw if missing
     private ensure(key?: string, providerName = "unknown") {
         if (!key) throw new Error(`${providerName} API key not found in config`);
         return key;
     }
 
-    // -----------------------------
-    // GEMINI EXAMPLE
-    // -----------------------------
     async listGeminiModels(): Promise<GeminiAPIModel[]> {
         const apiKey = this.ensure(this.config.googleGeminiKey, "Google Gemini");
         const response = await fetch(`${GEMINI_BASE_URL}/models?key=${apiKey}`);
@@ -198,9 +189,6 @@ export class ModelFetcherService {
         return data.models;
     }
 
-    // -----------------------------
-    // GROQ EXAMPLE
-    // -----------------------------
     async listGroqModels(): Promise<UnifiedModel[]> {
         const groqApiKey = this.ensure(this.config.groqKey, "Groq");
         const response = await fetch(`${GROQ_BASE_URL}/models`, {
@@ -232,9 +220,6 @@ export class ModelFetcherService {
         }));
     }
 
-    // -----------------------------
-    // TOGETHER EXAMPLE
-    // -----------------------------
     async listTogetherModels(): Promise<UnifiedModel[]> {
         const togetherApiKey = this.ensure(this.config.togetherKey, "Together");
         const response = await fetch(`${TOGETHER_BASE_URL}/models`, {
@@ -256,9 +241,6 @@ export class ModelFetcherService {
         }));
     }
 
-    // -----------------------------
-    // OPENAI EXAMPLE
-    // -----------------------------
     async listOpenAiModels(): Promise<OpenAIModelObject[]> {
         const openAIKey = this.ensure(this.config.openaiKey, "OpenAI");
         const response = await fetch(`${OPENAI_BASE_URL}/models`, {
@@ -278,9 +260,6 @@ export class ModelFetcherService {
         return data.data;
     }
 
-    // -----------------------------
-    // ANTHROPIC EXAMPLE
-    // -----------------------------
     async listAnthropicModels(): Promise<AnthropicModel[]> {
         const anthropicKey = this.ensure(this.config.anthropicKey, "Anthropic");
         const response = await fetch("https://api.anthropic.com/v1/models", {
@@ -300,15 +279,11 @@ export class ModelFetcherService {
         return data.data;
     }
 
-    // -----------------------------
-    // OPENROUTER EXAMPLE
-    // -----------------------------
     async listOpenRouterModels({
         headers
     }: {
         headers?: Record<string, string>
     } = {}): Promise<OpenRouterModel[]> {
-        console.log({config: this.config})
         const openRouterKey = this.ensure(this.config.openrouterKey, "openrouter");
         const response = await fetch(`${OPENROUTER_BASE_URL}/models`, {
             method: "GET",
@@ -327,9 +302,6 @@ export class ModelFetcherService {
         return data.data;
     }
 
-    // -----------------------------
-    // XAI EXAMPLE
-    // -----------------------------
     async listXAIModels(): Promise<OpenAIModelObject[]> {
         const xaiKey = this.ensure(this.config.xaiKey, "XAI");
         const response = await fetch(`${XAI_BASE_URL}/models`, {
@@ -349,9 +321,6 @@ export class ModelFetcherService {
         return data.data;
     }
 
-    // -----------------------------
-    // OLLAMA EXAMPLE
-    // -----------------------------
     async listOllamaModels({ baseUrl }: { baseUrl: string } = { baseUrl: OLLAMA_BASE_URL }): Promise<UnifiedModel[]> {
         const response = await fetch(`${baseUrl}/api/tags`);
         if (!response.ok) {
@@ -371,9 +340,6 @@ export class ModelFetcherService {
         }));
     }
 
-    // -----------------------------
-    // LMSTUDIO EXAMPLE
-    // -----------------------------
     async listLMStudioModels({ baseUrl }: { baseUrl: string } = { baseUrl: LMSTUDIO_BASE_URL }): Promise<UnifiedModel[]> {
         const response = await fetch(`${baseUrl}/models`);
         if (!response.ok) {
@@ -389,9 +355,6 @@ export class ModelFetcherService {
         }));
     }
 
-    /**
-     * A unified method to list models for a given provider
-     */
     async listModels(provider: APIProviders, {
         ollamaBaseUrl,
         lmstudioBaseUrl,

@@ -4,7 +4,7 @@ import {
   getPromptById, listAllPrompts, listPromptsByProject,
   updatePrompt, deletePrompt
 } from "@/services/prompt-service";
-import { randomString } from "../tests/test-utils";
+import { randomString } from "../utils/test-utils";
 import { db, resetDatabase } from "@db";
 
 describe("Prompt Service", () => {
@@ -71,8 +71,7 @@ describe("Prompt Service", () => {
   });
 
   test("getPromptById returns null for nonexisting ID", async () => {
-    const prompt = await getPromptById("nonexistent-id");
-    expect(prompt).toBeNull();
+    await expect(getPromptById("nonexistent-id")).rejects.toThrow('Prompt with ID nonexistent-id not found.');
   });
 
   test("getPromptById returns prompt if found", async () => {
@@ -132,8 +131,7 @@ describe("Prompt Service", () => {
   });
 
   test("updatePrompt returns null if prompt does not exist", async () => {
-    const nonexistent = await updatePrompt("fake-id", { name: "X" });
-    expect(nonexistent).toBeNull();
+    await expect(updatePrompt("fake-id", { name: "X" })).rejects.toThrow('Prompt with ID fake-id not found.');
   });
 
   test("deletePrompt returns true if deleted, false if nonexistent", async () => {
@@ -147,5 +145,8 @@ describe("Prompt Service", () => {
 
     const again = await deletePrompt(prompt.id);
     expect(again).toBe(false);
+
+    const nonExistentDelete = await deletePrompt("totally-fake-id");
+    expect(nonExistentDelete).toBe(false);
   });
 });

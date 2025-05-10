@@ -5,8 +5,7 @@ import { Button } from "../components/ui/button";
 import { Plus } from "lucide-react";
 import { useGetProject } from "@/hooks/api/use-projects-api";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
-
-import { Ticket, TicketWithTasks } from "@/generated";
+import { TicketWithTasks } from "@/generated";
 import { useActiveProjectTab } from "@/hooks/api/use-kv-api";
 
 export const Route = createFileRoute("/tickets")({
@@ -60,7 +59,6 @@ function TicketsPage() {
 
     return (
         <div className="p-4 space-y-4 h-full flex flex-col">
-            {/* Page Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">
                     Tickets for {projectData?.data?.name}
@@ -71,7 +69,6 @@ function TicketsPage() {
                 </Button>
             </div>
 
-            {/* Panel for listing/filtering tickets; returns TicketWithTasks to onSelectTicket */}
             <div className="flex-1">
                 <TicketListPanel
                     projectTabId={projectActiveTabId || "defaultTab"}
@@ -79,7 +76,6 @@ function TicketsPage() {
                 />
             </div>
 
-            {/* Dialog for creating/editing a ticket */}
             <TicketDialog
                 isOpen={isDialogOpen}
                 onClose={handleCloseDialog}

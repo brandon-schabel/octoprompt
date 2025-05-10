@@ -46,8 +46,6 @@ export function stripTripleBackticks(text: string): string {
   return text.trim();
 }
 
-
-
 export async function fetchTaskSuggestionsForTicket(
   ticket: Ticket,
   userContext: string | undefined
@@ -80,8 +78,6 @@ export async function fetchTaskSuggestionsForTicket(
   ${projectSummary}
 `;
 
-  console.log("userMessage", userMessage);
-
   const cfg = MEDIUM_MODEL_CONFIG;
   if (!cfg.model) {
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, "CONFIG_ERROR");
@@ -94,8 +90,6 @@ export async function fetchTaskSuggestionsForTicket(
     options: MEDIUM_MODEL_CONFIG
   });
 
-  console.log("result", result);
-
   return result.object
 }
 
@@ -107,16 +101,21 @@ function mapTicket(row: any): Ticket {
     overview: row.overview,
     status: row.status,
     priority: row.priority,
-    suggestedFileIds: row.suggested_file_ids,
+    suggestedFileIds: typeof row.suggested_file_ids === 'string' ? row.suggested_file_ids : JSON.stringify(row.suggested_file_ids || []),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at)
   };
-  const validated = TicketReadSchema.parse(mapped);
-  return {
-    ...validated,
-    createdAt: new Date(validated.createdAt),
-    updatedAt: new Date(validated.updatedAt)
-  };
+  try {
+    const validated = TicketReadSchema.parse(mapped);
+    return {
+        ...validated,
+        createdAt: new Date(validated.createdAt),
+        updatedAt: new Date(validated.updatedAt)
+    };
+  } catch (error) {
+    console.error("Validation failed for ticket:", mapped, error);
+    throw new ApiError(500, "Ticket data validation failed", "TICKET_VALIDATION_ERROR", { originalError: error });
+  }
 }
 
 function mapTicketTask(row: any): TicketTask {
@@ -129,12 +128,17 @@ function mapTicketTask(row: any): TicketTask {
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at)
   };
-  const validated = TicketTaskReadSchema.parse(mapped);
-  return {
-    ...validated,
-    createdAt: new Date(validated.createdAt),
-    updatedAt: new Date(validated.updatedAt)
-  };
+  try {
+    const validated = TicketTaskReadSchema.parse(mapped);
+    return {
+        ...validated,
+        createdAt: new Date(validated.createdAt),
+        updatedAt: new Date(validated.updatedAt)
+    };
+  } catch (error) {
+    console.error("Validation failed for ticket task:", mapped, error);
+    throw new ApiError(500, "Ticket task data validation failed", "TASK_VALIDATION_ERROR", { originalError: error });
+  }
 }
 
 function mapTicketFile(row: any): TicketFile {
@@ -183,7 +187,7 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *
     `);
-  const created = stmt.get(
+  const createdRaw = stmt.get(
     newTicketId,
     validatedData.projectId,
     validatedData.title,
@@ -192,17 +196,19 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
     validatedData.priority ?? "normal",
     validatedData.suggestedFileIds ?? "[]"
   ) as any;
-  if (!created) {
-    throw new ApiError(500, "Failed to create ticket", "CREATE_FAILED");
+  if (!createdRaw) {
+    throw new ApiError(500, "Failed to create ticket", "CREATE_TICKET_FAILED");
   }
-  return mapTicket(created);
+  return mapTicket(createdRaw);
 }
 
-export async function getTicketById(ticketId: string): Promise<Ticket | null> {
+export async function getTicketById(ticketId: string): Promise<Ticket> {
   const stmt = db.prepare(`SELECT * FROM tickets WHERE id = ? LIMIT 1`);
-  const found = stmt.get(ticketId) as any;
-  if (!found) return null;
-  return mapTicket(found);
+  const foundRaw = stmt.get(ticketId) as any;
+  if (!foundRaw) {
+    throw new ApiError(404, `Ticket with ID ${ticketId} not found.`, "TICKET_NOT_FOUND");
+  }
+  return mapTicket(foundRaw);
 }
 
 export async function listTicketsByProject(projectId: string, statusFilter?: string): Promise<Ticket[]> {
@@ -218,9 +224,8 @@ export async function listTicketsByProject(projectId: string, statusFilter?: str
   }
 }
 
-export async function updateTicket(ticketId: string, data: UpdateTicketBody): Promise<Ticket | null> {
+export async function updateTicket(ticketId: string, data: UpdateTicketBody): Promise<Ticket> {
   const existing = await getTicketById(ticketId);
-  if (!existing) return null;
 
   const validatedData = validateUpdateTicket(data);
 
@@ -236,7 +241,7 @@ export async function updateTicket(ticketId: string, data: UpdateTicketBody): Pr
       for (const fileId of fileIds) {
         const file = stmtFile.get(fileId, existing.projectId);
         if (!file) {
-          throw new ApiError(400, "Some fileIds no longer exist on disk", "FILE_NOT_FOUND");
+          throw new ApiError(400, `File with ID ${fileId} not found in project ${existing.projectId}.`, "FILE_NOT_FOUND_IN_PROJECT");
         }
       }
     }
@@ -277,25 +282,48 @@ export async function updateTicket(ticketId: string, data: UpdateTicketBody): Pr
 
   values.push(ticketId);
   const stmt = db.prepare(updateQuery);
-  const updated = stmt.get(...values) as any;
+  const updatedRaw = stmt.get(...values) as any;
 
-  if (!updated) return null;
-  return mapTicket(updated);
+  if (!updatedRaw) {
+    throw new ApiError(500, `Failed to update ticket ${ticketId} after confirming its existence.`, "UPDATE_TICKET_FAILED");
+  }
+  return mapTicket(updatedRaw);
 }
 
-export async function deleteTicket(ticketId: string): Promise<boolean> {
-  const stmt = db.prepare(`DELETE FROM tickets WHERE id = ? RETURNING *`);
-  const deleted = stmt.get(ticketId) as any;
-  return !!deleted;
+export async function deleteTicket(ticketId: string): Promise<void> {
+  db.prepare(`DELETE FROM ticket_tasks WHERE ticket_id = ?`).run(ticketId);
+  db.prepare(`DELETE FROM ticket_files WHERE ticket_id = ?`).run(ticketId);
+
+  const stmt = db.prepare(`DELETE FROM tickets WHERE id = ?`);
+  const info = stmt.run(ticketId);
+  if (info.changes === 0) {
+    throw new ApiError(404, `Ticket with ID ${ticketId} not found for deletion.`, "TICKET_NOT_FOUND");
+  }
 }
 
 export async function linkFilesToTicket(ticketId: string, fileIds: string[]): Promise<TicketFile[]> {
   const existingTicket = await getTicketById(ticketId);
-  if (!existingTicket) throw new Error(`Ticket ${ticketId} not found`);
-  const stmt = db.prepare(`INSERT OR IGNORE INTO ticket_files (ticket_id, file_id) VALUES (?, ?)`);
-  for (const fileId of fileIds) {
-    stmt.run(ticketId, fileId);
+  
+  if (fileIds.length > 0) {
+    const placeholders = fileIds.map(() => '?').join(',');
+    const filesInProjectStmt = db.prepare(
+        `SELECT id FROM files WHERE project_id = ? AND id IN (${placeholders})`
+    );
+    const existingFilesInProject = filesInProjectStmt.all(existingTicket.projectId, ...fileIds) as { id: string }[];
+    if (existingFilesInProject.length !== fileIds.length) {
+        const foundFileIds = new Set(existingFilesInProject.map(f => f.id));
+        const missingFileIds = fileIds.filter(id => !foundFileIds.has(id));
+        throw new ApiError(400, `Some files not found in project ${existingTicket.projectId}: ${missingFileIds.join(', ')}`, "FILES_NOT_FOUND_IN_PROJECT");
+    }
   }
+
+  const stmt = db.prepare(`INSERT OR IGNORE INTO ticket_files (ticket_id, file_id) VALUES (?, ?)`);
+  const transaction = db.transaction(() => {
+    for (const fileId of fileIds) {
+        stmt.run(ticketId, fileId);
+    }
+  });
+  transaction();
   return getTicketFiles(ticketId);
 }
 
@@ -308,19 +336,16 @@ export async function getTicketFiles(ticketId: string): Promise<TicketFile[]> {
 export async function suggestTasksForTicket(ticketId: string, userContext?: string): Promise<string[]> {
   console.log("[TicketService] Starting task suggestion for ticket:", ticketId);
   const ticket = await getTicketById(ticketId);
-  if (!ticket) {
-    console.error("[TicketService] Ticket not found:", ticketId);
-    throw new Error(`Ticket ${ticketId} not found`);
-  }
+
   try {
     const suggestions = await fetchTaskSuggestionsForTicket(ticket, userContext);
     return suggestions.tasks.map(task => task.title);
-  } catch (error) {
+  } catch (error: any) {
     console.error("[TicketService] Error in task suggestion:", error);
-    if (error instanceof Error) {
-      console.error("[TicketService] Error details:", { message: error.message, stack: error.stack });
+    if (error instanceof ApiError) {
+        throw error;
     }
-    return [];
+    throw new ApiError(500, `Failed to suggest tasks for ticket ${ticketId}: ${error.message || 'AI provider error'}`, "TASK_SUGGESTION_FAILED", { originalError: error });
   }
 }
 
@@ -347,9 +372,7 @@ export async function getTicketsWithFiles(projectId: string): Promise<(Ticket & 
 
 export async function createTask(ticketId: string, content: string): Promise<TicketTask> {
   const ticket = await getTicketById(ticketId);
-  if (!ticket) {
-    throw new ApiError(404, `Ticket ${ticketId} not found`, "NOT_FOUND");
-  }
+
   const validatedData = validateCreateTask(ticketId, content);
   const stmtMax = db.prepare(`SELECT MAX(order_index) as max FROM ticket_tasks WHERE ticket_id = ?`);
   const row = stmtMax.get(ticketId) as { max: number | null };
@@ -373,7 +396,7 @@ export async function createTask(ticketId: string, content: string): Promise<Tic
 
   const createdTaskRaw = stmt.get(...params) as any;
   if (!createdTaskRaw) {
-    throw new ApiError(500, "Failed to create task", "CREATE_FAILED");
+    throw new ApiError(500, "Failed to create task", "CREATE_TASK_FAILED");
   }
   return mapTicketTask(createdTaskRaw);
 }
@@ -384,43 +407,65 @@ export async function getTasks(ticketId: string): Promise<TicketTask[]> {
   return taskRows.map(mapTicketTask);
 }
 
-export async function deleteTask(ticketId: string, taskId: string): Promise<boolean> {
-  const stmt = db.prepare(`DELETE FROM ticket_tasks WHERE id = ? AND ticket_id = ? RETURNING *`);
-  const deletedTask = stmt.get(taskId, ticketId) as any;
-  return !!deletedTask;
+export async function deleteTask(ticketId: string, taskId: string): Promise<void> {
+  const stmt = db.prepare(`DELETE FROM ticket_tasks WHERE id = ? AND ticket_id = ?`);
+  const info = stmt.run(taskId, ticketId);
+  if (info.changes === 0) {
+    try {
+        await getTicketById(ticketId);
+        throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, "TASK_NOT_FOUND_FOR_TICKET");
+    } catch (ticketError: any) {
+        if (ticketError instanceof ApiError && ticketError.code === 'TICKET_NOT_FOUND') {
+            throw new ApiError(404, `Ticket with ID ${ticketId} not found, cannot delete task.`, "TICKET_NOT_FOUND");
+        }
+        throw ticketError; 
+    }
+  }
 }
 
 export async function reorderTasks(
   ticketId: string,
   tasks: Array<{ taskId: string; orderIndex: number }>
 ): Promise<TicketTask[]> {
+  await getTicketById(ticketId);
+  
   const stmt = db.prepare(`UPDATE ticket_tasks SET order_index = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND ticket_id = ?`);
-  for (const { taskId, orderIndex } of tasks) {
-    stmt.run(orderIndex, taskId, ticketId);
-  }
+  const transaction = db.transaction(() => {
+    for (const { taskId, orderIndex } of tasks) {
+        const info = stmt.run(orderIndex, taskId, ticketId);
+        if (info.changes === 0) {
+            throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId} during reorder.`, "TASK_NOT_FOUND_FOR_TICKET");
+        }
+    }
+  });
+  transaction();
   return getTasks(ticketId);
 }
 
 export async function autoGenerateTasksFromOverview(ticketId: string): Promise<TicketTask[]> {
   const ticket = await getTicketById(ticketId);
-  if (!ticket) {
-    throw new ApiError(404, `Ticket ${ticketId} not found`, "NOT_FOUND");
-  }
+  
   const titles = await suggestTasksForTicket(ticketId, ticket.overview ?? "");
-  const inserted: TicketTask[] = [];
-  for (const [idx, content] of titles.entries()) {
-    const stmt = db.prepare(`
-          INSERT INTO ticket_tasks (id, ticket_id, content, done, order_index, created_at, updated_at)
-          VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          RETURNING *
-        `);
-    const createdRaw = stmt.get(ticketId, content, 0, idx) as any;
-    if (!createdRaw) {
-      throw new ApiError(500, "Failed to create task", "CREATE_FAILED");
-    }
-    const createdTask = mapTicketTask(createdRaw);
-    inserted.push(createdTask);
+  if (titles.length === 0 && (ticket.overview && ticket.overview.trim() !== '')) {
   }
+
+  const inserted: TicketTask[] = [];
+  const transaction = db.transaction(() => {
+    for (const [idx, content] of titles.entries()) {
+        const stmtInsert = db.prepare(`
+            INSERT INTO ticket_tasks (id, ticket_id, content, done, order_index, created_at, updated_at)
+            VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING *
+            `);
+        const createdRaw = stmtInsert.get(ticketId, content, 0, idx) as any;
+        if (!createdRaw) {
+        throw new ApiError(500, `Failed to create auto-generated task '${content}'`, "CREATE_TASK_FAILED");
+        }
+        const createdTask = mapTicketTask(createdRaw);
+        inserted.push(createdTask);
+    }
+  });
+  transaction();
   return inserted;
 }
 
@@ -506,23 +551,42 @@ export async function getTicketWithSuggestedFiles(ticketId: string): Promise<(Ti
   };
 }
 
-export async function updateTask(ticketId: string, taskId: string, updates: { content?: string; done?: boolean }): Promise<TicketTask | null> {
-  try {
-    const stmt = db.prepare(`UPDATE ticket_tasks SET content = COALESCE(?, content), done = COALESCE(?, done) WHERE ticket_id = ? AND id = ? RETURNING *`);
-    const updatedTask = stmt.get(
-      updates.content === undefined ? null : updates.content,
-      updates.done === undefined ? null : updates.done,
-      ticketId,
-      taskId
-    ) as any;
-    return updatedTask ?? null;
-  } catch (error: any) {
-    // If the error message indicates that no row was affected, return null
-    if (error && typeof error.message === "string" && (error.message.includes("no such") || error.message.includes("not found"))) {
-      return null;
-    }
-    throw error;
+export async function updateTask(ticketId: string, taskId: string, updates: { content?: string; done?: boolean }): Promise<TicketTask> {
+  await getTicketById(ticketId);
+
+  const setClauses: string[] = [];
+  const values: any[] = [];
+
+  if (updates.content !== undefined) {
+    setClauses.push('content = ?');
+    values.push(updates.content);
   }
+  if (updates.done !== undefined) {
+    setClauses.push('done = ?');
+    values.push(updates.done ? 1 : 0);
+  }
+
+  if (setClauses.length === 0) {
+    const currentTaskStmt = db.prepare('SELECT * FROM ticket_tasks WHERE id = ? AND ticket_id = ?');
+    const currentTaskRaw = currentTaskStmt.get(taskId, ticketId) as any;
+    if (!currentTaskRaw) {
+        throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, "TASK_NOT_FOUND_FOR_TICKET");
+    }
+    return mapTicketTask(currentTaskRaw);
+  }
+
+  setClauses.push('updated_at = CURRENT_TIMESTAMP');
+
+  const query = `UPDATE ticket_tasks SET ${setClauses.join(', ')} WHERE ticket_id = ? AND id = ? RETURNING *`;
+  values.push(ticketId, taskId);
+
+  const stmt = db.prepare(query);
+  const updatedTaskRaw = stmt.get(...values) as any;
+
+  if (!updatedTaskRaw) {
+    throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}, or no changes made.`, "TASK_UPDATE_FAILED_OR_NOT_FOUND");
+  }
+  return mapTicketTask(updatedTaskRaw);
 }
 
 export async function suggestFilesForTicket(
@@ -530,21 +594,20 @@ export async function suggestFilesForTicket(
   options: { extraUserInput?: string }
 ): Promise<{ recommendedFileIds: string[], combinedSummaries?: string, message?: string }> {
   const ticket = await getTicketById(ticketId);
-  if (!ticket) {
-    throw new ApiError(404, "Ticket not found", "NOT_FOUND");
-  }
 
-  const tasks = await getTasks(ticketId);
-
-  // This is a simplified implementation - you'd likely want to actually
-  // call an AI service to get file suggestions based on the ticket content
   try {
-    // Get files from the project that might be relevant
     const projectFiles = await db.prepare(
       `SELECT id FROM files WHERE project_id = ?`
     ).all(ticket.projectId) as any[];
 
-    // For now, just return the first 5 files or fewer if there aren't many
+    if (!projectFiles) {
+        console.warn(`[TicketService] suggestFilesForTicket: No project files found for project ${ticket.projectId}, though ticket exists.`);
+        return {
+            recommendedFileIds: [],
+            message: "No files found in the project to suggest from."
+        };
+    }
+
     const recommendedFileIds = projectFiles
       .slice(0, Math.min(5, projectFiles.length))
       .map((file: any) => file.id);
@@ -556,9 +619,10 @@ export async function suggestFilesForTicket(
     };
   } catch (error) {
     console.error("[TicketService] Error suggesting files:", error);
-    return {
-      recommendedFileIds: [],
-      message: "Failed to suggest files"
-    };
+    if (error instanceof ApiError) {
+        throw error;
+    }
+    const errorMessage = (error as any)?.message || 'Error during file suggestion';
+    throw new ApiError(500, `Failed to suggest files for ticket ${ticketId}: ${errorMessage}`, "FILE_SUGGESTION_FAILED", { originalError: error });
   }
 }

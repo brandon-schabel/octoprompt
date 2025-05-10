@@ -4,7 +4,7 @@ import { Button } from "@ui";
 import { Input } from '@ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui";
 import { Textarea } from "@ui";
-import { useCreateTicket, useUpdateTicket, useSuggestFilesForTicket } from "../../hooks/api/use-tickets-api";
+import { useCreateTicket, useUpdateTicket } from "../../hooks/api/use-tickets-api";
 import { OctoTooltip } from "../octo/octo-tooltip";
 import { TicketTasksPanel } from "./ticket-tasks-panel";
 import type { TicketWithTasks } from "@/generated";

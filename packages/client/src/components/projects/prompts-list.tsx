@@ -220,7 +220,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({
     const handleSavePrompt = (newContent: string) => {
         if (!viewedPrompt) return
         // TODO: IMPLEMENT SAVE Prompt
-        console.log('TODOhandleSavePrompt, new content = ', newContent)
+        console.log('TODO: handleSavePrompt, new content = ', newContent)
     }
 
     // Expose a focus method

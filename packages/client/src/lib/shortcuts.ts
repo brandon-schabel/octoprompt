@@ -1,4 +1,3 @@
-
 export function isMacOS(): boolean {
     if (typeof window === 'undefined') return false
     return navigator.platform.toLowerCase().includes('mac')

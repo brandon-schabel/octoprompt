@@ -2,7 +2,6 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { db } from '@/utils/database';
 import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas';
 
-// Response schemas
 const EnvironmentInfoSchema = z.object({
     NODE_ENV: z.string().nullable(),
     BUN_ENV: z.string().nullable(),
@@ -80,14 +79,12 @@ const getSystemStatusRoute = createRoute({
 export const adminRoutes = new OpenAPIHono()
     .openapi(getEnvInfoRoute, async (c) => {
         try {
-            // Filter only needed environment variables for security
             const envInfo = {
-                NODE_ENV: process.env.NODE_ENV ?? null, // Ensure null if undefined
+                NODE_ENV: process.env.NODE_ENV ?? null,
                 BUN_ENV: process.env.BUN_ENV ?? null,
                 SERVER_PORT: process.env.PORT ?? null,
             };
 
-            // Get database statistics
             const dbStats = {
                 chats: db.query('SELECT COUNT(*) as count FROM chats').get() as { count: number },
                 chat_messages: db.query('SELECT COUNT(*) as count FROM chat_messages').get() as { count: number },
@@ -111,7 +108,6 @@ export const adminRoutes = new OpenAPIHono()
                 uptime: process.uptime(),
             };
 
-            // Create properly typed payload
             const payload: z.infer<typeof EnvInfoResponseSchema> = {
                 success: true,
                 environment: envInfo,

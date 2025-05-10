@@ -31,7 +31,7 @@ export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
 export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
     frequency_penalty: 0,
     presence_penalty: 0,
-    max_tokens: 100000,
+    max_tokens: 200000,
     temperature: 0.7,
     top_p: 1,
     top_k: 1,

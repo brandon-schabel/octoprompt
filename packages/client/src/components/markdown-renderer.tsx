@@ -47,7 +47,6 @@ export function MarkdownRenderer({
             if (!inline && match) {
                 return (
                     <div className="relative my-2 overflow-x-auto break-words">
-                        {/* Copy button */}
                         {copyToClipboard && (
                             <button
                                 onClick={() => copyToClipboard(codeString)}
@@ -76,7 +75,6 @@ export function MarkdownRenderer({
                 );
             }
 
-            // Inline code
             return (
                 <code className={className} {...rest}>
                     {children}

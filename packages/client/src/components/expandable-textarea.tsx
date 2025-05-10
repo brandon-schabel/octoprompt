@@ -46,7 +46,6 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null)
   const { copyToClipboard } = useCopyClipboard()
 
-  // Promptimizer state and mutation
   const [promptimizeDialogOpen, setPromptimizeDialogOpen] = useState(false)
   const [optimizedPrompt, setOptimizedPrompt] = useState("")
   const promptimizeMutation = useOptimizePrompt()
