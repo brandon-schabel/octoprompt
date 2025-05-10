@@ -15,10 +15,8 @@ import {
     RemoveSummariesBodySchema,
     SuggestFilesBodySchema,
     SummarizeFilesBodySchema,
-    // Import types
 } from "shared/src/schemas/project.schemas";
 
-// Import common schemas
 import {
     ApiErrorResponseSchema,
     OperationSuccessResponseSchema,
@@ -36,9 +34,7 @@ import { getFullProjectSummary } from '@/utils/get-full-project-summary';
 import { SuggestFilesResponseSchema, FileSummaryListResponseSchema, SummarizeFilesResponseSchema, RemoveSummariesResponseSchema, FileSuggestionsZodSchema } from 'shared/src/schemas/gen-ai.schemas';
 import { summarizeFiles } from '@/services/project-service';
 
-// DELETE REDUNDANT TYPE DEFINITIONS - SERVICE LAYER PROVIDES CORRECTLY TYPED DATA
 
-// DELETE MAPPING FUNCTIONS - SERVICE LAYER ALREADY MAPS DATA CORRECTLY
 
 const createProjectRoute = createRoute({
     method: 'post',
@@ -230,8 +226,6 @@ const removeSummariesRoute = createRoute({
         500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
     },
 });
-
-
 
 // --- Hono App Instance ---
 export const projectRoutes = new OpenAPIHono()
@@ -480,16 +474,9 @@ ${projectSummary}
     .openapi(summarizeFilesRoute, async (c) => {
         const { projectId } = c.req.valid('param');
         const { fileIds, force } = c.req.valid('json');
-        console.log({ projectId, fileIds, force })
-
-
-        console.log({ fileIds, force })
 
         const result = await summarizeFiles(projectId, fileIds);
 
-        console.log({ result })
-
-        // Ensure the returned object matches SummarizeFilesResponseSchema
         const payload: z.infer<typeof SummarizeFilesResponseSchema> = {
             success: true,
             message: "Summarization process completed.",

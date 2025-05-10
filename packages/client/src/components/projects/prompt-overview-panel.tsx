@@ -44,15 +44,10 @@ interface PromptOverviewPanelProps {
 
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
     function PromptOverviewPanel({ className }, ref) {
-        const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
+        const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
         const updateActiveProjectTab = useUpdateActiveProjectTab()
-
-        // Log Dialog State
         const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
 
-
-
-        // Read selected prompts & user prompt from store
         const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId || '')
         const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId || '')
         const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId || '')
@@ -64,6 +59,45 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         const [, setInitialChatContent] = useLocalStorage('initial-chat-content', '')
         const [, setActiveChatId] = useActiveChatId()
         const navigate = useNavigate()
+
+
+        const { copyToClipboard } = useCopyClipboard()
+        const promptInputRef = useRef<HTMLTextAreaElement>(null)
+        const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
+        const [showSuggestions, setShowSuggestions] = useState(false)
+
+        // Prompt creation/editing dialog states
+        const [promptDialogOpen, setPromptDialogOpen] = useState(false)
+        const [editPromptId] = useState<string | null>(null)
+
+        // Load the project's prompts
+        const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId || '')
+        const createPromptMutation = useCreatePrompt(activeProjectTabState?.selectedProjectId || '')
+        const updatePromptMutation = useUpdatePrompt(activeProjectTabState?.selectedProjectId || '')
+
+
+        // React Hook Form for creating/editing prompts
+        const promptForm = useForm<z.infer<typeof promptSchema>>({
+            resolver: zodResolver(promptSchema),
+            defaultValues: { name: '', content: '' },
+        })
+
+        // Read selected files
+        const { selectedFiles, projectFileMap, } = useSelectedFiles()
+
+
+        // Calculate total tokens
+        const totalTokens = useMemo(() => {
+            return calculateTotalTokens(
+                promptData,
+                selectedPrompts,
+                localUserPrompt,
+                selectedFiles,
+                projectFileMap
+            )
+        }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap])
+
+        const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
 
 
         // Update localUserPrompt if global changes externally
@@ -83,41 +117,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             return () => clearTimeout(timer)
         }, [localUserPrompt, globalUserPrompt])
 
-        // Prompt creation/editing dialog states
-        const [promptDialogOpen, setPromptDialogOpen] = useState(false)
-        const [editPromptId, setEditPromptId] = useState<string | null>(null)
 
-        // Load the project's prompts
-        const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId || '')
-        const createPromptMutation = useCreatePrompt(activeProjectTabState?.selectedProjectId || '')
-        const updatePromptMutation = useUpdatePrompt(activeProjectTabState?.selectedProjectId || '')
-
-        // Read selected files
-        const { selectedFiles, projectFileMap, } = useSelectedFiles()
-
-
-        // Calculate total tokens
-        const totalTokens = useMemo(() => {
-            return calculateTotalTokens(
-                promptData,
-                selectedPrompts,
-                localUserPrompt,
-                selectedFiles,
-                projectFileMap
-            )
-        }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap])
-
-        const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
-
-        // For copying to clipboard
-        const { copyToClipboard } = useCopyClipboard()
-
-        // IMPORTANT: We read from the textarea ref to guarantee we have the freshest user input.
-        const promptInputRef = useRef<HTMLTextAreaElement>(null)
-
-        // "Find suggested files" example
-        const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
-        const [showSuggestions, setShowSuggestions] = useState(false)
 
 
         const buildFullProjectContext = () => {
@@ -164,11 +164,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             })
         }
 
-        // React Hook Form for creating/editing prompts
-        const promptForm = useForm<z.infer<typeof promptSchema>>({
-            resolver: zodResolver(promptSchema),
-            defaultValues: { name: '', content: '' },
-        })
 
         useEffect(() => {
             if (editPromptId && promptData?.data) {
@@ -232,8 +227,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                     console.error('Error creating chat:', error);
                     toast.error('Failed to create chat');
                 }
-                console.log('chat with context')
-                // create a new chat with the context as the input
             }, 10)
         }
 
@@ -386,7 +379,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 )
 
 
-// --- Agent Coder Log Dialog Component ---
 interface AgentCoderLogDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -398,9 +390,6 @@ interface AgentCoderLogDialogProps {
     totalTokens: number;
 }
 
-// --- Define the expected shape for updatedFiles based on usage ---
-// This matches the structure used in line 702. Adjust if the actual API returns something different.
-// --- FIX: Corrected type definition syntax ---
 type UpdatedFileData = {
     meta: string | null;
     summary: string | null;
@@ -417,35 +406,27 @@ type UpdatedFileData = {
     updatedAt: string;
 };
 
-// --- NEW: Define a type for log entries ---
 type LogEntry = {
     timestamp?: string;
-    level?: 'info' | 'warn' | 'error' | string; // Allow other strings for flexibility
+    level?: 'info' | 'warn' | 'error' | string;
     message?: string;
     data?: any;
     error?: string;
-    raw?: any; // Keep raw for unexpected formats
+    raw?: any;
 };
 
 function AgentCoderControlDialog({
     open,
     onOpenChange,
-    // agentJobId,
-    selectedFiles: selectedFileIdsFromProps, // Rename prop to avoid conflict
+    selectedFiles: selectedFileIdsFromProps,
     userInput,
     projectId,
     selectedPrompts,
     promptData,
     totalTokens
-    // isAgentRunning
 }: AgentCoderLogDialogProps) {
-    // --- NEW: State to track the ID of the currently running agent ---
     const [selectedJobId, setSelectedJobId] = useLocalStorage<string>('selectedJobId', "NO_JOB_ID");
-    // --- NEW: State to manage the active tab ---
     const [activeTab, setActiveTab] = useState<'start-job' | 'logs' | 'data'>('start-job');
-
-
-    // Fetch agent run data - ensure the type is correct
     const { data: agentRunData, isLoading: isDataLoading, isError: isDataError, error: dataError, refetch: refetchData } = useGetAgentCoderRunData({ agentJobId: selectedJobId ?? '', enabled: open && !!selectedJobId && selectedJobId !== "NO_JOB_ID" });
     const runAgentCoderMutation = useRunAgentCoder(projectId);
 
@@ -454,48 +435,41 @@ function AgentCoderControlDialog({
     }, [runAgentCoderMutation.isPending])
 
 
-    // Fetch Agent Logs - Only enable when the dialog is open and agent is running or has an ID
     const { data: logData, isLoading: isLogLoading, isError: isLogError, error: logError, refetch: refetchLogs } = useGetAgentCoderRunLogs(
         selectedJobId,
         { enabled: open && !!selectedJobId && selectedJobId !== "NO_JOB_ID", isAgentRunning }
     );
 
-    // --- Instantiate the confirm mutation hook ---
     const confirmChangesMutation = useConfirmAgentRunChanges();
-    // --- NEW: Instantiate the delete mutation hook ---
     const deleteRunMutation = useDeleteAgentCoderRun();
 
-    // Get copy function
     const { copyToClipboard } = useCopyClipboard();
 
     const logEntries = useMemo(() => {
-        // logData is now guaranteed to be LogEntry[] or undefined due to the 'select' function
         if (Array.isArray(logData)) {
-            return logData as LogEntry[]; // Assume elements match LogEntry if it's an array
+            return logData as LogEntry[];
         }
-        return []; // Return empty array if not an array
+        return [];
     }, [logData]);
 
     const handleRefresh = () => {
         refetchLogs();
         if (selectedJobId) {
-            refetchData(); // Refetch data as well
+            refetchData();
         }
     };
 
 
 
-    // --- NEW: Agent Coder Handler ---
     const handleRunAgentCoder = () => {
-        // Use the renamed prop here
         const selectedFileIds = selectedFileIdsFromProps;
-        const newAgentJobId = uuidv4(); // Generate ID here
+        const newAgentJobId = uuidv4();
 
         if (!projectId) { toast.error("No project selected."); return; }
         if (!userInput.trim()) { toast.warning("Please enter a user prompt/instruction."); return; }
         if (selectedFileIds.length === 0) { toast.warning("Please select at least one file for context."); return; }
 
-        setSelectedJobId(newAgentJobId); // Set the new job ID *before* mutating
+        setSelectedJobId(newAgentJobId);
 
         runAgentCoderMutation.mutate({
             userInput,
@@ -503,19 +477,16 @@ function AgentCoderControlDialog({
             agentJobId: newAgentJobId
         }, {
             onSuccess: () => {
-                setActiveTab('logs'); // Switch to logs tab on success
-                refetchLogs(); // Refetch logs immediately
+                setActiveTab('logs');
+                refetchLogs();
             },
             onError: (error) => {
-                // Handle error appropriately, maybe reset job ID or show specific message
                 console.error("Agent run failed to start:", error);
                 toast.error("Failed to start agent run.");
-                // Consider resetting setCurrentAgentJobId(undefined) or an error state?
             }
         });
     };
 
-    // --- Handler for the confirm button ---
     const handleConfirmChanges = () => {
         if (!setSelectedJobId) {
             toast.error("Agent Job ID is missing.");
@@ -524,7 +495,6 @@ function AgentCoderControlDialog({
         confirmChangesMutation.mutate({ agentJobId: selectedJobId });
     };
 
-    // --- NEW: Handler for the delete button ---
     const handleDeleteRun = () => {
         if (!setSelectedJobId) {
             toast.error("Agent Job ID is missing.");
@@ -534,28 +504,23 @@ function AgentCoderControlDialog({
             deleteRunMutation.mutate({ agentJobId: selectedJobId }, {
                 onSuccess: () => {
                     toast.success(`Agent run ${selectedJobId} deleted.`);
-                    onOpenChange(false); // Close the dialog on successful deletion
-                    // Optionally trigger a refetch of the runs list if needed elsewhere
+                    onOpenChange(false);
                 },
                 onError: (error) => {
-                    // --- FIX 3: Cast to unknown before Error as suggested by linter ---
                     const errorAsUnknown = error as unknown;
-                    const errorDetails = (errorAsUnknown as any)?.data?.message // Check nested first
-                        || (errorAsUnknown instanceof Error ? errorAsUnknown.message : undefined) // Then check if standard Error
-                        || 'Unknown error'; // Fallback
+                    const errorDetails = (errorAsUnknown as any)?.data?.message
+                        || (errorAsUnknown instanceof Error ? errorAsUnknown.message : undefined)
+                        || 'Unknown error';
                     toast.error(`Failed to delete run: ${errorDetails}`);
                 }
             });
         }
     };
 
-    // --- Determine if confirmation is possible (using AgentRunData type) ---
     const canConfirm = useMemo(() => {
-        // Ensure agentRunData and updatedFiles exist and updatedFiles is an array with items
         return agentRunData?.updatedFiles && Array.isArray(agentRunData.updatedFiles) && agentRunData.updatedFiles.length > 0;
     }, [agentRunData]);
 
-    // --- NEW: Determine if deletion is possible ---
     const canDelete = !!setSelectedJobId && !deleteRunMutation.isPending;
     const { data: listData, isLoading: isListLoading, isError: isListError, error: listError, refetch: refetchList } = useListAgentCoderRuns();
 
@@ -578,38 +543,30 @@ function AgentCoderControlDialog({
         }));
     }, [listData, selectedJobId, runAgentCoderMutation.variables?.agentJobId, runAgentCoderMutation.isPending]);
 
-    // Reset active tab when dialog opens, unless an agent is already running
     useEffect(() => {
         if (open) {
-            // If there's a job ID but it's not the one currently running via mutation state, check its status?
-            // For simplicity, default to 'start-job' unless the mutation indicates it's currently running.
-            // Or perhaps check if `currentAgentJobId` is valid and not "NO_JOB_ID" to default to logs?
             if (selectedJobId && selectedJobId !== "NO_JOB_ID") {
-                setActiveTab('logs'); // If there's a previous or current job ID, default to logs
+                setActiveTab('logs');
             } else {
-                setActiveTab('start-job'); // Otherwise, default to start
+                setActiveTab('start-job');
             }
-            // Refetch list when dialog opens
             refetchList();
         }
-    }, [open, selectedJobId]); // Rerun when dialog opens or job ID changes
+    }, [open, selectedJobId]);
 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            {/* Increased width and kept height constraints */}
             <DialogContent className="sm:max-w-[85%] md:max-w-[80%] lg:max-w-[75%] xl:max-w-[70%] max-h-[85vh] flex flex-col">
                 <DialogHeader className="shrink-0">
                     <DialogTitle className="flex items-center gap-4">
                         <span className="flex items-center gap-2">
-                            {/* --- NEW: Visual indicator for running agent --- */}
                             {isAgentRunning && (
                                 <RefreshCw className="h-4 w-4 animate-spin text-purple-500" />
                             )}
                             <span>Agent Coder Run</span>
                         </span>
                         <div className='flex items-center gap-2 bg-muted rounded'>
-                            {/* --- Existing Buttons: Copy, Refresh, Delete --- */}
                             {selectedJobId && selectedJobId !== "NO_JOB_ID" && (
                                 <Button
                                     variant="ghost"
@@ -634,10 +591,10 @@ function AgentCoderControlDialog({
                             </Button>
                             <Button
                                 onClick={handleDeleteRun}
-                                size="icon" // Keep as icon button
+                                size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 text-destructive hover:bg-destructive/10" // Standard destructive styling
-                                disabled={!canDelete || confirmChangesMutation.isPending || runAgentCoderMutation.isPending} // Disable if running/deleting/confirming
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                disabled={!canDelete || confirmChangesMutation.isPending || runAgentCoderMutation.isPending}
                                 title="Delete this run"
                             >
                                 {deleteRunMutation.isPending ? (
@@ -647,20 +604,17 @@ function AgentCoderControlDialog({
                                 )}
                             </Button>
                         </div>
-                        {/* --- Agent Run Selector --- */}
-                        <div className="flex-1"> {/* Allow combobox to take remaining space */}
+                        {/* Agent Run Selector */}
+                        <div className="flex-1">
                             <OctoCombobox
                                 options={runOptions}
                                 value={selectedJobId}
-                                // isLoading={isListLoading} // Show loading state
                                 onValueChange={(id) => {
                                     const newId = id ?? "NO_JOB_ID";
                                     setSelectedJobId(newId);
-                                    // Reset mutation state if user selects a different run
                                     if (runAgentCoderMutation.variables?.agentJobId !== newId) {
                                         runAgentCoderMutation.reset();
                                     }
-                                    // Switch to logs if a valid run is selected
                                     if (newId !== "NO_JOB_ID") {
                                         setActiveTab('logs');
                                     } else {
@@ -669,8 +623,8 @@ function AgentCoderControlDialog({
                                 }}
                                 placeholder="Select a past run..."
                                 searchPlaceholder="Search or select run..."
-                                className="w-full min-w-[200px] text-xs h-8" // Use full width available
-                                popoverClassName="w-[--trigger-width]" // Match trigger width
+                                className="w-full min-w-[200px] text-xs h-8"
+                                popoverClassName="w-[--trigger-width]"
                             />
                         </div>
                     </DialogTitle>
@@ -679,18 +633,13 @@ function AgentCoderControlDialog({
                 {/* Use Tabs for Logs and Data, controlled by state */}
                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="flex-1 flex flex-col min-h-0">
                     <TabsList className="shrink-0 mb-2">
-                        {/* Disable tabs based on state */}
                         <TabsTrigger value="new-job" disabled={runAgentCoderMutation.isPending}>New Job</TabsTrigger>
                         <TabsTrigger value="logs" disabled={!selectedJobId || selectedJobId === "NO_JOB_ID"}>Logs</TabsTrigger>
                         <TabsTrigger value="data" disabled={!selectedJobId || selectedJobId === "NO_JOB_ID"}>Data</TabsTrigger>
                     </TabsList>
 
-                    {/* Start Job Tab Content */}
-                    {/* Keep existing TabsContent for start-job */}
                     <TabsContent value="new-job" className="flex-1 min-h-0 flex flex-col gap-2">
-                        {/* Existing grid structure */}
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 overflow-hidden">
-                            {/* Left Side: Input & Prompts */}
                             <Card className="flex flex-col overflow-hidden">
                                 <CardHeader className="py-2 px-3 border-b">
                                     <CardTitle className="text-sm font-medium">Agent Instructions</CardTitle>
@@ -728,9 +677,9 @@ function AgentCoderControlDialog({
                                 <CardContent className="flex-1 p-2 overflow-y-auto text-xs">
                                     <h3 className="font-semibold mb-1">Selected Files:</h3>
                                     <ScrollArea className="h-[100px] border rounded p-1 bg-background mb-2">
-                                        {selectedFileIdsFromProps.length > 0 ? ( // Use the renamed prop
+                                        {selectedFileIdsFromProps.length > 0 ? (
                                             <ul className="list-disc pl-4 space-y-1">
-                                                {selectedFileIdsFromProps.map(fileId => ( // Use the renamed prop
+                                                {selectedFileIdsFromProps.map(fileId => (
                                                     <li key={fileId} className="truncate" title={fileId}>{fileId}</li>
                                                 ))}
                                             </ul>
@@ -748,7 +697,7 @@ function AgentCoderControlDialog({
                         <div className="shrink-0 mt-auto pt-2 border-t">
                             <Button
                                 onClick={handleRunAgentCoder}
-                                disabled={isAgentRunning || !projectId || !userInput.trim() || selectedFileIdsFromProps.length === 0} // Use renamed prop
+                                disabled={isAgentRunning || !projectId || !userInput.trim() || selectedFileIdsFromProps.length === 0}
                                 size="sm"
                                 className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity"
                             >
@@ -758,8 +707,7 @@ function AgentCoderControlDialog({
                                     <><Bot className="h-3.5 w-3.5 mr-1" /> Start Agent Run</>
                                 )}
                             </Button>
-                            {/* Conditional validation message */}
-                            {(!userInput.trim() || selectedFileIdsFromProps.length === 0) && !isAgentRunning && ( // Use renamed prop
+                            {(!userInput.trim() || selectedFileIdsFromProps.length === 0) && !isAgentRunning && (
                                 <p className="text-xs text-destructive text-center mt-1">
                                     Please provide user input and select at least one file to start the agent.
                                 </p>
@@ -767,7 +715,6 @@ function AgentCoderControlDialog({
                         </div>
                     </TabsContent>
 
-                    {/* Logs Tab Content - Add overflow-y-auto, remove internal ScrollArea */}
                     <TabsContent value="logs" className="flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 overflow-y-auto p-2">
                         {isLogLoading && <p className="text-center py-4 text-muted-foreground">Loading logs...</p>}
                         {isLogError && (
@@ -779,13 +726,11 @@ function AgentCoderControlDialog({
                         {!isLogLoading && !isLogError && logEntries.length === 0 && selectedJobId && selectedJobId !== "NO_JOB_ID" && !isAgentRunning && (
                             <p className="text-center p-4 text-muted-foreground">No log entries found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.</p>
                         )}
-                        {/* Show message if agent is running but no logs yet */}
                         {!isLogLoading && !isLogError && logEntries.length === 0 && isAgentRunning && (
                             <p className="text-center p-4 text-muted-foreground flex items-center justify-center gap-2">
                                 <RefreshCw className="h-4 w-4 animate-spin" /> Waiting for agent logs...
                             </p>
                         )}
-                        {/* Show message if no run is selected */}
                         {(!selectedJobId || selectedJobId === "NO_JOB_ID") && (
                             <p className="text-center p-4 text-muted-foreground">Select or start an agent run to view logs.</p>
                         )}
@@ -813,7 +758,6 @@ function AgentCoderControlDialog({
                         )}
                     </TabsContent>
 
-                    {/* Data Tab Content - Add overflow-y-auto, remove internal ScrollArea */}
                     <TabsContent value="data" className="flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 overflow-y-auto">
                         {isDataLoading && <p className="text-center p-4 text-muted-foreground">Loading data...</p>}
                         {isDataError && (
@@ -861,9 +805,9 @@ function AgentCoderControlDialog({
                     </TabsContent>
                 </Tabs>
 
-                <DialogFooter className="shrink-0 mt-2 pt-2 border-t"> {/* Added border */}
+                <DialogFooter className="shrink-0 mt-2 pt-2 border-t">
                     <DialogClose asChild>
-                        <Button type="button" variant="outline" size="sm"> {/* Consistent size */}
+                        <Button type="button" variant="outline" size="sm">
                             Close
                         </Button>
                     </DialogClose>

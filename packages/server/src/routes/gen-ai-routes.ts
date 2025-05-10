@@ -30,8 +30,6 @@ import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/p
 import { providerKeyService } from '@/services/model-providers/provider-key-service';
 import { stream } from 'hono/streaming';
 
-
-
 // Define the Zod schema for filename suggestions
 const FilenameSuggestionSchema = z.object({
     suggestions: z.array(z.string()).length(5).openapi({
@@ -44,14 +42,11 @@ const FilenameSuggestionSchema = z.object({
     })
 }).openapi("FilenameSuggestionOutput");
 
-// Define other schemas as needed...
-// const CodeReviewSchema = z.object({ ... });
 
 // Central object mapping keys to structured task configurations
 // Place this here or in a separate config file (e.g., gen-ai-config.ts) and import it
 const structuredDataSchemas: Record<string, StructuredDataSchemaConfig<any>> = {
     filenameSuggestion: {
-        // These fields match BaseStructuredDataConfigSchema
         name: "Filename Suggestion",
         description: "Suggests 5 suitable filenames based on a description of the file's content.",
         promptTemplate: "Based on the following file description, suggest 5 suitable and conventional filenames. File Description: {userInput}",
@@ -60,25 +55,20 @@ const structuredDataSchemas: Record<string, StructuredDataSchemaConfig<any>> = {
             model: "gpt-4o",
             temperature: 0.5,
         },
-        // This field is part of the interface, but not the base Zod schema
-        schema: FilenameSuggestionSchema, // The actual Zod schema instance
+        schema: FilenameSuggestionSchema,
     },
-    // Example of another entry
     basicSummary: {
         name: "Basic Summary",
         description: "Generates a short summary of the input text.",
         promptTemplate: "Summarize the following text concisely: {userInput}",
         systemPrompt: "You are a summarization expert.",
         modelSettings: { model: "gpt-4o", temperature: 0.6, maxTokens: 150 },
-        schema: z.object({ // Define the schema directly here
+        schema: z.object({ 
             summary: z.string().openapi({ description: "The generated summary." })
         }).openapi("BasicSummaryOutput")
     }
-    // Add more structured tasks here...
 };
 
-
-// GET /models
 const getModelsRoute = createRoute({
     method: 'get',
     path: '/models',
@@ -107,13 +97,6 @@ const getModelsRoute = createRoute({
     }
 });
 
-
-// --- Original Chat Routes (/chats) ---
-
-
-// --- NEW GenAI Routes ---
-
-// POST /api/gen-ai/text (Simple Text Generation)
 const generateTextRoute = createRoute({
     method: 'post',
     path: '/api/gen-ai/text',
@@ -141,7 +124,6 @@ const generateTextRoute = createRoute({
     },
 });
 
-// POST /api/gen-ai/stream (Streaming Text Generation)
 const generateStreamRoute = createRoute({
     method: 'post',
     path: '/api/gen-ai/stream',
@@ -166,8 +148,6 @@ const generateStreamRoute = createRoute({
     },
 });
 
-
-// POST /api/gen-ai/structured (Structured Data Generation)
 const generateStructuredRoute = createRoute({
     method: 'post',
     path: '/api/gen-ai/structured',
@@ -199,7 +179,6 @@ const generateStructuredRoute = createRoute({
     },
 });
 
-// --- NEW: Definition for POST /ai/generate/text (One-off Text Generation) ---
 const postAiGenerateTextRoute = createRoute({
     method: 'post',
     path: '/ai/generate/text',

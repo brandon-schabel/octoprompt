@@ -78,8 +78,6 @@ export async function fetchTaskSuggestionsForTicket(
   ${projectSummary}
 `;
 
-  console.log("userMessage", userMessage);
-
   const cfg = MEDIUM_MODEL_CONFIG;
   if (!cfg.model) {
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, "CONFIG_ERROR");
@@ -91,8 +89,6 @@ export async function fetchTaskSuggestionsForTicket(
     schema: TaskSuggestionsZodSchema,
     options: MEDIUM_MODEL_CONFIG
   });
-
-  console.log("result", result);
 
   return result.object
 }

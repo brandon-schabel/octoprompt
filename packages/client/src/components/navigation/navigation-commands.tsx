@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { CommandItem } from '@ui'
-import { FileIcon, ChatBubbleIcon, CounterClockwiseClockIcon, GearIcon } from '@radix-ui/react-icons'
+import { FileIcon, ChatBubbleIcon, GearIcon } from '@radix-ui/react-icons'
 
 type NavigationCommandProps = {
   onSelect?: () => void

@@ -1,18 +1,21 @@
-import { describe, test, expect, spyOn, beforeEach, afterEach, Mock } from "bun:test";
+import { describe, test, expect, spyOn, beforeEach, afterEach, Mock, mock } from "bun:test";
 import * as fileSyncService from "./file-sync-service-unified";
 import * as projectService from "@/services/project-service";
 import * as fs from "node:fs";
 // Using node:path directly for spying consistency
 import nodePath, { join, relative, basename, extname, resolve } from 'node:path';
 import ignore, { type Ignore } from "ignore";
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from 'shared/src/constants/file-sync-options';
+import { DEFAULT_FILE_EXCLUSIONS } from 'shared/src/constants/file-sync-options';
 import type { Project, ProjectFile } from "shared/src/schemas/project.schemas";
 import type { PathOrFileDescriptor, PathLike, Dirent, Stats } from 'node:fs'; // Import necessary types
 import { resetDatabase } from "@/utils/database";
-
+import { isIgnored, inferChangeType } from "./file-sync-service-unified";
 // --- FIX: Use relative path for path-utils ---
 // Adjust the relative path based on your actual file structure
 import * as pathUtils from '../../utils/path-utils';
+import { createCleanupService } from "./file-sync-service-unified";
+// No direct DB usage here, so no raw queries needed
+// This file only tests the cleanup service logic/mocks
 
 // --- Mocks/Spies for external dependencies (fs, projectService, console, Bun) ---
 // Declared here, initialized in outer beforeEach
@@ -524,7 +527,7 @@ describe("FileSync Service", () => {
             expect(bulkUpdateSpy).not.toHaveBeenCalled();
             expect(bulkDeleteSpy).not.toHaveBeenCalled();
         });
-        
+
         // TODO: Fix this unit test
         // test("should skip file if error reading disk file", async () => {
         //     getProjectFilesSpy.mockResolvedValue([]);
@@ -759,4 +762,87 @@ describe("FileSync Service", () => {
 
     });
 
-}); 
+});
+
+
+
+
+
+
+
+describe("file-change-watcher", () => {
+    beforeEach(() => {
+        mock.restore();
+    });
+
+    test("isIgnored matches wildcard patterns", () => {
+        const patterns = ["*.log", "dist", "*.tmp"];
+        expect(isIgnored("/project/app.log", patterns)).toBe(true);
+        expect(isIgnored("/project/README.md", patterns)).toBe(false);
+    });
+
+    test("inferChangeType returns created if file now exists", () => {
+        mock.module("fs", () => ({
+            existsSync: () => true,
+        }));
+        const result = inferChangeType("rename", "/some/newFile.ts");
+        expect(result).toBe("created");
+    });
+
+    test("inferChangeType returns deleted if file no longer exists", () => {
+        mock.module("fs", () => ({
+            existsSync: () => false,
+        }));
+        const result = inferChangeType("rename", "/some/removed.ts");
+        expect(result).toBe("deleted");
+    });
+
+    test("inferChangeType returns modified for eventType 'change'", () => {
+        const result = inferChangeType("change", "/some/file.ts");
+        expect(result).toBe("modified");
+    });
+
+    test("inferChangeType returns null for unknown eventType", () => {
+        const result = inferChangeType("unknown", "/some/file.ts");
+        expect(result).toBeNull();
+    });
+});
+
+const listProjectsMock = mock(async () => [
+    { id: "p1", path: "/some/fake/path" },
+    { id: "p2", path: "/another/fake/path" },
+] as Project[]);
+
+spyOn(
+    await import("@/services/project-service"),
+    "listProjects"
+).mockImplementation(listProjectsMock);
+
+const syncProjectMock = mock(async () => { });
+spyOn(
+    await import("@/services/file-services/file-sync-service-unified"),
+    "syncProject"
+).mockImplementation(syncProjectMock);
+
+describe("cleanup-service", () => {
+    let cleanupService: ReturnType<typeof createCleanupService>;
+
+    beforeEach(() => {
+        cleanupService = createCleanupService({ intervalMs: 1000 });
+    });
+
+    test("cleanupAllProjects calls listProjects and syncProject for each", async () => {
+        const results = await cleanupService.cleanupAllProjects();
+        expect(listProjectsMock.mock.calls.length).toBe(1);
+        expect(syncProjectMock.mock.calls.length).toBe(2);
+        expect(results.length).toBe(2);
+        expect(results[0].status).toBe("success");
+    });
+
+    test("start and stop methods set and clear interval", async () => {
+        cleanupService.start();
+        cleanupService.start(); // second call warns but doesn't create double intervals
+        cleanupService.stop();
+        cleanupService.stop(); // second call warns about not running
+    });
+});

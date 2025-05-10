@@ -24,7 +24,6 @@ export function SuggestedFilesDialog({
         }
     }, [open, selectedFiles])
 
-    // Toggles a single file in local state
     const toggleLocalFile = (fileId: string) => {
         setLocalSelectedFiles((prev) => {
             const next = new Set(prev)
@@ -37,27 +36,22 @@ export function SuggestedFilesDialog({
         })
     }
 
-    // Toggle *all* suggested files in local state
     const handleSelectAll = () => {
         setLocalSelectedFiles((prev) => {
             const next = new Set(prev)
-            // Check if all suggestions are already selected
             const allSelected = suggestedFiles.every((f) => next.has(f.id))
 
             if (allSelected) {
-                // If all are selected, then deselect them
                 suggestedFiles.forEach((f) => next.delete(f.id))
             } else {
-                // Otherwise select them all
                 suggestedFiles.forEach((f) => next.add(f.id))
             }
             return next
         })
     }
 
-    // Commit local selection => global store, then close
     const handleDialogClose = () => {
-        selectFiles([...localSelectedFiles]) // commit
+        selectFiles([...localSelectedFiles])
         onClose()
     }
 

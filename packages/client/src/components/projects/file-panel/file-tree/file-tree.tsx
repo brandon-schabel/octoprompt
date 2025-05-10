@@ -56,12 +56,7 @@ import { useSummarizeProjectFiles } from "@/hooks/api/use-projects-api";
 import { ProjectFile } from "shared/src/schemas/project.schemas";
 import { useCopyClipboard } from "@/hooks/utility-hooks/use-copy-clipboard";
 import { useActiveProjectTab } from "@/hooks/api/use-kv-api";
-
-/**
- * The user's preferred external editor.
- */
-export type EditorType = "vscode" | "webstorm" | "cursor" | "other";
-
+import { EditorType } from "shared/index";
 
 export type VisibleItem = {
     path: string;
@@ -144,9 +139,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
     const { copyToClipboard } = useCopyClipboard()
     const projectId = projectTabState?.selectedProjectId ?? "";
 
-    // New refresh functionality
     const { mutate: refreshProject } = useRefreshProject(projectId ?? "");
-    // Hook for summarizing files
     const summarizeMutation = useSummarizeProjectFiles(projectId ?? "")
 
     const isFolder = item.node._folder === true;
@@ -331,8 +324,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                                         disabled={summarizeMutation.isPending && summarizeMutation.variables?.fileIds.includes(item.node.file.id)}
                                         onClick={(e) => {
                                             e.stopPropagation();
-
-                                            console.log("summarizing file", item.node.file!.id)
 
                                             summarizeMutation.mutate(
                                                 { fileIds: [item.node.file!.id], force: false }, // force: false initially
@@ -547,16 +538,11 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
 FileTreeNodeRow.displayName = "FileTreeNodeRow";
 
-/**
- * Exposed ref API for focusing the file tree.
- */
+
 export type FileTreeRef = {
     focusTree: (index?: number) => void;
 };
 
-/**
- * Main FileTree component.
- */
 export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree(
     {
         root,
@@ -603,10 +589,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
         }
     }, [focusedIndex]);
 
-    /**
-     * Ensure no duplicates are added to the visible list
-     * if the project has symlinks or other repeated paths.
-     */
     const buildVisibleItems = useCallback((): VisibleItem[] => {
         const result: VisibleItem[] = [];
         const visitedPaths = new Set<string>();
@@ -794,9 +776,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
 
     const { copyToClipboard } = useCopyClipboard()
 
-    /**
-     * Copy the entire root folder tree structure.
-     */
     function copyEntireTree() {
         const lines: string[] = [];
         for (const [name, node] of Object.entries(root)) {

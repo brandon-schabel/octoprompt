@@ -70,11 +70,11 @@ export function createProviderKeyService() {
     return results;
   }
 
-  async function getKeyById(id: string): Promise<ProviderKey> {
+  async function getKeyById(id: string): Promise<ProviderKey | null> {
     const stmt = db.prepare(`SELECT * FROM provider_keys WHERE id = ? LIMIT 1`);
     const foundRow = stmt.get(id) as any;
     if (!foundRow) {
-      throw new ApiError(404, `Provider key with ID ${id} not found.`, 'PROVIDER_KEY_NOT_FOUND');
+      return null;
     }
     const result = mapDbRowToProviderKey(foundRow);
     if (!result) {
@@ -107,12 +107,10 @@ export function createProviderKeyService() {
     return result;
   }
 
-  async function deleteKey(id: string): Promise<void> {
+  async function deleteKey(id: string): Promise<boolean> {
     const stmt = db.prepare(`DELETE FROM provider_keys WHERE id = ?`);
     const deletedInfo = stmt.run(id);
-    if (deletedInfo.changes === 0) {
-      throw new ApiError(404, `Provider key with ID ${id} not found for deletion.`, 'PROVIDER_KEY_NOT_FOUND_FOR_DELETE');
-    }
+    return deletedInfo.changes > 0;
   }
 
   return {

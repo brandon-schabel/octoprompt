@@ -1,5 +1,4 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import type { TypedResponse } from 'hono'; // For explicit response types
 
 import {
     getKvValue,
@@ -112,10 +111,6 @@ const deleteKvKeyRoute = createRoute({
     }
 });
 
-
-
-
-// --- Hono App Instance ---
 export const kvRoutes = new OpenAPIHono()
     .openapi(getKvValueRoute, async (c) => {
         const { key } = c.req.valid('query');
@@ -124,24 +119,21 @@ export const kvRoutes = new OpenAPIHono()
             value = await getKvValue(key);
         } catch (error: any) {
             if (error instanceof ApiError && error.code === 'KV_KEY_NOT_FOUND') {
-                // Key not found, initialize with default value
                 console.log(`[KV Route] Key '${key}' not found. Initializing with default.`);
                 const defaultValue = KVDefaultValues[key];
                 if (defaultValue === undefined) {
-                    // This case should ideally not happen if KVDefaultValues is comprehensive for all KVKey
                     console.error(`[KV Route] No default value defined for key: ${key}`);
                     throw new ApiError(500, `Internal Error: No default value specified for key '${key}'.`, 'KV_MISSING_DEFAULT');
                 }
                 try {
-                    await setKvValue(key, defaultValue); // setKvValue will validate and store
-                    value = defaultValue; // Use the defaultValue directly as it's now set
+                    await setKvValue(key, defaultValue);
+                    value = defaultValue;
                     console.log(`[KV Route] Key '${key}' initialized successfully with default value.`);
                 } catch (setError: any) {
                     console.error(`[KV Route] Error setting default value for key '${key}':`, setError);
                     throw new ApiError(500, `Internal Error: Failed to initialize state for key: ${key}. Reason: ${setError.message || 'Unknown error'}`, 'KV_INIT_DEFAULT_FAILED', { originalError: setError });
                 }
             } else {
-                // Re-throw other errors (e.g., corrupt data, parse error from getKvValue)
                 throw error;
             }
         }
@@ -149,8 +141,6 @@ export const kvRoutes = new OpenAPIHono()
         const payload = { success: true, key, value } satisfies z.infer<typeof KvGetResponseSchema>;        
         return c.json(payload, 200);
     })
-
-
     .openapi(deleteKvKeyRoute, async (c) => {
         const { key } = c.req.valid('query');
         await deleteKvKey(key); // Service now throws ApiError if key not found
@@ -159,7 +149,7 @@ export const kvRoutes = new OpenAPIHono()
     })
     .post('/api/kv/:key', async (c) => {
         const key = c.req.param('key') as KVKey;
-        const body = await c.req.json(); // Assuming body is { value: ... }
+        const body = await c.req.json();
 
         if (!body || typeof body.value === 'undefined') {
             throw new ApiError(400, "Request body must include a 'value' property.", "INVALID_REQUEST_BODY");
@@ -168,7 +158,6 @@ export const kvRoutes = new OpenAPIHono()
 
         const schema = KvSchemas[key];
         if (!schema) {
-            // This indicates a programming error or misconfiguration if a key is exposed but has no schema
             console.error(`[KV Route] No schema defined for key: ${key}`);
             throw new ApiError(500, `Internal Configuration Error: No schema defined for key: ${key}`, 'KV_SCHEMA_MISSING');
         }
@@ -186,16 +175,10 @@ export const kvRoutes = new OpenAPIHono()
         }
 
         // Use updateKVStore if partial update semantics are desired, or setKvValue for overwrite.
-        // The current logic in the original file was to call updateKVStore.
-        // If it was meant to be a simple set, it should be setKvValue(key, validatedValue).
-        // Let's assume the intention was a full update/overwrite of the value based on the input being `json.value` not partial.
-        // If `updateKVStore` is intended for partial updates, then the body structure might need to be different.
-        // Given the original POST route handled the full value, `setKvValue` is more direct.
         await setKvValue(key, validatedValue);
         
         console.log(`[KV Route] Value set for key '${key}':`, validatedValue);
-        // The response should reflect the successfully validated and stored value.
-        // Ensure the generic type for KvSetResponseSchema aligns with this structure.
+
         const responsePayload = { success: true, key, value: validatedValue } as z.infer<typeof KvSetResponseSchema>;
         return c.json(responsePayload, 200);
     });

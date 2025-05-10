@@ -150,12 +150,8 @@ export const useConfirmAgentRunChanges = () => {
         onSuccess: (data, variables) => {
             if (data.success) {
                 toast.success(data.message || `Agent run ${variables.agentJobId} changes confirmed and applied!`);
-                console.log('Confirm Agent Run Success:', data);
 
                 // Invalidate project files to reflect changes
-                // We need the projectId, which isn't directly available here.
-                // A broader invalidation might be needed, or pass projectId if possible.
-                // For now, let's invalidate *all* project file queries as a simple approach.
                 queryClient.invalidateQueries({ queryKey: ['getApiProjectsByProjectIdFiles'] }); // Invalidate based on query key prefix
 
                 // Optionally, refetch the specific run data to show it no longer needs confirmation (if applicable)
@@ -202,7 +198,6 @@ export const useDeleteAgentCoderRun = () => {
             // Check the structure of 'data' based on your actual response schema (DeleteAgentRunResponseSchema)
             if (data.success) {
                 toast.success(data.message || `Agent run ${variables.agentJobId} deleted successfully!`);
-                console.log('Delete Agent Run Success:', data);
 
                 // --- IMPORTANT: Invalidate the list of agent runs ---
                 const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;

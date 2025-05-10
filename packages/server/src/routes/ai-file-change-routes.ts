@@ -4,7 +4,7 @@ import {
   ApiErrorResponseSchema,
 } from 'shared/src/schemas/common.schemas';
 import { generateFileChange, getFileChange, confirmFileChange } from "@/services/file-services/ai-file-change-service";
-// Request schemas
+
 const GenerateChangeBodySchema = z.object({
   filePath: z.string().min(1).openapi({ example: 'src/components/Button.tsx', description: 'Path to the file to modify' }),
   prompt: z.string().min(1).openapi({ example: 'Add hover effects to the button', description: 'Instruction for the AI to follow' }),
@@ -18,7 +18,6 @@ const FileChangeIdParamsSchema = z.object({
   })
 }).openapi('FileChangeIdParams');
 
-// Response schemas
 const FileChangeResponseSchema = z.object({
   success: z.literal(true),
   result: z.object({
@@ -107,7 +106,6 @@ export const aiFileChangeRoutes = new OpenAPIHono()
   .openapi(generateFileChangeRoute, async (c) => {
     try {
       const body = c.req.valid('json');
-      // Service now returns the full DB record
       const changeRecord = await generateFileChange({
         filePath: body.filePath,
         prompt: body.prompt,
@@ -158,7 +156,6 @@ export const aiFileChangeRoutes = new OpenAPIHono()
         return c.json(errorPayload, 400);
       }
 
-      // Service returns the DB record or null
       const fileChangeRecord = await getFileChange(db, fileChangeId);
 
       if (fileChangeRecord === null) {
@@ -213,36 +210,32 @@ export const aiFileChangeRoutes = new OpenAPIHono()
             details: {}
           }
         };
-        // Return 400 as defined in the route responses
         return c.json(errorPayload, 400);
       }
 
-      // Service now returns { status, message } or throws
       const result = await confirmFileChange(db, fileChangeId);
 
       const payload: z.infer<typeof ConfirmChangeResponseSchema> = {
         success: true,
-        result: result // Use the { status, message } object directly
+        result: result 
       };
       return c.json(payload, 200);
     } catch (error) {
       console.error("Error confirming file change:", error);
-      let statusCode: 400 | 404 | 500 = 500; // Default to 500
+      let statusCode: 400 | 404 | 500 = 500; 
       let errorCode = "FILE_CHANGE_CONFIRM_ERROR";
       let errorMessage = "Failed to confirm file change";
 
       if (error instanceof Error) {
-        errorMessage = error.message; // Use actual error message
+        errorMessage = error.message; 
         const code = (error as any).code;
         if (code === 'NOT_FOUND') {
           statusCode = 404;
           errorCode = "NOT_FOUND";
         } else if (code === 'INVALID_STATE') {
-          // 409 Conflict is not defined in route, map to 400 Bad Request
           statusCode = 400;
           errorCode = "INVALID_STATE";
         }
-        // Add other specific error code checks if needed
       }
 
       const errorPayload: z.infer<typeof ApiErrorResponseSchema> = {
@@ -253,7 +246,7 @@ export const aiFileChangeRoutes = new OpenAPIHono()
           details: {}
         }
       };
-      // Use one of the defined error statuses: 400, 404, or 500
+      
       return c.json(errorPayload, statusCode);
     }
   });

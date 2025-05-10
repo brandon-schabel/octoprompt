@@ -6,10 +6,9 @@ import {
     ProviderKeyIdParamsSchema,
     ProviderKeyResponseSchema,
     ProviderKeyListResponseSchema,
-    ProviderKey, // Import the type if needed for casting, though service now returns it directly
+    ProviderKey, 
 } from "shared/src/schemas/provider-key.schemas";
 import { providerKeyService } from "@/services/model-providers/provider-key-service";
-// import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas'; // Redundant if imported above
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas';
 
 const createProviderKeyRoute = createRoute({
@@ -25,7 +24,7 @@ const createProviderKeyRoute = createRoute({
     },
     responses: {
         201: {
-            content: { 'application/json': { schema: ProviderKeyResponseSchema } }, // Returns key with secret
+            content: { 'application/json': { schema: ProviderKeyResponseSchema } }, 
             description: 'Provider key created successfully',
         },
         422: {
@@ -46,7 +45,7 @@ const listProviderKeysRoute = createRoute({
     summary: 'List all configured provider keys (excluding secrets)',
     responses: {
         200: {
-            content: { 'application/json': { schema: ProviderKeyListResponseSchema } }, // Returns list without secrets
+            content: { 'application/json': { schema: ProviderKeyListResponseSchema } }, 
             description: 'Successfully retrieved provider keys',
         },
         500: {
@@ -66,7 +65,7 @@ const getProviderKeyByIdRoute = createRoute({
     },
     responses: {
         200: {
-            content: { 'application/json': { schema: ProviderKeyResponseSchema } }, // Returns key with secret
+            content: { 'application/json': { schema: ProviderKeyResponseSchema } }, 
             description: 'Successfully retrieved provider key',
         },
         404: {
@@ -98,7 +97,7 @@ const updateProviderKeyRoute = createRoute({
     },
     responses: {
         200: {
-            content: { 'application/json': { schema: ProviderKeyResponseSchema } }, // Returns updated key with secret
+            content: { 'application/json': { schema: ProviderKeyResponseSchema } }, 
             description: 'Provider key updated successfully',
         },
         404: {
@@ -144,43 +143,38 @@ const deleteProviderKeyRoute = createRoute({
     },
 });
 
-// --- Hono App Instance ---
 export const providerKeyRoutes = new OpenAPIHono()
     .openapi(createProviderKeyRoute, async (c) => {
         const body = c.req.valid('json');
-        // No try-catch: providerKeyService.createKey now throws ApiError on failure.
         const newKey = await providerKeyService.createKey(body);
         return c.json({ success: true, data: newKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 201);
     })
 
     .openapi(listProviderKeysRoute, async (c) => {
-        // No try-catch: providerKeyService.listKeys handles its errors or returns data.
-        // If individual row parsing fails, it's logged by the service and excluded.
         const keys = await providerKeyService.listKeys();
         return c.json({ success: true, data: keys } satisfies z.infer<typeof ProviderKeyListResponseSchema>, 200);
     })
 
     .openapi(getProviderKeyByIdRoute, async (c) => {
         const { keyId } = c.req.valid('param');
-        // No try-catch: providerKeyService.getKeyById now throws ApiError if not found or parse fails.
         const key = await providerKeyService.getKeyById(keyId);
+        if (!key) {
+            throw new ApiError(404, 'Provider key not found', 'PROVIDER_KEY_NOT_FOUND');
+        }
         return c.json({ success: true, data: key } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
     })
 
     .openapi(updateProviderKeyRoute, async (c) => {
         const { keyId } = c.req.valid('param');
         const body = c.req.valid('json');
-        // No try-catch: providerKeyService.updateKey throws ApiError if not found or on failure.
         const updatedKey = await providerKeyService.updateKey(keyId, body);
         return c.json({ success: true, data: updatedKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 200);
     })
 
     .openapi(deleteProviderKeyRoute, async (c) => {
         const { keyId } = c.req.valid('param');
-        // No try-catch: providerKeyService.deleteKey throws ApiError if not found.
         await providerKeyService.deleteKey(keyId);
         return c.json({ success: true, message: "Key deleted successfully." } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     });
 
-// Export the type for the frontend client
 export type ProviderKeyRouteTypes = typeof providerKeyRoutes;

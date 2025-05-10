@@ -116,11 +116,8 @@ export function useDeleteChat() {
             const chatId = variables;
             if (chatId) {
                 queryClient.invalidateQueries({ queryKey: getChatsByChatIdMessagesQueryKey({ path: { chatId } }) });
-                console.log(`Invalidated messages for chat ${chatId} after deleting chat`);
             } else {
                 console.warn(`useDeleteChat: Could not invalidate messages for chat ${chatId}, chatId missing.`);
-                // Maybe invalidate *all* message queries as a last resort?
-                // queryClient.invalidateQueries({ queryKey: [{ _id: 'getChatsByChatIdMessages' }] }); // Prefix might work
             }
         },
         onError: (error) => commonErrorHandler(error as unknown as Error),

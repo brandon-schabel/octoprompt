@@ -140,11 +140,10 @@ export function ProjectSummarizationSettingsPage() {
     }), [projectFiles, tokensMap, minTokensFilter, maxTokensFilter])
 
     const sortedProjectFiles = [...filteredProjectFiles].sort((a, b) => {
-        const fileAData = summariesMap.get(a.id) // Might be undefined if no summary
-        const fileBData = summariesMap.get(b.id) // Might be undefined if no summary
+        const fileAData = summariesMap.get(a.id)
+        const fileBData = summariesMap.get(b.id) 
 
-        // Fallbacks need to handle potentially missing summary data gracefully
-        const nameA = a.path ?? "" // Use file path from includedFiles directly
+        const nameA = a.path ?? ""
         const nameB = b.path ?? ""
         const updatedA = fileAData?.summaryLastUpdatedAt
             ? new Date(fileAData.summaryLastUpdatedAt).getTime()
@@ -156,7 +155,7 @@ export function ProjectSummarizationSettingsPage() {
         const fileTokensB = tokensMap.get(b.id) ?? 0
         const summaryTokensA = summaryTokensMap.get(a.id) ?? 0
         const summaryTokensB = summaryTokensMap.get(b.id) ?? 0
-        const sizeA = a.size ?? 0 // Use size from includedFiles directly
+        const sizeA = a.size ?? 0
         const sizeB = b.size ?? 0
 
         switch (sortBy) {
@@ -166,13 +165,12 @@ export function ProjectSummarizationSettingsPage() {
                 return nameB.localeCompare(nameA)
 
             case "lastSummarizedAsc":
-                // Files without summaries (updated=0) should come first/last depending on desired sort
-                if (updatedA === 0 && updatedB !== 0) return -1 // Unsummarized first
-                if (updatedA !== 0 && updatedB === 0) return 1  // Unsummarized last
+                if (updatedA === 0 && updatedB !== 0) return -1
+                if (updatedA !== 0 && updatedB === 0) return 1  
                 return updatedA - updatedB
             case "lastSummarizedDesc":
-                if (updatedA === 0 && updatedB !== 0) return 1  // Unsummarized last
-                if (updatedA !== 0 && updatedB === 0) return -1 // Unsummarized first
+                if (updatedA === 0 && updatedB !== 0) return 1 
+                if (updatedA !== 0 && updatedB === 0) return -1 
                 return updatedB - updatedA
 
             case "fileTokenAsc":
@@ -202,7 +200,6 @@ export function ProjectSummarizationSettingsPage() {
     }
 
     async function handleSummarizeOptimistic() {
-        // ... (implementation remains the same)
         if (!selectedFileIds.length) {
             toast.error("No Files Selected", {
                 description: "Please select at least one file to summarize",
@@ -226,7 +223,6 @@ export function ProjectSummarizationSettingsPage() {
 
 
     function handleForceSummarize() {
-        // ... (implementation remains the same)
         if (!selectedFileIds.length) {
             toast.error("No Files Selected", {
                 description: "Please select at least one file to re-summarize",
@@ -247,7 +243,6 @@ export function ProjectSummarizationSettingsPage() {
 
 
     function handleRemoveSummaries() {
-        // ... (implementation remains the same)
         if (!selectedFileIds.length) {
             toast.error("No Files Selected", {
                 description: "Please select at least one file to remove summaries from",
@@ -267,12 +262,11 @@ export function ProjectSummarizationSettingsPage() {
 
 
     function handleToggleSummary(fileId: string) {
-        const f = summariesMap.get(fileId) // Get from summariesMap which only contains files with summaries
+        const f = summariesMap.get(fileId) 
         if (f) {
             setSelectedFileRecord(f)
             setSummaryDialogOpen(true)
         } else {
-            // Optional: Handle case where user clicks view on a file mistakenly thought to have a summary
             console.warn("Attempted to view summary for file without one:", fileId)
         }
     }
@@ -340,11 +334,10 @@ export function ProjectSummarizationSettingsPage() {
     // Calculate counts based on the final sorted/filtered list and summariesMap
     const includedFilesCount = sortedProjectFiles.length; // Now just the total filtered files
     const includedWithSummariesCount = sortedProjectFiles.filter(f => summariesMap.has(f.id)).length;
-    const allSummariesCount = summariesMap.size; // Total files *with* summaries
+    const allSummariesCount = summariesMap.size; 
 
     return (
         <div className="p-4 space-y-6">
-            {/* SUMMARY MEMORY & AGGREGATE STATS CARD */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center">
@@ -354,7 +347,6 @@ export function ProjectSummarizationSettingsPage() {
                             size="sm"
                             className="gap-2"
                             onClick={() => setCombinedSummaryDialogOpen(true)}
-                            // Disable if no files have summaries
                             disabled={!isProjectSummarizationEnabled || includedFilesWithSummaries.length === 0}
                         >
                             <FileText className="h-4 w-4" />
@@ -377,10 +369,6 @@ export function ProjectSummarizationSettingsPage() {
                             <strong>Included files with summaries:</strong>{" "}
                             {includedWithSummariesCount} / {includedFilesCount}
                         </p>
-                        {/* Content length might be less useful than token counts */}
-                        {/* <p className="text-sm">
-                            <strong>Total content length (included):</strong> {totalContentLength} characters
-                        </p> */}
                         <p className="text-sm flex items-center gap-1">
                             <strong>Total tokens in content (included files):</strong>{" "}
                             <FormatTokenCount tokenContent={totalTokensInContent} />
@@ -393,7 +381,6 @@ export function ProjectSummarizationSettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* MAIN PROJECT SUMMARIZATION SETTINGS CARD */}
             <Card className="w-full">
                 <CardHeader>
                     <CardTitle>Project Summarization Settings</CardTitle>
@@ -403,7 +390,6 @@ export function ProjectSummarizationSettingsPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-2 mb-6">
-                        {/* Enable Summarization Switch */}
                         <div className="flex items-center justify-between">
                             <div>
                                 <span className="text-sm font-medium">Enable Auto-Summarization</span>
@@ -417,8 +403,8 @@ export function ProjectSummarizationSettingsPage() {
                                     if (!selectedProjectId) return
                                     updateSettings({
                                         summarizationEnabledProjectIds: check
-                                            ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId] // Ensure array exists
-                                            : (summarizationEnabledProjectIds ?? []).filter( // Ensure array exists
+                                            ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId] 
+                                            : (summarizationEnabledProjectIds ?? []).filter( 
                                                 (id: string) => id !== selectedProjectId
                                             ),
                                     })
@@ -433,7 +419,6 @@ export function ProjectSummarizationSettingsPage() {
                         </p>
                     </div>
 
-                    {/* Sort-by dropdown */}
                     <div className="my-4 flex flex-wrap items-center gap-2">
                         <label className="text-sm font-medium">Sort Files By:</label>
                         <Select
@@ -441,7 +426,6 @@ export function ProjectSummarizationSettingsPage() {
                             onValueChange={(value) =>
                                 setSortBy(value as SortOption)
                             }
-                            // Disable sorting if the main feature is off or no files
                             disabled={!isProjectSummarizationEnabled || sortedProjectFiles.length === 0}
                         >
                             <SelectTrigger className="w-[180px]">
@@ -490,20 +474,17 @@ export function ProjectSummarizationSettingsPage() {
                         </div>
                     </div>
 
-                    {/* Included/Excluded Files Sections */}
                     <div className="mt-6 grid grid-cols-1 gap-6">
-                        {/* Included Files Section */}
                         <div className={!isProjectSummarizationEnabled ? "opacity-60 pointer-events-none" : ""}>
                             <h3 className="text-base font-semibold mb-2">
                                 Project Files ({sortedProjectFiles.length})
                             </h3>
-                            {/* Selection Controls */}
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 <div className="flex items-center gap-1">
                                     <Checkbox
                                         id="select-all"
                                         checked={
-                                            sortedProjectFiles.length > 0 && // Only checked if there are files
+                                            sortedProjectFiles.length > 0 &&
                                             selectedFileIds.length === sortedProjectFiles.length
                                         }
                                         disabled={!isProjectSummarizationEnabled || sortedProjectFiles.length === 0}
@@ -519,7 +500,6 @@ export function ProjectSummarizationSettingsPage() {
                                         Select All
                                     </label>
                                 </div>
-                                {/* --- NEW BUTTON --- */}
                                 <Button
                                     variant="link"
                                     size="sm"
@@ -529,7 +509,6 @@ export function ProjectSummarizationSettingsPage() {
                                 >
                                     Select Unsummarized
                                 </Button>
-                                {/* --- END NEW BUTTON --- */}
                                 {selectedFileIds.length > 0 && (
                                     <span className="text-xs text-muted-foreground ml-auto">
                                         ({selectedFileIds.length} selected)
@@ -537,7 +516,6 @@ export function ProjectSummarizationSettingsPage() {
                                 )}
                             </div>
 
-                            {/* File List */}
                             <ul
                                 className={`mt-2 space-y-1 border rounded p-2 h-72 overflow-y-auto bg-background ${!isProjectSummarizationEnabled ? "opacity-50" : ""}`}
                             >
@@ -563,21 +541,21 @@ export function ProjectSummarizationSettingsPage() {
                                         >
                                             <div className="flex items-center gap-2">
                                                 <Checkbox
-                                                    id={`check-${file.id}`} // Ensure unique ID for label association
+                                                    id={`check-${file.id}`}
                                                     checked={selectedFileIds.includes(file.id)}
                                                     disabled={!isProjectSummarizationEnabled}
                                                     onCheckedChange={() =>
                                                         toggleFileSelection(file.id)
                                                     }
-                                                    className="mt-0.5" // Align checkbox better
+                                                    className="mt-0.5" 
                                                 />
                                                 <label
-                                                    htmlFor={`check-${file.id}`} // Match checkbox ID
+                                                    htmlFor={`check-${file.id}`}
                                                     className={`flex-1 cursor-pointer truncate ${hasSummary
-                                                        ? "font-medium" // Maybe remove text-blue-600? Let icon indicate summary
+                                                        ? "font-medium" 
                                                         : ""
                                                         }`}
-                                                    title={file.path} // Tooltip for long paths
+                                                    title={file.path} 
                                                 >
                                                     {file.path}
                                                 </label>
@@ -612,7 +590,6 @@ export function ProjectSummarizationSettingsPage() {
                                                             <Info className="h-3.5 w-3.5 text-blue-600" />
                                                         </Button>
                                                     )}
-                                                    {/* Replace ResummarizeButton with an icon? */}
                                                     <ResummarizeButton
                                                         projectId={selectedProjectId ?? ""}
                                                         fileId={file.id}
@@ -621,8 +598,6 @@ export function ProjectSummarizationSettingsPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Inline summary view removed for simplicity, use dialog */}
-                                            {/* {expandedSummaryFileId === file.id && fileRecord && (...) } */}
                                         </li>
                                     )
                                 })}
@@ -634,8 +609,8 @@ export function ProjectSummarizationSettingsPage() {
                                     onClick={handleSummarizeOptimistic}
                                     disabled={
                                         selectedFileIds.length === 0 ||
-                                        isPending || // Use useTransition pending state
-                                        summarizeMutation.isPending || // Also check mutation state
+                                        isPending ||
+                                        summarizeMutation.isPending || 
                                         !isProjectSummarizationEnabled
                                     }
                                     size="sm"
@@ -688,9 +663,8 @@ export function ProjectSummarizationSettingsPage() {
 
             <FileViewerDialog
                 open={summaryDialogOpen}
-                // Ensure markdownText is always a string
                 markdownText={selectedFileRecord?.summary ?? "*No summary available*"}
-                filePath={selectedFileRecord?.path} // Pass file path for context
+                filePath={selectedFileRecord?.path}
                 onClose={() => {
                     setSummaryDialogOpen(false)
                     setSelectedFileRecord(null)
@@ -700,9 +674,8 @@ export function ProjectSummarizationSettingsPage() {
             <SummaryDialog
                 isOpen={combinedSummaryDialogOpen}
                 onClose={() => setCombinedSummaryDialogOpen(false)}
-                // Ensure summaryContent is always a string
                 summaryContent={formattedCombinedSummary || "*No included file summaries available.*"}
-                tokenCount={combinedSummaryTokens} // Pass token count
+                tokenCount={combinedSummaryTokens} 
             />
         </div>
     )

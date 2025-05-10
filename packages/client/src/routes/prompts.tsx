@@ -8,30 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
 import { toast } from 'sonner'
 import { useCreatePrompt, useUpdatePrompt, useDeletePrompt, useGetAllPrompts } from '@/hooks/api/use-prompts-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@ui'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@ui'
 import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
 import { Badge } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { Prompt } from '@/generated'
-
-// Utility function to estimate token count
-function estimateTokenCount(text: string, charsPerToken: number = 4): number {
-    const length = text?.length || 0
-    if (length === 0 || charsPerToken <= 0) {
-        return 0
-    }
-    return Math.ceil(length / charsPerToken)
-}
-
-// Utility function to format token count
-function formatTokenCount(count: number): string {
-    if (count >= 1000) {
-        return (count / 1000).toFixed(2).replace(/\.?0+$/, '') + 'k'
-    }
-    return count.toString()
-}
-
+import { estimateTokenCount, formatTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
 
 export function PromptsPage() {
     const [searchQuery, setSearchQuery] = useState('')
@@ -40,7 +23,6 @@ export function PromptsPage() {
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null)
     const [sortOrder, setSortOrder] = useState<"alphabetical" | "default" | "size_asc" | "size_desc">("alphabetical")
 
-    // const { prompts, isLoading, error, createPrompt, updatePrompt, deletePrompt } = usePrompts()
     const { data: prompts, isLoading, error } = useGetAllPrompts()
     const deletePromptMutation = useDeletePrompt()
     const createPromptMutation = useCreatePrompt()
@@ -158,17 +140,14 @@ export function PromptsPage() {
                 }}
                 prompt={selectedPrompt}
                 onSave={async (data) => {
-                    try {
-                        if (selectedPrompt) {
-                            await updatePromptMutation.mutateAsync({ promptId: selectedPrompt.id, data })
-                        } else {
-                            await createPromptMutation.mutateAsync({ body: data })
-                        }
-                        setIsCreateDialogOpen(false)
-                        setSelectedPrompt(null)
-                    } catch {
-                        // Error is handled in usePrompts
+                    if (selectedPrompt) {
+                        await updatePromptMutation.mutateAsync({ promptId: selectedPrompt.id, data })
+                    } else {
+                        await createPromptMutation.mutateAsync({ body: data })
                     }
+                    setIsCreateDialogOpen(false)
+                    setSelectedPrompt(null)
+
                 }}
             />
         </div>
@@ -261,7 +240,6 @@ function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
     )
 }
 
-// Prompt Dialog Component
 interface PromptDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void

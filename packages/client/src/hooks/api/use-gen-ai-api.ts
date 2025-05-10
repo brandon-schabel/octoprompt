@@ -13,7 +13,7 @@ import { z } from 'zod';
 export type StructuredSchemaGenericResponse<
     Key extends keyof typeof structuredDataSchemas,
     // Default Schema to the actual schema type looked up by Key
-    Schema extends z.ZodTypeAny = typeof structuredDataSchemas[Key]['schema'] // Corrected default
+    Schema extends z.ZodTypeAny = typeof structuredDataSchemas[Key]['schema']
 > = {
     success: true;
     data: {
@@ -32,20 +32,14 @@ type MutationSuccessResponse<Key extends keyof typeof structuredDataSchemas> = {
 
 // returns sturctured JSON, does not stream
 export const useGenerateStructuredData = <
-    // Key remains the same: identifies which schema config to use
     Key extends keyof typeof structuredDataSchemas
 >(
     key: Key,
-    // Optional: Allow passing react-query mutation options, now typed correctly
-    // based on the specific success response type defined below.
     options?: Omit<UseMutationOptions<
-        // TData: Use the specific MutationSuccessResponse defined inside the hook
-        MutationSuccessResponse<Key>, // <--- Key change: Use the specific type
-        // TError: Use the error type from your SDK
+        MutationSuccessResponse<Key>, 
         PostApiGenAiStructuredError,
-        // TVariables: The input type for the mutate function
         StructuredSchemaInput
-    >, 'mutationFn'> // Omit mutationFn as we define it here
+    >, 'mutationFn'> 
 ) => {
     // Get the specific Zod schema instance for the given key (runtime value)
     const specificSchema = structuredDataSchemas[key].schema;
@@ -76,8 +70,6 @@ export const useGenerateStructuredData = <
                 // Access the output from the correct path
                 dataToParse = (sdkResponse.data.data as { output: unknown }).output; // <<< CORRECT PATH
             }
-            // You might keep the other checks as fallbacks if the structure *could* vary,
-            // but based on the log, the primary check above is the most likely correct one.
             // Fallback Check 1: { data: { output: ... } }
             else if (
                 sdkResponse && typeof sdkResponse === 'object' && 'data' in sdkResponse &&

@@ -16,26 +16,22 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
     const newProjectData: Project = {
         id: projectId,
         name: data.name,
-        path: data.path, // Store the path as provided initially
+        path: data.path,
         description: data.description || '',
         createdAt: now,
         updatedAt: now,
     };
 
     try {
-        // Validate the new project data structure itself
         const validatedProject = ProjectSchema.parse(newProjectData);
 
         const projects = await projectStorage.readProjects();
         if (projects[projectId]) {
-            // Extremely unlikely with timestamp/random ID, but good practice
             throw new ApiError(409, `Project ID conflict for ${projectId}`, 'PROJECT_ID_CONFLICT');
         }
         projects[projectId] = validatedProject;
         await projectStorage.writeProjects(projects);
-
-        // Create the project's file storage (empty initially)
-        await projectStorage.writeProjectFiles(projectId, {}); // Ensures directory is created
+        await projectStorage.writeProjectFiles(projectId, {});
 
         return validatedProject;
     } catch (error) {
@@ -50,7 +46,6 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
 export async function getProjectById(projectId: string): Promise<Project | null> {
     try {
         const projects = await projectStorage.readProjects();
-        // The read function already validates against ProjectSchema
         return projects[projectId] || null;
     } catch (error) {
         if (error instanceof ApiError) throw error;
@@ -62,7 +57,6 @@ export async function listProjects(): Promise<Project[]> {
     try {
         const projects = await projectStorage.readProjects();
         const projectList = Object.values(projects);
-        // Sort by updatedAt descending, assuming ISO strings compare correctly
         projectList.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
         return projectList;
     } catch (error) {
@@ -77,19 +71,17 @@ export async function updateProject(projectId: string, data: UpdateProjectBody):
         const existingProject = projects[projectId];
 
         if (!existingProject) {
-            return null; // Project not found, handled by route which will throw 404 if this returns null
+            return null;
         }
 
-        // Create updated project data, merging fields
         const updatedProjectData: Project = {
             ...existingProject,
             name: data.name ?? existingProject.name,
             path: data.path ?? existingProject.path,
             description: data.description ?? existingProject.description,
-            updatedAt: new Date().toISOString(), // Update timestamp
+            updatedAt: new Date().toISOString(),
         };
 
-        // Validate the final structure
         const validatedProject = ProjectSchema.parse(updatedProjectData);
 
         projects[projectId] = validatedProject;
@@ -115,7 +107,6 @@ export async function deleteProject(projectId: string): Promise<boolean> {
         delete projects[projectId];
         await projectStorage.writeProjects(projects);
 
-        // Also delete the project's file data directory
         await projectStorage.deleteProjectData(projectId);
 
         return true;
@@ -127,7 +118,6 @@ export async function deleteProject(projectId: string): Promise<boolean> {
 
 export async function getProjectFiles(projectId: string): Promise<ProjectFile[] | null> {
     try {
-        // Optional: Check if project exists first (could be redundant if file read handles it)
         const projectExists = await getProjectById(projectId);
         if (!projectExists) {
             console.warn(`[ProjectService] Attempted to get files for non-existent project: ${projectId}`);
@@ -135,7 +125,6 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[] 
         }
 
         const files = await projectStorage.readProjectFiles(projectId);
-        // readProjectFiles validates each file against ProjectFileSchema
         return Object.values(files);
     } catch (error) {
         if (error instanceof ApiError) throw error;
@@ -144,7 +133,7 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[] 
 }
 
 export async function updateFileContent(
-    projectId: string, // Added projectId
+    projectId: string,
     fileId: string,
     content: string,
     options?: { updatedAt?: Date }
@@ -162,13 +151,11 @@ export async function updateFileContent(
         const updatedFileData: ProjectFile = {
             ...existingFile,
             content: content,
-            size: Buffer.byteLength(content, 'utf8'), // Recalculate size
+            size: Buffer.byteLength(content, 'utf8'),
             updatedAt: newUpdatedAt,
-            // Consider if checksum needs update here too, depends on how checksums are used
             // checksum: calculateChecksum(content),
         };
 
-        // Validate the updated file structure
         const validatedFile = ProjectFileSchema.parse(updatedFileData);
 
         files[fileId] = validatedFile;
@@ -190,7 +177,6 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
         throw new ApiError(404, `Project not found with ID ${projectId} for resummarize all.`, 'PROJECT_NOT_FOUND');
     }
 
-    // Sync files to ensure projects files are up to date before creating the summaries
     await syncProject(project);
 
     const allFiles = await getProjectFiles(projectId);
@@ -200,17 +186,13 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
     }
 
     try {
-        // forceSummarizeFiles should ideally return the modified files or handle saving internally
-        // Option 1: Assume it modifies the passed array objects directly
-        await summarizeFiles(projectId, allFiles.map(f => f.id)); // Pass the array
+        await summarizeFiles(projectId, allFiles.map(f => f.id));
 
-        // If forceSummarizeFiles modified the objects, we need to reconstruct the map and save
         const updatedFilesMap = allFiles.reduce((acc, file) => {
-            acc[file.id] = file; // Re-create the map
+            acc[file.id] = file;
             return acc;
         }, {} as ProjectFilesStorage);
 
-        // Validate the *entire map* before saving to catch inconsistencies
         const validatedMap = ProjectFilesStorageSchema.parse(updatedFilesMap);
 
         await projectStorage.writeProjectFiles(projectId, validatedMap);
@@ -218,7 +200,6 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
 
     } catch (error) {
         if (error instanceof ApiError) throw error;
-        // Decide if partial success is acceptable or if the whole operation should fail
         throw new ApiError(500, `Failed during resummarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'RESUMMARIZE_ALL_FAILED');
     }
 }
@@ -240,16 +221,14 @@ export async function removeSummariesFromFiles(projectId: string, fileIds: strin
         for (const fileId of fileIds) {
             if (files[fileId]) {
                 const file = files[fileId];
-                // Check if modification is needed
                 if (file.summary !== null || file.summaryLastUpdatedAt !== null) {
                     const updatedFileData: ProjectFile = {
                         ...file,
                         summary: null,
                         summaryLastUpdatedAt: null,
-                        updatedAt: now // Also update the main timestamp
+                        updatedAt: now
                     };
-                    // Validate the change
-                    files[fileId] = ProjectFileSchema.parse(updatedFileData); // Update in map after validation
+                    files[fileId] = ProjectFileSchema.parse(updatedFileData);
                     removedCount++;
                     changesMade = true;
                 }
@@ -259,7 +238,6 @@ export async function removeSummariesFromFiles(projectId: string, fileIds: strin
         }
 
         if (changesMade) {
-            // Validate the whole map before writing only if changes were made
             const validatedMap = ProjectFilesStorageSchema.parse(files);
             await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
@@ -279,7 +257,7 @@ export async function removeSummariesFromFiles(projectId: string, fileIds: strin
 
 export async function createProjectFileRecord(
     projectId: string,
-    filePath: string, // This should be relative to project root or absolute
+    filePath: string,
     initialContent: string = ''
 ): Promise<ProjectFile> {
     const project = await getProjectById(projectId);
@@ -287,10 +265,8 @@ export async function createProjectFileRecord(
         throw new ApiError(404, `Project not found with ID ${projectId}`, 'PROJECT_NOT_FOUND');
     }
 
-    // Resolve paths similar to original logic
-    const absoluteProjectPath = resolvePath(project.path); // Make sure resolvePath handles potential errors
+    const absoluteProjectPath = resolvePath(project.path);
     const absoluteFilePath = resolvePath(filePath.startsWith('/') || filePath.startsWith('~') || path.isAbsolute(filePath) ? filePath : path.join(absoluteProjectPath, filePath));
-    // Store path relative to project root for consistency within the project's files.json
     const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath);
 
     const fileId = projectStorage.generateId('file');
@@ -303,8 +279,7 @@ export async function createProjectFileRecord(
         id: fileId,
         projectId: projectId,
         name: fileName,
-        path: normalizedRelativePath, // stores relative path to project root, because we store project file root
-        // so we can get the full path with project root path + file path
+        path: normalizedRelativePath,
         extension: fileExtension,
         size: size,
         content: initialContent,
@@ -317,7 +292,6 @@ export async function createProjectFileRecord(
     };
 
     try {
-        // Validate the new file data
         const validatedFile = ProjectFileSchema.parse(newFileData);
 
         const files = await projectStorage.readProjectFiles(projectId);
@@ -326,7 +300,6 @@ export async function createProjectFileRecord(
         }
         files[fileId] = validatedFile;
 
-        // Validate the whole map before writing
         const validatedMap = ProjectFilesStorageSchema.parse(files);
         await projectStorage.writeProjectFiles(projectId, validatedMap);
 
@@ -341,18 +314,14 @@ export async function createProjectFileRecord(
     }
 }
 
-// --- Bulk Operations ---
-// Note: These lose the transactional safety of the database. Errors in the middle
-// might leave the JSON file in a partially updated state.
-
 /** Represents the data needed to create or update a file record during sync. */
 export interface FileSyncData {
-    path: string; // Normalized relative path
+    path: string; 
     name: string;
     extension: string;
     content: string;
     size: number;
-    checksum: string; // Assuming checksum is provided by sync logic
+    checksum: string;
 }
 
 /** Creates multiple file records in the project's JSON file. */
@@ -373,11 +342,10 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
         for (const fileData of filesToCreate) {
             const fileId = projectStorage.generateId('file');
 
-            // Basic check for duplicates based on path within this batch
             const existingInMap = Object.values(filesMap).find(f => f.path === fileData.path);
             if (existingInMap) {
                 console.warn(`[ProjectService] Skipping duplicate path in bulk create: ${fileData.path} in project ${projectId}`);
-                continue; // Skip this file
+                continue;
             }
 
             const newFileData: ProjectFile = {
@@ -387,17 +355,16 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
                 path: fileData.path,
                 extension: fileData.extension,
                 size: fileData.size,
-                content: fileData.content, // Storing content from sync
+                content: fileData.content,
                 summary: null,
                 summaryLastUpdatedAt: null,
                 meta: '{}',
-                checksum: fileData.checksum, // Store checksum from sync
+                checksum: fileData.checksum,
                 createdAt: now,
                 updatedAt: now,
             };
 
             try {
-                // Validate *each* new file individually
                 const validatedFile = ProjectFileSchema.parse(newFileData);
                 if (filesMap[fileId]) {
                     console.error(`[ProjectService] File ID conflict during bulk create: ${fileId}. Skipping.`);
@@ -407,14 +374,11 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
                 createdFiles.push(validatedFile);
             } catch (validationError) {
                 console.error(`[ProjectService] Validation failed for file ${fileData.path} during bulk create:`, validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError);
-                // Decide: skip this file or abort the whole bulk operation?
-                // Let's skip this file for now.
                 continue;
             }
         }
 
         if (createdFiles.length > 0) {
-            // Validate the final map before writing
             const validatedMap = ProjectFilesStorageSchema.parse(filesMap);
             await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
@@ -423,7 +387,7 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
 
     } catch (error) {
         if (error instanceof ApiError) throw error;
-        if (error instanceof ZodError) { // From ProjectFilesStorageSchema.parse
+        if (error instanceof ZodError) {
             throw new ApiError(500, `Internal validation of project files map failed during bulk create for project ${projectId}: ${error.message}`, 'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
         throw new ApiError(500, `Bulk file creation failed for project ${projectId}. Some files might be created. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_BULK_CREATE_FAILED');
@@ -456,31 +420,24 @@ export async function bulkUpdateProjectFiles(projectId: string, updates: { fileI
             const updatedFileData: ProjectFile = {
                 ...existingFile,
                 content: data.content,
-                extension: data.extension, // Keep extension? Sync might detect changes.
+                extension: data.extension,
                 size: data.size,
                 checksum: data.checksum,
                 updatedAt: now,
-                // Important: Do NOT overwrite createdAt, name, path, projectId, id
-                // Optionally reset summary? Depends on sync logic.
-                // summary: null,
-                // summaryLastUpdatedAt: null,
             };
 
             try {
-                // Validate each update
                 const validatedFile = ProjectFileSchema.parse(updatedFileData);
                 files[fileId] = validatedFile;
                 updatedFilesResult.push(validatedFile);
                 changesMade = true;
             } catch (validationError) {
                 console.error(`[ProjectService] Validation failed for file ${fileId} (${existingFile.path}) during bulk update:`, validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError);
-                // Skip this update
                 continue;
             }
         }
 
         if (changesMade) {
-            // Validate the final map before writing
             const validatedMap = ProjectFilesStorageSchema.parse(files);
             await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
@@ -489,7 +446,7 @@ export async function bulkUpdateProjectFiles(projectId: string, updates: { fileI
 
     } catch (error) {
         if (error instanceof ApiError) throw error;
-        if (error instanceof ZodError) { // From ProjectFilesStorageSchema.parse
+        if (error instanceof ZodError) {
             throw new ApiError(500, `Internal validation of project files map failed during bulk update for project ${projectId}: ${error.message}`, 'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
         throw new ApiError(500, `Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_BULK_UPDATE_FAILED');
@@ -524,8 +481,6 @@ export async function bulkDeleteProjectFiles(projectId: string, fileIdsToDelete:
         }
 
         if (changesMade) {
-            // No individual validation needed for deletes, just write the result
-            // Optional: could still validate the remaining map structure
             const validatedMap = ProjectFilesStorageSchema.parse(files);
             await projectStorage.writeProjectFiles(projectId, validatedMap);
         }
@@ -534,7 +489,7 @@ export async function bulkDeleteProjectFiles(projectId: string, fileIdsToDelete:
 
     } catch (error) {
         if (error instanceof ApiError) throw error;
-        if (error instanceof ZodError) { // From ProjectFilesStorageSchema.parse
+        if (error instanceof ZodError) {
             throw new ApiError(500, `Internal validation of project files map failed during bulk delete for project ${projectId}: ${error.message}`, 'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL', error.flatten().fieldErrors);
         }
         throw new ApiError(500, `Bulk file deletion failed for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'PROJECT_BULK_DELETE_FAILED');
@@ -546,12 +501,12 @@ export async function getProjectFilesByIds(projectId: string, fileIds: string[])
     if (!fileIds || fileIds.length === 0) {
         return [];
     }
-    const project = await getProjectById(projectId); // Ensures project exists
+    const project = await getProjectById(projectId);
     if (!project) {
         throw new ApiError(404, `Project not found with ID ${projectId} when fetching files by IDs.`, 'PROJECT_NOT_FOUND');
     }
 
-    const uniqueFileIds = [...new Set(fileIds)]; // Avoid duplicate lookups
+    const uniqueFileIds = [...new Set(fileIds)];
 
     try {
         const filesMap = await projectStorage.readProjectFiles(projectId);
@@ -562,7 +517,6 @@ export async function getProjectFilesByIds(projectId: string, fileIds: string[])
                 resultFiles.push(filesMap[id]);
             }
         }
-        // Data is already validated on read by projectStorage.readProjectFiles
         return resultFiles;
     } catch (error) {
         if (error instanceof ApiError) throw error;
@@ -570,21 +524,15 @@ export async function getProjectFilesByIds(projectId: string, fileIds: string[])
     }
 }
 
-/**
- * Exposed for unit testing. Summarizes a single file if it meets conditions
- * and updates the project's file storage.
- */
+/** Summarizes a single file if it meets conditions and updates the project's file storage. */
 export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFile> {
     const fileContent = file.content || "";
 
-    // --- Initial checks remain the same ---
     if (!fileContent.trim()) {
         console.warn(`[SummarizeSingleFile] File ${file.path} is empty, skipping summarization.`);
-        // No DB update needed here, just return
         throw new ApiError(400, `File ${file.path} is empty, skipping summarization.`, 'FILE_EMPTY_FOR_SUMMARY', { projectId: file.projectId, fileId: file.id });
     }
 
-    // --- AI Generation Logic (remains mostly the same) ---
     const systemPrompt = `
   ## You are a coding assistant specializing in concise code summaries.
   1. Provide a short overview of what the file does.
@@ -614,7 +562,6 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
         const summary = result.object.summary;
         const trimmedSummary = summary.trim();
 
-        // --- Update Project File Storage ---
         const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
             summary: trimmedSummary,
         });
@@ -623,20 +570,15 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
         return updatedFile;
     } catch (error) {
         if (error instanceof ApiError) throw error;
-        // Error from generateStructuredData or projectStorage.updateProjectFile
         throw new ApiError(500, `Failed to summarize file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`, 'FILE_SUMMARIZE_FAILED', { originalError: error, projectId: file.projectId, fileId: file.id });
     }
 }
 
-/**
-* Summarize multiple files, respecting summarization rules.
-* Processes files sequentially to avoid storage write conflicts.
-*/
+/** Summarize multiple files, respecting summarization rules. Processes files sequentially to avoid storage write conflicts. */
 export async function summarizeFiles(
     projectId: string,
     fileIdsToSummarize: string[],
 ): Promise<{ included: number; skipped: number, updatedFiles: ProjectFile[] }> {
-    // Use the project-service function to get files
     const allProjectFiles = await getProjectFiles(projectId);
 
     if (!allProjectFiles) {
@@ -644,18 +586,14 @@ export async function summarizeFiles(
         return { included: 0, skipped: 0, updatedFiles: [] };
     }
 
-    // Filter the fetched files based on the provided IDs
     const filesToProcess = allProjectFiles.filter((f) => fileIdsToSummarize.includes(f.id));
     const totalFiles = filesToProcess.length;
 
-
     const updatedFiles: ProjectFile[] = [];
 
-    // --- Process Sequentially ---
     for (const file of filesToProcess) {
-        const updatedFile = await summarizeSingleFile(file); // This handles internal checks and storage update
+        const updatedFile = await summarizeSingleFile(file);
         updatedFiles.push(updatedFile);
-
     }
 
     console.log(`[BatchSummarize] File summarization batch complete for project ${projectId}. Included: ${totalFiles}, Skipped: ${totalFiles - updatedFiles.length}`);

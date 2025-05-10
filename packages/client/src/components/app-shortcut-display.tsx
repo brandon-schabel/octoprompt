@@ -11,9 +11,6 @@ export function AppShortcutDisplay({
     return <Badge>{display}</Badge>
 }
 
-/**
- * Simple component to display a keyboard shortcut
- */
 export function ShortcutDisplay({
     shortcut,
     delimiter = ' + ',

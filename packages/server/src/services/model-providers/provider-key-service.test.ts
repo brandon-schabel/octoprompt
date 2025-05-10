@@ -32,7 +32,7 @@ describe("provider-key-service", () => {
         const found = await svc.getKeyById(created.id);
         expect(found?.key).toBe("abc");
 
-        const missing = await svc.getKeyById("nonexistent");
+        const missing = await svc.getKeyById("nonexistent-id-does-not-exist");
         expect(missing).toBeNull();
     });
 

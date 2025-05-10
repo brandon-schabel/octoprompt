@@ -10,13 +10,11 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useGetEnvironmentInfo, useGetSystemStatus } from '@/hooks/api/use-admin-api';
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants';
 
-// Create route
 export const Route = createFileRoute('/admin')({
   component: AdminPage,
 });
 
 function AdminPage() {
-  // Environment info data fetching
   const { 
     data: envInfo,
     isLoading: isLoadingEnv,
@@ -24,7 +22,6 @@ function AdminPage() {
     refetch: refetchEnvInfo
   } = useGetEnvironmentInfo();
 
-  // System status data fetching  
   const {
     data: systemStatus,
     isLoading: isLoadingSystem,
@@ -32,7 +29,6 @@ function AdminPage() {
     refetch: refetchSystemStatus
   } = useGetSystemStatus();
 
-  // Format bytes to a human-readable string
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     
@@ -53,7 +49,6 @@ function AdminPage() {
     return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`;
   };
 
-  // Handle refresh for environment info
   const handleRefreshEnvInfo = async () => {
     try {
       await refetchEnvInfo();

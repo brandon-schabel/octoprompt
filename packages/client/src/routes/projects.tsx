@@ -14,9 +14,7 @@ import { useCreateProjectTab } from '@/hooks/api/use-kv-api'
 export function ProjectsPage() {
     const filePanelRef = useRef<FilePanelRef>(null)
     const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
-
-    // All tabs + active tab
-    const [activeProjectTabState, setActiveProjectTab, activeTabId] = useActiveProjectTab()
+    const [activeProjectTabState,] = useActiveProjectTab()
     const selectedProjectId = activeProjectTabState?.selectedProjectId
     const { data: projects } = useGetProjects()
     const tabs = useGetProjectTabs()
@@ -59,9 +57,6 @@ export const Route = createFileRoute('/projects')({
     component: ProjectsPage,
 })
 
-// -------------------------------------------------------------------------
-// MainProjectsLayout: minimal wrapper around the two panels + dialogs
-// -------------------------------------------------------------------------
 type MainProjectsLayoutProps = {
     filePanelRef: React.RefObject<FilePanelRef>
     promptPanelRef: React.RefObject<PromptOverviewPanelRef>

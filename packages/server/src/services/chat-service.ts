@@ -2,7 +2,7 @@ import { db } from "@/utils/database";
 import { normalizeToIsoString } from "@/utils/parse-timestamp";
 import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage } from "shared/src/schemas/chat.schemas";
 import { randomUUID } from "crypto";
-import { ApiError } from 'shared'; // Import ApiError
+import { ApiError } from 'shared'; 
 
 export type CreateChatOptions = {
     copyExisting?: boolean;

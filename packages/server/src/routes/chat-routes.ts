@@ -324,7 +324,6 @@ const deleteChatRoute = createRoute({
     },
 });
 export const chatRoutes = new OpenAPIHono()
-    // GET /chats
     .openapi(getAllChatsRoute, async (c) => {
         const userChats = await chatService.getAllChats();
         // Assuming chatService.getAllChats now returns Chat[] with correct date strings
@@ -334,37 +333,29 @@ export const chatRoutes = new OpenAPIHono()
             data: userChats, // No need to remap if service formats correctly
         } satisfies z.infer<typeof ChatListResponseSchema>, 200);
     })
-
-    // POST /chats
     .openapi(createChatRoute, async (c) => {
         const body = c.req.valid('json');
-        // The check for referenced chat is now handled by chatService.createChat
         const chat = await chatService.createChat(body.title, {
             copyExisting: body.copyExisting,
             currentChatId: body.currentChatId
         });
         return c.json({
             success: true,
-            data: chat // Assuming chat from service is correctly formatted
+            data: chat
         } satisfies z.infer<typeof ChatResponseSchema>, 201);
     })
-
-    // GET /chats/:chatId/messages
     .openapi(getChatMessagesRoute, async (c) => {
         const { chatId } = c.req.valid('param');
-        // chatService.getChatMessages now throws ApiError if chat not found or data corrupt
         const messages = await chatService.getChatMessages(chatId);
         return c.json({
             success: true,
-            // Ensure messages are correctly typed; role assertion might still be needed if service doesn't guarantee exact enum type
+
             data: messages.map(msg => ({
                 ...msg,
-                role: msg.role as z.infer<typeof MessageRoleEnum>, // Keep if schema requires strict enum
+                role: msg.role as z.infer<typeof MessageRoleEnum>,
             }))
         } satisfies z.infer<typeof MessageListResponseSchema>, 200);
     })
-
-    // POST /ai/chat
     .openapi(postAiChatSdkRoute, async (c) => {
         const {
             chatId,
@@ -374,8 +365,8 @@ export const chatRoutes = new OpenAPIHono()
             tempId
         } = c.req.valid('json');
 
-        const provider = options?.provider as APIProviders; // Type assertion
-        const model = options?.model as string; // Type assertion
+        const provider = options?.provider as APIProviders;
+        const model = options?.model as string;
 
         console.log(`[Hono AI Chat] /ai/chat request: ChatID=${chatId}, Provider=${provider}, Model=${model}`);
 
@@ -401,11 +392,8 @@ export const chatRoutes = new OpenAPIHono()
         } catch (error: any) {
             console.error(`[Hono AI Chat] /ai/chat Error:`, error);
             if (error instanceof ApiError) {
-                throw error; // Re-throw ApiErrors from handleChatMessage or its dependencies
+                throw error;
             }
-            // If handleChatMessage or underlying services don't throw specific ApiErrors,
-            // this conversion logic remains necessary as a fallback.
-            // Ideally, handleChatMessage would be refactored to throw specific ApiErrors.
             if (error.message?.includes('not found') || error.code === 'CHAT_NOT_FOUND') { // Check code too
                 throw new ApiError(404, `Chat session with ID ${chatId} not found. Details: ${error.message}`, 'CHAT_NOT_FOUND', { originalError: error.message });
             }
@@ -416,58 +404,43 @@ export const chatRoutes = new OpenAPIHono()
             throw new ApiError(500, error.message || 'Error processing AI chat stream', 'AI_STREAM_ERROR', { originalError: error.message });
         }
     })
-
-    // POST /chats/:chatId/fork
     .openapi(forkChatRoute, async (c) => {
         const { chatId } = c.req.valid('param');
         const { excludedMessageIds } = c.req.valid('json');
-        // chatService.forkChat now throws ApiError if source chat not found or fork fails
         const newChat = await chatService.forkChat(chatId, excludedMessageIds);
         return c.json({
             success: true,
             data: newChat
         } satisfies z.infer<typeof ChatResponseSchema>, 201);
     })
-
-    // POST /chats/:chatId/fork/:messageId
     .openapi(forkChatFromMessageRoute, async (c) => {
         const { chatId, messageId } = c.req.valid('param');
         const { excludedMessageIds } = c.req.valid('json');
-        // chatService.forkChatFromMessage now throws specific ApiErrors
         const newChat = await chatService.forkChatFromMessage(chatId, messageId, excludedMessageIds);
         return c.json({
             success: true,
             data: newChat
         } satisfies z.infer<typeof ChatResponseSchema>, 201);
     })
-
-    // DELETE /messages/:messageId
     .openapi(deleteMessageRoute, async (c) => {
         const { messageId } = c.req.valid('param');
-        // chatService.deleteMessage now throws ApiError if message not found
         await chatService.deleteMessage(messageId);
         return c.json({
             success: true,
             message: 'Message deleted successfully'
         } satisfies z.infer<typeof OperationSuccessResponseSchema>, 200);
     })
-
-    // PATCH /chats/:chatId
     .openapi(updateChatRoute, async (c) => {
         const { chatId } = c.req.valid('param');
         const { title } = c.req.valid('json');
-        // chatService.updateChat now throws ApiError if chat not found or update fails
         const updatedChat = await chatService.updateChat(chatId, title);
         return c.json({
             success: true,
             data: updatedChat
         } satisfies z.infer<typeof ChatResponseSchema>, 200);
     })
-
-    // DELETE /chats/:chatId
     .openapi(deleteChatRoute, async (c) => {
         const { chatId } = c.req.valid('param');
-        // chatService.deleteChat now throws ApiError if chat not found
         await chatService.deleteChat(chatId);
         return c.json({
             success: true,

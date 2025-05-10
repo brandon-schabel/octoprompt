@@ -144,14 +144,12 @@ export async function updatePrompt(promptId: string, data: UpdatePromptBody): Pr
     });
 }
 
-export async function deletePrompt(promptId: string): Promise<void> {
+export async function deletePrompt(promptId: string): Promise<boolean> {
     db.prepare("DELETE FROM prompt_projects WHERE prompt_id = ?").run(promptId);
 
     const deleteStmt = db.prepare("DELETE FROM prompts WHERE id = ?");
     const info = deleteStmt.run(promptId);
-    if (info.changes === 0) {
-        throw new ApiError(404, `Prompt with ID ${promptId} not found for deletion.`, "PROMPT_NOT_FOUND");
-    }
+    return info.changes > 0;
 }
 
 export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {

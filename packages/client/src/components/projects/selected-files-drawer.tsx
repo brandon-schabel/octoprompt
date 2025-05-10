@@ -12,8 +12,7 @@ import { SelectedFilesList } from "@/components/projects/selected-files-list"
 import { useState } from "react"
 import { FormatTokenCount } from "../format-token-count"
 import { Badge } from "@ui"
-import { useSelectedFiles, type UseSelectedFileReturn } from '@/hooks/utility-hooks/use-selected-files'
-import { ProjectFile } from "@/generated"
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { ProjectFileMap } from "shared/src/schemas/project.schemas"
 import { estimateTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
 
