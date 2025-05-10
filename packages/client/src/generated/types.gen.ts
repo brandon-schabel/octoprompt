@@ -841,6 +841,10 @@ export type AgentCoderRunRequest = {
      * The unique ID for retrieving the execution logs and data for this run.
      */
     agentJobId?: string;
+    /**
+     * Array of Prompt IDs to provide as initial context.
+     */
+    selectedPromptIds: Array<string>;
 };
 
 export type AgentDataLog = {

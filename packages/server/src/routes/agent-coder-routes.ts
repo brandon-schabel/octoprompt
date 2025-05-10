@@ -14,6 +14,7 @@ import { getFullProjectSummary } from '@/utils/get-full-project-summary';
 import { resolvePath } from '@/utils/path-utils';
 import { fromZodError } from 'zod-validation-error';
 import { log } from '@/services/agents/agent-logger';
+import { getPromptsByIds } from '@/services/prompt-service';
 
 // --- Run Agent Coder Route ---
 const runAgentCoderRoute = createRoute({
@@ -266,7 +267,9 @@ export const writeFilesToFileSystem = async ({
 export const agentCoderRoutes = new OpenAPIHono()
     .openapi(runAgentCoderRoute, async (c) => {
         const { projectId: routeProjectId } = c.req.valid('param');
-        const { userInput, selectedFileIds: routeSelectedFileIds, agentJobId: routeAgentJobId = 'no-job-id' } = c.req.valid('json');
+        const { userInput, selectedFileIds: routeSelectedFileIds, agentJobId: routeAgentJobId = 'no-job-id', selectedPromptIds } = c.req.valid('json');
+
+        const prompts = await getPromptsByIds(selectedPromptIds);
 
         await log(`[Agent Coder Route] Starting run ${routeAgentJobId} for project ${routeProjectId}`, 'info', { agentJobId: routeAgentJobId, projectId: routeProjectId });
 
@@ -294,7 +297,9 @@ export const agentCoderRoutes = new OpenAPIHono()
             projectFileMap: buildProjectFileMap(projectFiles),
             projectSummaryContext,
             agentJobId: routeAgentJobId,
-            project
+            project,
+            prompts,
+            selectedFileIds: routeSelectedFileIds
         };
         const orchestratorResultData = await mainOrchestrator(coderAgentDataContext);
 

@@ -72,7 +72,7 @@ export async function removePromptFromProject(promptId: string, projectId: strin
     if (info.changes === 0) {
         const promptExists = await getPromptById(promptId);
         if (!promptExists) {
-             throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND');
+            throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND');
         }
         throw new ApiError(404, `Association between prompt ${promptId} and project ${projectId} not found.`, 'PROMPT_PROJECT_LINK_NOT_FOUND');
     }
@@ -102,6 +102,11 @@ export async function listAllPrompts(): Promise<Prompt[]> {
         createdAt: formatToISO(row.created_at),
         updatedAt: formatToISO(row.updated_at)
     }));
+}
+
+export const getPromptsByIds = async (promptIds: string[]): Promise<Prompt[]> => {
+    const allPrompts = await listAllPrompts();
+    return allPrompts.filter(p => promptIds.includes(p.id));
 }
 
 export async function listPromptsByProject(projectId: string): Promise<Prompt[]> {
@@ -152,11 +157,13 @@ export async function deletePrompt(promptId: string): Promise<boolean> {
     return info.changes > 0;
 }
 
+
 export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {
     const stmt = db.prepare("SELECT * FROM prompt_projects WHERE prompt_id = ?");
     const rows = stmt.all(promptId) as RawPromptProject[];
     return rows.map(row => PromptProjectSchema.parse(row));
 }
+
 
 /**
  * Takes the user's original context/intent/prompt and uses a model

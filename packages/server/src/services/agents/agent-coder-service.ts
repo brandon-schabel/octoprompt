@@ -17,6 +17,10 @@ const agentCoderPrompts = {
     planningAgent: {
         schema: AgentTaskPlanSchema,
         prompt: (agentContext: CoderAgentDataContext) => {
+            const selectedFileIds = agentContext.selectedFileIds;
+            const selectedFiles = agentContext.projectFiles.filter(f => selectedFileIds.includes(f.id));
+
+
             return `
     <goal>
     Analyze the user request and project summary to create a detailed, actionable task plan in JSON format conforming to the TaskPlanSchema.
@@ -26,10 +30,23 @@ const agentCoderPrompts = {
     Assign a descriptive title and a detailed description for each task.
     Specify the targetFilePath for every task.
     </goal>
+    <prompts>
+    ${agentContext.prompts.map(p => `<prompt name="${p.name}">${p.content}</prompt>`).join("\n")}
+    </prompts>
     <user_request>${agentContext.userInput}</user_request>
     <project_summary>${agentContext.projectSummaryContext}</project_summary>
+    <selected_files>
+    ${selectedFiles.map(f => `
+      <file>
+        <id>${f.id}</id>
+        <name>${f.name}</name>
+        <path>${f.path}</path>
+        <content><![CDATA[${f.content}]]></content>
+      </file>`).join("")}
+    </selected_files>
     <project_id>${agentContext.projectFiles[0].projectId}</project_id>
-    <schema>${JSON.stringify(AgentTaskPlanSchema.openapi("TaskPlan"), null, 2)}</schema>
+    <project_name>${agentContext.project.name}</project_name>
+    <project_description>${agentContext.project.description}</project_description>
     `;
         },
         systemPrompt: (agentContext: CoderAgentDataContext) => {
@@ -484,7 +501,7 @@ export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): 
         try {
             await writeAgentDataLog(agentJobId, agentDataLog);
             if (logFilePath) { // Check if logFilePath was initialized
-                 await log(`[Orchestrator] Run ${agentJobId} processing finished. Final status: ${agentDataLog.finalStatus}. Orchestrator logs at: ${logFilePath}. Data log at: ${getAgentDataLogFilePath(agentJobId)}`, 'info');
+                await log(`[Orchestrator] Run ${agentJobId} processing finished. Final status: ${agentDataLog.finalStatus}. Orchestrator logs at: ${logFilePath}. Data log at: ${getAgentDataLogFilePath(agentJobId)}`, 'info');
             } else {
                 console.error(`[Orchestrator CRITICAL] logFilePath not available in finally block for ${agentJobId}. AgentDataLog written to: ${getAgentDataLogFilePath(agentJobId)}`);
             }
