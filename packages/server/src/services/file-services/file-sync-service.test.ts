@@ -56,20 +56,34 @@ describe("FileSync Service", () => {
         path: join(dirPath, name)
     } as Dirent);
 
-    // Helper to create mock Stats
-    const createStats = (isDirectory: boolean, size: number = 10): Stats => ({
+    // Helper to create mock Stats (number-based, compatible with fs.Stats)
+    const createStats = (isDirectory: boolean, size: number = 10): fs.Stats => ({
         isDirectory: () => isDirectory,
         isFile: () => !isDirectory,
-        size: size,
         isBlockDevice: () => false,
         isCharacterDevice: () => false,
+        isSymbolicLink: () => false,
         isFIFO: () => false,
         isSocket: () => false,
-        isSymbolicLink: () => false,
-        dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0,
-        blksize: 4096, blocks: 1, atimeMs: 0, mtimeMs: 0, ctimeMs: 0, birthtimeMs: 0,
-        atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
-    } as Stats);
+        dev: 0,
+        ino: 0,
+        mode: 0,
+        nlink: 0,
+        uid: 0,
+        gid: 0,
+        rdev: 0,
+        size: size,
+        blksize: 4096,
+        blocks: Math.ceil(size / 4096),
+        atimeMs: Date.now(),
+        mtimeMs: Date.now(),
+        ctimeMs: Date.now(),
+        birthtimeMs: Date.now(),
+        atime: new Date(),
+        mtime: new Date(),
+        ctime: new Date(),
+        birthtime: new Date(),
+    });
 
 
     // Outer beforeEach: Initialize spies/mocks needed by *most* tests
@@ -80,7 +94,7 @@ describe("FileSync Service", () => {
         getProjectFilesSpy = spyOn(projectService, 'getProjectFiles');
         bulkCreateSpy = spyOn(projectService, 'bulkCreateProjectFiles').mockResolvedValue([]);
         bulkUpdateSpy = spyOn(projectService, 'bulkUpdateProjectFiles').mockResolvedValue([]);
-        bulkDeleteSpy = spyOn(projectService, 'bulkDeleteProjectFiles').mockResolvedValue({ success: true, deletedCount: 0 });
+        bulkDeleteSpy = spyOn(projectService, 'bulkDeleteProjectFiles').mockResolvedValue({ deletedCount: 0 });
 
         // Spy on fs functions - These might be managed/reset within Orchestration suite too
         existsSyncSpy = spyOn(fs, 'existsSync');
@@ -818,7 +832,12 @@ spyOn(
     "listProjects"
 ).mockImplementation(listProjectsMock);
 
-const syncProjectMock = mock(async () => { });
+// Corrected global mock for syncProject
+const syncProjectMock = mock(async (): Promise<{ created: number; updated: number; deleted: number; skipped: number }> => {
+    // Default mock implementation, can be overridden by mockResolvedValue
+    return { created: 0, updated: 0, deleted: 0, skipped: 0 };
+});
+
 spyOn(
     await import("@/services/file-services/file-sync-service-unified"),
     "syncProject"
@@ -826,17 +845,95 @@ spyOn(
 
 describe("cleanup-service", () => {
     let cleanupService: ReturnType<typeof createCleanupService>;
+    // Store original fs functions to call them if a path is not handled by mocks
+    const originalFsExistsSync = fs.existsSync;
+    const originalFsStatSync = fs.statSync;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+        // Clear any previous mock calls and specific implementations for these mocks
+        listProjectsMock.mockClear();
+        syncProjectMock.mockClear();
+
+        // Define mock projects that listProjectsMock will return
+        const mockProjectsList: Project[] = [
+            { id: "p1", name: "Proj1", path: "/test/project1", description: "Test project 1", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+            { id: "p2", name: "Proj2", path: "/test/project2", description: "Test project 2", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+        ];
+        listProjectsMock.mockResolvedValue([...mockProjectsList]);
+
+        // Ensure syncProjectMock returns the expected promise structure
+        syncProjectMock.mockResolvedValue({ created: 0, updated: 0, deleted: 0, skipped: 1 });
+
+        // Spy on the module aliases, now that the underlying mocks (listProjectsMock, syncProjectMock) are configured.
+        // This ensures that when createCleanupService is called, it gets these mocked versions.
+        spyOn(projectService, "listProjects").mockImplementation(listProjectsMock);
+        spyOn(fileSyncService, "syncProject").mockImplementation(syncProjectMock);
+
+        // Mock fs.existsSync
+        spyOn(fs, 'existsSync').mockImplementation((pathValue: fs.PathLike) => {
+            const pathStr = pathValue.toString();
+            // Handle paths for our mock projects and the problematic path from error logs
+            if (pathStr === "/test/project1" || pathStr === "/test/project2" || pathStr === "/Users/brandon/Programming/octoprompt") {
+                return true;
+            }
+            // console.warn(`[Test fs.existsSync] Unhandled path: ${pathStr}, falling back to original.`);
+            return originalFsExistsSync(pathStr); // Fallback for other paths (e.g., .gitignore)
+        });
+
+        // Mock fs.statSync
+        spyOn(fs, 'statSync').mockImplementation((pathValue: fs.PathLike) => {
+            const pathStr = pathValue.toString();
+            if (pathStr === "/test/project1" || pathStr === "/test/project2" || pathStr === "/Users/brandon/Programming/octoprompt") {
+                return {
+                    isDirectory: () => true,
+                    isFile: () => false,
+                    isBlockDevice: () => false,
+                    isCharacterDevice: () => false,
+                    isSymbolicLink: () => false,
+                    isFIFO: () => false,
+                    isSocket: () => false,
+                    dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0,
+                    size: 1024,
+                    blksize: 4096, blocks: 8,
+                    atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
+                    atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date(),
+                    atimeNs: BigInt(Date.now()) * BigInt(1000000),
+                    mtimeNs: BigInt(Date.now()) * BigInt(1000000),
+                    ctimeNs: BigInt(Date.now()) * BigInt(1000000),
+                    birthtimeNs: BigInt(Date.now()) * BigInt(1000000),
+                } as fs.BigIntStats; // Changed to BigIntStats
+            }
+            // console.warn(`[Test fs.statSync] Unhandled path: ${pathStr}, falling back to original.`);
+            return originalFsStatSync(pathValue); // Fallback for other paths
+        });
+
+        // Mock pathUtils.resolvePath to prevent it from creating problematic absolute paths
+        // if the input project.path is already what we want to test.
+        spyOn(pathUtils, 'resolvePath').mockImplementation((pathArg: string) => pathArg);
+
         cleanupService = createCleanupService({ intervalMs: 1000 });
     });
 
+    afterEach(() => {
+        // Restore all Bun mocks. This should cover spies on fs, projectService, fileSyncService, pathUtils.
+        mock.restore();
+    });
+
     test("cleanupAllProjects calls listProjects and syncProject for each", async () => {
+        // listProjectsMock is already configured in beforeEach to return 2 projects.
+        // syncProject should be called once for each project returned by listProjectsMock
         const results = await cleanupService.cleanupAllProjects();
+
         expect(listProjectsMock.mock.calls.length).toBe(1);
         expect(syncProjectMock.mock.calls.length).toBe(2);
         expect(results.length).toBe(2);
-        expect(results[0].status).toBe("success");
+        // Check status based on syncProjectMock's resolved value
+        if (results.length > 0) {
+            expect(results[0].status).toBe("success"); // Assuming syncProjectMock implies success
+        }
+        if (results.length > 1) {
+            expect(results[1].status).toBe("success");
+        }
     });
 
     test("start and stop methods set and clear interval", async () => {

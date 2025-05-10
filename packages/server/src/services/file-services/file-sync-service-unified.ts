@@ -175,9 +175,12 @@ export function createFileChangeWatcher() {
                     // Notify all listeners
                     for (const listener of listeners) {
                         
-                        listener.onFileChanged(changeType, fullPath).catch(err => {
-                            console.error('[FileChangeWatcher] Error in listener onFileChanged:', err);
-                        });
+                        const result = listener.onFileChanged(changeType, fullPath);
+                        if (result && typeof result.then === 'function') {
+                            result.catch((err: unknown) => {
+                                console.error('[FileChangeWatcher] Error in listener onFileChanged:', err);
+                            });
+                        }
                     }
                 }
             );
@@ -460,11 +463,7 @@ export async function syncFileSet(
         if (fileIdsToDelete.length > 0) {
             // console.log(`[FileSync] Deleting ${fileIdsToDelete.length} file records...`);
             const deleteResult = await bulkDeleteProjectFiles(project.id, fileIdsToDelete);
-            if (deleteResult.success) {
-                deletedCount = deleteResult.deletedCount;
-            } else {
-                console.error(`[FileSync] Bulk deletion failed for project ${project.id}.`);
-            }
+            deletedCount = deleteResult.deletedCount;
         }
         // console.log(`[FileSync] SyncFileSet results - Created: ${createdCount}, Updated: ${updatedCount}, Deleted: ${deletedCount}, Skipped: ${skippedCount}`);
         return { created: createdCount, updated: updatedCount, deleted: deletedCount, skipped: skippedCount };
