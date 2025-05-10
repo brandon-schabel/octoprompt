@@ -8,12 +8,12 @@ export type MessageRole = z.infer<typeof MessageRoleEnum>; // Export the type if
 
 const baseModelOptionsSchema = z.object({
     model: z.string().optional(),
-    max_tokens: z.number().optional(),
+    maxTokens: z.number().optional(),
     temperature: z.number().optional(),
-    top_p: z.number().optional(),
-    top_k: z.number().optional(),
-    frequency_penalty: z.number().optional(),
-    presence_penalty: z.number().optional(),
+    topP: z.number().optional(),
+    topK: z.number().optional(),
+    frequencyPenalty: z.number().optional(),
+    presencePenalty: z.number().optional(),
     stop: z.union([z.string(), z.array(z.string())]).optional(),
 });
 

@@ -11,10 +11,10 @@ export function useChatModelParams() {
 
     const {
         temperature,
-        max_tokens,
-        top_p,
-        frequency_penalty,
-        presence_penalty,
+        maxTokens,
+        topP,
+        frequencyPenalty,
+        presencePenalty,
         model,
         provider,
     } = settings;
@@ -30,19 +30,19 @@ export function useChatModelParams() {
     }, [isTempDisabled, updateSettings]);
 
     const setMaxTokens: ModelParamMutationFn = useCallback((value) => {
-        updateSettings({ max_tokens: value });
+        updateSettings({ maxTokens: value });
     }, [updateSettings]);
 
     const setTopP: ModelParamMutationFn = useCallback((value) => {
-        updateSettings({ top_p: value });
+        updateSettings({ topP: value });
     }, [updateSettings]);
 
     const setFreqPenalty: ModelParamMutationFn = useCallback((value) => {
-        updateSettings({ frequency_penalty: value });
+        updateSettings({ frequencyPenalty: value });
     }, [updateSettings]);
 
     const setPresPenalty: ModelParamMutationFn = useCallback((value) => {
-        updateSettings({ presence_penalty: value });
+        updateSettings({ presencePenalty: value });
     }, [updateSettings]);
 
 
@@ -57,18 +57,18 @@ export function useChatModelParams() {
 
     const modelSettings: AiSdkOptions = useMemo(() => ({
         temperature,
-        top_p,
-        frequency_penalty,
-        presence_penalty,
-        max_tokens,
+        topP,
+        frequencyPenalty,
+        presencePenalty,
+        maxTokens,
         model,
         provider,
     }), [
         temperature,
-        top_p,
-        frequency_penalty,
-        presence_penalty,
-        max_tokens,
+        topP,
+        frequencyPenalty,
+        presencePenalty,
+        maxTokens,
         model,
         provider
     ]);

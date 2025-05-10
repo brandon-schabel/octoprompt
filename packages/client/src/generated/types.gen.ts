@@ -844,7 +844,7 @@ export type AgentCoderRunRequest = {
     /**
      * Array of Prompt IDs to provide as initial context.
      */
-    selectedPromptIds: Array<string>;
+    selectedPromptIds?: Array<string>;
 };
 
 export type AgentDataLog = {
@@ -3123,23 +3123,28 @@ export type PostApiProjectsByProjectIdAgentCoderResponses = {
 
 export type PostApiProjectsByProjectIdAgentCoderResponse = PostApiProjectsByProjectIdAgentCoderResponses[keyof PostApiProjectsByProjectIdAgentCoderResponses];
 
-export type GetApiAgentCoderRunsData = {
+export type GetApiAgentCoderProjectByProjectIdRunsData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * The unique ID of the project.
+         */
+        projectId: string;
+    };
     query?: never;
-    url: '/api/agent-coder/runs';
+    url: '/api/agent-coder/project/{projectId}/runs';
 };
 
-export type GetApiAgentCoderRunsErrors = {
+export type GetApiAgentCoderProjectByProjectIdRunsErrors = {
     /**
      * Internal Server Error retrieving run list
      */
     500: ApiErrorResponse;
 };
 
-export type GetApiAgentCoderRunsError = GetApiAgentCoderRunsErrors[keyof GetApiAgentCoderRunsErrors];
+export type GetApiAgentCoderProjectByProjectIdRunsError = GetApiAgentCoderProjectByProjectIdRunsErrors[keyof GetApiAgentCoderProjectByProjectIdRunsErrors];
 
-export type GetApiAgentCoderRunsResponses = {
+export type GetApiAgentCoderProjectByProjectIdRunsResponses = {
     /**
      * List of available agent run job IDs
      */
@@ -3152,21 +3157,25 @@ export type GetApiAgentCoderRunsResponses = {
     };
 };
 
-export type GetApiAgentCoderRunsResponse = GetApiAgentCoderRunsResponses[keyof GetApiAgentCoderRunsResponses];
+export type GetApiAgentCoderProjectByProjectIdRunsResponse = GetApiAgentCoderProjectByProjectIdRunsResponses[keyof GetApiAgentCoderProjectByProjectIdRunsResponses];
 
-export type GetApiAgentCoderRunsByAgentJobIdLogsData = {
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsData = {
     body?: never;
     path: {
         /**
          * The unique ID of the agent run.
          */
         agentJobId: string;
+        /**
+         * The unique ID of the project.
+         */
+        projectId: string;
     };
     query?: never;
-    url: '/api/agent-coder/runs/{agentJobId}/logs';
+    url: '/api/agent-coder/project/{projectId}/runs/{agentJobId}/logs';
 };
 
-export type GetApiAgentCoderRunsByAgentJobIdLogsErrors = {
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsErrors = {
     /**
      * Agent run or log file not found
      */
@@ -3177,30 +3186,34 @@ export type GetApiAgentCoderRunsByAgentJobIdLogsErrors = {
     500: ApiErrorResponse;
 };
 
-export type GetApiAgentCoderRunsByAgentJobIdLogsError = GetApiAgentCoderRunsByAgentJobIdLogsErrors[keyof GetApiAgentCoderRunsByAgentJobIdLogsErrors];
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsError = GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsErrors[keyof GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsErrors];
 
-export type GetApiAgentCoderRunsByAgentJobIdLogsResponses = {
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponses = {
     /**
      * Agent orchestrator log content as an array of JSON objects
      */
     200: Array<{}>;
 };
 
-export type GetApiAgentCoderRunsByAgentJobIdLogsResponse = GetApiAgentCoderRunsByAgentJobIdLogsResponses[keyof GetApiAgentCoderRunsByAgentJobIdLogsResponses];
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponse = GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponses[keyof GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponses];
 
-export type GetApiAgentCoderRunsByAgentJobIdDataData = {
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataData = {
     body?: never;
     path: {
         /**
          * The unique ID of the agent run.
          */
         agentJobId: string;
+        /**
+         * The unique ID of the project.
+         */
+        projectId: string;
     };
     query?: never;
-    url: '/api/agent-coder/runs/{agentJobId}/data';
+    url: '/api/agent-coder/project/{projectId}/runs/{agentJobId}/data';
 };
 
-export type GetApiAgentCoderRunsByAgentJobIdDataErrors = {
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataErrors = {
     /**
      * Agent run or data file not found
      */
@@ -3211,30 +3224,34 @@ export type GetApiAgentCoderRunsByAgentJobIdDataErrors = {
     500: ApiErrorResponse;
 };
 
-export type GetApiAgentCoderRunsByAgentJobIdDataError = GetApiAgentCoderRunsByAgentJobIdDataErrors[keyof GetApiAgentCoderRunsByAgentJobIdDataErrors];
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataError = GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataErrors[keyof GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataErrors];
 
-export type GetApiAgentCoderRunsByAgentJobIdDataResponses = {
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataResponses = {
     /**
      * Agent data log content as a JSON object
      */
     200: AgentDataLog;
 };
 
-export type GetApiAgentCoderRunsByAgentJobIdDataResponse = GetApiAgentCoderRunsByAgentJobIdDataResponses[keyof GetApiAgentCoderRunsByAgentJobIdDataResponses];
+export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataResponse = GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataResponses[keyof GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataResponses];
 
-export type PostApiAgentCoderRunsByAgentJobIdConfirmData = {
+export type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmData = {
     body?: never;
     path: {
         /**
          * The unique ID of the agent run.
          */
         agentJobId: string;
+        /**
+         * The unique ID of the project.
+         */
+        projectId: string;
     };
     query?: never;
-    url: '/api/agent-coder/runs/{agentJobId}/confirm';
+    url: '/api/agent-coder/project/{projectId}/runs/{agentJobId}/confirm';
 };
 
-export type PostApiAgentCoderRunsByAgentJobIdConfirmErrors = {
+export type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmErrors = {
     /**
      * Agent run data, project, or original files not found
      */
@@ -3245,16 +3262,16 @@ export type PostApiAgentCoderRunsByAgentJobIdConfirmErrors = {
     500: ApiErrorResponse;
 };
 
-export type PostApiAgentCoderRunsByAgentJobIdConfirmError = PostApiAgentCoderRunsByAgentJobIdConfirmErrors[keyof PostApiAgentCoderRunsByAgentJobIdConfirmErrors];
+export type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError = PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmErrors[keyof PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmErrors];
 
-export type PostApiAgentCoderRunsByAgentJobIdConfirmResponses = {
+export type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponses = {
     /**
      * Agent run changes successfully written to filesystem.
      */
     200: ConfirmAgentRunChangesResponse;
 };
 
-export type PostApiAgentCoderRunsByAgentJobIdConfirmResponse = PostApiAgentCoderRunsByAgentJobIdConfirmResponses[keyof PostApiAgentCoderRunsByAgentJobIdConfirmResponses];
+export type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse = PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponses[keyof PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponses];
 
 export type DeleteApiAgentCoderRunsByAgentJobIdData = {
     body?: never;
@@ -3263,6 +3280,10 @@ export type DeleteApiAgentCoderRunsByAgentJobIdData = {
          * The unique ID of the agent run.
          */
         agentJobId: string;
+        /**
+         * The unique ID of the project.
+         */
+        projectId: string;
     };
     query?: never;
     url: '/api/agent-coder/runs/{agentJobId}';

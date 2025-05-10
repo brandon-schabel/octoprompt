@@ -69,13 +69,14 @@ async function parseJsonl(content: string): Promise<Array<Record<string, unknown
 
 // Schema for agentJobId path parameter
 const AgentJobIdParamsSchema = z.object({
-    agentJobId: z.string().openapi({ description: 'The unique ID of the agent run.' })
+    agentJobId: z.string().openapi({ description: 'The unique ID of the agent run.' }),
+    projectId: z.string().openapi({ description: 'The unique ID of the project.' })
 });
 
 // Route for getting orchestrator logs for a specific run
 const getAgentRunLogsRoute = createRoute({
     method: 'get',
-    path: '/api/agent-coder/runs/{agentJobId}/logs',
+    path: '/api/agent-coder/project/{projectId}/runs/{agentJobId}/logs',
     tags: ['AI', 'Agent', 'Logs'],
     summary: 'Retrieve the orchestrator execution logs (.jsonl) for a specific Agent Coder run',
     request: {
@@ -100,7 +101,7 @@ const getAgentRunLogsRoute = createRoute({
 // Route for getting agent data for a specific run
 const getAgentRunDataRoute = createRoute({
     method: 'get',
-    path: '/api/agent-coder/runs/{agentJobId}/data',
+    path: '/api/agent-coder/project/{projectId}/runs/{agentJobId}/data',
     tags: ['AI', 'Agent', 'Data'],
     summary: 'Retrieve the agent data log (.json) for a specific Agent Coder run',
     request: {
@@ -128,11 +129,18 @@ const ListAgentRunsResponseSchema = z.object({
     data: z.array(z.string()).openapi({ description: 'List of available agent run job IDs' })
 });
 
+const ListAgentRunsParamsSchema = z.object({
+    projectId: z.string().openapi({ description: 'The unique ID of the project.' })
+});
+
 const listAgentRunsRoute = createRoute({
     method: 'get',
-    path: '/api/agent-coder/runs', // Updated path to list runs
+    path: '/api/agent-coder/project/{projectId}/runs', // Updated path to list runs
     tags: ['AI', 'Agent', 'Logs'],
     summary: 'List available Agent Coder run job IDs',
+    request: {
+        params: ListAgentRunsParamsSchema
+    },
     responses: {
         200: {
             content: { 'application/json': { schema: ListAgentRunsResponseSchema } },
@@ -155,7 +163,7 @@ const ConfirmAgentRunChangesResponseSchema = z.object({
 // --- Route Definition for Confirming Changes ---
 const confirmAgentRunChangesRoute = createRoute({
     method: 'post',
-    path: '/api/agent-coder/runs/{agentJobId}/confirm',
+    path: '/api/agent-coder/project/{projectId}/runs/{agentJobId}/confirm',
     tags: ['AI', 'Agent', 'Filesystem'],
     summary: 'Confirm and write agent-generated file changes to the filesystem',
     request: {
@@ -269,7 +277,7 @@ export const agentCoderRoutes = new OpenAPIHono()
         const { projectId: routeProjectId } = c.req.valid('param');
         const { userInput, selectedFileIds: routeSelectedFileIds, agentJobId: routeAgentJobId = 'no-job-id', selectedPromptIds } = c.req.valid('json');
 
-        const prompts = await getPromptsByIds(selectedPromptIds);
+        const prompts = await getPromptsByIds(selectedPromptIds || []);
 
         await log(`[Agent Coder Route] Starting run ${routeAgentJobId} for project ${routeProjectId}`, 'info', { agentJobId: routeAgentJobId, projectId: routeProjectId });
 
@@ -316,9 +324,9 @@ export const agentCoderRoutes = new OpenAPIHono()
         return c.json(responsePayload, 200);
     })
     .openapi(listAgentRunsRoute, async (c) => {
-        await log(`[Agent Runs List Route] Request received.`, 'info');
-        const jobIds = await listAgentJobs();
-        await log(`[Agent Runs List Route] Found ${jobIds.length} job IDs.`, 'info', { count: jobIds.length });
+        const { projectId } = c.req.valid('param');
+        const jobIds = await listAgentJobs(projectId);
+        
         const responsePayload: z.infer<typeof ListAgentRunsResponseSchema> = {
             success: true,
             data: jobIds,
@@ -326,47 +334,39 @@ export const agentCoderRoutes = new OpenAPIHono()
         return c.json(responsePayload, 200);
     })
     .openapi(getAgentRunLogsRoute, async (c) => {
-        const { agentJobId } = c.req.valid('param');
-        await log(`[Agent Logs Route] Request received for job ID: ${agentJobId}`, 'info', { agentJobId });
+        const { agentJobId, projectId } = c.req.valid('param');
 
-        const { filePath } = await getOrchestratorLogFilePaths(agentJobId);
-        await log(`[Agent Logs Route] Found log file path: ${filePath}`, 'info', { agentJobId, filePath });
+        const { filePath } = await getOrchestratorLogFilePaths(projectId, agentJobId);
 
         const logFile = Bun.file(filePath);
         if (!(await logFile.exists())) {
-            await log(`[Agent Logs Route] Log file not found at path: ${filePath}`, 'error', { agentJobId, filePath });
             throw new ApiError(404, `Agent run ${agentJobId} logs not found. File does not exist: ${filePath}`, 'LOG_FILE_NOT_FOUND');
         }
         const logContent = await logFile.text();
 
-        const parsedLogs = await parseJsonl(logContent); // Now async
-        await log(`[Agent Logs Route] Parsed ${parsedLogs.length} log entries.`, 'info', { agentJobId, count: parsedLogs.length });
+        const parsedLogs = await parseJsonl(logContent);
 
         return c.json(parsedLogs, 200);
     })
     .openapi(getAgentRunDataRoute, async (c) => {
-        const { agentJobId } = c.req.valid('param');
-        await log(`[Agent Data Route] Request received for job ID: ${agentJobId}`, 'info', { agentJobId });
+        const { agentJobId, projectId } = c.req.valid('param');
 
-        const dataFilePath = getAgentDataLogFilePath(agentJobId); // This function should be robust
-        await log(`[Agent Data Route] Resolved data file path: ${dataFilePath}`, 'info', { agentJobId, dataFilePath });
+        const dataFilePath = await getAgentDataLogFilePath(projectId, agentJobId); // This function should be robust
 
         const dataFile = Bun.file(dataFilePath);
         if (!(await dataFile.exists())) {
-            await log(`[Agent Data Route] Data file not found at path: ${dataFilePath}`, 'error', { agentJobId, dataFilePath });
             throw new ApiError(404, `Agent run ${agentJobId} data not found. File does not exist: ${dataFilePath}`, 'DATA_LOG_NOT_FOUND');
         }
 
-        const agentData = await dataFile.json(); // This will throw if parsing fails
-        await log(`[Agent Data Route] Successfully parsed data for job ${agentJobId}`, 'info', { agentJobId });
+        const agentData = await dataFile.json();
 
         return c.json(agentData, 200);
     })
     .openapi(confirmAgentRunChangesRoute, async (c) => {
-        const { agentJobId } = c.req.valid('param');
+        const { agentJobId, projectId } = c.req.valid('param');
         await log(`[Agent Confirm Route] Request received for job ID: ${agentJobId}`, 'info', { agentJobId });
 
-        const dataFilePath = getAgentDataLogFilePath(agentJobId);
+        const dataFilePath = await getAgentDataLogFilePath(projectId, agentJobId);
         await log(`[Agent Confirm Route] Reading data file path: ${dataFilePath}`, 'info', { agentJobId, dataFilePath });
 
         const dataFile = Bun.file(dataFilePath);
@@ -384,7 +384,7 @@ export const agentCoderRoutes = new OpenAPIHono()
             throw new ApiError(500, `Invalid agent data log structure for agent run ${agentJobId}.`, 'AGENT_DATA_LOG_INVALID', { agentJobId, details: error.message });
         }
 
-        const { projectId, updatedFiles: agentProposedFiles } = validationResult.data;
+        const { updatedFiles: agentProposedFiles } = validationResult.data;
 
         if (!agentProposedFiles || agentProposedFiles.length === 0) {
             await log(`[Agent Confirm Route ${agentJobId}] No file changes proposed in data log. Nothing to write.`, 'info', { agentJobId });

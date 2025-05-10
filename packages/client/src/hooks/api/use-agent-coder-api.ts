@@ -3,11 +3,13 @@ import { v4 as uuidv4 } from 'uuid';
 import {
     postApiProjectsByProjectIdAgentCoderMutation,
     getApiProjectsByProjectIdFilesQueryKey,
-    getApiAgentCoderRunsOptions,
-    getApiAgentCoderRunsByAgentJobIdLogsOptions,
-    getApiAgentCoderRunsByAgentJobIdDataOptions,
-    postApiAgentCoderRunsByAgentJobIdConfirmMutation,
+    getApiAgentCoderProjectByProjectIdRunsOptions,
+    getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions,
+    getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataQueryKey,
+    getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions,
+    getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsQueryKey,
     deleteApiAgentCoderRunsByAgentJobIdMutation,
+    postApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmMutation,
 
 } from '../../generated/@tanstack/react-query.gen';
 import { toast } from 'sonner';
@@ -17,15 +19,16 @@ import {
     type AgentCoderRunRequest as AgentCoderRunRequestBody,
     type ProjectFile,
     type GetApiProjectsByProjectIdFilesData,
-    type GetApiAgentCoderRunsByAgentJobIdLogsData,
-    type GetApiAgentCoderRunsByAgentJobIdDataData,
     type ApiErrorResponse,
-    type PostApiAgentCoderRunsByAgentJobIdConfirmData,
-    type PostApiAgentCoderRunsByAgentJobIdConfirmError,
-    type PostApiAgentCoderRunsByAgentJobIdConfirmResponse,
-    type DeleteApiAgentCoderRunsByAgentJobIdResponse,
-    type DeleteApiAgentCoderRunsByAgentJobIdError,
-    type DeleteApiAgentCoderRunsByAgentJobIdData,
+    type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataData,
+    type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsData,
+    type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmData,
+    type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError,
+    type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse,
+    type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmErrors,
+    DeleteApiAgentCoderRunsByAgentJobIdResponse,
+    DeleteApiAgentCoderRunsByAgentJobIdError,
+    DeleteApiAgentCoderRunsByAgentJobIdData
 } from '../../generated/types.gen';
 import { type Options } from '../../generated/sdk.gen';
 import { commonErrorHandler } from './common-mutation-error-handler';
@@ -35,7 +38,7 @@ import { type TaskPlan, AgentCoderRunSuccessDataSchema, type AgentCoderRunSucces
 export type AgentRunData = AgentCoderRunSuccessData;
 
 // Define the query key type explicitly for clarity
-type AgentRunDataQueryKey = ReturnType<typeof getApiAgentCoderRunsByAgentJobIdDataOptions>['queryKey'];
+type AgentRunDataQueryKey = ReturnType<typeof getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions>['queryKey'];
 
 // Corresponds to AgentCoderRunResponseSchema in agent-coder-routes.ts
 type AgentCoderRunResponse = {
@@ -75,14 +78,14 @@ export const useRunAgentCoder = (projectId: string) => {
 
             const queryKey = getApiProjectsByProjectIdFilesQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdFilesData>);
             queryClient.invalidateQueries({ queryKey });
-            const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
+            const runsListQueryKey = getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }).queryKey;
             queryClient.invalidateQueries({ queryKey: runsListQueryKey });
 
             // Invalidate specific run data/logs if the job ID is available
             if (data.success && data.data?.agentJobId) {
                 const agentJobId = data.data.agentJobId;
-                const dataQueryKey = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId } }).queryKey;
-                const logsQueryKey = getApiAgentCoderRunsByAgentJobIdLogsOptions({ path: { agentJobId } }).queryKey;
+                const dataQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({ path: { projectId, agentJobId } }).queryKey;
+                const logsQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions({ path: { projectId, agentJobId } }).queryKey;
                 queryClient.invalidateQueries({ queryKey: dataQueryKey });
                 queryClient.invalidateQueries({ queryKey: logsQueryKey });
             }
@@ -91,36 +94,42 @@ export const useRunAgentCoder = (projectId: string) => {
     });
 };
 
-export const useListAgentCoderRuns = () => {
-    return useQuery(getApiAgentCoderRunsOptions());
+export const useListAgentCoderRuns = (projectId: string) => {
+    return useQuery(getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }));
 };
 
-export const useGetAgentCoderRunLogs = (agentJobId?: string, options: { enabled?: boolean, isAgentRunning?: boolean } = {}) => {
-    const pathParams: Options<GetApiAgentCoderRunsByAgentJobIdLogsData>['path'] = { agentJobId: agentJobId ?? '' };
+export const useGetAgentCoderRunLogs = (options: { enabled?: boolean, isAgentRunning: boolean, projectId: string, agentJobId: string, } = {
+    enabled: false,
+    isAgentRunning: false,
+    projectId: '',
+    agentJobId: ''
+}) => {
+    const pathParams: Options<GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsData>['path'] = { agentJobId: options.agentJobId ?? '', projectId: options.projectId ?? '' };
 
     return useQuery({
-        ...getApiAgentCoderRunsByAgentJobIdLogsOptions({
+        ...getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions({
             path: pathParams,
         }),
         // Ensure enabled respects both agentJobId presence and the passed option
-        enabled: !!agentJobId && (options.enabled ?? true),
+        enabled: !!options.agentJobId && (options.enabled ?? true),
         refetchOnWindowFocus: false,
         refetchOnMount: true, // Refetch when component mounts or enabled state changes
         refetchInterval: options.isAgentRunning ? 250 : false,
     });
 };
 
-export const useGetAgentCoderRuns = () => {
-    return useQuery(getApiAgentCoderRunsOptions());
+export const useGetAgentCoderRuns = (projectId: string) => {
+    return useQuery(getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }));
 }
 
 export const useGetAgentCoderRunData = ({
     agentJobId,
     enabled = true,
     isAgentRunning = false,
-}: { agentJobId: string, enabled?: boolean, isAgentRunning?: boolean }) => {
+    projectId,
+}: { agentJobId: string, enabled?: boolean, isAgentRunning?: boolean, projectId: string }) => {
     // Use the specific query key type here
-    const queryOptions = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId } }) as UseQueryOptions<AgentRunData, Error, AgentRunData, AgentRunDataQueryKey>;
+    const queryOptions = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({ path: { projectId, agentJobId } }) as UseQueryOptions<AgentRunData, Error, AgentRunData, AgentRunDataQueryKey>;
 
     return useQuery<AgentRunData, Error, AgentRunData, AgentRunDataQueryKey>({ // Specify the type parameters including the query key
         ...queryOptions,
@@ -132,12 +141,12 @@ export const useGetAgentCoderRunData = ({
 // --- NEW Hook: Confirm Agent Run Changes ---
 export const useConfirmAgentRunChanges = () => {
     const queryClient = useQueryClient();
-    const mutationOptionsFn = postApiAgentCoderRunsByAgentJobIdConfirmMutation();
+    const mutationOptionsFn = postApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmMutation();
 
-    return useMutation<PostApiAgentCoderRunsByAgentJobIdConfirmResponse, PostApiAgentCoderRunsByAgentJobIdConfirmError, { agentJobId: string }>({
-        mutationFn: async ({ agentJobId }) => {
-            const options: Options<PostApiAgentCoderRunsByAgentJobIdConfirmData> = {
-                path: { agentJobId },
+    return useMutation<PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse, PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError, { agentJobId: string, projectId: string }>({
+        mutationFn: async ({ agentJobId, projectId }) => {
+            const options: Options<PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmData> = {
+                path: { projectId, agentJobId },
             };
             const mutationFn = mutationOptionsFn.mutationFn;
             if (!mutationFn) {
@@ -145,7 +154,7 @@ export const useConfirmAgentRunChanges = () => {
             }
             const result = await mutationFn(options);
             // The generated type PostApiAgentCoderRunsByAgentJobIdConfirmResponse should be correct
-            return result as PostApiAgentCoderRunsByAgentJobIdConfirmResponse;
+            return result as PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse;
         },
         onSuccess: (data, variables) => {
             if (data.success) {
@@ -155,11 +164,11 @@ export const useConfirmAgentRunChanges = () => {
                 queryClient.invalidateQueries({ queryKey: ['getApiProjectsByProjectIdFiles'] }); // Invalidate based on query key prefix
 
                 // Optionally, refetch the specific run data to show it no longer needs confirmation (if applicable)
-                const dataQueryKey = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId: variables.agentJobId } }).queryKey;
+                const dataQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({ path: { projectId: variables.projectId, agentJobId: variables.agentJobId } }).queryKey;
                 queryClient.invalidateQueries({ queryKey: dataQueryKey });
 
                 // Invalidate runs list in case status changes (though less likely needed here)
-                const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
+                const runsListQueryKey = getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId: variables.projectId } }).queryKey;
                 queryClient.invalidateQueries({ queryKey: runsListQueryKey });
             } else {
                 const errorMessage = (data as any)?.error?.message || 'Failed to confirm agent run changes.';
@@ -180,11 +189,11 @@ export const useDeleteAgentCoderRun = () => {
     return useMutation<
         DeleteApiAgentCoderRunsByAgentJobIdResponse, // Success response type
         DeleteApiAgentCoderRunsByAgentJobIdError,   // Error type
-        { agentJobId: string }                      // Variables type ({ agentJobId })
+        { agentJobId: string, projectId: string }                      // Variables type ({ agentJobId })
     >({
-        mutationFn: async ({ agentJobId }) => {
+        mutationFn: async ({ agentJobId, projectId }) => {
             const options: Options<DeleteApiAgentCoderRunsByAgentJobIdData> = { // Use the correct Options type
-                path: { agentJobId },
+                path: { projectId, agentJobId },
             };
             const mutationFn = mutationOptionsFn.mutationFn;
             if (!mutationFn) {
@@ -200,12 +209,12 @@ export const useDeleteAgentCoderRun = () => {
                 toast.success(data.message || `Agent run ${variables.agentJobId} deleted successfully!`);
 
                 // --- IMPORTANT: Invalidate the list of agent runs ---
-                const runsListQueryKey = getApiAgentCoderRunsOptions().queryKey;
+                const runsListQueryKey = getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId: variables.projectId } }).queryKey;
                 queryClient.invalidateQueries({ queryKey: runsListQueryKey });
 
                 // Optionally invalidate specific run data/logs if they were cached, though they shouldn't exist anymore
-                const dataQueryKey = getApiAgentCoderRunsByAgentJobIdDataOptions({ path: { agentJobId: variables.agentJobId } }).queryKey;
-                const logsQueryKey = getApiAgentCoderRunsByAgentJobIdLogsOptions({ path: { agentJobId: variables.agentJobId } }).queryKey;
+                const dataQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({ path: { projectId: variables.projectId, agentJobId: variables.agentJobId } }).queryKey;
+                const logsQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions({ path: { projectId: variables.projectId, agentJobId: variables.agentJobId } }).queryKey;
                 queryClient.removeQueries({ queryKey: dataQueryKey }); // Remove cached data/logs for the deleted run
                 queryClient.removeQueries({ queryKey: logsQueryKey });
 

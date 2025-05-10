@@ -10,8 +10,6 @@ import type { Project, ProjectFile } from "shared/src/schemas/project.schemas";
 import type { PathOrFileDescriptor, PathLike, Dirent, Stats } from 'node:fs'; // Import necessary types
 import { resetDatabase } from "@/utils/database";
 import { isIgnored, inferChangeType } from "./file-sync-service-unified";
-// --- FIX: Use relative path for path-utils ---
-// Adjust the relative path based on your actual file structure
 import * as pathUtils from '../../utils/path-utils';
 import { createCleanupService } from "./file-sync-service-unified";
 // No direct DB usage here, so no raw queries needed

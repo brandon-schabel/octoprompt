@@ -157,9 +157,9 @@ export function AgentCoderControlDialog({
 }: AgentCoderLogDialogProps) {
     const [selectedJobId, setSelectedJobId] = useLocalStorage<string>('selectedJobId', "NO_JOB_ID");
     const [activeTab, setActiveTab] = useState<'new-job' | 'logs' | 'confirm'>('new-job');
-    const [showDataInLogsTab, setShowDataInLogsTab] = useState(false); 
+    const [showDataInLogsTab, setShowDataInLogsTab] = useState(false);
 
-    const { data: agentRunData, isLoading: isDataLoading, isError: isDataError, error: dataError, refetch: refetchData } = useGetAgentCoderRunData({ agentJobId: selectedJobId ?? '', enabled: open && !!selectedJobId && selectedJobId !== "NO_JOB_ID" });
+    const { data: agentRunData, isLoading: isDataLoading, isError: isDataError, error: dataError, refetch: refetchData } = useGetAgentCoderRunData({ agentJobId: selectedJobId ?? '', projectId, enabled: open && !!selectedJobId && selectedJobId !== "NO_JOB_ID" });
     const runAgentCoderMutation = useRunAgentCoder(projectId);
 
     const isAgentRunning = useMemo(() => {
@@ -168,8 +168,11 @@ export function AgentCoderControlDialog({
 
 
     const { data: logData, isLoading: isLogLoading, isError: isLogError, error: logError, refetch: refetchLogs } = useGetAgentCoderRunLogs(
-        selectedJobId,
-        { enabled: open && !!selectedJobId && selectedJobId !== "NO_JOB_ID", isAgentRunning }
+        {
+            projectId,
+            agentJobId: selectedJobId,
+            enabled: open && !!selectedJobId && selectedJobId !== "NO_JOB_ID", isAgentRunning
+        }
     );
 
     const confirmChangesMutation = useConfirmAgentRunChanges();
@@ -227,7 +230,7 @@ export function AgentCoderControlDialog({
             toast.error("Agent Job ID is missing.");
             return;
         }
-        confirmChangesMutation.mutate({ agentJobId: selectedJobId });
+        confirmChangesMutation.mutate({ agentJobId: selectedJobId, projectId });
     };
 
     const handleDeleteRun = () => {
@@ -236,7 +239,7 @@ export function AgentCoderControlDialog({
             return;
         }
         if (window.confirm(`Are you sure you want to permanently delete agent run "${selectedJobId}"? This cannot be undone.`)) {
-            deleteRunMutation.mutate({ agentJobId: selectedJobId }, {
+            deleteRunMutation.mutate({ agentJobId: selectedJobId, projectId }, {
                 onSuccess: () => {
                     toast.success(`Agent run ${selectedJobId} deleted.`);
                     setSelectedJobId("NO_JOB_ID"); // Reset selected job ID
@@ -259,7 +262,9 @@ export function AgentCoderControlDialog({
     }, [agentRunData]);
 
     const canDelete = !!selectedJobId && selectedJobId !== "NO_JOB_ID" && !deleteRunMutation.isPending; // Ensure job ID is valid
-    const { data: listData, isLoading: isListLoading, refetch: refetchList } = useListAgentCoderRuns();
+    const { data: listData, isLoading: isListLoading, refetch: refetchList } = useListAgentCoderRuns(projectId);
+
+
 
     const runOptions = useMemo(() => {
         const runs = listData?.data || [];
@@ -282,8 +287,8 @@ export function AgentCoderControlDialog({
     useEffect(() => {
         if (open) {
             const isRunForSelectedJobPending = runAgentCoderMutation.isPending &&
-                                              runAgentCoderMutation.variables?.agentJobId === selectedJobId &&
-                                              selectedJobId !== "NO_JOB_ID";
+                runAgentCoderMutation.variables?.agentJobId === selectedJobId &&
+                selectedJobId !== "NO_JOB_ID";
 
             if (isRunForSelectedJobPending) {
                 // If a relevant job is actively running, go to logs.
@@ -381,7 +386,12 @@ export function AgentCoderControlDialog({
                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new-job' | 'logs' | 'confirm')} className="flex-1 flex flex-col min-h-0">
                     <TabsList className="shrink-0 mb-2">
                         <TabsTrigger value="new-job" >New Job</TabsTrigger>
-                        <TabsTrigger value="logs" >Logs & Data</TabsTrigger>
+                        <TabsTrigger value="logs" >
+                            <span className="flex items-center gap-1">
+                                Logs & Data
+                                {isAgentRunning && activeTab !== 'logs' && <RefreshCw className="h-3 w-3 animate-spin" />}
+                            </span>
+                        </TabsTrigger>
                         <TabsTrigger value="confirm" >Confirm</TabsTrigger>
                     </TabsList>
 
@@ -521,8 +531,8 @@ export function AgentCoderControlDialog({
                                                 <p className="text-center pt-2 text-muted-foreground">No log entries found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.</p>
                                             )}
                                             {!isLogLoading && !isLogError && logEntries.length === 0 && isAgentRunning && (
-                                                <p className="text-center pt-2 text-muted-foreground flex items-center justify-center gap-2">
-                                                    <RefreshCw className="h-4 w-4 animate-spin" /> Waiting for agent logs...
+                                                <p className="text-center pt-4 text-lg font-semibold text-purple-500 flex items-center justify-center gap-2">
+                                                    <RefreshCw className="h-5 w-5 animate-spin" /> Waiting for agent logs...
                                                 </p>
                                             )}
                                             {!isLogLoading && !isLogError && logEntries.length > 0 && (

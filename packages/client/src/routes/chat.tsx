@@ -116,20 +116,20 @@ export function ModelSettingsPopover() {
             <Slider id="temperature" disabled={isTempDisabled} min={0} max={1} step={0.01} value={[temperature]} onValueChange={temps => handleUpdateTemperature(temps[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="max_tokens">Max Tokens: {maxTokens}</Label>
-            <Slider id="max_tokens" min={1000} max={1000000} step={1000} value={[maxTokens]} onValueChange={maxTokens => handleUpdateMaxTokens(maxTokens[0])} />
+            <Label htmlFor="maxTokens">Max Tokens: {maxTokens}</Label>
+            <Slider id="maxTokens" min={1000} max={1000000} step={1000} value={[maxTokens]} onValueChange={maxTokens => handleUpdateMaxTokens(maxTokens[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="top_p">Top P: {topP.toFixed(2)}</Label>
-            <Slider id="top_p" min={0} max={1} step={0.01} value={[topP]} onValueChange={topP => handleUpdateTopP(topP[0])} />
+            <Label htmlFor="topP">Top P: {topP.toFixed(2)}</Label>
+            <Slider id="topP" min={0} max={1} step={0.01} value={[topP]} onValueChange={topP => handleUpdateTopP(topP[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="frequency_penalty">Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
-            <Slider id="frequency_penalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={freqPenalty => handleUpdateFreqPenalty(freqPenalty[0])} />
+            <Label htmlFor="frequencyPenalty">Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
+            <Slider id="frequencyPenalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={freqPenalty => handleUpdateFreqPenalty(freqPenalty[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="presence_penalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
-            <Slider id="presence_penalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={presPenalty => handleUpdatePresPenalty(presPenalty[0])} />
+            <Label htmlFor="presencePenalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
+            <Slider id="presencePenalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={presPenalty => handleUpdatePresPenalty(presPenalty[0])} />
           </div>
         </div>
       </PopoverContent>
@@ -728,8 +728,8 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     <SlidingSidebar
       width={300}
       side="left"
-      isOpen={isOpen} 
-      onClose={onClose} 
+      isOpen={isOpen}
+      onClose={onClose}
     >
       {/* Sidebar content  */}
       <div className="p-2 border-b mb-2 flex flex-col gap-2">
@@ -866,7 +866,7 @@ function ChatPage() {
 
   const { messages, input, isLoading: isAiLoading, error, setInput, sendMessage }
     = useAIChat({
-      chatId: activeChatId || '', 
+      chatId: activeChatId || '',
       provider,
       model: model ?? '',
       systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.',

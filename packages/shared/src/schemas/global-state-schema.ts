@@ -52,10 +52,10 @@ export const projectTabStateSchema = z.object({
 // Chat Model Settings (Defined once, used in AppSettings)
 export const chatModelSettingsSchema = z.object({
     temperature: z.number().min(0).max(2).default(defaultModelConfigs.temperature ?? 0.7).openapi({ description: "Controls randomness. Lower values make the model more deterministic.", example: 0.7 }),
-    max_tokens: z.number().min(100).max(Infinity).default(defaultModelConfigs.max_tokens ?? 4096).openapi({ description: "Maximum number of tokens to generate in the chat completion.", example: 4096 }),
-    top_p: z.number().min(0).max(1).default(defaultModelConfigs.top_p ?? 1).openapi({ description: "Nucleus sampling parameter. Considers tokens with top_p probability mass.", example: 1 }),
-    frequency_penalty: z.number().min(-2).max(2).default(defaultModelConfigs.frequency_penalty ?? 0).openapi({ description: "Penalizes new tokens based on their frequency in the text so far.", example: 0 }),
-    presence_penalty: z.number().min(-2).max(2).default(defaultModelConfigs.presence_penalty ?? 0).openapi({ description: "Penalizes new tokens based on whether they appear in the text so far.", example: 0 }),
+    maxTokens: z.number().min(100).max(Infinity).default(defaultModelConfigs.maxTokens ?? 4096).openapi({ description: "Maximum number of tokens to generate in the chat completion.", example: 4096 }),
+    topP: z.number().min(0).max(1).default(defaultModelConfigs.topP ?? 1).openapi({ description: "Nucleus sampling parameter. Considers tokens with top_p probability mass.", example: 1 }),
+    frequencyPenalty: z.number().min(-2).max(2).default(defaultModelConfigs.frequencyPenalty ?? 0).openapi({ description: "Penalizes new tokens based on their frequency in the text so far.", example: 0 }),
+    presencePenalty: z.number().min(-2).max(2).default(defaultModelConfigs.presencePenalty ?? 0).openapi({ description: "Penalizes new tokens based on whether they appear in the text so far.", example: 0 }),
     // stream: z.boolean().default(defaultModelConfigs.stream ?? true).openapi({ description: "Whether to stream back partial progress.", example: true }),
 }).openapi('ChatModelSettings', { description: 'Configuration parameters for the AI chat model generation.' });
 export type ChatModelSettings = z.infer<typeof chatModelSettingsSchema>;
@@ -84,10 +84,10 @@ export const appSettingsSchema = z.object({
     provider: providerSchema.optional().default(defaultModelConfigs.provider as APIProviders).openapi({ description: "Default AI provider to use for chat.", example: "openrouter" }),
     model: z.string().optional().default(defaultModelConfigs.model ?? "gpt-4o").openapi({ description: "Default AI model name to use for chat.", example: "gpt-4o" }),
     temperature: chatModelSettingsSchema.shape.temperature,
-    max_tokens: chatModelSettingsSchema.shape.max_tokens,
-    top_p: chatModelSettingsSchema.shape.top_p,
-    frequency_penalty: chatModelSettingsSchema.shape.frequency_penalty,
-    presence_penalty: chatModelSettingsSchema.shape.presence_penalty,
+    maxTokens: chatModelSettingsSchema.shape.maxTokens,
+    topP: chatModelSettingsSchema.shape.topP,
+    frequencyPenalty: chatModelSettingsSchema.shape.frequencyPenalty,
+    presencePenalty: chatModelSettingsSchema.shape.presencePenalty,
     // stream: chatModelSettingsSchema.shape.stream,
 }).openapi('AppSettings', { description: 'Global application settings, including theme, AI provider configuration, and default chat parameters.' });
 

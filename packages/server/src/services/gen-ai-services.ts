@@ -310,25 +310,32 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
         console.log(`[UnifiedProviderService] Generating structured data: Provider=${provider}, ModelID=${modelInstance.modelId}, Schema=${schema.description || 'Unnamed Schema'}`);
     }
 
-    const result = await generateObject({
-        model: modelInstance,
-        schema: schema,
-        prompt: prompt,
-        system: systemMessage,
-        temperature: finalOptions.temperature,
-        maxTokens: finalOptions.maxTokens,
-        topP: finalOptions.topP,
-        frequencyPenalty: finalOptions.frequencyPenalty,
-        presencePenalty: finalOptions.presencePenalty,
-        topK: finalOptions.topK,
-    });
+    try {
+        const result = await generateObject({
+            model: modelInstance,
+            schema: schema,
+            prompt: prompt,
+            system: systemMessage,
+            temperature: finalOptions.temperature,
+            maxTokens: finalOptions.maxTokens,
+            topP: finalOptions.topP,
+            frequencyPenalty: finalOptions.frequencyPenalty,
+            presencePenalty: finalOptions.presencePenalty,
+            topK: finalOptions.topK,
+        });
 
-    if (debug) {
-        console.log(`[UnifiedProviderService] generateObject finished. Reason: ${result.finishReason}. Usage: ${JSON.stringify(result.usage)}`);
+        if (debug) {
+            console.log(`[UnifiedProviderService] generateObject finished. Reason: ${result.finishReason}. Usage: ${JSON.stringify(result.usage)}`);
+        }
+
+
+        return result;
+
+    } catch (error: any) {
+        if (error instanceof ApiError) throw error;
+        console.error(`[UnifiedProviderService - generateStructuredData] Error for ${provider}:`, error);
+        throw new ApiError(500, `Failed to generate structured data for provider ${provider}: ${error.message}`, 'GENERATE_STRUCTURED_DATA_FAILED', { originalError: error.message });
     }
-
-
-    return result;
 }
 
 
