@@ -32,7 +32,6 @@ export function ProjectSettingsDialog() {
     const { data: preferredEditor } = useProjectTabField('preferredEditor')
     const { data: projectId } = useProjectTabField('selectedProjectId')
 
-    const isProjectSummarizationEnabled = projectId ? summarizationEnabledProjectIds?.includes(projectId) : false
     const { isPending: isSyncing, mutate: syncProject } = useSyncProject(projectId ?? '')
 
 
@@ -71,17 +70,6 @@ export function ProjectSettingsDialog() {
         }))
     }
 
-    const setEnableProjectSummarization = (value: boolean) => {
-        if (!projectId) return
-
-        updateSettings(prev => ({
-            ...prev,
-            summarizationEnabledProjectIds: value
-                ? [...(prev.summarizationEnabledProjectIds ?? []), projectId]
-                : (prev.summarizationEnabledProjectIds ?? []).filter(id => id !== projectId)
-        }))
-    }
-
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -98,22 +86,6 @@ export function ProjectSettingsDialog() {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-6 py-4">
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <span className="text-sm font-medium">Enable Summarization</span>
-                                <p className="text-sm text-muted-foreground">
-                                    When enabled, files will be automatically summarized when added to the context.
-                                </p>
-                            </div>
-                            <Switch
-                                checked={isProjectSummarizationEnabled}
-                                onCheckedChange={(check) => {
-                                    setEnableProjectSummarization(check)
-                                }}
-                            />
-                        </div>
-                    </div>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <div>

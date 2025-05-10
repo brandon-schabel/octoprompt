@@ -446,7 +446,9 @@ export function AgentCoderControlDialog({
 
                         <div className="shrink-0 mt-auto pt-2 border-t">
                             <p className="text-xs text-muted-foreground text-center mb-2">
-                                Note: Agent runs may propose file modifications. You can review and apply these changes from the 'Confirm' tab after the run completes.
+                                Note: Agent won't make file changes without confirmation.
+                                <br />
+                                Model selection/settings can be updated in the "model-default-configs.ts" file by updating the "HIGH_MODEL_CONFIG" variable, UI controls will be added soon.
                             </p>
                             <Button
                                 onClick={handleRunAgentCoder}

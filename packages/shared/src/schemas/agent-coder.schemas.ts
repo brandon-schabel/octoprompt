@@ -98,7 +98,7 @@ export const AgentCoderRunRequestSchema = z.object({
     agentJobId: z.string().optional().openapi({
         description: "The unique ID for retrieving the execution logs and data for this run."
     }),
-    selectedPromptIds: z.array(z.string().min(1)).min(1).openapi({
+    selectedPromptIds: z.array(z.string().min(1)).optional().openapi({
         description: "Array of Prompt IDs to provide as initial context.",
         example: ["prompt-id-1", "prompt-id-2"]
     })

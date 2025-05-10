@@ -141,7 +141,7 @@ export function ProjectSummarizationSettingsPage() {
 
     const sortedProjectFiles = [...filteredProjectFiles].sort((a, b) => {
         const fileAData = summariesMap.get(a.id)
-        const fileBData = summariesMap.get(b.id) 
+        const fileBData = summariesMap.get(b.id)
 
         const nameA = a.path ?? ""
         const nameB = b.path ?? ""
@@ -166,11 +166,11 @@ export function ProjectSummarizationSettingsPage() {
 
             case "lastSummarizedAsc":
                 if (updatedA === 0 && updatedB !== 0) return -1
-                if (updatedA !== 0 && updatedB === 0) return 1  
+                if (updatedA !== 0 && updatedB === 0) return 1
                 return updatedA - updatedB
             case "lastSummarizedDesc":
-                if (updatedA === 0 && updatedB !== 0) return 1 
-                if (updatedA !== 0 && updatedB === 0) return -1 
+                if (updatedA === 0 && updatedB !== 0) return 1
+                if (updatedA !== 0 && updatedB === 0) return -1
                 return updatedB - updatedA
 
             case "fileTokenAsc":
@@ -262,7 +262,7 @@ export function ProjectSummarizationSettingsPage() {
 
 
     function handleToggleSummary(fileId: string) {
-        const f = summariesMap.get(fileId) 
+        const f = summariesMap.get(fileId)
         if (f) {
             setSelectedFileRecord(f)
             setSummaryDialogOpen(true)
@@ -334,7 +334,7 @@ export function ProjectSummarizationSettingsPage() {
     // Calculate counts based on the final sorted/filtered list and summariesMap
     const includedFilesCount = sortedProjectFiles.length; // Now just the total filtered files
     const includedWithSummariesCount = sortedProjectFiles.filter(f => summariesMap.has(f.id)).length;
-    const allSummariesCount = summariesMap.size; 
+    const allSummariesCount = summariesMap.size;
 
     return (
         <div className="p-4 space-y-6">
@@ -392,10 +392,7 @@ export function ProjectSummarizationSettingsPage() {
                     <div className="space-y-2 mb-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <span className="text-sm font-medium">Enable Auto-Summarization</span>
-                                <p className="text-sm text-muted-foreground">
-                                    Automatically summarize new or changed files matching inclusion criteria.
-                                </p>
+                                <span className="text-sm font-medium">Enable File Summarization</span>
                             </div>
                             <Switch
                                 checked={isProjectSummarizationEnabled}
@@ -403,8 +400,8 @@ export function ProjectSummarizationSettingsPage() {
                                     if (!selectedProjectId) return
                                     updateSettings({
                                         summarizationEnabledProjectIds: check
-                                            ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId] 
-                                            : (summarizationEnabledProjectIds ?? []).filter( 
+                                            ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId]
+                                            : (summarizationEnabledProjectIds ?? []).filter(
                                                 (id: string) => id !== selectedProjectId
                                             ),
                                     })
@@ -547,15 +544,15 @@ export function ProjectSummarizationSettingsPage() {
                                                     onCheckedChange={() =>
                                                         toggleFileSelection(file.id)
                                                     }
-                                                    className="mt-0.5" 
+                                                    className="mt-0.5"
                                                 />
                                                 <label
                                                     htmlFor={`check-${file.id}`}
                                                     className={`flex-1 cursor-pointer truncate ${hasSummary
-                                                        ? "font-medium" 
+                                                        ? "font-medium"
                                                         : ""
                                                         }`}
-                                                    title={file.path} 
+                                                    title={file.path}
                                                 >
                                                     {file.path}
                                                 </label>
@@ -610,7 +607,7 @@ export function ProjectSummarizationSettingsPage() {
                                     disabled={
                                         selectedFileIds.length === 0 ||
                                         isPending ||
-                                        summarizeMutation.isPending || 
+                                        summarizeMutation.isPending ||
                                         !isProjectSummarizationEnabled
                                     }
                                     size="sm"
@@ -675,7 +672,7 @@ export function ProjectSummarizationSettingsPage() {
                 isOpen={combinedSummaryDialogOpen}
                 onClose={() => setCombinedSummaryDialogOpen(false)}
                 summaryContent={formattedCombinedSummary || "*No included file summaries available.*"}
-                tokenCount={combinedSummaryTokens} 
+                tokenCount={combinedSummaryTokens}
             />
         </div>
     )

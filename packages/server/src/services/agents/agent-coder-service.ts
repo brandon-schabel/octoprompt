@@ -1,4 +1,4 @@
-import { MEDIUM_MODEL_CONFIG } from 'shared';
+import { HIGH_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from 'shared';
 import { AiSdkOptions } from 'shared/src/schemas/gen-ai.schemas';
 import { ProjectFile, } from 'shared/src/schemas/project.schemas';
 import { buildProjectFileMap } from 'shared/src/utils/projects-utils';
@@ -120,7 +120,7 @@ Ensure the generated code is complete and correct for the file path specified.
 }
 
 // --- Configuration ---
-const AI_OPTIONS: AiSdkOptions = MEDIUM_MODEL_CONFIG; // Use your desired model config
+const AI_OPTIONS: AiSdkOptions = HIGH_MODEL_CONFIG; // Use your desired model config
 const AI_REWRITE_TEMPERATURE = 0.3; // Adjust temperature for rewrite creativity vs precision
 
 // --- Agent Function Definitions ---
@@ -369,8 +369,11 @@ export type CoderAgentOrchestratorSuccessResult = {
 
 
 export async function mainOrchestrator(rawAgentContext: CoderAgentDataContext): Promise<CoderAgentOrchestratorSuccessResult> {
+
     const agentJobId = rawAgentContext.agentJobId;
     const agentJobDirPath = join(AGENT_LOGS_DIR, agentJobId);
+
+    console.log({ agentJobId })
     let { filePath: logFilePath } = { filePath: '' }; // Initialize to prevent uninitialized errors
 
     const agentDataLog: AgentDataLog = {
