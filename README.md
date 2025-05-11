@@ -6,6 +6,9 @@ Software Toolkit For Rapidly Building Codebases Using AI
 
 If you've worked with LLMs and code you know how much quality drops off with more code in the context.  OctoPrompt helps with quality dropoff by helping you find and select the files from your codebase for your desired changes. OctoPrompt is a dev tool without AI first, and uses AI to enhance its abilities. The long term goal of OctoPrompt is to make building codebases with AI as easy as possible and to increasingly automate the manual work of planning changes, editing code, and testing the result.
 
+#### OctoPrompt Project Overview page
+![octoprompt-0-5-0-project-overview](https://github.com/user-attachments/assets/f92680e4-2877-488a-b336-79533c3999d4)
+
 ---
 
 ## Quick Start
