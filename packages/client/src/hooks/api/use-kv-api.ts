@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KVKey, KvSchemas, KVValue } from 'shared/src/schemas/kv-store.schemas';
 import { commonErrorHandler } from './common-mutation-error-handler';
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants';
-import { AppSettings, ProjectTabsStateRecord, ProjectTabState, ProjectTabStatePartial, Theme } from 'shared/index';
+import { AppSettings, ProjectTabsStateRecord, ProjectTabState, ProjectTabStatePartial, Theme, ApiError } from 'shared/index';
 import { useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -31,6 +31,8 @@ type MutationContext<K extends KVKey> = {
     previousValue?: KVValue<K>;
 };
 
+
+// Set does a REPLACE, whereas update does a PATCH/merge of the exist value(if it's an object)
 export function useSetKvValue<K extends KVKey>(key: K) {
     const invalidateKv = useInvalidateKv(key)
     const queryClient = useQueryClient()
@@ -124,9 +126,8 @@ export function useDeleteKvValue() {
     });
 }
 
-
 export const updateProjectTabs = () => {
-    const { mutate: setProjectTabs } = useSetKvValue('projectTabs')
+    const { mutate: setProjectTabs } = useUpdateKvValue('projectTabs')
 
     return (projectTabs: ProjectTabsStateRecord) => {
         setProjectTabs(projectTabs)
@@ -181,7 +182,7 @@ export const useGetAppSettings = () => {
 
 export const useAppSettingsKvApi = () => {
     const { data: appSettings } = useGetAppSettings()
-    const { mutate: setAppSettings } = useSetKvValue('appSettings')
+    const { mutate: setAppSettings } = useUpdateKvValue('appSettings')
 
     return [appSettings, setAppSettings]
 }
@@ -382,7 +383,6 @@ export function useActiveChatId(): [string | null, (chatId: string | null) => vo
     return [activeChatId as string | null, setActiveChatId];
 }
 
-
 export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
 
 function getPartial<T>(prev: T, partialOrFn: PartialOrFn<T>): Partial<T> {
@@ -478,5 +478,82 @@ export function useUpdateActiveProjectTab() {
         // Call the updater function returned by useActiveProjectTabData
         updateActiveTabData(finalPartial);
     };
+}
+
+// New hook for PATCH /api/kv/:key for partial updates
+export function useUpdateKvValue<K extends KVKey>(key: K) {
+    const invalidateKv = useInvalidateKv(key);
+    const queryClient = useQueryClient();
+
+    // For partial updates, the input payload will be Partial<KVValue<K>>
+    // However, the body sent to the API is { value: Partial<KVValue<K>> }
+    type PartialSpecificValueType = Partial<KVValue<K>>;
+
+    return useMutation<
+        { success: boolean; key: K; value: KVValue<K> }, // API response type
+        Error, // Error type
+        PartialSpecificValueType, // Input variable to the mutation function
+        MutationContext<K> // Context type, can be reused or adapted
+    >({
+        mutationFn: async (partialPayload: PartialSpecificValueType) => {
+            const resp = await fetch(`${SERVER_HTTP_ENDPOINT}/api/kv/${key}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ value: partialPayload }), // Wrap partial payload in { value: ... }
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!resp.ok) {
+                const errorText = await resp.text();
+                // Attempt to parse errorText as ApiError if possible for richer error info
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    if (errorJson.message && errorJson.code) {
+                        throw new ApiError(resp.status, errorJson.message, errorJson.code, errorJson.details);
+                    }
+                } catch (e) {
+                    // Fallback if errorText is not JSON or not an ApiError structure
+                }
+                throw new Error(`Failed to update KV value for key "${key}": ${resp.status} ${errorText}`);
+            }
+            return resp.json();
+        },
+        onMutate: async (partialPayload) => {
+            await queryClient.cancelQueries({ queryKey: ['kv', key] });
+            const previousValue = queryClient.getQueryData<KVValue<K>>(['kv', key]);
+
+            // Optimistically update to the new value (merged)
+            queryClient.setQueryData<KVValue<K>>(['kv', key], (old) => {
+                if (!old) return previousValue; // Should not happen if data is loaded
+                // Simple merge for objects, arrays might need more specific logic
+                // depending on use case (e.g., replace, append, merge items by ID)
+                if (typeof old === 'object' && old !== null && !Array.isArray(old) &&
+                    typeof partialPayload === 'object' && partialPayload !== null && !Array.isArray(partialPayload)) {
+                    return { ...old, ...partialPayload } as KVValue<K>;
+                }
+                // For non-objects or arrays, or if more complex merge is needed,
+                // this optimistic update might be too simple or incorrect.
+                // Consider if a full replacement is safer for non-object types here,
+                // or if specific merge logic is required based on K.
+                // For now, returning partialPayload if old is not an object to be merged with.
+                // This part might need refinement based on the actual types in KVValue<K>
+                return { ...(old as object), ...(partialPayload as object) } as KVValue<K>;
+            });
+
+            return { previousValue };
+        },
+        onError: (err, partialPayload, context) => {
+            if (context?.previousValue) {
+                queryClient.setQueryData(['kv', key], context.previousValue);
+            }
+            // Consider calling commonErrorHandler or a more specific one
+            commonErrorHandler(err);
+        },
+        onSuccess: (data) => {
+            // data from PATCH should be the full new value
+            queryClient.setQueryData(['kv', key], data.value);
+            invalidateKv(); // Could also use queryClient.invalidateQueries({ queryKey: ['kv', key] });
+        },
+    });
 }
 

@@ -44,7 +44,7 @@ bun i && bun run setup
 bun run dev
 ```
 
-Quick links:
+### Quick links
 
 [UI](http://localhost:5173)
 
@@ -55,6 +55,20 @@ Quick links:
 [Open API Spec Endpoint](http://localhost:3147/doc)
 
 > If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file.
+
+### Documentation Quick Links
+
+[Projects Screen User Guide](./docs/projects.md)
+
+[General AI Concepts](./docs/general-ai-concepts.md)
+
+[Coding Agent User Guide](./docs/coding-agent.md)
+
+[Chat Screen User Guide](./docs/chat.md)
+
+[Prompts Page User Guide](./docs/prompts.md)
+
+[Provider Keys Page User Guide](./docs/provider-keys.md)
 
 ---
 

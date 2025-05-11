@@ -864,6 +864,8 @@ function ChatPage() {
   const { copyToClipboard } = useCopyClipboard();
   const [excludedMessageIds, setExcludedMessageIds] = useState<string[]>([]);
 
+  const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null);
+
   const { messages, input, isLoading: isAiLoading, error, setInput, sendMessage }
     = useAIChat({
       chatId: activeChatId || '',
@@ -907,6 +909,28 @@ function ChatPage() {
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
+  useEffect(() => {
+    if (activeChatId && initialChatContent && setInput && (input === '' || input === null) && messages.length === 0 && !isAiLoading) {
+      setInput(initialChatContent);
+      toast.success("Context loaded into input.");
+      setInitialChatContent(null); // Clear from localStorage after setting input
+    }
+  }, [
+    activeChatId,
+    initialChatContent,
+    setInput,
+    input,
+    messages,
+    isAiLoading,
+    setInitialChatContent
+  ]);
+
+  // Cleanup effect to ensure ref is reset if chat changes or content is cleared
+  useEffect(() => {
+    if (!activeChatId || !initialChatContent) {
+      // If chat ID changes or there's no initial content, ensure we're ready for a new load
+    }
+  }, [activeChatId, initialChatContent]);
 
   return (
     <div className='flex flex-col md:flex-row overflow-hidden h-full'>

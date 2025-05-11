@@ -13,6 +13,7 @@ import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useActiveProjectTab, useSelectSetting } from "@/hooks/api/use-kv-api"
 import { useUpdateActiveProjectTab } from "@/hooks/api/use-kv-api"
 
+
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
     const [projectDialogOpen, setProjectDialogOpen] = useState(false)

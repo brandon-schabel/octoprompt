@@ -157,26 +157,6 @@ export function ProjectSettingsDialog() {
                         </div>
                     </div>
                 </div>
-                <div className="space-y-2">
-                    <div>
-                        <span className="text-sm font-medium">Sync Project</span>
-                        <p className="text-sm text-muted-foreground">
-                            Manually refresh the project files to ensure your local view matches the current state of your codebase.
-                        </p>
-                    </div>
-                    <Button
-                        variant="outline"
-                        disabled={isSyncing}
-                        onClick={() => syncProject()}
-                    >
-                        {isSyncing ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                        )}
-                        Sync
-                    </Button>
-                </div>
             </DialogContent>
         </Dialog>
     )

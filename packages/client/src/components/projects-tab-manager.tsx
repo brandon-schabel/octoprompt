@@ -26,6 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useActiveProjectTab, useCreateProjectTab, useDeleteProjectTabById, useGetActiveProjectTabId, useGetProjectTabs, useSetActiveProjectTabId, useUpdateProjectTabById } from '@/hooks/api/use-kv-api';
 import { toast } from 'sonner';
+import { useGetProjects } from '@/hooks/api/use-projects-api';
 
 export type ProjectsTabManagerProps = {
   className?: string;
@@ -44,8 +45,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const { updateProjectTabById } = useUpdateProjectTabById();
   const { setActiveProjectTabId } = useSetActiveProjectTabId();
   const { activeProjectTabId: activeTabId } = useGetActiveProjectTabId();
+  const { data: projects } = useGetProjects()
   const { createProjectTab } = useCreateProjectTab();
-  const projectId = activeProjectTabState?.selectedProjectId;
+  // by default use selected tabs project id, otherwise fallback to the first project
+  const projectId = activeProjectTabState?.selectedProjectId ?? projects?.data[0]?.id
 
   const calculateInitialOrder = (): string[] => {
     if (!tabs) return [];
@@ -109,10 +112,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTabId]);
 
   const handleCreateTab = () => {
-    if (!projectId) {
-      toast.error("Cannot create project tab: No active project ID selected.");
-      return;
-    }
 
     createProjectTab({ selectedProjectId: projectId, selectedFiles: [] });
   };

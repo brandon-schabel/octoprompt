@@ -316,7 +316,7 @@ export async function createProjectFileRecord(
 
 /** Represents the data needed to create or update a file record during sync. */
 export interface FileSyncData {
-    path: string; 
+    path: string;
     name: string;
     extension: string;
     content: string;
@@ -525,12 +525,12 @@ export async function getProjectFilesByIds(projectId: string, fileIds: string[])
 }
 
 /** Summarizes a single file if it meets conditions and updates the project's file storage. */
-export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFile> {
+export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFile | null> {
     const fileContent = file.content || "";
 
     if (!fileContent.trim()) {
-        console.warn(`[SummarizeSingleFile] File ${file.path} is empty, skipping summarization.`);
-        throw new ApiError(400, `File ${file.path} is empty, skipping summarization.`, 'FILE_EMPTY_FOR_SUMMARY', { projectId: file.projectId, fileId: file.id });
+        console.warn(`[SummarizeSingleFile] File ${file.path} (ID: ${file.id}) in project ${file.projectId} is empty, skipping summarization.`);
+        return null;
     }
 
     const systemPrompt = `
@@ -587,15 +587,42 @@ export async function summarizeFiles(
     }
 
     const filesToProcess = allProjectFiles.filter((f) => fileIdsToSummarize.includes(f.id));
-    const totalFiles = filesToProcess.length;
 
-    const updatedFiles: ProjectFile[] = [];
+    const updatedFilesResult: ProjectFile[] = [];
+    let summarizedCount = 0;
+    let skippedByEmptyCount = 0;
+    let errorCount = 0;
 
     for (const file of filesToProcess) {
-        const updatedFile = await summarizeSingleFile(file);
-        updatedFiles.push(updatedFile);
+        try {
+            const summarizedFile = await summarizeSingleFile(file);
+            if (summarizedFile) {
+                updatedFilesResult.push(summarizedFile);
+                summarizedCount++;
+            } else {
+                skippedByEmptyCount++;
+            }
+        } catch (error) {
+            console.error(`[BatchSummarize] Error processing file ${file.path} (ID: ${file.id}) in project ${projectId} for summarization: ${error instanceof Error ? error.message : String(error)}`, error instanceof ApiError ? error.details : '');
+            errorCount++;
+        }
     }
 
-    console.log(`[BatchSummarize] File summarization batch complete for project ${projectId}. Included: ${totalFiles}, Skipped: ${totalFiles - updatedFiles.length}`);
-    return { included: totalFiles, skipped: totalFiles - updatedFiles.length, updatedFiles };
+    const totalProcessed = filesToProcess.length;
+    const finalSkippedCount = skippedByEmptyCount + errorCount;
+
+    console.log(
+        `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
+        `Total to process: ${totalProcessed}, ` +
+        `Successfully summarized: ${summarizedCount}, ` +
+        `Skipped (empty): ${skippedByEmptyCount}, ` +
+        `Skipped (errors): ${errorCount}, ` +
+        `Total not summarized: ${finalSkippedCount}`
+    );
+
+    return {
+        included: summarizedCount,
+        skipped: finalSkippedCount,
+        updatedFiles: updatedFilesResult
+    };
 }

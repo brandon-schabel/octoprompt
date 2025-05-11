@@ -17,7 +17,9 @@ export type ApiErrorResponse = {
     error: {
         message: string;
         code?: string;
-        details?: {};
+        details?: {
+            [key: string]: unknown;
+        };
     };
 };
 
@@ -3192,7 +3194,9 @@ export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponses = {
     /**
      * Agent orchestrator log content as an array of JSON objects
      */
-    200: Array<{}>;
+    200: Array<{
+        [key: string]: unknown;
+    }>;
 };
 
 export type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponse = GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponses[keyof GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsResponses];
