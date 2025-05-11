@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.5.0-alpha",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "setup": "bun run scripts/setup.ts",
