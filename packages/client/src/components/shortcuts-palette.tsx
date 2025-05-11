@@ -14,7 +14,6 @@ export function ChatShortcutsPalette({ children
     return (
         <div className="relative w-full">
             <Popover open={open} onOpenChange={setOpen}>
-                {/* The trigger asChild means our Button is the "click target" */}
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
@@ -40,19 +39,12 @@ export function ChatShortcutsPalette({ children
                     </Button>
                 </PopoverTrigger>
 
-                {/* PopoverContent: we align on top & center, offset a bit so it slides above. */}
                 <PopoverContent
                     side="top"
                     align="center"
                     sideOffset={8}
                     className="bg-transparent border-none p-0"
                 >
-                    {/* 
-            We wrap the children in a div that uses the same
-            scale/fade classes you had before. 
-            This is so we can keep your custom animation 
-            in addition to the basic popover logic.
-          */}
                     <div
                         className={`
               transform-gpu

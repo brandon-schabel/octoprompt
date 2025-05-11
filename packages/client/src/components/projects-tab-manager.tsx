@@ -26,6 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useActiveProjectTab, useCreateProjectTab, useDeleteProjectTabById, useGetActiveProjectTabId, useGetProjectTabs, useSetActiveProjectTabId, useUpdateProjectTabById } from '@/hooks/api/use-kv-api';
 import { toast } from 'sonner';
+import { useGetProjects } from '@/hooks/api/use-projects-api';
 
 export type ProjectsTabManagerProps = {
   className?: string;
@@ -44,8 +45,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const { updateProjectTabById } = useUpdateProjectTabById();
   const { setActiveProjectTabId } = useSetActiveProjectTabId();
   const { activeProjectTabId: activeTabId } = useGetActiveProjectTabId();
+  const { data: projects } = useGetProjects()
   const { createProjectTab } = useCreateProjectTab();
-  const projectId = activeProjectTabState?.selectedProjectId;
+  // by default use selected tabs project id, otherwise fallback to the first project
+  const projectId = activeProjectTabState?.selectedProjectId ?? projects?.data[0]?.id
 
   const calculateInitialOrder = (): string[] => {
     if (!tabs) return [];
@@ -109,10 +112,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   }, { preventDefault: true }, [activeTabId, finalTabOrder, setActiveProjectTabId]);
 
   const handleCreateTab = () => {
-    if (!projectId) {
-      toast.error("Cannot create project tab: No active project ID selected.");
-      return;
-    }
 
     createProjectTab({ selectedProjectId: projectId, selectedFiles: [] });
   };
@@ -164,7 +163,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 
   if (!tabs || Object.keys(tabs).length === 0) {
     return (
-      <div className={cn("flex flex-col gap-2 p-2", className)}> {/* Added padding */}
+      <div className={cn("flex flex-col gap-2 p-2", className)}>
         <Button onClick={handleCreateTab}>
           <Plus className="mr-2 h-4 w-4" /> New Project Tab
         </Button>
@@ -206,9 +205,8 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
         className={cn("flex flex-col justify-start rounded-none border-b", className)}
 
       >
-        <TabsList className="h-auto bg-background justify-start rounded-none p-1"> {/* Adjusted padding/height */}
-          {/* Title and Settings Button */}
-          <div className="text-xs lg:text-sm px-2 font-semibold flex items-center gap-1 mr-2 whitespace-nowrap"> {/* Adjusted padding/gap */}
+        <TabsList className="h-auto bg-background justify-start rounded-none p-1">
+          <div className="text-xs lg:text-sm px-2 font-semibold flex items-center gap-1 mr-2 whitespace-nowrap">
             Project Tabs
             <OctoTooltip >{titleTooltipContent}</OctoTooltip>
             <Button
@@ -222,14 +220,13 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
             </Button>
           </div>
 
-          {/* Sortable Tabs Area */}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={finalTabOrder} strategy={horizontalListSortingStrategy}>
-              <div className="flex gap-1"> {/* Add gap for spacing */}
+              <div className="flex gap-1">
                 {finalTabOrder.map((tabId, index) => {
                   const tabData = tabs[tabId];
                   if (!tabData) return null;
@@ -256,7 +253,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
             </SortableContext>
           </DndContext>
 
-          {/* Add New Tab Button */}
           <div className='ml-2'>
             <Button
               onClick={handleCreateTab}
@@ -265,19 +261,18 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
               variant="ghost"
               title={`New Project Tab (${hotkeyPrefix}+?)`}
             >
-              <Plus className="h-4 w-4" /> {/* Use standard Plus */}
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
         </TabsList>
       </Tabs>
 
-      {/* Settings Dialog */}
       <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Manage Project Tabs</DialogTitle>
           </DialogHeader>
-          <div className="mt-4 space-y-2 max-h-[60vh] overflow-y-auto pr-2"> {/* Added max-height scroll */}
+          <div className="mt-4 space-y-2 max-h-[60vh] overflow-y-auto pr-2">
             {finalTabOrder.map((tabId) => {
               const tabData = tabs[tabId];
               if (!tabData) return null;
@@ -290,8 +285,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                   key={tabId}
                   className="group flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-accent/10"
                 >
-                  {/* Left Side: Name and Stats */}
-                  <div className="flex flex-col flex-1 truncate min-w-0"> {/* Ensure truncation works */}
+                  <div className="flex flex-col flex-1 truncate min-w-0">
                     {isEditing ? (
                       <Input
                         value={dialogEditingName}
@@ -318,7 +312,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                     </span>
                   </div>
 
-                  {/* Right Side: Action Buttons */}
                   <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
                     {isEditing ? (
                       <Button
@@ -365,7 +358,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   );
 }
 
-// Internal SortableTab Component (Simplified and adapted)
 function SortableTab(props: {
   tabId: string;
   index: number;
@@ -469,7 +461,7 @@ function SortableTab(props: {
                 {`${hotkeyPrefix}${shortcutNumber}`}
               </Badge>
             )}
-            <span className="truncate max-w-[120px]">{displayName}</span> {/* Add truncation */}
+            <span className="truncate max-w-[120px]">{displayName}</span>
             {hasLink && <LinkIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
           </>
         )}

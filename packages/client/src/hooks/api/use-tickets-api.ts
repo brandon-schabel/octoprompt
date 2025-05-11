@@ -180,8 +180,6 @@ export function useDeleteTicket(projectId: string) {
                 queryKey: TICKET_KEYS.tasks(ticketId)
             });
 
-            console.log({ data })
-
             queryClient.invalidateQueries({
                 queryKey: getApiProjectsByProjectIdTicketsWithTasksQueryKey({
                     path: { projectId }

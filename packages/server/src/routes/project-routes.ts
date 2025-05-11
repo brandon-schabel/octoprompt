@@ -15,10 +15,8 @@ import {
     RemoveSummariesBodySchema,
     SuggestFilesBodySchema,
     SummarizeFilesBodySchema,
-    // Import types
 } from "shared/src/schemas/project.schemas";
 
-// Import common schemas
 import {
     ApiErrorResponseSchema,
     OperationSuccessResponseSchema,
@@ -29,17 +27,14 @@ import { resolve as resolvePath } from 'node:path';
 import { homedir as getHomedir } from 'node:os';
 
 import * as projectService from "@/services/project-service";
-import { syncProject, syncProjectFolder } from "@/services/file-services/file-sync-service";
-import { watchersManager } from "@/services/shared-services";
+import { syncProject, syncProjectFolder, watchersManager } from "@/services/file-services/file-sync-service-unified";
 import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter';
 import { generateStructuredData } from '@/services/gen-ai-services';
 import { getFullProjectSummary } from '@/utils/get-full-project-summary';
 import { SuggestFilesResponseSchema, FileSummaryListResponseSchema, SummarizeFilesResponseSchema, RemoveSummariesResponseSchema, FileSuggestionsZodSchema } from 'shared/src/schemas/gen-ai.schemas';
 import { summarizeFiles } from '@/services/project-service';
 
-// DELETE REDUNDANT TYPE DEFINITIONS - SERVICE LAYER PROVIDES CORRECTLY TYPED DATA
 
-// DELETE MAPPING FUNCTIONS - SERVICE LAYER ALREADY MAPS DATA CORRECTLY
 
 const createProjectRoute = createRoute({
     method: 'post',
@@ -231,8 +226,6 @@ const removeSummariesRoute = createRoute({
         500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' },
     },
 });
-
-
 
 // --- Hono App Instance ---
 export const projectRoutes = new OpenAPIHono()
@@ -481,16 +474,9 @@ ${projectSummary}
     .openapi(summarizeFilesRoute, async (c) => {
         const { projectId } = c.req.valid('param');
         const { fileIds, force } = c.req.valid('json');
-        console.log({ projectId, fileIds, force })
-
-
-        console.log({ fileIds, force })
 
         const result = await summarizeFiles(projectId, fileIds);
 
-        console.log({ result })
-
-        // Ensure the returned object matches SummarizeFilesResponseSchema
         const payload: z.infer<typeof SummarizeFilesResponseSchema> = {
             success: true,
             message: "Summarization process completed.",
@@ -506,7 +492,7 @@ ${projectSummary}
         const { fileIds } = c.req.valid('json');
         const result = await projectService.removeSummariesFromFiles(projectId, fileIds);
         // Ensure the returned object matches RemoveSummariesResponseSchema (result already has the correct shape)
-        if (!result.success) {
+        if (typeof result.removedCount !== 'number') {
             // Handle potential failure from the service if needed, though schema expects success:true
             console.error("Removal of summaries reported failure from service:", result);
             throw new ApiError(500, result.message || "Failed to remove summaries");

@@ -3,11 +3,7 @@ import { useMemo } from "react"
 import { clsx } from "clsx"
 import { formatTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
 
-/**
- * 
- * @param tokenContent - string or number - string if it's the raw content number if it's already been calculated
- * @returns 
- */
+/** Formats and displays the token count for given content, color-coding it based on thresholds. */
 export const FormatTokenCount = ({ tokenContent }: { tokenContent: string | number }) => {
     const tokenCount = useMemo(() => {
         if (typeof tokenContent === 'string') {

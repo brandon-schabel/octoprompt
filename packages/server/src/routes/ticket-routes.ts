@@ -562,9 +562,6 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(getTicketRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const ticket = await getTicketById(ticketId)
-    if (!ticket) {
-      throw new ApiError(404, 'Ticket not found', 'NOT_FOUND')
-    }
     const formattedTicket = formatTicketData(ticket)
     const payload: z.infer<typeof TicketResponseSchema> = { success: true, ticket: formattedTicket }
     return c.json(payload, 200)
@@ -573,19 +570,13 @@ export const ticketRoutes = new OpenAPIHono()
     const { ticketId } = c.req.valid('param')
     const body = c.req.valid('json')
     const updatedTicket = await updateTicket(ticketId, body)
-    if (!updatedTicket) {
-      throw new ApiError(404, 'Ticket not found', 'NOT_FOUND')
-    }
     const formattedTicket = formatTicketData(updatedTicket)
     const payload: z.infer<typeof TicketResponseSchema> = { success: true, ticket: formattedTicket }
     return c.json(payload, 200)
   })
   .openapi(deleteTicketRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
-    const deleted = await deleteTicket(ticketId)
-    if (!deleted) {
-      throw new ApiError(404, 'Ticket not found or already deleted', 'NOT_FOUND')
-    }
+    await deleteTicket(ticketId)
     const payload: z.infer<typeof OperationSuccessResponseSchema> = {
       success: true,
       message: 'Ticket deleted successfully'
@@ -692,20 +683,14 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(updateTaskRoute, async (c) => {
     const { ticketId, taskId } = c.req.valid('param')
     const body = c.req.valid('json')
-    const updated = await updateTask(ticketId, taskId, body)
-    if (!updated) {
-      throw new ApiError(404, 'Task not found', 'NOT_FOUND')
-    }
-    const formattedTask = formatTaskData(updated)
+    const updatedTask = await updateTask(ticketId, taskId, body)
+    const formattedTask = formatTaskData(updatedTask)
     const payload: z.infer<typeof TaskResponseSchema> = { success: true, task: formattedTask }
     return c.json(payload, 200)
   })
   .openapi(deleteTaskRoute, async (c) => {
     const { ticketId, taskId } = c.req.valid('param')
-    const deleted = await deleteTask(ticketId, taskId)
-    if (!deleted) {
-      throw new ApiError(404, 'Task not found or already deleted', 'NOT_FOUND')
-    }
+    await deleteTask(ticketId, taskId)
     const payload: z.infer<typeof OperationSuccessResponseSchema> = {
       success: true,
       message: 'Task deleted successfully'
@@ -715,8 +700,8 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(reorderTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { tasks } = c.req.valid('json')
-    const updated = await reorderTasks(ticketId, tasks)
-    const formattedTasks = updated.map(formatTaskData)
+    const updatedTasks = await reorderTasks(ticketId, tasks)
+    const formattedTasks = updatedTasks.map(formatTaskData)
     const payload: z.infer<typeof TaskListResponseSchema> = { success: true, tasks: formattedTasks }
     return c.json(payload, 200)
   })

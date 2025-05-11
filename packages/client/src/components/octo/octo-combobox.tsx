@@ -77,10 +77,8 @@ export function OctoCombobox({
                                     key={option.value}
                                     value={option.value}
                                     onSelect={(currentValue) => {
-                                        // Find the option object corresponding to the selected value
                                         const selectedOption = options.find(opt => opt.value === currentValue);
-                                        // If the selected option is the same as the current value, deselect (set to null)
-                                        // Otherwise, select the new value
+  
                                         onValueChange(currentValue === value ? null : selectedOption ? selectedOption.value : null);
                                         setOpen(false);
                                     }}

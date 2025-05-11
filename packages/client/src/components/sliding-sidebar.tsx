@@ -13,6 +13,7 @@ interface SlidingSidebarProps {
     onClose: () => void;
 }
 
+/** A sliding sidebar component that can appear from the left or right, with click-outside and escape-key to close. */
 export function SlidingSidebar({
     children,
     width = 300,

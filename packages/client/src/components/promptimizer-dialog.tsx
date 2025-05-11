@@ -17,14 +17,11 @@ export function PromptimizerDialog({
 }: PromptimizerDialogProps) {
 
     useEffect(() => {
-        // If you want to auto-focus or auto-select the text area, do it here
     }, [open])
 
     const handleUpdatePrompt = () => {
         if (!optimizedPrompt.trim()) return
-        // Call the callback to update the parent's prompt
         onUpdatePrompt?.(optimizedPrompt)
-        // Optionally close the dialog after updating
         onClose()
     }
 
@@ -50,7 +47,6 @@ export function PromptimizerDialog({
                     <Button variant="outline" onClick={onClose}>
                         Close
                     </Button>
-                    {/* NEW: Button to update main user prompt */}
                     <Button onClick={handleUpdatePrompt}>
                         Update Prompt
                     </Button>

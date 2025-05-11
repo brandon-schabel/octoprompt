@@ -1,18 +1,10 @@
 # OctoPrompt
 
-Vibe code with precision
+Software Toolkit For Rapidly Building Codebases Using AI
 
 ## Introduction
 
-OctoPrompt is a dev tool for your codebase by building context from your project files, prompts, and your input. OctoPrompt takes advantage of AI agents to perform things like ticket/task planning, building a knowledgebase from your code files, and finding suggested files based on user input as well as from the knowledge base built by the summary agent.
-
-### Repo Management Made Easy
-
-Save, manage, and include all your favorite prompts with the built-in prompt manager. Copy all context to clipboard with a single click to use with any AI API provider or use OctoPrompt built-in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your codebase and allows you to make architectural changes to your code faster than before, all without the hassle of an agent running up your API bill running around your repo. OctoPrompt works completely without AI models as well, it is a great AI context builder without the use of agents. Using OctoPrompt to build out context works really well because you are providing the AI with all the context it needs, but not overloading it with things it doesn't need - other tools suggest loading your repo into context which can be costly if using API and diminishes model output quality.
-
-Thank you for checking out the project. If you have any questions please feel free to reach out and support Open Source by leaving a star.
-
-You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. OctoPrompt AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt’s local file watchers, built-in ticket system, quick file searching, and prompt management.
+If you've worked with LLMs and code you know how much quality drops off with more code in the context.  OctoPrompt helps with quality dropoff by helping you find and select the files from your codebase for your desired changes. OctoPrompt is a dev tool without AI first, and uses AI to enhance its abilities. The long term goal of OctoPrompt is to make building codebases with AI as easy as possible and to increasingly automate the manual work of planning changes, editing code, and testing the result.
 
 ---
 
@@ -44,9 +36,25 @@ bun i && bun run setup
 bun run dev
 ```
 
-Quick links:
+View the [UI here](http://localhost:5173)
 
-[UI](http://localhost:5173)
+> If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file.
+
+### Documentation Quick Links
+
+[Projects Screen User Guide](./docs/projects.md)
+
+[General AI Concepts](./docs/general-ai-concepts.md)
+
+[Coding Agent User Guide](./docs/coding-agent.md)
+
+[Chat Screen User Guide](./docs/chat.md)
+
+[Prompts Page User Guide](./docs/prompts.md)
+
+[Provider Keys Page User Guide](./docs/provider-keys.md)
+
+### Other Links
 
 [Server Base](http://localhost:3147)
 
@@ -54,9 +62,17 @@ Quick links:
 
 [Open API Spec Endpoint](http://localhost:3147/doc)
 
-> If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file.
-
 ---
+
+### Repo Management Made Easy
+
+Throwing in an entire codebase into LLMs will get you diminishing retuns as the codebase grows, however with OctoPrompt Your code will never be too complex. Instead of taking the spray and pray approach, OctoPrompt helps users be quick but precise with the built-in tools. OctoPrompt takes advantage of AI agents to perform everyday tasks with built in coding, planning, file summarization, and file search. OctoPrompt will help you maximize the quality of the code results from the AI models you're working with by providing the models with the precise context they need.
+
+Save, manage, and include all your favorite prompts with the built-in prompt manager. Copy all context to clipboard with a single click to use with any AI API provider or use OctoPrompt built-in chat to use API Providers like OpenRouter, OpenAI or fast inference providers like Groq. OctoPrompt is an AI sandbox for your codebase and allows you to make architectural changes to your code faster than before, all without the hassle of an agent running up your API bill running around your repo. OctoPrompt works completely without AI models as well, it is a great AI context builder without the use of agents. Using OctoPrompt to build out context works really well because you are providing the AI with all the context it needs, but not overloading it with things it doesn't need - other tools suggest loading your repo into context which can be costly if using API and diminishes model output quality.
+
+Thank you for checking out the project. If you have any questions please feel free to reach out and support Open Source by leaving a star.
+
+You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. OctoPrompt AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt’s local file watchers, built-in ticket system, quick file searching, and prompt management.
 
 ## Key User Features
 

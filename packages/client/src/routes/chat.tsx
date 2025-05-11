@@ -116,20 +116,20 @@ export function ModelSettingsPopover() {
             <Slider id="temperature" disabled={isTempDisabled} min={0} max={1} step={0.01} value={[temperature]} onValueChange={temps => handleUpdateTemperature(temps[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="max_tokens">Max Tokens: {maxTokens}</Label>
-            <Slider id="max_tokens" min={1000} max={1000000} step={1000} value={[maxTokens]} onValueChange={maxTokens => handleUpdateMaxTokens(maxTokens[0])} />
+            <Label htmlFor="maxTokens">Max Tokens: {maxTokens}</Label>
+            <Slider id="maxTokens" min={1000} max={1000000} step={1000} value={[maxTokens]} onValueChange={maxTokens => handleUpdateMaxTokens(maxTokens[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="top_p">Top P: {topP.toFixed(2)}</Label>
-            <Slider id="top_p" min={0} max={1} step={0.01} value={[topP]} onValueChange={topP => handleUpdateTopP(topP[0])} />
+            <Label htmlFor="topP">Top P: {topP.toFixed(2)}</Label>
+            <Slider id="topP" min={0} max={1} step={0.01} value={[topP]} onValueChange={topP => handleUpdateTopP(topP[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="frequency_penalty">Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
-            <Slider id="frequency_penalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={freqPenalty => handleUpdateFreqPenalty(freqPenalty[0])} />
+            <Label htmlFor="frequencyPenalty">Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
+            <Slider id="frequencyPenalty" min={-2} max={2} step={0.01} value={[freqPenalty]} onValueChange={freqPenalty => handleUpdateFreqPenalty(freqPenalty[0])} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="presence_penalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
-            <Slider id="presence_penalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={presPenalty => handleUpdatePresPenalty(presPenalty[0])} />
+            <Label htmlFor="presencePenalty">Presence Penalty: {presPenalty.toFixed(2)}</Label>
+            <Slider id="presencePenalty" min={-2} max={2} step={0.01} value={[presPenalty]} onValueChange={presPenalty => handleUpdatePresPenalty(presPenalty[0])} />
           </div>
         </div>
       </PopoverContent>
@@ -137,7 +137,6 @@ export function ModelSettingsPopover() {
   );
 }
 
-// --- Model Selector (No changes needed) ---
 type ModelSelectorProps = {
   provider: APIProviders;
   currentModel: string;
@@ -198,8 +197,6 @@ export function ProviderModelSector({ provider, currentModel, onProviderChange, 
   );
 }
 
-
-// --- Adaptive Chat Input (No changes needed) ---
 type AdaptiveChatInputProps = {
   value: string;
   onChange: (value: string) => void;
@@ -334,7 +331,6 @@ export function AdaptiveChatInput({
 }
 
 
-// --- Think Block Parser (No changes needed) ---
 function parseThinkBlock(content: string) {
   if (!content?.startsWith("<think>")) {
     return { hasThinkBlock: false, isThinking: false, thinkContent: "", mainContent: content ?? "" };
@@ -353,7 +349,6 @@ function parseThinkBlock(content: string) {
   };
 }
 
-// --- Chat Message Item (No changes needed) ---
 const ChatMessageItem = React.memo((props: {
   msg: Message;
   excluded: boolean;
@@ -470,7 +465,6 @@ const ChatMessageItem = React.memo((props: {
 ChatMessageItem.displayName = 'ChatMessageItem';
 
 
-// --- Chat Messages List (No changes needed) ---
 interface ChatMessagesProps {
   chatId: string | null;
   messages: Message[];
@@ -609,8 +603,6 @@ export function ChatMessages({ chatId, messages, isLoading, excludedMessageIds =
 }
 
 
-// --- Chat Sidebar (MODIFIED) ---
-// Added props for controlled state: isOpen, onClose
 export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [activeChatId, setActiveChatId] = useActiveChatId();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
@@ -644,7 +636,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         toast.success('New chat created');
         setEditingTitle('');
         setEditingChatId(null);
-        onClose(); // Close sidebar after creating new chat
+        onClose();
       } else {
         throw new Error("Created chat did not return an ID.");
       }
@@ -667,8 +659,6 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         setEditingChatId(null);
         setEditingTitle('');
       }
-      // Optionally close sidebar if the active chat was deleted?
-      // if (activeChatId === chatId) onClose();
     } catch (error) {
       console.error('Error deleting chat:', error);
       toast.error("Failed to delete chat");
@@ -708,9 +698,9 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const handleSelectChat = useCallback((chatId: string) => {
     if (!editingChatId) {
       setActiveChatId(chatId);
-      onClose(); // Close sidebar after selecting chat
+      onClose();
     }
-  }, [setActiveChatId, editingChatId, onClose]); // Added onClose dependency
+  }, [setActiveChatId, editingChatId, onClose]);
 
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]');
@@ -735,14 +725,13 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, []);
 
   return (
-    // Use the controlled SlidingSidebar
     <SlidingSidebar
       width={300}
       side="left"
-      isOpen={isOpen} // Pass state down
-      onClose={onClose} // Pass callback down
+      isOpen={isOpen}
+      onClose={onClose}
     >
-      {/* Sidebar content remains the same */}
+      {/* Sidebar content  */}
       <div className="p-2 border-b mb-2 flex flex-col gap-2">
         <Button variant="outline" className="w-full justify-start gap-2" onClick={handleCreateNewChat}>
           <PlusIcon className="h-4 w-4" /> New Chat
@@ -814,7 +803,6 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   );
 }
 
-// Added onToggleSidebar prop
 export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const [activeChatId] = useActiveChatId();
   const { data: chatsData } = useGetChats();
@@ -860,17 +848,14 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
 }
 
 
-// --- Chat Page (Route Component - MODIFIED) ---
 
 export const Route = createFileRoute("/chat")({
   component: ChatPage,
 });
 
 function ChatPage() {
-  // --- State for sidebar visibility ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // --- Other Hooks ---
   const [activeChatId] = useActiveChatId();
   const { settings: modelSettings } = useChatModelParams();
   const provider = modelSettings.provider ?? 'openrouter';
@@ -879,17 +864,17 @@ function ChatPage() {
   const { copyToClipboard } = useCopyClipboard();
   const [excludedMessageIds, setExcludedMessageIds] = useState<string[]>([]);
 
-  // --- Call useAIChat ---
+  const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null);
+
   const { messages, input, isLoading: isAiLoading, error, setInput, sendMessage }
     = useAIChat({
-      chatId: activeChatId || '', // Use chatId, pass empty string if null/undefined
+      chatId: activeChatId || '',
       provider,
       model: model ?? '',
       systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.',
     });
 
 
-  // --- Callbacks & Memoizations ---
   const selectedModelName = useMemo(() => {
     return modelsData?.data.find(m => m.id === model)?.name ?? model ?? '...';
   }, [modelsData, model]);
@@ -912,7 +897,6 @@ function ChatPage() {
       return;
     }
     try {
-      // Pass modelSettings directly in the options object
       await sendMessage(input, { ...modelSettings });
       setInput(''); // Clear input after sending
     } catch (err) {
@@ -925,8 +909,29 @@ function ChatPage() {
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
+  useEffect(() => {
+    if (activeChatId && initialChatContent && setInput && (input === '' || input === null) && messages.length === 0 && !isAiLoading) {
+      setInput(initialChatContent);
+      toast.success("Context loaded into input.");
+      setInitialChatContent(null); // Clear from localStorage after setting input
+    }
+  }, [
+    activeChatId,
+    initialChatContent,
+    setInput,
+    input,
+    messages,
+    isAiLoading,
+    setInitialChatContent
+  ]);
 
-  // --- JSX Render ---
+  // Cleanup effect to ensure ref is reset if chat changes or content is cleared
+  useEffect(() => {
+    if (!activeChatId || !initialChatContent) {
+      // If chat ID changes or there's no initial content, ensure we're ready for a new load
+    }
+  }, [activeChatId, initialChatContent]);
+
   return (
     <div className='flex flex-col md:flex-row overflow-hidden h-full'>
       <ChatSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />

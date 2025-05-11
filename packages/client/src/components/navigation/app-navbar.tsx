@@ -7,11 +7,12 @@ import { ProjectDialog } from "@/components/projects/project-dialog"
 import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
 import { Link } from "@tanstack/react-router"
 import { useHotkeys } from 'react-hotkeys-hook'
-import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon } from "lucide-react"
+import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Sparkles, LayoutDashboardIcon, Lightbulb } from "lucide-react"
 import { HelpDialog } from "@/components/navigation/help-dialog"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { useActiveProjectTab, useSelectSetting } from "@/hooks/api/use-kv-api"
 import { useUpdateActiveProjectTab } from "@/hooks/api/use-kv-api"
+
 
 export function AppNavbar() {
     const [openDialog, setOpenDialog] = useState(false)
@@ -148,7 +149,7 @@ export function AppNavbar() {
                                 }`}
                             title="Prompts"
                         >
-                            <Sparkles className="w-4 h-4 flex-shrink-0" />
+                            <Lightbulb className="w-4 h-4 flex-shrink-0" />
                             <span className="hidden md:inline">Prompts</span>
                         </Link>
                         <div className="h-4 w-[1px] bg-border" />

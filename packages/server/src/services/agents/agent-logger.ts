@@ -1,84 +1,55 @@
-import { BunFile, file, write } from 'bun'; // Removed fileURLToPath
+import { BunFile, file, write } from 'bun';
 import { mkdir, readdir } from 'node:fs/promises';
-import { join, dirname } from 'node:path'; // Added dirname
-// import os from 'node:os'; // Removed unused import
-// import type { FileWriter } from 'bun'; // Removed problematic type import
+import { join, dirname } from 'node:path';
 
+export const AGENT_LOGS_DIR = './data/agent-logs';
+const ORCHESTRATOR_LOG_FILENAME = 'orchestrator-log.jsonl';
+const AGENT_DATA_FILENAME = 'agent-data.json'
 
-// Top-level directory for all agent logs
-export const AGENT_LOGS_DIR = './agent-logs';
-const ORCHESTRATOR_LOG_FILENAME = 'orchestrator-log.jsonl'; // Standard filename for jsonl logs
-const AGENT_DATA_FILENAME = 'agent-data.json'; // Standard filename for data logs
-
-
-
-// --- Logger Setup ---
-
-// No longer need getRandomId here as agentJobId will be provided
-
-/**
- * Gets the paths for the agent orchestrator log file (.jsonl) and its directory
- * based on the agent job ID. Ensures the directory exists.
- * @param agentJobId - The unique ID for the agent run.
- * @returns An object containing the directory path and the full file path for the orchestrator log.
- */
-export async function getOrchestratorLogFilePaths(agentJobId: string) {
-	if (!agentJobId) throw new Error('agentJobId is required');
-	const jobLogDir = join(AGENT_LOGS_DIR, agentJobId);
-	await ensureLogDirExists(jobLogDir); // Ensure the specific job directory exists
+export async function getOrchestratorLogFilePaths(projectId: string, agentJobId: string,) {
+	const jobLogDir = join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId);
+	console.log({
+		"ORCHESTRATOR_LOG_PATH": join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId, ORCHESTRATOR_LOG_FILENAME)
+	})
+	await ensureLogDirExists(jobLogDir);
 	const filePath = join(jobLogDir, ORCHESTRATOR_LOG_FILENAME);
 	return { jobLogDir, filePath, agentJobId };
 }
 
-/**
- * Gets the path for the agent data log file (.json) based on the agent job ID.
- * Assumes the directory is already created by getOrchestratorLogFilePaths or ensureLogDirExists.
- * @param agentJobId - The unique ID for the agent run.
- * @returns The full file path for the agent data log.
- */
-export function getAgentDataLogFilePath(agentJobId: string): string {
-	if (!agentJobId) throw new Error('agentJobId is required');
-	const jobLogDir = join(AGENT_LOGS_DIR, agentJobId);
-	// No need to ensure dir exists here, assume it's done when orchestrator log is set up
+
+export async function getAgentDataLogFilePath(projectId: string, agentJobId: string): Promise<string> {
+
+	const jobLogDir = join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId);
+	console.log({
+		"DATA_LOG_PATH": join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId, AGENT_DATA_FILENAME)
+	})
+	await ensureLogDirExists(jobLogDir);
 	return join(jobLogDir, AGENT_DATA_FILENAME);
 }
 
 
-// Function to get the full path for a given log ID (DEPRECATED, use getOrchestratorLogFilePaths)
-// export function getLogFilePath(logId: string): string { ... } // Removed old function
-
-// Ensure a specific log directory exists (modified to take a path)
 async function ensureLogDirExists(dirPath: string) {
 	try {
 		await mkdir(dirPath, { recursive: true });
-		// console.log(`Log directory ensured: ${dirPath}`); // Less noisy logging
 	} catch (error) {
 		console.error(`Failed to create or access log directory: ${dirPath}`, error);
 		throw error; // Re-throw to signal failure upstream
 	}
 }
-// No initial ensureLogDirExists call here, it's done per-job now.
-
-// --- Logger Instance Management ---
-// Removed getRandomId and getOrchestratorLogFilePath (replaced)
 
 let logFile: BunFile | null = null;
 let fileWriter: ReturnType<BunFile['writer']> | null = null;
 let loggerInitialized = false;
 let currentLogFilePath: string | null = null; // Store the current orchestrator log file path
 
-/**
- * Initializes the file logger for a specific agent run's orchestrator log file.
- * @param orchestratorLogFilePath - The full path to the .jsonl log file.
- */
-export async function initializeLogger(orchestratorLogFilePath: string) { // Renamed param for clarity
+export async function initializeLogger(orchestratorLogFilePath: string) {
 	if (loggerInitialized && orchestratorLogFilePath === currentLogFilePath) {
-		return; // Already initialized for this file
+		return;
 	}
 	if (fileWriter) {
 		// If switching files, ensure the previous one is flushed/closed
 		try {
-			await fileWriter.end(); // Use end() which also flushes
+			await fileWriter.end(); //
 			console.log(`Closed previous logger for: ${currentLogFilePath}`);
 		} catch (e) { console.error(`Error closing previous logger: ${currentLogFilePath}`, e); }
 		fileWriter = null; // Reset
@@ -112,12 +83,7 @@ export async function initializeLogger(orchestratorLogFilePath: string) { // Ren
 
 type LogLevel = 'info' | 'verbose' | 'warn' | 'error';
 
-/**
- * Logs messages to the initialized orchestrator log file (as JSONL) and potentially the console.
- * @param message The primary log message string.
- * @param level The severity level ('info', 'verbose', 'warn', 'error'). 'verbose' only goes to file.
- * @param data Optional structured data.
- */
+
 export async function log(message: string, level: LogLevel = 'info', data?: Record<string, any>): Promise<void> {
 	if (!loggerInitialized || !fileWriter) {
 		console.warn("[Logger not initialized/writer error] Log attempt:", level, message, data ? JSON.stringify(data) : '');
@@ -138,9 +104,8 @@ export async function log(message: string, level: LogLevel = 'info', data?: Reco
 
 	try {
 		fileWriter.write(jsonLogLine + '\n');
-		// Consider removing immediate flush for performance if logs are frequent,
-		// but ensure flush/end happens reliably on close/error.
-		await fileWriter.flush(); // Keep flush for now for reliability during dev/debug
+
+		await fileWriter.flush();
 	} catch (error) {
 		console.error(`[Logger File Write Error] ${error instanceof Error ? error.message : String(error)}`);
 		const fallbackMsg = data ? `${message} ${JSON.stringify(data)}` : message;
@@ -159,31 +124,25 @@ export async function log(message: string, level: LogLevel = 'info', data?: Reco
 	}
 }
 
-/**
- * Writes arbitrary data to the agent-data.json file for a given job ID.
- * This overwrites the file each time it's called.
- * @param agentJobId The ID of the agent run.
- * @param data The data object to write as JSON.
- */
-export async function writeAgentDataLog(agentJobId: string, data: any): Promise<void> {
-	const filePath = getAgentDataLogFilePath(agentJobId);
+export async function writeAgentDataLog(projectId: string, agentJobId: string, data: any): Promise<void> {
+	const filePath = await getAgentDataLogFilePath(projectId, agentJobId);
+	console.log({
+		"DATA_LOG_PATH": filePath
+	})
+
 	try {
-		// Ensure directory exists (might be redundant if logger is initialized, but safe)
 		await ensureLogDirExists(dirname(filePath));
-		await write(filePath, JSON.stringify(data, null, 2)); // Pretty-print JSON
+		await write(filePath, JSON.stringify(data, null, 2));
 		console.log(`Agent data log written to: ${filePath}`);
 	} catch (error) {
 		console.error(`Failed to write agent data log to ${filePath}:`, error);
-		// Decide if this should throw - depends on how critical this data is
-		// throw new Error(`Failed to write agent data log for job ${agentJobId}`);
 	}
 }
 
-// --- Optional Logger Close ---
 export async function closeLogger() {
 	if (fileWriter) {
 		try {
-			await fileWriter.end(); // Ensures flush before closing
+			await fileWriter.end();
 			console.log(`Logger closed for: ${currentLogFilePath}`);
 		} catch (e) {
 			console.error(`Error closing logger for ${currentLogFilePath}:`, e);
@@ -196,19 +155,10 @@ export async function closeLogger() {
 	}
 }
 
-// --- Function to List Log Directories (Job IDs) ---
 
-// Removed LOG_FILE_PATTERN as we now list directories
-
-/**
- * Lists available agent job IDs by looking for directories within AGENT_LOGS_DIR.
- * @returns A promise that resolves to an array of agentJobId strings.
- */
-export async function listAgentJobs(): Promise<string[]> {
+export async function listAgentJobs(projectId: string): Promise<string[]> {
 	try {
-		// Ensure the top-level directory exists, but don't create it if it doesn't
-		// because we only want to list *existing* job directories.
-		const entries = await readdir(AGENT_LOGS_DIR, { withFileTypes: true });
+		const entries = await readdir(join(AGENT_LOGS_DIR, 'projects', projectId), { withFileTypes: true });
 		const jobIds = entries.filter(entry => entry.isDirectory()).map(entry => entry.name);
 		console.log(`[Agent Logger] Found ${jobIds.length} agent job directories in ${AGENT_LOGS_DIR}`);
 		return jobIds;
@@ -222,6 +172,3 @@ export async function listAgentJobs(): Promise<string[]> {
 	}
 }
 
-// --- End Function to List Log Files ---
-
-// --- End Logger Setup ---

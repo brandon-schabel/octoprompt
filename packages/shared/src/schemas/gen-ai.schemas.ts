@@ -20,23 +20,23 @@ export const AiSdkOptionsSchema = z.object({
     }),
     maxTokens: z.number().int().positive().optional().openapi({
         description: "The maximum number of tokens (words or parts of words) the model is allowed to generate in the response. This limits the output length and can affect cost. Note: This limit usually applies only to the *generated* tokens, not the input prompt tokens.",
-        example: LOW_MODEL_CONFIG.max_tokens ?? 1024 // Example: Limit response to roughly 1024 tokens
+        example: LOW_MODEL_CONFIG.maxTokens ?? 100000 // Example: Limit response to roughly 1024 tokens
     }),
     topP: z.number().min(0).max(1).optional().openapi({
         description: "Controls diversity via nucleus sampling. It defines a probability threshold (e.g., 0.9). The model considers only the smallest set of most probable tokens whose cumulative probability exceeds this threshold for the next token selection. Lower values (e.g., 0.5) restrict choices more, leading to less random outputs. A value of 1 considers all tokens. It's often recommended to alter *either* `temperature` *or* `topP`, not both.",
-        example: LOW_MODEL_CONFIG.top_p ?? 0.9 // Example: Consider top 90% probable tokens
+        example: LOW_MODEL_CONFIG.topP ?? 0.9 // Example: Consider top 90% probable tokens
     }),
     frequencyPenalty: z.number().min(-2).max(2).optional().openapi({ // Added typical range
         description: "Applies a penalty to tokens based on how frequently they have already appeared in the generated text *and* the prompt. Positive values (e.g., 0.5) decrease the likelihood of the model repeating the same words or phrases verbatim, making the output less repetitive. Negative values encourage repetition.",
-        example: LOW_MODEL_CONFIG.frequency_penalty ?? 0.2 // Example: Slightly discourage repeating words
+        example: LOW_MODEL_CONFIG.frequencyPenalty ?? 0.2 // Example: Slightly discourage repeating words
     }),
     presencePenalty: z.number().min(-2).max(2).optional().openapi({ // Added typical range
         description: "Applies a penalty to tokens based on whether they have appeared *at all* in the generated text *and* the prompt so far (regardless of frequency). Positive values (e.g., 0.5) encourage the model to introduce new concepts and topics, reducing the likelihood of repeating *any* previously mentioned word. Negative values encourage staying on topic.",
-        example: LOW_MODEL_CONFIG.presence_penalty ?? 0.1 // Example: Slightly encourage introducing new concepts
+        example: LOW_MODEL_CONFIG.presencePenalty ?? 0.1 // Example: Slightly encourage introducing new concepts
     }),
     topK: z.number().int().positive().optional().openapi({
         description: "Restricts the model's choices for the next token to the `k` most likely candidates. For example, if `topK` is 40, the model will only consider the top 40 most probable tokens at each step. A lower value restricts choices more. Setting `topK` to 1 is equivalent to greedy decoding (same as `temperature: 0`). Less commonly used than `topP`.",
-        example: LOW_MODEL_CONFIG.top_k ?? 40 // Example: Consider only the 40 most likely next tokens
+        example: LOW_MODEL_CONFIG.topK ?? 40 // Example: Consider only the 40 most likely next tokens
     }),
     stop: z.union([z.string(), z.array(z.string())]).optional().openapi({
         description: "Specifies one or more sequences of text where the AI should stop generating. Once the model generates a stop sequence, it will halt output immediately, even if `maxTokens` hasn't been reached. Useful for structured output or controlling conversational turns.",

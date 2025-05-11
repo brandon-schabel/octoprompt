@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
+import { randomUUID } from "crypto";
 import { db, resetDatabase } from "@db";
 import {
     createTicket,
@@ -67,17 +68,18 @@ describe("Ticket Service", () => {
     });
 
     test("getTicketById returns null if not found", async () => {
-        const t = await getTicketById("nonexistent");
-        expect(t).toBeNull();
+        await expect(getTicketById("nonexistent")).rejects.toThrow(
+            expect.objectContaining({ code: "TICKET_NOT_FOUND" })
+        );
     });
 
     test("listTicketsByProject returns only those tickets", async () => {
         // Insert two projects
-        db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["PA", "/pA"]);
-        const pA = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
+        const pA = randomUUID();
+        db.run(`INSERT INTO projects (id, name, path) VALUES (?, ?, ?)`, [pA, "PA", "/pA"]);
 
-        db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["PB", "/pB"]);
-        const pB = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
+        const pB = randomUUID();
+        db.run(`INSERT INTO projects (id, name, path) VALUES (?, ?, ?)`, [pB, "PB", "/pB"]);
 
         // Insert tickets
         await createTicket({ projectId: pA, title: "TicketA1", overview: "Overview A1", status: "open", priority: "normal" });
@@ -114,8 +116,9 @@ describe("Ticket Service", () => {
         expect(updated).not.toBeNull();
         expect(updated?.title).toBe("NewTitle");
 
-        const no = await updateTicket("fakeid", { title: "No" });
-        expect(no).toBeNull();
+        await expect(updateTicket("fakeid", { title: "No" })).rejects.toThrow(
+            expect.objectContaining({ code: "TICKET_NOT_FOUND" })
+        );
     });
 
     test("updateTicket throws if suggestedFileIds references missing file", async () => {
@@ -128,7 +131,12 @@ describe("Ticket Service", () => {
         });
         await expect(
             updateTicket(ticket.id, { suggestedFileIds: ["nonexistent-file"] })
-        ).rejects.toThrow("Some fileIds no longer exist on disk");
+        ).rejects.toThrow(
+            expect.objectContaining({
+                code: "FILE_NOT_FOUND_IN_PROJECT",
+                message: "File with ID nonexistent-file not found in project testProj."
+            })
+        );
     });
 
     test("deleteTicket returns true if deleted, false if not found", async () => {
@@ -139,33 +147,40 @@ describe("Ticket Service", () => {
             status: "open",
             priority: "normal",
         });
-        const success = await deleteTicket(ticket.id);
-        expect(success).toBe(true);
+        await expect(deleteTicket(ticket.id)).resolves.toBeUndefined();
+        await expect(getTicketById(ticket.id)).rejects.toThrow(
+            expect.objectContaining({ code: "TICKET_NOT_FOUND" })
+        );
 
-        const again = await deleteTicket(ticket.id);
-        expect(again).toBe(false);
+        await expect(deleteTicket(ticket.id)).rejects.toThrow(
+            expect.objectContaining({ code: "TICKET_NOT_FOUND" })
+        );
     });
 
     test("linkFilesToTicket inserts rows in ticketFiles, getTicketFiles retrieves them", async () => {
+        const ticketProjectId = randomUUID();
+        db.run(`INSERT INTO projects (id, name, path) VALUES (?, ?, ?)`, [ticketProjectId, "pLinkProject", "/plink"]);
+
         const ticket = await createTicket({
-            projectId: "pLink",
+            projectId: ticketProjectId,
             title: "LinkT",
             overview: "Link ticket overview",
             status: "open",
             priority: "normal",
         });
-        // Insert some files
-        db.run(
-            `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?);`,
-            ["pLink", "f1", "f1.txt", ".txt", 111]
-        );
-        const f1 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
+        // Insert some files
+        const f1 = randomUUID();
         db.run(
-            `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?);`,
-            ["pLink", "f2", "f2.txt", ".txt", 222]
+            `INSERT INTO files (id, project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?, ?);`,
+            [f1, ticketProjectId, "f1", "f1.txt", ".txt", 111]
         );
-        const f2 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
+
+        const f2 = randomUUID();
+        db.run(
+            `INSERT INTO files (id, project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?, ?);`,
+            [f2, ticketProjectId, "f2", "f2.txt", ".txt", 222]
+        );
 
         const linked = await linkFilesToTicket(ticket.id, [f1, f2]);
         expect(linked.length).toBe(2);
@@ -176,7 +191,10 @@ describe("Ticket Service", () => {
 
     test("linkFilesToTicket throws if ticket not found", async () => {
         await expect(linkFilesToTicket("fakeid", ["someFile"])).rejects.toThrow(
-            "Ticket fakeid not found"
+            expect.objectContaining({
+                code: "TICKET_NOT_FOUND",
+                message: "Ticket with ID fakeid not found."
+            })
         );
     });
 
@@ -220,20 +238,24 @@ describe("Ticket Service", () => {
             status: "open",
             priority: "normal",
         });
-        const titles = await suggestTasksForTicket(ticket.id, "err context");
-        expect(titles).toEqual([]);
+        await expect(suggestTasksForTicket(ticket.id, "err context")).rejects.toThrow(
+            expect.objectContaining({ code: "TASK_SUGGESTION_FAILED" })
+        );
     });
 
     test("suggestTasksForTicket throws if ticket not found", async () => {
         await expect(suggestTasksForTicket("fake", "ctx")).rejects.toThrow(
-            "Ticket fake not found"
+            expect.objectContaining({
+                code: "TICKET_NOT_FOUND",
+                message: "Ticket with ID fake not found."
+            })
         );
     });
 
     test("getTicketsWithFiles merges file IDs", async () => {
         // Insert a project
-        db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["WF", "/WF"]);
-        const projId = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
+        const projId = randomUUID();
+        db.run(`INSERT INTO projects (id, name, path) VALUES (?, ?, ?)`, [projId, "WF", "/WF"]);
 
         // Two tickets
         const t1 = await createTicket({
@@ -252,17 +274,17 @@ describe("Ticket Service", () => {
         });
 
         // Insert two files
+        const f1 = randomUUID();
         db.run(
-            `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?)`,
-            [projId, "f1", "f1.txt", ".txt", 111]
+            `INSERT INTO files (id, project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?, ?)`,
+            [f1, projId, "f1", "f1.txt", ".txt", 111]
         );
-        const f1 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
+        const f2 = randomUUID();
         db.run(
-            `INSERT INTO files (project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?)`,
-            [projId, "f2", "f2.txt", ".txt", 222]
+            `INSERT INTO files (id, project_id, name, path, extension, size) VALUES (?, ?, ?, ?, ?, ?)`,
+            [f2, projId, "f2", "f2.txt", ".txt", 222]
         );
-        const f2 = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
 
         await linkFilesToTicket(t1.id, [f1, f2]);
         await linkFilesToTicket(t2.id, [f2]);
@@ -295,7 +317,7 @@ describe("Ticket Service", () => {
 
     test("createTask throws if ticket not found", async () => {
         await expect(createTask("fakeid", "Nope")).rejects.toThrow(
-            expect.objectContaining({ code: "NOT_FOUND" })
+            expect.objectContaining({ code: "TICKET_NOT_FOUND" })
         );
     });
 
@@ -330,8 +352,9 @@ describe("Ticket Service", () => {
         expect(all[0].content).toBe("NewContent");
         expect(all[0].done).toBe(true);
 
-        const notFound = await updateTask(t.id, "fakeTaskId", { done: false });
-        expect(notFound).toBeNull();
+        await expect(updateTask(t.id, "fakeTaskId", { done: false })).rejects.toThrow(
+            expect.objectContaining({ code: "TASK_UPDATE_FAILED_OR_NOT_FOUND" })
+        );
     });
 
     test("deleteTask returns true if removed, false if not found", async () => {
@@ -343,11 +366,14 @@ describe("Ticket Service", () => {
             priority: "normal",
         });
         const task = await createTask(t.id, "ToDel");
-        const success = await deleteTask(t.id, task.id);
-        expect(success).toBe(true);
+        await expect(deleteTask(t.id, task.id)).resolves.toBeUndefined();
 
-        const again = await deleteTask(t.id, task.id);
-        expect(again).toBe(false);
+        const tasksAfterDelete = await getTasks(t.id);
+        expect(tasksAfterDelete.find(tk => tk.id === task.id)).toBeUndefined();
+
+        await expect(deleteTask(t.id, task.id)).rejects.toThrow(
+            expect.objectContaining({ code: "TASK_NOT_FOUND_FOR_TICKET" })
+        );
     });
 
     test("reorderTasks updates multiple orderIndexes", async () => {
@@ -387,8 +413,8 @@ describe("Ticket Service", () => {
     });
 
     test("listTicketsWithTaskCount returns array with aggregated taskCount", async () => {
-        db.run(`INSERT INTO projects (name, path) VALUES (?, ?)`, ["TaskCountProj", "/tcp"]);
-        const projId = ((db.query("SELECT last_insert_rowid() as id").get() as { id: number }).id).toString();
+        const projId = randomUUID();
+        db.run(`INSERT INTO projects (id, name, path) VALUES (?, ?, ?)`, [projId, "TaskCountProj", "/tcp"]);
 
         const tk1 = await createTicket({ projectId: projId, title: "TC1", overview: "TC1 overview", status: "open", priority: "normal" });
         const tk2 = await createTicket({ projectId: projId, title: "TC2", overview: "TC2 overview", status: "open", priority: "normal" });

@@ -100,7 +100,6 @@ export function AIFileChangeDialog({
             />
           </div>
 
-          {/* Once we have a changeId, show the suggested changes */}
           {changeId && (
             <div className="grid gap-2">
               <h3 className="font-medium">Suggested Changes</h3>
@@ -109,7 +108,6 @@ export function AIFileChangeDialog({
                   <LoaderPinwheel />
                 </div>
               ) : changeResponse ? (
-                // Show a diff between originalContent and the diff field
                 <DiffViewer
                   oldValue={changeResponse.fileChange.originalContent}
                   newValue={changeResponse.fileChange.suggestedContent}

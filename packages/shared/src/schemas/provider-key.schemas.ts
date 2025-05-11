@@ -112,3 +112,6 @@ export type UpdateProviderKeyBody = z.infer<typeof UpdateProviderKeyBodySchema>;
 export type ProviderKeyIdParams = z.infer<typeof ProviderKeyIdParamsSchema>;
 
 export type ProviderKey = z.infer<typeof ProviderKeySchema>;
+
+// Explicit type for the input to the updateKey service method
+export type UpdateProviderKeyInput = z.infer<typeof UpdateProviderKeyBodySchema>;

@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { ProjectFileSchema, ProjectFileMapSchema, ProjectSchema } from 'shared/src/schemas/project.schemas';
+import { PromptSchema } from './prompt.schemas';
 
 // Project/Task related schemas remain largely the same
 export const AgentTaskStatusSchema = z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "FAILED", "SKIPPED"])
@@ -69,6 +70,8 @@ export const AgentContextSchema = z.object({
     projectSummaryContext: z.string().openapi({ description: "A summary of the project's purpose and structure.", example: "A Node.js backend service for managing user accounts." }),
     project: ProjectSchema,
     agentJobId: z.string().openapi({ description: "The ID of the agent job that is running this task plan.", example: "job-xyz-789" }),
+    prompts: z.array(PromptSchema).openapi({ description: "The prompts to use for the agent." }),
+    selectedFileIds: z.array(z.string().min(1)).min(1).openapi({ description: "Array of ProjectFile IDs to provide as initial context.", example: ["file-id-1", "file-id-2"] })
 }).refine(ctx => ctx.projectFiles[0]?.projectId, {
     message: "Could not determine projectId from the first project file.",
     path: ["projectFiles"],
@@ -94,6 +97,10 @@ export const AgentCoderRunRequestSchema = z.object({
     // generated on the client side and passed to the server to retrieve the execution logs and data for this run.
     agentJobId: z.string().optional().openapi({
         description: "The unique ID for retrieving the execution logs and data for this run."
+    }),
+    selectedPromptIds: z.array(z.string().min(1)).optional().openapi({
+        description: "Array of Prompt IDs to provide as initial context.",
+        example: ["prompt-id-1", "prompt-id-2"]
     })
 }).openapi('AgentCoderRunRequest');
 

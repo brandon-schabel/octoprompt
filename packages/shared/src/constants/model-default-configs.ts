@@ -6,36 +6,42 @@ export type ModelOptionsWithProvider = ModelOptions & {
 }
 
 export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    max_tokens: 10000,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
+    // max output tokens
+    maxTokens: 10000,
     temperature: 0.7,
-    top_p: 1,
-    top_k: 1,
+    topP: 0,
+    topK: 0,
     provider: "openrouter",
     model: "google/gemini-2.5-flash-preview",
     // model: "qwen/qwen3-235b-a22b",
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    max_tokens: 100000,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
+    maxTokens: 25000,
     temperature: 0.7,
-    top_p: 1,
-    top_k: 1,
+    topP: 0,
+    topK: 0,
     provider: "openrouter",
     model: "google/gemini-2.5-flash-preview",
 }
 
 export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    max_tokens: 100000,
+    frequencyPenalty: 0,
+    presencePenalty: 0,
+    maxTokens: 50000,
     temperature: 0.7,
-    top_p: 1,
-    top_k: 1,
+    topP: 0,
+    topK: 0,
     provider: "openrouter",
     model: "google/gemini-2.5-flash-preview",
 }
 
+
+export const PLANNING_MODEL_CONFIG: ModelOptionsWithProvider = {
+    ...HIGH_MODEL_CONFIG,
+    model: "anthropic/claude-3.7-sonnet"
+}
