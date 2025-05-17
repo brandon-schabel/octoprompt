@@ -10,11 +10,6 @@ import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
 // Initialize core services
 const queryClient = new QueryClient()
 
-console.log({
-  message: 'setting',
-  SERVER_HTTP_ENDPOINT
-})
-
 client.setConfig({
   baseUrl: SERVER_HTTP_ENDPOINT
 })

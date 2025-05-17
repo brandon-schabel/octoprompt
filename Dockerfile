@@ -84,7 +84,7 @@ RUN cp -a ./packages/server/data/. /app/dist_final/data/
 # This defines the 'start' script necessary to run the server.
 RUN echo '{ \
   "name": "octoprompt-server-runtime", \
-  "version": "0.5.0", \
+  "version": "0.5.1", \
   "type": "module", \
   "scripts": { "start": "bun ./server.js" } \
 }' > /app/dist_final/package.json

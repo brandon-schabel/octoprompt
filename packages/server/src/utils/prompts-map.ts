@@ -8,7 +8,6 @@ import { isProdEnv } from "@/constants/server-config"
 // in prod it's just relatives to the root server.js built server, but in dev it's relative to this file using import.meta.dir
 const promptsDir = isProdEnv ? './prompts' : import.meta.dir + '/../../../../prompts'
 
-
 const contemplativePrompt = Bun.file(promptsDir + '/contemplative-prompt.md').text()
 const summarizationSteps = Bun.file(promptsDir + '/summarization-prompt.md').text()
 const octopromptPlanningMetaPrompt = Bun.file(promptsDir + '/octoprompt-planning-meta-prompt.md').text()

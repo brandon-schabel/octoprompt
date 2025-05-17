@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
@@ -14,7 +14,7 @@
     "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
     "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
     "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts",
-    "run:binary": "cd ./dist/octoprompt-0.5.0-macos-arm64 && ./octoprompt-v0.5.0"
+    "build:docker": "docker build -t octoprompt-app ."
   },
   "workspaces": [
     "packages/*"

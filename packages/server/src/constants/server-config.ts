@@ -1,5 +1,6 @@
 export const isDevEnv = import.meta.env.DEV === 'true'
-export const isProdEnv = !isDevEnv
+export const isTestEnv = import.meta.env.NODE_ENV === 'test'
+export const isProdEnv = !isDevEnv && !isTestEnv
 
 const DEV_PORT = 3147
 const PROD_PORT = 3579
