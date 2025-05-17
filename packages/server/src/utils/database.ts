@@ -1,9 +1,9 @@
-import { Database } from 'bun:sqlite';
-import path from 'path';
+import { Database } from 'bun:sqlite'
+import path from 'path'
 
 // Define our database instance with correct typing
-export let db: Database;
-const defaultDbPath = '../sqlite.db';
+export let db: Database
+const defaultDbPath = '../sqlite.db'
 
 function createTables(db: Database): void {
   db.exec(`
@@ -13,7 +13,7 @@ function createTables(db: Database): void {
       created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS chat_messages (
@@ -24,7 +24,7 @@ function createTables(db: Database): void {
       created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -35,7 +35,7 @@ function createTables(db: Database): void {
       created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS files (
@@ -54,7 +54,7 @@ function createTables(db: Database): void {
       updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS prompts (
@@ -64,7 +64,7 @@ function createTables(db: Database): void {
       created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS prompt_projects (
@@ -74,7 +74,7 @@ function createTables(db: Database): void {
       FOREIGN KEY(prompt_id) REFERENCES prompts(id) ON DELETE CASCADE,
       FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS provider_keys (
@@ -84,7 +84,7 @@ function createTables(db: Database): void {
       created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (
@@ -99,7 +99,7 @@ function createTables(db: Database): void {
       updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS ticket_files (
@@ -109,7 +109,7 @@ function createTables(db: Database): void {
       FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
       FOREIGN KEY(file_id) REFERENCES files(id) ON DELETE CASCADE
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS ticket_tasks (
@@ -122,7 +122,7 @@ function createTables(db: Database): void {
       updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
       FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
     );
-  `);
+  `)
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS file_changes (
@@ -133,62 +133,62 @@ function createTables(db: Database): void {
       status TEXT NOT NULL,
       timestamp INTEGER NOT NULL
     );
-  `);
+  `)
 }
 
 type SetupDatabaseOptions = {
-  dbPath?: string;
-};
+  dbPath?: string
+}
 
 export function setupDatabase(options: SetupDatabaseOptions = {}): Database {
-  let dbPath = options.dbPath ?? defaultDbPath;
+  let dbPath = options.dbPath ?? defaultDbPath
 
   // Resolve dbPath relative to the current module's directory
   if (!options.dbPath) {
-    const moduleDir = path.dirname(import.meta.dir); // Get directory of current module
-    dbPath = path.resolve(moduleDir, dbPath); // Resolve path relative to module directory
+    const moduleDir = path.dirname(import.meta.dir) // Get directory of current module
+    dbPath = path.resolve(moduleDir, dbPath) // Resolve path relative to module directory
   }
 
   if (process.env.NODE_ENV === 'test') {
-    db = new Database(':memory:');
+    db = new Database(':memory:')
   } else {
-    db = new Database(dbPath);
+    db = new Database(dbPath)
   }
 
   // Check if tables already exist before creating them - simplified logic, tables are created with IF NOT EXISTS
-  createTables(db);
-  console.log(`All tables created or verified at ${dbPath}.`);
-  return db;
+  createTables(db)
+  console.log(`All tables created or verified at ${dbPath}.`)
+  return db
 }
 
 // Initialize database at module load time
-setupDatabase();
+setupDatabase()
 
 // Added resetDatabase function that resets the in-memory test database
 export function resetDatabase(): void {
   if (process.env.NODE_ENV !== 'test') {
-    console.log("resetDatabase: Not in test environment. No reset performed.");
-    return;
+    console.log('resetDatabase: Not in test environment. No reset performed.')
+    return
   }
   try {
     // Drop tables in order considering dependencies
-    db.exec("DROP TABLE IF EXISTS ticket_tasks;");
-    db.exec("DROP TABLE IF EXISTS ticket_files;");
-    db.exec("DROP TABLE IF EXISTS tickets;");
-    db.exec("DROP TABLE IF EXISTS prompt_projects;");
-    db.exec("DROP TABLE IF EXISTS chat_messages;");
-    db.exec("DROP TABLE IF EXISTS chats;");
-    db.exec("DROP TABLE IF EXISTS files;");
-    db.exec("DROP TABLE IF EXISTS projects;");
-    db.exec("DROP TABLE IF EXISTS prompts;");
-    db.exec("DROP TABLE IF EXISTS provider_keys;");
-    db.exec("DROP TABLE IF EXISTS file_changes;");
+    db.exec('DROP TABLE IF EXISTS ticket_tasks;')
+    db.exec('DROP TABLE IF EXISTS ticket_files;')
+    db.exec('DROP TABLE IF EXISTS tickets;')
+    db.exec('DROP TABLE IF EXISTS prompt_projects;')
+    db.exec('DROP TABLE IF EXISTS chat_messages;')
+    db.exec('DROP TABLE IF EXISTS chats;')
+    db.exec('DROP TABLE IF EXISTS files;')
+    db.exec('DROP TABLE IF EXISTS projects;')
+    db.exec('DROP TABLE IF EXISTS prompts;')
+    db.exec('DROP TABLE IF EXISTS provider_keys;')
+    db.exec('DROP TABLE IF EXISTS file_changes;')
 
     // Recreate tables after dropping
-    createTables(db);
-    console.log("resetDatabase: In-memory test database reset successfully.");
+    createTables(db)
+    console.log('resetDatabase: In-memory test database reset successfully.')
   } catch (error) {
-    console.error("resetDatabase: Error resetting the database.", error);
-    throw error;
+    console.error('resetDatabase: Error resetting the database.', error)
+    throw error
   }
 }

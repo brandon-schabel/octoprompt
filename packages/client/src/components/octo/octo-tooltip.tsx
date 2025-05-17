@@ -1,27 +1,25 @@
-import { HelpCircle, LucideIcon } from "lucide-react"
-import { ReactNode } from "react"
+import { HelpCircle, LucideIcon } from 'lucide-react'
+import { ReactNode } from 'react'
 
-import { Popover, PopoverContent, PopoverTrigger } from "@ui"
-import { useSelectSetting } from "@/hooks/api/use-kv-api"
+import { Popover, PopoverContent, PopoverTrigger } from '@ui'
+import { useSelectSetting } from '@/hooks/api/use-kv-api'
 type InfoTooltipProps = {
-    children: ReactNode
-    icon?: LucideIcon
-    className?: string
+  children: ReactNode
+  icon?: LucideIcon
+  className?: string
 }
 
 export const OctoTooltip = ({ children, icon: Icon = HelpCircle, className }: InfoTooltipProps) => {
-    const hideInformationalTooltips = useSelectSetting('hideInformationalTooltips')
+  const hideInformationalTooltips = useSelectSetting('hideInformationalTooltips')
 
-    if (hideInformationalTooltips) return null
+  if (hideInformationalTooltips) return null
 
-    return (
-        <Popover>
-            <PopoverTrigger>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-            </PopoverTrigger>
-            <PopoverContent className={className}>
-                {children}
-            </PopoverContent>
-        </Popover>
-    )
+  return (
+    <Popover>
+      <PopoverTrigger>
+        <Icon className='h-4 w-4 text-muted-foreground' />
+      </PopoverTrigger>
+      <PopoverContent className={className}>{children}</PopoverContent>
+    </Popover>
+  )
 }

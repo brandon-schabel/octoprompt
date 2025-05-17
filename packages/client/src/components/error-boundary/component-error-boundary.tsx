@@ -28,17 +28,17 @@ export class ComponentErrorBoundary extends Component<ComponentErrorBoundaryProp
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-4 border border-destructive rounded-lg m-2">
-          <div className="flex items-center gap-2 text-destructive mb-2">
-            <AlertCircle className="w-5 h-5" />
-            <span className="font-medium">Error in {this.props.componentName}</span>
+        <div className='p-4 border border-destructive rounded-lg m-2'>
+          <div className='flex items-center gap-2 text-destructive mb-2'>
+            <AlertCircle className='w-5 h-5' />
+            <span className='font-medium'>Error in {this.props.componentName}</span>
           </div>
-          <p className="text-sm text-muted-foreground mb-2">
+          <p className='text-sm text-muted-foreground mb-2'>
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
           <Button
-            size="sm"
-            variant="outline"
+            size='sm'
+            variant='outline'
             onClick={() => {
               this.setState({ hasError: false, error: null })
             }}
@@ -51,4 +51,4 @@ export class ComponentErrorBoundary extends Component<ComponentErrorBoundaryProp
 
     return this.props.children
   }
-} 
+}

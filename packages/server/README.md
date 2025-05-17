@@ -37,12 +37,14 @@ server/
 ### Key Components
 
 1. **Services Layer** (`/src/services/`)
+
    - Contains business logic
    - Handles database operations
    - Examples: `SubscriptionService`, `AuthService`
    - Services are injectable and testable
 
 2. **Routes Layer** (`/src/routes/`)
+
    - API endpoint definitions
    - Request validation using Zod
    - Routes are grouped by feature
@@ -57,14 +59,14 @@ The project uses Bun's test runner for end-to-end tests. Example from `auth.test
 
 ```typescript
 describe('Auth Operations', () => {
-    const api = new APIInterface(API_CONFIG);
-    const authApi = new AuthAPI(api);
-    
-    test('registration works', async () => {
-        const response = await authApi.register(testUser);
-        expect(response.user).toBeDefined();
-    });
-});
+  const api = new APIInterface(API_CONFIG)
+  const authApi = new AuthAPI(api)
+
+  test('registration works', async () => {
+    const response = await authApi.register(testUser)
+    expect(response.user).toBeDefined()
+  })
+})
 ```
 
 Key testing principles:
@@ -95,63 +97,62 @@ The server uses a strongly-typed router with built-in validation, and error hand
 ```typescript
 // Define validation schemas
 const todoRouteValidation = {
-    create: {
-        body: z.object({
-            title: z.string(),
-            description: z.string().optional(),
-            dueDate: z.string().optional(),
-            completed: z.boolean().optional()
-        })
-    },
-    update: {
-        params: z.object({
-            id: z.string().uuid()
-        }),
-        body: z.object({
-            title: z.string().optional(),
-            description: z.string().optional(),
-            dueDate: z.string().optional(),
-            completed: z.boolean().optional()
-        })
-    }
-} as const;
+  create: {
+    body: z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      dueDate: z.string().optional(),
+      completed: z.boolean().optional()
+    })
+  },
+  update: {
+    params: z.object({
+      id: z.string().uuid()
+    }),
+    body: z.object({
+      title: z.string().optional(),
+      description: z.string().optional(),
+      dueDate: z.string().optional(),
+      completed: z.boolean().optional()
+    })
+  }
+} as const
 
 // Define API error responses
 const API_ERRORS = {
-    NOT_FOUND: (details?: unknown) =>
-        json.error('Resource not found', 404, details),
-    UNAUTHORIZED: (details?: unknown) =>
-        json.error('Unauthorized access', 401, details),
-    INTERNAL_ERROR: (error: unknown) => {
-        console.error('Internal server error:', error);
-        return json.error('Internal server error', 500);
-    }
-} as const;
+  NOT_FOUND: (details?: unknown) => json.error('Resource not found', 404, details),
+  UNAUTHORIZED: (details?: unknown) => json.error('Unauthorized access', 401, details),
+  INTERNAL_ERROR: (error: unknown) => {
+    console.error('Internal server error:', error)
+    return json.error('Internal server error', 500)
+  }
+} as const
 
 // Route implementation
 router.post(
-    '/api/todos',
-    {
-        validation: todoRouteValidation.create,
-        auth: true
-    },
-    async (req, { body }) => {
-        try {
-            const [todo] = await db.insert(todos)
-                .values({
-                    title: body.title,
-                    description: body.description,
-                    dueDate: body.dueDate ? new Date(body.dueDate) : null,
-                    completed: body.completed ?? false
-                })
-                .returning();
+  '/api/todos',
+  {
+    validation: todoRouteValidation.create,
+    auth: true
+  },
+  async (req, { body }) => {
+    try {
+      const [todo] = await db
+        .insert(todos)
+        .values({
+          title: body.title,
+          description: body.description,
+          dueDate: body.dueDate ? new Date(body.dueDate) : null,
+          completed: body.completed ?? false
+        })
+        .returning()
 
-            return json(todo, { status: 201 });
-        } catch (error) {
-            return API_ERRORS.INTERNAL_ERROR(error);
-        }
+      return json(todo, { status: 201 })
+    } catch (error) {
+      return API_ERRORS.INTERNAL_ERROR(error)
     }
-);
+  }
+)
 ```
 
 ### Router Features
@@ -160,32 +161,40 @@ router.post(
 
    ```typescript
    const validation = {
-       create: {
-           body: z.object({ /* schema */ }),
-           params: z.object({ /* schema */ }),
-           query: z.object({ /* schema */ })
-       }
-   } as const;
+     create: {
+       body: z.object({
+         /* schema */
+       }),
+       params: z.object({
+         /* schema */
+       }),
+       query: z.object({
+         /* schema */
+       })
+     }
+   } as const
    ```
 
-3. **Error Handling**
+2. **Error Handling**
 
    ```typescript
    try {
-       // Route logic
+     // Route logic
    } catch (error) {
-       return json.error('Error message', 500, error);
+     return json.error('Error message', 500, error)
    }
    ```
 
-4. **Response Helpers**
+3. **Response Helpers**
 
    ```typescript
    // JSON responses with proper typing
-   return json(data, { 
-       status: 201,
-       headers: { /* custom headers */ }
-   });
+   return json(data, {
+     status: 201,
+     headers: {
+       /* custom headers */
+     }
+   })
    ```
 
 ### Route Configuration
@@ -196,56 +205,56 @@ Each route can specify:
 
    ```typescript
    router.get(
-       '/api/todos/:id',
-       {
-           validation: {
-               params: z.object({
-                   id: z.string().uuid()
-               })
-           }
-       },
-       async (req, { params }) => {
-           // params.id is typed as string
+     '/api/todos/:id',
+     {
+       validation: {
+         params: z.object({
+           id: z.string().uuid()
+         })
        }
-   );
+     },
+     async (req, { params }) => {
+       // params.id is typed as string
+     }
+   )
    ```
 
 2. **Query Parameters**
 
    ```typescript
    router.get(
-       '/api/todos',
-       {
-           validation: {
-               query: z.object({
-                   completed: z.boolean().optional(),
-                   limit: z.number().optional()
-               })
-           }
-       },
-       async (req, { query }) => {
-           // query is fully typed
+     '/api/todos',
+     {
+       validation: {
+         query: z.object({
+           completed: z.boolean().optional(),
+           limit: z.number().optional()
+         })
        }
-   );
+     },
+     async (req, { query }) => {
+       // query is fully typed
+     }
+   )
    ```
 
 3. **Request Body**
 
    ```typescript
    router.post(
-       '/api/todos',
-       {
-           validation: {
-               body: z.object({
-                   title: z.string(),
-                   completed: z.boolean()
-               })
-           }
-       },
-       async (req, { body }) => {
-           // body is fully typed
+     '/api/todos',
+     {
+       validation: {
+         body: z.object({
+           title: z.string(),
+           completed: z.boolean()
+         })
        }
-   );
+     },
+     async (req, { body }) => {
+       // body is fully typed
+     }
+   )
    ```
 
 ### Error Handling Pattern
@@ -254,44 +263,42 @@ The recommended pattern for handling errors:
 
 ```typescript
 const API_ERRORS = {
-    NOT_FOUND: (details?: unknown) =>
-        json.error('Resource not found', 404, details),
-    UNAUTHORIZED: (details?: unknown) =>
-        json.error('Unauthorized access', 401, details),
-    INTERNAL_ERROR: (error: unknown) => {
-        console.error('Internal server error:', error);
-        return json.error('Internal server error', 500);
-    }
-} as const;
+  NOT_FOUND: (details?: unknown) => json.error('Resource not found', 404, details),
+  UNAUTHORIZED: (details?: unknown) => json.error('Unauthorized access', 401, details),
+  INTERNAL_ERROR: (error: unknown) => {
+    console.error('Internal server error:', error)
+    return json.error('Internal server error', 500)
+  }
+} as const
 
 router.get(
-    '/api/resource/:id',
-    {
-        validation: {
-            params: z.object({
-                id: z.string().uuid()
-            })
-        },
-        auth: true
+  '/api/resource/:id',
+  {
+    validation: {
+      params: z.object({
+        id: z.string().uuid()
+      })
     },
-    async (req, { params }) => {
-        try {
-            const resource = await db.findResource(params.id);
-            
-            if (!resource) {
-                return API_ERRORS.NOT_FOUND();
-            }
-            
-            if (resource.userId !== req.auth!.userId) {
-                return API_ERRORS.UNAUTHORIZED();
-            }
-            
-            return json(resource);
-        } catch (error) {
-            return API_ERRORS.INTERNAL_ERROR(error);
-        }
+    auth: true
+  },
+  async (req, { params }) => {
+    try {
+      const resource = await db.findResource(params.id)
+
+      if (!resource) {
+        return API_ERRORS.NOT_FOUND()
+      }
+
+      if (resource.userId !== req.auth!.userId) {
+        return API_ERRORS.UNAUTHORIZED()
+      }
+
+      return json(resource)
+    } catch (error) {
+      return API_ERRORS.INTERNAL_ERROR(error)
     }
-);
+  }
+)
 ```
 
 ## Route Validation
@@ -300,35 +307,39 @@ The server uses Zod for runtime validation of request data. Each route can speci
 
 ```typescript
 const quizValidation = {
-    createQuiz: {
-        body: z.object({
-            categoryId: z.string(),
-            totalQuestions: z.number().min(1).max(50),
-        }),
-        query: z.object({
-            difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
-        }),
-        params: z.object({
-            userId: z.string().uuid(),
-        }),
-    },
-} as const;
+  createQuiz: {
+    body: z.object({
+      categoryId: z.string(),
+      totalQuestions: z.number().min(1).max(50)
+    }),
+    query: z.object({
+      difficulty: z.enum(['easy', 'medium', 'hard']).optional()
+    }),
+    params: z.object({
+      userId: z.string().uuid()
+    })
+  }
+} as const
 
-router.post<typeof quizValidation.createQuiz>({
+router.post<typeof quizValidation.createQuiz>(
+  {
     path: '/api/quiz/:userId',
     validation: quizValidation.createQuiz,
-    auth: true,
-}, async (req, { body, query, params }) => {
+    auth: true
+  },
+  async (req, { body, query, params }) => {
     // Types are automatically inferred:
     // body: { categoryId: string; totalQuestions: number }
     // query: { difficulty?: 'easy' | 'medium' | 'hard' }
     // params: { userId: string }
-});
+  }
+)
 ```
 
 ### Validation Features
 
 1. **Request Parts**
+
    - `body`: Request body validation
    - `query`: URL query parameters
    - `params`: URL path parameters
@@ -337,9 +348,9 @@ router.post<typeof quizValidation.createQuiz>({
 2. **Type Inference**
 
    ```typescript
-   type RouteConfig = typeof quizValidation.createQuiz;
-   type RequestBody = z.infer<RouteConfig['body']>;
-   type QueryParams = z.infer<RouteConfig['query']>;
+   type RouteConfig = typeof quizValidation.createQuiz
+   type RequestBody = z.infer<RouteConfig['body']>
+   type QueryParams = z.infer<RouteConfig['query']>
    ```
 
 3. **Error Handling**
@@ -408,10 +419,10 @@ The `package.json` includes various test commands:
    ```bash
    # 1. Setup test database
    bun test:setup-db
-   
+
    # 2. Create test user
    bun test:setup-user
-   
+
    # 3. Start test server (port 3147)
    bun test:server
    ```
@@ -436,39 +447,39 @@ Here's an example from `auth.test.ts` showing how E2E tests work:
 
 ```typescript
 describe('Auth Operations', () => {
-    const api = new APIInterface(API_CONFIG);
-    const authApi = new AuthAPI(api);
-    
-    const testUser: LoginRegisterInput = {
-        email: `test-${Date.now()}@example.com`,
-        password: 'TestPassword123!'
-    };
+  const api = new APIInterface(API_CONFIG)
+  const authApi = new AuthAPI(api)
 
-    // Helper to ensure clean state
-    const ensureLoggedOut = async () => {
-        try {
-            await authApi.logout();
-            api.setTokens('', '');
-            await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-            // Ignore logout errors in cleanup
-        }
-    };
+  const testUser: LoginRegisterInput = {
+    email: `test-${Date.now()}@example.com`,
+    password: 'TestPassword123!'
+  }
 
-    beforeAll(async () => {
-        await ensureLoggedOut();
-    });
+  // Helper to ensure clean state
+  const ensureLoggedOut = async () => {
+    try {
+      await authApi.logout()
+      api.setTokens('', '')
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    } catch (error) {
+      // Ignore logout errors in cleanup
+    }
+  }
 
-    test('registration works', async () => {
-        const response = await authApi.register(testUser);
-        
-        expect(response.error).toBeUndefined();
-        expect(response.user).toBeDefined();
-        expect(response.user?.email).toBe(testUser.email);
-        
-        await ensureLoggedOut();
-    });
-});
+  beforeAll(async () => {
+    await ensureLoggedOut()
+  })
+
+  test('registration works', async () => {
+    const response = await authApi.register(testUser)
+
+    expect(response.error).toBeUndefined()
+    expect(response.user).toBeDefined()
+    expect(response.user?.email).toBe(testUser.email)
+
+    await ensureLoggedOut()
+  })
+})
 ```
 
 ### Test Environment
@@ -483,11 +494,13 @@ The E2E tests use:
 ### Key Testing Features
 
 1. **Database Integration**
+
    - Tests run against a real PostgreSQL database
    - Automatic schema migration for test database
    - Data cleanup between test suites
 
 2. **Server Management**
+
    - Automated server startup/shutdown
    - Port management to avoid conflicts
    - Environment isolation
@@ -497,12 +510,12 @@ The E2E tests use:
    ```typescript
    // e2e/utils/get-auth-test-api.ts
    export const getAuthTescounttApi = () => {
-       const api = new APIInterface({
-           baseUrl: 'http://localhost:3147',
-           // Test-specific configuration
-       });
-       return new AuthAPI(api);
-   };
+     const api = new APIInterface({
+       baseUrl: 'http://localhost:3147'
+       // Test-specific configuration
+     })
+     return new AuthAPI(api)
+   }
    ```
 
 4. **Test Lifecycle**
@@ -510,26 +523,28 @@ The E2E tests use:
    ```typescript
    // Example test lifecycle
    beforeAll(async () => {
-       // Setup test environment
-       await setupTestDatabase();
-       await startTestServer();
-   });
+     // Setup test environment
+     await setupTestDatabase()
+     await startTestServer()
+   })
 
    afterAll(async () => {
-       // Cleanup
-       await teardownTestDatabase();
-       await stopTestServer();
-   });
+     // Cleanup
+     await teardownTestDatabase()
+     await stopTestServer()
+   })
    ```
 
 ### Best Practices
 
 1. **Test Isolation**
+
    - Each test suite manages its own state
    - Cleanup after each test
    - No shared state between tests
 
 2. **Error Handling**
+
    - Test both success and failure cases
    - Verify error responses
    - Check error message content

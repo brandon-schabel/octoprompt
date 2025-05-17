@@ -1,15 +1,15 @@
 // migrateNew.ts
-import Database from 'bun:sqlite';
+import Database from 'bun:sqlite'
 
 function main() {
   // Open the new DB
-  const newDb = new Database('sqlite.db');
+  const newDb = new Database('sqlite.db')
 
   // Attach the old DB
-  newDb.exec("ATTACH 'sqlite-old.db' AS oldDb");
+  newDb.exec("ATTACH 'sqlite-old.db' AS oldDb")
 
   // Wrap all inserts in a single transaction for speed and atomicity
-  newDb.exec('BEGIN');
+  newDb.exec('BEGIN')
 
   try {
     // 1) chats
@@ -26,7 +26,7 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.chats;
-    `);
+    `)
 
     // 2) chat_messages
     newDb.exec(`
@@ -44,7 +44,7 @@ function main() {
         content,
         created_at
       FROM oldDb.chat_messages;
-    `);
+    `)
 
     // 3) projects
     newDb.exec(`
@@ -64,7 +64,7 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.projects;
-    `);
+    `)
 
     // 4) files
     newDb.exec(`
@@ -98,7 +98,7 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.files;
-    `);
+    `)
 
     // 5) prompts
     newDb.exec(`
@@ -116,7 +116,7 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.prompts;
-    `);
+    `)
 
     // 6) prompt_projects
     newDb.exec(`
@@ -130,11 +130,11 @@ function main() {
         prompt_id,
         project_id
       FROM oldDb.prompt_projects;
-    `);
+    `)
 
     // 7) global_state is deprecated.
     // Instead of migrating its data, drop the table from the new DB if it exists.
-    newDb.exec(`DROP TABLE IF EXISTS global_state;`);
+    newDb.exec(`DROP TABLE IF EXISTS global_state;`)
 
     // 8) flags
     newDb.exec(`
@@ -152,7 +152,7 @@ function main() {
         description,
         data
       FROM oldDb.flags;
-    `);
+    `)
 
     // 9) provider_keys
     newDb.exec(`
@@ -170,7 +170,7 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.provider_keys;
-    `);
+    `)
 
     // 10) tickets
     newDb.exec(`
@@ -196,7 +196,7 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.tickets;
-    `);
+    `)
 
     // 11) ticket_files (junction table)
     newDb.exec(`
@@ -208,7 +208,7 @@ function main() {
         ticket_id,
         file_id
       FROM oldDb.ticket_files;
-    `);
+    `)
 
     // 12) ticket_tasks
     newDb.exec(`
@@ -230,25 +230,25 @@ function main() {
         created_at,
         updated_at
       FROM oldDb.ticket_tasks;
-    `);
+    `)
 
     // 13) file_changes is a new table.
     // Since legacy data doesn't exist for it, no INSERT is necessary.
     // (It will be empty in the new DB.)
 
     // Commit the transaction
-    newDb.exec('COMMIT');
+    newDb.exec('COMMIT')
   } catch (error) {
     // Roll back if something fails
-    newDb.exec('ROLLBACK');
-    throw error;
+    newDb.exec('ROLLBACK')
+    throw error
   } finally {
     // Detach the old DB and close the connection
-    newDb.exec('DETACH oldDb');
-    newDb.close();
+    newDb.exec('DETACH oldDb')
+    newDb.close()
   }
 
-  console.log('Migration completed successfully!');
+  console.log('Migration completed successfully!')
 }
 
-main();
+main()

@@ -44,17 +44,14 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const queryClient = useQueryClient()
 
-  const {
-    data: fileDataResponse,
-    isLoading: filesLoading,
-  } = useGetProjectFiles(activeProjectTabState?.selectedProjectId || '')
+  const { data: fileDataResponse, isLoading: filesLoading } = useGetProjectFiles(
+    activeProjectTabState?.selectedProjectId || ''
+  )
 
-  const {
-    data: projectDataResponse,
-  } = useGetProject(activeProjectTabState?.selectedProjectId || '')
+  const { data: projectDataResponse } = useGetProject(activeProjectTabState?.selectedProjectId || '')
 
-  const projectFiles = useMemo(() => fileDataResponse?.data || [], [fileDataResponse]);
-  const project = useMemo(() => projectDataResponse?.data, [projectDataResponse]);
+  const projectFiles = useMemo(() => fileDataResponse?.data || [], [fileDataResponse])
+  const project = useMemo(() => projectDataResponse?.data, [projectDataResponse])
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
   const closeFileViewer = () => setViewedFile(null)
@@ -95,7 +92,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     },
     [debouncedSetFileSearch]
   )
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles();
+  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
 
   const filteredFiles = useMemo(() => {
     if (!projectFiles) return []
@@ -153,7 +150,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       <SelectedFilesDrawer
         selectedFiles={selectedFiles}
         fileMap={projectFileMap}
-        onRemoveFile={() => { }}
+        onRemoveFile={() => {}}
         trigger={trigger}
         projectTabId={activeProjectTabId ?? ''}
       />
@@ -281,8 +278,9 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               return (
                 <li
                   key={file.id}
-                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
-                    }`}
+                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
+                    isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                  }`}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     e.stopPropagation()

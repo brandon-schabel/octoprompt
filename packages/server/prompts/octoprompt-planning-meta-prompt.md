@@ -54,29 +54,34 @@ octoprompt/
 
 When a new project “ticket” is provided (with a title and overview of the requested feature, bug fix, or improvement), **use this meta prompt** to break down that request into a precise set of actionable tasks spanning all relevant areas of the monorepo:
 
-1. **Server-Side Changes**  
-   - **Routes**: New or modified endpoints in `server-router.ts` or sub-route files within `packages/server/src/routes/`.  
-   - **Validations**: Update or create new Zod schemas in `packages/shared/src/validation/`.  
-   - **Services**: Adjust or add domain logic in `packages/server/src/services/`.  
+1. **Server-Side Changes**
+
+   - **Routes**: New or modified endpoints in `server-router.ts` or sub-route files within `packages/server/src/routes/`.
+   - **Validations**: Update or create new Zod schemas in `packages/shared/src/validation/`.
+   - **Services**: Adjust or add domain logic in `packages/server/src/services/`.
    - **Error Handling**: If relevant, specify adjustments to error responses, logging, or middleware.
 
-2. **Database Updates**  
-   - **Schema Changes**: Modifications to `packages/shared/src/utils/database/db-schemas.ts` or new DB tables/fields.  
+2. **Database Updates**
 
-3. **Client-Side Changes**  
-   - **Routes**: New or updated TanStack Router routes in `packages/client/src/routes/`.  
-   - **UI Components**: Create or modify components in `packages/client/src/components/`.  
-   - **Hooks**: Adjust data fetching or mutation hooks in `packages/client/src/hooks/api/` for updated endpoints.  
+   - **Schema Changes**: Modifications to `packages/shared/src/utils/database/db-schemas.ts` or new DB tables/fields.
+
+3. **Client-Side Changes**
+
+   - **Routes**: New or updated TanStack Router routes in `packages/client/src/routes/`.
+   - **UI Components**: Create or modify components in `packages/client/src/components/`.
+   - **Hooks**: Adjust data fetching or mutation hooks in `packages/client/src/hooks/api/` for updated endpoints.
    - **Global State**: Update `websocket-global-state.ts` (or equivalent) if real-time data updates are required.
 
-4. **WebSocket Integration**  
-   - **Server**: Decide if new events or subscription logic are required in `websocket-manager.ts` or `websocket-config.ts`.  
+4. **WebSocket Integration**
+
+   - **Server**: Decide if new events or subscription logic are required in `websocket-manager.ts` or `websocket-config.ts`.
    - **Client**: Adjust how the front-end listens/reacts to new or modified WebSocket events (e.g., updating a global store or local state).
 
-5. **Testing**  
-   - **Unit Tests**: Indicate new or updated tests for services, routes, and components (mention file paths like `packages/server/test/*` or `packages/client/test/*`, if relevant).  
+5. **Testing**
+
+   - **Unit Tests**: Indicate new or updated tests for services, routes, and components (mention file paths like `packages/server/test/*` or `packages/client/test/*`, if relevant).
    - **Integration/E2E Tests**: Suggest how to verify end-to-end functionality, possibly referencing a separate testing setup (e.g., Cypress in the client, or supertest in the server).
 
-6. **Environment/Configuration**  
-   - **Environment Variables**: Note if changes are needed in `.env` files for local/production.  
+6. **Environment/Configuration**
+   - **Environment Variables**: Note if changes are needed in `.env` files for local/production.
    - **Build Config**: Check `tsconfig.json` or bundler (e.g., Vite, etc.) for adjustments related to new features or libraries.

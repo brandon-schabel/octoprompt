@@ -18,7 +18,12 @@ import { ComponentErrorBoundary } from '@/components/error-boundary/component-er
 import { useGetProjects } from '@/hooks/api/use-projects-api'
 import { useDebounce } from '@/hooks/utility-hooks/use-debounce'
 import { useNavigate } from '@tanstack/react-router'
-import { useGetActiveProjectTabId, useGetAppSettings, useGetProjectTab, useGetProjectTabs } from '@/hooks/api/use-kv-api'
+import {
+  useGetActiveProjectTabId,
+  useGetAppSettings,
+  useGetProjectTab,
+  useGetProjectTabs
+} from '@/hooks/api/use-kv-api'
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
@@ -33,7 +38,6 @@ function GlobalCommandPalette() {
     evt.preventDefault()
     setOpen((o) => !o)
   })
-
 
   // Filter projects based on search
   const filteredProjects = (projectsData?.data ?? [])
@@ -142,8 +146,8 @@ function RootComponent() {
   const { isPending: isProjectTabsPending } = useGetProjectTabs()
   const { isPending: isProjectTabByIdPending } = useGetProjectTab(activeProjectTabId ?? '')
 
-
-  const isPending = isAppSettingsPending || isActiveProjectTabIdPending || isProjectTabsPending || isProjectTabByIdPending
+  const isPending =
+    isAppSettingsPending || isActiveProjectTabIdPending || isProjectTabsPending || isProjectTabByIdPending
 
   if (isPending) {
     return <div>Loading...</div>

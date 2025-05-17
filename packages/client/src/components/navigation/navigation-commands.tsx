@@ -16,24 +16,18 @@ export function NavigationCommands({ onSelect }: NavigationCommandProps) {
 
   return (
     <>
-      <CommandItem
-        onSelect={() => handleNavigate('/projects')}
-      >
+      <CommandItem onSelect={() => handleNavigate('/projects')}>
         <FileIcon />
         <span>Go to Projects</span>
       </CommandItem>
-      <CommandItem
-        onSelect={() => handleNavigate('/chat')}
-      >
+      <CommandItem onSelect={() => handleNavigate('/chat')}>
         <ChatBubbleIcon />
         <span>Go to Chat</span>
       </CommandItem>
-      <CommandItem
-        onSelect={() => handleNavigate('/admin')}
-      >
+      <CommandItem onSelect={() => handleNavigate('/admin')}>
         <GearIcon />
         <span>Admin Dashboard</span>
       </CommandItem>
     </>
   )
-} 
+}

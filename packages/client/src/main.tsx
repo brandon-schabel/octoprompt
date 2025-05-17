@@ -9,9 +9,9 @@ import { Toaster } from '@ui'
 const queryClient = new QueryClient()
 
 // Create router instance with context
-const router = createRouter<typeof routeTree, "never", true>({
+const router = createRouter<typeof routeTree, 'never', true>({
   routeTree,
-  defaultPreload: 'intent',
+  defaultPreload: 'intent'
 })
 
 // Type registration for router
@@ -28,8 +28,8 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster />
+      <RouterProvider router={router} />
+      <Toaster />
     </QueryClientProvider>
   )
 }

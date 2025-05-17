@@ -3,10 +3,5 @@
   "compilerOptions": {
     "types": ["bun-types"]
   },
-  "include": [
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx"
-  ]
-} 
+  "include": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+}

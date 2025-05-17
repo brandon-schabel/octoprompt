@@ -25,49 +25,49 @@ import { Route as IndexImport } from './routes/index'
 const TicketsRoute = TicketsImport.update({
   id: '/tickets',
   path: '/tickets',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 const PromptsRoute = PromptsImport.update({
   id: '/prompts',
   path: '/prompts',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 const ProjectsRoute = ProjectsImport.update({
   id: '/projects',
   path: '/projects',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 const ProjectSummarizationRoute = ProjectSummarizationImport.update({
   id: '/project-summarization',
   path: '/project-summarization',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 const KeysRoute = KeysImport.update({
   id: '/keys',
   path: '/keys',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 const ChatRoute = ChatImport.update({
   id: '/chat',
   path: '/chat',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 const AdminRoute = AdminImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRoute
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -171,35 +171,10 @@ export interface FileRoutesById {
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/admin'
-    | '/chat'
-    | '/keys'
-    | '/project-summarization'
-    | '/projects'
-    | '/prompts'
-    | '/tickets'
+  fullPaths: '/' | '/admin' | '/chat' | '/keys' | '/project-summarization' | '/projects' | '/prompts' | '/tickets'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/admin'
-    | '/chat'
-    | '/keys'
-    | '/project-summarization'
-    | '/projects'
-    | '/prompts'
-    | '/tickets'
-  id:
-    | '__root__'
-    | '/'
-    | '/admin'
-    | '/chat'
-    | '/keys'
-    | '/project-summarization'
-    | '/projects'
-    | '/prompts'
-    | '/tickets'
+  to: '/' | '/admin' | '/chat' | '/keys' | '/project-summarization' | '/projects' | '/prompts' | '/tickets'
+  id: '__root__' | '/' | '/admin' | '/chat' | '/keys' | '/project-summarization' | '/projects' | '/prompts' | '/tickets'
   fileRoutesById: FileRoutesById
 }
 
@@ -222,12 +197,10 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
   PromptsRoute: PromptsRoute,
-  TicketsRoute: TicketsRoute,
+  TicketsRoute: TicketsRoute
 }
 
-export const routeTree = rootRoute
-  ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+export const routeTree = rootRoute._addFileChildren(rootRouteChildren)._addFileTypes<FileRouteTypes>()
 
 /* ROUTE_MANIFEST_START
 {

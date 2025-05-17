@@ -16,7 +16,7 @@ export * from './icons'
 export * from './input'
 export * from './textarea'
 export * from './tooltip'
-export * from './button';
+export * from './button'
 export * from './label'
 export * from './menubar'
 export * from './popover'

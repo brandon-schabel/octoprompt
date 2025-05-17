@@ -4,9 +4,10 @@ Software Toolkit For Rapidly Building Codebases Using AI
 
 ## Introduction
 
-If you've worked with LLMs and code you know how much quality drops off with more code in the context.  OctoPrompt helps with quality dropoff by helping you find and select the files from your codebase for your desired changes. OctoPrompt is a dev tool without AI first, and uses AI to enhance its abilities. The long term goal of OctoPrompt is to make building codebases with AI as easy as possible and to increasingly automate the manual work of planning changes, editing code, and testing the result.
+If you've worked with LLMs and code you know how much quality drops off with more code in the context. OctoPrompt helps with quality dropoff by helping you find and select the files from your codebase for your desired changes. OctoPrompt is a dev tool without AI first, and uses AI to enhance its abilities. The long term goal of OctoPrompt is to make building codebases with AI as easy as possible and to increasingly automate the manual work of planning changes, editing code, and testing the result.
 
 #### OctoPrompt Project Overview page
+
 ![octoprompt-0-5-0-project-overview](https://github.com/user-attachments/assets/f92680e4-2877-488a-b336-79533c3999d4)
 
 ---
@@ -89,7 +90,7 @@ OctoPrompt has a great file search and file picking interface. As you pick files
 
 ### **🤖🕵️‍♂️ AI Agents**
 
-OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help  generate tasks for your tickets, suggest files to select based on your "user input".
+OctoPrompt implements various AI features to help you deal with increasingly complex codebases. As codebases grow they can be hard to manage. OctoPrompt creates short summaries of every file in the codebase to build a solid understanding of the codebase. Using this knowledgebase it can help generate tasks for your tickets, suggest files to select based on your "user input".
 
 ### **🎟️ Ticket and Task Planning**
 
@@ -97,7 +98,7 @@ Write a ticket with an overview and let AI generate the ticket tasks for you. Be
 
 ### **💬 Built-In AI Chat**
 
-Chat with any AI model. Configure and get started with using AI Chats  built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
+Chat with any AI model. Configure and get started with using AI Chats built right into OctoPrompt, OctoPrompt supports numerous providers, and can support just about anything thanks to OctoPrompt using [AI SDK](https://sdk.vercel.ai/docs)
 
 ### **📚 Prompt Library**
 
@@ -106,7 +107,7 @@ Save your favorite prompts directly into OctoPrompt and import them into any pro
 ### **⌨️ Key Bindings**
 
 Quickly navigate through the navigation using keyboard commands, use the help button in the top right corner to view the available hotkeys.
-  
+
 ## Features For Nerds
 
 ### **📝 Bun Server with OpenAPI Spec**
@@ -117,15 +118,15 @@ No guessing about what is going on, every OctoPrompt endpoint can be test using 
 
 Operates entirely on your local machine—no mandatory cloud dependencies—letting you keep your data where you want it. Run OctoPrompt on your machine, and use local AI Models with Ollama or LM Studio
 
-### **🔌 Customizable**  
+### **🔌 Customizable**
 
-Built with proven technologies such as  Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
+Built with proven technologies such as Bun, Hono, Open API, Zod, React, TanStack Router, ShadCN & Radix, Tailwind, Vite. OctoPrompt is a great platform to either extend or even build your own project on. Please share anything you build I would be interested :)
 
-### **🛟 Type Safe & Modular**  
+### **🛟 Type Safe & Modular**
 
 Written in TypeScript with full back-to-front Zod validation. All types are generated from the schemas which are the source of truth for the data/validations. Flexible architecture to easily customize or extend functionality.
-  
-### **🔥 High Performance**  
+
+### **🔥 High Performance**
 
 Uses **Bun** on the backend for top-notch speed with minimal overhead. Avoids heavy libraries and leans on built-in APIs with heavy lift from Hono and Zod.
 
@@ -232,7 +233,7 @@ bun run dev:server
 ```
 
 - **Client Only** from the root (runs on port 5173):
-Note: this will generate the `openapi-ts` client, the server must be running first.
+  Note: this will generate the `openapi-ts` client, the server must be running first.
 
 ```bash
 bun run dev:client
@@ -275,7 +276,7 @@ You can always install local models with software like:
 
 - **Open** your web client at [localhost:5173](http://localhost:5173).
 - Click "Chat" in the Navbar.
-- Click the chat icon and  **New Chat** in the top-left.
+- Click the chat icon and **New Chat** in the top-left.
 - **Type** a question — OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.
 
 Configure your model defaults for the OctoPrompt AI Features
@@ -291,6 +292,7 @@ OctoPrompt is designed with a streamlined production build process where the cli
 ### Build Process
 
 1. **Client Build**
+
    - The client's Vite configuration (`vite.config.ts`) is set up to output the production build to `../server/client-dist`
    - This means the built client files will be directly available to the server for serving static content
    - All test files are automatically excluded from the production build
@@ -318,11 +320,11 @@ bun run build
 
 The build process will:
 
-1. Clear the previous dist directory  
-2. Build the client and copy it to the server's static files directory  
-3. Bundle the server with the client files  
-4. Create platform-specific executables  
-5. Package everything into distributable zip files  
+1. Clear the previous dist directory
+2. Build the client and copy it to the server's static files directory
+3. Bundle the server with the client files
+4. Create platform-specific executables
+5. Package everything into distributable zip files
 
 The final builds will be available in `packages/server/dist/`, with separate zip files for each supported platform.
 
@@ -339,9 +341,9 @@ Each distribution includes:
 We welcome all contributions—whether you’re fixing a bug, adding a feature, or improving docs.  
 General guidelines:
 
-1. **Fork & Clone**  
-2. **Create** a new feature branch  
-3. **Implement** & Test  
+1. **Fork & Clone**
+2. **Create** a new feature branch
+3. **Implement** & Test
 4. **Open** a Pull Request
 
 Let’s make OctoPrompt even better together!

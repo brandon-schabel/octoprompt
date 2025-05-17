@@ -2,11 +2,7 @@
   "compilerOptions": {
     "target": "ES2021",
     "useDefineForClassFields": true,
-    "lib": [
-      "ES2021",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     /* Bundler mode */
@@ -23,30 +19,13 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@ui": [
-        "./src/components/ui"
-      ],
-      "@ui/*": [
-        "./src/components/ui/*"
-      ],
-      "@/*": [
-        "./src/*"
-      ],
-      "shared/*": [
-        "../shared/*"
-      ]
+      "@ui": ["./src/components/ui"],
+      "@ui/*": ["./src/components/ui/*"],
+      "@/*": ["./src/*"],
+      "shared/*": ["../shared/*"]
     },
-    "types": [
-      "bun-types"
-    ]
+    "types": ["bun-types"]
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx"
-  ]
+  "include": ["src"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
 }

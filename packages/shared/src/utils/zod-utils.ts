@@ -1,11 +1,10 @@
-import { z } from "zod"
+import { z } from 'zod'
 
 export function getSchemaDefaults<Schema extends z.AnyZodObject>(schema: Schema) {
-    return Object.fromEntries(
-        Object.entries(schema.shape).map(([key, value]) => {
-            if (value instanceof z.ZodDefault) return [key, value._def.defaultValue()]
-            return [key, undefined]
-        })
-    )
+  return Object.fromEntries(
+    Object.entries(schema.shape).map(([key, value]) => {
+      if (value instanceof z.ZodDefault) return [key, value._def.defaultValue()]
+      return [key, undefined]
+    })
+  )
 }
-

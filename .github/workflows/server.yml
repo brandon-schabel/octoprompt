@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
@@ -35,13 +35,13 @@ jobs:
 
       - name: Install server dependencies
         run: cd packages/server && bun install
-        
+
       - name: Run unit tests
         run: |
           echo "🧪 Running Unit Tests..."
           cd packages/server && bun run test
-        
-    #   - name: Run E2E tests  
+
+    #   - name: Run E2E tests
     #     run: |
     #       echo "🔄 Running E2E Tests..."
     #       cd server && bun run test:e2e
@@ -52,4 +52,4 @@ jobs:
   #   if: github.ref == 'refs/heads/main'
   #   steps:
   #     - name: Deploy application
-  #       run: echo "Add your deployment steps here" 
+  #       run: echo "Add your deployment steps here"

@@ -1,6 +1,6 @@
-import { Database } from "bun:sqlite";
+import { Database } from 'bun:sqlite'
 
-const db = new Database("database.sqlite");
+const db = new Database('database.sqlite')
 
 // Create the "chats" table
 db.exec(`
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS chats (
     created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
-`);
+`)
 
 // Create the "chat_messages" table
 db.exec(`
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
-`);
+`)
 
 // Create the "projects" table
 db.exec(`
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS projects (
     created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
-`);
+`)
 
 // Create the "files" table
 db.exec(`
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS files (
     updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
-`);
+`)
 
 // Create the "prompts" table
 db.exec(`
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS prompts (
     created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
-`);
+`)
 
 // Create the "prompt_projects" table
 db.exec(`
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS prompt_projects (
     FOREIGN KEY(prompt_id) REFERENCES prompts(id) ON DELETE CASCADE,
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
-`);
+`)
 
 // Create the "provider_keys" table
 db.exec(`
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS provider_keys (
     created_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
-`);
+`)
 
 // Create the "tickets" table
 db.exec(`
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
-`);
+`)
 
 // Create the "ticket_files" table (junction table with a composite primary key)
 db.exec(`
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS ticket_files (
     FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
     FOREIGN KEY(file_id) REFERENCES files(id) ON DELETE CASCADE
 );
-`);
+`)
 
 // Create the "ticket_tasks" table
 db.exec(`
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS ticket_tasks (
     updated_at INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
 );
-`);
+`)
 
 // Create the "file_changes" table
 db.exec(`
@@ -140,6 +140,6 @@ CREATE TABLE IF NOT EXISTS file_changes (
     status TEXT NOT NULL,
     timestamp INTEGER NOT NULL
 );
-`);
+`)
 
-console.log("All tables created successfully.");
+console.log('All tables created successfully.')

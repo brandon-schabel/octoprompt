@@ -1,140 +1,140 @@
-import { estimateTokenCount } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
+import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
 import { z } from 'zod'
-import type { FileNode } from "shared/src/utils/file-tree-utils/file-node-tree-utils"
-import type { ProjectFile } from "../schemas/project.schemas"
-import type { ProjectFileMap } from "../schemas/project.schemas"
-import type { PromptListResponse } from "../schemas/prompt.schemas"
+import type { FileNode } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+import type { ProjectFile } from '../schemas/project.schemas'
+import type { ProjectFileMap } from '../schemas/project.schemas'
+import type { PromptListResponse } from '../schemas/prompt.schemas'
 
 export const projectSchema = z.object({
-    name: z.string().min(1, 'Project name is required'),
-    description: z.string().optional(),
-    path: z.string().min(1, 'Project path is required'),
+  name: z.string().min(1, 'Project name is required'),
+  description: z.string().optional(),
+  path: z.string().min(1, 'Project path is required')
 })
 
 export const promptSchema = z.object({
-    name: z.string().min(1, 'Prompt name is required'),
-    content: z.string().min(1, 'Prompt content is required'),
+  name: z.string().min(1, 'Prompt name is required'),
+  content: z.string().min(1, 'Prompt content is required')
 })
 
-export function buildPromptContent(
-    { fileMap, promptData, selectedFiles, selectedPrompts, userPrompt }: {
-        promptData: PromptListResponse | null | undefined,
-        selectedPrompts: string[],
-        userPrompt: string,
-        selectedFiles: string[],
-        fileMap: ProjectFileMap
+export function buildPromptContent({
+  fileMap,
+  promptData,
+  selectedFiles,
+  selectedPrompts,
+  userPrompt
+}: {
+  promptData: PromptListResponse | null | undefined
+  selectedPrompts: string[]
+  userPrompt: string
+  selectedFiles: string[]
+  fileMap: ProjectFileMap
+}): string {
+  let contentToCopy = ''
+  let promptCount = 1
+  for (const prompt of promptData?.data ?? []) {
+    if (selectedPrompts.includes(prompt.id)) {
+      // Using a more descriptive tag for clarity
+      contentToCopy += `<system_prompt index="${promptCount}" name="${prompt.name}">\n<![CDATA[\n${prompt.content}\n]]>\n</system_prompt>\n\n`
+      promptCount++
     }
-): string {
-    let contentToCopy = ''
-    let promptCount = 1
-    for (const prompt of promptData?.data ?? []) {
-        if (selectedPrompts.includes(prompt.id)) {
-            // Using a more descriptive tag for clarity
-            contentToCopy += `<system_prompt index="${promptCount}" name="${prompt.name}">\n<![CDATA[\n${prompt.content}\n]]>\n</system_prompt>\n\n`
-            promptCount++
-        }
+  }
+
+  const filesWithContent = selectedFiles
+    .map((fileId) => fileMap.get(fileId))
+    .filter((file): file is ProjectFile => !!file?.content)
+
+  if (filesWithContent.length > 0) {
+    contentToCopy += `<file_context>\n`
+    for (const file of filesWithContent) {
+      contentToCopy += `<file>\n  <path>${file.path}</path>\n  <content><![CDATA[\n${file.content}\n]]></content>\n</file>\n\n`
     }
+    contentToCopy += `</file_context>\n`
+  }
 
-    const filesWithContent = selectedFiles
-        .map(fileId => fileMap.get(fileId))
-        .filter((file): file is ProjectFile => !!file?.content)
+  const trimmedUserPrompt = userPrompt.trim()
+  if (trimmedUserPrompt) {
+    contentToCopy += `<user_instructions>\n<![CDATA[\n${trimmedUserPrompt}\n]]>\n</user_instructions>\n\n`
+  }
 
-    if (filesWithContent.length > 0) {
-        contentToCopy += `<file_context>\n`
-        for (const file of filesWithContent) {
-            contentToCopy += `<file>\n  <path>${file.path}</path>\n  <content><![CDATA[\n${file.content}\n]]></content>\n</file>\n\n`
-        }
-        contentToCopy += `</file_context>\n`
-    }
-
-    const trimmedUserPrompt = userPrompt.trim()
-    if (trimmedUserPrompt) {
-        contentToCopy += `<user_instructions>\n<![CDATA[\n${trimmedUserPrompt}\n]]>\n</user_instructions>\n\n`
-    }
-
-    return contentToCopy.trimEnd() // Remove trailing newline
+  return contentToCopy.trimEnd() // Remove trailing newline
 }
 
 export function calculateTotalTokens(
-    promptData: PromptListResponse | null | undefined,
-    selectedPrompts: string[],
-    userPrompt: string,
-    selectedFiles: string[],
-    fileMap: Map<string, ProjectFile>
+  promptData: PromptListResponse | null | undefined,
+  selectedPrompts: string[],
+  userPrompt: string,
+  selectedFiles: string[],
+  fileMap: Map<string, ProjectFile>
 ): number {
-    let total = 0
-    for (const prompt of promptData?.data ?? []) {
-        if (selectedPrompts.includes(prompt.id)) {
-            total += estimateTokenCount(prompt.content)
-        }
+  let total = 0
+  for (const prompt of promptData?.data ?? []) {
+    if (selectedPrompts.includes(prompt.id)) {
+      total += estimateTokenCount(prompt.content)
     }
+  }
 
-    if (userPrompt.trim()) {
-        total += estimateTokenCount(userPrompt)
+  if (userPrompt.trim()) {
+    total += estimateTokenCount(userPrompt)
+  }
+
+  for (const fileId of selectedFiles) {
+    const file = fileMap.get(fileId)
+    if (file?.content) {
+      total += estimateTokenCount(file.content)
     }
+  }
 
-    for (const fileId of selectedFiles) {
-        const file = fileMap.get(fileId)
-        if (file?.content) {
-            total += estimateTokenCount(file.content)
-        }
-    }
-
-    return total
+  return total
 }
-
 
 export const buildFileTree = (files: ProjectFile[]) => {
-    const root: Record<string, any> = {}
-    for (const f of files) {
-        const parts = f.path.split('/')
-        let current = root
-        for (let i = 0; i < parts.length; i++) {
-            const part = parts[i]
-            if (!current[part]) {
-                current[part] = {}
-            }
-            if (i === parts.length - 1) {
-                current[part]._folder = false
-                current[part].file = f
-            } else {
-                current[part]._folder = true
-                if (!current[part].children) {
-                    current[part].children = {}
-                }
-                current = current[part].children
-            }
+  const root: Record<string, any> = {}
+  for (const f of files) {
+    const parts = f.path.split('/')
+    let current = root
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      if (!current[part]) {
+        current[part] = {}
+      }
+      if (i === parts.length - 1) {
+        current[part]._folder = false
+        current[part].file = f
+      } else {
+        current[part]._folder = true
+        if (!current[part].children) {
+          current[part].children = {}
         }
+        current = current[part].children
+      }
     }
-    return root
+  }
+  return root
 }
 
-export function buildNodeContent(
-    node: FileNode,
-    isFolder: boolean
-): string {
-    let contentToCopy = ''
+export function buildNodeContent(node: FileNode, isFolder: boolean): string {
+  let contentToCopy = ''
 
-    if (isFolder) {
-        contentToCopy += `<folder_context path="${node.file?.path ?? 'unknown'}">\n` // Add folder path if available
-        const processNode = (currentNode: FileNode) => {
-            if (!currentNode._folder && currentNode.file?.content) {
-                contentToCopy += `  <file>\n    <path>${currentNode.file.path}</path>\n    <content><![CDATA[\n${currentNode.file.content}\n]]></content>\n  </file>\n`
-            }
-            if (currentNode.children) {
-                Object.values(currentNode.children).forEach(processNode)
-            }
-        }
-        processNode(node)
-        contentToCopy += `</folder_context>\n`
-    } else if (node.file?.content) {
-        // Single file context uses file_context tag for consistency
-        contentToCopy += `<file_context>\n`
-        contentToCopy += `  <file>\n    <path>${node.file.path}</path>\n    <content><![CDATA[\n${node.file.content}\n]]></content>\n  </file>\n`
-        contentToCopy += `</file_context>\n`
+  if (isFolder) {
+    contentToCopy += `<folder_context path="${node.file?.path ?? 'unknown'}">\n` // Add folder path if available
+    const processNode = (currentNode: FileNode) => {
+      if (!currentNode._folder && currentNode.file?.content) {
+        contentToCopy += `  <file>\n    <path>${currentNode.file.path}</path>\n    <content><![CDATA[\n${currentNode.file.content}\n]]></content>\n  </file>\n`
+      }
+      if (currentNode.children) {
+        Object.values(currentNode.children).forEach(processNode)
+      }
     }
+    processNode(node)
+    contentToCopy += `</folder_context>\n`
+  } else if (node.file?.content) {
+    // Single file context uses file_context tag for consistency
+    contentToCopy += `<file_context>\n`
+    contentToCopy += `  <file>\n    <path>${node.file.path}</path>\n    <content><![CDATA[\n${node.file.content}\n]]></content>\n  </file>\n`
+    contentToCopy += `</file_context>\n`
+  }
 
-    return contentToCopy.trimEnd() // Remove trailing newline
+  return contentToCopy.trimEnd() // Remove trailing newline
 }
 
 // --- New function ---
@@ -143,35 +143,32 @@ export function buildNodeContent(
  * For folders, it recursively includes summaries from all files within.
  * For files, it includes only that file's summary.
  */
-export function buildNodeSummaries(
-    node: FileNode,
-    isFolder: boolean
-): string {
-    let summariesToCopy = ''
+export function buildNodeSummaries(node: FileNode, isFolder: boolean): string {
+  let summariesToCopy = ''
 
-    if (isFolder) {
-        const processNode = (currentNode: FileNode, indent = "") => {
-            // Check if it's a file node and has a summary
-            if (!currentNode._folder && currentNode.file?.summary) {
-                summariesToCopy += `${indent}File: ${currentNode.file.path}\n${indent}Summary: ${currentNode.file.summary}\n\n`
-            }
-            // Recursively process children if they exist
-            if (currentNode.children) {
-                const sortedEntries = Object.entries(currentNode.children).sort(([nameA], [nameB]) =>
-                    nameA.localeCompare(nameB) // Sort children alphabetically
-                );
-                sortedEntries.forEach(([, childNode]) => processNode(childNode, indent)); // Keep same indent for files within a folder
-            }
-        }
-        processNode(node) // Start processing from the given folder node
-    } else if (node.file?.summary) { // It's a single file node with a summary
-        summariesToCopy += `File: ${node.file.path}\nSummary: ${node.file.summary}\n`
+  if (isFolder) {
+    const processNode = (currentNode: FileNode, indent = '') => {
+      // Check if it's a file node and has a summary
+      if (!currentNode._folder && currentNode.file?.summary) {
+        summariesToCopy += `${indent}File: ${currentNode.file.path}\n${indent}Summary: ${currentNode.file.summary}\n\n`
+      }
+      // Recursively process children if they exist
+      if (currentNode.children) {
+        const sortedEntries = Object.entries(currentNode.children).sort(
+          ([nameA], [nameB]) => nameA.localeCompare(nameB) // Sort children alphabetically
+        )
+        sortedEntries.forEach(([, childNode]) => processNode(childNode, indent)) // Keep same indent for files within a folder
+      }
     }
+    processNode(node) // Start processing from the given folder node
+  } else if (node.file?.summary) {
+    // It's a single file node with a summary
+    summariesToCopy += `File: ${node.file.path}\nSummary: ${node.file.summary}\n`
+  }
 
-    return summariesToCopy.trim(); // Trim trailing newlines if any
+  return summariesToCopy.trim() // Trim trailing newlines if any
 }
 
-
 export const buildProjectFileMap = (files: ProjectFile[]): ProjectFileMap => {
-    return new Map(files.map(file => [file.id, file]));
+  return new Map(files.map((file) => [file.id, file]))
 }

@@ -16,14 +16,8 @@ type UseCopyClipboardReturn = {
 export const useCopyClipboard = (): UseCopyClipboardReturn => {
   const [status, setStatus] = useState<CopyStatus>('idle')
 
-  const copyToClipboard = async (
-    text: string,
-    options?: CopyOptions
-  ): Promise<void> => {
-    const {
-      successMessage = 'Copied to clipboard',
-      errorMessage = 'Failed to copy to clipboard'
-    } = options ?? {}
+  const copyToClipboard = async (text: string, options?: CopyOptions): Promise<void> => {
+    const { successMessage = 'Copied to clipboard', errorMessage = 'Failed to copy to clipboard' } = options ?? {}
 
     try {
       setStatus('copying')
