@@ -937,42 +937,42 @@ export type KvDeleteResponse = {
   message: string
 }
 
-export type GetChatsData = {
+export type GetApiChatsData = {
   body?: never
   path?: never
   query?: never
-  url: '/chats'
+  url: '/api/chats'
 }
 
-export type GetChatsErrors = {
+export type GetApiChatsErrors = {
   /**
    * Internal Server Error
    */
   500: ApiErrorResponse
 }
 
-export type GetChatsError = GetChatsErrors[keyof GetChatsErrors]
+export type GetApiChatsError = GetApiChatsErrors[keyof GetApiChatsErrors]
 
-export type GetChatsResponses = {
+export type GetApiChatsResponses = {
   /**
    * Successfully retrieved all chats
    */
   200: ChatListResponse
 }
 
-export type GetChatsResponse = GetChatsResponses[keyof GetChatsResponses]
+export type GetApiChatsResponse = GetApiChatsResponses[keyof GetApiChatsResponses]
 
-export type PostChatsData = {
+export type PostApiChatsData = {
   /**
    * Data for the new chat session
    */
   body: CreateChatRequestBody
   path?: never
   query?: never
-  url: '/chats'
+  url: '/api/chats'
 }
 
-export type PostChatsErrors = {
+export type PostApiChatsErrors = {
   /**
    * Referenced chat not found
    */
@@ -987,18 +987,18 @@ export type PostChatsErrors = {
   500: ApiErrorResponse
 }
 
-export type PostChatsError = PostChatsErrors[keyof PostChatsErrors]
+export type PostApiChatsError = PostApiChatsErrors[keyof PostApiChatsErrors]
 
-export type PostChatsResponses = {
+export type PostApiChatsResponses = {
   /**
    * Chat created successfully
    */
   201: ChatResponse
 }
 
-export type PostChatsResponse = PostChatsResponses[keyof PostChatsResponses]
+export type PostApiChatsResponse = PostApiChatsResponses[keyof PostApiChatsResponses]
 
-export type GetChatsByChatIdMessagesData = {
+export type GetApiChatsByChatIdMessagesData = {
   body?: never
   path: {
     /**
@@ -1007,10 +1007,10 @@ export type GetChatsByChatIdMessagesData = {
     chatId: string
   }
   query?: never
-  url: '/chats/{chatId}/messages'
+  url: '/api/chats/{chatId}/messages'
 }
 
-export type GetChatsByChatIdMessagesErrors = {
+export type GetApiChatsByChatIdMessagesErrors = {
   /**
    * Chat not found
    */
@@ -1025,29 +1025,30 @@ export type GetChatsByChatIdMessagesErrors = {
   500: ApiErrorResponse
 }
 
-export type GetChatsByChatIdMessagesError = GetChatsByChatIdMessagesErrors[keyof GetChatsByChatIdMessagesErrors]
+export type GetApiChatsByChatIdMessagesError =
+  GetApiChatsByChatIdMessagesErrors[keyof GetApiChatsByChatIdMessagesErrors]
 
-export type GetChatsByChatIdMessagesResponses = {
+export type GetApiChatsByChatIdMessagesResponses = {
   /**
    * Successfully retrieved messages
    */
   200: MessageListResponse
 }
 
-export type GetChatsByChatIdMessagesResponse =
-  GetChatsByChatIdMessagesResponses[keyof GetChatsByChatIdMessagesResponses]
+export type GetApiChatsByChatIdMessagesResponse =
+  GetApiChatsByChatIdMessagesResponses[keyof GetApiChatsByChatIdMessagesResponses]
 
-export type PostAiChatData = {
+export type PostApiAiChatData = {
   /**
    * Chat ID, user message, provider, model, and options for the streaming AI chat completion.
    */
   body: AiChatStreamRequest
   path?: never
   query?: never
-  url: '/ai/chat'
+  url: '/api/ai/chat'
 }
 
-export type PostAiChatErrors = {
+export type PostApiAiChatErrors = {
   /**
    * Bad Request (e.g., missing API key for provider, invalid provider/model)
    */
@@ -1066,18 +1067,18 @@ export type PostAiChatErrors = {
   500: ApiErrorResponse
 }
 
-export type PostAiChatError = PostAiChatErrors[keyof PostAiChatErrors]
+export type PostApiAiChatError = PostApiAiChatErrors[keyof PostApiAiChatErrors]
 
-export type PostAiChatResponses = {
+export type PostApiAiChatResponses = {
   /**
    * Stream of response tokens (Vercel AI SDK format)
    */
   200: string
 }
 
-export type PostAiChatResponse = PostAiChatResponses[keyof PostAiChatResponses]
+export type PostApiAiChatResponse = PostApiAiChatResponses[keyof PostApiAiChatResponses]
 
-export type PostChatsByChatIdForkData = {
+export type PostApiChatsByChatIdForkData = {
   /**
    * Optional message IDs to exclude from the fork
    */
@@ -1089,10 +1090,10 @@ export type PostChatsByChatIdForkData = {
     chatId: string
   }
   query?: never
-  url: '/chats/{chatId}/fork'
+  url: '/api/chats/{chatId}/fork'
 }
 
-export type PostChatsByChatIdForkErrors = {
+export type PostApiChatsByChatIdForkErrors = {
   /**
    * Original chat not found
    */
@@ -1107,18 +1108,19 @@ export type PostChatsByChatIdForkErrors = {
   500: ApiErrorResponse
 }
 
-export type PostChatsByChatIdForkError = PostChatsByChatIdForkErrors[keyof PostChatsByChatIdForkErrors]
+export type PostApiChatsByChatIdForkError = PostApiChatsByChatIdForkErrors[keyof PostApiChatsByChatIdForkErrors]
 
-export type PostChatsByChatIdForkResponses = {
+export type PostApiChatsByChatIdForkResponses = {
   /**
    * Chat forked successfully
    */
   201: ChatResponse
 }
 
-export type PostChatsByChatIdForkResponse = PostChatsByChatIdForkResponses[keyof PostChatsByChatIdForkResponses]
+export type PostApiChatsByChatIdForkResponse =
+  PostApiChatsByChatIdForkResponses[keyof PostApiChatsByChatIdForkResponses]
 
-export type PostChatsByChatIdForkByMessageIdData = {
+export type PostApiChatsByChatIdForkByMessageIdData = {
   /**
    * Optional message IDs to exclude from the fork
    */
@@ -1134,10 +1136,10 @@ export type PostChatsByChatIdForkByMessageIdData = {
     messageId: string
   }
   query?: never
-  url: '/chats/{chatId}/fork/{messageId}'
+  url: '/api/chats/{chatId}/fork/{messageId}'
 }
 
-export type PostChatsByChatIdForkByMessageIdErrors = {
+export type PostApiChatsByChatIdForkByMessageIdErrors = {
   /**
    * Original chat or message not found
    */
@@ -1152,20 +1154,20 @@ export type PostChatsByChatIdForkByMessageIdErrors = {
   500: ApiErrorResponse
 }
 
-export type PostChatsByChatIdForkByMessageIdError =
-  PostChatsByChatIdForkByMessageIdErrors[keyof PostChatsByChatIdForkByMessageIdErrors]
+export type PostApiChatsByChatIdForkByMessageIdError =
+  PostApiChatsByChatIdForkByMessageIdErrors[keyof PostApiChatsByChatIdForkByMessageIdErrors]
 
-export type PostChatsByChatIdForkByMessageIdResponses = {
+export type PostApiChatsByChatIdForkByMessageIdResponses = {
   /**
    * Chat forked successfully from message
    */
   201: ChatResponse
 }
 
-export type PostChatsByChatIdForkByMessageIdResponse =
-  PostChatsByChatIdForkByMessageIdResponses[keyof PostChatsByChatIdForkByMessageIdResponses]
+export type PostApiChatsByChatIdForkByMessageIdResponse =
+  PostApiChatsByChatIdForkByMessageIdResponses[keyof PostApiChatsByChatIdForkByMessageIdResponses]
 
-export type DeleteChatsByChatIdMessagesByMessageIdData = {
+export type DeleteApiChatsByChatIdMessagesByMessageIdData = {
   body?: never
   path: {
     /**
@@ -1178,10 +1180,10 @@ export type DeleteChatsByChatIdMessagesByMessageIdData = {
     messageId: string
   }
   query?: never
-  url: '/chats/{chatId}/messages/{messageId}'
+  url: '/api/chats/{chatId}/messages/{messageId}'
 }
 
-export type DeleteChatsByChatIdMessagesByMessageIdErrors = {
+export type DeleteApiChatsByChatIdMessagesByMessageIdErrors = {
   /**
    * Message not found
    */
@@ -1196,20 +1198,20 @@ export type DeleteChatsByChatIdMessagesByMessageIdErrors = {
   500: ApiErrorResponse
 }
 
-export type DeleteChatsByChatIdMessagesByMessageIdError =
-  DeleteChatsByChatIdMessagesByMessageIdErrors[keyof DeleteChatsByChatIdMessagesByMessageIdErrors]
+export type DeleteApiChatsByChatIdMessagesByMessageIdError =
+  DeleteApiChatsByChatIdMessagesByMessageIdErrors[keyof DeleteApiChatsByChatIdMessagesByMessageIdErrors]
 
-export type DeleteChatsByChatIdMessagesByMessageIdResponses = {
+export type DeleteApiChatsByChatIdMessagesByMessageIdResponses = {
   /**
    * Message deleted successfully
    */
   200: OperationSuccessResponse
 }
 
-export type DeleteChatsByChatIdMessagesByMessageIdResponse =
-  DeleteChatsByChatIdMessagesByMessageIdResponses[keyof DeleteChatsByChatIdMessagesByMessageIdResponses]
+export type DeleteApiChatsByChatIdMessagesByMessageIdResponse =
+  DeleteApiChatsByChatIdMessagesByMessageIdResponses[keyof DeleteApiChatsByChatIdMessagesByMessageIdResponses]
 
-export type DeleteChatsByChatIdData = {
+export type DeleteApiChatsByChatIdData = {
   body?: never
   path: {
     /**
@@ -1218,10 +1220,10 @@ export type DeleteChatsByChatIdData = {
     chatId: string
   }
   query?: never
-  url: '/chats/{chatId}'
+  url: '/api/chats/{chatId}'
 }
 
-export type DeleteChatsByChatIdErrors = {
+export type DeleteApiChatsByChatIdErrors = {
   /**
    * Chat not found
    */
@@ -1236,18 +1238,18 @@ export type DeleteChatsByChatIdErrors = {
   500: ApiErrorResponse
 }
 
-export type DeleteChatsByChatIdError = DeleteChatsByChatIdErrors[keyof DeleteChatsByChatIdErrors]
+export type DeleteApiChatsByChatIdError = DeleteApiChatsByChatIdErrors[keyof DeleteApiChatsByChatIdErrors]
 
-export type DeleteChatsByChatIdResponses = {
+export type DeleteApiChatsByChatIdResponses = {
   /**
    * Chat deleted successfully
    */
   200: OperationSuccessResponse
 }
 
-export type DeleteChatsByChatIdResponse = DeleteChatsByChatIdResponses[keyof DeleteChatsByChatIdResponses]
+export type DeleteApiChatsByChatIdResponse = DeleteApiChatsByChatIdResponses[keyof DeleteApiChatsByChatIdResponses]
 
-export type PatchChatsByChatIdData = {
+export type PatchApiChatsByChatIdData = {
   /**
    * Data to update for the chat
    */
@@ -1259,10 +1261,10 @@ export type PatchChatsByChatIdData = {
     chatId: string
   }
   query?: never
-  url: '/chats/{chatId}'
+  url: '/api/chats/{chatId}'
 }
 
-export type PatchChatsByChatIdErrors = {
+export type PatchApiChatsByChatIdErrors = {
   /**
    * Chat not found
    */
@@ -1277,16 +1279,16 @@ export type PatchChatsByChatIdErrors = {
   500: ApiErrorResponse
 }
 
-export type PatchChatsByChatIdError = PatchChatsByChatIdErrors[keyof PatchChatsByChatIdErrors]
+export type PatchApiChatsByChatIdError = PatchApiChatsByChatIdErrors[keyof PatchApiChatsByChatIdErrors]
 
-export type PatchChatsByChatIdResponses = {
+export type PatchApiChatsByChatIdResponses = {
   /**
    * Chat updated successfully
    */
   200: ChatResponse
 }
 
-export type PatchChatsByChatIdResponse = PatchChatsByChatIdResponses[keyof PatchChatsByChatIdResponses]
+export type PatchApiChatsByChatIdResponse = PatchApiChatsByChatIdResponses[keyof PatchApiChatsByChatIdResponses]
 
 export type PostApiTicketsData = {
   body?: CreateTicketBody
@@ -3167,7 +3169,7 @@ export type PostApiGenAiStructuredResponses = {
 
 export type PostApiGenAiStructuredResponse = PostApiGenAiStructuredResponses[keyof PostApiGenAiStructuredResponses]
 
-export type GetModelsData = {
+export type GetApiModelsData = {
   body?: never
   path?: never
   query: {
@@ -3176,10 +3178,10 @@ export type GetModelsData = {
      */
     provider: string
   }
-  url: '/models'
+  url: '/api/models'
 }
 
-export type GetModelsErrors = {
+export type GetApiModelsErrors = {
   /**
    * Invalid provider or configuration error
    */
@@ -3194,28 +3196,28 @@ export type GetModelsErrors = {
   500: ApiErrorResponse
 }
 
-export type GetModelsError = GetModelsErrors[keyof GetModelsErrors]
+export type GetApiModelsError = GetApiModelsErrors[keyof GetApiModelsErrors]
 
-export type GetModelsResponses = {
+export type GetApiModelsResponses = {
   /**
    * Successfully retrieved model list
    */
   200: ModelsListResponse
 }
 
-export type GetModelsResponse = GetModelsResponses[keyof GetModelsResponses]
+export type GetApiModelsResponse = GetApiModelsResponses[keyof GetApiModelsResponses]
 
-export type PostAiGenerateTextData = {
+export type PostApiAiGenerateTextData = {
   /**
    * Prompt, provider, model, and options for text generation.
    */
   body: AiGenerateTextRequest
   path?: never
   query?: never
-  url: '/ai/generate/text'
+  url: '/api//ai/generate/text'
 }
 
-export type PostAiGenerateTextErrors = {
+export type PostApiAiGenerateTextErrors = {
   /**
    * Bad Request (e.g., missing API key, invalid provider/model)
    */
@@ -3230,16 +3232,16 @@ export type PostAiGenerateTextErrors = {
   500: ApiErrorResponse
 }
 
-export type PostAiGenerateTextError = PostAiGenerateTextErrors[keyof PostAiGenerateTextErrors]
+export type PostApiAiGenerateTextError = PostApiAiGenerateTextErrors[keyof PostApiAiGenerateTextErrors]
 
-export type PostAiGenerateTextResponses = {
+export type PostApiAiGenerateTextResponses = {
   /**
    * Successfully generated text response.
    */
   200: AiGenerateTextResponse
 }
 
-export type PostAiGenerateTextResponse = PostAiGenerateTextResponses[keyof PostAiGenerateTextResponses]
+export type PostApiAiGenerateTextResponse = PostApiAiGenerateTextResponses[keyof PostApiAiGenerateTextResponses]
 
 export type PostApiProjectsByProjectIdAgentCoderData = {
   body: AgentCoderRunRequest

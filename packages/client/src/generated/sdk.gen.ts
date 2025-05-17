@@ -2,33 +2,33 @@
 
 import type { Options as ClientOptions, TDataShape, Client } from '@hey-api/client-fetch'
 import type {
-  GetChatsData,
-  GetChatsResponse,
-  GetChatsError,
-  PostChatsData,
-  PostChatsResponse,
-  PostChatsError,
-  GetChatsByChatIdMessagesData,
-  GetChatsByChatIdMessagesResponse,
-  GetChatsByChatIdMessagesError,
-  PostAiChatData,
-  PostAiChatResponse,
-  PostAiChatError,
-  PostChatsByChatIdForkData,
-  PostChatsByChatIdForkResponse,
-  PostChatsByChatIdForkError,
-  PostChatsByChatIdForkByMessageIdData,
-  PostChatsByChatIdForkByMessageIdResponse,
-  PostChatsByChatIdForkByMessageIdError,
-  DeleteChatsByChatIdMessagesByMessageIdData,
-  DeleteChatsByChatIdMessagesByMessageIdResponse,
-  DeleteChatsByChatIdMessagesByMessageIdError,
-  DeleteChatsByChatIdData,
-  DeleteChatsByChatIdResponse,
-  DeleteChatsByChatIdError,
-  PatchChatsByChatIdData,
-  PatchChatsByChatIdResponse,
-  PatchChatsByChatIdError,
+  GetApiChatsData,
+  GetApiChatsResponse,
+  GetApiChatsError,
+  PostApiChatsData,
+  PostApiChatsResponse,
+  PostApiChatsError,
+  GetApiChatsByChatIdMessagesData,
+  GetApiChatsByChatIdMessagesResponse,
+  GetApiChatsByChatIdMessagesError,
+  PostApiAiChatData,
+  PostApiAiChatResponse,
+  PostApiAiChatError,
+  PostApiChatsByChatIdForkData,
+  PostApiChatsByChatIdForkResponse,
+  PostApiChatsByChatIdForkError,
+  PostApiChatsByChatIdForkByMessageIdData,
+  PostApiChatsByChatIdForkByMessageIdResponse,
+  PostApiChatsByChatIdForkByMessageIdError,
+  DeleteApiChatsByChatIdMessagesByMessageIdData,
+  DeleteApiChatsByChatIdMessagesByMessageIdResponse,
+  DeleteApiChatsByChatIdMessagesByMessageIdError,
+  DeleteApiChatsByChatIdData,
+  DeleteApiChatsByChatIdResponse,
+  DeleteApiChatsByChatIdError,
+  PatchApiChatsByChatIdData,
+  PatchApiChatsByChatIdResponse,
+  PatchApiChatsByChatIdError,
   PostApiTicketsData,
   PostApiTicketsResponse,
   PostApiTicketsError,
@@ -184,12 +184,12 @@ import type {
   PostApiGenAiStructuredData,
   PostApiGenAiStructuredResponse,
   PostApiGenAiStructuredError,
-  GetModelsData,
-  GetModelsResponse,
-  GetModelsError,
-  PostAiGenerateTextData,
-  PostAiGenerateTextResponse,
-  PostAiGenerateTextError,
+  GetApiModelsData,
+  GetApiModelsResponse,
+  GetApiModelsError,
+  PostApiAiGenerateTextData,
+  PostApiAiGenerateTextResponse,
+  PostApiAiGenerateTextError,
   PostApiProjectsByProjectIdAgentCoderData,
   PostApiProjectsByProjectIdAgentCoderResponse,
   PostApiProjectsByProjectIdAgentCoderError,
@@ -237,9 +237,9 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 /**
  * Get all chat sessions
  */
-export const getChats = <ThrowOnError extends boolean = false>(options?: Options<GetChatsData, ThrowOnError>) => {
-  return (options?.client ?? _heyApiClient).get<GetChatsResponse, GetChatsError, ThrowOnError>({
-    url: '/chats',
+export const getApiChats = <ThrowOnError extends boolean = false>(options?: Options<GetApiChatsData, ThrowOnError>) => {
+  return (options?.client ?? _heyApiClient).get<GetApiChatsResponse, GetApiChatsError, ThrowOnError>({
+    url: '/api/chats',
     ...options
   })
 }
@@ -247,9 +247,11 @@ export const getChats = <ThrowOnError extends boolean = false>(options?: Options
 /**
  * Create a new chat session
  */
-export const postChats = <ThrowOnError extends boolean = false>(options: Options<PostChatsData, ThrowOnError>) => {
-  return (options.client ?? _heyApiClient).post<PostChatsResponse, PostChatsError, ThrowOnError>({
-    url: '/chats',
+export const postApiChats = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiChatsData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).post<PostApiChatsResponse, PostApiChatsError, ThrowOnError>({
+    url: '/api/chats',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -261,15 +263,15 @@ export const postChats = <ThrowOnError extends boolean = false>(options: Options
 /**
  * Get messages for a specific chat
  */
-export const getChatsByChatIdMessages = <ThrowOnError extends boolean = false>(
-  options: Options<GetChatsByChatIdMessagesData, ThrowOnError>
+export const getApiChatsByChatIdMessages = <ThrowOnError extends boolean = false>(
+  options: Options<GetApiChatsByChatIdMessagesData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).get<
-    GetChatsByChatIdMessagesResponse,
-    GetChatsByChatIdMessagesError,
+    GetApiChatsByChatIdMessagesResponse,
+    GetApiChatsByChatIdMessagesError,
     ThrowOnError
   >({
-    url: '/chats/{chatId}/messages',
+    url: '/api/chats/{chatId}/messages',
     ...options
   })
 }
@@ -278,9 +280,11 @@ export const getChatsByChatIdMessages = <ThrowOnError extends boolean = false>(
  * Chat completion (streaming, chat-associated)
  * Continues a chat session identified by chatId, streams response using Vercel AI SDK via UnifiedProviderService.
  */
-export const postAiChat = <ThrowOnError extends boolean = false>(options: Options<PostAiChatData, ThrowOnError>) => {
-  return (options.client ?? _heyApiClient).post<PostAiChatResponse, PostAiChatError, ThrowOnError>({
-    url: '/ai/chat',
+export const postApiAiChat = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiAiChatData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).post<PostApiAiChatResponse, PostApiAiChatError, ThrowOnError>({
+    url: '/api/ai/chat',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -292,15 +296,15 @@ export const postAiChat = <ThrowOnError extends boolean = false>(options: Option
 /**
  * Fork a chat session
  */
-export const postChatsByChatIdFork = <ThrowOnError extends boolean = false>(
-  options: Options<PostChatsByChatIdForkData, ThrowOnError>
+export const postApiChatsByChatIdFork = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiChatsByChatIdForkData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).post<
-    PostChatsByChatIdForkResponse,
-    PostChatsByChatIdForkError,
+    PostApiChatsByChatIdForkResponse,
+    PostApiChatsByChatIdForkError,
     ThrowOnError
   >({
-    url: '/chats/{chatId}/fork',
+    url: '/api/chats/{chatId}/fork',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -312,15 +316,15 @@ export const postChatsByChatIdFork = <ThrowOnError extends boolean = false>(
 /**
  * Fork a chat session from a specific message
  */
-export const postChatsByChatIdForkByMessageId = <ThrowOnError extends boolean = false>(
-  options: Options<PostChatsByChatIdForkByMessageIdData, ThrowOnError>
+export const postApiChatsByChatIdForkByMessageId = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiChatsByChatIdForkByMessageIdData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).post<
-    PostChatsByChatIdForkByMessageIdResponse,
-    PostChatsByChatIdForkByMessageIdError,
+    PostApiChatsByChatIdForkByMessageIdResponse,
+    PostApiChatsByChatIdForkByMessageIdError,
     ThrowOnError
   >({
-    url: '/chats/{chatId}/fork/{messageId}',
+    url: '/api/chats/{chatId}/fork/{messageId}',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -332,15 +336,15 @@ export const postChatsByChatIdForkByMessageId = <ThrowOnError extends boolean = 
 /**
  * Delete a specific message
  */
-export const deleteChatsByChatIdMessagesByMessageId = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteChatsByChatIdMessagesByMessageIdData, ThrowOnError>
+export const deleteApiChatsByChatIdMessagesByMessageId = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteApiChatsByChatIdMessagesByMessageIdData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).delete<
-    DeleteChatsByChatIdMessagesByMessageIdResponse,
-    DeleteChatsByChatIdMessagesByMessageIdError,
+    DeleteApiChatsByChatIdMessagesByMessageIdResponse,
+    DeleteApiChatsByChatIdMessagesByMessageIdError,
     ThrowOnError
   >({
-    url: '/chats/{chatId}/messages/{messageId}',
+    url: '/api/chats/{chatId}/messages/{messageId}',
     ...options
   })
 }
@@ -348,11 +352,15 @@ export const deleteChatsByChatIdMessagesByMessageId = <ThrowOnError extends bool
 /**
  * Delete a chat session and its messages
  */
-export const deleteChatsByChatId = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteChatsByChatIdData, ThrowOnError>
+export const deleteApiChatsByChatId = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteApiChatsByChatIdData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).delete<DeleteChatsByChatIdResponse, DeleteChatsByChatIdError, ThrowOnError>({
-    url: '/chats/{chatId}',
+  return (options.client ?? _heyApiClient).delete<
+    DeleteApiChatsByChatIdResponse,
+    DeleteApiChatsByChatIdError,
+    ThrowOnError
+  >({
+    url: '/api/chats/{chatId}',
     ...options
   })
 }
@@ -360,11 +368,15 @@ export const deleteChatsByChatId = <ThrowOnError extends boolean = false>(
 /**
  * Update chat properties (e.g., title)
  */
-export const patchChatsByChatId = <ThrowOnError extends boolean = false>(
-  options: Options<PatchChatsByChatIdData, ThrowOnError>
+export const patchApiChatsByChatId = <ThrowOnError extends boolean = false>(
+  options: Options<PatchApiChatsByChatIdData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).patch<PatchChatsByChatIdResponse, PatchChatsByChatIdError, ThrowOnError>({
-    url: '/chats/{chatId}',
+  return (options.client ?? _heyApiClient).patch<
+    PatchApiChatsByChatIdResponse,
+    PatchApiChatsByChatIdError,
+    ThrowOnError
+  >({
+    url: '/api/chats/{chatId}',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -1244,9 +1256,11 @@ export const postApiGenAiStructured = <ThrowOnError extends boolean = false>(
 /**
  * List available AI models for a provider
  */
-export const getModels = <ThrowOnError extends boolean = false>(options: Options<GetModelsData, ThrowOnError>) => {
-  return (options.client ?? _heyApiClient).get<GetModelsResponse, GetModelsError, ThrowOnError>({
-    url: '/models',
+export const getApiModels = <ThrowOnError extends boolean = false>(
+  options: Options<GetApiModelsData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).get<GetApiModelsResponse, GetApiModelsError, ThrowOnError>({
+    url: '/api/models',
     ...options
   })
 }
@@ -1255,11 +1269,15 @@ export const getModels = <ThrowOnError extends boolean = false>(options: Options
  * Generate text (one-off, non-streaming)
  * Generates text based on a prompt using the specified provider and model. Does not use chat history or save messages.
  */
-export const postAiGenerateText = <ThrowOnError extends boolean = false>(
-  options: Options<PostAiGenerateTextData, ThrowOnError>
+export const postApiAiGenerateText = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiAiGenerateTextData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).post<PostAiGenerateTextResponse, PostAiGenerateTextError, ThrowOnError>({
-    url: '/ai/generate/text',
+  return (options.client ?? _heyApiClient).post<
+    PostApiAiGenerateTextResponse,
+    PostApiAiGenerateTextError,
+    ThrowOnError
+  >({
+    url: '/api//ai/generate/text',
     ...options,
     headers: {
       'Content-Type': 'application/json',

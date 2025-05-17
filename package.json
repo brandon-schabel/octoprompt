@@ -4,7 +4,6 @@
   "version": "0.5.0",
   "type": "module",
   "scripts": {
-    "setup": "bun run scripts/setup.ts",
     "dev": "bun run scripts/start-dev.ts",
     "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
     "dev:server": "bun run scripts/start-server-dev.ts",
@@ -12,8 +11,10 @@
     "build-binaries": "bun run scripts/build-binaries.ts",
     "format": "prettier --write .",
     "test": "bun test",
-    "pretest": "DB_FILENAME=test.db bun run src/utils/migrate-db.ts",
-    "openapi-ts": "openapi-ts  && prettier --write packages/client/src/generated"
+    "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
+    "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
+    "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts",
+    "run:binary": "cd ./dist/octoprompt-0.5.0-macos-arm64 && ./octoprompt-v0.5.0"
   },
   "workspaces": [
     "packages/*"

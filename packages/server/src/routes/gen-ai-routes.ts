@@ -74,7 +74,7 @@ const structuredDataSchemas: Record<string, StructuredDataSchemaConfig<any>> = {
 
 const getModelsRoute = createRoute({
   method: 'get',
-  path: '/models',
+  path: '/api/models',
   tags: ['AI'],
   summary: 'List available AI models for a provider',
   request: {
@@ -185,7 +185,7 @@ const generateStructuredRoute = createRoute({
 
 const postAiGenerateTextRoute = createRoute({
   method: 'post',
-  path: '/ai/generate/text',
+  path: '/api//ai/generate/text',
   tags: ['AI'],
   summary: 'Generate text (one-off, non-streaming)',
   description:

@@ -28,7 +28,7 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
   // initialized the kv store by reading the data/kv-store.json file
   await initKvStore()
 
-  const server: Server = serve<{ clientId: string }>({
+  const server = serve({
     idleTimeout: 255,
     port,
     async fetch(req: Request): Promise<Response | undefined> {
@@ -87,16 +87,16 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
     }
   })
 
-  // Start watchers for existing projects
-  ;(async () => {
-    const allProjects = await listProjects()
-    for (const project of allProjects) {
-      // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
-      watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
-    }
+    // Start watchers for existing projects
+    ; (async () => {
+      const allProjects = await listProjects()
+      for (const project of allProjects) {
+        // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
+        watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+      }
 
-    cleanupService.start()
-  })()
+      cleanupService.start()
+    })()
 
   console.log(`Server running at http://localhost:${server.port}`)
   console.log(`Server swagger at http://localhost:${server.port}/swagger`)
@@ -119,15 +119,15 @@ function serveStatic(path: string): Response {
 
 if (import.meta.main) {
   console.log('Starting server...')
-  ;(async () => {
-    const server = await instantiateServer()
-    function handleShutdown() {
-      console.log('Received kill signal. Shutting down gracefully...')
-      watchersManager.stopAllWatchers?.()
-      server.stop()
-      process.exit(0)
-    }
-    process.on('SIGINT', handleShutdown)
-    process.on('SIGTERM', handleShutdown)
-  })()
+    ; (async () => {
+      const server = await instantiateServer()
+      function handleShutdown() {
+        console.log('Received kill signal. Shutting down gracefully...')
+        watchersManager.stopAllWatchers?.()
+        server.stop()
+        process.exit(0)
+      }
+      process.on('SIGINT', handleShutdown)
+      process.on('SIGTERM', handleShutdown)
+    })()
 }

@@ -1,8 +1,7 @@
-import { mkdirSync, copyFileSync, chmodSync } from 'node:fs'
+import { mkdirSync, chmodSync } from 'node:fs'
 import { join } from 'node:path'
 import { createWriteStream } from 'node:fs'
 import archiver from 'archiver'
-import { setupDatabase } from '../packages/server/src/utils/database'
 import { $ } from 'bun'
 
 async function buildProject() {
@@ -10,6 +9,8 @@ async function buildProject() {
   const rootDir = process.cwd()
   const serverDir = join(rootDir, 'packages', 'server')
   const clientDir = join(rootDir, 'packages', 'client')
+  // this is set in vite.config.ts
+  const clientBuildOutputDir = join(rootDir, 'packages', 'server', 'client-dist')
   const sharedDir = join(rootDir, 'packages', 'shared')
   const distDir = join(rootDir, 'dist')
 
@@ -18,7 +19,9 @@ async function buildProject() {
 
   // Build client first
   console.log('Building client...')
-  await $`cd ${clientDir} && bun run build`
+  console.log('Generating production OpenAPI client...')
+  await $`bun run openapi-ts:prod`
+  await $`cd ${clientDir} && bun run build:prod`
 
   // Build server as normal JS bundle first
   console.log('Building server...')
@@ -35,19 +38,6 @@ async function buildProject() {
   console.log('Copying required files to dist...')
   mkdirSync(join(distDir, 'client-dist'), { recursive: true })
 
-  // Updated database creation section using @database.ts
-  console.log('Creating database using @database.ts...')
-  try {
-    await $`rm -f ${join(distDir, 'sqlite.db')}`
-  } catch (error) {
-    console.log('No existing database to remove')
-  }
-  // Set the DB path for the database creation
-  process.env.DB_PATH = join(distDir, 'sqlite.db')
-  // Create the database using the custom setupDatabase function with explicit path
-  const db = setupDatabase({ dbPath: join(distDir, 'sqlite.db') })
-  db.close()
-
   // Write modified package.json to dist
   const pkg = require(join(serverDir, 'package.json'))
   pkg.scripts = {
@@ -55,13 +45,15 @@ async function buildProject() {
   }
   await Bun.write(join(distDir, 'package.json'), JSON.stringify(pkg, null, 2))
 
-  // Copy built client files
-  console.log('Copying built client files to server dist...')
-  await $`cp -r ${join(clientDir, 'dist')}/* ${join(distDir, 'client-dist')}/`
+
+  // this is already done becuase its set in vite.config.ts
+  // // Copy built client files
+  // console.log('Copying built client files to server dist...')
+  // await $`cp -r ${join(clientDir, 'dist')}/* ${join(distDir, 'client-dist')}/`
 
   // Copy prompts folder
   console.log('Copying prompts folder to dist...')
-  await $`cp -r ${join(serverDir, 'prompts')} ${join(distDir, 'prompts')}`
+  await $`cp -r ${join('prompts')} ${join(distDir, 'prompts')}`
 
   // Define targets with proper executable extensions
   const bundleNamePrefix = `${pkg.name}-${pkg.version}`
@@ -72,10 +64,10 @@ async function buildProject() {
   }
 
   const targets: PlatformTarget[] = [
-    { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '' },
-    { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '' },
+    // { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '' },
+    // { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '' },
     { name: `${bundleNamePrefix}-macos-arm64`, target: 'bun-darwin-arm64', executableExt: '' },
-    { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe' }
+    // { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe' }
   ]
 
   for (const { name, target, executableExt } of targets) {
@@ -83,16 +75,11 @@ async function buildProject() {
     const platformDir = join(distDir, name)
     mkdirSync(platformDir, { recursive: true })
 
-    // Copy the database from dist to platform directory
-    copyFileSync(join(distDir, 'sqlite.db'), join(platformDir, 'sqlite.db'))
-    // Ensure proper file permissions
-    chmodSync(join(platformDir, 'sqlite.db'), 0o644)
-
     // Copy prompts folder to platform directory
     await $`cp -r ${join(distDir, 'prompts')} ${join(platformDir, 'prompts')}`
 
     // Copy client-dist folder to platform directory
-    await $`cp -r ${join(distDir, 'client-dist')} ${join(platformDir, 'client-dist')}`
+    await $`cp -r ${clientBuildOutputDir} ${join(platformDir, 'client-dist')}`
 
     // Build the standalone binary with version in the name
     const executableName = `${pkg.name}-v${pkg.version}${executableExt}`

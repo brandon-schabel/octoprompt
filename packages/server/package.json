@@ -8,7 +8,7 @@
     "start": "bun server.ts",
     "dev": "DEV=true bun server.ts",
     "dev:watch": "DEV=true bun --watch server.ts",
-    "start:prod": "cd dist && ./start.sh"
+    "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh"
   },
   "type": "module",
   "dependencies": {

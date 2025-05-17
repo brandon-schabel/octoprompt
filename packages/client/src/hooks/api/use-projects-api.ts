@@ -53,6 +53,7 @@ import type {
   GetApiProjectsByProjectIdSummaryData,
 } from '../../generated/types.gen'
 import { Options, postApiProjectsByProjectIdSuggestFiles } from '../../generated/sdk.gen'
+import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
 
 export type CreateProjectInput = PostApiProjectsData['body']
 export type UpdateProjectInput = PatchApiProjectsByProjectIdData['body']
@@ -76,7 +77,12 @@ const PROJECT_FILES_KEYS = {
 } as const
 
 export const useGetProjects = () => {
-  const queryOptions = getApiProjectsOptions()
+  console.log({
+    SERVER_HTTP_ENDPOINT
+  })
+  const queryOptions = getApiProjectsOptions({
+    baseUrl: SERVER_HTTP_ENDPOINT
+  })
   return useQuery(queryOptions)
 }
 

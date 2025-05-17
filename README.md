@@ -31,7 +31,7 @@ cd octoprompt && npm install -g bun
 ### Step 3 - Install Repo Packages && Run Setup to Initialize DB
 
 ```bash
-bun i && bun run setup
+bun i
 ```
 
 ### Step 4 - Start Server and Client

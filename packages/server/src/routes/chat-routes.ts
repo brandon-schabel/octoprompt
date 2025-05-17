@@ -37,7 +37,7 @@ const chatService = createChatService()
 // GET /chats
 const getAllChatsRoute = createRoute({
     method: 'get',
-    path: '/chats',
+    path: '/api/chats',
     tags: ['Chats'],
     summary: 'Get all chat sessions',
     responses: {
@@ -55,7 +55,7 @@ const getAllChatsRoute = createRoute({
 // POST /chats
 const createChatRoute = createRoute({
     method: 'post',
-    path: '/chats',
+    path: '/api/chats',
     tags: ['Chats'],
     summary: 'Create a new chat session',
     request: {
@@ -92,7 +92,7 @@ const createChatRoute = createRoute({
 // GET /chats/:chatId/messages
 const getChatMessagesRoute = createRoute({
     method: 'get',
-    path: '/chats/{chatId}/messages',
+    path: '/api/chats/{chatId}/messages',
     tags: ['Chats'],
     summary: 'Get messages for a specific chat',
     request: {
@@ -120,7 +120,7 @@ const getChatMessagesRoute = createRoute({
 
 const postAiChatSdkRoute = createRoute({
     method: 'post',
-    path: '/ai/chat', // Keeping the path
+    path: '/api/ai/chat', // Keeping the path
     tags: ['AI'],
     summary: 'Chat completion (streaming, chat-associated)',
     description:
@@ -166,7 +166,7 @@ const postAiChatSdkRoute = createRoute({
 // POST /chats/{chatId}/fork
 const forkChatRoute = createRoute({
     method: 'post',
-    path: '/chats/{chatId}/fork',
+    path: '/api/chats/{chatId}/fork',
     tags: ['Chats'],
     summary: 'Fork a chat session',
     request: {
@@ -200,7 +200,7 @@ const forkChatRoute = createRoute({
 // POST /chats/{chatId}/fork/{messageId}
 const forkChatFromMessageRoute = createRoute({
     method: 'post',
-    path: '/chats/{chatId}/fork/{messageId}',
+    path: '/api/chats/{chatId}/fork/{messageId}',
     tags: ['Chats'],
     summary: 'Fork a chat session from a specific message',
     request: {
@@ -234,7 +234,7 @@ const forkChatFromMessageRoute = createRoute({
 // DELETE /chats/{chatId}/messages/{messageId}
 const deleteMessageRoute = createRoute({
     method: 'delete',
-    path: '/chats/{chatId}/messages/{messageId}',
+    path: '/api/chats/{chatId}/messages/{messageId}',
     tags: ['Messages'],
     summary: 'Delete a specific message',
     request: {
@@ -263,7 +263,7 @@ const deleteMessageRoute = createRoute({
 // PATCH /chats/{chatId}
 const updateChatRoute = createRoute({
     method: 'patch',
-    path: '/chats/{chatId}',
+    path: '/api/chats/{chatId}',
     tags: ['Chats'],
     summary: 'Update chat properties (e.g., title)',
     request: {
@@ -297,7 +297,7 @@ const updateChatRoute = createRoute({
 // DELETE /chats/{chatId}
 const deleteChatRoute = createRoute({
     method: 'delete',
-    path: '/chats/{chatId}',
+    path: '/api/chats/{chatId}',
     tags: ['Chats'],
     summary: 'Delete a chat session and its messages',
     request: {

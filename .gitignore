@@ -197,3 +197,5 @@ kv-store.json.*.backup
 
 
 packages/server/data/*
+
+openapi.json
