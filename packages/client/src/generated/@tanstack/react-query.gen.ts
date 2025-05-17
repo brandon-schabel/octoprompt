@@ -2,15 +2,15 @@
 
 import {
   type Options,
-  getChats,
-  postChats,
-  getChatsByChatIdMessages,
-  postAiChat,
-  postChatsByChatIdFork,
-  postChatsByChatIdForkByMessageId,
-  deleteChatsByChatIdMessagesByMessageId,
-  deleteChatsByChatId,
-  patchChatsByChatId,
+  getApiChats,
+  postApiChats,
+  getApiChatsByChatIdMessages,
+  postApiAiChat,
+  postApiChatsByChatIdFork,
+  postApiChatsByChatIdForkByMessageId,
+  deleteApiChatsByChatIdMessagesByMessageId,
+  deleteApiChatsByChatId,
+  patchApiChatsByChatId,
   postApiTickets,
   deleteApiTicketsByTicketId,
   getApiTicketsByTicketId,
@@ -63,8 +63,8 @@ import {
   postApiGenAiStream,
   postApiGenAiText,
   postApiGenAiStructured,
-  getModels,
-  postAiGenerateText,
+  getApiModels,
+  postApiAiGenerateText,
   postApiProjectsByProjectIdAgentCoder,
   getApiAgentCoderProjectByProjectIdRuns,
   getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogs,
@@ -76,29 +76,29 @@ import {
 } from '../sdk.gen'
 import { queryOptions, type UseMutationOptions, type DefaultError } from '@tanstack/react-query'
 import type {
-  GetChatsData,
-  PostChatsData,
-  PostChatsError,
-  PostChatsResponse,
-  GetChatsByChatIdMessagesData,
-  PostAiChatData,
-  PostAiChatError,
-  PostAiChatResponse,
-  PostChatsByChatIdForkData,
-  PostChatsByChatIdForkError,
-  PostChatsByChatIdForkResponse,
-  PostChatsByChatIdForkByMessageIdData,
-  PostChatsByChatIdForkByMessageIdError,
-  PostChatsByChatIdForkByMessageIdResponse,
-  DeleteChatsByChatIdMessagesByMessageIdData,
-  DeleteChatsByChatIdMessagesByMessageIdError,
-  DeleteChatsByChatIdMessagesByMessageIdResponse,
-  DeleteChatsByChatIdData,
-  DeleteChatsByChatIdError,
-  DeleteChatsByChatIdResponse,
-  PatchChatsByChatIdData,
-  PatchChatsByChatIdError,
-  PatchChatsByChatIdResponse,
+  GetApiChatsData,
+  PostApiChatsData,
+  PostApiChatsError,
+  PostApiChatsResponse,
+  GetApiChatsByChatIdMessagesData,
+  PostApiAiChatData,
+  PostApiAiChatError,
+  PostApiAiChatResponse,
+  PostApiChatsByChatIdForkData,
+  PostApiChatsByChatIdForkError,
+  PostApiChatsByChatIdForkResponse,
+  PostApiChatsByChatIdForkByMessageIdData,
+  PostApiChatsByChatIdForkByMessageIdError,
+  PostApiChatsByChatIdForkByMessageIdResponse,
+  DeleteApiChatsByChatIdMessagesByMessageIdData,
+  DeleteApiChatsByChatIdMessagesByMessageIdError,
+  DeleteApiChatsByChatIdMessagesByMessageIdResponse,
+  DeleteApiChatsByChatIdData,
+  DeleteApiChatsByChatIdError,
+  DeleteApiChatsByChatIdResponse,
+  PatchApiChatsByChatIdData,
+  PatchApiChatsByChatIdError,
+  PatchApiChatsByChatIdResponse,
   PostApiTicketsData,
   PostApiTicketsError,
   PostApiTicketsResponse,
@@ -216,12 +216,12 @@ import type {
   PostApiGenAiTextError,
   PostApiGenAiTextResponse,
   PostApiGenAiStructuredData,
-PostApiGenAiStructuredError,
+  PostApiGenAiStructuredError,
   PostApiGenAiStructuredResponse,
-  GetModelsData,
-  PostAiGenerateTextData,
-  PostAiGenerateTextError,
-  PostAiGenerateTextResponse,
+  GetApiModelsData,
+  PostApiAiGenerateTextData,
+  PostApiAiGenerateTextError,
+  PostApiAiGenerateTextResponse,
   PostApiProjectsByProjectIdAgentCoderData,
   PostApiProjectsByProjectIdAgentCoderError,
   PostApiProjectsByProjectIdAgentCoderResponse,
@@ -275,12 +275,12 @@ const createQueryKey = <TOptions extends Options>(
   return [params]
 }
 
-export const getChatsQueryKey = (options?: Options<GetChatsData>) => createQueryKey('getChats', options)
+export const getApiChatsQueryKey = (options?: Options<GetApiChatsData>) => createQueryKey('getApiChats', options)
 
-export const getChatsOptions = (options?: Options<GetChatsData>) => {
+export const getApiChatsOptions = (options?: Options<GetApiChatsData>) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await getChats({
+      const { data } = await getApiChats({
         ...options,
         ...queryKey[0],
         signal,
@@ -288,16 +288,16 @@ export const getChatsOptions = (options?: Options<GetChatsData>) => {
       })
       return data
     },
-    queryKey: getChatsQueryKey(options)
+    queryKey: getApiChatsQueryKey(options)
   })
 }
 
-export const postChatsQueryKey = (options: Options<PostChatsData>) => createQueryKey('postChats', options)
+export const postApiChatsQueryKey = (options: Options<PostApiChatsData>) => createQueryKey('postApiChats', options)
 
-export const postChatsOptions = (options: Options<PostChatsData>) => {
+export const postApiChatsOptions = (options: Options<PostApiChatsData>) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postChats({
+      const { data } = await postApiChats({
         ...options,
         ...queryKey[0],
         signal,
@@ -305,16 +305,16 @@ export const postChatsOptions = (options: Options<PostChatsData>) => {
       })
       return data
     },
-    queryKey: postChatsQueryKey(options)
+    queryKey: postApiChatsQueryKey(options)
   })
 }
 
-export const postChatsMutation = (
-  options?: Partial<Options<PostChatsData>>
-): UseMutationOptions<PostChatsResponse, PostChatsError, Options<PostChatsData>> => {
-  const mutationOptions: UseMutationOptions<PostChatsResponse, PostChatsError, Options<PostChatsData>> = {
+export const postApiChatsMutation = (
+  options?: Partial<Options<PostApiChatsData>>
+): UseMutationOptions<PostApiChatsResponse, PostApiChatsError, Options<PostApiChatsData>> => {
+  const mutationOptions: UseMutationOptions<PostApiChatsResponse, PostApiChatsError, Options<PostApiChatsData>> = {
     mutationFn: async (localOptions) => {
-      const { data } = await postChats({
+      const { data } = await postApiChats({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -325,13 +325,13 @@ export const postChatsMutation = (
   return mutationOptions
 }
 
-export const getChatsByChatIdMessagesQueryKey = (options: Options<GetChatsByChatIdMessagesData>) =>
-  createQueryKey('getChatsByChatIdMessages', options)
+export const getApiChatsByChatIdMessagesQueryKey = (options: Options<GetApiChatsByChatIdMessagesData>) =>
+  createQueryKey('getApiChatsByChatIdMessages', options)
 
-export const getChatsByChatIdMessagesOptions = (options: Options<GetChatsByChatIdMessagesData>) => {
+export const getApiChatsByChatIdMessagesOptions = (options: Options<GetApiChatsByChatIdMessagesData>) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await getChatsByChatIdMessages({
+      const { data } = await getApiChatsByChatIdMessages({
         ...options,
         ...queryKey[0],
         signal,
@@ -339,16 +339,16 @@ export const getChatsByChatIdMessagesOptions = (options: Options<GetChatsByChatI
       })
       return data
     },
-    queryKey: getChatsByChatIdMessagesQueryKey(options)
+    queryKey: getApiChatsByChatIdMessagesQueryKey(options)
   })
 }
 
-export const postAiChatQueryKey = (options: Options<PostAiChatData>) => createQueryKey('postAiChat', options)
+export const postApiAiChatQueryKey = (options: Options<PostApiAiChatData>) => createQueryKey('postApiAiChat', options)
 
-export const postAiChatOptions = (options: Options<PostAiChatData>) => {
+export const postApiAiChatOptions = (options: Options<PostApiAiChatData>) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postAiChat({
+      const { data } = await postApiAiChat({
         ...options,
         ...queryKey[0],
         signal,
@@ -356,16 +356,16 @@ export const postAiChatOptions = (options: Options<PostAiChatData>) => {
       })
       return data
     },
-    queryKey: postAiChatQueryKey(options)
+    queryKey: postApiAiChatQueryKey(options)
   })
 }
 
-export const postAiChatMutation = (
-  options?: Partial<Options<PostAiChatData>>
-): UseMutationOptions<PostAiChatResponse, PostAiChatError, Options<PostAiChatData>> => {
-  const mutationOptions: UseMutationOptions<PostAiChatResponse, PostAiChatError, Options<PostAiChatData>> = {
+export const postApiAiChatMutation = (
+  options?: Partial<Options<PostApiAiChatData>>
+): UseMutationOptions<PostApiAiChatResponse, PostApiAiChatError, Options<PostApiAiChatData>> => {
+  const mutationOptions: UseMutationOptions<PostApiAiChatResponse, PostApiAiChatError, Options<PostApiAiChatData>> = {
     mutationFn: async (localOptions) => {
-      const { data } = await postAiChat({
+      const { data } = await postApiAiChat({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -376,13 +376,13 @@ export const postAiChatMutation = (
   return mutationOptions
 }
 
-export const postChatsByChatIdForkQueryKey = (options: Options<PostChatsByChatIdForkData>) =>
-  createQueryKey('postChatsByChatIdFork', options)
+export const postApiChatsByChatIdForkQueryKey = (options: Options<PostApiChatsByChatIdForkData>) =>
+  createQueryKey('postApiChatsByChatIdFork', options)
 
-export const postChatsByChatIdForkOptions = (options: Options<PostChatsByChatIdForkData>) => {
+export const postApiChatsByChatIdForkOptions = (options: Options<PostApiChatsByChatIdForkData>) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postChatsByChatIdFork({
+      const { data } = await postApiChatsByChatIdFork({
         ...options,
         ...queryKey[0],
         signal,
@@ -390,24 +390,24 @@ export const postChatsByChatIdForkOptions = (options: Options<PostChatsByChatIdF
       })
       return data
     },
-    queryKey: postChatsByChatIdForkQueryKey(options)
+    queryKey: postApiChatsByChatIdForkQueryKey(options)
   })
 }
 
-export const postChatsByChatIdForkMutation = (
-  options?: Partial<Options<PostChatsByChatIdForkData>>
+export const postApiChatsByChatIdForkMutation = (
+  options?: Partial<Options<PostApiChatsByChatIdForkData>>
 ): UseMutationOptions<
-  PostChatsByChatIdForkResponse,
-  PostChatsByChatIdForkError,
-  Options<PostChatsByChatIdForkData>
+  PostApiChatsByChatIdForkResponse,
+  PostApiChatsByChatIdForkError,
+  Options<PostApiChatsByChatIdForkData>
 > => {
   const mutationOptions: UseMutationOptions<
-    PostChatsByChatIdForkResponse,
-    PostChatsByChatIdForkError,
-    Options<PostChatsByChatIdForkData>
+    PostApiChatsByChatIdForkResponse,
+    PostApiChatsByChatIdForkError,
+    Options<PostApiChatsByChatIdForkData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await postChatsByChatIdFork({
+      const { data } = await postApiChatsByChatIdFork({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -418,13 +418,16 @@ export const postChatsByChatIdForkMutation = (
   return mutationOptions
 }
 
-export const postChatsByChatIdForkByMessageIdQueryKey = (options: Options<PostChatsByChatIdForkByMessageIdData>) =>
-  createQueryKey('postChatsByChatIdForkByMessageId', options)
+export const postApiChatsByChatIdForkByMessageIdQueryKey = (
+  options: Options<PostApiChatsByChatIdForkByMessageIdData>
+) => createQueryKey('postApiChatsByChatIdForkByMessageId', options)
 
-export const postChatsByChatIdForkByMessageIdOptions = (options: Options<PostChatsByChatIdForkByMessageIdData>) => {
+export const postApiChatsByChatIdForkByMessageIdOptions = (
+  options: Options<PostApiChatsByChatIdForkByMessageIdData>
+) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postChatsByChatIdForkByMessageId({
+      const { data } = await postApiChatsByChatIdForkByMessageId({
         ...options,
         ...queryKey[0],
         signal,
@@ -432,24 +435,24 @@ export const postChatsByChatIdForkByMessageIdOptions = (options: Options<PostCha
       })
       return data
     },
-    queryKey: postChatsByChatIdForkByMessageIdQueryKey(options)
+    queryKey: postApiChatsByChatIdForkByMessageIdQueryKey(options)
   })
 }
 
-export const postChatsByChatIdForkByMessageIdMutation = (
-  options?: Partial<Options<PostChatsByChatIdForkByMessageIdData>>
+export const postApiChatsByChatIdForkByMessageIdMutation = (
+  options?: Partial<Options<PostApiChatsByChatIdForkByMessageIdData>>
 ): UseMutationOptions<
-  PostChatsByChatIdForkByMessageIdResponse,
-  PostChatsByChatIdForkByMessageIdError,
-  Options<PostChatsByChatIdForkByMessageIdData>
+  PostApiChatsByChatIdForkByMessageIdResponse,
+  PostApiChatsByChatIdForkByMessageIdError,
+  Options<PostApiChatsByChatIdForkByMessageIdData>
 > => {
   const mutationOptions: UseMutationOptions<
-    PostChatsByChatIdForkByMessageIdResponse,
-    PostChatsByChatIdForkByMessageIdError,
-    Options<PostChatsByChatIdForkByMessageIdData>
+    PostApiChatsByChatIdForkByMessageIdResponse,
+    PostApiChatsByChatIdForkByMessageIdError,
+    Options<PostApiChatsByChatIdForkByMessageIdData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await postChatsByChatIdForkByMessageId({
+      const { data } = await postApiChatsByChatIdForkByMessageId({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -460,20 +463,20 @@ export const postChatsByChatIdForkByMessageIdMutation = (
   return mutationOptions
 }
 
-export const deleteChatsByChatIdMessagesByMessageIdMutation = (
-  options?: Partial<Options<DeleteChatsByChatIdMessagesByMessageIdData>>
+export const deleteApiChatsByChatIdMessagesByMessageIdMutation = (
+  options?: Partial<Options<DeleteApiChatsByChatIdMessagesByMessageIdData>>
 ): UseMutationOptions<
-  DeleteChatsByChatIdMessagesByMessageIdResponse,
-  DeleteChatsByChatIdMessagesByMessageIdError,
-  Options<DeleteChatsByChatIdMessagesByMessageIdData>
+  DeleteApiChatsByChatIdMessagesByMessageIdResponse,
+  DeleteApiChatsByChatIdMessagesByMessageIdError,
+  Options<DeleteApiChatsByChatIdMessagesByMessageIdData>
 > => {
   const mutationOptions: UseMutationOptions<
-    DeleteChatsByChatIdMessagesByMessageIdResponse,
-    DeleteChatsByChatIdMessagesByMessageIdError,
-    Options<DeleteChatsByChatIdMessagesByMessageIdData>
+    DeleteApiChatsByChatIdMessagesByMessageIdResponse,
+    DeleteApiChatsByChatIdMessagesByMessageIdError,
+    Options<DeleteApiChatsByChatIdMessagesByMessageIdData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await deleteChatsByChatIdMessagesByMessageId({
+      const { data } = await deleteApiChatsByChatIdMessagesByMessageId({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -484,16 +487,20 @@ export const deleteChatsByChatIdMessagesByMessageIdMutation = (
   return mutationOptions
 }
 
-export const deleteChatsByChatIdMutation = (
-  options?: Partial<Options<DeleteChatsByChatIdData>>
-): UseMutationOptions<DeleteChatsByChatIdResponse, DeleteChatsByChatIdError, Options<DeleteChatsByChatIdData>> => {
+export const deleteApiChatsByChatIdMutation = (
+  options?: Partial<Options<DeleteApiChatsByChatIdData>>
+): UseMutationOptions<
+  DeleteApiChatsByChatIdResponse,
+  DeleteApiChatsByChatIdError,
+  Options<DeleteApiChatsByChatIdData>
+> => {
   const mutationOptions: UseMutationOptions<
-    DeleteChatsByChatIdResponse,
-    DeleteChatsByChatIdError,
-    Options<DeleteChatsByChatIdData>
+    DeleteApiChatsByChatIdResponse,
+    DeleteApiChatsByChatIdError,
+    Options<DeleteApiChatsByChatIdData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await deleteChatsByChatId({
+      const { data } = await deleteApiChatsByChatId({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -504,16 +511,20 @@ export const deleteChatsByChatIdMutation = (
   return mutationOptions
 }
 
-export const patchChatsByChatIdMutation = (
-  options?: Partial<Options<PatchChatsByChatIdData>>
-): UseMutationOptions<PatchChatsByChatIdResponse, PatchChatsByChatIdError, Options<PatchChatsByChatIdData>> => {
+export const patchApiChatsByChatIdMutation = (
+  options?: Partial<Options<PatchApiChatsByChatIdData>>
+): UseMutationOptions<
+  PatchApiChatsByChatIdResponse,
+  PatchApiChatsByChatIdError,
+  Options<PatchApiChatsByChatIdData>
+> => {
   const mutationOptions: UseMutationOptions<
-    PatchChatsByChatIdResponse,
-    PatchChatsByChatIdError,
-    Options<PatchChatsByChatIdData>
+    PatchApiChatsByChatIdResponse,
+    PatchApiChatsByChatIdError,
+    Options<PatchApiChatsByChatIdData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await patchChatsByChatId({
+      const { data } = await patchApiChatsByChatId({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -2060,12 +2071,12 @@ export const postApiGenAiStructuredMutation = (
   return mutationOptions
 }
 
-export const getModelsQueryKey = (options: Options<GetModelsData>) => createQueryKey('getModels', options)
+export const getApiModelsQueryKey = (options: Options<GetApiModelsData>) => createQueryKey('getApiModels', options)
 
-export const getModelsOptions = (options: Options<GetModelsData>) => {
+export const getApiModelsOptions = (options: Options<GetApiModelsData>) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await getModels({
+      const { data } = await getApiModels({
         ...options,
         ...queryKey[0],
         signal,
@@ -2073,17 +2084,17 @@ export const getModelsOptions = (options: Options<GetModelsData>) => {
       })
       return data
     },
-    queryKey: getModelsQueryKey(options)
+    queryKey: getApiModelsQueryKey(options)
   })
 }
 
-export const postAiGenerateTextQueryKey = (options: Options<PostAiGenerateTextData>) =>
-  createQueryKey('postAiGenerateText', options)
+export const postApiAiGenerateTextQueryKey = (options: Options<PostApiAiGenerateTextData>) =>
+  createQueryKey('postApiAiGenerateText', options)
 
-export const postAiGenerateTextOptions = (options: Options<PostAiGenerateTextData>) => {
+export const postApiAiGenerateTextOptions = (options: Options<PostApiAiGenerateTextData>) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postAiGenerateText({
+      const { data } = await postApiAiGenerateText({
         ...options,
         ...queryKey[0],
         signal,
@@ -2091,20 +2102,24 @@ export const postAiGenerateTextOptions = (options: Options<PostAiGenerateTextDat
       })
       return data
     },
-    queryKey: postAiGenerateTextQueryKey(options)
+    queryKey: postApiAiGenerateTextQueryKey(options)
   })
 }
 
-export const postAiGenerateTextMutation = (
-  options?: Partial<Options<PostAiGenerateTextData>>
-): UseMutationOptions<PostAiGenerateTextResponse, PostAiGenerateTextError, Options<PostAiGenerateTextData>> => {
+export const postApiAiGenerateTextMutation = (
+  options?: Partial<Options<PostApiAiGenerateTextData>>
+): UseMutationOptions<
+  PostApiAiGenerateTextResponse,
+  PostApiAiGenerateTextError,
+  Options<PostApiAiGenerateTextData>
+> => {
   const mutationOptions: UseMutationOptions<
-    PostAiGenerateTextResponse,
-    PostAiGenerateTextError,
-    Options<PostAiGenerateTextData>
+    PostApiAiGenerateTextResponse,
+    PostApiAiGenerateTextError,
+    Options<PostApiAiGenerateTextData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await postAiGenerateText({
+      const { data } = await postApiAiGenerateText({
         ...options,
         ...localOptions,
         throwOnError: true

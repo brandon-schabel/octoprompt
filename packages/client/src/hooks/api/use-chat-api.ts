@@ -1,62 +1,62 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { commonErrorHandler } from './common-mutation-error-handler'
 import {
-  getChatsOptions,
-  getChatsQueryKey,
-  getChatsByChatIdMessagesOptions,
-  getChatsByChatIdMessagesQueryKey,
-  postChatsMutation,
-  patchChatsByChatIdMutation,
-  deleteChatsByChatIdMutation,
-  postChatsByChatIdForkMutation,
-  postChatsByChatIdForkByMessageIdMutation,
-  deleteChatsByChatIdMessagesByMessageIdMutation,
-  getModelsOptions
+  getApiChatsOptions,
+  getApiChatsQueryKey,
+  getApiChatsByChatIdMessagesOptions,
+  getApiChatsByChatIdMessagesQueryKey,
+  postApiChatsMutation,
+  patchApiChatsByChatIdMutation,
+  deleteApiChatsByChatIdMutation,
+  postApiChatsByChatIdForkMutation,
+  postApiChatsByChatIdForkByMessageIdMutation,
+  deleteApiChatsByChatIdMessagesByMessageIdMutation,
+  getApiModelsOptions
 } from '../../generated/@tanstack/react-query.gen'
 import type {
-  PostChatsData,
-  PostChatsError,
-  GetChatsByChatIdMessagesData,
-  PatchChatsByChatIdData,
-  PatchChatsByChatIdError,
-  DeleteChatsByChatIdData,
-  DeleteChatsByChatIdError,
-  PostChatsByChatIdForkData,
-  PostChatsByChatIdForkError,
-  PostChatsByChatIdForkByMessageIdData,
-  PostChatsByChatIdForkByMessageIdError,
+  PostApiChatsData,
+  PostApiChatsError,
+  GetApiChatsByChatIdMessagesData,
+  PatchApiChatsByChatIdData,
+  PatchApiChatsByChatIdError,
+  DeleteApiChatsByChatIdData,
+  DeleteApiChatsByChatIdError,
+  PostApiChatsByChatIdForkData,
+  PostApiChatsByChatIdForkError,
+  PostApiChatsByChatIdForkByMessageIdData,
+  PostApiChatsByChatIdForkByMessageIdError,
   ForkChatRequestBody,
   ForkChatFromMessageRequestBody,
-  DeleteChatsByChatIdMessagesByMessageIdData,
-  DeleteChatsByChatIdMessagesByMessageIdError,
-  GetModelsData,
-  PostChatsResponse,
-  PatchChatsByChatIdResponse,
-  DeleteChatsByChatIdResponse,
-  PostChatsByChatIdForkResponse,
-  PostChatsByChatIdForkByMessageIdResponse,
-  DeleteChatsByChatIdMessagesByMessageIdResponse
+  DeleteApiChatsByChatIdMessagesByMessageIdData,
+  DeleteApiChatsByChatIdMessagesByMessageIdError,
+  GetApiModelsData,
+  PostApiChatsResponse,
+  PatchApiChatsByChatIdResponse,
+  DeleteApiChatsByChatIdResponse,
+  PostApiChatsByChatIdForkResponse,
+  PostApiChatsByChatIdForkByMessageIdResponse,
+  DeleteApiChatsByChatIdMessagesByMessageIdResponse
 } from '../../generated/types.gen'
 import { Options } from '../../generated/sdk.gen'
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
 
-export type CreateChatInput = PostChatsData['body']
-export type UpdateChatInput = PatchChatsByChatIdData['body']
+export type CreateChatInput = PostApiChatsData['body']
+export type UpdateChatInput = PatchApiChatsByChatIdData['body']
 
 const CHAT_KEYS = {
-  all: () => getChatsQueryKey(),
-  lists: () => getChatsQueryKey(),
+  all: () => getApiChatsQueryKey(),
+  lists: () => getApiChatsQueryKey(),
   messages: (chatId: string) =>
-    getChatsByChatIdMessagesQueryKey({ path: { chatId } } as Options<GetChatsByChatIdMessagesData>)
+    getApiChatsByChatIdMessagesQueryKey({ path: { chatId } } as Options<GetApiChatsByChatIdMessagesData>)
 } as const
 
 export function useGetChats() {
-  const queryOptions = getChatsOptions()
+  const queryOptions = getApiChatsOptions()
   return useQuery(queryOptions)
 }
 
 export function useGetMessages(chatId: string) {
-  const queryOptions = getChatsByChatIdMessagesOptions({ path: { chatId } } as Options<GetChatsByChatIdMessagesData>)
+  const queryOptions = getApiChatsByChatIdMessagesOptions({ path: { chatId } } as Options<GetApiChatsByChatIdMessagesData>)
   return useQuery({
     ...queryOptions,
     enabled: !!chatId
@@ -65,13 +65,13 @@ export function useGetMessages(chatId: string) {
 
 export function useCreateChat() {
   const queryClient = useQueryClient()
-  const mutationOptions = postChatsMutation() // Get the generated mutation config
+  const mutationOptions = postApiChatsMutation() // Get the generated mutation config
 
   // Using generated types for better type safety
-  return useMutation<PostChatsResponse, PostChatsError, CreateChatInput>({
+  return useMutation<PostApiChatsResponse, PostApiChatsError, CreateChatInput>({
     // Input is the body
     mutationFn: (body: CreateChatInput) => {
-      const opts: Options<PostChatsData> = { body }
+      const opts: Options<PostApiChatsData> = { body }
       return mutationOptions.mutationFn!(opts) // Call generated function
     },
     onSuccess: (data, variables, context) => {
@@ -85,12 +85,12 @@ export function useCreateChat() {
 
 export function useUpdateChat() {
   const queryClient = useQueryClient()
-  const mutationOptions = patchChatsByChatIdMutation()
+  const mutationOptions = patchApiChatsByChatIdMutation()
 
   // Input includes chatId for path and data for body
-  return useMutation<PatchChatsByChatIdResponse, PatchChatsByChatIdError, { chatId: string; data: UpdateChatInput }>({
+  return useMutation<PatchApiChatsByChatIdResponse, PatchApiChatsByChatIdError, { chatId: string; data: UpdateChatInput }>({
     mutationFn: (vars: { chatId: string; data: UpdateChatInput }) => {
-      const opts: Options<PatchChatsByChatIdData> = { path: { chatId: vars.chatId }, body: vars.data }
+      const opts: Options<PatchApiChatsByChatIdData> = { path: { chatId: vars.chatId }, body: vars.data }
       return mutationOptions.mutationFn!(opts)
     },
     onSuccess: (data, variables, context) => {
@@ -106,18 +106,18 @@ export function useUpdateChat() {
 
 export function useDeleteChat() {
   const queryClient = useQueryClient()
-  const mutationOptions = deleteChatsByChatIdMutation()
+  const mutationOptions = deleteApiChatsByChatIdMutation()
 
   // Input is just the chatId string
-  return useMutation<DeleteChatsByChatIdResponse, DeleteChatsByChatIdError, string>({
+  return useMutation<DeleteApiChatsByChatIdResponse, DeleteApiChatsByChatIdError, string>({
     mutationFn: (chatId: string) => {
-      const opts: Options<DeleteChatsByChatIdData> = { path: { chatId } }
+      const opts: Options<DeleteApiChatsByChatIdData> = { path: { chatId } }
       return mutationOptions.mutationFn!(opts)
     },
     onSuccess: (data, variables, context) => {
       const chatId = variables
       if (chatId) {
-        queryClient.invalidateQueries({ queryKey: getChatsByChatIdMessagesQueryKey({ path: { chatId } }) })
+        queryClient.invalidateQueries({ queryKey: getApiChatsByChatIdMessagesQueryKey({ path: { chatId } }) })
       } else {
         console.warn(`useDeleteChat: Could not invalidate messages for chat ${chatId}, chatId missing.`)
       }
@@ -128,16 +128,16 @@ export function useDeleteChat() {
 
 export function useForkChat() {
   const queryClient = useQueryClient()
-  const mutationOptions = postChatsByChatIdForkMutation()
+  const mutationOptions = postApiChatsByChatIdForkMutation()
 
   // Input includes chatId and optional body (excludedMessageIds)
   return useMutation<
-    PostChatsByChatIdForkResponse,
-    PostChatsByChatIdForkError,
+    PostApiChatsByChatIdForkResponse,
+    PostApiChatsByChatIdForkError,
     { chatId: string; body: ForkChatRequestBody }
   >({
     mutationFn: (vars: { chatId: string; body: ForkChatRequestBody }) => {
-      const opts: Options<PostChatsByChatIdForkData> = { path: { chatId: vars.chatId }, body: vars.body }
+      const opts: Options<PostApiChatsByChatIdForkData> = { path: { chatId: vars.chatId }, body: vars.body }
       return mutationOptions.mutationFn!(opts)
     },
     onSuccess: (data, variables, context) => {
@@ -150,16 +150,16 @@ export function useForkChat() {
 
 export function useForkChatFromMessage() {
   const queryClient = useQueryClient()
-  const mutationOptions = postChatsByChatIdForkByMessageIdMutation()
+  const mutationOptions = postApiChatsByChatIdForkByMessageIdMutation()
 
   // Input includes chatId, messageId, and optional body
   return useMutation<
-    PostChatsByChatIdForkByMessageIdResponse,
-    PostChatsByChatIdForkByMessageIdError,
+    PostApiChatsByChatIdForkByMessageIdResponse,
+    PostApiChatsByChatIdForkByMessageIdError,
     { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }
   >({
     mutationFn: (vars: { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }) => {
-      const opts: Options<PostChatsByChatIdForkByMessageIdData> = {
+      const opts: Options<PostApiChatsByChatIdForkByMessageIdData> = {
         path: { chatId: vars.chatId, messageId: vars.messageId },
         body: vars.body
       }
@@ -175,12 +175,12 @@ export function useForkChatFromMessage() {
 
 export function useDeleteMessage() {
   const queryClient = useQueryClient()
-  const mutationOptions = deleteChatsByChatIdMessagesByMessageIdMutation()
+  const mutationOptions = deleteApiChatsByChatIdMessagesByMessageIdMutation()
 
   // Input is messageId string
-  return useMutation<DeleteChatsByChatIdMessagesByMessageIdResponse, DeleteChatsByChatIdMessagesByMessageIdError, { chatId: string; messageId: string }>({
+  return useMutation<DeleteApiChatsByChatIdMessagesByMessageIdResponse, DeleteApiChatsByChatIdMessagesByMessageIdError, { chatId: string; messageId: string }>({
     mutationFn: (vars: { chatId: string; messageId: string }) => {
-      const opts: Options<DeleteChatsByChatIdMessagesByMessageIdData> = { path: { chatId: vars.chatId, messageId: vars.messageId } }
+      const opts: Options<DeleteApiChatsByChatIdMessagesByMessageIdData> = { path: { chatId: vars.chatId, messageId: vars.messageId } }
       return mutationOptions.mutationFn!(opts)
     },
     onSuccess: (data, variables, context) => {
@@ -191,6 +191,6 @@ export function useDeleteMessage() {
 }
 
 export function useGetModels(provider: APIProviders) {
-  const queryOptions = getModelsOptions({ query: { provider } })
+  const queryOptions = getApiModelsOptions({ query: { provider } })
   return useQuery(queryOptions)
 }
