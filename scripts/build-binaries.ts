@@ -64,10 +64,10 @@ async function buildProject() {
   }
 
   const targets: PlatformTarget[] = [
-    // { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '' },
-    // { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '' },
+    { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '' },
+    { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '' },
     { name: `${bundleNamePrefix}-macos-arm64`, target: 'bun-darwin-arm64', executableExt: '' },
-    // { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe' }
+    { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe' }
   ]
 
   for (const { name, target, executableExt } of targets) {

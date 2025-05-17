@@ -10,8 +10,9 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  pull_request:
-    branches: [main]
+  # binaries on PR to main
+  #   pull_request:
+  #     branches: [main]
   # Optional: Trigger on merges to the main branch to build and store artifacts (not for formal release)
   # push:
   #   branches:
