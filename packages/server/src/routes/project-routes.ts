@@ -476,28 +476,19 @@ export const projectRoutes = new OpenAPIHono()
 
   .openapi(getProjectSummaryRoute, async (c) => {
     const { projectId } = c.req.valid('param')
-    const project = await projectService.getProjectById(projectId)
-    if (!project) {
-      // Throwing here ensures this path doesn't return a success response
-      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
-    }
-
-    const projectFiles = await projectService.getProjectFiles(projectId)
 
     // Calculate summary conditionally, default to empty string if no files
-    let summary = ''
-    if (!projectFiles) {
-      console.warn(`No files found for project ${projectId} when generating summary.`)
-      // Set summary to empty, but don't return early
-      summary = ''
-    } else {
-      summary = buildCombinedFileSummariesXml(projectFiles)
+    let summary = await getFullProjectSummary(projectId)
+
+    if (typeof summary === 'object') {
+      throw new ApiError(500, summary.message, 'AI_SUMMARY_ERROR')
     }
+
 
     // Construct the single success payload at the end
     const payload: z.infer<typeof ProjectSummaryResponseSchema> = {
       success: true,
-      summary: summary // Use the calculated summary
+      summary: summary as string // Use the calculated summary
     }
 
     // Explicitly return status 200
@@ -529,13 +520,13 @@ You have a list of file summaries and a user request.
         `
 
     const userPrompt = `
-<user_query>
-${userInput}
-</user_query>
-
 <project_summary>
 ${projectSummary}
 </project_summary>
+
+<user_query>
+${userInput}
+</user_query>
 `
     try {
       const result = await generateStructuredData({

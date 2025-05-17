@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState, useEffect } from 'react' // Added useEffect
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
@@ -25,9 +26,16 @@ import { ProjectDialog } from '@/components/projects/project-dialog'
 export const AddProjectUI = ({ openProjectModal }: { openProjectModal: () => void }) => {
   // Assuming openProjectModal would be passed as a prop
   return (
-    <Button variant='outline' onClick={openProjectModal} className='mt-2'>
-      Add project
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant='outline' onClick={openProjectModal} className='mt-2'>
+          Add project
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Open a dialog to add a new project or select an existing one.</p>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -127,9 +135,16 @@ export function ProjectsPage() {
         <p className='text-lg font-semibold text-foreground mb-2'>
           To get started, sync your first project to Octoprompt.
         </p>
-        <Button onClick={handleOpenNewProjectForm} size='lg' className='px-6 py-3 text-base mt-4'>
-          + Add Project
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button onClick={handleOpenNewProjectForm} size='lg' className='px-6 py-3 text-base mt-4'>
+              + Add Project
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Add your first project to get started.</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     )
   } else if (noTabsYet) {
@@ -159,9 +174,16 @@ export function ProjectsPage() {
         {/* Added text-center for button alignment */}
         <ProjectsTabManager />
         <p className='mt-4 text-muted-foreground'>Please select a project by opening a tab or creating a new one.</p>
-        <Button variant='outline' onClick={() => setProjectModalOpen(true)} className='mt-4'>
-          Open Project Selector
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant='outline' onClick={() => setProjectModalOpen(true)} className='mt-4'>
+              Open Project Selector
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Open a dialog to select an existing project or create a new one.</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     )
   } else {
@@ -181,7 +203,7 @@ export function ProjectsPage() {
 
   return (
     <>
-      {content}
+      <TooltipProvider>{content}</TooltipProvider>
 
       {/* Common Dialogs, available in all states if their open state is true */}
       <Dialog open={projectModalOpen} onOpenChange={setProjectModalOpen}>
@@ -258,20 +280,34 @@ function NoTabsYetView({ projects, selectedProjectId, createProjectTab, openProj
       <div className='mt-4 flex flex-col items-start gap-3'>
         <p className='text-sm text-muted-foreground'>Welcome! You need a tab to start working with your projects.</p>
         {projectForButton ? (
-          <Button
-            onClick={() =>
-              createProjectTab({
-                projectId: projectForButton!.id,
-                name: projectForButton!.name || `Tab for ${projectForButton!.id.substring(0, 6)}`
-              })
-            }
-          >
-            + Create Tab for "{projectForButton!.name}"
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() =>
+                  createProjectTab({
+                    projectId: projectForButton!.id,
+                    name: projectForButton!.name || `Tab for ${projectForButton!.id.substring(0, 6)}`
+                  })
+                }
+              >
+                + Create Tab for "{projectForButton!.name}"
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Create a new tab for the project: {projectForButton!.name}</p>
+            </TooltipContent>
+          </Tooltip>
         ) : (
           // If no specific project is selected to create a tab for, prompt to open/select one.
           // This happens if there are multiple projects and none is yet `selectedProjectId`.
-          <Button onClick={openProjectModal}>Select a Project to Create a Tab</Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={openProjectModal}>Select a Project to Create a Tab</Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Open the project selector to choose a project for a new tab.</p>
+            </TooltipContent>
+          </Tooltip>
         )}
         {/* Fallback if projects exist but no project could be determined for button, though less likely with above logic */}
         {!projectForButton && projects.length > 0 && !selectedProjectId && (
@@ -298,9 +334,16 @@ function WelcomeDialog({ showWelcomeDialog, setShowWelcomeDialog }: WelcomeDialo
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className='gap-2'>
-          <Button variant='outline' onClick={() => setShowWelcomeDialog(false)}>
-            Got it
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant='outline' onClick={() => setShowWelcomeDialog(false)}>
+                Got it
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Dismiss the welcome message.</p>
+            </TooltipContent>
+          </Tooltip>
         </DialogFooter>
       </DialogContent>
     </Dialog>

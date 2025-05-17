@@ -141,18 +141,30 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
                   <span onClick={() => setIsEditing(true)} className='cursor-pointer' title='Click to rename tab'>
                     {activeProjectTabData.displayName || 'Unnamed Tab'}
                   </span>
-                  <Pencil
-                    className='invisible group-hover:visible w-3 h-3 text-gray-500 cursor-pointer'
-                    onClick={() => setIsEditing(true)}
-                    //   title="Rename tab"
-                  />
-                  <button
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className='invisible group-hover:visible text-red-500'
-                    title='Delete tab'
-                  >
-                    <Trash2 className='w-3 h-3' />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Pencil
+                        className='invisible group-hover:visible w-3 h-3 text-gray-500 cursor-pointer'
+                        onClick={() => setIsEditing(true)}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Rename tab</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        className='invisible group-hover:visible text-red-500'
+                      >
+                        <Trash2 className='w-3 h-3' />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Delete tab</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               )}
             </div>
@@ -160,38 +172,61 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
         </div>
 
         <div className='flex items-center space-x-4'>
-          <ProjectSettingsDialog />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <ProjectSettingsDialog />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Open project settings</p>
+            </TooltipContent>
+          </Tooltip>
 
-          <Link
-            to='/tickets'
-            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to='/tickets'
+                className={`inline-flex items-center gap-2 text-sm font-medium transition-colors
                     hover:bg-accent/50 px-3 py-2 rounded-md ${
                       isOnTicketsRoute
                         ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
                         : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
                     }`}
-          >
-            <TicketIcon className='w-4 h-4' />
-            Tickets
-            {openTicketsCount > 0 && (
-              <Badge variant='count' className='ml-1'>
-                {openTicketsCount}
-              </Badge>
-            )}
-          </Link>
+              >
+                <TicketIcon className='w-4 h-4' />
+                Tickets
+                {openTicketsCount > 0 && (
+                  <Badge variant='count' className='ml-1'>
+                    {openTicketsCount}
+                  </Badge>
+                )}
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View and manage project tickets</p>
+            </TooltipContent>
+          </Tooltip>
 
-          <Link
-            to='/project-summarization'
-            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to='/project-summarization'
+                className={`inline-flex items-center gap-2 text-sm font-medium transition-colors
                     hover:bg-accent/50 px-3 py-2 rounded-md ${
                       isOnSummarizationRoute
                         ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
                         : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
                     }`}
-          >
-            <ScanEye className='w-4 h-4' />
-            Summarization
-          </Link>
+              >
+                <ScanEye className='w-4 h-4' />
+                Summarization
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Access project summarization features</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -201,18 +236,32 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
           </DialogHeader>
           <DialogDescription>Are you sure you want to delete this tab? This action cannot be undone.</DialogDescription>
           <div className='mt-4 flex justify-end space-x-2'>
-            <Button variant='outline' onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant='destructive'
-              onClick={() => {
-                deleteTab(activeProjectTabId ?? '')
-                setIsDeleteDialogOpen(false)
-              }}
-            >
-              Delete
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant='outline' onClick={() => setIsDeleteDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cancel tab deletion</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='destructive'
+                  onClick={() => {
+                    deleteTab(activeProjectTabId ?? '')
+                    setIsDeleteDialogOpen(false)
+                  }}
+                >
+                  Delete
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Confirm to delete tab</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </DialogContent>
       </Dialog>

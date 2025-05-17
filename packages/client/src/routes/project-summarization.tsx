@@ -6,7 +6,12 @@ import { Switch } from '@ui'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@ui'
 import { Checkbox } from '@ui'
 import { Info, FileText } from 'lucide-react'
-import { useGetProjectFiles, useRemoveSummariesFromFiles, useSummarizeProjectFiles } from '@/hooks/api/use-projects-api'
+import {
+  useGetProjectFiles,
+  useGetProjectSummary,
+  useRemoveSummariesFromFiles,
+  useSummarizeProjectFiles
+} from '@/hooks/api/use-projects-api'
 import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter'
 
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
@@ -61,6 +66,8 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string;
   )
 }
 
+
+
 export function ProjectSummarizationSettingsPage() {
   const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
 
@@ -80,11 +87,20 @@ export function ProjectSummarizationSettingsPage() {
   const [minTokensFilter, setMinTokensFilter] = useState<number | null>(null)
   const [maxTokensFilter, setMaxTokensFilter] = useState<number | null>(null)
   const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false)
+  const {
+    data: summaryData,
+    isLoading: summaryLoading,
+    isError: summaryError
+  } = useGetProjectSummary(selectedProjectId ?? '')
 
   const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? '')
   const projectFiles = (data?.data || []) as ProjectFile[]
 
   const summariesMap = new Map<string, ProjectFile>()
+
+
+
+
   for (const f of data?.data || []) {
     // Only add files that actually have a summary string to the map
     // This ensures !summariesMap.get(id)?.summary correctly identifies unsummarized files

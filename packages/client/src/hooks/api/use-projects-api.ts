@@ -8,6 +8,8 @@ import {
   getApiProjectsByProjectIdFilesOptions,
   getApiProjectsByProjectIdFilesQueryKey,
   postApiProjectsMutation,
+  getApiProjectsByProjectIdSummaryOptions,
+  getApiProjectsByProjectIdSummaryQueryKey,
   patchApiProjectsByProjectIdMutation,
   deleteApiProjectsByProjectIdMutation,
   postApiProjectsByProjectIdSyncMutation,
@@ -15,7 +17,7 @@ import {
   postApiProjectsByProjectIdSuggestFilesMutation,
   postApiProjectsByProjectIdRefreshMutation,
   postApiProjectsByProjectIdSummarizeMutation,
-  postApiPromptOptimizeMutation
+  postApiPromptOptimizeMutation,
 } from '../../generated/@tanstack/react-query.gen'
 import type {
   PostApiProjectsData,
@@ -47,7 +49,8 @@ import type {
   SuggestFilesRequestBody,
   PostApiPromptOptimizeData,
   PostApiPromptOptimizeResponse,
-  PostApiPromptOptimizeError
+  PostApiPromptOptimizeError,
+  GetApiProjectsByProjectIdSummaryData,
 } from '../../generated/types.gen'
 import { Options, postApiProjectsByProjectIdSuggestFiles } from '../../generated/sdk.gen'
 
@@ -293,5 +296,16 @@ export const useOptimzeUserInput = () => {
       return mutationOptions.mutationFn!(opts)
     },
     onError: (error) => commonErrorHandler(error as unknown as Error)
+  })
+}
+
+
+export const useGetProjectSummary = (projectId: string) => {
+  const queryOptions = getApiProjectsByProjectIdSummaryOptions({
+    path: { projectId }
+  } as Options<GetApiProjectsByProjectIdSummaryData>)
+  return useQuery({
+    ...queryOptions,
+    enabled: !!projectId
   })
 }
