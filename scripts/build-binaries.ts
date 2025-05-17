@@ -61,18 +61,19 @@ async function buildProject() {
     name: string
     target: string
     executableExt: string
+    outputDirName: string
   }
 
   const targets: PlatformTarget[] = [
-    { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '' },
-    { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '' },
-    { name: `${bundleNamePrefix}-macos-arm64`, target: 'bun-darwin-arm64', executableExt: '' },
-    { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe' }
+    { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-linux-x64` },
+    { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-macos-x64` },
+    { name: `${bundleNamePrefix}-macos-arm64`, target: 'bun-darwin-arm64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-macos` },
+    { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe', outputDirName: `${pkg.name}-${pkg.version}-windows-x64` }
   ]
 
-  for (const { name, target, executableExt } of targets) {
-    console.log(`Creating ${name} standalone executable...`)
-    const platformDir = join(distDir, name)
+  for (const { name, target, executableExt, outputDirName } of targets) {
+    console.log(`Creating ${outputDirName} standalone executable...`)
+    const platformDir = join(distDir, outputDirName)
     mkdirSync(platformDir, { recursive: true })
 
     // Copy prompts folder to platform directory
@@ -82,7 +83,7 @@ async function buildProject() {
     await $`cp -r ${clientBuildOutputDir} ${join(platformDir, 'client-dist')}`
 
     // Build the standalone binary with version in the name
-    const executableName = `${pkg.name}-v${pkg.version}${executableExt}`
+    const executableName = `${pkg.name}${executableExt}`
     await $`cd ${serverDir} && bun build --compile --target=${target} ./server.ts --outfile ${join(platformDir, executableName)}`
 
     // For non-Windows platforms, ensure the executable has proper permissions
@@ -91,13 +92,11 @@ async function buildProject() {
     }
 
     // Create a zip archive with the versioned name
-    console.log(`Creating zip archive for ${name}...`)
+    console.log(`Creating zip archive for ${outputDirName}...`)
     try {
-      await createZipArchive(platformDir, `${platformDir}.zip`)
-      // Rename the zip file to include version
-      await $`mv ${platformDir}.zip ${join(distDir, name)}.zip`
+      await createZipArchive(platformDir, `${join(distDir, outputDirName)}.zip`)
     } catch (error) {
-      console.error(`Failed to create zip archive for ${name}:`, error)
+      console.error(`Failed to create zip archive for ${outputDirName}:`, error)
       process.exit(1)
     }
   }

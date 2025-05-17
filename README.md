@@ -301,10 +301,9 @@ OctoPrompt is designed with a streamlined production build process where the cli
    The server's build process (`build-binaries.ts`) handles several key steps:
    - Builds the client first and includes it in the server distribution
    - Bundles the server as a minimized JS bundle
-   - Creates and migrates a fresh SQLite database for production
    - Generates platform-specific standalone executables for:
      - Linux (x64)
-     - macOS (x64, arm64)
+     - macOS (arm64, x64 )
      - Windows (x64)
    - Creates distributable zip archives for each platform
 
@@ -313,28 +312,20 @@ OctoPrompt is designed with a streamlined production build process where the cli
 To create a production build:
 
 ```bash
-# From the root directory
-cd packages/server
-bun run build
+bun run build-binaries
 ```
 
-The build process will:
+then navigate to the built binaries in `/dist` - in this case for MacOS arm64
 
-1. Clear the previous dist directory
-2. Build the client and copy it to the server's static files directory
-3. Bundle the server with the client files
-4. Create platform-specific executables
-5. Package everything into distributable zip files
+```bash
+cd dist/octoprompt-0.5.1-macos
+```
 
-The final builds will be available in `packages/server/dist/`, with separate zip files for each supported platform.
+then run the binary file for your platforms directory:
 
-Each distribution includes:
-
-- The standalone server executable
-- Pre-migrated SQLite database
-- Built client files (served automatically by the server)
-
----
+```bash
+./octoprompt
+```
 
 ## Contributing
 
