@@ -1,9 +1,8 @@
-name: Server CI
+name: Shared Utils CI
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'server/**'
+
   pull_request:
     branches: [main]
     paths:
@@ -12,10 +11,6 @@ on:
 jobs:
   test-server:
     runs-on: ubuntu-latest
-    # env:
-    #   DATABASE_TEST_URL: ${{ secrets.DATABASE_TEST_URL }}
-    #   STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-    #   STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 
     steps:
       - uses: actions/checkout@v3
@@ -33,13 +28,13 @@ jobs:
           echo "🧪 Running Shared Package Tests..."
           cd packages/shared && bun run test
 
-      - name: Install server dependencies
-        run: cd packages/server && bun install
+      - name: Install shared dependencies
+        run: cd packages/shared && bun install
 
       - name: Run unit tests
         run: |
           echo "🧪 Running Unit Tests..."
-          cd packages/server && bun run test
+          cd packages/shared && bun run test
 
     #   - name: Run E2E tests
     #     run: |
