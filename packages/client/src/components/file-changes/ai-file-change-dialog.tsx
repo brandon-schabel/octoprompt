@@ -6,6 +6,7 @@ import { Textarea } from '@ui'
 import { Alert, AlertDescription } from '@ui'
 import { LoaderPinwheel } from 'lucide-react'
 import { DiffViewer } from './diff-viewer'
+import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
 
 interface AIFileChangeDialogProps {
   open: boolean
@@ -16,11 +17,13 @@ interface AIFileChangeDialogProps {
 
 export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSuccess }: AIFileChangeDialogProps) {
   const [prompt, setPrompt] = useState('')
-  const [changeId, setChangeId] = useState<number | null>(null)
+  const [changeId, setChangeId] = useState<string | null>(null)
+  const [activeProject] = useActiveProjectTab()
+  const projectId = activeProject.selectedProjectId
 
   const generateMutation = useGenerateFileChange()
   const confirmMutation = useConfirmFileChange()
-  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(changeId)
+  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(projectId, changeId)
 
   const handleGenerate = async () => {
     if (!filePath) return
@@ -28,7 +31,8 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
     try {
       const response = await generateMutation.mutateAsync({
         filePath,
-        prompt
+        prompt,
+        projectId: projectId ?? ''
       })
 
       if (response?.result?.id) {
@@ -43,7 +47,7 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
     if (!changeId) return
 
     try {
-      await confirmMutation.mutateAsync(changeId)
+      await confirmMutation.mutateAsync({ changeId: changeId, projectId: projectId ?? '' })
       onSuccess?.()
       onOpenChange(false)
     } catch (error) {

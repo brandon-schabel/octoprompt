@@ -28,7 +28,7 @@ type FileChangeDetailsResponse = GetApiProjectsByProjectIdAiFileChangesByAiFileC
 
 const FILE_CHANGE_KEYS = {
   all: ['fileChange'] as const,
-  detail: (projectId: string, changeId: number) =>
+  detail: (projectId: string, changeId: string) =>
     getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdQueryKey({
       path: { projectId: projectId, aiFileChangeId: changeId.toString() }
     } as Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData>)
@@ -58,7 +58,7 @@ export function useGenerateFileChange() {
   })
 }
 
-export function useGetFileChange(projectId: string | null, changeId: number | null) {
+export function useGetFileChange(projectId: string | null, changeId: string | null) {
   const queryKey =
     projectId && changeId
       ? FILE_CHANGE_KEYS.detail(projectId, changeId)
@@ -108,7 +108,7 @@ export function useGetFileChange(projectId: string | null, changeId: number | nu
 
 export type ConfirmFileChangeInput = {
   projectId: string
-  changeId: number
+  changeId: string
 }
 
 export function useConfirmFileChange() {
