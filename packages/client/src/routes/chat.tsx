@@ -8,15 +8,13 @@ import {
   X,
   Edit2,
   Trash2,
-  Expand,
   Settings2Icon,
   Copy,
   GitFork,
   Trash,
   SendIcon,
-  PanelLeftOpen,
   MessageSquareText
-} from 'lucide-react' // Added PanelLeftOpen
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Message } from '@ai-sdk/react'
 
@@ -637,7 +635,7 @@ export function ChatMessages({
     async (messageId: string) => {
       if (!window.confirm('Are you sure you want to delete this message?')) return
       try {
-        await deleteMessageMutation.mutateAsync(messageId)
+        await deleteMessageMutation.mutateAsync({ chatId: chatId ??'', messageId })
         toast.success('Message deleted successfully')
       } catch (error) {
         console.error('Error deleting message:', error)

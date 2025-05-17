@@ -220,6 +220,14 @@ export const DeleteChatParamsSchema = z
 
 export const DeleteMessageParamsSchema = z
   .object({
+    chatId: z
+      .string()
+      .min(1)
+      .openapi({
+        param: { name: 'chatId', in: 'path' },
+        example: 'chat-a1b2c3d4',
+        description: 'The ID of the chat to delete'
+      }),
     messageId: z
       .string()
       .min(1)

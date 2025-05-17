@@ -132,8 +132,12 @@ export type ProjectIdParams = z.infer<typeof ProjectIdParamsSchema>
 export type ProjectAndPromptIdParams = z.infer<typeof ProjectAndPromptIdParamsSchema>
 
 // --- Request Body Schema ---
-export const OptimizePromptRequestSchema = z
+export const OptimizeUserInputRequestSchema = z
   .object({
+    projectId: z.string().min(1).openapi({
+      example: 'project-123',
+      description: 'The ID of the project'
+    }),
     userContext: z.string().min(1).openapi({
       example: 'Make my login form better.',
       description: "The user's initial prompt or context to be optimized."
@@ -156,13 +160,6 @@ export const OptimizePromptResponseSchema = z
   })
   .openapi('OptimizePromptResponse')
 
-// --- Validation Object (optional, follows pattern) ---
-export const promptimizerApiValidation = {
-  optimize: {
-    body: OptimizePromptRequestSchema
-  }
-} as const
-
 export const PromptProjectSchema = z.object({
   id: z.string(),
   promptId: z.string(),
@@ -170,7 +167,7 @@ export const PromptProjectSchema = z.object({
 })
 
 // Export types if needed elsewhere
-export type OptimizePromptRequest = z.infer<typeof OptimizePromptRequestSchema>
+export type OptimizePromptRequest = z.infer<typeof OptimizeUserInputRequestSchema>
 export type Prompt = z.infer<typeof PromptSchema>
 export type PromptListResponse = z.infer<typeof PromptListResponseSchema>
 export type PromptResponse = z.infer<typeof PromptResponseSchema>

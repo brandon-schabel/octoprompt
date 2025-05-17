@@ -14,7 +14,8 @@ import {
   postApiProjectsByProjectIdRemoveSummariesMutation,
   postApiProjectsByProjectIdSuggestFilesMutation,
   postApiProjectsByProjectIdRefreshMutation,
-  postApiProjectsByProjectIdSummarizeMutation
+  postApiProjectsByProjectIdSummarizeMutation,
+  postApiPromptOptimizeMutation
 } from '../../generated/@tanstack/react-query.gen'
 import type {
   PostApiProjectsData,
@@ -43,7 +44,10 @@ import type {
   PostApiProjectsByProjectIdRefreshResponse,
   PostApiProjectsByProjectIdSummarizeError,
   PostApiProjectsByProjectIdSummarizeResponse,
-  SuggestFilesRequestBody
+  SuggestFilesRequestBody,
+  PostApiPromptOptimizeData,
+  PostApiPromptOptimizeResponse,
+  PostApiPromptOptimizeError
 } from '../../generated/types.gen'
 import { Options, postApiProjectsByProjectIdSuggestFiles } from '../../generated/sdk.gen'
 
@@ -272,6 +276,21 @@ export const useSummarizeProjectFiles = (projectId: string) => {
       // queryClient.invalidateQueries({ queryKey: PROJECT_FILES_KEYS.list(projectId) });
 
       // TODO: invalidate project files
+    },
+    onError: (error) => commonErrorHandler(error as unknown as Error)
+  })
+}
+
+
+/**
+ * Optimizes a given prompt text (doesn't modify stored prompts).
+ */
+export const useOptimzeUserInput = () => {
+  const mutationOptions = postApiPromptOptimizeMutation()
+  return useMutation<PostApiPromptOptimizeResponse, PostApiPromptOptimizeError, { userContext: string; projectId: string }>({
+    mutationFn: (vars: { userContext: string; projectId: string }) => {
+      const opts: Options<PostApiPromptOptimizeData> = { body: { userContext: vars.userContext, projectId: vars.projectId } }
+      return mutationOptions.mutationFn!(opts)
     },
     onError: (error) => commonErrorHandler(error as unknown as Error)
   })

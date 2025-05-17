@@ -33,7 +33,8 @@ import {
   RemoveSummariesResponseSchema,
   FileSuggestionsZodSchema
 } from 'shared/src/schemas/gen-ai.schemas'
-import { summarizeFiles } from '@/services/project-service'
+import { optimizeUserInput, summarizeFiles } from '@/services/project-service'
+import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from 'shared/src/schemas/prompt.schemas'
 
 const createProjectRoute = createRoute({
   method: 'post',
@@ -275,6 +276,34 @@ const removeSummariesRoute = createRoute({
     },
     422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const optimizeUserInputRoute = createRoute({
+  method: 'post',
+  path: '/api/prompt/optimize',
+  tags: ['Prompts', 'AI'],
+  summary: 'Optimize a user-provided prompt using an AI model',
+  request: {
+    body: {
+      content: { 'application/json': { schema: OptimizeUserInputRequestSchema } },
+      required: true,
+      description: 'The user prompt context to optimize'
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OptimizePromptResponseSchema } },
+      description: 'Successfully optimized the prompt'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation Error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error or AI provider error during optimization'
+    }
   }
 })
 
@@ -561,6 +590,13 @@ ${projectSummary}
     }
     return c.json(payload, 200) // Defaults to 200
   })
+  .openapi(optimizeUserInputRoute, async (c) => {
+    const { userContext, projectId } = c.req.valid('json')
+    const optimized = await optimizeUserInput(projectId, userContext)
+    const responseData = { optimizedPrompt: optimized }
+    return c.json({ success: true, data: responseData } satisfies z.infer<typeof OptimizePromptResponseSchema>, 200)
+  })
+
 
 // Export the type for the frontend client generator
 export type ProjectRouteTypes = typeof projectRoutes

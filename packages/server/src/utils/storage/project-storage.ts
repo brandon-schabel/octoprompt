@@ -3,6 +3,7 @@ import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises' // Using Node's fs promises
 import { ProjectSchema, ProjectFileSchema, type ProjectFile } from 'shared/src/schemas/project.schemas'
+import { AIFileChangesStorageSchema, type AIFileChangesStorage, type AIFileChangeRecord, AIFileChangeRecordSchema } from 'shared/src/schemas/ai-file-change.schemas'
 
 // Define the base directory for storing project data
 // Adjust this path as needed, e.g., use an environment variable
@@ -32,6 +33,11 @@ function getProjectDataDir(projectId: string): string {
 /** Gets the absolute path to a specific project's files index file. */
 function getProjectFilesPath(projectId: string): string {
   return path.join(getProjectDataDir(projectId), 'files.json')
+}
+
+/** Gets the absolute path to a specific project's AI file changes index file. */
+function getProjectAIFileChangesPath(projectId: string): string {
+  return path.join(getProjectDataDir(projectId), 'ai-file-changes.json')
 }
 
 // --- Core Read/Write Functions ---
@@ -148,6 +154,48 @@ export const projectStorage = {
   /** Writes a specific project's file data. */
   async writeProjectFiles(projectId: string, files: ProjectFilesStorage): Promise<ProjectFilesStorage> {
     return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema)
+  },
+
+  /** Reads a specific project's AI file changes data. */
+  async readAIFileChanges(projectId: string): Promise<AIFileChangesStorage> {
+    return readValidatedJson(getProjectAIFileChangesPath(projectId), AIFileChangesStorageSchema, {})
+  },
+
+  /** Writes a specific project's AI file changes data. */
+  async writeAIFileChanges(projectId: string, changes: AIFileChangesStorage): Promise<AIFileChangesStorage> {
+    return writeValidatedJson(getProjectAIFileChangesPath(projectId), changes, AIFileChangesStorageSchema)
+  },
+
+  /**
+   * Adds or updates a specific AI file change record within a project.
+   * @param projectId The ID of the project.
+   * @param changeData The AI file change data to add or update.
+   * @returns The validated and saved AIFileChangeRecord data.
+   */
+  async saveAIFileChange(projectId: string, changeData: AIFileChangeRecord): Promise<AIFileChangeRecord> {
+    const validationResult = await AIFileChangeRecordSchema.safeParseAsync(changeData);
+    if (!validationResult.success) {
+      console.error(`Zod validation failed for AI file change in project ${projectId}:`, validationResult.error.errors);
+      throw new ZodError(validationResult.error.errors);
+    }
+    const validatedChangeData = validationResult.data;
+
+    const currentChanges = await this.readAIFileChanges(projectId);
+    currentChanges[validatedChangeData.id] = validatedChangeData;
+
+    await this.writeAIFileChanges(projectId, currentChanges);
+    return validatedChangeData;
+  },
+
+  /**
+   * Retrieves a specific AI file change record by its ID from a project.
+   * @param projectId The ID of the project.
+   * @param aiFileChangeId The ID of the AI file change record.
+   * @returns The AIFileChangeRecord or undefined if not found.
+   */
+  async getAIFileChangeById(projectId: string, aiFileChangeId: string): Promise<AIFileChangeRecord | undefined> {
+    const changes = await this.readAIFileChanges(projectId);
+    return changes[aiFileChangeId];
   },
 
   /**

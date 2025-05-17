@@ -8,9 +8,10 @@ import { PromptimizerDialog } from './promptimizer-dialog'
 import { toast } from 'sonner'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'
-import { useOptimizePrompt } from '@/hooks/api/use-prompts-api'
 import exp from 'constants'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
+import { useOptimzeUserInput } from '@/hooks/api/use-projects-api'
+import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
 
 type ExpandableTextareaProps = {
   value: string
@@ -29,26 +30,31 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     const [selectionStart, setSelectionStart] = useState<number | null>(null)
     const [selectionEnd, setSelectionEnd] = useState<number | null>(null)
     const { copyToClipboard } = useCopyClipboard()
+    const [activeProject] = useActiveProjectTab()
+    const projectId = activeProject.selectedProjectId
 
     const [promptimizeDialogOpen, setPromptimizeDialogOpen] = useState(false)
     const [optimizedPrompt, setOptimizedPrompt] = useState('')
-    const promptimizeMutation = useOptimizePrompt()
+    const optimizeUserInput = useOptimzeUserInput()
 
-    const handlePromptimize = () => {
+    const handleOptimizeUserInput = () => {
       if (!expandedValue.trim()) {
         toast.error('Please enter some text to optimize')
         return
       }
-      promptimizeMutation.mutate(expandedValue, {
-        onSuccess: (resp) => {
-          if (resp.success && resp.data?.optimizedPrompt) {
-            setOptimizedPrompt(resp.data.optimizedPrompt)
-            setPromptimizeDialogOpen(true)
-          } else {
-            toast.error('Optimization failed or no prompt returned')
+      optimizeUserInput.mutate(
+        { userContext: expandedValue, projectId: projectId ?? '' },
+        {
+          onSuccess: (resp) => {
+            if (resp.success && resp.data?.optimizedPrompt) {
+              setOptimizedPrompt(resp.data.optimizedPrompt)
+              setPromptimizeDialogOpen(true)
+            } else {
+              toast.error('Optimization failed or no prompt returned')
+            }
           }
         }
-      })
+      )
     }
 
     const handleCopyContent = async () => {
@@ -115,9 +121,9 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
                 <Copy className='mr-2 h-4 w-4' />
                 <span>Copy Content</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handlePromptimize} disabled={promptimizeMutation.isPending}>
+              <DropdownMenuItem onClick={handleOptimizeUserInput} disabled={optimizeUserInput.isPending}>
                 <Wand2 className='mr-2 h-4 w-4' />
-                <span>{promptimizeMutation.isPending ? 'Optimizing...' : 'Promptimize'}</span>
+                <span>{optimizeUserInput.isPending ? 'Optimizing...' : 'Promptimize'}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -169,9 +175,9 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
                       <Copy className='mr-2 h-4 w-4' />
                       <span>Copy Content</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handlePromptimize} disabled={promptimizeMutation.isPending}>
+                    <DropdownMenuItem onClick={handleOptimizeUserInput} disabled={optimizeUserInput.isPending}>
                       <Wand2 className='mr-2 h-4 w-4' />
-                      <span>{promptimizeMutation.isPending ? 'Optimizing...' : 'Promptimize'}</span>
+                      <span>{optimizeUserInput.isPending ? 'Optimizing...' : 'Promptimize'}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -10,7 +10,7 @@ import {
   deleteChatsByChatIdMutation,
   postChatsByChatIdForkMutation,
   postChatsByChatIdForkByMessageIdMutation,
-  deleteMessagesByMessageIdMutation,
+  deleteChatsByChatIdMessagesByMessageIdMutation,
   getModelsOptions
 } from '../../generated/@tanstack/react-query.gen'
 import type {
@@ -27,15 +27,15 @@ import type {
   PostChatsByChatIdForkByMessageIdError,
   ForkChatRequestBody,
   ForkChatFromMessageRequestBody,
-  DeleteMessagesByMessageIdData,
-  DeleteMessagesByMessageIdError,
+  DeleteChatsByChatIdMessagesByMessageIdData,
+  DeleteChatsByChatIdMessagesByMessageIdError,
   GetModelsData,
   PostChatsResponse,
   PatchChatsByChatIdResponse,
   DeleteChatsByChatIdResponse,
   PostChatsByChatIdForkResponse,
   PostChatsByChatIdForkByMessageIdResponse,
-  DeleteMessagesByMessageIdResponse
+  DeleteChatsByChatIdMessagesByMessageIdResponse
 } from '../../generated/types.gen'
 import { Options } from '../../generated/sdk.gen'
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
@@ -175,12 +175,12 @@ export function useForkChatFromMessage() {
 
 export function useDeleteMessage() {
   const queryClient = useQueryClient()
-  const mutationOptions = deleteMessagesByMessageIdMutation()
+  const mutationOptions = deleteChatsByChatIdMessagesByMessageIdMutation()
 
   // Input is messageId string
-  return useMutation<DeleteMessagesByMessageIdResponse, DeleteMessagesByMessageIdError, string>({
-    mutationFn: (messageId: string) => {
-      const opts: Options<DeleteMessagesByMessageIdData> = { path: { messageId } }
+  return useMutation<DeleteChatsByChatIdMessagesByMessageIdResponse, DeleteChatsByChatIdMessagesByMessageIdError, { chatId: string; messageId: string }>({
+    mutationFn: (vars: { chatId: string; messageId: string }) => {
+      const opts: Options<DeleteChatsByChatIdMessagesByMessageIdData> = { path: { chatId: vars.chatId, messageId: vars.messageId } }
       return mutationOptions.mutationFn!(opts)
     },
     onSuccess: (data, variables, context) => {

@@ -8,7 +8,6 @@ import ignore, { type Ignore } from 'ignore'
 import { DEFAULT_FILE_EXCLUSIONS } from 'shared/src/constants/file-sync-options'
 import type { Project, ProjectFile } from 'shared/src/schemas/project.schemas'
 import type { PathOrFileDescriptor, PathLike, Dirent, Stats } from 'node:fs' // Import necessary types
-import { resetDatabase } from '@/utils/database'
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import * as pathUtils from '../../utils/path-utils'
 import { createCleanupService } from './file-sync-service-unified'
@@ -85,7 +84,6 @@ describe('FileSync Service', () => {
 
   // Outer beforeEach: Initialize spies/mocks needed by *most* tests
   beforeEach(() => {
-    resetDatabase()
 
     // Spy on projectService functions
     getProjectFilesSpy = spyOn(projectService, 'getProjectFiles')
@@ -100,8 +98,8 @@ describe('FileSync Service', () => {
     readFileSyncSpy = spyOn(fs, 'readFileSync')
 
     // Spy on console
-    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => {})
-    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {})
+    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => { })
+    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => { })
 
     // Mock Bun.file().text()
     if (typeof Bun !== 'undefined') {
@@ -272,11 +270,11 @@ describe('FileSync Service', () => {
         if (pathString === dir) {
           return options?.withFileTypes
             ? [
-                createDirent('file.ts', false, dir),
-                createDirent('image.png', false, dir),
-                createDirent('src', true, dir),
-                createDirent('empty', true, dir)
-              ]
+              createDirent('file.ts', false, dir),
+              createDirent('image.png', false, dir),
+              createDirent('src', true, dir),
+              createDirent('empty', true, dir)
+            ]
             : ['file.ts', 'image.png', 'src', 'empty']
         }
         if (pathString === subDir) {
@@ -327,11 +325,11 @@ describe('FileSync Service', () => {
         if (pStr === dir) {
           return options?.withFileTypes
             ? [
-                createDirent('src', true, dir),
-                createDirent('build.log', false, dir),
-                createDirent('dist', true, dir),
-                createDirent('node_modules', true, dir)
-              ]
+              createDirent('src', true, dir),
+              createDirent('build.log', false, dir),
+              createDirent('dist', true, dir),
+              createDirent('node_modules', true, dir)
+            ]
             : ['src', 'build.log', 'dist', 'node_modules']
         }
         if (pStr === srcDir) {

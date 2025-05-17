@@ -8,7 +8,7 @@ import {
   postAiChat,
   postChatsByChatIdFork,
   postChatsByChatIdForkByMessageId,
-  deleteMessagesByMessageId,
+  deleteChatsByChatIdMessagesByMessageId,
   deleteChatsByChatId,
   patchChatsByChatId,
   postApiTickets,
@@ -40,6 +40,7 @@ import {
   postApiProjectsByProjectIdSuggestFiles,
   postApiProjectsByProjectIdSummarize,
   postApiProjectsByProjectIdRemoveSummaries,
+  postApiPromptOptimize,
   getApiKeys,
   postApiKeys,
   deleteApiKeysByKeyId,
@@ -47,9 +48,10 @@ import {
   patchApiKeysByKeyId,
   getApiAdminEnvInfo,
   getApiAdminSystemStatus,
-  postApiFileAiChange,
-  getApiFileAiChangeByFileChangeId,
-  postApiFileAiChangeByFileChangeIdConfirm,
+  postApiProjectsByProjectIdAiFileChanges,
+  getApiProjectsByProjectIdAiFileChangesByAiFileChangeId,
+  postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirm,
+  postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdReject,
   getApiPrompts,
   postApiPrompts,
   getApiProjectsByProjectIdPrompts,
@@ -58,7 +60,6 @@ import {
   deleteApiPromptsByPromptId,
   getApiPromptsByPromptId,
   patchApiPromptsByPromptId,
-  postApiPromptOptimize,
   postApiGenAiStream,
   postApiGenAiText,
   postApiGenAiStructured,
@@ -89,9 +90,9 @@ import type {
   PostChatsByChatIdForkByMessageIdData,
   PostChatsByChatIdForkByMessageIdError,
   PostChatsByChatIdForkByMessageIdResponse,
-  DeleteMessagesByMessageIdData,
-  DeleteMessagesByMessageIdError,
-  DeleteMessagesByMessageIdResponse,
+  DeleteChatsByChatIdMessagesByMessageIdData,
+  DeleteChatsByChatIdMessagesByMessageIdError,
+  DeleteChatsByChatIdMessagesByMessageIdResponse,
   DeleteChatsByChatIdData,
   DeleteChatsByChatIdError,
   DeleteChatsByChatIdResponse,
@@ -165,6 +166,9 @@ import type {
   PostApiProjectsByProjectIdRemoveSummariesData,
   PostApiProjectsByProjectIdRemoveSummariesError,
   PostApiProjectsByProjectIdRemoveSummariesResponse,
+  PostApiPromptOptimizeData,
+  PostApiPromptOptimizeError,
+  PostApiPromptOptimizeResponse,
   GetApiKeysData,
   PostApiKeysData,
   PostApiKeysError,
@@ -178,13 +182,16 @@ import type {
   PatchApiKeysByKeyIdResponse,
   GetApiAdminEnvInfoData,
   GetApiAdminSystemStatusData,
-  PostApiFileAiChangeData,
-  PostApiFileAiChangeError,
-  PostApiFileAiChangeResponse,
-  GetApiFileAiChangeByFileChangeIdData,
-  PostApiFileAiChangeByFileChangeIdConfirmData,
-  PostApiFileAiChangeByFileChangeIdConfirmError,
-  PostApiFileAiChangeByFileChangeIdConfirmResponse,
+  PostApiProjectsByProjectIdAiFileChangesData,
+  PostApiProjectsByProjectIdAiFileChangesError,
+  PostApiProjectsByProjectIdAiFileChangesResponse,
+  GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmError,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmResponse,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectError,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectResponse,
   GetApiPromptsData,
   PostApiPromptsData,
   PostApiPromptsError,
@@ -203,16 +210,13 @@ import type {
   PatchApiPromptsByPromptIdData,
   PatchApiPromptsByPromptIdError,
   PatchApiPromptsByPromptIdResponse,
-  PostApiPromptOptimizeData,
-  PostApiPromptOptimizeError,
-  PostApiPromptOptimizeResponse,
   PostApiGenAiStreamData,
   PostApiGenAiStreamResponse,
   PostApiGenAiTextData,
   PostApiGenAiTextError,
   PostApiGenAiTextResponse,
   PostApiGenAiStructuredData,
-  PostApiGenAiStructuredError,
+PostApiGenAiStructuredError,
   PostApiGenAiStructuredResponse,
   GetModelsData,
   PostAiGenerateTextData,
@@ -456,20 +460,20 @@ export const postChatsByChatIdForkByMessageIdMutation = (
   return mutationOptions
 }
 
-export const deleteMessagesByMessageIdMutation = (
-  options?: Partial<Options<DeleteMessagesByMessageIdData>>
+export const deleteChatsByChatIdMessagesByMessageIdMutation = (
+  options?: Partial<Options<DeleteChatsByChatIdMessagesByMessageIdData>>
 ): UseMutationOptions<
-  DeleteMessagesByMessageIdResponse,
-  DeleteMessagesByMessageIdError,
-  Options<DeleteMessagesByMessageIdData>
+  DeleteChatsByChatIdMessagesByMessageIdResponse,
+  DeleteChatsByChatIdMessagesByMessageIdError,
+  Options<DeleteChatsByChatIdMessagesByMessageIdData>
 > => {
   const mutationOptions: UseMutationOptions<
-    DeleteMessagesByMessageIdResponse,
-    DeleteMessagesByMessageIdError,
-    Options<DeleteMessagesByMessageIdData>
+    DeleteChatsByChatIdMessagesByMessageIdResponse,
+    DeleteChatsByChatIdMessagesByMessageIdError,
+    Options<DeleteChatsByChatIdMessagesByMessageIdData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await deleteMessagesByMessageId({
+      const { data } = await deleteChatsByChatIdMessagesByMessageId({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -1388,6 +1392,48 @@ export const postApiProjectsByProjectIdRemoveSummariesMutation = (
   return mutationOptions
 }
 
+export const postApiPromptOptimizeQueryKey = (options: Options<PostApiPromptOptimizeData>) =>
+  createQueryKey('postApiPromptOptimize', options)
+
+export const postApiPromptOptimizeOptions = (options: Options<PostApiPromptOptimizeData>) => {
+  return queryOptions({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await postApiPromptOptimize({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true
+      })
+      return data
+    },
+    queryKey: postApiPromptOptimizeQueryKey(options)
+  })
+}
+
+export const postApiPromptOptimizeMutation = (
+  options?: Partial<Options<PostApiPromptOptimizeData>>
+): UseMutationOptions<
+  PostApiPromptOptimizeResponse,
+  PostApiPromptOptimizeError,
+  Options<PostApiPromptOptimizeData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    PostApiPromptOptimizeResponse,
+    PostApiPromptOptimizeError,
+    Options<PostApiPromptOptimizeData>
+  > = {
+    mutationFn: async (localOptions) => {
+      const { data } = await postApiPromptOptimize({
+        ...options,
+        ...localOptions,
+        throwOnError: true
+      })
+      return data
+    }
+  }
+  return mutationOptions
+}
+
 export const getApiKeysQueryKey = (options?: Options<GetApiKeysData>) => createQueryKey('getApiKeys', options)
 
 export const getApiKeysOptions = (options?: Options<GetApiKeysData>) => {
@@ -1532,13 +1578,16 @@ export const getApiAdminSystemStatusOptions = (options?: Options<GetApiAdminSyst
   })
 }
 
-export const postApiFileAiChangeQueryKey = (options?: Options<PostApiFileAiChangeData>) =>
-  createQueryKey('postApiFileAiChange', options)
+export const postApiProjectsByProjectIdAiFileChangesQueryKey = (
+  options: Options<PostApiProjectsByProjectIdAiFileChangesData>
+) => createQueryKey('postApiProjectsByProjectIdAiFileChanges', options)
 
-export const postApiFileAiChangeOptions = (options?: Options<PostApiFileAiChangeData>) => {
+export const postApiProjectsByProjectIdAiFileChangesOptions = (
+  options: Options<PostApiProjectsByProjectIdAiFileChangesData>
+) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postApiFileAiChange({
+      const { data } = await postApiProjectsByProjectIdAiFileChanges({
         ...options,
         ...queryKey[0],
         signal,
@@ -1546,20 +1595,24 @@ export const postApiFileAiChangeOptions = (options?: Options<PostApiFileAiChange
       })
       return data
     },
-    queryKey: postApiFileAiChangeQueryKey(options)
+    queryKey: postApiProjectsByProjectIdAiFileChangesQueryKey(options)
   })
 }
 
-export const postApiFileAiChangeMutation = (
-  options?: Partial<Options<PostApiFileAiChangeData>>
-): UseMutationOptions<PostApiFileAiChangeResponse, PostApiFileAiChangeError, Options<PostApiFileAiChangeData>> => {
+export const postApiProjectsByProjectIdAiFileChangesMutation = (
+  options?: Partial<Options<PostApiProjectsByProjectIdAiFileChangesData>>
+): UseMutationOptions<
+  PostApiProjectsByProjectIdAiFileChangesResponse,
+  PostApiProjectsByProjectIdAiFileChangesError,
+  Options<PostApiProjectsByProjectIdAiFileChangesData>
+> => {
   const mutationOptions: UseMutationOptions<
-    PostApiFileAiChangeResponse,
-    PostApiFileAiChangeError,
-    Options<PostApiFileAiChangeData>
+    PostApiProjectsByProjectIdAiFileChangesResponse,
+    PostApiProjectsByProjectIdAiFileChangesError,
+    Options<PostApiProjectsByProjectIdAiFileChangesData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await postApiFileAiChange({
+      const { data } = await postApiProjectsByProjectIdAiFileChanges({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -1570,34 +1623,16 @@ export const postApiFileAiChangeMutation = (
   return mutationOptions
 }
 
-export const getApiFileAiChangeByFileChangeIdQueryKey = (options: Options<GetApiFileAiChangeByFileChangeIdData>) =>
-  createQueryKey('getApiFileAiChangeByFileChangeId', options)
+export const getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdQueryKey = (
+  options: Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData>
+) => createQueryKey('getApiProjectsByProjectIdAiFileChangesByAiFileChangeId', options)
 
-export const getApiFileAiChangeByFileChangeIdOptions = (options: Options<GetApiFileAiChangeByFileChangeIdData>) => {
-  return queryOptions({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await getApiFileAiChangeByFileChangeId({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true
-      })
-      return data
-    },
-    queryKey: getApiFileAiChangeByFileChangeIdQueryKey(options)
-  })
-}
-
-export const postApiFileAiChangeByFileChangeIdConfirmQueryKey = (
-  options: Options<PostApiFileAiChangeByFileChangeIdConfirmData>
-) => createQueryKey('postApiFileAiChangeByFileChangeIdConfirm', options)
-
-export const postApiFileAiChangeByFileChangeIdConfirmOptions = (
-  options: Options<PostApiFileAiChangeByFileChangeIdConfirmData>
+export const getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdOptions = (
+  options: Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData>
 ) => {
   return queryOptions({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postApiFileAiChangeByFileChangeIdConfirm({
+      const { data } = await getApiProjectsByProjectIdAiFileChangesByAiFileChangeId({
         ...options,
         ...queryKey[0],
         signal,
@@ -1605,24 +1640,90 @@ export const postApiFileAiChangeByFileChangeIdConfirmOptions = (
       })
       return data
     },
-    queryKey: postApiFileAiChangeByFileChangeIdConfirmQueryKey(options)
+    queryKey: getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdQueryKey(options)
   })
 }
 
-export const postApiFileAiChangeByFileChangeIdConfirmMutation = (
-  options?: Partial<Options<PostApiFileAiChangeByFileChangeIdConfirmData>>
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmQueryKey = (
+  options: Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData>
+) => createQueryKey('postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirm', options)
+
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmOptions = (
+  options: Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData>
+) => {
+  return queryOptions({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirm({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true
+      })
+      return data
+    },
+    queryKey: postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmQueryKey(options)
+  })
+}
+
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmMutation = (
+  options?: Partial<Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData>>
 ): UseMutationOptions<
-  PostApiFileAiChangeByFileChangeIdConfirmResponse,
-  PostApiFileAiChangeByFileChangeIdConfirmError,
-  Options<PostApiFileAiChangeByFileChangeIdConfirmData>
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmResponse,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmError,
+  Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData>
 > => {
   const mutationOptions: UseMutationOptions<
-    PostApiFileAiChangeByFileChangeIdConfirmResponse,
-    PostApiFileAiChangeByFileChangeIdConfirmError,
-    Options<PostApiFileAiChangeByFileChangeIdConfirmData>
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmResponse,
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmError,
+    Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData>
   > = {
     mutationFn: async (localOptions) => {
-      const { data } = await postApiFileAiChangeByFileChangeIdConfirm({
+      const { data } = await postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirm({
+        ...options,
+        ...localOptions,
+        throwOnError: true
+      })
+      return data
+    }
+  }
+  return mutationOptions
+}
+
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectQueryKey = (
+  options: Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData>
+) => createQueryKey('postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdReject', options)
+
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectOptions = (
+  options: Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData>
+) => {
+  return queryOptions({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdReject({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true
+      })
+      return data
+    },
+    queryKey: postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectQueryKey(options)
+  })
+}
+
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectMutation = (
+  options?: Partial<Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData>>
+): UseMutationOptions<
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectResponse,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectError,
+  Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectResponse,
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectError,
+    Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData>
+  > = {
+    mutationFn: async (localOptions) => {
+      const { data } = await postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdReject({
         ...options,
         ...localOptions,
         throwOnError: true
@@ -1831,48 +1932,6 @@ export const patchApiPromptsByPromptIdMutation = (
   > = {
     mutationFn: async (localOptions) => {
       const { data } = await patchApiPromptsByPromptId({
-        ...options,
-        ...localOptions,
-        throwOnError: true
-      })
-      return data
-    }
-  }
-  return mutationOptions
-}
-
-export const postApiPromptOptimizeQueryKey = (options: Options<PostApiPromptOptimizeData>) =>
-  createQueryKey('postApiPromptOptimize', options)
-
-export const postApiPromptOptimizeOptions = (options: Options<PostApiPromptOptimizeData>) => {
-  return queryOptions({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await postApiPromptOptimize({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true
-      })
-      return data
-    },
-    queryKey: postApiPromptOptimizeQueryKey(options)
-  })
-}
-
-export const postApiPromptOptimizeMutation = (
-  options?: Partial<Options<PostApiPromptOptimizeData>>
-): UseMutationOptions<
-  PostApiPromptOptimizeResponse,
-  PostApiPromptOptimizeError,
-  Options<PostApiPromptOptimizeData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    PostApiPromptOptimizeResponse,
-    PostApiPromptOptimizeError,
-    Options<PostApiPromptOptimizeData>
-  > = {
-    mutationFn: async (localOptions) => {
-      const { data } = await postApiPromptOptimize({
         ...options,
         ...localOptions,
         throwOnError: true

@@ -90,7 +90,7 @@ export async function handleChatMessage({
       // Update the placeholder Assistant Message with Final Content
       if (finalAssistantMessageId) {
         try {
-          await chatService.updateMessageContent(finalAssistantMessageId, finalContent)
+          await chatService.updateMessageContent(chatId, finalAssistantMessageId, finalContent)
         } catch (dbError) {
           console.error(
             `[UnifiedProviderService] Failed to update final message content in DB for ID ${finalAssistantMessageId}:`,
@@ -105,6 +105,7 @@ export async function handleChatMessage({
       if (finalAssistantMessageId) {
         chatService
           .updateMessageContent(
+            chatId,
             finalAssistantMessageId,
             `Error: Streaming failed. ${error instanceof Error ? error.message : String(error)}`
           )

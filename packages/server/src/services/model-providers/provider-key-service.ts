@@ -1,142 +1,149 @@
-import { db } from '@/utils/database'
+// packages/server/src/services/model-providers/provider-key-service.ts
+import { providerKeyStorage } from '@/utils/storage/provider-key-storage' // ADDED
 import {
   CreateProviderKeyInputSchema,
   ProviderKey,
   ProviderKeySchema,
   UpdateProviderKeyInput
 } from 'shared/src/schemas/provider-key.schemas'
-import { parseTimestamp } from '@/utils/parse-timestamp'
 import { ApiError } from 'shared'
 import { z } from '@hono/zod-openapi'
 
-// Add a helper function to convert DB row to ProviderKey format
-function mapDbRowToProviderKey(row: any): ProviderKey | null {
-  if (!row) return null
-
-  const createdAtDate = parseTimestamp(row.created_at)
-  const updatedAtDate = parseTimestamp(row.updated_at)
-
-  if (!createdAtDate || !updatedAtDate) {
-    console.warn(`Skipping provider key row due to invalid or unparseable timestamp: ${JSON.stringify(row)}`)
-    return null
-  }
-
-  const mapped = {
-    ...row,
-    createdAt: createdAtDate.toISOString(),
-    updatedAt: updatedAtDate.toISOString()
-  }
-  delete mapped.created_at
-  delete mapped.updated_at
-
-  const parseResult = ProviderKeySchema.safeParse(mapped)
-  if (!parseResult.success) {
-    console.error(`Failed to parse provider key data: ${parseResult.error.message}`, {
-      rawData: row,
-      mappedData: mapped,
-      error: parseResult.error.flatten()
-    })
-    return null
-  }
-  return parseResult.data
-}
+// The mapDbRowToProviderKey function is no longer needed as we store objects directly
+// that should conform to the ProviderKey schema.
 
 export type CreateProviderKeyInput = z.infer<typeof CreateProviderKeyInputSchema>
 
 /**
- * Returns an object of functions to create, list, update, and delete provider keys.
+ * Returns an object of functions to create, list, update, and delete provider keys,
+ * using JSON file storage.
  */
 export function createProviderKeyService() {
   async function createKey(data: CreateProviderKeyInput): Promise<ProviderKey> {
-    const stmt = db.prepare(`
-      INSERT INTO provider_keys (provider, key, created_at, updated_at, id)
-      VALUES (?, ?, unixepoch(), unixepoch(), lower(hex(randomblob(16))))
-      RETURNING *
-    `)
-    const createdRow = stmt.get(data.provider, data.key) as any
-    if (!createdRow) {
-      throw new ApiError(500, 'Failed to create provider key: database did not return created row.', 'DB_CREATE_FAILED')
+    const allKeys = await providerKeyStorage.readProviderKeys()
+    const now = new Date().toISOString()
+    const id = providerKeyStorage.generateId()
+
+    const newKeyData: ProviderKey = {
+      id,
+      provider: data.provider,
+      key: data.key, // Stored in plaintext initially
+      createdAt: now,
+      updatedAt: now,
+      // Add any other fields from ProviderKeySchema with defaults if necessary
+      // e.g., metadata: data.metadata ?? null, if metadata was part of your schema
     }
-    const result = mapDbRowToProviderKey(createdRow)
-    if (!result) {
-      throw new ApiError(
-        500,
-        'Failed to parse newly created provider key data. Data integrity issue.',
-        'PROVIDER_KEY_CREATE_PARSE_FAILED',
-        { createdRow }
-      )
+
+    // Validate the new key data against the schema before saving
+    const parseResult = ProviderKeySchema.safeParse(newKeyData)
+    if (!parseResult.success) {
+      console.error(`Validation failed for new provider key data: ${parseResult.error.message}`, {
+        rawData: data,
+        constructedData: newKeyData,
+        error: parseResult.error.flatten()
+      })
+      throw new ApiError(500, 'Internal validation error creating provider key.', 'PROVIDER_KEY_VALIDATION_ERROR', parseResult.error.flatten())
     }
-    return result
+
+    const validatedNewKey = parseResult.data;
+
+    if (allKeys[validatedNewKey.id]) {
+      // Extremely unlikely with UUIDs but a good safeguard
+      throw new ApiError(500, `Provider key ID conflict for ${validatedNewKey.id}`, 'PROVIDER_KEY_ID_CONFLICT')
+    }
+
+    allKeys[validatedNewKey.id] = validatedNewKey
+    await providerKeyStorage.writeProviderKeys(allKeys)
+    return validatedNewKey
   }
 
   async function listKeys(): Promise<ProviderKey[]> {
-    const stmt = db.prepare(`SELECT * FROM provider_keys ORDER BY provider, created_at DESC`)
-    const rows = stmt.all() as any[]
+    const allKeys = await providerKeyStorage.readProviderKeys()
+    const keyList = Object.values(allKeys)
 
-    const results = rows
-      .map((row) => {
-        const key = mapDbRowToProviderKey(row)
-        if (!key) {
-          console.error('Failed to parse a provider key during list operation. Skipping row.', { row })
-        }
-        return key
-      })
-      .filter((key): key is ProviderKey => key !== null)
-
-    return results
+    // Sort by provider, then by createdAt descending (as in original SQL)
+    keyList.sort((a, b) => {
+      if (a.provider < b.provider) return -1
+      if (a.provider > b.provider) return 1
+      // Assuming createdAt are valid ISO strings, direct string comparison for descending order
+      if (a.createdAt > b.createdAt) return -1
+      if (a.createdAt < b.createdAt) return 1
+      return 0
+    })
+    return keyList
   }
 
   async function getKeyById(id: string): Promise<ProviderKey | null> {
-    const stmt = db.prepare(`SELECT * FROM provider_keys WHERE id = ? LIMIT 1`)
-    const foundRow = stmt.get(id) as any
-    if (!foundRow) {
+    const allKeys = await providerKeyStorage.readProviderKeys()
+    const foundKeyData = allKeys[id]
+
+    if (!foundKeyData) {
       return null
     }
-    const result = mapDbRowToProviderKey(foundRow)
-    if (!result) {
+    // Data should already be validated by readValidatedJson via providerKeyStorage.
+    // If an extra check is desired, uncomment:
+    /*
+    const parseResult = ProviderKeySchema.safeParse(foundKeyData)
+    if (!parseResult.success) {
+      console.error(`Failed to parse provider key data for ID ${id} from storage. Data integrity issue.`, {
+        id,
+        foundData: foundKeyData,
+        error: parseResult.error.flatten()
+      })
       throw new ApiError(
         500,
         `Failed to parse provider key data for ID ${id}. Data integrity issue.`,
-        'PROVIDER_KEY_PARSE_FAILED',
-        { id, foundRow }
+        'PROVIDER_KEY_PARSE_FAILED_ON_READ',
+        { id, foundData: foundKeyData, error: parseResult.error.flatten() }
       )
     }
-    return result
+    return parseResult.data
+    */
+    return foundKeyData
   }
 
   async function updateKey(id: string, data: UpdateProviderKeyInput): Promise<ProviderKey> {
-    const stmt = db.prepare(`
-      UPDATE provider_keys
-      SET
-        provider = COALESCE(?, provider),
-        key = COALESCE(?, key),
-        updated_at = unixepoch()
-      WHERE id = ?
-      RETURNING *
-    `)
-    const provider = data.provider ?? null
-    const key = data.key ?? null
-    const updatedRow = stmt.get(provider, key, id) as any
+    const allKeys = await providerKeyStorage.readProviderKeys()
+    const existingKey = allKeys[id]
 
-    if (!updatedRow) {
+    if (!existingKey) {
       throw new ApiError(404, `Provider key with ID ${id} not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE')
     }
-    const result = mapDbRowToProviderKey(updatedRow)
-    if (!result) {
-      throw new ApiError(
-        500,
-        `Failed to parse updated provider key data for ID ${id}. Data integrity issue.`,
-        'PROVIDER_KEY_UPDATE_PARSE_FAILED',
-        { id, updatedRow }
-      )
+
+    const updatedKeyData: ProviderKey = {
+      ...existingKey,
+      provider: data.provider ?? existingKey.provider,
+      key: data.key ?? existingKey.key, // Stored in plaintext initially
+      updatedAt: new Date().toISOString()
+      // any other updatable fields
     }
-    return result
+
+    const parseResult = ProviderKeySchema.safeParse(updatedKeyData)
+    if (!parseResult.success) {
+      console.error(`Validation failed updating provider key ${id}: ${parseResult.error.message}`, {
+        id,
+        updatePayload: data,
+        mergedData: updatedKeyData,
+        error: parseResult.error.flatten()
+      })
+      throw new ApiError(500, `Internal validation error updating provider key.`, 'PROVIDER_KEY_UPDATE_VALIDATION_ERROR', parseResult.error.flatten())
+    }
+
+    const validatedUpdatedKey = parseResult.data;
+    allKeys[id] = validatedUpdatedKey
+    await providerKeyStorage.writeProviderKeys(allKeys)
+    return validatedUpdatedKey
   }
 
   async function deleteKey(id: string): Promise<boolean> {
-    const stmt = db.prepare(`DELETE FROM provider_keys WHERE id = ?`)
-    const deletedInfo = stmt.run(id)
-    return deletedInfo.changes > 0
+    const allKeys = await providerKeyStorage.readProviderKeys()
+    if (!allKeys[id]) {
+      return false // Key not found, nothing to delete
+    }
+
+    delete allKeys[id]
+    await providerKeyStorage.writeProviderKeys(allKeys)
+    return true
   }
 
   return {

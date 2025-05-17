@@ -1,10 +1,12 @@
 import { z } from 'zod'
 import { readFile } from 'fs/promises'
-import { Database } from 'bun:sqlite'
 import { generateStructuredData } from '../gen-ai-services'
 import { resolvePath } from '@/utils/path-utils'
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
 import { MEDIUM_MODEL_CONFIG } from 'shared/src/constants/model-default-configs'
+import { projectStorage } from '@/utils/storage/project-storage'
+import { type AIFileChangeRecord, AIFileChangeStatusSchema, type AIFileChangeStatus } from 'shared/src/schemas/ai-file-change.schemas'
+import { ApiError } from 'shared'
 
 export const FileChangeResponseSchema = z.object({
   updatedContent: z.string().describe('The complete, updated content of the file after applying the changes.'),
@@ -14,6 +16,7 @@ export const FileChangeResponseSchema = z.object({
 export type FileChangeResponse = z.infer<typeof FileChangeResponseSchema>
 
 export interface GenerateAIFileChangeParams {
+  projectId: string
   filePath: string
   prompt: string
   provider?: APIProviders
@@ -32,9 +35,8 @@ export async function readLocalFileContent(filePath: string): Promise<string> {
   }
 }
 
-export async function generateAIFileChange(params: GenerateAIFileChangeParams) {
-  const { filePath, prompt } = params
-  const originalContent = await readLocalFileContent(filePath)
+async function performAIFileGeneration(params: Pick<GenerateAIFileChangeParams, 'filePath' | 'prompt' | 'provider' | 'model' | 'temperature'> & { originalContent: string }) {
+  const { filePath, prompt, originalContent } = params
 
   const cfg = MEDIUM_MODEL_CONFIG
 
@@ -66,88 +68,101 @@ User Request: ${prompt}
       options: cfg
     })
 
-    return aiResponse
+    return aiResponse.object
   } catch (error) {
     console.error(`[AIFileChangeService] Failed to generate AI file change for ${filePath}:`, error)
-    throw new Error(
-      `AI failed to generate changes for ${filePath}: ${error instanceof Error ? error.message : String(error)}`
+    throw new ApiError(
+      500,
+      `AI failed to generate changes for ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+      'AI_FILE_CHANGE_GENERATION_FAILED'
     )
   }
 }
 
 export type GenerateFileChangeOptions = {
+  projectId: string
   filePath: string
   prompt: string
-  db: Database
 }
 
-export interface FileChangeDBRecord {
-  id: number
-  file_path: string
-  original_content: string
-  suggested_diff: string | null
-  status: 'pending' | 'confirmed'
-  timestamp: number
-  prompt: string | null
-  suggested_content: string | null
-}
-
-export async function generateFileChange({ filePath, prompt, db }: GenerateFileChangeOptions) {
-  const aiSuggestion = await generateAIFileChange({ filePath, prompt })
-
+export async function generateFileChange(options: GenerateFileChangeOptions): Promise<AIFileChangeRecord> {
+  const { projectId, filePath, prompt } = options
   const originalContent = await readLocalFileContent(filePath)
-  const status = 'pending'
-  const timestamp = Math.floor(Date.now() / 1000)
-  const suggestedDiffOrExplanation = aiSuggestion.object.explanation
 
-  const stmt = db.prepare(
-    'INSERT INTO file_changes (file_path, original_content, suggested_diff, status, timestamp, prompt, suggested_content) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  )
-  const result = stmt.run(
+  const aiSuggestion = await performAIFileGeneration({ filePath, prompt, originalContent })
+
+  const now = new Date().toISOString()
+  const changeId = projectStorage.generateId('aifc')
+
+  const newRecord: AIFileChangeRecord = {
+    id: changeId,
+    projectId,
     filePath,
     originalContent,
-    suggestedDiffOrExplanation,
-    status,
-    timestamp,
+    suggestedContent: aiSuggestion.updatedContent,
+    diff: null,
+    explanation: aiSuggestion.explanation,
     prompt,
-    aiSuggestion.object.updatedContent // Store the suggested content
-  )
-
-  const changeId = result.lastInsertRowid as number
-
-  const newRecord = await getFileChange(db, changeId)
-  if (!newRecord) {
-    // Should not happen, but handle defensively
-    throw new Error(`Failed to retrieve newly created file change record with ID: ${changeId}`)
+    status: 'pending' as AIFileChangeStatus,
+    createdAt: now,
+    updatedAt: now,
   }
-  return newRecord
+
+  await projectStorage.saveAIFileChange(projectId, newRecord)
+
+  const retrievedRecord = await projectStorage.getAIFileChangeById(projectId, changeId)
+  if (!retrievedRecord) {
+    throw new ApiError(500, `Failed to retrieve newly created file change record with ID: ${changeId}`, 'FILE_CHANGE_STORE_FAILED')
+  }
+  return retrievedRecord
 }
 
-export async function getFileChange(db: Database, changeId: number): Promise<FileChangeDBRecord | null> {
-  const stmt = db.prepare('SELECT * FROM file_changes WHERE id = ?')
-  const result = stmt.get(changeId) as FileChangeDBRecord | undefined
-  return result || null
+export async function getFileChange(projectId: string, aiFileChangeId: string): Promise<AIFileChangeRecord | null> {
+  const record = await projectStorage.getAIFileChangeById(projectId, aiFileChangeId)
+  if (!record) return null;
+  return record
 }
 
-// Confirms a file change by updating its status in the database.
-// Returns true if the update was successful.
-export async function confirmFileChange(db: Database, changeId: number): Promise<{ status: string; message: string }> {
-  const existing = await getFileChange(db, changeId)
-  if (!existing) {
-    throw Object.assign(new Error(`File change with ID ${changeId} not found.`), { code: 'NOT_FOUND' })
+export async function confirmFileChange(projectId: string, aiFileChangeId: string): Promise<{ status: AIFileChangeStatus; message: string }> {
+  const existingRecord = await projectStorage.getAIFileChangeById(projectId, aiFileChangeId)
+
+  if (!existingRecord) {
+    throw new ApiError(404, `File change with ID ${aiFileChangeId} not found in project ${projectId}.`, 'AI_FILE_CHANGE_NOT_FOUND')
   }
-  if (existing.status !== 'pending') {
-    throw Object.assign(new Error(`File change with ID ${changeId} is already ${existing.status}.`), {
-      code: 'INVALID_STATE'
-    })
+  if (existingRecord.status !== 'pending') {
+    throw new ApiError(400, `File change with ID ${aiFileChangeId} is already ${existingRecord.status}.`, 'AI_FILE_CHANGE_INVALID_STATE')
   }
 
-  const stmt = db.prepare("UPDATE file_changes SET status = 'confirmed' WHERE id = ?")
-  const result = stmt.run(changeId)
-
-  if (result.changes > 0) {
-    return { status: 'confirmed', message: `File change ${changeId} confirmed successfully.` }
-  } else {
-    throw new Error(`Failed to confirm file change ${changeId}. No rows updated.`)
+  const now = new Date().toISOString()
+  const updatedRecord: AIFileChangeRecord = {
+    ...existingRecord,
+    status: 'confirmed' as AIFileChangeStatus,
+    updatedAt: now,
   }
+
+  await projectStorage.saveAIFileChange(projectId, updatedRecord)
+
+  return { status: 'confirmed', message: `File change ${aiFileChangeId} confirmed successfully.` }
+}
+
+export async function rejectFileChange(projectId: string, aiFileChangeId: string): Promise<{ status: AIFileChangeStatus; message: string }> {
+  const existingRecord = await projectStorage.getAIFileChangeById(projectId, aiFileChangeId)
+
+  if (!existingRecord) {
+    throw new ApiError(404, `File change with ID ${aiFileChangeId} not found in project ${projectId}.`, 'AI_FILE_CHANGE_NOT_FOUND')
+  }
+  if (existingRecord.status !== 'pending') {
+    throw new ApiError(400, `File change with ID ${aiFileChangeId} is already ${existingRecord.status}.`, 'AI_FILE_CHANGE_INVALID_STATE')
+  }
+
+  const now = new Date().toISOString()
+  const updatedRecord: AIFileChangeRecord = {
+    ...existingRecord,
+    status: 'rejected' as AIFileChangeStatus,
+    updatedAt: now,
+  }
+
+  await projectStorage.saveAIFileChange(projectId, updatedRecord)
+
+  return { status: 'rejected', message: `File change ${aiFileChangeId} rejected.` }
 }

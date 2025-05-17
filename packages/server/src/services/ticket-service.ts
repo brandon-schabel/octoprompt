@@ -1,23 +1,21 @@
-import { db } from '@/utils/database'
 import { ApiError, MEDIUM_MODEL_CONFIG } from 'shared'
 import { getFullProjectSummary } from '@/utils/get-full-project-summary'
-import { z } from 'zod'
+import { z, ZodError } from 'zod'
 import {
   CreateTicketBody,
   UpdateTicketBody,
-  TicketReadSchema,
-  TicketTaskReadSchema,
-  TicketFileReadSchema,
-  TicketCreateSchema,
-  TicketUpdateSchema,
-  TicketTaskCreateSchema,
+  TicketReadSchema, // Will be used by storage directly
+  TicketTaskReadSchema, // Will be used by storage directly
+  TicketFileReadSchema, // Will be used by storage directly
   type Ticket,
   type TicketTask,
   type TicketFile,
   TaskSuggestions,
   TaskSuggestionsZodSchema
 } from 'shared/src/schemas/ticket.schemas'
-import { randomUUID } from 'crypto'
+// Import projectStorage to check for file existence
+import { projectStorage } from '@/utils/storage/project-storage'
+import { ticketStorage, type TicketsStorage, type TicketTasksStorage, type TicketFilesStorage } from '@/utils/storage/ticket-storage'
 import { generateStructuredData } from './gen-ai-services'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
@@ -38,14 +36,33 @@ Each task should be clear and actionable.
 ${validTaskFormatPrompt}
 `
 
-export function stripTripleBackticks(text: string): string {
-  const tripleBacktickRegex = /```(?:json)?([\s\S]*?)```/
-  const match = text.match(tripleBacktickRegex)
-  if (match) {
-    return match[1].trim()
-  }
-  return text.trim()
+// Helper to ensure data read from JSON (potentially with string dates) conforms to the schema with Date objects
+// Zod's z.date() should handle ISO string parsing automatically, so direct mapping might be fine.
+// These map functions are essentially for type safety and consistency if any transformation were needed.
+function mapTicket(data: any): Ticket {
+  const preprocessedData = {
+    ...data,
+    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
+    updatedAt: data.updatedAt ? new Date(data.updatedAt) : undefined,
+  };
+  const parsed = TicketReadSchema.parse(preprocessedData)
+  return parsed
 }
+
+function mapTicketTask(data: any): TicketTask {
+  const preprocessedData = {
+    ...data,
+    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
+    updatedAt: data.updatedAt ? new Date(data.updatedAt) : undefined,
+  };
+  const parsed = TicketTaskReadSchema.parse(preprocessedData)
+  return parsed
+}
+
+function mapTicketFile(data: any): TicketFile {
+  return TicketFileReadSchema.parse(data)
+}
+
 
 export async function fetchTaskSuggestionsForTicket(
   ticket: Ticket,
@@ -94,257 +111,184 @@ export async function fetchTaskSuggestionsForTicket(
   return result.object
 }
 
-function mapTicket(row: any): Ticket {
-  const mapped = {
-    id: row.id,
-    projectId: row.project_id,
-    title: row.title,
-    overview: row.overview,
-    status: row.status,
-    priority: row.priority,
-    suggestedFileIds:
-      typeof row.suggested_file_ids === 'string'
-        ? row.suggested_file_ids
-        : JSON.stringify(row.suggested_file_ids || []),
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at)
-  }
-  try {
-    const validated = TicketReadSchema.parse(mapped)
-    return {
-      ...validated,
-      createdAt: new Date(validated.createdAt),
-      updatedAt: new Date(validated.updatedAt)
-    }
-  } catch (error) {
-    console.error('Validation failed for ticket:', mapped, error)
-    throw new ApiError(500, 'Ticket data validation failed', 'TICKET_VALIDATION_ERROR', { originalError: error })
-  }
-}
 
-function mapTicketTask(row: any): TicketTask {
-  const mapped = {
-    id: row.id,
-    ticketId: row.ticket_id,
-    content: row.content,
-    done: row.done === 1,
-    orderIndex: row.order_index,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at)
-  }
-  try {
-    const validated = TicketTaskReadSchema.parse(mapped)
-    return {
-      ...validated,
-      createdAt: new Date(validated.createdAt),
-      updatedAt: new Date(validated.updatedAt)
-    }
-  } catch (error) {
-    console.error('Validation failed for ticket task:', mapped, error)
-    throw new ApiError(500, 'Ticket task data validation failed', 'TASK_VALIDATION_ERROR', { originalError: error })
-  }
-}
+export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
+  const ticketId = ticketStorage.generateId('tkt')
+  const now = new Date()
 
-function mapTicketFile(row: any): TicketFile {
-  const mapped = {
-    ticketId: row.ticket_id,
-    fileId: row.file_id
-  }
-  return TicketFileReadSchema.parse(mapped)
-}
-
-function validateCreateTicket(data: CreateTicketBody) {
-  return TicketCreateSchema.parse({
+  const newTicketData: Ticket = {
+    id: ticketId,
     projectId: data.projectId,
     title: data.title,
     overview: data.overview ?? '',
     status: data.status ?? 'open',
     priority: data.priority ?? 'normal',
-    suggestedFileIds: data.suggestedFileIds ? JSON.stringify(data.suggestedFileIds) : '[]'
-  })
-}
-
-function validateUpdateTicket(data: UpdateTicketBody) {
-  return TicketUpdateSchema.parse({
-    title: data.title,
-    overview: data.overview,
-    status: data.status,
-    priority: data.priority,
-    suggestedFileIds: data.suggestedFileIds ? JSON.stringify(data.suggestedFileIds) : undefined
-  })
-}
-
-function validateCreateTask(ticketId: string, content: string) {
-  return TicketTaskCreateSchema.parse({
-    ticketId,
-    content,
-    done: false
-  })
-}
-
-export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
-  const validatedData = validateCreateTicket(data)
-  const newTicketId = randomUUID()
-
-  const stmt = db.prepare(`
-      INSERT INTO tickets (id, project_id, title, overview, status, priority, suggested_file_ids, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      RETURNING *
-    `)
-  const createdRaw = stmt.get(
-    newTicketId,
-    validatedData.projectId,
-    validatedData.title,
-    validatedData.overview ?? '',
-    validatedData.status ?? 'open',
-    validatedData.priority ?? 'normal',
-    validatedData.suggestedFileIds ?? '[]'
-  ) as any
-  if (!createdRaw) {
-    throw new ApiError(500, 'Failed to create ticket', 'CREATE_TICKET_FAILED')
+    suggestedFileIds: JSON.stringify(data.suggestedFileIds || []),
+    createdAt: now,
+    updatedAt: now
   }
-  return mapTicket(createdRaw)
+
+  try {
+    // Validate with TicketReadSchema as it represents the full ticket structure with Date objects
+    const validatedTicket = TicketReadSchema.parse(newTicketData)
+
+    const allTickets = await ticketStorage.readTickets()
+    if (allTickets[ticketId]) {
+      // Extremely unlikely with UUIDs but good to check
+      throw new ApiError(509, `Ticket ID conflict for ${ticketId}`, 'TICKET_ID_CONFLICT');
+    }
+
+    allTickets[ticketId] = validatedTicket
+    await ticketStorage.writeTickets(allTickets)
+    // Initialize empty tasks and files for the new ticket
+    await ticketStorage.writeTicketTasks(ticketId, {})
+    await ticketStorage.writeTicketFiles(ticketId, [])
+
+    return mapTicket(validatedTicket) // Ensure Date objects are correctly typed
+  } catch (error) {
+    if (error instanceof ZodError) {
+      console.error(`Validation failed for new ticket data: ${error.message}`, error.flatten().fieldErrors)
+      throw new ApiError(500, `Internal validation error creating ticket.`, 'TICKET_VALIDATION_ERROR', error.flatten().fieldErrors)
+    }
+    if (error instanceof ApiError) throw error
+    throw new ApiError(500, `Failed to create ticket.`, 'CREATE_TICKET_FAILED', { originalError: error })
+  }
 }
 
 export async function getTicketById(ticketId: string): Promise<Ticket> {
-  const stmt = db.prepare(`SELECT * FROM tickets WHERE id = ? LIMIT 1`)
-  const foundRaw = stmt.get(ticketId) as any
-  if (!foundRaw) {
+  const allTickets = await ticketStorage.readTickets()
+  const ticketData = allTickets[ticketId]
+  if (!ticketData) {
     throw new ApiError(404, `Ticket with ID ${ticketId} not found.`, 'TICKET_NOT_FOUND')
   }
-  return mapTicket(foundRaw)
+  return mapTicket(ticketData)
 }
 
-export async function listTicketsByProject(projectId: string, statusFilter?: string): Promise<Ticket[]> {
-  let stmt
-  if (statusFilter) {
-    stmt = db.prepare(`SELECT * FROM tickets WHERE project_id = ? AND status = ? ORDER BY created_at DESC`)
-    const rows = stmt.all(projectId, statusFilter) as any[]
-    return rows.map(mapTicket)
-  } else {
-    stmt = db.prepare(`SELECT * FROM tickets WHERE project_id = ? ORDER BY created_at DESC`)
-    const rows = stmt.all(projectId) as any[]
-    return rows.map(mapTicket)
+async function updateTicketTimestamp(ticketId: string, allTickets: TicketsStorage): Promise<TicketsStorage> {
+  if (allTickets[ticketId]) {
+    allTickets[ticketId] = {
+      ...allTickets[ticketId],
+      updatedAt: new Date() // Store as Date object; writeTickets (mock) will stringify
+    };
+    // The TicketReadSchema.parse call here was removed for simplification.
+    // Full validation occurs in the main service functions (e.g., updateTicket) before writing.
   }
+  return allTickets;
+}
+
+
+export async function listTicketsByProject(projectId: string, statusFilter?: string): Promise<Ticket[]> {
+  const allTickets = await ticketStorage.readTickets()
+  let tickets = Object.values(allTickets).filter(t => t.projectId === projectId)
+
+  if (statusFilter) {
+    tickets = tickets.filter(t => t.status === statusFilter)
+  }
+
+  tickets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return tickets.map(mapTicket)
 }
 
 export async function updateTicket(ticketId: string, data: UpdateTicketBody): Promise<Ticket> {
-  const existing = await getTicketById(ticketId)
+  let allTickets = await ticketStorage.readTickets()
+  const existingTicket = allTickets[ticketId]
 
-  const validatedData = validateUpdateTicket(data)
+  if (!existingTicket) {
+    throw new ApiError(404, `Ticket with ID ${ticketId} not found for update.`, 'TICKET_NOT_FOUND')
+  }
 
-  if (validatedData.suggestedFileIds !== undefined) {
-    let fileIds: string[] = []
-    try {
-      fileIds = JSON.parse(validatedData.suggestedFileIds)
-    } catch (error) {
-      fileIds = []
-    }
-    if (fileIds.length > 0) {
-      const stmtFile = db.prepare(`SELECT 1 as present FROM files WHERE id = ? AND project_id = ? LIMIT 1`)
-      for (const fileId of fileIds) {
-        const file = stmtFile.get(fileId, existing.projectId)
-        if (!file) {
-          throw new ApiError(
-            400,
-            `File with ID ${fileId} not found in project ${existing.projectId}.`,
-            'FILE_NOT_FOUND_IN_PROJECT'
-          )
-        }
+  const updatedData = { ...existingTicket }
+
+  if (data.title !== undefined) updatedData.title = data.title
+  if (data.overview !== undefined) updatedData.overview = data.overview
+  if (data.status !== undefined) updatedData.status = data.status
+  if (data.priority !== undefined) updatedData.priority = data.priority
+  if (data.suggestedFileIds !== undefined) {
+    // Validate that these files exist in the project
+    const projectFiles = await projectStorage.readProjectFiles(existingTicket.projectId)
+    for (const fileId of data.suggestedFileIds) {
+      if (!projectFiles[fileId]) {
+        throw new ApiError(
+          400,
+          `File with ID ${fileId} not found in project ${existingTicket.projectId}.`,
+          'FILE_NOT_FOUND_IN_PROJECT'
+        )
       }
     }
+    updatedData.suggestedFileIds = JSON.stringify(data.suggestedFileIds)
   }
+  updatedData.updatedAt = new Date()
 
-  const updates: string[] = []
-  const values: any[] = []
-
-  if (validatedData.title !== undefined) {
-    updates.push('title = ?')
-    values.push(validatedData.title)
+  try {
+    // Ensure date fields from existingTicket are Date objects before validation
+    const dataToValidate = {
+      ...updatedData,
+      createdAt: new Date(existingTicket.createdAt), // existingTicket.createdAt would be a string here
+    };
+    const validatedTicket = TicketReadSchema.parse(dataToValidate)
+    allTickets[ticketId] = validatedTicket
+    await ticketStorage.writeTickets(allTickets)
+    return mapTicket(validatedTicket)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new ApiError(500, `Validation failed updating ticket ${ticketId}.`, 'TICKET_VALIDATION_ERROR', error.flatten().fieldErrors)
+    }
+    if (error instanceof ApiError) throw error
+    throw new ApiError(500, `Failed to update ticket ${ticketId}.`, 'UPDATE_TICKET_FAILED', { originalError: error })
   }
-  if (validatedData.overview !== undefined) {
-    updates.push('overview = ?')
-    values.push(validatedData.overview)
-  }
-  if (validatedData.status !== undefined) {
-    updates.push('status = ?')
-    values.push(validatedData.status)
-  }
-  if (validatedData.priority !== undefined) {
-    updates.push('priority = ?')
-    values.push(validatedData.priority)
-  }
-  if (validatedData.suggestedFileIds !== undefined) {
-    updates.push('suggested_file_ids = ?')
-    values.push(validatedData.suggestedFileIds)
-  }
-
-  updates.push('updated_at = CURRENT_TIMESTAMP')
-
-  const updateQuery = `
-      UPDATE tickets 
-      SET ${updates.join(', ')}
-      WHERE id = ?
-      RETURNING *
-    `
-
-  values.push(ticketId)
-  const stmt = db.prepare(updateQuery)
-  const updatedRaw = stmt.get(...values) as any
-
-  if (!updatedRaw) {
-    throw new ApiError(
-      500,
-      `Failed to update ticket ${ticketId} after confirming its existence.`,
-      'UPDATE_TICKET_FAILED'
-    )
-  }
-  return mapTicket(updatedRaw)
 }
 
 export async function deleteTicket(ticketId: string): Promise<void> {
-  db.prepare(`DELETE FROM ticket_tasks WHERE ticket_id = ?`).run(ticketId)
-  db.prepare(`DELETE FROM ticket_files WHERE ticket_id = ?`).run(ticketId)
-
-  const stmt = db.prepare(`DELETE FROM tickets WHERE id = ?`)
-  const info = stmt.run(ticketId)
-  if (info.changes === 0) {
+  const allTickets = await ticketStorage.readTickets()
+  if (!allTickets[ticketId]) {
     throw new ApiError(404, `Ticket with ID ${ticketId} not found for deletion.`, 'TICKET_NOT_FOUND')
   }
+
+  delete allTickets[ticketId]
+  await ticketStorage.writeTickets(allTickets)
+  await ticketStorage.deleteTicketData(ticketId) // Delete associated tasks and files
 }
 
 export async function linkFilesToTicket(ticketId: string, fileIds: string[]): Promise<TicketFile[]> {
-  const existingTicket = await getTicketById(ticketId)
+  const ticket = await getTicketById(ticketId) // Ensures ticket exists
 
-  if (fileIds.length > 0) {
-    const placeholders = fileIds.map(() => '?').join(',')
-    const filesInProjectStmt = db.prepare(`SELECT id FROM files WHERE project_id = ? AND id IN (${placeholders})`)
-    const existingFilesInProject = filesInProjectStmt.all(existingTicket.projectId, ...fileIds) as { id: string }[]
-    if (existingFilesInProject.length !== fileIds.length) {
-      const foundFileIds = new Set(existingFilesInProject.map((f) => f.id))
-      const missingFileIds = fileIds.filter((id) => !foundFileIds.has(id))
+  // Validate that files exist in the project
+  const projectFilesData = await projectStorage.readProjectFiles(ticket.projectId);
+  for (const fileId of fileIds) {
+    if (!projectFilesData[fileId]) {
       throw new ApiError(
         400,
-        `Some files not found in project ${existingTicket.projectId}: ${missingFileIds.join(', ')}`,
-        'FILES_NOT_FOUND_IN_PROJECT'
-      )
+        `File with ID ${fileId} not found in project ${ticket.projectId} for linking.`,
+        'FILE_NOT_FOUND_IN_PROJECT'
+      );
     }
   }
 
-  const stmt = db.prepare(`INSERT OR IGNORE INTO ticket_files (ticket_id, file_id) VALUES (?, ?)`)
-  const transaction = db.transaction(() => {
-    for (const fileId of fileIds) {
-      stmt.run(ticketId, fileId)
+  let ticketLinks = await ticketStorage.readTicketFiles(ticketId)
+  const existingFileIds = new Set(ticketLinks.map(link => link.fileId))
+
+  let newLinksMade = false;
+  for (const fileId of fileIds) {
+    if (!existingFileIds.has(fileId)) {
+      ticketLinks.push({ ticketId, fileId })
+      newLinksMade = true;
     }
-  })
-  transaction()
-  return getTicketFiles(ticketId)
+  }
+
+  if (newLinksMade) {
+    await ticketStorage.writeTicketFiles(ticketId, ticketLinks)
+    let allTickets = await ticketStorage.readTickets();
+    allTickets = await updateTicketTimestamp(ticketId, allTickets);
+    await ticketStorage.writeTickets(allTickets);
+  }
+  return ticketLinks.map(mapTicketFile)
 }
 
 export async function getTicketFiles(ticketId: string): Promise<TicketFile[]> {
-  const stmt = db.prepare(`SELECT * FROM ticket_files WHERE ticket_id = ?`)
-  const rows = stmt.all(ticketId) as any[]
-  return rows.map(mapTicketFile)
+  // Ensure ticket exists, implicitly
+  await getTicketById(ticketId);
+  const ticketLinks = await ticketStorage.readTicketFiles(ticketId)
+  return ticketLinks.map(mapTicketFile)
 }
 
 export async function suggestTasksForTicket(ticketId: string, userContext?: string): Promise<string[]> {
@@ -369,181 +313,210 @@ export async function suggestTasksForTicket(ticketId: string, userContext?: stri
 }
 
 export async function getTicketsWithFiles(projectId: string): Promise<(Ticket & { fileIds: string[] })[]> {
-  const stmtTickets = db.prepare(`SELECT * FROM tickets WHERE project_id = ?`)
-  const allTickets = stmtTickets.all(projectId) as any[]
-  if (allTickets.length === 0) return []
-  const ticketIds = allTickets.map((t: any) => t.id)
-  const placeholders = ticketIds.map(() => '?').join(', ')
-  const stmtTicketFiles = db.prepare(`SELECT * FROM ticket_files WHERE ticket_id IN (${placeholders})`)
-  const allLinks = stmtTicketFiles.all(...ticketIds) as Array<{ ticket_id: string; file_id: string }>
-  const mapping: Record<string, string[]> = {}
-  for (const link of allLinks) {
-    if (!mapping[link.ticket_id]) {
-      mapping[link.ticket_id] = []
-    }
-    mapping[link.ticket_id].push(link.file_id)
+  const projectTickets = await listTicketsByProject(projectId)
+  if (projectTickets.length === 0) return []
+
+  const results: (Ticket & { fileIds: string[] })[] = []
+  for (const ticket of projectTickets) {
+    const links = await ticketStorage.readTicketFiles(ticket.id)
+    results.push({
+      ...mapTicket(ticket), // Ensure Date objects are correct
+      fileIds: links.map(link => link.fileId)
+    })
   }
-  return allTickets.map((t: any) => ({
-    ...t,
-    fileIds: mapping[t.id] || []
-  }))
+  return results
 }
 
 export async function createTask(ticketId: string, content: string): Promise<TicketTask> {
-  const ticket = await getTicketById(ticketId)
+  await getTicketById(ticketId) // Ensure ticket exists
 
-  const validatedData = validateCreateTask(ticketId, content)
-  const stmtMax = db.prepare(`SELECT MAX(order_index) as max FROM ticket_tasks WHERE ticket_id = ?`)
-  const row = stmtMax.get(ticketId) as { max: number | null }
-  const nextIndex = (row?.max ?? 0) + 1
+  const taskId = ticketStorage.generateId('task')
+  const now = new Date()
 
-  const newTaskId = randomUUID()
+  let ticketTasks = await ticketStorage.readTicketTasks(ticketId)
+  const orderIndex = Object.keys(ticketTasks).length > 0
+    ? Math.max(...Object.values(ticketTasks).map(t => t.orderIndex)) + 1
+    : 1;
 
-  const stmt = db.prepare(`
-      INSERT INTO ticket_tasks (id, ticket_id, content, done, order_index, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      RETURNING *
-    `)
-
-  const params: [string, string, string, number, number] = [
-    newTaskId,
-    validatedData.ticketId,
-    validatedData.content,
-    validatedData.done ? 1 : 0,
-    nextIndex
-  ]
-
-  const createdTaskRaw = stmt.get(...params) as any
-  if (!createdTaskRaw) {
-    throw new ApiError(500, 'Failed to create task', 'CREATE_TASK_FAILED')
+  const newTaskData: TicketTask = {
+    id: taskId,
+    ticketId: ticketId,
+    content: content,
+    done: false,
+    orderIndex: orderIndex,
+    createdAt: now,
+    updatedAt: now
   }
-  return mapTicketTask(createdTaskRaw)
+
+  try {
+    const validatedTask = TicketTaskReadSchema.parse(newTaskData)
+    if (ticketTasks[taskId]) {
+      throw new ApiError(509, `Task ID conflict for ${taskId}`, 'TASK_ID_CONFLICT');
+    }
+    ticketTasks[taskId] = validatedTask
+    await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
+
+    let allTickets = await ticketStorage.readTickets();
+    allTickets = await updateTicketTimestamp(ticketId, allTickets);
+    await ticketStorage.writeTickets(allTickets);
+
+    return mapTicketTask(validatedTask)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new ApiError(500, `Validation failed creating task for ticket ${ticketId}.`, 'TASK_VALIDATION_ERROR', error.flatten().fieldErrors)
+    }
+    if (error instanceof ApiError) throw error
+    throw new ApiError(500, `Failed to create task for ticket ${ticketId}.`, 'CREATE_TASK_FAILED', { originalError: error })
+  }
 }
 
 export async function getTasks(ticketId: string): Promise<TicketTask[]> {
-  const stmt = db.prepare(`SELECT * FROM ticket_tasks WHERE ticket_id = ? ORDER BY order_index`)
-  const taskRows = stmt.all(ticketId) as any[]
-  return taskRows.map(mapTicketTask)
+  await getTicketById(ticketId); // Ensure ticket exists
+  const ticketTasksData = await ticketStorage.readTicketTasks(ticketId)
+  const tasks = Object.values(ticketTasksData)
+  tasks.sort((a, b) => a.orderIndex - b.orderIndex)
+  return tasks.map(mapTicketTask)
 }
 
+
 export async function deleteTask(ticketId: string, taskId: string): Promise<void> {
-  const stmt = db.prepare(`DELETE FROM ticket_tasks WHERE id = ? AND ticket_id = ?`)
-  const info = stmt.run(taskId, ticketId)
-  if (info.changes === 0) {
-    try {
-      await getTicketById(ticketId)
-      throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, 'TASK_NOT_FOUND_FOR_TICKET')
-    } catch (ticketError: any) {
-      if (ticketError instanceof ApiError && ticketError.code === 'TICKET_NOT_FOUND') {
-        throw new ApiError(404, `Ticket with ID ${ticketId} not found, cannot delete task.`, 'TICKET_NOT_FOUND')
-      }
-      throw ticketError
-    }
+  await getTicketById(ticketId) // Ensure ticket exists
+
+  const ticketTasks = await ticketStorage.readTicketTasks(ticketId)
+  if (!ticketTasks[taskId]) {
+    throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, 'TASK_NOT_FOUND_FOR_TICKET')
   }
+
+  delete ticketTasks[taskId]
+  await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
+
+  let allTickets = await ticketStorage.readTickets();
+  allTickets = await updateTicketTimestamp(ticketId, allTickets);
+  await ticketStorage.writeTickets(allTickets);
 }
 
 export async function reorderTasks(
   ticketId: string,
-  tasks: Array<{ taskId: string; orderIndex: number }>
+  taskReorders: Array<{ taskId: string; orderIndex: number }>
 ): Promise<TicketTask[]> {
-  await getTicketById(ticketId)
+  await getTicketById(ticketId) // Ensure ticket exists
 
-  const stmt = db.prepare(
-    `UPDATE ticket_tasks SET order_index = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND ticket_id = ?`
-  )
-  const transaction = db.transaction(() => {
-    for (const { taskId, orderIndex } of tasks) {
-      const info = stmt.run(orderIndex, taskId, ticketId)
-      if (info.changes === 0) {
-        throw new ApiError(
-          404,
-          `Task with ID ${taskId} not found for ticket ${ticketId} during reorder.`,
-          'TASK_NOT_FOUND_FOR_TICKET'
-        )
+  const ticketTasks = await ticketStorage.readTicketTasks(ticketId)
+  let changed = false
+  for (const { taskId, orderIndex } of taskReorders) {
+    if (ticketTasks[taskId]) {
+      if (ticketTasks[taskId].orderIndex !== orderIndex) {
+        ticketTasks[taskId].orderIndex = orderIndex
+        ticketTasks[taskId].updatedAt = new Date()
+        changed = true
       }
+    } else {
+      throw new ApiError(
+        404,
+        `Task with ID ${taskId} not found for ticket ${ticketId} during reorder.`,
+        'TASK_NOT_FOUND_FOR_TICKET'
+      )
     }
-  })
-  transaction()
-  return getTasks(ticketId)
+  }
+
+  if (changed) {
+    await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
+    let allTickets = await ticketStorage.readTickets();
+    allTickets = await updateTicketTimestamp(ticketId, allTickets);
+    await ticketStorage.writeTickets(allTickets);
+  }
+
+  const tasksArray = Object.values(ticketTasks).sort((a, b) => a.orderIndex - b.orderIndex);
+  return tasksArray.map(mapTicketTask)
 }
+
 
 export async function autoGenerateTasksFromOverview(ticketId: string): Promise<TicketTask[]> {
   const ticket = await getTicketById(ticketId)
 
   const titles = await suggestTasksForTicket(ticketId, ticket.overview ?? '')
-  if (titles.length === 0 && ticket.overview && ticket.overview.trim() !== '') {
-  }
 
-  const inserted: TicketTask[] = []
-  const transaction = db.transaction(() => {
-    for (const [idx, content] of titles.entries()) {
-      const stmtInsert = db.prepare(`
-            INSERT INTO ticket_tasks (id, ticket_id, content, done, order_index, created_at, updated_at)
-            VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            RETURNING *
-            `)
-      const createdRaw = stmtInsert.get(ticketId, content, 0, idx) as any
-      if (!createdRaw) {
-        throw new ApiError(500, `Failed to create auto-generated task '${content}'`, 'CREATE_TASK_FAILED')
+  const insertedTasks: TicketTask[] = []
+  if (titles.length > 0) {
+    let ticketTasks = await ticketStorage.readTicketTasks(ticketId)
+    let currentMaxOrder = Object.keys(ticketTasks).length > 0
+      ? Math.max(...Object.values(ticketTasks).map(t => t.orderIndex))
+      : 0;
+    const now = new Date();
+
+    for (const content of titles) {
+      currentMaxOrder++;
+      const taskId = ticketStorage.generateId('task');
+      const newTaskData: TicketTask = {
+        id: taskId,
+        ticketId: ticketId,
+        content: content,
+        done: false,
+        orderIndex: currentMaxOrder,
+        createdAt: now,
+        updatedAt: now
+      };
+      try {
+        const validatedTask = TicketTaskReadSchema.parse(newTaskData);
+        ticketTasks[taskId] = validatedTask;
+        insertedTasks.push(mapTicketTask(validatedTask));
+      } catch (error) {
+        if (error instanceof ZodError) {
+          console.error(`Validation failed for auto-generated task '${content}': ${error.message}`, error.flatten().fieldErrors);
+          // Skip this task or throw? For now, skip.
+        } else {
+          throw error;
+        }
       }
-      const createdTask = mapTicketTask(createdRaw)
-      inserted.push(createdTask)
     }
-  })
-  transaction()
-  return inserted
+    if (insertedTasks.length > 0) {
+      await ticketStorage.writeTicketTasks(ticketId, ticketTasks);
+      let allTickets = await ticketStorage.readTickets();
+      allTickets = await updateTicketTimestamp(ticketId, allTickets);
+      await ticketStorage.writeTickets(allTickets);
+    }
+  }
+  return insertedTasks;
 }
 
 export async function listTicketsWithTaskCount(
   projectId: string,
   statusFilter?: string
 ): Promise<Array<Ticket & { taskCount: number; completedTaskCount: number }>> {
-  let query: string
-  let params: any[]
-  if (statusFilter && statusFilter !== 'all') {
-    query = `
-          SELECT t.*, 
-            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id) as taskCount,
-            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id AND tt.done = 1) as completedTaskCount
-          FROM tickets t
-          WHERE t.project_id = ? AND t.status = ?
-          ORDER BY t.created_at DESC
-        `
-    params = [projectId, statusFilter]
-  } else {
-    query = `
-          SELECT t.*, 
-            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id) as taskCount,
-            (SELECT COUNT(*) FROM ticket_tasks tt WHERE tt.ticket_id = t.id AND tt.done = 1) as completedTaskCount
-          FROM tickets t
-          WHERE t.project_id = ?
-          ORDER BY t.created_at DESC
-        `
-    params = [projectId]
+  const tickets = await listTicketsByProject(projectId, statusFilter)
+  const results: Array<Ticket & { taskCount: number; completedTaskCount: number }> = []
+
+  for (const ticket of tickets) {
+    const tasksData = await ticketStorage.readTicketTasks(ticket.id)
+    const tasksArray = Object.values(tasksData)
+    results.push({
+      ...mapTicket(ticket),
+      taskCount: tasksArray.length,
+      completedTaskCount: tasksArray.filter(t => t.done).length
+    })
   }
-  const stmt = db.prepare(query)
-  const rowsCount = stmt.all(...params) as any[]
-  return rowsCount.map((r: any) => ({
-    ...r,
-    taskCount: Number(r.taskCount || 0),
-    completedTaskCount: Number(r.completedTaskCount || 0)
-  }))
+  return results
 }
 
 export async function getTasksForTickets(ticketIds: string[]): Promise<Record<string, TicketTask[]>> {
   if (!ticketIds.length) return {}
-  const placeholders = ticketIds.map(() => '?').join(', ')
-  const stmt = db.prepare(`SELECT * FROM ticket_tasks WHERE ticket_id IN (${placeholders}) ORDER BY order_index`)
-  const tasks = stmt.all(...ticketIds) as any[]
+
   const tasksByTicket: Record<string, TicketTask[]> = {}
-  for (const task of tasks) {
-    if (!tasksByTicket[task.ticket_id]) {
-      tasksByTicket[task.ticket_id] = []
+  const allTickets = await ticketStorage.readTickets(); // Fetch all tickets once
+
+  for (const ticketId of ticketIds) {
+    if (allTickets[ticketId]) { // Only process if the ticket actually exists
+      const tasksData = await ticketStorage.readTicketTasks(ticketId)
+      const tasksArray = Object.values(tasksData).sort((a, b) => a.orderIndex - b.orderIndex)
+      tasksByTicket[ticketId] = tasksArray.map(mapTicketTask)
+    } else {
+      // Optionally log or handle cases where a ticketId is provided but doesn't exist
+      // console.warn(`[getTasksForTickets] Ticket with ID ${ticketId} not found.`);
     }
-    tasksByTicket[task.ticket_id].push(mapTicketTask(task))
   }
   return tasksByTicket
 }
+
 
 export async function listTicketsWithTasks(
   projectId: string,
@@ -556,7 +529,7 @@ export async function listTicketsWithTasks(
   const ticketIds = baseTickets.map((t: any) => t.id)
   const tasksByTicket = await getTasksForTickets(ticketIds)
   return baseTickets.map((ticket: any) => ({
-    ...ticket,
+    ...mapTicket(ticket),
     tasks: tasksByTicket[ticket.id] || []
   }))
 }
@@ -566,15 +539,23 @@ export async function getTicketWithSuggestedFiles(
 ): Promise<(Ticket & { parsedSuggestedFileIds: string[] }) | null> {
   const ticket = await getTicketById(ticketId)
   if (!ticket) return null
-  return {
-    ...ticket,
-    parsedSuggestedFileIds: (() => {
-      try {
-        return JSON.parse(ticket.suggestedFileIds || '[]')
-      } catch {
-        return []
+
+  let parsedFileIds: string[] = []
+  try {
+    if (ticket.suggestedFileIds) {
+      const parsed = JSON.parse(ticket.suggestedFileIds)
+      if (Array.isArray(parsed)) {
+        parsedFileIds = parsed.filter(id => typeof id === 'string');
       }
-    })()
+    }
+  } catch (e) {
+    console.warn(`Could not parse suggestedFileIds for ticket ${ticketId}: ${ticket.suggestedFileIds}`)
+    parsedFileIds = [] // Default to empty array on error
+  }
+
+  return {
+    ...mapTicket(ticket),
+    parsedSuggestedFileIds: parsedFileIds
   }
 }
 
@@ -583,59 +564,65 @@ export async function updateTask(
   taskId: string,
   updates: { content?: string; done?: boolean }
 ): Promise<TicketTask> {
-  await getTicketById(ticketId)
+  await getTicketById(ticketId) // Ensure ticket exists
 
-  const setClauses: string[] = []
-  const values: any[] = []
+  const ticketTasks = await ticketStorage.readTicketTasks(ticketId)
+  const existingTask = ticketTasks[taskId]
 
-  if (updates.content !== undefined) {
-    setClauses.push('content = ?')
-    values.push(updates.content)
-  }
-  if (updates.done !== undefined) {
-    setClauses.push('done = ?')
-    values.push(updates.done ? 1 : 0)
+  if (!existingTask) {
+    throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, 'TASK_NOT_FOUND_FOR_TICKET')
   }
 
-  if (setClauses.length === 0) {
-    const currentTaskStmt = db.prepare('SELECT * FROM ticket_tasks WHERE id = ? AND ticket_id = ?')
-    const currentTaskRaw = currentTaskStmt.get(taskId, ticketId) as any
-    if (!currentTaskRaw) {
-      throw new ApiError(404, `Task with ID ${taskId} not found for ticket ${ticketId}.`, 'TASK_NOT_FOUND_FOR_TICKET')
+  let changed = false
+  if (updates.content !== undefined && existingTask.content !== updates.content) {
+    existingTask.content = updates.content
+    changed = true
+  }
+  if (updates.done !== undefined && existingTask.done !== updates.done) {
+    existingTask.done = updates.done
+    changed = true
+  }
+
+  if (changed) {
+    existingTask.updatedAt = new Date()
+    try {
+      // Ensure date fields from existingTask are Date objects before validation
+      const taskToValidate = {
+        ...existingTask,
+        createdAt: new Date(existingTask.createdAt), // existingTask.createdAt would be string here
+        // updatedAt is already being set to a new Date() above if changed is true
+      };
+      TicketTaskReadSchema.parse(taskToValidate); // Re-validate before writing
+      ticketTasks[taskId] = taskToValidate; // ensure the map has the potentially re-validated object
+      await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
+      let allTickets = await ticketStorage.readTickets();
+      allTickets = await updateTicketTimestamp(ticketId, allTickets);
+      await ticketStorage.writeTickets(allTickets);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ApiError(500, `Validation failed updating task ${taskId}.`, 'TASK_VALIDATION_ERROR', error.flatten().fieldErrors)
+      }
+      throw error;
     }
-    return mapTicketTask(currentTaskRaw)
   }
-
-  setClauses.push('updated_at = CURRENT_TIMESTAMP')
-
-  const query = `UPDATE ticket_tasks SET ${setClauses.join(', ')} WHERE ticket_id = ? AND id = ? RETURNING *`
-  values.push(ticketId, taskId)
-
-  const stmt = db.prepare(query)
-  const updatedTaskRaw = stmt.get(...values) as any
-
-  if (!updatedTaskRaw) {
-    throw new ApiError(
-      404,
-      `Task with ID ${taskId} not found for ticket ${ticketId}, or no changes made.`,
-      'TASK_UPDATE_FAILED_OR_NOT_FOUND'
-    )
-  }
-  return mapTicketTask(updatedTaskRaw)
+  return mapTicketTask(existingTask)
 }
 
 export async function suggestFilesForTicket(
   ticketId: string,
-  options: { extraUserInput?: string }
+  options: { extraUserInput?: string } // extraUserInput not used in this version
 ): Promise<{ recommendedFileIds: string[]; combinedSummaries?: string; message?: string }> {
   const ticket = await getTicketById(ticketId)
 
   try {
-    const projectFiles = (await db.prepare(`SELECT id FROM files WHERE project_id = ?`).all(ticket.projectId)) as any[]
+    // This simplified version will just grab some files from the project.
+    // A more advanced version would use AI and file summaries.
+    const projectFilesMap = await projectStorage.readProjectFiles(ticket.projectId)
+    const projectFileIds = Object.keys(projectFilesMap)
 
-    if (!projectFiles) {
+    if (projectFileIds.length === 0) {
       console.warn(
-        `[TicketService] suggestFilesForTicket: No project files found for project ${ticket.projectId}, though ticket exists.`
+        `[TicketService] suggestFilesForTicket: No project files found for project ${ticket.projectId}.`
       )
       return {
         recommendedFileIds: [],
@@ -643,12 +630,17 @@ export async function suggestFilesForTicket(
       }
     }
 
-    const recommendedFileIds = projectFiles.slice(0, Math.min(5, projectFiles.length)).map((file: any) => file.id)
+    // Simple logic: recommend first 5 files or fewer if not enough.
+    // A real implementation would use AI, ticket content, file summaries, etc.
+    const recommendedFileIds = projectFileIds.slice(0, Math.min(5, projectFileIds.length))
+
+    // Placeholder for combinedSummaries as it's not implemented with actual summaries here.
+    const combinedSummaries = `Placeholder summary for files in project ${ticket.projectId} related to ticket: ${ticket.title}`;
 
     return {
       recommendedFileIds,
-      combinedSummaries: `Combined summary for ticket: ${ticket.title}`,
-      message: 'Files suggested based on ticket content'
+      combinedSummaries,
+      message: 'Files suggested based on simplified project file listing.'
     }
   } catch (error) {
     console.error('[TicketService] Error suggesting files:', error)

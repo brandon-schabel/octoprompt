@@ -227,17 +227,3 @@ export function useRemovePromptFromProject() {
     onError: (error) => commonErrorHandler(error as unknown as Error)
   })
 }
-
-/**
- * Optimizes a given prompt text (doesn't modify stored prompts).
- */
-export const useOptimizePrompt = () => {
-  const mutationOptions = postApiPromptOptimizeMutation()
-  return useMutation<PostApiPromptOptimizeResponse, PostApiPromptOptimizeError, string>({
-    mutationFn: (userContext: string) => {
-      const opts: Options<PostApiPromptOptimizeData> = { body: { userContext } }
-      return mutationOptions.mutationFn!(opts)
-    },
-    onError: (error) => commonErrorHandler(error as unknown as Error)
-  })
-}

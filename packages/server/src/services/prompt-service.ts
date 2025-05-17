@@ -1,4 +1,5 @@
-import { db } from '@/utils/database'
+// packages/server/src/services/prompt-service.ts
+import { promptStorage, type PromptsStorage, type PromptProjectsStorage } from '@/utils/storage/prompt-storage'
 import {
   CreatePromptBody,
   UpdatePromptBody,
@@ -7,216 +8,214 @@ import {
   PromptProject,
   PromptProjectSchema
 } from 'shared/src/schemas/prompt.schemas'
-import { promptsMap } from '../utils/prompts-map'
-import { generateSingleText } from './gen-ai-services'
+
 import { ApiError } from 'shared'
-
-const formatToISO = (sqlDate: string) => new Date(sqlDate).toISOString()
-
-export type RawPrompt = {
-  id: string
-  name: string
-  content: string
-  created_at: string
-  updated_at: string
-}
-
-export type RawPromptProject = {
-  prompt_id: string
-  project_id: string
-}
-
-export function mapPromptProject(row: RawPromptProject): PromptProject {
-  const mapped = {
-    promptId: row.prompt_id,
-    projectId: row.project_id
-  }
-  return PromptProjectSchema.parse(mapped)
-}
+import { ZodError } from 'zod'
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
-  const insertStmt = db.prepare(`
-    INSERT INTO prompts (id, name, content, created_at, updated_at) 
-    VALUES (lower(hex(randomblob(16))), ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    RETURNING *
-  `)
-  const createdRaw = insertStmt.get(data.name, data.content) as RawPrompt | undefined
-  if (!createdRaw) {
-    throw new ApiError(500, 'Failed to create prompt', 'PROMPT_CREATE_FAILED')
+  const promptId = promptStorage.generateId('prompt')
+  const now = new Date().toISOString()
+
+  const newPromptData: Prompt = {
+    id: promptId,
+    name: data.name,
+    content: data.content,
+    createdAt: now,
+    updatedAt: now
+    // projectId is not part of the core Prompt schema, handled by associations
   }
-  const newPrompt = PromptSchema.parse({
-    ...createdRaw,
-    createdAt: formatToISO(createdRaw.created_at),
-    updatedAt: formatToISO(createdRaw.updated_at)
-  })
+
+  try {
+    PromptSchema.parse(newPromptData) // Validate before adding to storage
+  } catch (error) {
+    if (error instanceof ZodError) {
+      console.error(`Validation failed for new prompt data: ${error.message}`, error.flatten().fieldErrors)
+      throw new ApiError(500, `Internal validation error creating prompt.`, 'PROMPT_VALIDATION_ERROR', error.flatten().fieldErrors)
+    }
+    throw error // Should not happen if data is constructed correctly
+  }
+
+  const allPrompts = await promptStorage.readPrompts()
+
+  if (allPrompts[promptId]) {
+    throw new ApiError(500, `Prompt ID conflict for ${promptId}`, 'PROMPT_ID_CONFLICT')
+  }
+
+  allPrompts[promptId] = newPromptData
+  await promptStorage.writePrompts(allPrompts)
 
   if (data.projectId) {
-    await addPromptToProject(newPrompt.id, data.projectId)
+    await addPromptToProject(newPromptData.id, data.projectId)
   }
 
-  return newPrompt
+  return newPromptData
 }
 
 export async function addPromptToProject(promptId: string, projectId: string): Promise<void> {
-  const promptExists = db.prepare('SELECT id FROM prompts WHERE id = ?').get(promptId)
-  if (!promptExists) {
+  const allPrompts = await promptStorage.readPrompts()
+  if (!allPrompts[promptId]) {
     throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND')
   }
 
-  db.prepare('DELETE FROM prompt_projects WHERE prompt_id = ?').run(promptId)
+  let promptProjects = await promptStorage.readPromptProjects()
 
-  const insertStmt = db.prepare(
-    'INSERT INTO prompt_projects (id, prompt_id, project_id) VALUES (lower(hex(randomblob(16))), ?, ?)'
-  )
-  const info = insertStmt.run(promptId, projectId)
-  if (info.changes === 0) {
-    throw new ApiError(500, `Failed to link prompt ${promptId} to project ${projectId}.`, 'PROMPT_LINK_FAILED')
+  // Check if association already exists
+  const existingLink = promptProjects.find(link => link.promptId === promptId && link.projectId === projectId)
+  if (existingLink) {
+    return // Association already exists, do nothing
   }
+
+  // In the previous DB version, this was effectively an "set project for prompt"
+  // For a file-based many-to-many, we usually add.
+  // The old code `db.prepare('DELETE FROM prompt_projects WHERE prompt_id = ?').run(promptId)`
+  // would remove the prompt from ALL projects before adding to one.
+  // This is a change in behavior if we simply add.
+  // Let's stick to the previous behavior for now: a prompt is associated with one project via this call.
+  // If multiple projects are desired, a different method or logic modification is needed.
+  // The schema `CreatePromptBodySchema` implies one project association at creation.
+  // The `listPromptsByProject` and `removePromptFromProject` suggest many-to-many is possible.
+
+  // Re-evaluating: The original DB `addPromptToProject` did NOT remove all other associations.
+  // It only added a new one. The `DELETE FROM prompt_projects WHERE prompt_id = ?` was in `createPrompt` if a `projectId` was given.
+  // Let's look at the `createPrompt`'s use of `addPromptToProject`.
+  // The DB `addPromptToProject`:
+  // `db.prepare('DELETE FROM prompt_projects WHERE prompt_id = ?').run(promptId)` THIS IS THE LINE.
+  // So yes, it first removes all project associations for that prompt, then adds the new one.
+  // This means a prompt is assigned to at most one project via the `createPrompt` or direct `addPromptToProject` flow.
+
+  // To replicate: filter out existing links for this promptId, then add the new one.
+  promptProjects = promptProjects.filter(link => link.promptId !== promptId)
+
+  const newLink: PromptProject = {
+    id: promptStorage.generateId('link'), // ID for the association itself
+    promptId: promptId,
+    projectId: projectId
+  }
+
+  try {
+    PromptProjectSchema.parse(newLink)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      console.error(`Validation failed for new prompt-project link: ${error.message}`, error.flatten().fieldErrors)
+      throw new ApiError(500, `Internal validation error linking prompt to project.`, 'PROMPT_LINK_VALIDATION_ERROR', error.flatten().fieldErrors)
+    }
+    throw error
+  }
+
+  promptProjects.push(newLink)
+  await promptStorage.writePromptProjects(promptProjects)
 }
 
 export async function removePromptFromProject(promptId: string, projectId: string): Promise<void> {
-  const stmt = db.prepare('DELETE FROM prompt_projects WHERE prompt_id = ? AND project_id = ?')
-  const info = stmt.run(promptId, projectId)
-  if (info.changes === 0) {
-    const promptExists = await getPromptById(promptId)
-    if (!promptExists) {
+  let promptProjects = await promptStorage.readPromptProjects()
+  const initialLinkCount = promptProjects.length
+
+  promptProjects = promptProjects.filter(link => !(link.promptId === promptId && link.projectId === projectId))
+
+  if (promptProjects.length === initialLinkCount) {
+    const allPrompts = await promptStorage.readPrompts()
+    if (!allPrompts[promptId]) {
       throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND')
     }
+    // If prompt exists, but link didn't, then the association was not found.
     throw new ApiError(
       404,
       `Association between prompt ${promptId} and project ${projectId} not found.`,
       'PROMPT_PROJECT_LINK_NOT_FOUND'
     )
   }
+
+  await promptStorage.writePromptProjects(promptProjects)
 }
 
 export async function getPromptById(promptId: string): Promise<Prompt> {
-  const stmt = db.prepare('SELECT * FROM prompts WHERE id = ? LIMIT 1')
-  const found = stmt.get(promptId) as RawPrompt | undefined
+  const allPrompts = await promptStorage.readPrompts()
+  const found = allPrompts[promptId]
   if (!found) {
     throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND')
   }
-  return PromptSchema.parse({
-    ...found,
-    createdAt: formatToISO(found.created_at),
-    updatedAt: formatToISO(found.updated_at)
-  })
+  return found
 }
 
 export async function listAllPrompts(): Promise<Prompt[]> {
-  const stmt = db.prepare('SELECT * FROM prompts')
-  const rows = stmt.all() as RawPrompt[]
-  if (!rows) {
-    return []
-  }
-  return rows.map((row) =>
-    PromptSchema.parse({
-      ...row,
-      createdAt: formatToISO(row.created_at),
-      updatedAt: formatToISO(row.updated_at)
-    })
-  )
+  const allPromptsData = await promptStorage.readPrompts()
+  const promptList = Object.values(allPromptsData)
+  // Optional: sort if needed, e.g., by updatedAt or name
+  promptList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  return promptList
 }
 
 export const getPromptsByIds = async (promptIds: string[]): Promise<Prompt[]> => {
-  const allPrompts = await listAllPrompts()
-  return allPrompts.filter((p) => promptIds.includes(p.id))
+  const allPrompts = await promptStorage.readPrompts()
+  return promptIds.map(id => allPrompts[id]).filter(Boolean) as Prompt[]
 }
 
 export async function listPromptsByProject(projectId: string): Promise<Prompt[]> {
-  const stmt = db.prepare(`
-    SELECT p.* 
-    FROM prompts p 
-    INNER JOIN prompt_projects pp ON p.id = pp.prompt_id 
-    WHERE pp.project_id = ?
-  `)
-  const rows = stmt.all(projectId) as RawPrompt[]
-  return rows.map((row) =>
-    PromptSchema.parse({
-      ...row,
-      createdAt: formatToISO(row.created_at),
-      updatedAt: formatToISO(row.updated_at)
-    })
-  )
+  const promptProjects = await promptStorage.readPromptProjects()
+  const relevantPromptIds = promptProjects
+    .filter(link => link.projectId === projectId)
+    .map(link => link.promptId)
+
+  if (relevantPromptIds.length === 0) {
+    return []
+  }
+  const allPrompts = await promptStorage.readPrompts()
+  return relevantPromptIds.map(promptId => allPrompts[promptId]).filter(Boolean) as Prompt[] // filter(Boolean) to remove undefined if a link exists for a deleted prompt
 }
 
 export async function updatePrompt(promptId: string, data: UpdatePromptBody): Promise<Prompt> {
-  const existing = await getPromptById(promptId)
+  const allPrompts = await promptStorage.readPrompts()
+  const existingPrompt = allPrompts[promptId]
 
-  const updateStmt = db.prepare(`
-    UPDATE prompts 
-    SET name = ?, content = ?, updated_at = CURRENT_TIMESTAMP 
-    WHERE id = ?
-    RETURNING *
-  `)
-  const updatedRaw = updateStmt.get(data.name ?? existing.name, data.content ?? existing.content, promptId) as
-    | RawPrompt
-    | undefined
-
-  if (!updatedRaw) {
-    throw new ApiError(500, `Failed to update prompt ${promptId} after confirming existence.`, 'PROMPT_UPDATE_FAILED')
+  if (!existingPrompt) {
+    throw new ApiError(404, `Prompt with ID ${promptId} not found for update.`, 'PROMPT_NOT_FOUND')
   }
-  return PromptSchema.parse({
-    ...updatedRaw,
-    createdAt: formatToISO(updatedRaw.created_at),
-    updatedAt: formatToISO(updatedRaw.updated_at)
-  })
-}
 
-export async function deletePrompt(promptId: string): Promise<boolean> {
-  db.prepare('DELETE FROM prompt_projects WHERE prompt_id = ?').run(promptId)
-
-  const deleteStmt = db.prepare('DELETE FROM prompts WHERE id = ?')
-  const info = deleteStmt.run(promptId)
-  return info.changes > 0
-}
-
-export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {
-  const stmt = db.prepare('SELECT * FROM prompt_projects WHERE prompt_id = ?')
-  const rows = stmt.all(promptId) as RawPromptProject[]
-  return rows.map((row) => PromptProjectSchema.parse(row))
-}
-
-/**
- * Takes the user's original context/intent/prompt and uses a model
- * to generate a refined (optimized) version of that prompt.
- */
-export async function optimizePrompt(userContext: string): Promise<string> {
-  const systemMessage = `
-<SystemPrompt>
-You are the Promptimizer, a specialized assistant that refines or rewrites user queries into
-more effective prompts. Given the user's context or goal, output ONLY the single optimized prompt.
-No additional commentary, no extraneous text, no markdown formatting.
-</SystemPrompt>
-
-<Reasoning>
-Follow the style guidelines and key requirements below:
-${promptsMap.contemplativePrompt}
-</Reasoning>
-`
-
-  const userMessage = userContext.trim()
-  if (!userMessage) {
-    return ''
+  const updatedPromptData: Prompt = {
+    ...existingPrompt,
+    name: data.name ?? existingPrompt.name,
+    content: data.content ?? existingPrompt.content,
+    updatedAt: new Date().toISOString()
   }
 
   try {
-    const optimizedPrompt = await generateSingleText({
-      systemMessage: systemMessage,
-      prompt: userMessage
-    })
-
-    return optimizedPrompt.trim()
-  } catch (error: any) {
-    console.error('[PromptimizerService] Failed to optimize prompt:', error)
-    if (error instanceof ApiError) {
-      throw error
+    PromptSchema.parse(updatedPromptData)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      console.error(`Validation failed updating prompt ${promptId}: ${error.message}`, error.flatten().fieldErrors)
+      throw new ApiError(500, `Internal validation error updating prompt.`, 'PROMPT_VALIDATION_ERROR', error.flatten().fieldErrors)
     }
-    throw new ApiError(
-      500,
-      `Failed to optimize prompt: ${error.message || 'AI provider error'}`,
-      'PROMPT_OPTIMIZE_ERROR',
-      { originalError: error }
-    )
+    throw error
   }
+
+  allPrompts[promptId] = updatedPromptData
+  await promptStorage.writePrompts(allPrompts)
+  return updatedPromptData
 }
+
+export async function deletePrompt(promptId: string): Promise<boolean> {
+  const allPrompts = await promptStorage.readPrompts()
+  if (!allPrompts[promptId]) {
+    return false // Prompt not found, nothing to delete
+  }
+
+  delete allPrompts[promptId]
+  await promptStorage.writePrompts(allPrompts)
+
+  // Also remove any associations for this prompt
+  let promptProjects = await promptStorage.readPromptProjects()
+  const initialLinkCount = promptProjects.length
+  promptProjects = promptProjects.filter(link => link.promptId !== promptId)
+
+  if (promptProjects.length < initialLinkCount) {
+    await promptStorage.writePromptProjects(promptProjects)
+  }
+
+  return true
+}
+
+export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {
+  const promptProjects = await promptStorage.readPromptProjects()
+  return promptProjects.filter(link => link.promptId === promptId)
+}
+

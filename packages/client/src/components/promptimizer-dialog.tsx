@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Textarea } from '@ui'
 import { Button } from '@ui'
 
 interface PromptimizerDialogProps {
@@ -10,8 +10,6 @@ interface PromptimizerDialogProps {
 }
 
 export function PromptimizerDialog({ open, onClose, optimizedPrompt, onUpdatePrompt }: PromptimizerDialogProps) {
-  useEffect(() => {}, [open])
-
   const handleUpdatePrompt = () => {
     if (!optimizedPrompt.trim()) return
     onUpdatePrompt?.(optimizedPrompt)
@@ -27,7 +25,7 @@ export function PromptimizerDialog({ open, onClose, optimizedPrompt, onUpdatePro
         </DialogHeader>
 
         <div className='mt-2 space-y-2'>
-          <textarea
+          <Textarea
             className='w-full h-40 p-2 border rounded focus:outline-none text-sm'
             readOnly
             value={optimizedPrompt}

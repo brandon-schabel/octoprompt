@@ -1,5 +1,5 @@
 import { resolvePath } from '@/utils/path-utils'
-import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@/utils/project-storage'
+import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@/utils/storage/project-storage'
 import {
   CreateProjectBody,
   Project,
@@ -12,9 +12,11 @@ import path from 'path'
 import { z, ZodError } from 'zod'
 import { LOW_MODEL_CONFIG } from 'shared'
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
-import { generateStructuredData } from './gen-ai-services'
+import { generateSingleText, generateStructuredData } from './gen-ai-services'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { ApiError } from 'shared'
+import { promptsMap } from '../utils/prompts-map'
+import { getFullProjectSummary } from '@/utils/get-full-project-summary'
 
 export async function createProject(data: CreateProjectBody): Promise<Project> {
   const projectId = projectStorage.generateId('proj')
@@ -39,6 +41,7 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
     projects[projectId] = validatedProject
     await projectStorage.writeProjects(projects)
     await projectStorage.writeProjectFiles(projectId, {})
+
 
     return validatedProject
   } catch (error) {
@@ -245,14 +248,7 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
       allFiles.map((f) => f.id)
     )
 
-    const updatedFilesMap = allFiles.reduce((acc, file) => {
-      acc[file.id] = file
-      return acc
-    }, {} as ProjectFilesStorage)
 
-    const validatedMap = ProjectFilesStorageSchema.parse(updatedFilesMap)
-
-    await projectStorage.writeProjectFiles(projectId, validatedMap)
     console.log(`[ProjectService] Completed resummarizeAllFiles and saved updates for project ${projectId}`)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -758,16 +754,72 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
-      `Successfully summarized: ${summarizedCount}, ` +
-      `Skipped (empty): ${skippedByEmptyCount}, ` +
-      `Skipped (errors): ${errorCount}, ` +
-      `Total not summarized: ${finalSkippedCount}`
+    `Total to process: ${totalProcessed}, ` +
+    `Successfully summarized: ${summarizedCount}, ` +
+    `Skipped (empty): ${skippedByEmptyCount}, ` +
+    `Skipped (errors): ${errorCount}, ` +
+    `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
     included: summarizedCount,
     skipped: finalSkippedCount,
     updatedFiles: updatedFilesResult
+  }
+}
+
+/**
+ * Takes the user's original context/intent/prompt and uses a model
+ * to generate a refined (optimized) version of that prompt.
+ * This function does not interact with prompt storage for CRUD and remains unchanged.
+ */
+export async function optimizeUserInput(projectId: string, userContext: string): Promise<string> {
+  const projectSummary = await getFullProjectSummary(projectId)
+
+
+
+
+  const systemMessage = `
+<SystemPrompt>
+You are the Promptimizer, a specialized assistant that refines or rewrites user queries into
+more effective prompts based on the project context. Given the user's context or goal, output ONLY the single optimized prompt.
+No additional commentary, no extraneous text, no markdown formatting.
+</SystemPrompt>
+
+
+<ProjectSummary>
+${projectSummary}
+</ProjectSummary>
+
+<Reasoning>
+Follow the style guidelines and key requirements below:
+${promptsMap.contemplativePrompt}
+</Reasoning>
+`
+
+  const userMessage = userContext.trim()
+  if (!userMessage) {
+    return ''
+  }
+
+  try {
+    const optimizedPrompt = await generateSingleText({
+      systemMessage: systemMessage,
+      prompt: userMessage
+
+    })
+
+    return optimizedPrompt.trim()
+  } catch (error: any) {
+    console.error('[PromptimizerService] Failed to optimize prompt:', error)
+    if (error instanceof ApiError) {
+      throw error
+    }
+    throw new ApiError(
+      500,
+      `Failed to optimize prompt: ${error.message || 'AI provider error'}`,
+      'PROMPT_OPTIMIZE_ERROR',
+      { originalError: error }
+    )
   }
 }

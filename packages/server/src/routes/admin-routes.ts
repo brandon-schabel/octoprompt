@@ -1,5 +1,4 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { db } from '@/utils/database'
 import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas'
 
 const EnvironmentInfoSchema = z
@@ -107,19 +106,7 @@ export const adminRoutes = new OpenAPIHono()
         SERVER_PORT: process.env.PORT ?? null
       }
 
-      const dbStats = {
-        chats: db.query('SELECT COUNT(*) as count FROM chats').get() as { count: number },
-        chat_messages: db.query('SELECT COUNT(*) as count FROM chat_messages').get() as { count: number },
-        projects: db.query('SELECT COUNT(*) as count FROM projects').get() as { count: number },
-        files: db.query('SELECT COUNT(*) as count FROM files').get() as { count: number },
-        prompts: db.query('SELECT COUNT(*) as count FROM prompts').get() as { count: number },
-        prompt_projects: db.query('SELECT COUNT(*) as count FROM prompt_projects').get() as { count: number },
-        provider_keys: db.query('SELECT COUNT(*) as count FROM provider_keys').get() as { count: number },
-        tickets: db.query('SELECT COUNT(*) as count FROM tickets').get() as { count: number },
-        ticket_files: db.query('SELECT COUNT(*) as count FROM ticket_files').get() as { count: number },
-        ticket_tasks: db.query('SELECT COUNT(*) as count FROM ticket_tasks').get() as { count: number },
-        file_changes: db.query('SELECT COUNT(*) as count FROM file_changes').get() as { count: number }
-      }
+
 
       const serverInfo = {
         version: process.version,
@@ -134,7 +121,6 @@ export const adminRoutes = new OpenAPIHono()
         success: true,
         environment: envInfo,
         serverInfo: serverInfo,
-        databaseStats: dbStats
       }
       return c.json(payload, 200)
     } catch (e) {

@@ -7,8 +7,6 @@ import {
   ProjectAndPromptIdParamsSchema,
   PromptResponseSchema,
   PromptListResponseSchema,
-  OptimizePromptResponseSchema,
-  OptimizePromptRequestSchema
 } from 'shared/src/schemas/prompt.schemas'
 import {
   addPromptToProject,
@@ -19,7 +17,6 @@ import {
   listPromptsByProject,
   removePromptFromProject,
   updatePrompt,
-  optimizePrompt
 } from '@/services/prompt-service'
 import { ProjectIdParamsSchema } from 'shared/src/schemas/project.schemas'
 
@@ -217,33 +214,6 @@ const updatePromptRoute = createRoute({
   }
 })
 
-const optimizePromptRoute = createRoute({
-  method: 'post',
-  path: '/api/prompt/optimize',
-  tags: ['Prompts', 'AI'],
-  summary: 'Optimize a user-provided prompt using an AI model',
-  request: {
-    body: {
-      content: { 'application/json': { schema: OptimizePromptRequestSchema } },
-      required: true,
-      description: 'The user prompt context to optimize'
-    }
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OptimizePromptResponseSchema } },
-      description: 'Successfully optimized the prompt'
-    },
-    422: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Validation Error'
-    },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error or AI provider error during optimization'
-    }
-  }
-})
 
 const deletePromptRoute = createRoute({
   method: 'delete',
@@ -334,12 +304,6 @@ export const promptRoutes = new OpenAPIHono()
       >,
       200
     )
-  })
-  .openapi(optimizePromptRoute, async (c) => {
-    const { userContext } = c.req.valid('json')
-    const optimized = await optimizePrompt(userContext)
-    const responseData = { optimizedPrompt: optimized }
-    return c.json({ success: true, data: responseData } satisfies z.infer<typeof OptimizePromptResponseSchema>, 200)
   })
 
 export type PromptRouteTypes = typeof promptRoutes

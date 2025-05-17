@@ -20,9 +20,9 @@ import type {
   PostChatsByChatIdForkByMessageIdData,
   PostChatsByChatIdForkByMessageIdResponse,
   PostChatsByChatIdForkByMessageIdError,
-  DeleteMessagesByMessageIdData,
-  DeleteMessagesByMessageIdResponse,
-  DeleteMessagesByMessageIdError,
+  DeleteChatsByChatIdMessagesByMessageIdData,
+  DeleteChatsByChatIdMessagesByMessageIdResponse,
+  DeleteChatsByChatIdMessagesByMessageIdError,
   DeleteChatsByChatIdData,
   DeleteChatsByChatIdResponse,
   DeleteChatsByChatIdError,
@@ -116,6 +116,9 @@ import type {
   PostApiProjectsByProjectIdRemoveSummariesData,
   PostApiProjectsByProjectIdRemoveSummariesResponse,
   PostApiProjectsByProjectIdRemoveSummariesError,
+  PostApiPromptOptimizeData,
+  PostApiPromptOptimizeResponse,
+  PostApiPromptOptimizeError,
   GetApiKeysData,
   GetApiKeysResponse,
   GetApiKeysError,
@@ -137,15 +140,18 @@ import type {
   GetApiAdminSystemStatusData,
   GetApiAdminSystemStatusResponse,
   GetApiAdminSystemStatusError,
-  PostApiFileAiChangeData,
-  PostApiFileAiChangeResponse,
-  PostApiFileAiChangeError,
-  GetApiFileAiChangeByFileChangeIdData,
-  GetApiFileAiChangeByFileChangeIdResponse,
-  GetApiFileAiChangeByFileChangeIdError,
-  PostApiFileAiChangeByFileChangeIdConfirmData,
-  PostApiFileAiChangeByFileChangeIdConfirmResponse,
-  PostApiFileAiChangeByFileChangeIdConfirmError,
+  PostApiProjectsByProjectIdAiFileChangesData,
+  PostApiProjectsByProjectIdAiFileChangesResponse,
+  PostApiProjectsByProjectIdAiFileChangesError,
+  GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData,
+  GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdResponse,
+  GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdError,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmResponse,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmError,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectResponse,
+  PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectError,
   GetApiPromptsData,
   GetApiPromptsResponse,
   GetApiPromptsError,
@@ -170,9 +176,6 @@ import type {
   PatchApiPromptsByPromptIdData,
   PatchApiPromptsByPromptIdResponse,
   PatchApiPromptsByPromptIdError,
-  PostApiPromptOptimizeData,
-  PostApiPromptOptimizeResponse,
-  PostApiPromptOptimizeError,
   PostApiGenAiStreamData,
   PostApiGenAiStreamResponse,
   PostApiGenAiTextData,
@@ -329,15 +332,15 @@ export const postChatsByChatIdForkByMessageId = <ThrowOnError extends boolean = 
 /**
  * Delete a specific message
  */
-export const deleteMessagesByMessageId = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteMessagesByMessageIdData, ThrowOnError>
+export const deleteChatsByChatIdMessagesByMessageId = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteChatsByChatIdMessagesByMessageIdData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).delete<
-    DeleteMessagesByMessageIdResponse,
-    DeleteMessagesByMessageIdError,
+    DeleteChatsByChatIdMessagesByMessageIdResponse,
+    DeleteChatsByChatIdMessagesByMessageIdError,
     ThrowOnError
   >({
-    url: '/messages/{messageId}',
+    url: '/chats/{chatId}/messages/{messageId}',
     ...options
   })
 }
@@ -875,6 +878,26 @@ export const postApiProjectsByProjectIdRemoveSummaries = <ThrowOnError extends b
 }
 
 /**
+ * Optimize a user-provided prompt using an AI model
+ */
+export const postApiPromptOptimize = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiPromptOptimizeData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).post<
+    PostApiPromptOptimizeResponse,
+    PostApiPromptOptimizeError,
+    ThrowOnError
+  >({
+    url: '/api/prompt/optimize',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers
+    }
+  })
+}
+
+/**
  * List all configured provider keys (excluding secrets)
  */
 export const getApiKeys = <ThrowOnError extends boolean = false>(options?: Options<GetApiKeysData, ThrowOnError>) => {
@@ -971,13 +994,17 @@ export const getApiAdminSystemStatus = <ThrowOnError extends boolean = false>(
 }
 
 /**
- * Generate AI-assisted file changes based on a prompt
+ * Generate AI-assisted file changes for a project file
  */
-export const postApiFileAiChange = <ThrowOnError extends boolean = false>(
-  options?: Options<PostApiFileAiChangeData, ThrowOnError>
+export const postApiProjectsByProjectIdAiFileChanges = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiProjectsByProjectIdAiFileChangesData, ThrowOnError>
 ) => {
-  return (options?.client ?? _heyApiClient).post<PostApiFileAiChangeResponse, PostApiFileAiChangeError, ThrowOnError>({
-    url: '/api/file/ai-change',
+  return (options.client ?? _heyApiClient).post<
+    PostApiProjectsByProjectIdAiFileChangesResponse,
+    PostApiProjectsByProjectIdAiFileChangesError,
+    ThrowOnError
+  >({
+    url: '/api/projects/{projectId}/ai-file-changes',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -987,17 +1014,17 @@ export const postApiFileAiChange = <ThrowOnError extends boolean = false>(
 }
 
 /**
- * Retrieve details about a specific AI file change
+ * Retrieve details for a specific AI file change
  */
-export const getApiFileAiChangeByFileChangeId = <ThrowOnError extends boolean = false>(
-  options: Options<GetApiFileAiChangeByFileChangeIdData, ThrowOnError>
+export const getApiProjectsByProjectIdAiFileChangesByAiFileChangeId = <ThrowOnError extends boolean = false>(
+  options: Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).get<
-    GetApiFileAiChangeByFileChangeIdResponse,
-    GetApiFileAiChangeByFileChangeIdError,
+    GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdResponse,
+    GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdError,
     ThrowOnError
   >({
-    url: '/api/file/ai-change/{fileChangeId}',
+    url: '/api/projects/{projectId}/ai-file-changes/{aiFileChangeId}',
     ...options
   })
 }
@@ -1005,15 +1032,31 @@ export const getApiFileAiChangeByFileChangeId = <ThrowOnError extends boolean = 
 /**
  * Confirm and apply an AI-generated file change
  */
-export const postApiFileAiChangeByFileChangeIdConfirm = <ThrowOnError extends boolean = false>(
-  options: Options<PostApiFileAiChangeByFileChangeIdConfirmData, ThrowOnError>
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirm = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData, ThrowOnError>
 ) => {
   return (options.client ?? _heyApiClient).post<
-    PostApiFileAiChangeByFileChangeIdConfirmResponse,
-    PostApiFileAiChangeByFileChangeIdConfirmError,
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmResponse,
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmError,
     ThrowOnError
   >({
-    url: '/api/file/ai-change/{fileChangeId}/confirm',
+    url: '/api/projects/{projectId}/ai-file-changes/{aiFileChangeId}/confirm',
+    ...options
+  })
+}
+
+/**
+ * Reject an AI-generated file change
+ */
+export const postApiProjectsByProjectIdAiFileChangesByAiFileChangeIdReject = <ThrowOnError extends boolean = false>(
+  options: Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).post<
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectResponse,
+    PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdRejectError,
+    ThrowOnError
+  >({
+    url: '/api/projects/{projectId}/ai-file-changes/{aiFileChangeId}/reject',
     ...options
   })
 }
@@ -1138,26 +1181,6 @@ export const patchApiPromptsByPromptId = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/api/prompts/{promptId}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers
-    }
-  })
-}
-
-/**
- * Optimize a user-provided prompt using an AI model
- */
-export const postApiPromptOptimize = <ThrowOnError extends boolean = false>(
-  options: Options<PostApiPromptOptimizeData, ThrowOnError>
-) => {
-  return (options.client ?? _heyApiClient).post<
-    PostApiPromptOptimizeResponse,
-    PostApiPromptOptimizeError,
-    ThrowOnError
-  >({
-    url: '/api/prompt/optimize',
     ...options,
     headers: {
       'Content-Type': 'application/json',
