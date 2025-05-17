@@ -9,7 +9,7 @@ on:
       - 'packages/shared/**'
 
 jobs:
-  test-server:
+  shared-utils-ci:
     runs-on: ubuntu-latest
 
     steps:

@@ -10,7 +10,7 @@ on:
       - 'packages/server/**'
 
 jobs:
-  test-server:
+  server-ci:
     runs-on: ubuntu-latest
     # env:
     #   DATABASE_TEST_URL: ${{ secrets.DATABASE_TEST_URL }}
