@@ -37,6 +37,9 @@ async function buildProject() {
   // Prepare dist folder
   console.log('Copying required files to dist...')
   mkdirSync(join(distDir, 'client-dist'), { recursive: true })
+  // Copy the built client assets from packages/server/client-dist to dist/client-dist
+  console.log('Copying built client files to main dist for Bun bundle...')
+  await $`cp -r ${clientBuildOutputDir}/* ${join(distDir, 'client-dist')}/`
 
   // Write modified package.json to dist
   const pkg = require(join(serverDir, 'package.json'))
@@ -57,6 +60,12 @@ async function buildProject() {
 
   // Define targets with proper executable extensions
   const bundleNamePrefix = `${pkg.name}-${pkg.version}`
+
+  // Create a zip archive for the Bun-runnable bundle
+  console.log('Creating Bun-runnable bundle zip archive...')
+  const bunBundleName = `${bundleNamePrefix}-bun-bundle.zip`
+  await createBunBundleZip(distDir, join(distDir, bunBundleName))
+
   type PlatformTarget = {
     name: string
     target: string
@@ -107,6 +116,32 @@ async function buildProject() {
   const endTime = performance.now()
   const totalSeconds = ((endTime - startTime) / 1000).toFixed(2)
   console.log(`\nBuild completed in ${totalSeconds} seconds`)
+}
+
+async function createBunBundleZip(sourceDir: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const output = createWriteStream(outputPath)
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    })
+
+    output.on('close', () => {
+      console.log(`Bun bundle zip archive created successfully: ${archive.pointer()} total bytes`)
+      resolve()
+    })
+
+    archive.on('error', (err) => {
+      reject(err)
+    })
+
+    archive.pipe(output)
+    // Add specific files and folders for the Bun bundle
+    archive.file(join(sourceDir, 'server.js'), { name: 'server.js' })
+    archive.file(join(sourceDir, 'package.json'), { name: 'package.json' })
+    archive.directory(join(sourceDir, 'client-dist'), 'client-dist')
+    archive.directory(join(sourceDir, 'prompts'), 'prompts')
+    archive.finalize()
+  })
 }
 
 function createZipArchive(sourceDir: string, outputPath: string): Promise<void> {

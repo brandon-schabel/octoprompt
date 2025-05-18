@@ -6,13 +6,41 @@ Software Toolkit For Rapidly Building Codebases Using AI
 
 If you've worked with LLMs and code you know how much quality drops off with more code in the context. OctoPrompt helps with quality dropoff by helping you find and select the files from your codebase for your desired changes. OctoPrompt is a dev tool without AI first, and uses AI to enhance its abilities. The long term goal of OctoPrompt is to make building codebases with AI as easy as possible and to increasingly automate the manual work of planning changes, editing code, and testing the result.
 
-#### OctoPrompt Project Overview page
+## Quick Start
+
+If you have [Bun](https://bun.sh/) installed then I'd recommend downloading the prebuilt Server/UI Bundle.
+
+[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-bun-bundle.zip)
+
+[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-macos-arm64.zip)
+
+[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-windows-x64.zip)
+
+[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-linux-x64.zip)
+
+> Once you have downloaded OctoPrompt for your platform please read "Running Binaries", especially for MacOS
+
+[View More Releases and Downloads](https://github.com/brandon-schabel/octoprompt/releases)
+
+Don't have Bun but have NPM? Install Bun using NPM: `npm install -g bun`
+
+Don't have NPM or Bun? Install Bun with curl on Mac/Linux `curl -fsSL https://bun.sh/install | bash` on Windows Powershell: `powershell -c "irm bun.sh/install.ps1 | iex"`
+
+Extract the zip file and cd into the extracted zip file and run the OctoPrompt server.
+
+```bash
+cd octoprompt-0.5.1-bun-bundle && bun run start
+```
+
+[View Your Local OctoPrompt UI](http://localhost:3579/)
+
+## OctoPrompt Project Overview page
 
 ![octoprompt-0-5-0-project-overview](https://github.com/user-attachments/assets/f92680e4-2877-488a-b336-79533c3999d4)
 
 ---
 
-## Quick Start
+## Zero Config Dev Environment Setup
 
 ### Step 1 - Clone OctoPrompt
 
@@ -28,7 +56,7 @@ Note: Only needed if Bun isn't already installed.
 cd octoprompt && npm install -g bun
 ```
 
-### Step 3 - Install Repo Packages && Run Setup to Initialize DB
+### Step 3 - Install Repo Packages
 
 ```bash
 bun i
@@ -40,11 +68,13 @@ bun i
 bun run dev
 ```
 
-View the [UI here](http://localhost:5173)
+View the [Dev UI here](http://localhost:5173)
 
-> If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file.
+> If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file or your `.gitignore`
 
 ## Running Binaries
+
+### Running on Linux
 
 On Linux you should be able to just navigate to the octoprompt binary file in the terminal and run it for example:
 
@@ -76,6 +106,28 @@ Finally  you can run the Octoprompt app by running the binary file as you normal
 
 ```bash
 ./octoprompt
+```
+
+### Running on Windows
+
+After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.5.1-windows-x64.zip`), open Command Prompt or PowerShell.
+
+Navigate to the extracted folder. For example, if you extracted it to your Downloads folder:
+
+```batch
+cd %USERPROFILE%\Downloads\octoprompt-v0.5.1-windows-x64
+```
+
+Or using PowerShell:
+
+```powershell
+cd $env:USERPROFILE\Downloads\octoprompt-v0.5.1-windows-x64
+```
+
+Then, run the executable:
+
+```batch
+.\octoprompt.exe
 ```
 
 ### Documentation Quick Links
@@ -110,7 +162,7 @@ Save, manage, and include all your favorite prompts with the built-in prompt man
 
 Thank you for checking out the project. If you have any questions please feel free to reach out and support Open Source by leaving a star.
 
-You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. OctoPrompt AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt’s local file watchers, built-in ticket system, quick file searching, and prompt management.
+You are always in control of your data. By default, everything runs locally, and the AI features are entirely optional, however you can run the AI features locally using on machine providers like Ollama and LM Studio. OctoPrompt AI can generate file summaries, plan tasks, and help with context-aware suggestions. If not, you still benefit from OctoPrompt's local file watchers, built-in ticket system, quick file searching, and prompt management.
 
 ## Key User Features
 
@@ -363,7 +415,7 @@ then run the binary file for your platforms directory:
 
 ## Contributing
 
-We welcome all contributions—whether you’re fixing a bug, adding a feature, or improving docs.  
+We welcome all contributions—whether you're fixing a bug, adding a feature, or improving docs.  
 General guidelines:
 
 1. **Fork & Clone**
@@ -371,7 +423,7 @@ General guidelines:
 3. **Implement** & Test
 4. **Open** a Pull Request
 
-Let’s make OctoPrompt even better together!
+Let's make OctoPrompt even better together!
 
 ---
 

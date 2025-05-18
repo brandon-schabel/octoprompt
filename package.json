@@ -13,8 +13,7 @@
     "test": "bun test",
     "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
     "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
-    "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts",
-    "build:docker": "docker build -t octoprompt-app ."
+    "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts"
   },
   "workspaces": [
     "packages/*"
