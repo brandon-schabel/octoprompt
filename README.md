@@ -44,6 +44,40 @@ View the [UI here](http://localhost:5173)
 
 > If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file.
 
+## Running Binaries
+
+On Linux you should be able to just navigate to the octoprompt binary file in the terminal and run it for example:
+
+```bash
+cd ~/Downloads/octoprompt-v0.5.1
+```
+
+Run the linux binary file:
+
+```bash
+./octoprompt
+```
+
+### Running on MacOS
+
+Currently I don't have MacOS code signing, so it just says the binary is damaged, but really it is quarntined. In order to run the binary on Mac you would have to do the following
+
+```bash
+cd ~/Downloads/octoprompt-v0.5.1
+```
+
+Then run to remove the quarantine:
+
+```bash
+sudo xattr -r -d com.apple.quarantine ./octoprompt
+```
+
+Finally  you can run the Octoprompt app by running the binary file as you normally would
+
+```bash
+./octoprompt
+```
+
 ### Documentation Quick Links
 
 [Projects Screen User Guide](./docs/projects.md)

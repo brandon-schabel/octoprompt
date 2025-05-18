@@ -65,9 +65,10 @@ async function buildProject() {
   }
 
   const targets: PlatformTarget[] = [
+    { name: `${bundleNamePrefix}-linux-arm64`, target: 'bun-linux-arm64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-linux-arm64` },
     { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-linux-x64` },
     { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-macos-x64` },
-    { name: `${bundleNamePrefix}-macos-arm64`, target: 'bun-darwin-arm64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-macos` },
+    { name: `${bundleNamePrefix}-macos-arm64`, target: 'bun-darwin-arm64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-macos-arm64` },
     { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe', outputDirName: `${pkg.name}-${pkg.version}-windows-x64` }
   ]
 
