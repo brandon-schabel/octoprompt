@@ -8,7 +8,7 @@ from enum import Enum
 # 2. Imported AppSettings, ProjectTabsStateRecord from .global_state_schema.
 # 3. Added placeholder for OperationSuccessResponseSchema, ApiErrorResponseSchema from .common_schemas.
 # 4. Defined KVKeyEnum and Pydantic models for KV operations.
-# 5. KVValue generic type and KVDefaultValues are illustrative of TS concepts; main schemas are ported.
+# 5. Renamed KV_SCHEMAS_PYTHON_EQUIVALENT to KV_SCHEMAS, added KVValue type.
 
 # Try to import from global_state_schema, use placeholders if not found (though it should exist)
 try:
@@ -53,12 +53,16 @@ class KVKeyEnum(str, Enum):
 
 # This mapping is useful for validation or dispatch in Python, similar to KvSchemas in TS.
 # The actual Pydantic models are defined elsewhere or are basic types.
-KV_SCHEMAS_PYTHON_EQUIVALENT = {
+KV_SCHEMAS = {
     KVKeyEnum.APP_SETTINGS: AppSettings,
     KVKeyEnum.PROJECT_TABS: ProjectTabsStateRecord, # This is Dict[str, ProjectTabState]
     KVKeyEnum.ACTIVE_PROJECT_TAB_ID: str,
     KVKeyEnum.ACTIVE_CHAT_ID: str
 }
+
+# Generic type for KV values, similar to z.infer from Zod schemas.
+# Used in service layer for type hinting. Response models use 'Any' for flexibility.
+KVValue = Any
 
 # KVDefaultValues equivalent in Python would typically involve a function
 # or a dictionary of default instances, leveraging Pydantic model defaults.
@@ -126,5 +130,7 @@ __all__ = [
     "KvSetResponse",
     "KvDeleteResponse",
     "ApiErrorResponse", # Exporting the imported/placeholder
-    "OperationSuccessResponse" # Exporting the imported/placeholder
+    "OperationSuccessResponse", # Exporting the imported/placeholder
+    "KV_SCHEMAS",
+    "KVValue"
 ]
