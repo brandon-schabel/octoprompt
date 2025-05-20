@@ -42,5 +42,6 @@ export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
 
 export const PLANNING_MODEL_CONFIG: ModelOptionsWithProvider = {
   ...HIGH_MODEL_CONFIG,
-  model: 'anthropic/claude-3.7-sonnet'
+  // model: 'anthropic/claude-3.7-sonnet'
+  model: 'google/gemini-2.5-pro-preview'
 }

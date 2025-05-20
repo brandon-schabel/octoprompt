@@ -27,9 +27,26 @@ import {
   ScrollArea,
   DialogFooter,
   DialogClose,
-  Switch
-} from '@ui' // Added Switch
-import { RefreshCw, Copy, Trash2, Bot, CheckCircle, FileEdit, FilePlus, FileMinus, Eye } from 'lucide-react'
+  Switch,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@ui'
+import {
+  RefreshCw,
+  Copy,
+  Trash2,
+  Bot,
+  CheckCircle,
+  FileEdit,
+  FilePlus,
+  FileMinus,
+  Eye,
+  ClipboardCopy,
+  Maximize,
+  Minimize
+} from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
 import { toast } from 'sonner'
@@ -172,6 +189,7 @@ export function AgentCoderControlDialog({
   const [selectedJobId, setSelectedJobId] = useLocalStorage<string>('selectedJobId', 'NO_JOB_ID')
   const [activeTab, setActiveTab] = useState<'new-job' | 'logs' | 'confirm'>('new-job')
   const [showDataInLogsTab, setShowDataInLogsTab] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
 
   const {
     data: agentRunData,
@@ -328,7 +346,7 @@ export function AgentCoderControlDialog({
       .reverse()
       .map((jobId: string) => ({
         value: jobId,
-        label: `${jobId.substring(0, 8)}... ${jobId === currentMutationJobId && runAgentCoderMutation.isPending ? ' (Running...)' : ''}`
+        label: `${jobId} ${jobId === currentMutationJobId && runAgentCoderMutation.isPending ? ' (Running...)' : ''}`
       }))
   }, [listData, selectedJobId, runAgentCoderMutation.variables?.agentJobId, runAgentCoderMutation.isPending])
 
@@ -350,6 +368,24 @@ export function AgentCoderControlDialog({
       refetchList()
     }
   }, [open, selectedJobId, runAgentCoderMutation.isPending, runAgentCoderMutation.variables?.agentJobId])
+
+  const handleCopyAllLogs = () => {
+    if (logEntries.length > 0) {
+      copyToClipboard(JSON.stringify(logEntries, null, 2), { successMessage: 'All logs copied!' })
+    } else {
+      toast.info('No logs to copy.')
+    }
+  }
+
+  const handleCopyLogEntry = (entry: LogEntry) => {
+    const contentToCopy = {
+      message: entry.message,
+      data: entry.data,
+      error: entry.error,
+      raw: entry.raw
+    }
+    copyToClipboard(JSON.stringify(contentToCopy, null, 2), { successMessage: 'Log entry copied!' })
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -451,272 +487,309 @@ export function AgentCoderControlDialog({
             <TabsTrigger value='confirm'>Confirm</TabsTrigger>
           </TabsList>
 
-          <TabsContent value='new-job' className='flex-1 min-h-0 flex flex-col gap-2'>
-            <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 overflow-hidden'>
-              <Card className='flex flex-col overflow-hidden'>
-                <CardHeader className='py-2 px-3 border-b'>
-                  <CardTitle className='text-sm font-medium'>Agent Instructions</CardTitle>
-                </CardHeader>
-                <CardContent className='flex-1 p-2 overflow-y-auto text-xs'>
-                  <h3 className='font-semibold mb-1'>User Input:</h3>
-                  <ScrollArea className='h-[100px] border rounded p-1 bg-background mb-2'>
-                    <pre className='whitespace-pre-wrap break-words'>{userInput || '(No user input provided)'}</pre>
-                  </ScrollArea>
-                  <h3 className='font-semibold mb-1'>Selected Prompts:</h3>
-                  <ScrollArea className='h-[100px] border rounded p-1 bg-background'>
-                    {selectedPrompts.length > 0 ? (
-                      <ul className='list-disc pl-4 space-y-1'>
-                        {selectedPrompts.map((id) => {
-                          const prompt = promptData?.find((p) => p.id === id)
-                          return (
-                            <li key={id} title={prompt?.content || 'Prompt content missing'}>
-                              {prompt?.name || `ID: ${id.substring(0, 8)}...`}
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    ) : (
-                      <p className='text-muted-foreground italic'>(No prompts selected)</p>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+          {activeTab === 'new-job' && (
+            <TabsContent value='new-job' className='flex-1 min-h-0 flex flex-col gap-2'>
+              <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 overflow-hidden'>
+                <Card className='flex flex-col overflow-hidden'>
+                  <CardHeader className='py-2 px-3 border-b'>
+                    <CardTitle className='text-sm font-medium'>Agent Instructions</CardTitle>
+                  </CardHeader>
+                  <CardContent className='flex-1 p-2 overflow-y-auto text-xs'>
+                    <h3 className='font-semibold mb-1'>User Input:</h3>
+                    <ScrollArea className='h-[100px] border rounded p-1 bg-background mb-2'>
+                      <pre className='whitespace-pre-wrap break-words'>{userInput || '(No user input provided)'}</pre>
+                    </ScrollArea>
+                    <h3 className='font-semibold mb-1'>Selected Prompts:</h3>
+                    <ScrollArea className='h-[100px] border rounded p-1 bg-background'>
+                      {selectedPrompts.length > 0 ? (
+                        <ul className='list-disc pl-4 space-y-1'>
+                          {selectedPrompts.map((id) => {
+                            const prompt = promptData?.find((p) => p.id === id)
+                            return (
+                              <li key={id} title={prompt?.content || 'Prompt content missing'}>
+                                {prompt?.name || `ID: ${id.substring(0, 8)}...`}
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      ) : (
+                        <p className='text-muted-foreground italic'>(No prompts selected)</p>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
 
-              <Card className='flex flex-col overflow-hidden'>
-                <CardHeader className='py-2 px-3 border-b'>
-                  <CardTitle className='text-sm font-medium'>Context & Execution</CardTitle>
-                </CardHeader>
-                <CardContent className='flex-1 p-2 overflow-y-auto text-xs'>
-                  <h3 className='font-semibold mb-1'>Selected Files:</h3>
-                  <ScrollArea className='h-[100px] border rounded p-1 bg-background mb-2'>
-                    {selectedFileIdsFromProps.length > 0 ? (
-                      <ul className='list-disc pl-4 space-y-1'>
-                        {selectedFileIdsFromProps.map((fileId) => {
-                          const file = projectFileMap.get(fileId)
-                          return (
-                            <li key={fileId} className='truncate' title={file?.path || fileId}>
-                              {file?.name}
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    ) : (
-                      <p className='text-muted-foreground italic'>(No files selected)</p>
-                    )}
-                  </ScrollArea>
-                  <h3 className='font-semibold mb-1'>Token Input Estimate:</h3>
-                  <p className='border rounded p-1 bg-background'>{totalTokens} tokens</p>
-                </CardContent>
-              </Card>
-            </div>
+                <Card className='flex flex-col overflow-hidden'>
+                  <CardHeader className='py-2 px-3 border-b'>
+                    <CardTitle className='text-sm font-medium'>Context & Execution</CardTitle>
+                  </CardHeader>
+                  <CardContent className='flex-1 p-2 overflow-y-auto text-xs'>
+                    <h3 className='font-semibold mb-1'>Selected Files:</h3>
+                    <ScrollArea className='h-[100px] border rounded p-1 bg-background mb-2'>
+                      {selectedFileIdsFromProps.length > 0 ? (
+                        <ul className='list-disc pl-4 space-y-1'>
+                          {selectedFileIdsFromProps.map((fileId) => {
+                            const file = projectFileMap.get(fileId)
+                            return (
+                              <li key={fileId} className='truncate' title={file?.path || fileId}>
+                                {file?.name}
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      ) : (
+                        <p className='text-muted-foreground italic'>(No files selected)</p>
+                      )}
+                    </ScrollArea>
+                    <h3 className='font-semibold mb-1'>Token Input Estimate:</h3>
+                    <p className='border rounded p-1 bg-background'>{totalTokens} tokens</p>
+                  </CardContent>
+                </Card>
+              </div>
 
-            <div className='shrink-0 mt-auto pt-2 border-t'>
-              <p className='text-xs text-muted-foreground text-center mb-2'>
-                Note: Agent won't make file changes without confirmation.
-                <br />
-                Model selection/settings can be updated in the "model-default-configs.ts" file by updating the
-                "HIGH_MODEL_CONFIG" variable, UI controls will be added soon.
-              </p>
-              <Button
-                onClick={handleRunAgentCoder}
-                disabled={isAgentRunning || !projectId || !userInput.trim() || selectedFileIdsFromProps.length === 0}
-                size='sm'
-                className='w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity'
-              >
-                {isAgentRunning ? (
-                  <>
-                    <RefreshCw className='h-3.5 w-3.5 mr-1 animate-spin' /> Agent Running...
-                  </>
-                ) : (
-                  <>
-                    <Bot className='h-3.5 w-3.5 mr-1' /> Start Agent Run
-                  </>
-                )}
-              </Button>
-              {(!userInput.trim() || selectedFileIdsFromProps.length === 0) && !isAgentRunning && (
-                <p className='text-xs text-destructive text-center mt-1'>
-                  Please provide user input and select at least one file to start the agent.
+              <div className='shrink-0 mt-auto pt-2 border-t'>
+                <p className='text-xs text-muted-foreground text-center mb-2'>
+                  Note: Agent won't make file changes without confirmation.
+                  <br />
+                  Model selection/settings can be updated in the "model-default-configs.ts" file by updating the
+                  "HIGH_MODEL_CONFIG" variable, UI controls will be added soon.
                 </p>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value='logs' className='flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 p-2'>
-            {!selectedJobId || selectedJobId === 'NO_JOB_ID' ? (
-              <p className='text-center p-4 text-muted-foreground'>
-                Select or start an agent run to view logs or data.
-              </p>
-            ) : (
-              <>
-                <div className='flex items-center justify-end space-x-2 pb-2 border-b mb-2'>
-                  <label htmlFor='logs-data-switch' className='text-sm font-medium'>
-                    {showDataInLogsTab ? 'Viewing Raw Data' : 'Viewing Logs'}
-                  </label>
-                  <Switch
-                    id='logs-data-switch'
-                    checked={showDataInLogsTab}
-                    onCheckedChange={setShowDataInLogsTab}
-                    aria-label={showDataInLogsTab ? 'Switch to logs view' : 'Switch to raw data view'}
-                  />
-                </div>
-
-                <div className='flex-1 min-h-0 overflow-y-auto'>
-                  {showDataInLogsTab ? (
-                    // Data View
+                <Button
+                  onClick={handleRunAgentCoder}
+                  disabled={isAgentRunning || !projectId || !userInput.trim() || selectedFileIdsFromProps.length === 0}
+                  size='sm'
+                  className='w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white hover:opacity-90 transition-opacity'
+                >
+                  {isAgentRunning ? (
                     <>
-                      {isDataLoading && <p className='text-center pt-2 text-muted-foreground'>Loading data...</p>}
-                      {isDataError && (
-                        <div className='text-center pt-2 text-destructive'>
-                          <p>Error loading data:</p>
-                          <pre className='text-xs whitespace-pre-wrap'>{dataError?.message || 'Unknown error'}</pre>
-                        </div>
-                      )}
-                      {!isDataLoading && !isDataError && !agentRunData && (
-                        <p className='text-center pt-2 text-muted-foreground'>
-                          No data found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.
-                        </p>
-                      )}
-                      {!isDataLoading && !isDataError && agentRunData && (
-                        <pre className='font-mono text-xs whitespace-pre-wrap break-words'>
-                          {JSON.stringify(agentRunData, null, 2)}
-                        </pre>
-                      )}
+                      <RefreshCw className='h-3.5 w-3.5 mr-1 animate-spin' /> Agent Running...
                     </>
                   ) : (
-                    // Logs View
                     <>
-                      {isLogLoading && <p className='text-center pt-2 text-muted-foreground'>Loading logs...</p>}
-                      {isLogError && (
-                        <div className='text-center pt-2 text-destructive'>
-                          <p>Error loading logs:</p>
-                          <pre className='text-xs whitespace-pre-wrap'>{logError?.message || 'Unknown error'}</pre>
-                        </div>
-                      )}
-                      {!isLogLoading && !isLogError && logEntries.length === 0 && !isAgentRunning && (
-                        <p className='text-center pt-2 text-muted-foreground'>
-                          No log entries found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.
-                        </p>
-                      )}
-                      {!isLogLoading && !isLogError && logEntries.length === 0 && isAgentRunning && (
-                        <p className='text-center pt-4 text-lg font-semibold text-purple-500 flex items-center justify-center gap-2'>
-                          <RefreshCw className='h-5 w-5 animate-spin' /> Waiting for agent logs...
-                        </p>
-                      )}
-                      {!isLogLoading && !isLogError && logEntries.length > 0 && (
-                        <div className='space-y-1 font-mono text-xs'>
-                          {logEntries.map((entry: LogEntry, index: number) => (
-                            <div
-                              key={index}
-                              className='whitespace-pre-wrap break-words border-b border-muted/50 pb-1 mb-1 last:border-b-0'
-                            >
-                              {entry.timestamp && (
-                                <span className='text-muted-foreground mr-2'>
-                                  [
-                                  {new Date(entry.timestamp).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit'
-                                  })}
-                                  ]
-                                </span>
-                              )}
-                              <span
-                                className={cn(
-                                  'font-medium',
-                                  entry.level === 'error' && 'text-destructive',
-                                  entry.level === 'warn' && 'text-yellow-500',
-                                  entry.level === 'info' && 'text-blue-500',
-                                  entry.level === 'debug' && 'text-gray-500'
-                                )}
-                              >
-                                {(entry.level || 'LOG').toUpperCase()}:
-                              </span>
-                              <span className='ml-1'>{entry.message}</span>
-                              {entry.data && (
-                                <pre className='mt-1 p-1 bg-background/50 rounded text-[11px] overflow-x-auto'>
-                                  {JSON.stringify(entry.data, null, 2)}
-                                </pre>
-                              )}
-                              {entry.error && (
-                                <pre className='mt-1 p-1 bg-destructive/10 rounded text-destructive text-[11px]'>
-                                  {entry.error}
-                                  {entry.raw ? `\nRaw: ${JSON.stringify(entry.raw)}` : ''}
-                                </pre>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <Bot className='h-3.5 w-3.5 mr-1' /> Start Agent Run
                     </>
                   )}
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          {/* Removed TabsContent for value="data" */}
-
-          <TabsContent
-            value='confirm'
-            className='flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 overflow-y-auto'
-          >
-            {isDataLoading && <p className='text-center p-4 text-muted-foreground'>Loading changes...</p>}
-            {isDataError && (
-              <div className='text-center p-4 text-destructive'>
-                <p>Error loading changes:</p>
-                <pre className='text-xs whitespace-pre-wrap'>{dataError?.message || 'Unknown error'}</pre>
+                </Button>
+                {(!userInput.trim() || selectedFileIdsFromProps.length === 0) && !isAgentRunning && (
+                  <p className='text-xs text-destructive text-center mt-1'>
+                    Please provide user input and select at least one file to start the agent.
+                  </p>
+                )}
               </div>
-            )}
-            {!isDataLoading &&
-              !isDataError &&
-              (!agentRunData?.updatedFiles || agentRunData.updatedFiles.length === 0) &&
-              selectedJobId &&
-              selectedJobId !== 'NO_JOB_ID' && (
+            </TabsContent>
+          )}
+
+          {activeTab === 'logs' && (
+            <TabsContent value='logs' className='flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 p-2'>
+              {!selectedJobId || selectedJobId === 'NO_JOB_ID' ? (
                 <p className='text-center p-4 text-muted-foreground'>
-                  No proposed changes found for this run, or changes have already been confirmed.
+                  Select or start an agent run to view logs or data.
                 </p>
-              )}
-            {(!selectedJobId || selectedJobId === 'NO_JOB_ID') && (
-              <p className='text-center p-4 text-muted-foreground'>Select an agent run to view proposed changes.</p>
-            )}
-            {!isDataLoading && !isDataError && agentRunData?.updatedFiles && agentRunData.updatedFiles.length > 0 && (
-              <div className='flex flex-col flex-1 h-full p-4'>
-                <div className='flex-1 overflow-y-auto'>
-                  <h3 className='text-sm font-medium mb-4'>Proposed Changes</h3>
-                  {(agentRunData.updatedFiles as UpdatedFileData[]).map((file) => (
-                    <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} />
-                  ))}
-                </div>
-                <div className='shrink-0 mt-auto pt-4 border-t'>
-                  {' '}
-                  {/* Ensure padding consistency, changed from p-4 */}
-                  <Button
-                    onClick={handleConfirmChanges}
-                    disabled={confirmChangesMutation.isPending || isDataLoading || isAgentRunning || !canConfirm}
-                    variant='default'
-                    size='sm'
-                    className='w-full bg-green-600 hover:bg-green-700 text-white'
-                  >
-                    {confirmChangesMutation.isPending ? (
+              ) : (
+                <>
+                  <div className='flex items-center justify-end space-x-2 pb-2 border-b mb-2'>
+                    <label htmlFor='logs-data-switch' className='text-sm font-medium'>
+                      {showDataInLogsTab ? 'Viewing Raw Data' : 'Viewing Logs'}
+                    </label>
+                    <Switch
+                      id='logs-data-switch'
+                      checked={showDataInLogsTab}
+                      onCheckedChange={setShowDataInLogsTab}
+                      aria-label={showDataInLogsTab ? 'Switch to logs view' : 'Switch to raw data view'}
+                    />
+                  </div>
+
+                  <div className='flex-1 min-h-0 overflow-y-auto'>
+                    {showDataInLogsTab ? (
+                      // Data View
                       <>
-                        <RefreshCw className='h-3.5 w-3.5 mr-1 animate-spin' /> Applying...
+                        {isDataLoading && <p className='text-center pt-2 text-muted-foreground'>Loading data...</p>}
+                        {isDataError && (
+                          <div className='text-center pt-2 text-destructive'>
+                            <p>Error loading data:</p>
+                            <pre className='text-xs whitespace-pre-wrap'>{dataError?.message || 'Unknown error'}</pre>
+                          </div>
+                        )}
+                        {!isDataLoading && !isDataError && !agentRunData && (
+                          <p className='text-center pt-2 text-muted-foreground'>
+                            No data found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.
+                          </p>
+                        )}
+                        {!isDataLoading && !isDataError && agentRunData && (
+                          <pre className='font-mono text-xs whitespace-pre-wrap break-words'>
+                            {JSON.stringify(agentRunData, null, 2)}
+                          </pre>
+                        )}
                       </>
                     ) : (
+                      // Logs View
                       <>
-                        <CheckCircle className='h-3.5 w-3.5 mr-1' /> Confirm & Apply Changes
+                        {isLogLoading && <p className='text-center pt-2 text-muted-foreground'>Loading logs...</p>}
+                        {isLogError && (
+                          <div className='text-center pt-2 text-destructive'>
+                            <p>Error loading logs:</p>
+                            <pre className='text-xs whitespace-pre-wrap'>{logError?.message || 'Unknown error'}</pre>
+                          </div>
+                        )}
+                        {!isLogLoading && !isLogError && logEntries.length === 0 && !isAgentRunning && (
+                          <p className='text-center pt-2 text-muted-foreground'>
+                            No log entries found for run{' '}
+                            <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.
+                          </p>
+                        )}
+                        {!isLogLoading && !isLogError && logEntries.length === 0 && isAgentRunning && (
+                          <p className='text-center pt-4 text-lg font-semibold text-purple-500 flex items-center justify-center gap-2'>
+                            <RefreshCw className='h-5 w-5 animate-spin' /> Waiting for agent logs...
+                          </p>
+                        )}
+                        {!isLogLoading && !isLogError && logEntries.length > 0 && (
+                          <div className='space-y-2 font-mono text-xs'>
+                            <div className='flex justify-end mb-2'>
+                              <Button variant='outline' size='sm' onClick={handleCopyAllLogs}>
+                                <ClipboardCopy className='h-3 w-3 mr-1' />
+                                Copy All Logs
+                              </Button>
+                            </div>
+                            {logEntries.map((entry: LogEntry, index: number) => (
+                              <div
+                                key={index}
+                                className={cn(
+                                  'whitespace-pre-wrap break-words border rounded-md p-2 bg-background shadow-sm transition-all duration-150 ease-in-out',
+                                  entry.level === 'error' && 'border-red-500/40 hover:ring-red-500/50',
+                                  entry.level === 'warn' && 'border-yellow-500/40 hover:ring-yellow-500/50',
+                                  entry.level === 'info' && 'border-blue-500/40 hover:ring-blue-500/50',
+                                  entry.level === 'debug' && 'border-gray-400/40 hover:ring-gray-500/50',
+                                  !['error', 'warn', 'info', 'debug'].includes(entry.level || '') &&
+                                    'border-border hover:ring-primary/30',
+                                  'hover:ring-2 hover:ring-offset-1 hover:ring-offset-background'
+                                )}
+                              >
+                                <div className='flex justify-between items-start mb-1'>
+                                  <div>
+                                    {entry.timestamp && (
+                                      <span className='text-muted-foreground mr-2'>
+                                        [
+                                        {new Date(entry.timestamp).toLocaleTimeString([], {
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          second: '2-digit'
+                                        })}
+                                        ]
+                                      </span>
+                                    )}
+                                    <span
+                                      className={cn(
+                                        'font-medium',
+                                        entry.level === 'error' && 'text-destructive',
+                                        entry.level === 'warn' && 'text-yellow-500',
+                                        entry.level === 'info' && 'text-blue-500',
+                                        entry.level === 'debug' && 'text-gray-500'
+                                      )}
+                                    >
+                                      {(entry.level || 'LOG').toUpperCase()}:
+                                    </span>
+                                    <span className='ml-1'>{entry.message}</span>
+                                  </div>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant='ghost'
+                                          size='icon'
+                                          className='h-6 w-6 shrink-0'
+                                          onClick={() => handleCopyLogEntry(entry)}
+                                        >
+                                          <Copy className='h-3.5 w-3.5' />
+                                          <span className='sr-only'>Copy log entry</span>
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Copy log entry</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                                {entry.data && (
+                                  <pre className='mt-1 p-1.5 bg-muted/50 rounded text-[11px] overflow-x-auto'>
+                                    {JSON.stringify(entry.data, null, 2)}
+                                  </pre>
+                                )}
+                                {entry.error && (
+                                  <pre className='mt-1 p-1.5 bg-destructive/10 rounded text-destructive text-[11px]'>
+                                    {entry.error}
+                                    {entry.raw ? `\nRaw: ${JSON.stringify(entry.raw)}` : ''}
+                                  </pre>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </>
                     )}
-                  </Button>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          )}
+
+          {activeTab === 'confirm' && (
+            <TabsContent value='confirm' className='flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 p-2'>
+              {isDataLoading && <p className='text-center p-4 text-muted-foreground'>Loading changes...</p>}
+              {isDataError && (
+                <div className='text-center p-4 text-destructive'>
+                  <p>Error loading changes:</p>
+                  <pre className='text-xs whitespace-pre-wrap'>{dataError?.message || 'Unknown error'}</pre>
                 </div>
-              </div>
-            )}
-          </TabsContent>
+              )}
+              {!isDataLoading &&
+                !isDataError &&
+                (!agentRunData?.updatedFiles || agentRunData.updatedFiles.length === 0) &&
+                selectedJobId &&
+                selectedJobId !== 'NO_JOB_ID' && (
+                  <p className='text-center p-4 text-muted-foreground'>
+                    No proposed changes found for this run, or changes have already been confirmed.
+                  </p>
+                )}
+              {(!selectedJobId || selectedJobId === 'NO_JOB_ID') && (
+                <p className='text-center p-4 text-muted-foreground'>Select an agent run to view proposed changes.</p>
+              )}
+              {!isDataLoading && !isDataError && agentRunData?.updatedFiles && agentRunData.updatedFiles.length > 0 && (
+                <div className='flex flex-col flex-1 min-h-0'>
+                  <div className='flex-1 overflow-y-auto p-2'>
+                    <h3 className='text-sm font-medium mb-2'>Proposed Changes</h3>
+                    {(agentRunData.updatedFiles as UpdatedFileData[]).map((file) => (
+                      <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} />
+                    ))}
+                  </div>
+                  <div className='shrink-0 mt-auto pt-2 border-t p-2'>
+                    <Button
+                      onClick={handleConfirmChanges}
+                      disabled={confirmChangesMutation.isPending || isDataLoading || isAgentRunning || !canConfirm}
+                      variant='default'
+                      size='sm'
+                      className='w-full bg-green-600 hover:bg-green-700 text-white'
+                    >
+                      {confirmChangesMutation.isPending ? (
+                        <>
+                          <RefreshCw className='h-3.5 w-3.5 mr-1 animate-spin' /> Applying...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className='h-3.5 w-3.5 mr-1' /> Confirm & Apply Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          )}
         </Tabs>
 
         <DialogFooter className='shrink-0 mt-2 pt-2 border-t'>
           <DialogClose asChild>
             <Button type='button' variant='outline' size='sm'>
-              Close
+              {isAgentRunning ? 'Execute in Background' : 'Close'}
             </Button>
           </DialogClose>
         </DialogFooter>
