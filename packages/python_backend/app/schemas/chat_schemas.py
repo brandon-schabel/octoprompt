@@ -1,0 +1,168 @@
+from typing import Optional, List, Dict, Any, Literal, Union
+from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
+from enum import Enum
+
+# --- Chat Schemas ---
+# Last 5 changes:
+# 1. Initial conversion from Zod to Pydantic.
+# 2. Added try-except import placeholders for common_schemas and gen_ai_schemas.
+# 3. Used datetime for Zod's .datetime().
+# 4. Mapped z.enum to Python Enum and z.literal to Literal.
+# 5. Handled .openapi() metadata (title, example, param details via json_schema_extra and aliases).
+
+# Assuming these are available from other schema files in the Python backend
+try:
+    from .common_schemas import MessageRoleEnum
+except ImportError:
+    class MessageRoleEnum(str, Enum):
+        USER = "user"
+        ASSISTANT = "assistant"
+        SYSTEM = "system"
+        TOOL = "tool"
+        FUNCTION = "function"
+
+try:
+    from .gen_ai_schemas import AiSdkOptions, UnifiedModel, AiMessage
+except ImportError:
+    class AiSdkOptions(BaseModel):
+        model_config = ConfigDict(title="AiSdkOptions", extra="allow")
+        pass
+    class UnifiedModel(BaseModel):
+        id: str
+        name: str
+        provider: str
+        context_length: Optional[int] = None
+        model_config = ConfigDict(title="UnifiedModel", extra="allow")
+        pass
+    class AiMessage(BaseModel):
+        role: MessageRoleEnum
+        content: str
+        model_config = ConfigDict(title="AiMessage")
+
+
+class ModelOptions(BaseModel):
+    model: Optional[str] = None
+    max_tokens: Optional[int] = Field(None, validation_alias="maxTokens", serialization_alias="maxTokens")
+    temperature: Optional[float] = None
+    top_p: Optional[float] = Field(None, validation_alias="topP", serialization_alias="topP")
+    top_k: Optional[int] = Field(None, validation_alias="topK", serialization_alias="topK")
+    frequency_penalty: Optional[float] = Field(None, validation_alias="frequencyPenalty", serialization_alias="frequencyPenalty")
+    presence_penalty: Optional[float] = Field(None, validation_alias="presencePenalty", serialization_alias="presencePenalty")
+    stop: Optional[Union[str, List[str]]] = None
+    model_config = ConfigDict(populate_by_name=True)
+
+class Chat(BaseModel):
+    id: str = Field(..., example="chat_1a2b3c4d")
+    title: str
+    created_at: datetime = Field(..., validation_alias="createdAt", serialization_alias="createdAt", example="2024-03-10T10:00:00.000Z")
+    updated_at: datetime = Field(..., validation_alias="updatedAt", serialization_alias="updatedAt", example="2024-03-10T10:05:00.000Z")
+    model_config = ConfigDict(title="Chat", populate_by_name=True)
+
+class ChatMessage(BaseModel):
+    id: str = Field(..., min_length=1, example="msg-m1a2b3c4", description="Message ID")
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", example="chat-a1b2c3d4", description="Parent Chat ID")
+    role: MessageRoleEnum = Field(..., example="user", description="Role of the message sender")
+    content: str = Field(..., example="Hello, world!", description="Message content")
+    created_at: datetime = Field(..., validation_alias="createdAt", serialization_alias="createdAt", example="2024-01-01T12:00:05.000Z", description="Creation timestamp (ISO 8601)")
+    model_config = ConfigDict(title="ChatMessage", populate_by_name=True)
+
+class ChatIdParams(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", description="The ID of the chat", json_schema_extra={'param': {'name': 'chatId', 'in': 'path'}, 'example': "chat_1a2b3c4d"})
+    model_config = ConfigDict(title="ChatIdParams", populate_by_name=True)
+
+class CreateChatBody(BaseModel):
+    title: str = Field(..., min_length=1, example="New Chat Session")
+    copy_existing: Optional[bool] = Field(None, validation_alias="copyExisting", serialization_alias="copyExisting", description="Copy messages from currentChatId if true")
+    current_chat_id: Optional[str] = Field(None, min_length=1, validation_alias="currentChatId", serialization_alias="currentChatId", example="chat-a1b2c3d4")
+    model_config = ConfigDict(title="CreateChatRequestBody", populate_by_name=True)
+
+class UpdateChatBody(BaseModel):
+    title: str = Field(..., min_length=1, example="Updated Chat Title")
+    model_config = ConfigDict(title="UpdateChatRequestBody")
+
+class CreateChatMessageBody(BaseModel):
+    role: str = Field(..., example="user", description="Message role (user, assistant, system)")
+    content: str = Field(..., min_length=1, example="How can I implement authentication?")
+    model_config = ConfigDict(title="CreateChatMessageRequestBody")
+
+class ChatResponse(BaseModel):
+    success: Literal[True] = True
+    data: Chat
+    model_config = ConfigDict(title="ChatResponse")
+
+class ChatListResponse(BaseModel):
+    success: Literal[True] = True
+    data: List[Chat]
+    model_config = ConfigDict(title="ChatListResponse")
+
+class ChatMessageResponse(BaseModel):
+    success: Literal[True] = True
+    data: ChatMessage
+    model_config = ConfigDict(title="ChatMessageResponse")
+
+class ChatMessagesListResponse(BaseModel):
+    success: Literal[True] = True
+    data: List[ChatMessage]
+    model_config = ConfigDict(title="ChatMessagesListResponse")
+
+class MessageListResponse(BaseModel):
+    success: Literal[True] = True
+    data: List[ChatMessage]
+    model_config = ConfigDict(title="MessageListResponse")
+
+class ModelListResponse(BaseModel):
+    success: Literal[True] = True
+    data: List[UnifiedModel]
+    model_config = ConfigDict(title="ModelListResponse")
+
+class GetMessagesParams(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", description="The ID of the chat to retrieve messages for", json_schema_extra={'param': {'name': 'chatId', 'in': 'path'}, 'example': "chat-a1b2c3d4"})
+    model_config = ConfigDict(title="GetMessagesParams", populate_by_name=True)
+
+class ForkChatParams(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", description="The ID of the chat to fork", json_schema_extra={'param': {'name': 'chatId', 'in': 'path'}, 'example': "chat-a1b2c3d4"})
+    model_config = ConfigDict(title="ForkChatParams", populate_by_name=True)
+
+class ForkChatBody(BaseModel):
+    excluded_message_ids: List[str] = Field(default=[], validation_alias="excludedMessageIds", serialization_alias="excludedMessageIds", description="Optional list of message IDs to exclude from the fork", json_schema_extra={'example': ["msg-m1a2b3c4"]})
+    model_config = ConfigDict(title="ForkChatRequestBody", populate_by_name=True)
+
+class ForkChatFromMessageParams(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", description="The ID of the chat to fork", json_schema_extra={'param': {'name': 'chatId', 'in': 'path'}, 'example': "chat-a1b2c3d4"})
+    message_id: str = Field(..., min_length=1, validation_alias="messageId", serialization_alias="messageId", description="The ID of the message to fork from", json_schema_extra={'param': {'name': 'messageId', 'in': 'path'}, 'example': "msg-m1a2b3c4"})
+    model_config = ConfigDict(title="ForkChatFromMessageParams", populate_by_name=True)
+
+class ForkChatFromMessageBody(BaseModel):
+    excluded_message_ids: List[str] = Field(default=[], validation_alias="excludedMessageIds", serialization_alias="excludedMessageIds", description="Optional list of message IDs to exclude from the fork", json_schema_extra={'example': ["msg-m1a2b3c4"]})
+    model_config = ConfigDict(title="ForkChatFromMessageRequestBody", populate_by_name=True)
+
+class UpdateChatParams(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", description="The ID of the chat to update", json_schema_extra={'param': {'name': 'chatId', 'in': 'path'}, 'example': "chat-a1b2c3d4"})
+    model_config = ConfigDict(title="UpdateChatParams", populate_by_name=True)
+
+class DeleteChatParams(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", description="The ID of the chat to delete", json_schema_extra={'param': {'name': 'chatId', 'in': 'path'}, 'example': "chat-a1b2c3d4"})
+    model_config = ConfigDict(title="DeleteChatParams", populate_by_name=True)
+
+class DeleteMessageParams(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", description="The ID of the chat to delete", json_schema_extra={'param': {'name': 'chatId', 'in': 'path'}, 'example': "chat-a1b2c3d4"})
+    message_id: str = Field(..., min_length=1, validation_alias="messageId", serialization_alias="messageId", description="The ID of the message to delete", json_schema_extra={'param': {'name': 'messageId', 'in': 'path'}, 'example': "msg-m1a2b3c4"})
+    model_config = ConfigDict(title="DeleteMessageParams", populate_by_name=True)
+
+class ModelsQuery(BaseModel):
+    provider: str = Field(..., description="The provider to filter models by", example="openrouter") # Example from LOW_MODEL_CONFIG.provider
+    model_config = ConfigDict(title="ModelsQuery")
+
+class AiChatStreamRequest(BaseModel):
+    chat_id: str = Field(..., min_length=1, validation_alias="chatId", serialization_alias="chatId", example="chat-a1b2c3d4", description="Required ID of the chat session to continue.")
+    user_message: str = Field(..., min_length=1, validation_alias="userMessage", serialization_alias="userMessage", description="The latest message content from the user.", example="Thanks! Can you elaborate on the E=mc^2 part?")
+    options: Optional[AiSdkOptions] = Field(None, description="Optional parameters for the AI model.")
+    system_message: Optional[str] = Field(None, validation_alias="systemMessage", serialization_alias="systemMessage", example="Respond concisely.", description="Optional system message override for this specific request.")
+    temp_id: Optional[str] = Field(None, validation_alias="tempId", serialization_alias="tempId", example="temp_msg_456", description="Temporary client-side ID for optimistic UI updates.")
+    debug: Optional[bool] = Field(None, example=True, description="Enable debug mode for detailed logging.")
+    model_config = ConfigDict(title="AiChatStreamRequest", populate_by_name=True)
+
+class ExtendedChatMessage(ChatMessage):
+    temp_id: Optional[str] = Field(None, validation_alias="tempId", serialization_alias="tempId")
+    model_config = ConfigDict(populate_by_name=True)
