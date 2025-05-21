@@ -4,7 +4,7 @@ import ts from 'react-syntax-highlighter/dist/esm/languages/hljs/typescript'
 import js from 'react-syntax-highlighter/dist/esm/languages/hljs/javascript'
 // @ts-ignore
 import * as languages from 'react-syntax-highlighter/dist/esm/languages/hljs'
-import { useSelectSetting } from '@/hooks/api/use-kv-api'
+import { useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { useMemo } from 'react'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 

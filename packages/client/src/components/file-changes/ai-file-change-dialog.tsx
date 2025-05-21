@@ -6,7 +6,7 @@ import { Textarea } from '@ui'
 import { Alert, AlertDescription } from '@ui'
 import { LoaderPinwheel } from 'lucide-react'
 import { DiffViewer } from './diff-viewer'
-import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 interface AIFileChangeDialogProps {
   open: boolean
@@ -19,11 +19,11 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
   const [prompt, setPrompt] = useState('')
   const [changeId, setChangeId] = useState<string | null>(null)
   const [activeProject] = useActiveProjectTab()
-  const projectId = activeProject.selectedProjectId
+  const projectId = activeProject?.selectedProjectId
 
   const generateMutation = useGenerateFileChange()
   const confirmMutation = useConfirmFileChange()
-  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(projectId, changeId)
+  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(projectId ?? '', changeId)
 
   const handleGenerate = async () => {
     if (!filePath) return

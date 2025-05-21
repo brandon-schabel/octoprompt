@@ -10,13 +10,13 @@ If you've worked with LLMs and code you know how much quality drops off with mor
 
 If you have [Bun](https://bun.sh/) installed then I'd recommend downloading the prebuilt Server/UI Bundle.
 
-[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-bun-bundle.zip)
+[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.2/octoprompt-0.5.2-bun-bundle.zip)
 
-[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-macos-arm64.zip)
+[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.2/octoprompt-0.5.2-macos-arm64.zip)
 
-[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-windows-x64.zip)
+[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.2/octoprompt-0.5.2-windows-x64.zip)
 
-[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.1/octoprompt-0.5.1-linux-x64.zip)
+[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.2/octoprompt-0.5.2-linux-x64.zip)
 
 > Once you have downloaded OctoPrompt for your platform please read "Running Binaries", especially for MacOS
 
@@ -29,7 +29,7 @@ Don't have NPM or Bun? Install Bun with curl on Mac/Linux `curl -fsSL https://bu
 Extract the zip file and cd into the extracted zip file and run the OctoPrompt server.
 
 ```bash
-cd octoprompt-0.5.1-bun-bundle && bun run start
+cd octoprompt-0.5.2-bun-bundle && bun run start
 ```
 
 [View Your Local OctoPrompt UI](http://localhost:3579/)
@@ -79,7 +79,7 @@ View the [Dev UI here](http://localhost:5173)
 On Linux you should be able to just navigate to the octoprompt binary file in the terminal and run it for example:
 
 ```bash
-cd ~/Downloads/octoprompt-v0.5.1
+cd ~/Downloads/octoprompt-v0.5.2
 ```
 
 Run the linux binary file:
@@ -93,7 +93,7 @@ Run the linux binary file:
 Currently I don't have MacOS code signing, so it just says the binary is damaged, but really it is quarntined. In order to run the binary on Mac you would have to do the following
 
 ```bash
-cd ~/Downloads/octoprompt-v0.5.1
+cd ~/Downloads/octoprompt-v0.5.2
 ```
 
 Then run to remove the quarantine:
@@ -110,18 +110,18 @@ Finally  you can run the Octoprompt app by running the binary file as you normal
 
 ### Running on Windows
 
-After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.5.1-windows-x64.zip`), open Command Prompt or PowerShell.
+After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.5.2-windows-x64.zip`), open Command Prompt or PowerShell.
 
 Navigate to the extracted folder. For example, if you extracted it to your Downloads folder:
 
 ```batch
-cd %USERPROFILE%\Downloads\octoprompt-v0.5.1-windows-x64
+cd %USERPROFILE%\Downloads\octoprompt-v0.5.2-windows-x64
 ```
 
 Or using PowerShell:
 
 ```powershell
-cd $env:USERPROFILE\Downloads\octoprompt-v0.5.1-windows-x64
+cd $env:USERPROFILE\Downloads\octoprompt-v0.5.2-windows-x64
 ```
 
 Then, run the executable:
@@ -404,7 +404,7 @@ bun run build-binaries
 then navigate to the built binaries in `/dist` - in this case for MacOS arm64
 
 ```bash
-cd dist/octoprompt-0.5.1-macos
+cd dist/octoprompt-0.5.2-macos
 ```
 
 then run the binary file for your platforms directory:

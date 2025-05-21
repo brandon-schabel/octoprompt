@@ -11,7 +11,7 @@ import { formatShortcut } from '@/lib/shortcuts'
 import exp from 'constants'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useOptimzeUserInput } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ExpandableTextareaProps = {
   value: string
@@ -31,7 +31,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     const [selectionEnd, setSelectionEnd] = useState<number | null>(null)
     const { copyToClipboard } = useCopyClipboard()
     const [activeProject] = useActiveProjectTab()
-    const projectId = activeProject.selectedProjectId
+    const projectId = activeProject?.selectedProjectId
 
     const [promptimizeDialogOpen, setPromptimizeDialogOpen] = useState(false)
     const [optimizedPrompt, setOptimizedPrompt] = useState('')

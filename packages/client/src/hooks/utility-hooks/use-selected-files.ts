@@ -4,7 +4,7 @@ import {
   useProjectTabField,
   useUpdateActiveProjectTab,
   useUpdateProjectTabById
-} from '@/hooks/api/use-kv-api'
+} from '@/hooks/use-kv-local-storage'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
 import { ProjectFileMap } from 'shared/src/schemas/project.schemas'

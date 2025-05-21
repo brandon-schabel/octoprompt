@@ -1,11 +1,8 @@
-import { ScanEye } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui'
 import { TooltipProvider } from '@ui'
-import { TicketIcon } from 'lucide-react'
 import { Copy } from 'lucide-react'
 import { Button } from '@ui'
-import { ProjectSettingsDialog } from '../project-settings-dialog'
 import { Badge } from '@ui'
 import { Link, useMatches } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
@@ -20,7 +17,7 @@ import {
   useGetActiveProjectTabId,
   useGetProjectTab,
   useUpdateProjectTabById
-} from '@/hooks/api/use-kv-api'
+} from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 type ProjectHeaderProps = {
@@ -32,8 +29,6 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
   const [projectTabData] = useActiveProjectTab()
   const { deleteTab } = useDeleteProjectTabById()
   const selectedProjectId = projectTabData?.selectedProjectId
-  const isOnTicketsRoute = matches.some((m) => m.routeId === '/tickets')
-  const isOnSummarizationRoute = matches.some((m) => m.routeId === '/project-summarization')
 
   // Tickets for this project
   const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? '')
@@ -45,7 +40,7 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const { projectTab: activeProjectTabData } = useGetProjectTab(projectData.id)
   const [newTabName, setNewTabName] = useState(activeProjectTabData?.displayName || '')
-  const { activeProjectTabId = 'unset' } = useGetActiveProjectTabId()
+  const [activeProjectTabId] = useGetActiveProjectTabId()
   const { updateProjectTabById } = useUpdateProjectTabById()
   const { copyToClipboard } = useCopyClipboard()
 
@@ -61,57 +56,15 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
     setNewTabName(activeProjectTabData?.displayName || '')
   }, [activeProjectTabData?.displayName])
 
+  if (!activeProjectTabData && activeProjectTabId === 'unset') return null
+
   return (
     <>
-      <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 pt-4'>
+      <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4'>
         <div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <h2 className='text-lg font-semibold hover:cursor-help'>{projectData?.name}</h2>
-              </TooltipTrigger>
-              <TooltipContent side='bottom' className='flex flex-col items-center gap-2 max-w-md'>
-                <div className='flex items-center gap-2'>
-                  <span className='break-all'>{projectData?.path}</span>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='h-4 w-4 hover:bg-accent hover:text-accent-foreground'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      copyToClipboard(projectData?.path || '', {
-                        successMessage: 'Project path copied to clipboard',
-                        errorMessage: 'Failed to copy project path'
-                      })
-                    }}
-                  >
-                    <Copy className='h-3 w-3' />
-                  </Button>
-                </div>
+          {/* Project Title and Path Removed */}
 
-                <div className='flex items-center gap-2'>
-                  <span>Copy Project ID</span>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='h-4 w-4 hover:bg-accent hover:text-accent-foreground'
-                    onClick={(e) => {
-                      e.preventDefault()
-                      copyToClipboard(projectData?.id || '', {
-                        successMessage: 'Project ID copied to clipboard',
-                        errorMessage: 'Failed to copy project ID'
-                      })
-                    }}
-                  >
-                    <Copy className='h-3 w-3' />
-                  </Button>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <span className='hidden md:block text-sm text-muted-foreground'>{projectData?.path.slice(0, 100)}</span>
-
-          {/* NEW: Display active tab name with inline editing and delete actions */}
+          {/* Active tab name with inline editing and delete actions */}
           {activeProjectTabData && (
             <div className='mt-1 text-[0.8rem] text-muted-foreground group inline-block'>
               {isEditing ? (
@@ -141,93 +94,39 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
                   <span onClick={() => setIsEditing(true)} className='cursor-pointer' title='Click to rename tab'>
                     {activeProjectTabData.displayName || 'Unnamed Tab'}
                   </span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Pencil
-                        className='invisible group-hover:visible w-3 h-3 text-gray-500 cursor-pointer'
-                        onClick={() => setIsEditing(true)}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Rename tab</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setIsDeleteDialogOpen(true)}
-                        className='invisible group-hover:visible text-red-500'
-                      >
-                        <Trash2 className='w-3 h-3' />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Delete tab</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Pencil
+                          className='invisible group-hover:visible w-3 h-3 text-gray-500 cursor-pointer'
+                          onClick={() => setIsEditing(true)}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Rename tab</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setIsDeleteDialogOpen(true)}
+                          className='invisible group-hover:visible text-red-500'
+                        >
+                          <Trash2 className='w-3 h-3' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Delete tab</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <div className='flex items-center space-x-4'>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <ProjectSettingsDialog />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Open project settings</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to='/tickets'
-                className={`inline-flex items-center gap-2 text-sm font-medium transition-colors
-                    hover:bg-accent/50 px-3 py-2 rounded-md ${
-                      isOnTicketsRoute
-                        ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
-                        : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
-                    }`}
-              >
-                <TicketIcon className='w-4 h-4' />
-                Tickets
-                {openTicketsCount > 0 && (
-                  <Badge variant='count' className='ml-1'>
-                    {openTicketsCount}
-                  </Badge>
-                )}
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>View and manage project tickets</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                to='/project-summarization'
-                className={`inline-flex items-center gap-2 text-sm font-medium transition-colors
-                    hover:bg-accent/50 px-3 py-2 rounded-md ${
-                      isOnSummarizationRoute
-                        ? 'text-indigo-600 dark:text-indigo-400 bg-accent/80'
-                        : 'text-foreground hover:text-indigo-600 dark:hover:text-indigo-400'
-                    }`}
-              >
-                <ScanEye className='w-4 h-4' />
-                Summarization
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Access project summarization features</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {/* <div className='flex items-center space-x-4'>ProjectSettingsDialog Button Removed</div> */}
       </div>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -236,32 +135,36 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
           </DialogHeader>
           <DialogDescription>Are you sure you want to delete this tab? This action cannot be undone.</DialogDescription>
           <div className='mt-4 flex justify-end space-x-2'>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant='outline' onClick={() => setIsDeleteDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Cancel tab deletion</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant='destructive'
-                  onClick={() => {
-                    deleteTab(activeProjectTabId ?? '')
-                    setIsDeleteDialogOpen(false)
-                  }}
-                >
-                  Delete
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Confirm to delete tab</p>
-              </TooltipContent>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant='outline' onClick={() => setIsDeleteDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cancel tab deletion</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant='destructive'
+                    onClick={() => {
+                      if (activeProjectTabId && activeProjectTabId !== 'unset') {
+                        deleteTab(activeProjectTabId)
+                      }
+                      setIsDeleteDialogOpen(false)
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Confirm to delete tab</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </DialogContent>
       </Dialog>

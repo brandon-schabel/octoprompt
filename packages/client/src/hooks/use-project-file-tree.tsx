@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useActiveProjectTab } from './api/use-kv-api'
+import { useActiveProjectTab } from './use-kv-local-storage'
 import { useGetProjectFiles } from './api/use-projects-api'
 import { buildFileTree } from 'shared/src/utils/projects-utils'
 

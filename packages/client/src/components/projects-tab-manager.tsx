@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@ui'
@@ -20,16 +20,17 @@ import {
   useGetProjectTabs,
   useSetActiveProjectTabId,
   useUpdateProjectTabById
-} from '@/hooks/api/use-kv-api'
+} from '@/hooks/use-kv-local-storage'
 import { toast } from 'sonner'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 export type ProjectsTabManagerProps = {
   className?: string
 }
 
 export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
-  const { data: tabs } = useGetProjectTabs()
+  const [tabs] = useGetProjectTabs()
   const { deleteTab } = useDeleteProjectTabById()
   const [activeProjectTabState] = useActiveProjectTab()
 
@@ -40,11 +41,14 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const [dialogEditingName, setDialogEditingName] = useState('')
   const { updateProjectTabById } = useUpdateProjectTabById()
   const { setActiveProjectTabId } = useSetActiveProjectTabId()
-  const { activeProjectTabId: activeTabId } = useGetActiveProjectTabId()
+  const [activeTabId] = useGetActiveProjectTabId()
   const { data: projects } = useGetProjects()
   const { createProjectTab } = useCreateProjectTab()
   // by default use selected tabs project id, otherwise fallback to the first project
   const projectId = activeProjectTabState?.selectedProjectId ?? projects?.data[0]?.id
+
+  const scrollableTabsRef = useRef<HTMLDivElement>(null)
+  const [showFade, setShowFade] = useState(false)
 
   const calculateInitialOrder = (): string[] => {
     if (!tabs) return []
@@ -120,6 +124,31 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     { preventDefault: true },
     [activeTabId, finalTabOrder, setActiveProjectTabId]
   )
+
+  useEffect(() => {
+    const tabContainer = scrollableTabsRef.current
+    if (!tabContainer) return
+
+    const checkFadeVisibility = () => {
+      if (tabContainer) {
+        const isOverflowing = tabContainer.scrollWidth > tabContainer.clientWidth
+        // Add a small tolerance to avoid fade flickering/appearing when fully scrolled.
+        const isNotScrolledToEnd = tabContainer.scrollLeft + tabContainer.clientWidth < tabContainer.scrollWidth - 5
+        setShowFade(isOverflowing && isNotScrolledToEnd)
+      }
+    }
+
+    checkFadeVisibility() // Initial check
+
+    tabContainer.addEventListener('scroll', checkFadeVisibility)
+    const resizeObserver = new ResizeObserver(checkFadeVisibility)
+    resizeObserver.observe(tabContainer)
+
+    return () => {
+      tabContainer.removeEventListener('scroll', checkFadeVisibility)
+      resizeObserver.disconnect()
+    }
+  }, [tabs, finalTabOrder]) // Re-check when tabs or their order changes
 
   const handleCreateTab = () => {
     createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
@@ -206,159 +235,166 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   )
 
   return (
-    <>
-      <Tabs
-        value={activeTabId ?? ''}
-        onValueChange={(value) => {
-          setActiveProjectTabId(value)
-        }}
-        className={cn('flex flex-col justify-start rounded-none border-b', className)}
-      >
-        <TabsList className='h-auto bg-background justify-start rounded-none p-1'>
-          <div className='text-xs lg:text-sm px-2 font-semibold flex items-center gap-1 mr-2 whitespace-nowrap'>
-            Project Tabs
-            <OctoTooltip>{titleTooltipContent}</OctoTooltip>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-6 w-6'
-              onClick={() => setShowSettingsDialog(true)}
-              title='Manage Tabs'
-            >
-              <Settings className='h-4 w-4' />
-            </Button>
-          </div>
+    <ErrorBoundary>
+      <>
+        <Tabs
+          value={activeTabId ?? ''}
+          onValueChange={(value) => {
+            setActiveProjectTabId(value)
+          }}
+          className={cn('flex flex-col justify-start rounded-none border-b', className)}
+        >
+          <TabsList className='h-auto bg-background justify-start rounded-none p-1'>
+            <div className='text-xs lg:text-sm px-2 font-semibold flex items-center gap-1 mr-2 whitespace-nowrap'>
+              Project Tabs
+              <OctoTooltip>{titleTooltipContent}</OctoTooltip>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-6 w-6'
+                onClick={() => setShowSettingsDialog(true)}
+                title='Manage Tabs'
+              >
+                <Settings className='h-4 w-4' />
+              </Button>
+            </div>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={finalTabOrder} strategy={horizontalListSortingStrategy}>
-              <div className='flex gap-1'>
-                {finalTabOrder.map((tabId, index) => {
-                  const tabData = tabs[tabId]
-                  if (!tabData) return null
-                  const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`
+            <div className='mr-2'>
+              <Button
+                onClick={handleCreateTab}
+                size='icon'
+                className='w-6 h-6'
+                variant='ghost'
+                title={`New Project Tab (${hotkeyPrefix}+?)`}
+              >
+                <Plus className='h-4 w-4' />
+              </Button>
+            </div>
 
-                  return (
-                    <SortableTab
-                      key={tabId}
-                      tabId={tabId}
-                      index={index}
-                      displayName={displayName}
-                      hasLink={false}
-                      isEditingInline={editingTabName?.id === tabId}
-                      editingInlineName={editingTabName?.name ?? ''}
-                      setEditingInlineName={(name) => setEditingTabName({ id: tabId, name })}
-                      onSaveInlineRename={handleRenameTab}
-                      onCancelInlineRename={() => setEditingTabName(null)}
-                      isActive={activeTabId === tabId}
-                      hotkeyPrefix={hotkeyPrefix}
-                    />
-                  )
-                })}
-              </div>
-            </SortableContext>
-          </DndContext>
+            <div ref={scrollableTabsRef} className='flex-1 min-w-0 overflow-x-auto scrollbar-hide relative'>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={finalTabOrder} strategy={horizontalListSortingStrategy}>
+                  <div className='flex gap-1 whitespace-nowrap py-1'>
+                    {finalTabOrder.map((tabId, index) => {
+                      const tabData = tabs[tabId]
+                      if (!tabData) return null
+                      const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`
 
-          <div className='ml-2'>
-            <Button
-              onClick={handleCreateTab}
-              size='icon'
-              className='w-6 h-6'
-              variant='ghost'
-              title={`New Project Tab (${hotkeyPrefix}+?)`}
-            >
-              <Plus className='h-4 w-4' />
-            </Button>
-          </div>
-        </TabsList>
-      </Tabs>
+                      return (
+                        <SortableTab
+                          key={tabId}
+                          tabId={tabId}
+                          index={index}
+                          displayName={displayName}
+                          hasLink={false}
+                          isEditingInline={editingTabName?.id === tabId}
+                          editingInlineName={editingTabName?.name ?? ''}
+                          setEditingInlineName={(name) => setEditingTabName({ id: tabId, name })}
+                          onSaveInlineRename={handleRenameTab}
+                          onCancelInlineRename={() => setEditingTabName(null)}
+                          isActive={activeTabId === tabId}
+                          hotkeyPrefix={hotkeyPrefix}
+                        />
+                      )
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+              {showFade && (
+                <div className='absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-background to-transparent pointer-events-none' />
+              )}
+            </div>
+          </TabsList>
+        </Tabs>
 
-      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-        <DialogContent className='sm:max-w-lg'>
-          <DialogHeader>
-            <DialogTitle>Manage Project Tabs</DialogTitle>
-          </DialogHeader>
-          <div className='mt-4 space-y-2 max-h-[60vh] overflow-y-auto pr-2'>
-            {finalTabOrder.map((tabId) => {
-              const tabData = tabs[tabId]
-              if (!tabData) return null
-              const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`
-              const isEditing = dialogEditingTab === tabId
+        <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+          <DialogContent className='sm:max-w-lg'>
+            <DialogHeader>
+              <DialogTitle>Manage Project Tabs</DialogTitle>
+            </DialogHeader>
+            <div className='mt-4 space-y-2 max-h-[60vh] overflow-y-auto pr-2'>
+              {finalTabOrder.map((tabId) => {
+                const tabData = tabs[tabId]
+                if (!tabData) return null
+                const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`
+                const isEditing = dialogEditingTab === tabId
 
-              return (
-                <div
-                  key={tabId}
-                  className='group flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-accent/10'
-                >
-                  <div className='flex flex-col flex-1 truncate min-w-0'>
-                    {isEditing ? (
-                      <Input
-                        value={dialogEditingName}
-                        onChange={(e) => setDialogEditingName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveDialogRename()
-                          if (e.key === 'Escape') cancelDialogRename()
-                        }}
-                        onBlur={saveDialogRename}
-                        className='h-7 text-sm'
-                        autoFocus
-                      />
-                    ) : (
-                      <span
-                        className='truncate font-medium text-sm cursor-pointer'
-                        onClick={() => startDialogRename(tabId)}
-                        title={displayName}
-                      >
-                        {displayName}
+                return (
+                  <div
+                    key={tabId}
+                    className='group flex items-center justify-between gap-3 px-2 py-1.5 rounded hover:bg-accent/10'
+                  >
+                    <div className='flex flex-col flex-1 truncate min-w-0'>
+                      {isEditing ? (
+                        <Input
+                          value={dialogEditingName}
+                          onChange={(e) => setDialogEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveDialogRename()
+                            if (e.key === 'Escape') cancelDialogRename()
+                          }}
+                          onBlur={saveDialogRename}
+                          className='h-7 text-sm'
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className='truncate font-medium text-sm cursor-pointer'
+                          onClick={() => startDialogRename(tabId)}
+                          title={displayName}
+                        >
+                          {displayName}
+                        </span>
+                      )}
+                      <span className='text-xs text-muted-foreground truncate' title={getTabStats(tabId)}>
+                        {getTabStats(tabId)}
                       </span>
-                    )}
-                    <span className='text-xs text-muted-foreground truncate' title={getTabStats(tabId)}>
-                      {getTabStats(tabId)}
-                    </span>
-                  </div>
+                    </div>
 
-                  <div className='flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity'>
-                    {isEditing ? (
+                    <div className='flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity'>
+                      {isEditing ? (
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-6 w-6'
+                          onClick={saveDialogRename}
+                          title='Save Name'
+                        >
+                          <Pencil className='h-3.5 w-3.5' />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-6 w-6'
+                          onClick={() => startDialogRename(tabId)}
+                          title='Rename Tab'
+                        >
+                          <Pencil className='h-3.5 w-3.5' />
+                        </Button>
+                      )}
+
                       <Button
                         variant='ghost'
                         size='icon'
-                        className='h-6 w-6'
-                        onClick={saveDialogRename}
-                        title='Save Name'
+                        className='h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive'
+                        onClick={() => handleDeleteTab(tabId)}
+                        title='Delete Tab'
                       >
-                        <Pencil className='h-3.5 w-3.5' />
+                        <Trash2 className='h-3.5 w-3.5' />
                       </Button>
-                    ) : (
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='h-6 w-6'
-                        onClick={() => startDialogRename(tabId)}
-                        title='Rename Tab'
-                      >
-                        <Pencil className='h-3.5 w-3.5' />
-                      </Button>
-                    )}
-
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      className='h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive'
-                      onClick={() => handleDeleteTab(tabId)}
-                      title='Delete Tab'
-                    >
-                      <Trash2 className='h-3.5 w-3.5' />
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-          {finalTabOrder.length === 0 && (
-            <p className='text-sm text-muted-foreground text-center mt-4'>No tabs to manage.</p>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+                )
+              })}
+            </div>
+            {finalTabOrder.length === 0 && (
+              <p className='text-sm text-muted-foreground text-center mt-4'>No tabs to manage.</p>
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
+    </ErrorBoundary>
   )
 }
 
@@ -414,61 +450,63 @@ function SortableTab(props: {
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        'inline-flex group relative rounded-md',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-      )}
-      {...attributes}
-    >
-      <TabsTrigger
-        value={tabId}
+    <ErrorBoundary>
+      <div
+        ref={setNodeRef}
+        style={style}
         className={cn(
-          'flex-1 flex items-center gap-1.5 px-2.5 py-1.5 h-full text-sm rounded-md',
-          'data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-inner',
-          'hover:bg-accent/50',
-          isDragging ? 'shadow-lg' : ''
+          'inline-flex group relative rounded-md',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
         )}
-        onDoubleClick={(e) => {
-          e.preventDefault()
-          setEditingInlineName(displayName)
-        }}
-        {...listeners}
-        title={displayName}
+        {...attributes}
       >
-        {isEditingInline ? (
-          <Input
-            value={editingInlineName}
-            onChange={(e) => setEditingInlineName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave()
-              if (e.key === 'Escape') onCancelInlineRename()
-            }}
-            onBlur={handleSave}
-            className='h-6 w-28 text-sm'
-            autoFocus
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <>
-            {showShortcut && (
-              <Badge
-                variant='outline'
-                className={cn(
-                  'px-1.5 text-xs font-mono',
-                  isActive ? 'border-primary/50 text-primary' : 'text-muted-foreground'
-                )}
-              >
-                {`${hotkeyPrefix}${shortcutNumber}`}
-              </Badge>
-            )}
-            <span className='truncate max-w-[120px]'>{displayName}</span>
-            {hasLink && <LinkIcon className='h-3.5 w-3.5 text-muted-foreground flex-shrink-0' />}
-          </>
-        )}
-      </TabsTrigger>
-    </div>
+        <TabsTrigger
+          value={tabId}
+          className={cn(
+            'flex-1 flex items-center gap-1.5 px-2.5 py-1.5 h-full text-sm rounded-md',
+            'data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-inner',
+            'hover:bg-accent/50',
+            isDragging ? 'shadow-lg' : ''
+          )}
+          onDoubleClick={(e) => {
+            e.preventDefault()
+            setEditingInlineName(displayName)
+          }}
+          {...listeners}
+          title={displayName}
+        >
+          {isEditingInline ? (
+            <Input
+              value={editingInlineName}
+              onChange={(e) => setEditingInlineName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave()
+                if (e.key === 'Escape') onCancelInlineRename()
+              }}
+              onBlur={handleSave}
+              className='h-6 w-28 text-sm'
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <>
+              {showShortcut && (
+                <Badge
+                  variant='outline'
+                  className={cn(
+                    'px-1.5 text-xs font-mono',
+                    isActive ? 'border-primary/50 text-primary' : 'text-muted-foreground'
+                  )}
+                >
+                  {`${hotkeyPrefix}${shortcutNumber}`}
+                </Badge>
+              )}
+              <span className='truncate max-w-[120px]'>{displayName}</span>
+              {hasLink && <LinkIcon className='h-3.5 w-3.5 text-muted-foreground flex-shrink-0' />}
+            </>
+          )}
+        </TabsTrigger>
+      </div>
+    </ErrorBoundary>
   )
 }

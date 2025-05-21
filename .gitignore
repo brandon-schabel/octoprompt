@@ -199,3 +199,7 @@ kv-store.json.*.backup
 packages/server/data/*
 
 openapi.json
+
+.venv
+
+__pycache__

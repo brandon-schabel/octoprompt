@@ -21,7 +21,7 @@ import {
   useUpdateActiveProjectTab,
   useProjectTabField,
   useActiveChatId
-} from '@/hooks/api/use-kv-api'
+} from '@/hooks/use-kv-local-storage'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { z } from 'zod'
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
@@ -34,6 +34,7 @@ import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-
 import { AgentCoderControlDialog } from './agent-coding-dialog'
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 export type PromptOverviewPanelRef = {
   focusPrompt: () => void
@@ -271,180 +272,182 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     }
 
     return (
-      <TooltipProvider>
-        <div className={cn('flex flex-col h-full overflow-hidden', className)}>
-          <SuggestedFilesDialog
-            open={showSuggestions}
-            onClose={() => setShowSuggestions(false)}
-            suggestedFiles={suggestedFiles}
-          />
+      <ErrorBoundary>
+        <TooltipProvider>
+          <div className={cn('flex flex-col h-full overflow-hidden', className)}>
+            <SuggestedFilesDialog
+              open={showSuggestions}
+              onClose={() => setShowSuggestions(false)}
+              suggestedFiles={suggestedFiles}
+            />
 
-          <div className='flex-1 flex flex-col min-h-0 p-4 overflow-hidden min-w-0'>
-            {/* 1) Token usage */}
-            <div className='shrink-0 space-y-2 mb-4 '>
-              <div className='space-y-1'>
-                <div className='text-xs text-muted-foreground'>
-                  {totalTokens} of {contextLimit} tokens used ({usagePercentage.toFixed(0)}%)
-                </div>
-                <Progress value={usagePercentage} variant='danger' />
-              </div>
-            </div>
-
-            {/* Resizable panels for Prompts List and User Input */}
-            <VerticalResizablePanel
-              topPanel={
-                <PromptsList
-                  ref={promptsListRef}
-                  projectTabId={activeProjectTabId || 'default'}
-                  className='h-full w-full'
-                />
-              }
-              bottomPanel={
-                <div className='flex flex-col h-full w-full'>
-                  <div className='flex items-center gap-2 mb-2 shrink-0'>
-                    <span className='text-sm font-medium'>User Input</span>
-                    <OctoTooltip>
-                      <div className='space-y-2'>
-                        <p>Shortcuts:</p>
-                        <ul>
-                          <li>
-                            - <span className='font-medium'>Copy All:</span>{' '}
-                            <ShortcutDisplay shortcut={['mod', 'shift', 'c']} />
-                          </li>
-                        </ul>
-                      </div>
-                    </OctoTooltip>
+            <div className='flex-1 flex flex-col min-h-0 p-4 overflow-hidden min-w-0'>
+              {/* 1) Token usage */}
+              <div className='shrink-0 space-y-2 mb-4 '>
+                <div className='space-y-1'>
+                  <div className='text-xs text-muted-foreground'>
+                    {totalTokens} of {contextLimit} tokens used ({usagePercentage.toFixed(0)}%)
                   </div>
-                  <div className='flex-1 min-h-0 flex flex-col'>
-                    <ExpandableTextarea
-                      ref={promptInputRef}
-                      placeholder='Type your user prompt here...'
-                      value={localUserPrompt}
-                      onChange={(val) => setLocalUserPrompt(val)}
-                      className='flex-1 min-h-0 bg-background'
-                    />
-                    <div className='flex gap-2 mt-2 shrink-0 flex-wrap'>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button onClick={handleCopyAll} size='sm'>
-                            <Copy className='h-3.5 w-3.5 mr-1' />
-                            Copy
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            Copy all context (User Input + Selected Prompts + Selected Files) to clipboard.
-                            <ShortcutDisplay shortcut={['mod', 'shift', 'c']} variant='secondary' />
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={handleFindSuggestions}
-                            disabled={findSuggestedFilesMutation.isPending}
-                            size='sm'
-                          >
-                            {findSuggestedFilesMutation.isPending ? (
-                              <>
-                                <Binoculars className='h-3.5 w-3.5 mr-1 animate-spin' />
-                                Finding...
-                              </>
-                            ) : (
-                              <>
-                                <Search className='h-3.5 w-3.5 mr-1' />
-                                Files
-                              </>
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            Suggest relevant files based on your user input as well as your project summary context.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button onClick={handleChatWithContext} size='sm'>
-                            <MessageCircleCode className='h-3.5 w-3.5 mr-1' /> Chat
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            Start a new chat session with the current context. This includes user input, selected
-                            prompts, and selected files.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
+                  <Progress value={usagePercentage} variant='danger' />
+                </div>
+              </div>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button onClick={handleCopyProjectSummary} size='sm'>
-                            <FileText className='h-3.5 w-3.5 mr-1' /> Summary
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Copy the project summary and file tree to clipboard.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={handleViewAgentDialog}
-                            variant={'outline'}
-                            size='sm'
-                            className={cn(
-                              'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50'
-                            )}
-                          >
-                            <Bot className='h-3.5 w-3.5 mr-1' /> Agent
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Open the Agent Coder control panel to run AI tasks.</p>
-                        </TooltipContent>
-                      </Tooltip>
+              {/* Resizable panels for Prompts List and User Input */}
+              <VerticalResizablePanel
+                topPanel={
+                  <PromptsList
+                    ref={promptsListRef}
+                    projectTabId={activeProjectTabId || 'default'}
+                    className='h-full w-full'
+                  />
+                }
+                bottomPanel={
+                  <div className='flex flex-col h-full w-full'>
+                    <div className='flex items-center gap-2 mb-2 shrink-0'>
+                      <span className='text-sm font-medium'>User Input</span>
+                      <OctoTooltip>
+                        <div className='space-y-2'>
+                          <p>Shortcuts:</p>
+                          <ul>
+                            <li>
+                              - <span className='font-medium'>Copy All:</span>{' '}
+                              <ShortcutDisplay shortcut={['mod', 'shift', 'c']} />
+                            </li>
+                          </ul>
+                        </div>
+                      </OctoTooltip>
+                    </div>
+                    <div className='flex-1 min-h-0 flex flex-col'>
+                      <ExpandableTextarea
+                        ref={promptInputRef}
+                        placeholder='Type your user prompt here...'
+                        value={localUserPrompt}
+                        onChange={(val) => setLocalUserPrompt(val)}
+                        className='flex-1 min-h-0 bg-background'
+                      />
+                      <div className='flex gap-2 mt-2 shrink-0 flex-wrap'>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={handleCopyAll} size='sm'>
+                              <Copy className='h-3.5 w-3.5 mr-1' />
+                              Copy
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Copy all context (User Input + Selected Prompts + Selected Files) to clipboard.
+                              <ShortcutDisplay shortcut={['mod', 'shift', 'c']} variant='secondary' />
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={handleFindSuggestions}
+                              disabled={findSuggestedFilesMutation.isPending}
+                              size='sm'
+                            >
+                              {findSuggestedFilesMutation.isPending ? (
+                                <>
+                                  <Binoculars className='h-3.5 w-3.5 mr-1 animate-spin' />
+                                  Finding...
+                                </>
+                              ) : (
+                                <>
+                                  <Search className='h-3.5 w-3.5 mr-1' />
+                                  Files
+                                </>
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Suggest relevant files based on your user input as well as your project summary context.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={handleChatWithContext} size='sm'>
+                              <MessageCircleCode className='h-3.5 w-3.5 mr-1' /> Chat
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Start a new chat session with the current context. This includes user input, selected
+                              prompts, and selected files.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={handleCopyProjectSummary} size='sm'>
+                              <FileText className='h-3.5 w-3.5 mr-1' /> Summary
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Copy the project summary and file tree to clipboard.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={handleViewAgentDialog}
+                              variant={'outline'}
+                              size='sm'
+                              className={cn(
+                                'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50'
+                              )}
+                            >
+                              <Bot className='h-3.5 w-3.5 mr-1' /> Agent
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Open the Agent Coder control panel to run AI tasks.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
                   </div>
-                </div>
-              }
-              initialTopPanelHeight={55}
-              minTopPanelHeight={15}
-              maxTopPanelHeight={85}
-              storageKey='prompt-panel-height'
-              className='flex-1 min-h-0'
-              resizerClassName='my-1'
+                }
+                initialTopPanelHeight={55}
+                minTopPanelHeight={15}
+                maxTopPanelHeight={85}
+                storageKey='prompt-panel-height'
+                className='flex-1 min-h-0'
+                resizerClassName='my-1'
+              />
+            </div>
+
+            <PromptDialog
+              open={promptDialogOpen}
+              editPromptId={editPromptId}
+              promptForm={promptForm}
+              handleCreatePrompt={handleCreatePrompt}
+              handleUpdatePrompt={async (updates) => {
+                if (!editPromptId) return
+                return handleUpdatePromptContent(editPromptId, updates)
+              }}
+              createPromptPending={createPromptMutation.isPending}
+              updatePromptPending={updatePromptMutation.isPending}
+              onClose={() => setPromptDialogOpen(false)}
+            />
+
+            <AgentCoderControlDialog
+              open={isLogDialogOpen}
+              onOpenChange={setIsLogDialogOpen}
+              userInput={localUserPrompt}
+              selectedFiles={selectedFiles}
+              projectId={activeProjectTabState?.selectedProjectId || ''}
+              selectedPrompts={selectedPrompts}
+              promptData={promptData?.data}
+              totalTokens={totalTokens}
+              projectFileMap={projectFileMap}
             />
           </div>
-
-          <PromptDialog
-            open={promptDialogOpen}
-            editPromptId={editPromptId}
-            promptForm={promptForm}
-            handleCreatePrompt={handleCreatePrompt}
-            handleUpdatePrompt={async (updates) => {
-              if (!editPromptId) return
-              return handleUpdatePromptContent(editPromptId, updates)
-            }}
-            createPromptPending={createPromptMutation.isPending}
-            updatePromptPending={updatePromptMutation.isPending}
-            onClose={() => setPromptDialogOpen(false)}
-          />
-
-          <AgentCoderControlDialog
-            open={isLogDialogOpen}
-            onOpenChange={setIsLogDialogOpen}
-            userInput={localUserPrompt}
-            selectedFiles={selectedFiles}
-            projectId={activeProjectTabState?.selectedProjectId || ''}
-            selectedPrompts={selectedPrompts}
-            promptData={promptData?.data}
-            totalTokens={totalTokens}
-            projectFileMap={projectFileMap}
-          />
-        </div>
-      </TooltipProvider>
+        </TooltipProvider>
+      </ErrorBoundary>
     )
   }
 )

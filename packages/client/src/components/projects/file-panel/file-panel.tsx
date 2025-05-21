@@ -5,7 +5,7 @@ import { ProjectHeader } from './project-header'
 import { FileExplorer } from './file-explorer/file-explorer'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useGetProject } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab, useSelectSetting } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab, useSelectSetting } from '@/hooks/use-kv-local-storage'
 
 export type FilePanelRef = {
   focusSearch: () => void

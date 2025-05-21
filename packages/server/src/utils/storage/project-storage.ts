@@ -70,26 +70,33 @@ async function readValidatedJson<T extends ZodTypeAny>(
   try {
     await ensureDirExists(path.dirname(filePath)) // Ensure parent dir exists
     const fileContent = await fs.readFile(filePath, 'utf-8')
-    const jsonData = JSON.parse(fileContent)
-    const validationResult = await schema.safeParseAsync(jsonData) // Use async parse
+
+    // Handle cases where fileContent might be empty or only whitespace
+    if (fileContent.trim() === '') {
+      console.warn(`File is empty or contains only whitespace: ${filePath}. Returning default value.`);
+      return defaultValue;
+    }
+
+    const jsonData = JSON.parse(fileContent) // This can throw SyntaxError
+    const validationResult = await schema.safeParseAsync(jsonData)
 
     if (!validationResult.success) {
       console.error(`Zod validation failed reading ${filePath}:`, validationResult.error.errors)
-      // Decide how to handle: throw, return default, or try to recover?
-      // Returning default for robustness against corrupted files.
       console.warn(`Returning default value due to validation failure for ${filePath}.`)
       return defaultValue
-      // Or: throw new ZodError(validationResult.error.errors);
     }
     return validationResult.data
   } catch (error: any) {
     if (error.code === 'ENOENT') {
-      // File doesn't exist, return the default value
-      // console.log(`File not found ${filePath}, returning default value.`);
       return defaultValue
     }
+    // Specifically catch JSON parsing errors
+    if (error instanceof SyntaxError) {
+      console.error(`JSON Parse error in ${filePath}:`, error.message);
+      console.warn(`Returning default value due to JSON parsing error for ${filePath}.`);
+      return defaultValue;
+    }
     console.error(`Error reading or parsing JSON from ${filePath}:`, error)
-    // Throw for unexpected errors (parsing, permissions etc.)
     throw new Error(`Failed to read/parse JSON file at ${filePath}. Reason: ${error.message}`)
   }
 }

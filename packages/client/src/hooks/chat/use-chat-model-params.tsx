@@ -1,4 +1,4 @@
-import { useAppSettings } from '@/hooks/api/use-kv-api'
+import { useAppSettings } from '@/hooks/use-kv-local-storage'
 import { AiSdkOptions } from '@/generated'
 import { useCallback, useMemo } from 'react'
 import { modelsTempNotAllowed } from 'shared'

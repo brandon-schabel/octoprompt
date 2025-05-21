@@ -22,7 +22,7 @@ import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-t
 
 import { toast } from 'sonner'
 import { ProjectFile } from '@/generated'
-import { useActiveProjectTab, useAppSettings } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 
 export const Route = createFileRoute('/project-summarization')({
   component: ProjectSummarizationSettingsPage
@@ -66,8 +66,6 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string;
   )
 }
 
-
-
 export function ProjectSummarizationSettingsPage() {
   const [{ summarizationEnabledProjectIds = [] }, updateSettings] = useAppSettings()
 
@@ -97,9 +95,6 @@ export function ProjectSummarizationSettingsPage() {
   const projectFiles = (data?.data || []) as ProjectFile[]
 
   const summariesMap = new Map<string, ProjectFile>()
-
-
-
 
   for (const f of data?.data || []) {
     // Only add files that actually have a summary string to the map
@@ -358,11 +353,11 @@ export function ProjectSummarizationSettingsPage() {
               <strong>Included files with summaries:</strong> {includedWithSummariesCount} / {includedFilesCount}
             </p>
             <p className='text-sm flex items-center gap-1'>
-              <strong>Total tokens in content (included files):</strong>{' '}
+              <strong>Total tokens in content (included files):</strong>
               <FormatTokenCount tokenContent={totalTokensInContent} />
             </p>
             <p className='text-sm flex items-center gap-1'>
-              <strong>Total tokens in summaries (included files):</strong>{' '}
+              <strong>Total tokens in summaries (included files):</strong>
               <FormatTokenCount tokenContent={totalTokensInSummaries} />
             </p>
           </div>
@@ -599,7 +594,7 @@ export function ProjectSummarizationSettingsPage() {
                   selectedFileIds.some((id) => summarizeMutation.variables?.fileIds.includes(id)) &&
                   summarizeMutation.variables?.force
                     ? 'Re-summarizing...'
-                    : 'Force Re-summarize'}{' '}
+                    : 'Force Re-summarize'}
                   ({selectedFileIds.length})
                 </Button>
                 <Button

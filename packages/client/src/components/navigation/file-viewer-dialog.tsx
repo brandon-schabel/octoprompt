@@ -7,7 +7,7 @@ import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
-import { useSelectSetting } from '@/hooks/api/use-kv-api'
+import { useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { ProjectFile } from '@/generated'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
