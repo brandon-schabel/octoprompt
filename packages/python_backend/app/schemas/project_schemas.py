@@ -5,9 +5,9 @@
 # - Matched OpenAPI examples and descriptions
 # - Handled optional fields and datetime strings
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field, validator
-from datetime import datetime # Pydantic can parse ISO datetime strings to datetime objects
+from datetime import datetime, timezone
 
 class Project(BaseModel):
     id: str = Field(..., example='proj_1a2b3c4d')
@@ -49,12 +49,11 @@ class ProjectFile(BaseModel):
 
 # For ProjectIdParamsSchema
 class ProjectIdParams(BaseModel):
-    projectId: str = Field(..., min_length=1, example='proj_1a2b3c4d', description='The ID of the project')
-    # FastAPI handles param location (path, query) in the route decorator
+    project_id: str = Field(..., min_length=1, alias="projectId", examples=["proj_1a2b3c4d"], description="The ID of the project")
 
-    class Config:
-        openapi_extra = {"title": "ProjectIdParams"}
-
+    model_config = {
+        "populate_by_name": True,
+    }
 
 # For UpdateProjectBodySchema with refine
 class UpdateProjectBody(BaseModel):
@@ -84,6 +83,56 @@ class ProjectListResponse(SuccessResponse):
 class FileListResponse(SuccessResponse):
     data: List[ProjectFile]
 
+class ProjectResponseMultiStatus(ProjectResponse):
+    warning: Optional[str] = Field(None, example="Initial sync encountered a minor issue.")
+    error: Optional[str] = Field(None, example="Failed to start file watcher.")
+
+    class Config:
+        openapi_extra = {"title": "ProjectResponseMultiStatus"}
+
+class ProjectSummaryResponse(SuccessResponse):
+    summary: str = Field(..., example="This project contains components for user authentication and profile management.")
+
+    class Config:
+        openapi_extra = {"title": "ProjectSummaryResponse"}
+
+class RemoveSummariesBody(BaseModel):
+    fileIds: List[str] = Field(..., min_items=1, example=['file_1a2b3c4d', 'file_e5f6g7h8'])
+
+    @validator('fileIds', each_item=True)
+    def check_file_id_min_length(cls, v):
+        if len(v) < 1:
+            raise ValueError('File ID must have a minimum length of 1')
+        return v
+
+    class Config:
+        openapi_extra = {"title": "RemoveSummariesRequestBody"}
+
+class SummarizeFilesBody(BaseModel):
+    fileIds: List[str] = Field(..., min_items=1, example=['file_1a2b3c4d', 'file_e5f6g7h8'])
+    force: bool = Field(False, example=False, description='Force re-summarization even if summary exists')
+
+    @validator('fileIds', each_item=True)
+    def check_file_id_min_length(cls, v):
+        if len(v) < 1:
+            raise ValueError('File ID must have a minimum length of 1')
+        return v
+
+    class Config:
+        openapi_extra = {"title": "SummarizeFilesRequestBody"}
+
+class SuggestFilesBody(BaseModel):
+    userInput: str = Field(..., min_length=1, example='Implement authentication using JWT')
+
+    class Config:
+        openapi_extra = {"title": "SuggestFilesRequestBody"}
+
+class RefreshQuery(BaseModel):
+    folder: Optional[str] = Field(None, example='src/components', description='Optional folder path to limit the refresh scope')
+
+    class Config:
+        openapi_extra = {"title": "RefreshQuery"}
+
 # ProjectFileMap equivalent
 ProjectFileMap = Dict[str, ProjectFile]
 
@@ -92,3 +141,13 @@ ProjectFileMap = Dict[str, ProjectFile]
 # type ProjectFile = ProjectFile (class name itself)
 # type CreateProjectBody = CreateProjectBody (class name itself)
 # type UpdateProjectBody = UpdateProjectBody (class name itself)
+
+# Added for agent_coder_service to align with TypeScript's FileSyncData
+class FileSyncData(BaseModel):
+    path: str
+    name: str
+    extension: str
+    content: str
+    size: int
+    checksum: str
+    # project_id is not part of FileSyncData in TS, it's passed to bulk_create_project_files

@@ -7,13 +7,17 @@
 import asyncio
 from pathlib import Path
 import uuid
-from typing import Type, TypeVar, Any
+from typing import Type, TypeVar, Any, Dict, List
 from pydantic import ValidationError
 from app.schemas.ticket_schemas import (
-    TicketBase, TicketTaskBase, TicketFileBase,
-    TicketsStorageModel, TicketTasksStorageModel, TicketFilesStorageModel
+    TicketBase, TicketTaskBase, TicketFileBase
 )
-from app.utils.json_utils import json_scribe # Assuming json_scribe uses aiofiles
+from app.utils.json_scribe import json_scribe # Assuming json_scribe uses aiofiles
+
+# Define StorageModel type aliases here as they are not in ticket_schemas.py
+TicketsStorageModel = Dict[str, TicketBase]
+TicketTasksStorageModel = Dict[str, TicketTaskBase]
+TicketFilesStorageModel = List[TicketFileBase]
 
 DATA_DIR = Path.cwd() / 'data' / 'ticket_storage'
 TICKETS_FILE = 'tickets.json'

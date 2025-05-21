@@ -6,8 +6,8 @@ from app.schemas.chat_schemas import (
     ChatIdParams, ForkChatParams, ForkChatFromMessageParams, DeleteMessageParams, UpdateChatParams, DeleteChatParams,
     OperationSuccessResponse # Added for success/failure messages
 )
-from app.core.custom_errors import ApiError # For catching service errors
 from fastapi.responses import StreamingResponse # For streaming responses
+from app.error_handling.api_error import ApiError
 
 router = APIRouter(prefix="/api/chats", tags=["Chats"])
 chat_service_dependency = ChatService() # Or a more sophisticated dependency provider

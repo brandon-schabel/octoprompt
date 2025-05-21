@@ -37,6 +37,7 @@ process = psutil.Process(os.getpid()) # Get current process for uptime and memor
         500: {"model": ApiErrorResponse, "description": "Error retrieving environment information"}
     }
 )
+
 async def get_env_info():
     try:
         env_info = EnvironmentInfo(

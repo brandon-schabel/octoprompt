@@ -14,12 +14,13 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Type, TypeVar, Optional, Union
+from typing import Any, Dict, Type, TypeVar, Optional, Union, List
 from pydantic import BaseModel, ValidationError, RootModel
 from datetime import datetime, timezone
 
 # Assuming schemas are in app.schemas
 from app.schemas.project_schemas import Project, ProjectFile
+from app.schemas.ai_file_change_schemas import AIFileChangeRecord
 
 # Define the base directory for storing project data, relative to the workspace root
 # This should ideally be configurable.
@@ -39,6 +40,8 @@ DATA_DIR = WORKSPACE_ROOT / "data" / "python_project_storage"
 ProjectsStorageModel = RootModel[Dict[str, Project]]
 # Store files within a project as a map (Record) keyed by fileId
 ProjectFilesStorageModel = RootModel[Dict[str, ProjectFile]]
+# Store AI file changes within a project as a map keyed by changeId
+AIFileChangesStorageModel = RootModel[Dict[str, AIFileChangeRecord]]
 
 T = TypeVar("T", bound=BaseModel) # For generic Pydantic models in read/write
 DictModel = TypeVar("DictModel", bound=RootModel) # For RootModel types
@@ -53,6 +56,9 @@ def get_project_data_dir(project_id: str) -> Path:
 
 def get_project_files_path(project_id: str) -> Path:
     return get_project_data_dir(project_id) / "files.json"
+
+def get_ai_file_changes_path(project_id: str) -> Path:
+    return get_project_data_dir(project_id) / "ai_file_changes.json"
 
 # --- Core Read/Write Functions ---
 
@@ -164,6 +170,14 @@ class ProjectStorage:
         written_model = await _write_validated_json(get_project_files_path(project_id), files_model, ProjectFilesStorageModel)
         return written_model.root
 
+    async def read_ai_file_changes(self, project_id: str) -> Dict[str, AIFileChangeRecord]:
+        return await _read_validated_json(get_ai_file_changes_path(project_id), AIFileChangesStorageModel, {})
+
+    async def write_ai_file_changes(self, project_id: str, changes: Dict[str, AIFileChangeRecord]) -> Dict[str, AIFileChangeRecord]:
+        changes_model = AIFileChangesStorageModel(root=changes)
+        written_model = await _write_validated_json(get_ai_file_changes_path(project_id), changes_model, AIFileChangesStorageModel)
+        return written_model.root
+
     async def read_project_file(self, project_id: str, file_id: str) -> Optional[ProjectFile]:
         files = await self.read_project_files(project_id)
         return files.get(file_id)
@@ -195,6 +209,15 @@ class ProjectStorage:
         
         await self.write_project_files(project_id, current_project_files)
         return validated_file_data
+
+    async def get_ai_file_change_by_id(self, project_id: str, change_id: str) -> Optional[AIFileChangeRecord]:
+        changes = await self.read_ai_file_changes(project_id)
+        return changes.get(change_id)
+
+    async def save_ai_file_change(self, project_id: str, record: AIFileChangeRecord) -> None:
+        changes = await self.read_ai_file_changes(project_id)
+        changes[record.id] = record
+        await self.write_ai_file_changes(project_id, changes)
 
     async def delete_project_data(self, project_id: str) -> None:
         dir_path = get_project_data_dir(project_id)

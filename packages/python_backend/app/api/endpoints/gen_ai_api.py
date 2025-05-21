@@ -17,6 +17,7 @@ from app.schemas.gen_ai_schemas import (
     AiGenerateStructuredRequest, AiGenerateStructuredResponse, ModelsListResponse,
     FilenameSuggestionOutput, BasicSummaryOutput, UnifiedModel, AiSdkOptions # Added UnifiedModel, AiSdkOptions
 )
+from app.core.config import OLLAMA_BASE_URL, LMSTUDIO_BASE_URL
 # from app.schemas.provider_key_schemas import APIProviders # Keep for future use if provider type becomes strict
 
 # Placeholder for actual services - to be implemented in app.services.*
@@ -52,7 +53,7 @@ class TempProviderKey: # TODO: Replace with import from app.schemas.provider_key
         self.key = key
 
 class TempProviderKeyService:
-    # TODO: Implement in app.services.model_providers.provider_key_service.py
+    # TODO: Implement in app.services.provider_key_service.py
     async def list_keys(self) -> List[TempProviderKey]:
         return [TempProviderKey(provider="openai", key="sk-placeholder-openai"), TempProviderKey(provider="ollama", key="ollama_key_placeholder")]
 
@@ -77,9 +78,7 @@ class TempModelFetcherService:
             ]
         return []
 
-# TODO: These base URLs should ideally come from app.core.config or provider defaults
-OLLAMA_BASE_URL = "http://localhost:11434"
-LMSTUDIO_BASE_URL = "http://localhost:1234"
+
 # End of placeholder services
 
 # Actual schemas from app.schemas.gen_ai_schemas are used below for config
@@ -201,7 +200,7 @@ async def get_models_endpoint(query_params: ModelsQuery = Query(...)): # Use Mod
     provider_id = query_params.provider
     try:
         # Replace with actual service calls:
-        # from app.services.model_providers.provider_key_service import provider_key_service
+        # from app.services.provider_key_service import provider_key_service
         # from app.services.model_providers.model_fetcher_service import ModelFetcherService
         # keys_list = await provider_key_service.list_keys()
         # provider_keys_config = {f"{key.provider}Key": key.key for key in keys_list}
@@ -252,7 +251,7 @@ async def post_ai_generate_text_endpoint(body: AiGenerateTextRequest):
 import asyncio # Required for placeholder stream function
 # Note: To make this fully operational:
 # 1. Implement the actual service functions in app.services.gen_ai_service.py,
-#    app.services.model_providers.provider_key_service.py, and
+#    app.services.provider_key_service.py, and
 #    app.services.model_providers.model_fetcher_service.py.
 # 2. Replace the 'temp_*' function calls and class instantiations with actual imports and calls.
 # 3. Ensure app.core.config provides OLLAMA_BASE_URL, LMSTUDIO_BASE_URL, etc.

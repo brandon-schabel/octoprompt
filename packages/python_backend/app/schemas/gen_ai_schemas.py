@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any, Literal, Union
 from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 from .common_schemas import MessageRoleEnum
+from .project_schemas import ProjectFile
 
 # --- Schema for individual messages ---
 class AiMessage(BaseModel):
@@ -48,9 +49,12 @@ class AiGenerateTextRequest(BaseModel):
 
     model_config = ConfigDict(title="AiGenerateTextRequest")
 
+class AiTextResponseData(BaseModel):
+    text: str
+
 class AiGenerateTextResponse(BaseModel):
     success: Literal[True] = True
-    data: Dict[str, str] = Field(..., description="Generated text response")
+    data: AiTextResponseData
 
     model_config = ConfigDict(title="AiGenerateTextResponse")
 
@@ -70,6 +74,11 @@ class FilenameSuggestionOutput(BaseModel):
 
     model_config = ConfigDict(title="FilenameSuggestionOutput")
 
+class BasicSummaryOutput(BaseModel):
+    summary: str = Field(..., description="The generated summary.")
+
+    model_config = ConfigDict(title="BasicSummaryOutput")
+
 class AiGenerateStructuredRequest(BaseModel):
     schema_key: str = Field(..., min_length=1)
     user_input: str = Field(..., min_length=1)
@@ -77,9 +86,12 @@ class AiGenerateStructuredRequest(BaseModel):
 
     model_config = ConfigDict(title="AiGenerateStructuredRequest")
 
+class AiStructuredResponseData(BaseModel):
+    output: Any
+
 class AiGenerateStructuredResponse(BaseModel):
     success: Literal[True] = True
-    data: Dict[str, Any]
+    data: AiStructuredResponseData
 
     model_config = ConfigDict(title="AiGenerateStructuredResponse")
 
@@ -92,7 +104,7 @@ class FileSuggestions(BaseModel):
 # --- Response schemas ---
 class FileSummaryListResponse(BaseModel):
     success: Literal[True] = True
-    data: List[Any]  # Replace with actual ProjectFile type when available
+    data: List[ProjectFile]
 
     model_config = ConfigDict(title="FileSummaryListResponse")
 
@@ -100,7 +112,7 @@ class SummarizeFilesResponse(BaseModel):
     success: Literal[True] = True
     included: int
     skipped: int
-    updated_files: List[Any]  # Replace with actual ProjectFile type when available
+    updated_files: List[ProjectFile]
     message: str
 
     model_config = ConfigDict(title="SummarizeFilesResponse")

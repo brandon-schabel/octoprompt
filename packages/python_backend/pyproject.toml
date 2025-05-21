@@ -5,6 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "aiofiles>=24.1.0",
     "fastapi>=0.115.12",
+    "freezegun>=1.5.1",
+    "ignore>=0.1.4",
+    "pathspec>=0.12.1",
+    "psutil>=7.0.0",
     "pydantic-ai>=0.2.4",
+    "pytest>=8.3.5",
+    "pytest-mock>=3.14.0",
+    "watchdog>=6.0.0",
 ]

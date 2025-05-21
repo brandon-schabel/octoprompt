@@ -92,6 +92,8 @@ class TaskSuggestionItem(BaseModel):
 class TaskSuggestions(BaseModel):
     tasks: List[TaskSuggestionItem]
 
+TaskSuggestionsModel = TaskSuggestions # Alias for TaskSuggestions
+
 # Schemas based on the refined Zod definitions (createTicketSchema, etc.)
 class CreateTicketBody(BaseModel):
     project_id: str = Field(..., min_length=1, validation_alias="projectId", serialization_alias="projectId")
@@ -151,3 +153,7 @@ class TicketAndTaskIdParams(BaseModel):
 # Pydantic models themselves serve as the types.
 # Example: Ticket = TicketRead
 # Example: TicketTask = TicketTaskRead
+
+TicketBase = TicketRead
+TicketTaskBase = TicketTaskRead
+TicketFileBase = TicketFileRead

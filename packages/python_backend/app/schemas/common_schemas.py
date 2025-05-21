@@ -9,12 +9,12 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 class ErrorDetail(BaseModel):
-    message: str = Field(..., example='An error occurred')
-    code: Optional[str] = Field(None, example='ERROR_CODE')
+    message: str
+    code: Optional[str] = None
     details: Optional[Dict[str, Any]] = None
 
 class ApiErrorResponse(BaseModel):
-    success: TypingLiteral[False] = False
+    success: bool = Field(default=False)
     error: ErrorDetail
 
     class Config:

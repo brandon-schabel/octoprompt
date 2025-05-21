@@ -11,10 +11,19 @@ from pydantic import ValidationError
 from app.error_handling.api_error import ApiError
 from app.schemas.ticket_schemas import (
     TicketBase, TicketTaskBase, TicketFileBase,
-    TicketCreate, TicketUpdate, TaskSuggestionsModel,
-    TicketsStorageModel, TicketTasksStorageModel, TicketFilesStorageModel
+    TicketCreate, TicketUpdate, TaskSuggestions
 )
 from app.utils.storage.ticket_storage import ticket_storage
+from app.services.gen_ai_service import generate_structured_data, LOW_MODEL_CONFIG
+from app.schemas.ticket_schemas import TaskSuggestions, TicketRead as Ticket
+from app.utils.get_full_project_summary import get_full_project_summary
+from app.core.config import MEDIUM_MODEL_CONFIG
+
+# Define StorageModel type aliases here as they are not in ticket_schemas.py
+TicketsStorageModel = Dict[str, TicketBase]
+TicketTasksStorageModel = Dict[str, TicketTaskBase]
+TicketFilesStorageModel = List[TicketFileBase]
+
 # --- Placeholders for external dependencies ---
 # (These would be actual imports in a full application)
 class PlaceholderProjectStorage: # Mock for project_storage
@@ -29,16 +38,39 @@ class PlaceholderGenAIService: # Mock for gen_ai_services
     MEDIUM_MODEL_CONFIG = {"model": "mock-ai-model"}
     async def generate_structured_data(self, prompt: str, system_message: str, schema: Any, options: Dict) -> Any:
         print(f"Mock: Generating structured data for schema {schema.__name__}")
-        if schema is TaskSuggestionsModel: return type('obj', (object,), {'object': TaskSuggestionsModel(tasks=[{'title': 'AI Suggested Task 1'}])})()
+        if schema is TaskSuggestions: return type('obj', (object,), {'object': TaskSuggestions(tasks=[{'title': 'AI Suggested Task 1'}])})()
         return type('obj', (object,), {'object': schema()})() # Default empty model
 gen_ai_services = PlaceholderGenAIService()
 
-async def get_full_project_summary(project_id: str) -> str: # Mock
-    return f"<project_summary>Mock summary for {project_id}</project_summary>"
+# Removed local placeholder:
+# async def get_full_project_summary(project_id: str) -> str: # Mock
+#     return f"<project_summary>Mock summary for {project_id}</project_summary>"
 # --- End Placeholders ---
 
 VALID_TASK_FORMAT_PROMPT = """IMPORTANT: Return ONLY valid JSON matching this schema: {"tasks": [{"title": "Task title", "description": "Optional desc"}]}"""
 DEFAULT_TASK_PROMPT = f"""You are a technical project manager... Each task clear and actionable.\n{VALID_TASK_FORMAT_PROMPT}"""
+
+DEFAULT_TASK_PROMPT_PY = """You are a technical project manager helping break down tickets into actionable tasks.
+Given a ticket's title and overview, suggest specific, concrete tasks that would help complete the ticket.
+Focus on technical implementation tasks, testing, and validation steps.
+Each task should be clear and actionable.
+
+IMPORTANT: Return ONLY valid JSON matching this schema:
+{
+  "tasks": [
+    {
+      "title": "Task title here",
+      "description": "Optional description here",
+      "files": [
+            {
+                "file_id": "Optional file ID relevant to this task",
+                "file_name": "Optional file name relevant to this task"
+            }
+        ]
+    }
+  ]
+}
+"""
 
 async def _update_ticket_timestamp_and_save(ticket_id: str, all_tickets: TicketsStorageModel) -> TicketsStorageModel:
     if ticket_id in all_tickets:
@@ -47,17 +79,78 @@ async def _update_ticket_timestamp_and_save(ticket_id: str, all_tickets: Tickets
     await ticket_storage.write_tickets(all_tickets)
     return all_tickets
 
-async def fetch_task_suggestions_for_ticket(ticket: TicketBase, user_context: str | None) -> TaskSuggestionsModel:
-    project_summary = await get_full_project_summary(ticket.projectId)
-    user_message = f"<goal>Suggest tasks...</goal><ticket_title>{ticket.title}</ticket_title><ticket_overview>{ticket.overview}</ticket_overview>"
-    if user_context: user_message += f"<user_context>Additional Context: {user_context}</user_context>"
-    user_message += project_summary
-    if not gen_ai_services.MEDIUM_MODEL_CONFIG.get("model"): raise ApiError(500, "Model not configured", "CONFIG_ERROR")
-    result = await gen_ai_services.generate_structured_data(
-        prompt=user_message, system_message=DEFAULT_TASK_PROMPT,
-        schema=TaskSuggestionsModel, options=gen_ai_services.MEDIUM_MODEL_CONFIG
-    )
-    return result.object
+async def fetch_task_suggestions_for_ticket(
+    ticket: Ticket, # Pydantic model for Ticket
+    user_context: Optional[str] = None
+) -> TaskSuggestions: # Pydantic model for TaskSuggestions
+    project_summary = await get_full_project_summary(ticket.project_id)
+
+    user_message = f"""
+<goal>
+Suggest tasks for this ticket. The tasks should be relevant to the project. The goal is to break down the
+ticket into smaller, actionable tasks based on the user's request. Refer to the ticket overview and title for context.
+Break the ticket down into step-by-step tasks that are clear, actionable, and specific to the project.
+
+- Each Task should include which files are relevant to the task. Include file_id and file_name.
+</goal>
+
+<ticket_title>
+{ticket.title}
+</ticket_title>
+
+<ticket_overview>
+{ticket.overview}
+</ticket_overview>
+
+<user_context>
+{f"Additional Context: {user_context}" if user_context else ""}
+</user_context>
+
+{project_summary}
+"""
+
+    # Use the imported gen_ai_service.py's config or define one
+    # For simplicity, using a slightly modified LOW_MODEL_CONFIG as a placeholder for MEDIUM_MODEL_CONFIG
+    # In a real scenario, you'd have distinct configurations.
+    ai_options = {
+        "provider": MEDIUM_MODEL_CONFIG.get("provider", "openai"), # Default to openai if not set
+        "model": MEDIUM_MODEL_CONFIG.get("model"),
+        # Add other relevant parameters like temperature, max_tokens, etc. from MEDIUM_MODEL_CONFIG
+        "temperature": MEDIUM_MODEL_CONFIG.get("temperature"),
+        "max_tokens": MEDIUM_MODEL_CONFIG.get("max_tokens", 2000), # Default max_tokens if not in config
+    }
+    
+    if not ai_options["model"]:
+        raise ApiError(500, "Model not configured for 'suggest-ticket-tasks'", "CONFIG_ERROR")
+
+    try:
+        # generate_structured_data expects AiSdkOptions, so we need to create an instance
+        # However, the current gen_ai_service.py's generate_structured_data takes a dictionary for options
+        # and internally creates AiSdkOptions. We'll pass the dict directly.
+        
+        # The schema for generate_structured_data is the Pydantic model class itself.
+        result_dict = await generate_structured_data(
+            prompt=user_message,
+            system_message_content=DEFAULT_TASK_PROMPT_PY,
+            output_schema=TaskSuggestions, # Pass the Pydantic model class
+            options=ai_options, # Pass the dictionary of options
+            debug=True # Enable debug for more verbose output if needed
+        )
+        # result_dict from generate_structured_data contains {"object": dict, "usage": dict}
+        # We need to parse the "object" part into our TaskSuggestions model
+        if "object" in result_dict and isinstance(result_dict["object"], dict):
+            return TaskSuggestions(**result_dict["object"])
+        else:
+            raise ApiError(500, "AI service returned an unexpected structure for task suggestions.", "AI_RESPONSE_ERROR")
+
+    except ApiError as e:
+        # Re-raise ApiErrors directly
+        raise e
+    except Exception as e:
+        # Catch-all for other errors, wrap in ApiError
+        error_message = f"Failed to fetch task suggestions: {str(e)}"
+        print(f"[TicketServicePy] Error: {error_message}")
+        raise ApiError(500, error_message, "TASK_SUGGESTION_FAILED_PY", {"original_error": str(e)})
 
 async def create_ticket(data: TicketCreate) -> TicketBase:
     ticket_id = ticket_storage.generate_id('tkt'); now = datetime.now(timezone.utc)

@@ -11,7 +11,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 
 from app.error_handling.api_error import ApiError
 # Assuming config is structured to provide these model configs
@@ -20,18 +20,18 @@ from app.core.config import (
     MEDIUM_MODEL_CONFIG,
     PLANNING_MODEL_CONFIG,
 )
+
 from app.schemas.agent_coder_schemas import (
     AgentContext,
     AgentDataLog,
     AgentDataLogFinalStatusEnum,
     AgentFileRewriteResponse,
     AgentTask,
-    AgentTaskPlan,
     AgentTaskStatusEnum,
-    CoderAgentDataContext, # This was used in TS, AgentContext is the Python equivalent
-    FileRewriteResponse, # Python: AgentFileRewriteResponse
-    Task, # Python: AgentTask
-    TaskPlan as PyTaskPlan, # Python: AgentTaskPlan
+    # CoderAgentDataContext, # This was used in TS, AgentContext is the Python equivalent. PyCoderAgentDataContext = AgentContext is used below.
+    # FileRewriteResponse, # Python: AgentFileRewriteResponse. AgentFileRewriteResponse is imported and used.
+    # Task, # Python: AgentTask. AgentTask is imported and used.
+    AgentTaskPlan as PyTaskPlan, # Correctly alias AgentTaskPlan to PyTaskPlan
 )
 from app.schemas.gen_ai_schemas import AiSdkOptions
 from app.schemas.project_schemas import ProjectFile
@@ -39,7 +39,7 @@ from app.schemas.project_schemas import ProjectFile
 # from app.services.project_service import FileSyncData, bulk_create_project_files
 from app.services.project_service import bulk_create_project_files, FileSyncData # Adjusted import
 from app.services.file_services.file_sync_service_unified import compute_checksum
-from app.services.gen_ai_services import generate_structured_data
+from app.services.gen_ai_service import generate_structured_data
 from app.services.agents.agent_logger import (
     AGENT_LOGS_DIR,
     get_orchestrator_log_file_paths,
@@ -50,7 +50,7 @@ from app.services.agents.agent_logger import (
 )
 from app.utils.path_utils import normalize_path_for_db
 # Assuming build_project_file_map is available, e.g., from a shared utils module
-from app.utils.projects_utils import build_project_file_map
+from app.utils.project_utils import build_project_file_map
 
 
 # Type alias for consistency with TS if CoderAgentDataContext is preferred over AgentContext internally
@@ -95,7 +95,7 @@ def get_planning_agent_prompt(agent_context: PyCoderAgentDataContext) -> str:
     <project_id>{agent_context.project.id}</project_id>
     <project_name>{agent_context.project.name}</project_name>
     <project_description>{agent_context.project.description if agent_context.project.description else ''}</project_description>
-    <schema>{json.dumps(AgentTaskPlan.model_json_schema(ref_template='#/components/schemas/{model}'), indent=2)}</schema>
+    <schema>{json.dumps(PyTaskPlan.model_json_schema(ref_template='#/components/schemas/{model}'), indent=2)}</schema>
     """
 
 def get_planning_agent_system_prompt(_agent_context: PyCoderAgentDataContext) -> str:
@@ -150,7 +150,7 @@ def get_file_rewrite_agent_system_prompt(
 
 agent_coder_prompts = {
     "planning_agent": {
-        "schema": AgentTaskPlan,
+        "schema": PyTaskPlan,
         "prompt": get_planning_agent_prompt,
         "system_prompt": get_planning_agent_system_prompt,
     },
@@ -226,8 +226,8 @@ async def run_planning_agent(agent_context: PyCoderAgentDataContext) -> PyTaskPl
         # The schema is passed to generate_structured_data, which should ideally return a validated Pydantic model
         # If it returns a dict, we validate here.
         if isinstance(result_obj, dict):
-            plan = AgentTaskPlan.model_validate(result_obj)
-        elif isinstance(result_obj, AgentTaskPlan):
+            plan = PyTaskPlan.model_validate(result_obj)
+        elif isinstance(result_obj, PyTaskPlan):
             plan = result_obj
         else:
             raise ValueError(f"Unexpected type from generate_structured_data: {type(result_obj)}")
@@ -459,7 +459,7 @@ async def main_orchestrator(raw_agent_context_input: PyCoderAgentDataContext) ->
         "project_id": raw_agent_context_input.project.id,
         "agent_job_id": agent_job_id,
         "agent_job_start_time": datetime.now(timezone.utc).isoformat(),
-        "task_plan": AgentTaskPlan(project_id=raw_agent_context_input.project.id, overall_goal=raw_agent_context_input.user_input or "User input not provided", tasks=[]).model_dump(),
+        "task_plan": PyTaskPlan(project_id=raw_agent_context_input.project.id, overall_goal=raw_agent_context_input.user_input or "User input not provided", tasks=[]).model_dump(),
         "final_status": None, # Will be set to a valid enum before final validation
         "final_task_plan": None,
         "error_message": None,

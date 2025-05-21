@@ -4,7 +4,7 @@ import uuid
 from typing import List, Optional
 from app.schemas.chat_schemas import Chat, ChatMessage, ExtendedChatMessage, CreateChatBody, MessageRoleEnum # and other relevant schemas
 from app.utils.storage import chat_storage # The Python chat_storage module
-from app.core.custom_errors import ApiError # Custom error class
+from app.error_handling.api_error import ApiError # Custom error class
 from pydantic import ValidationError
 
 # Last 5 changes:

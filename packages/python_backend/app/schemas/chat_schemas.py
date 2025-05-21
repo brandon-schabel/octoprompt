@@ -106,6 +106,11 @@ class ChatMessagesListResponse(BaseModel):
     data: List[ChatMessage]
     model_config = ConfigDict(title="ChatMessagesListResponse")
 
+class OperationSuccessResponse(BaseModel):
+    success: Literal[True] = True
+    detail: Optional[str] = Field(None, example="Operation completed successfully.")
+    model_config = ConfigDict(title="OperationSuccessResponse")
+
 class MessageListResponse(BaseModel):
     success: Literal[True] = True
     data: List[ChatMessage]

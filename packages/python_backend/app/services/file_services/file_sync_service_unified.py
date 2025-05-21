@@ -8,7 +8,7 @@ from typing import List, Optional, Callable, Dict, Any, Tuple, Set, Union, Liter
 import threading
 
 from pydantic import BaseModel, Field
-import ignore # Python's 'ignore' library, similar to 'ignore' in JS
+import pathspec # Replaced 'ignore' with 'pathspec'
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, \
     FileModifiedEvent, FileCreatedEvent, FileDeletedEvent, DirModifiedEvent, DirCreatedEvent, DirDeletedEvent
@@ -154,12 +154,12 @@ def is_path_ignored_by_custom_patterns(relative_file_path: str, custom_ignore_pa
     return False
 
 class _UnifiedFileSystemEventHandler(FileSystemEventHandler):
-    def __init__(self, base_path: Path, listeners: List[FileChangeListener], project_root: Path, ig: ignore.Ignore, custom_ignore_patterns: List[str]):
+    def __init__(self, base_path: Path, listeners: List[FileChangeListener], project_root: Path, spec: Optional[pathspec.PathSpec], custom_ignore_patterns: List[str]):
         super().__init__()
         self.base_path = base_path # The directory being watched
         self.listeners = listeners
         self.project_root = project_root # Project root for relative path calculations for .gitignore
-        self.ig = ig # ignore.Ignore instance for .gitignore rules
+        self.spec = spec # pathspec.PathSpec instance
         self.custom_ignore_patterns = custom_ignore_patterns # Additional explicit ignore patterns
 
     def _dispatch_event(self, event_type: FileChangeEvent, path_str: str):
@@ -186,9 +186,11 @@ class _UnifiedFileSystemEventHandler(FileSystemEventHandler):
             # Path relative to project root for ignore checking
             relative_path_to_project_root = normalize_path_for_db(full_path.relative_to(self.project_root))
             
-            if self.ig.ignores(relative_path_to_project_root) or \
-               is_path_ignored_by_custom_patterns(relative_path_to_project_root, self.custom_ignore_patterns) or \
-               any(part in CRITICAL_EXCLUDED_DIRS for part in Path(relative_path_to_project_root).parts):
+            is_critically_excluded = any(part in CRITICAL_EXCLUDED_DIRS for part in Path(relative_path_to_project_root).parts)
+            is_custom_ignored = is_path_ignored_by_custom_patterns(relative_path_to_project_root, self.custom_ignore_patterns)
+            is_pathspec_ignored = self.spec.match_file(relative_path_to_project_root) if self.spec else False
+            
+            if is_critically_excluded or is_custom_ignored or is_pathspec_ignored:
                 return
 
             self._dispatch_event(event_type, str(full_path))
@@ -254,14 +256,14 @@ def create_file_change_watcher():
             print(f"[FSWatcher] Directory does not exist or is not a dir: {resolved_dir_to_watch}")
             return
         
-        current_ignore_rules = load_ignore_rules_sync(str(project_root_for_ignores))
+        current_pathspec_rules = load_ignore_rules_sync(str(project_root_for_ignores))
 
         new_observer = Observer()
         event_handler = _UnifiedFileSystemEventHandler(
             resolved_dir_to_watch, 
             listeners_ref, 
             project_root_for_ignores, 
-            current_ignore_rules,
+            current_pathspec_rules,
             current_custom_ignore_patterns
         )
         new_observer.schedule(event_handler, str(resolved_dir_to_watch), recursive=options.recursive)
@@ -305,27 +307,35 @@ def compute_checksum(content: str) -> str:
 def is_valid_checksum(checksum: Optional[str]) -> bool:
     return isinstance(checksum, str) and len(checksum) == 64 and all(c in '0123456789abcdef' for c in checksum)
 
-def load_ignore_rules_sync(project_root_str: str) -> ignore.Ignore:
+def load_ignore_rules_sync(project_root_str: str) -> Optional[pathspec.PathSpec]:
     project_root = Path(project_root_str)
-    ig = ignore.Ignore(DEFAULT_FILE_EXCLUSIONS, str(project_root)) # Pass base_dir to ignore
+    patterns = list(DEFAULT_FILE_EXCLUSIONS) # Start with defaults
     
     gitignore_path = project_root / '.gitignore'
-    if gitignore_path.exists():
+    if gitignore_path.exists() and gitignore_path.is_file():
         try:
             with open(gitignore_path, 'r', encoding='utf-8') as f:
-                ig.add_patterns(f.read().splitlines())
+                patterns.extend(f.read().splitlines())
         except Exception as e:
-            print(f"[FileSync] Error reading .gitignore at {gitignore_path}: {e}. Using default exclusions.")
-    return ig
+            print(f"[FileSync] Error reading .gitignore at {gitignore_path}: {e}. Using default exclusions only.")
+    
+    if not patterns:
+        return None
+    try:
+        # Use 'gitwildmatch' for .gitignore style pattern matching
+        return pathspec.PathSpec.from_lines('gitwildmatch', patterns)
+    except Exception as e:
+        print(f"[FileSync] Error compiling pathspec patterns for {project_root_str}: {e}")
+        return None # Return None if compilation fails
 
-async def load_ignore_rules(project_root_str: str) -> ignore.Ignore:
+async def load_ignore_rules(project_root_str: str) -> Optional[pathspec.PathSpec]:
     return load_ignore_rules_sync(project_root_str)
 
 
 def get_text_files(
     dir_path_str: str, 
     project_root_str: str, 
-    ig: ignore.Ignore, 
+    spec: Optional[pathspec.PathSpec], # Changed from ig: ignore.Ignore
     allowed_configs: List[str] = ALLOWED_FILE_CONFIGS
 ) -> List[str]: # Returns list of absolute paths
     
@@ -333,30 +343,49 @@ def get_text_files(
     start_dir = Path(dir_path_str)
     project_root = Path(project_root_str)
 
-    # Use os.walk for better control over skipping CRITICAL_EXCLUDED_DIRS directly
     for root, dirs, files in os.walk(start_dir, topdown=True):
-        # Filter out critical excluded directories from further traversal
-        dirs[:] = [d for d in dirs if d not in CRITICAL_EXCLUDED_DIRS and not ig.ignores(normalize_path_for_db(Path(root).joinpath(d).relative_to(project_root)))]
-
         current_dir_path = Path(root)
-        relative_dir_to_project = normalize_path_for_db(current_dir_path.relative_to(project_root))
-        if ig.ignores(relative_dir_to_project) and relative_dir_to_project != '.': # Don't ignore project root itself with '.'
-            dirs[:] = [] # Don't traverse into this directory further
-            continue
+        
+        # Filter out critical excluded directories from further traversal
+        # And directories matched by pathspec
+        dirs_to_remove = set()
+        for d_name in dirs:
+            dir_full_path = current_dir_path / d_name
+            relative_dir_to_project = normalize_path_for_db(dir_full_path.relative_to(project_root))
+            if d_name in CRITICAL_EXCLUDED_DIRS or (spec and spec.match_file(relative_dir_to_project)):
+                dirs_to_remove.add(d_name)
+        
+        dirs[:] = [d for d in dirs if d not in dirs_to_remove]
+
+        # If the current directory itself is ignored (and not root), skip files in it
+        if current_dir_path != project_root:
+            relative_current_dir_to_project = normalize_path_for_db(current_dir_path.relative_to(project_root))
+            if spec and spec.match_file(relative_current_dir_to_project):
+                continue # Don't process files in this directory
 
         for filename in files:
             file_path_obj = current_dir_path / filename
             relative_file_to_project = normalize_path_for_db(file_path_obj.relative_to(project_root))
 
-            if filename in CRITICAL_EXCLUDED_DIRS or ig.ignores(relative_file_to_project):
+            if filename in CRITICAL_EXCLUDED_DIRS or (spec and spec.match_file(relative_file_to_project)):
                 continue
             
             file_ext = file_path_obj.suffix.lower()
-            if filename in allowed_configs or file_ext in allowed_configs:
+            # Check if filename itself or its extension is in allowed_configs
+            is_allowed_name = filename in allowed_configs
+            is_allowed_ext = file_ext in allowed_configs
+            
+            # Handle case for files like '.env' which have no extension but should be matched by name
+            if not file_ext and file_path_obj.name.startswith('.') and file_path_obj.name in allowed_configs:
+                is_allowed_name = True
+
+            if is_allowed_name or is_allowed_ext:
                 try:
-                    if file_path_obj.stat().st_size < 10 * 1024 * 1024: # Max 10MB
+                    # Basic check to avoid excessively large files, can be refined
+                    if file_path_obj.is_file() and file_path_obj.stat().st_size < 10 * 1024 * 1024: # Max 10MB, ensure it's a file
                         files_found.append(str(file_path_obj.resolve()))
                 except FileNotFoundError:
+                    # print(f"[FileSync] File not found during stat: {file_path_obj}")
                     pass 
                 except Exception as e:
                     print(f"[FileSync] Error stating file {file_path_obj}: {e}")
@@ -367,7 +396,7 @@ async def sync_file_set(
     project: Project,
     absolute_project_path: Path,
     absolute_file_paths_on_disk: List[str],
-    ig: ignore.Ignore
+    spec: Optional[pathspec.PathSpec] # Changed from ig: ignore.Ignore
 ) -> Dict[str, int]:
     
     files_to_create_data: List[FileSyncData] = []
@@ -421,7 +450,7 @@ async def sync_file_set(
         # If file is in DB but not on disk (or became ignored by getTextFiles already), delete.
         # We also check if it became ignored by current rules explicitly for files that might have been missed by getTextFiles' initial filter pass
         # (e.g. if ignore rules changed dramatically and getTextFiles still picked it up before but ig.ignores now catches it).
-        if ig.ignores(normalized_db_path):
+        if spec and spec.match_file(normalized_db_path):
             file_ids_to_delete.append(db_file.id)
         else: # Not on disk and not explicitly ignored by *current* rules (implies it was deleted or is outside scope of files_on_disk)
             file_ids_to_delete.append(db_file.id)
@@ -449,15 +478,15 @@ async def sync_project(project: Project) -> Dict[str, int]:
         if not abs_project_path.is_dir():
             raise ValueError(f"Project path is not a valid directory: {project.path}")
 
-        ig_rules = await load_ignore_rules(str(abs_project_path))
+        pathspec_rules = await load_ignore_rules(str(abs_project_path))
         
         project_files_on_disk = get_text_files(
             str(abs_project_path),
             str(abs_project_path),
-            ig_rules,
+            pathspec_rules, # use pathspec_rules
             ALLOWED_FILE_CONFIGS
         )
-        return await sync_file_set(project, abs_project_path, project_files_on_disk, ig_rules)
+        return await sync_file_set(project, abs_project_path, project_files_on_disk, pathspec_rules) # use pathspec_rules
     except Exception as e:
         print(f"[FileSync] Failed to sync project {project.id} ({project.name}): {e}")
         raise
@@ -470,16 +499,16 @@ async def sync_project_folder(project: Project, folder_path_relative: str) -> Di
         if not abs_folder_to_sync.is_dir():
             raise ValueError(f"Folder path is not valid: {folder_path_relative}")
         
-        ig_rules = await load_ignore_rules(str(abs_project_path)) # Project-level ignore
+        pathspec_rules = await load_ignore_rules(str(abs_project_path)) # Project-level ignore
         
         # Pass absolute_folder_to_sync as starting dir, but project_root for ignore context
         folder_files_on_disk = get_text_files(
             str(abs_folder_to_sync),
             str(abs_project_path), 
-            ig_rules,
+            pathspec_rules, # use pathspec_rules
             ALLOWED_FILE_CONFIGS
         )
-        return await sync_file_set(project, abs_project_path, folder_files_on_disk, ig_rules)
+        return await sync_file_set(project, abs_project_path, folder_files_on_disk, pathspec_rules) # use pathspec_rules
     except Exception as e:
         print(f"[FileSync] Failed to sync folder '{folder_path_relative}' for project {project.id}: {e}")
         raise

@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException, Body, Path, status
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 
-from app.core.config import AGENT_LOGS_DIR # Assuming AGENT_LOGS_DIR is in config
+from app.services.agents.agent_logger import AGENT_LOGS_DIR
 from app.error_handling.api_error import ApiError # Assuming ApiError is defined
 from app.schemas.agent_coder_schemas import (
     AgentCoderRunRequest,
@@ -26,14 +26,15 @@ from app.schemas.agent_coder_schemas import (
     AgentCoderRunSuccessData,
     ProjectFile as PyProjectFile, # Renamed to avoid clash if ProjectFile is imported from elsewhere
     AgentTaskPlan as PyAgentTaskPlan,
-    ProjectFileMap
+    ProjectFileMap,
+    AgentContext
 )
 from app.schemas.project_schemas import Project, ProjectFile # Assuming these exist
 from app.schemas.prompt_schemas import Prompt # Assuming this exists
 from app.schemas.common_schemas import ApiErrorResponse # Assuming this exists
 
 # Assuming services are available and structured similarly
-from app.services.agents.agent_coder_service import main_orchestrator, CoderAgentDataContext, CoderAgentOrchestratorSuccessResult
+from app.services.agents.agent_coder_service import main_orchestrator, CoderAgentOrchestratorSuccessResult
 from app.services.agents.agent_logger import (
     get_orchestrator_log_file_paths, # Python equivalent
     get_agent_data_log_file_path, # Python equivalent
@@ -42,7 +43,7 @@ from app.services.agents.agent_logger import (
 )
 from app.services.project_service import get_project_by_id, get_project_files, bulk_update_project_files # Python equivalents
 from app.services.prompt_service import get_prompts_by_ids # Python equivalent
-from app.utils.projects_utils import build_project_file_map # Python equivalent
+from app.utils.project_utils import build_project_file_map # Python equivalent
 from app.utils.get_full_project_summary import get_full_project_summary # Python equivalent
 from app.utils.path_utils import resolve_path, normalize_path_for_db # Python equivalents
 from app.services.file_services.file_sync_service_unified import compute_checksum # Python equivalent
@@ -77,7 +78,6 @@ async def write_files_to_filesystem(
 ) -> List[str]:
     written_paths: List[str] = []
     # Ensure AGENT_LOGS_DIR is defined, typically from config
-    # from app.core.config import AGENT_LOGS_DIR (already imported)
 
     for updated_file in updated_files:
         if updated_file.content is None: # Skip if no content
@@ -160,7 +160,7 @@ async def run_agent_coder(
              await agent_log(f"[Agent Coder Route {agent_job_id}] No matching files found for IDs: {', '.join(request_body.selected_file_ids)}", "warn", {"agent_job_id": agent_job_id, "selected_file_ids": request_body.selected_file_ids})
              # Depending on strictness, you might raise 404/422 here or proceed if empty selection is allowed for some use cases
 
-        coder_agent_data_context = CoderAgentDataContext(
+        coder_agent_data_context = AgentContext(
             user_input=request_body.user_input,
             project_files=project_files_list, # Pass all project files
             project_file_map=build_project_file_map(project_files_list),
