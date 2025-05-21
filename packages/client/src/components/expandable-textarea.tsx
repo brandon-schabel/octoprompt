@@ -31,7 +31,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
     const [selectionEnd, setSelectionEnd] = useState<number | null>(null)
     const { copyToClipboard } = useCopyClipboard()
     const [activeProject] = useActiveProjectTab()
-    const projectId = activeProject.selectedProjectId
+    const projectId = activeProject?.selectedProjectId
 
     const [promptimizeDialogOpen, setPromptimizeDialogOpen] = useState(false)
     const [optimizedPrompt, setOptimizedPrompt] = useState('')

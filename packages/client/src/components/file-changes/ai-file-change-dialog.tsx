@@ -19,11 +19,11 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
   const [prompt, setPrompt] = useState('')
   const [changeId, setChangeId] = useState<string | null>(null)
   const [activeProject] = useActiveProjectTab()
-  const projectId = activeProject.selectedProjectId
+  const projectId = activeProject?.selectedProjectId
 
   const generateMutation = useGenerateFileChange()
   const confirmMutation = useConfirmFileChange()
-  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(projectId, changeId)
+  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(projectId ?? '', changeId)
 
   const handleGenerate = async () => {
     if (!filePath) return
