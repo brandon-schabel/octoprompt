@@ -42,7 +42,7 @@ import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { ProjectFile } from '@/generated'
 import { promptSchema } from 'shared/src/utils/projects-utils'
-import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/api/use-kv-api'
+import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 export type PromptsListRef = {
@@ -56,7 +56,7 @@ interface PromptsListProps {
 
 export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ projectTabId, className = '' }, ref) => {
   const updateProjectTabState = useUpdateProjectTabState(projectTabId)
-  const { projectTab } = useGetProjectTabById(projectTabId)
+  const [projectTab, setProjectTab] = useGetProjectTabById(projectTabId)
   const selectedPrompts = projectTab?.selectedPrompts || []
   const selectedProjectId = projectTab?.selectedProjectId || ''
   const { copyToClipboard } = useCopyClipboard()
@@ -260,14 +260,14 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         selectedProjectId={selectedProjectId}
       />
       <div className={`border rounded-lg h-full flex flex-col ${className}`}>
-        <div className='flex-shrink-0 flex flex-row items-center justify-between p-4 border-b'>
+        <div className='flex-shrink-0 flex flex-row items-center justify-between p-2 border-b'>
           <div>
             <div className='text-md font-medium flex items-center gap-2'>
               <span>
                 <Badge>{selectedPrompts.length}</Badge> Project Prompts
               </span>
               <OctoTooltip>
-                <div className='space-y-2'>
+                <div className=''>
                   <p>
                     Prompts are reusable instructions that will be included with your chat. Each selected prompt will be
                     added to the final prompt sent to the AI.
@@ -378,7 +378,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         <div className='flex-1 relative min-h-0 '>
           {sortedPrompts.length > 0 ? (
             <ScrollArea className='h-full'>
-              <div className='space-y-2 p-4 w-72 md:w-80 lg:w-full'>
+              <div className='space-y-2 p-2 w-72 md:w-80 lg:w-full'>
                 {sortedPrompts.map((prompt, index) => (
                   <div
                     key={prompt.id}
@@ -392,8 +392,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
                     onFocus={() => setFocusedIndex(index)}
                     onKeyDown={(e) => handleKeyDown(e, index, prompt.id)}
                   >
-                    <div className='flex items-center space-x-3 min-w-0'>
+                    <div className='flex items-center min-w-0'>
                       <Checkbox
+                        className='mr-2'
                         checked={selectedPrompts.includes(prompt.id)}
                         onCheckedChange={(checked) => {
                           updateProjectTabState((prev) => {

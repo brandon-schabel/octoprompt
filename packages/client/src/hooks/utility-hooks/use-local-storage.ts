@@ -23,46 +23,67 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, SetValueFu
   // Handle storage events from other tabs/windows
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === key && event.newValue !== null) {
+      // Ensure the event is for localStorage and for the correct key
+      if (event.storageArea === window.localStorage && event.key === key) {
+        if (event.newValue === null) { // Key was removed or cleared from another tab/window
+          // Reset to initialValue if current value is different
+          if (JSON.stringify(storedValue) !== JSON.stringify(initialValue)) {
+            setStoredValue(initialValue);
+          }
+          return;
+        }
         try {
-          setStoredValue(JSON.parse(event.newValue))
+          const newValueFromStorage = JSON.parse(event.newValue);
+          // Optimization: only update React state if the new value from storage is different
+          // from the current React state.
+          if (JSON.stringify(newValueFromStorage) !== JSON.stringify(storedValue)) {
+            setStoredValue(newValueFromStorage);
+          }
         } catch (error) {
-          console.error(`Error parsing storage value for key "${key}":`, error)
+          console.error(`Error parsing storage value for key "${key}" from storage event:`, error);
         }
       }
-    }
+    };
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [key])
+  }, [key, storedValue, initialValue]); // Updated dependencies
 
   // Memoized setValue function
   const setValue: SetValueFunction<T> = useCallback(
-    (value) => {
+    (valueOrFn) => {
       try {
-        // Handle function updates
-        const valueToStore = value instanceof Function ? value(storedValue) : value
+        const currentValue = storedValue;
+        const newValue = valueOrFn instanceof Function ? valueOrFn(currentValue) : valueOrFn;
 
-        // Save to state
-        setStoredValue(valueToStore)
-
-        // Save to localStorage
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(key, JSON.stringify(valueToStore))
+        // Optimization: Only update if the value has actually changed.
+        if (JSON.stringify(newValue) === JSON.stringify(currentValue)) {
+          return;
         }
 
-        // Dispatch storage event for cross-tab sync
-        window.dispatchEvent(
-          new StorageEvent('storage', {
-            key,
-            newValue: JSON.stringify(valueToStore)
-          })
-        )
+        setStoredValue(newValue); // Update React state
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, JSON.stringify(newValue)); // Update localStorage
+
+          // Manually dispatch event. This is useful if localStorage.setItem itself doesn't 
+          // trigger the 'storage' event reliably for the current tab in all browsers/scenarios,
+          // or to ensure immediate propagation for other hook instances in the same tab.
+          window.dispatchEvent(
+            new StorageEvent('storage', {
+              key,
+              newValue: JSON.stringify(newValue),
+              oldValue: JSON.stringify(currentValue), // Add oldValue
+              storageArea: window.localStorage,        // Add storageArea
+              url: window.location.href                // Add url
+            })
+          );
+        }
       } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error)
+        console.error(`Error setting localStorage key "${key}":`, error);
       }
     },
-    [key, storedValue]
+    [key, storedValue] // storedValue is crucial here
   )
 
   return [storedValue, setValue]

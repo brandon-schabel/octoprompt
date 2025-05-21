@@ -11,7 +11,7 @@ import { formatShortcut } from '@/lib/shortcuts'
 import exp from 'constants'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useOptimzeUserInput } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ExpandableTextareaProps = {
   value: string

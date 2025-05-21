@@ -56,7 +56,7 @@ import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { useActiveChatId, useSelectSetting } from '@/hooks/api/use-kv-api'
+import { useActiveChatId, useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { OctoCombobox } from '@/components/octo/octo-combobox'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
@@ -496,7 +496,7 @@ const ChatMessageItem = React.memo(
                     checked={excluded}
                     onCheckedChange={handleToggleExclude}
                     className='scale-75'
-                  />{' '}
+                  />
                   Exclude
                 </Label>
                 <Label htmlFor={`raw-${msg.id}`} className='flex items-center gap-1 cursor-pointer'>
@@ -505,7 +505,7 @@ const ChatMessageItem = React.memo(
                     checked={rawView}
                     onCheckedChange={handleToggleRaw}
                     className='scale-75'
-                  />{' '}
+                  />
                   Raw
                 </Label>
               </div>
@@ -977,7 +977,6 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
 
       {/* Right: Model Settings or Placeholder */}
       <div className='flex-shrink-0 w-8'>
-        {' '}
         {/* Ensure right side takes up same space as left button */}
         {activeChatId && <ModelSettingsPopover />}
       </div>

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, Button } from '@ui' /
 import { Badge } from '@ui'
 import { ScrollArea } from '@ui'
 import { AppShortcutDisplay, ShortcutDisplay } from '../app-shortcut-display'
-import { useActiveChatId, useAppSettings, useSelectSetting } from '@/hooks/api/use-kv-api'
+import { useActiveChatId, useAppSettings, useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/tabs'
 import { Link } from '@tanstack/react-router'
 import {
@@ -149,10 +149,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                     project page.
                   </li>
                   <li>
-                    <strong>Initiation:</strong> Clicking the{' '}
+                    <strong>Initiation:</strong> Clicking the
                     <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30'>
                       <Bot className='inline-block h-3 w-3 mr-1' /> Agent
-                    </span>{' '}
+                    </span>
                     button (underneath the "User Input" field) opens the Agent Control Dialog.
                   </li>
                   <li>
@@ -190,10 +190,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         of selected files, chosen prompts, and an estimated total token count for the input.
                       </li>
                       <li>
-                        Click the{' '}
+                        Click the
                         <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white'>
                           <Bot className='inline-block h-3 w-3 mr-1' /> Start Agent Run
-                        </span>{' '}
+                        </span>
                         button at the bottom to begin the process. You'll be automatically switched to the "Logs & Data"
                         tab.
                       </li>
@@ -217,24 +217,24 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         analysis.
                       </li>
                       <li>
-                        Use the{' '}
+                        Use the
                         <span className='inline-flex items-center px-1 py-0.5 border rounded text-xs shadow-sm'>
                           <RefreshCw className='inline-block h-3 w-3' />
-                        </span>{' '}
+                        </span>
                         button to refresh logs and data.
                       </li>
                       <li>
                         The Run ID selector (a dropdown menu) allows you to load logs and data from previous agent runs.
                       </li>
                       <li>
-                        You can copy the current Run ID using the{' '}
+                        You can copy the current Run ID using the
                         <span className='inline-flex items-center px-1 py-0.5 border rounded text-xs shadow-sm'>
                           <Copy className='inline-block h-3 w-3' />
-                        </span>{' '}
-                        button or delete the run using the{' '}
+                        </span>
+                        button or delete the run using the
                         <span className='inline-flex items-center px-1 py-0.5 border rounded text-xs shadow-sm text-destructive'>
                           <Trash2 className='inline-block h-3 w-3' />
-                        </span>{' '}
+                        </span>
                         button.
                       </li>
                     </ul>
@@ -248,24 +248,24 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                       </li>
                       <li>
                         You'll see a list of files that will be created, modified, or deleted. Each file entry shows the
-                        type of change (e.g., <FilePlus className='inline-block h-3 w-3 text-green-500' />,{' '}
-                        <FileEdit className='inline-block h-3 w-3 text-blue-500' />,{' '}
+                        type of change (e.g., <FilePlus className='inline-block h-3 w-3 text-green-500' />,
+                        <FileEdit className='inline-block h-3 w-3 text-blue-500' />,
                         <FileMinus className='inline-block h-3 w-3 text-red-500' />) and line change counts.
                       </li>
                       <li>
-                        For each file, you can click the{' '}
+                        For each file, you can click the
                         <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm'>
                           <Eye className='inline-block h-3 w-3 mr-1' />
                           Preview
-                        </span>{' '}
+                        </span>
                         button to see a diff view highlighting the exact changes (for modifications) or the full content
                         (for new/deleted files).
                       </li>
                       <li>
-                        Review these changes carefully. If you're satisfied, click the{' '}
+                        Review these changes carefully. If you're satisfied, click the
                         <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm bg-green-600 text-white'>
                           <CheckCircle className='inline-block h-3 w-3 mr-1' /> Confirm & Apply Changes
-                        </span>{' '}
+                        </span>
                         button to write the modifications to your project's files on your computer.
                       </li>
                       <li>
@@ -297,7 +297,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                   suits your needs.
                 </p>
                 <p>
-                  We primarily recommend using{' '}
+                  We primarily recommend using
                   <a
                     href='https://openrouter.ai/'
                     target='_blank'
@@ -312,10 +312,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </p>
                 <p>
                   To configure your provider and model, use the settings icon within the chat interface. You can manage
-                  your API keys on the{' '}
+                  your API keys on the
                   <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                     Keys
-                  </Link>{' '}
+                  </Link>
                   page.
                 </p>
                 <h4 className='font-semibold mt-3 mb-1'>Key Features:</h4>
@@ -338,14 +338,14 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <h4 className='font-semibold mt-3 mb-1'>1. Setting Up Your Project</h4>
                 <ol className='list-decimal list-inside space-y-1'>
                   <li>
-                    Navigate to the{' '}
+                    Navigate to the
                     <Link
                       to='/projects'
                       className='text-blue-500 hover:underline'
                       onClick={() => onOpenChange?.(false)}
                     >
                       Projects
-                    </Link>{' '}
+                    </Link>
                     page.
                   </li>
                   <li>Click the "New Project" button. This will open the project dialog.</li>
@@ -367,7 +367,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         as Pathname".
                       </li>
                       <li>
-                        Alternatively, select the folder, press{' '}
+                        Alternatively, select the folder, press
                         <ShortcutDisplay shortcut={['Cmd', 'I']} delimiter=' + ' /> to open the "Get Info" window, and
                         copy the path from the "Where:" field.
                       </li>
@@ -396,7 +396,7 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                         Navigate to the directory *containing* your project folder using the <code>cd</code> command.
                       </li>
                       <li>
-                        Type <code>readlink -f your_project_folder_name</code> (replace{' '}
+                        Type <code>readlink -f your_project_folder_name</code> (replace
                         <code>your_project_folder_name</code> with the actual folder name) and press Enter. The full
                         path will be printed.
                       </li>
@@ -428,9 +428,9 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <ul className='list-disc list-inside space-y-1 pl-4'>
                   <li>
                     <strong>File Tree Navigation:</strong> In the File Panel, manually browse your project's directory
-                    structure. Click on files or folders to select/deselect them. Use{' '}
-                    <ShortcutDisplay shortcut={['up', 'down']} delimiter=' / ' /> to navigate items,{' '}
-                    <ShortcutDisplay shortcut={['space']} /> to toggle selection, and{' '}
+                    structure. Click on files or folders to select/deselect them. Use
+                    <ShortcutDisplay shortcut={['up', 'down']} delimiter=' / ' /> to navigate items,
+                    <ShortcutDisplay shortcut={['space']} /> to toggle selection, and
                     <ShortcutDisplay shortcut={['left', 'right']} delimiter=' / ' /> to collapse/expand folders.
                   </li>
                   <li>
@@ -442,20 +442,20 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                   <li>
                     <strong>AI-Assisted File Search:</strong>
                     In the Prompt Overview Panel (right side), first type your task description or question into the
-                    "User Input" text area. Then, click the{' '}
+                    "User Input" text area. Then, click the
                     <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm'>
                       <Search className='inline-block h-3 w-3 mr-1' />
                       Files
-                    </span>{' '}
+                    </span>
                     button (located directly beneath the "User Input" area). The AI will analyze your input and your
                     project's file summaries (if available) to suggest relevant files. Add these suggestions to your
                     "Selected Files" list.
                     <em>
                       (Note: This feature requires project file summarization to be enabled for your project, which in
-                      turn needs an API key to be configured on the{' '}
+                      turn needs an API key to be configured on the
                       <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                         Keys
-                      </Link>{' '}
+                      </Link>
                       page).
                     </em>
                   </li>
@@ -481,10 +481,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </p>
                 <p>
                   You can create new prompts specific to this project, or import prompts from your global library.
-                  Manage your global prompt library on the{' '}
+                  Manage your global prompt library on the
                   <Link to='/prompts' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                     Prompts
-                  </Link>{' '}
+                  </Link>
                   page.
                 </p>
 
@@ -495,30 +495,30 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 </p>
                 <ul className='list-disc list-inside space-y-1 pl-4'>
                   <li>
-                    <strong>Copy All for External Use:</strong> Click the{' '}
+                    <strong>Copy All for External Use:</strong> Click the
                     <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm'>
                       <Copy className='inline-block h-3 w-3 mr-1' /> Copy All
-                    </span>{' '}
+                    </span>
                     button. This action compiles an XML-formatted string containing all your selected file content, the
                     content of your chosen prompts, and your user input. You can then paste this comprehensive context
                     into external AI chat interfaces like ChatGPT, Claude, or Gemini. This is particularly useful for
                     complex refactoring tasks or when you prefer the UIs of those services.
                   </li>
                   <li>
-                    <strong>Using the AI Agent (Introduced in v0.5.0):</strong> Click the{' '}
+                    <strong>Using the AI Agent (Introduced in v0.5.0):</strong> Click the
                     <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30'>
                       <Bot className='inline-block h-3 w-3 mr-1' /> Agent
-                    </span>{' '}
+                    </span>
                     button. This initiates an automated workflow. The agent will receive your entire context (files,
                     prompts, user input), create a plan of action, generate code modifications, and then propose these
                     changes to you in a dialog. You can review these changes and choose to apply them to your file
                     system. See the "Agent Usage" tab for a detailed explanation.
                   </li>
                   <li>
-                    <strong>Chat with Context:</strong> Click the{' '}
+                    <strong>Chat with Context:</strong> Click the
                     <span className='inline-flex items-center px-1.5 py-0.5 border rounded text-xs shadow-sm'>
                       <MessageCircleCode className='inline-block h-3 w-3 mr-1' /> Chat
-                    </span>{' '}
+                    </span>
                     button. This takes your current context (selected files, prompts, user input) and starts a new chat
                     session on the "Chat" page, pre-filling the first message with this context. This allows for a more
                     conversational interaction with the LLM regarding the selected materials.
@@ -531,10 +531,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                   understand your project's structure and content for search and AI operations.
                 </p>
                 <p>
-                  If you have AI features enabled (by configuring your API keys on the{' '}
+                  If you have AI features enabled (by configuring your API keys on the
                   <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                     Keys
-                  </Link>{' '}
+                  </Link>
                   page), and you enable file summaries for your project (usually in the project's settings or a
                   dedicated "Summary" page after creation), OctoPrompt will begin to create summaries of your project
                   files. These summaries are then used as context for various AI operations, such as:
@@ -594,10 +594,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <h4 className='font-semibold mt-3 mb-1'>Adding, Editing, and Deleting Keys:</h4>
                 <ul className='list-disc list-inside space-y-1 pl-4'>
                   <li>
-                    Navigate to the{' '}
+                    Navigate to the
                     <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                       Keys
-                    </Link>{' '}
+                    </Link>
                     page.
                   </li>
                   <li>
@@ -661,10 +661,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                   </li>
                 </ul>
                 <p className='mt-3'>
-                  Once you have your API key from the provider, return to the{' '}
+                  Once you have your API key from the provider, return to the
                   <Link to='/keys' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                     Keys
-                  </Link>{' '}
+                  </Link>
                   page in OctoPrompt to add it.
                 </p>
               </div>
@@ -682,10 +682,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
 
                 <h4 className='font-semibold mt-3 mb-1'>The Prompts Page:</h4>
                 <p>
-                  On the{' '}
+                  On the
                   <Link to='/prompts' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                     Prompts
-                  </Link>{' '}
+                  </Link>
                   page, you will find a list of all your saved prompts. Each prompt entry typically includes a title and
                   a preview of the prompt content. You can use the search bar to quickly find specific prompts by title
                   or keywords within the content.
@@ -694,10 +694,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <h4 className='font-semibold mt-3 mb-1'>Creating a New Prompt:</h4>
                 <ol className='list-decimal list-inside space-y-1'>
                   <li>
-                    Navigate to the{' '}
+                    Navigate to the
                     <Link to='/prompts' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                       Prompts
-                    </Link>{' '}
+                    </Link>
                     page.
                   </li>
                   <li>Click the "New Prompt" button. This will open a dialog or a new page for creating a prompt.</li>
@@ -712,10 +712,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <h4 className='font-semibold mt-3 mb-1'>Editing an Existing Prompt:</h4>
                 <ol className='list-decimal list-inside space-y-1'>
                   <li>
-                    Navigate to the{' '}
+                    Navigate to the
                     <Link to='/prompts' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                       Prompts
-                    </Link>{' '}
+                    </Link>
                     page.
                   </li>
                   <li>Find the prompt you wish to edit in the list.</li>
@@ -730,10 +730,10 @@ export function HelpDialog({ open = false, onOpenChange }: HelpDialogProps) {
                 <h4 className='font-semibold mt-3 mb-1'>Deleting a Prompt:</h4>
                 <ol className='list-decimal list-inside space-y-1'>
                   <li>
-                    Navigate to the{' '}
+                    Navigate to the
                     <Link to='/prompts' className='text-blue-500 hover:underline' onClick={() => onOpenChange?.(false)}>
                       Prompts
-                    </Link>{' '}
+                    </Link>
                     page.
                   </li>
                   <li>Find the prompt you wish to delete in the list.</li>

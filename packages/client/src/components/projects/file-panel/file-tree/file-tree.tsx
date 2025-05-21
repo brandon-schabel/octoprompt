@@ -49,7 +49,7 @@ import { useRefreshProject } from '@/hooks/api/use-projects-api'
 import { useSummarizeProjectFiles } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from 'shared/src/schemas/project.schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { EditorType } from 'shared/index'
 
 export type VisibleItem = {

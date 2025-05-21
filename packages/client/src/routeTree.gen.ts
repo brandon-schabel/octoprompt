@@ -11,7 +11,6 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-import { Route as TicketsImport } from './routes/tickets'
 import { Route as PromptsImport } from './routes/prompts'
 import { Route as ProjectsImport } from './routes/projects'
 import { Route as ProjectSummarizationImport } from './routes/project-summarization'
@@ -22,12 +21,6 @@ import { Route as AdminImport } from './routes/admin'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
-
-const TicketsRoute = TicketsImport.update({
-  id: '/tickets',
-  path: '/tickets',
-  getParentRoute: () => rootRoute,
-} as any)
 
 const PromptsRoute = PromptsImport.update({
   id: '/prompts',
@@ -137,13 +130,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PromptsImport
       parentRoute: typeof rootRoute
     }
-    '/tickets': {
-      id: '/tickets'
-      path: '/tickets'
-      fullPath: '/tickets'
-      preLoaderRoute: typeof TicketsImport
-      parentRoute: typeof rootRoute
-    }
   }
 }
 
@@ -158,7 +144,6 @@ export interface FileRoutesByFullPath {
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
-  '/tickets': typeof TicketsRoute
 }
 
 export interface FileRoutesByTo {
@@ -170,7 +155,6 @@ export interface FileRoutesByTo {
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
-  '/tickets': typeof TicketsRoute
 }
 
 export interface FileRoutesById {
@@ -183,7 +167,6 @@ export interface FileRoutesById {
   '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
-  '/tickets': typeof TicketsRoute
 }
 
 export interface FileRouteTypes {
@@ -197,7 +180,6 @@ export interface FileRouteTypes {
     | '/project-summarization'
     | '/projects'
     | '/prompts'
-    | '/tickets'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -208,7 +190,6 @@ export interface FileRouteTypes {
     | '/project-summarization'
     | '/projects'
     | '/prompts'
-    | '/tickets'
   id:
     | '__root__'
     | '/'
@@ -219,7 +200,6 @@ export interface FileRouteTypes {
     | '/project-summarization'
     | '/projects'
     | '/prompts'
-    | '/tickets'
   fileRoutesById: FileRoutesById
 }
 
@@ -232,7 +212,6 @@ export interface RootRouteChildren {
   ProjectSummarizationRoute: typeof ProjectSummarizationRoute
   ProjectsRoute: typeof ProjectsRoute
   PromptsRoute: typeof PromptsRoute
-  TicketsRoute: typeof TicketsRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -244,7 +223,6 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
   PromptsRoute: PromptsRoute,
-  TicketsRoute: TicketsRoute,
 }
 
 export const routeTree = rootRoute
@@ -264,8 +242,7 @@ export const routeTree = rootRoute
         "/keys",
         "/project-summarization",
         "/projects",
-        "/prompts",
-        "/tickets"
+        "/prompts"
       ]
     },
     "/": {
@@ -291,9 +268,6 @@ export const routeTree = rootRoute
     },
     "/prompts": {
       "filePath": "prompts.tsx"
-    },
-    "/tickets": {
-      "filePath": "tickets.tsx"
     }
   }
 }

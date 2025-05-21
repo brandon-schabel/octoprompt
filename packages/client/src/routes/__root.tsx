@@ -1,5 +1,8 @@
+// File: packages/client/src/routes/__root.tsx
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
-import { AppNavbar } from '@/components/navigation/app-navbar'
+// Removed: import { AppNavbar } from '@/components/navigation/app-navbar';
+import { AppSidebar } from '@/components/navigation/app-sidebar' // Added
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar' // Added
 import { useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
@@ -11,7 +14,7 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut
-} from '@ui'
+} from '@/components/ui/command' // Assuming @ui maps to @/components/ui
 import { NavigationCommands } from '@/components/navigation/navigation-commands'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ComponentErrorBoundary } from '@/components/error-boundary/component-error-boundary'
@@ -23,15 +26,15 @@ import {
   useGetAppSettings,
   useGetProjectTab,
   useGetProjectTabs
-} from '@/hooks/api/use-kv-api'
+} from '@/hooks/use-kv-local-storage'
+import { MenuIcon } from 'lucide-react' // For a custom trigger example
+import { Button } from '@ui'
 
 function GlobalCommandPalette() {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const navigate = useNavigate()
-
-  // Get data from various sources
   const { data: projectsData } = useGetProjects()
 
   useHotkeys('mod+k', (evt) => {
@@ -39,7 +42,6 @@ function GlobalCommandPalette() {
     setOpen((o) => !o)
   })
 
-  // Filter projects based on search
   const filteredProjects = (projectsData?.data ?? [])
     .filter((project) => {
       const searchLower = debouncedSearch.toLowerCase()
@@ -47,21 +49,17 @@ function GlobalCommandPalette() {
         project.name.toLowerCase().includes(searchLower) || project.description?.toLowerCase().includes(searchLower)
       )
     })
-    .slice(0, 5) // Limit to 5 results
+    .slice(0, 5)
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder='Type a command or search...' value={search} onValueChange={setSearch} />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-
-        {/* Navigation Commands */}
         <CommandGroup heading='Navigation'>
           <NavigationCommands onSelect={() => setOpen(false)} />
         </CommandGroup>
         <CommandSeparator />
-
-        {/* Project Results */}
         {filteredProjects.length > 0 && (
           <>
             <CommandGroup heading='Projects'>
@@ -83,8 +81,6 @@ function GlobalCommandPalette() {
             <CommandSeparator />
           </>
         )}
-
-        {/* Quick Actions */}
         <CommandGroup heading='Quick Actions'>
           <CommandItem
             onSelect={() => {
@@ -95,8 +91,11 @@ function GlobalCommandPalette() {
             New Chat
             <CommandShortcut>⌘ N</CommandShortcut>
           </CommandItem>
-          <CommandItem
+          <CommandItem // This might now be redundant if "Add Project" is in sidebar's "Open Projects" flow
             onSelect={() => {
+              // Potentially trigger the new project dialog from AppSidebar context if needed,
+              // or navigate and let AppSidebar handle it.
+              // For now, navigating to /projects which should show the project management UI.
               navigate({ to: '/projects' })
               setOpen(false)
             }}
@@ -113,16 +112,12 @@ function GlobalCommandPalette() {
             Manage Prompts
           </CommandItem>
         </CommandGroup>
-
-        {/* File Navigation */}
         <CommandGroup heading='File Navigation'>
           <CommandItem>
             Open File
             <CommandShortcut>⌘/Ctrl P</CommandShortcut>
           </CommandItem>
         </CommandGroup>
-
-        {/* Global Actions */}
         <CommandGroup heading='Global Actions'>
           <CommandItem>
             Undo <CommandShortcut>⌘/Ctrl Z</CommandShortcut>
@@ -141,43 +136,41 @@ export const Route = createRootRouteWithContext()({
 })
 
 function RootComponent() {
-  const { isPending: isAppSettingsPending } = useGetAppSettings()
-  const { activeProjectTabId, isPending: isActiveProjectTabIdPending } = useGetActiveProjectTabId()
-  const { isPending: isProjectTabsPending } = useGetProjectTabs()
-  const { isPending: isProjectTabByIdPending } = useGetProjectTab(activeProjectTabId ?? '')
-
-  const isPending =
-    isAppSettingsPending || isActiveProjectTabIdPending || isProjectTabsPending || isProjectTabByIdPending
-
-  if (isPending) {
-    return <div>Loading...</div>
-  }
+  const [activeProjectTabId] = useGetActiveProjectTabId()
 
   return (
     <ErrorBoundary>
-      <div className='h-screen w-screen flex flex-col'>
-        <header className='flex-none'>
-          <ComponentErrorBoundary componentName='Navigation'>
-            <AppNavbar />
+      <SidebarProvider>
+        {/* defaultOpen={initialSidebarOpen} can be used here */}
+        <div className='flex h-screen w-screen bg-background text-foreground'>
+          {/* Ensure background and text colors are set */}
+          <ComponentErrorBoundary componentName='Sidebar'>
+            <AppSidebar />
           </ComponentErrorBoundary>
-        </header>
-
-        {/* Main content area with proper overflow handling and top safe-area */}
-        <main className='flex-1 min-h-0 overflow-auto pt-[env(safe-area-inset-top)]'>
-          <ComponentErrorBoundary componentName='Main Content'>
-            <Outlet />
+          <main className='flex-1 min-h-0 overflow-auto relative'>
+            {/* pt-[env(safe-area-inset-top)] can be added if needed */}
+            {/* Example of a manual SidebarTrigger fixed in the content area */}
+            {/* You might not need this if SidebarRail is sufficient */}
+            <div className='absolute top-4 left-4 z-20 md:hidden'>
+              {/* Show only on mobile, or remove if rail is enough */}
+              <SidebarTrigger asChild>
+                <Button variant='ghost' size='icon'>
+                  <MenuIcon />
+                </Button>
+              </SidebarTrigger>
+            </div>
+            <ComponentErrorBoundary componentName='Main Content'>
+              <Outlet />
+            </ComponentErrorBoundary>
+          </main>
+          <ComponentErrorBoundary componentName='Command Palette'>
+            <GlobalCommandPalette />
           </ComponentErrorBoundary>
-        </main>
-
-        {/* Global keyboard-driven UI components */}
-        <ComponentErrorBoundary componentName='Command Palette'>
-          <GlobalCommandPalette />
-        </ComponentErrorBoundary>
-
-        <ComponentErrorBoundary componentName='Development Tools'>
-          {/* <ReactQueryDevtools /> */}
-        </ComponentErrorBoundary>
-      </div>
+          <ComponentErrorBoundary componentName='Development Tools'>
+            {/* <ReactQueryDevtools /> */}
+          </ComponentErrorBoundary>
+        </div>
+      </SidebarProvider>
     </ErrorBoundary>
   )
 }

@@ -1,18 +1,13 @@
 import React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { TicketDialog } from '../components/tickets/ticket-dialog'
-import { Button } from '../components/ui/button'
+import { TicketDialog } from './tickets/ticket-dialog'
+import { Button } from './ui/button'
 import { Plus } from 'lucide-react'
 import { useGetProject } from '@/hooks/api/use-projects-api'
 import { TicketListPanel } from '@/components/tickets/ticket-list-panel'
 import { TicketWithTasks } from '@/generated'
-import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
-export const Route = createFileRoute('/tickets')({
-  component: TicketsPage
-})
-
-function TicketsPage() {
+export function TicketsPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
 
   // We store a ticket with tasks in local state so it matches
@@ -76,5 +71,3 @@ function TicketsPage() {
     </div>
   )
 }
-
-export default TicketsPage

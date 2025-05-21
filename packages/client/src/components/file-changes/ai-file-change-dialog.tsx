@@ -6,7 +6,7 @@ import { Textarea } from '@ui'
 import { Alert, AlertDescription } from '@ui'
 import { LoaderPinwheel } from 'lucide-react'
 import { DiffViewer } from './diff-viewer'
-import { useActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 interface AIFileChangeDialogProps {
   open: boolean

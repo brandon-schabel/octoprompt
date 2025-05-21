@@ -7,7 +7,7 @@ import { Label } from '@ui'
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from '@/hooks/api/use-projects-api'
 import { useEffect, useState } from 'react'
 import { CreateProjectRequestBody } from '@/generated'
-import { useUpdateActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ProjectDialogProps = {
   open: boolean

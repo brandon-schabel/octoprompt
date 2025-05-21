@@ -2,7 +2,7 @@ import { HelpCircle, LucideIcon } from 'lucide-react'
 import { ReactNode } from 'react'
 
 import { Popover, PopoverContent, PopoverTrigger } from '@ui'
-import { useSelectSetting } from '@/hooks/api/use-kv-api'
+import { useSelectSetting } from '@/hooks/use-kv-local-storage'
 type InfoTooltipProps = {
   children: ReactNode
   icon?: LucideIcon

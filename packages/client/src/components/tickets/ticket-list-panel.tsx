@@ -24,7 +24,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { TicketWithTasks } from '@/generated'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/api/use-kv-api'
+import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 
 interface TicketListPanelProps {
   projectTabId: string

@@ -1,9 +1,17 @@
+// packages/client/src/routes/projects.tsx
+// Recent changes:
+// 1. Added Tabs component for Explorer/Statistics views.
+// 2. Integrated ProjectStatsDisplay component.
+// 3. Adjusted styling for TabsContent to fill height and enable scroll.
+// 4. Ensured selectedProjectId is passed to ProjectStatsDisplay.
+// 5. Imported necessary Tab components and ProjectStatsDisplay.
+
 import { createFileRoute } from '@tanstack/react-router'
-import { useRef, useState, useEffect } from 'react' // Added useEffect
+import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
+import { useGetProjects, useDeleteProject, useGetProject } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
@@ -15,29 +23,16 @@ import {
   useUpdateActiveProjectTab,
   useCreateProjectTab,
   useSetKvValue,
-  useSetActiveProjectTabId,
-  useUpdateKvValue
-} from '@/hooks/api/use-kv-api'
-
+  useSetActiveProjectTabId
+} from '@/hooks/use-kv-local-storage'
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
-
-// AddProjectUI is not directly used in ProjectsPage after changes, but kept for reference if needed elsewhere.
-export const AddProjectUI = ({ openProjectModal }: { openProjectModal: () => void }) => {
-  // Assuming openProjectModal would be passed as a prop
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button variant='outline' onClick={openProjectModal} className='mt-2'>
-          Add project
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>Open a dialog to add a new project or select an existing one.</p>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProjectStatsDisplay } from '@/components/projects/project-stats-display'
+import { ProjectSummarizationSettingsPage } from '@/routes/project-summarization'
+import { TicketsPage } from '@/components/tickets'
+import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -45,8 +40,11 @@ export function ProjectsPage() {
   const [activeProjectTabState] = useActiveProjectTab()
 
   const selectedProjectId = activeProjectTabState?.selectedProjectId
+  const { data: projectResponse } = useGetProject(selectedProjectId!)
+  const projectData = projectResponse?.data
+
   const { data: allProjectsData, isLoading: projectsLoading } = useGetProjects()
-  const { data: tabs } = useGetProjectTabs()
+  const [tabs] = useGetProjectTabs()
   const { createProjectTab: createProjectTabFromHook } = useCreateProjectTab()
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const { mutate: deleteProjectMutate } = useDeleteProject()
@@ -64,28 +62,30 @@ export function ProjectsPage() {
   const { mutate: updateProjectTabs } = useSetKvValue('projectTabs')
 
   useEffect(() => {
-    // if there is a project, and no project tabs, create a new project tab
     if (projects.length === 1 && noTabsYet) {
-      const projectTab = createProjectTabFromHook({
+      createProjectTabFromHook({
         displayName: projects[0].name || `Tab for ${projects[0].id.substring(0, 6)}`,
         selectedProjectId: projects[0].id
       })
     }
-
-    // if there isn't a selected project in the active tab and there is one project, then select the only project
     if (!selectedProjectId && projects.length === 1 && tabsLen === 1) {
-      // set the active tab to the only project tab
       updateProjectTabs({
-        [tabsKeys[0]]: {
-          ...tabsArray[0],
-          selectedProjectId: projects[0].id
-        }
+        [tabsKeys[0]]: { ...tabsArray[0], selectedProjectId: projects[0].id }
       })
-
-      // set active tab id
       setActiveProjectTabId(tabsKeys[0])
     }
-  }, [projects, noTabsYet, activeProjectTabState, selectedProjectId])
+  }, [
+    projects,
+    noTabsYet,
+    activeProjectTabState,
+    selectedProjectId,
+    createProjectTabFromHook,
+    updateActiveProjectTab,
+    tabsKeys,
+    tabsArray,
+    setActiveProjectTabId,
+    tabsLen
+  ])
 
   const handleSelectProject = (id: string) => {
     updateActiveProjectTab((prev) => ({
@@ -100,29 +100,23 @@ export function ProjectsPage() {
   const handleOpenNewProjectForm = () => {
     setEditingProjectId(null)
     setProjectFormOpen(true)
-    setProjectModalOpen(false) // Close the selector dialog if it was open
+    setProjectModalOpen(false)
   }
-
   const handleEditProjectForm = (id: string) => {
     setEditingProjectId(id)
     setProjectFormOpen(true)
     setProjectModalOpen(false)
   }
-
   const handleDeleteProject = (id: string) => {
     deleteProjectMutate(id, {
       onSuccess: () => {
         if (selectedProjectId === id) {
           updateActiveProjectTab((prev) => ({ ...(prev || {}), selectedProjectId: undefined }))
         }
-        // If the deleted project was the only one, selectedProjectId might become undefined.
-        // If projectModalOpen was true, ProjectList will refresh.
-        // Consider if projectModalOpen should be closed. For now, rely on list refresh.
       }
     })
   }
   let content
-
   if (projectsLoading) {
     content = (
       <div className='flex items-center justify-center h-full w-full'>
@@ -135,6 +129,7 @@ export function ProjectsPage() {
         <p className='text-lg font-semibold text-foreground mb-2'>
           To get started, sync your first project to Octoprompt.
         </p>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button onClick={handleOpenNewProjectForm} size='lg' className='px-6 py-3 text-base mt-4'>
@@ -148,32 +143,22 @@ export function ProjectsPage() {
       </div>
     )
   } else if (noTabsYet) {
-    // This state is reached if:
-    // 1. More than one project exists, and no tabs are open.
-    // 2. A single project exists, is selected (by the effect), but tab creation is pending or needs manual trigger.
-    // NoTabsYetView will guide the user:
-    // - If selectedProjectId is set (e.g., by the effect), it prompts to create a tab for it.
-    // - If selectedProjectId is not set (multiple projects scenario), it allows opening project modal.
     content = (
       <NoTabsYetView
         projects={projects}
         selectedProjectId={selectedProjectId}
-        createProjectTab={async ({ name, projectId }) => {
-          // Call the renamed hook function and wrap its string result in a promise
-          const result = createProjectTabFromHook({ displayName: name, selectedProjectId: projectId })
-          return Promise.resolve(result) // Satisfies Promise<any>
-        }}
+        createProjectTab={async ({ name, projectId }) =>
+          Promise.resolve(createProjectTabFromHook({ displayName: name, selectedProjectId: projectId }))
+        }
         openProjectModal={() => setProjectModalOpen(true)}
       />
     )
   } else if (!selectedProjectId) {
-    // Projects exist, and tabs exist (noTabsYet is false), but no project is actively selected.
     content = (
       <div className='p-4 text-center'>
-        {' '}
-        {/* Added text-center for button alignment */}
         <ProjectsTabManager />
         <p className='mt-4 text-muted-foreground'>Please select a project by opening a tab or creating a new one.</p>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant='outline' onClick={() => setProjectModalOpen(true)} className='mt-4'>
@@ -187,70 +172,112 @@ export function ProjectsPage() {
       </div>
     )
   } else {
-    // Projects exist, tabs exist, and a project is selected.
     content = (
       <div className='flex flex-col h-full w-full overflow-hidden'>
         <div className='flex-none'>
           <ProjectsTabManager />
         </div>
-        <MainProjectsLayout
-          filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
-          promptPanelRef={promptPanelRef as React.RefObject<PromptOverviewPanelRef>}
-        />
+        <Tabs defaultValue='context' className='flex-1 flex flex-col min-h-0'>
+          <div className='flex-none px-4 py-2 border-b dark:border-slate-700 flex items-center'>
+            {projectData && (
+              <h2 className='text-lg font-semibold whitespace-nowrap mr-4' title={projectData.name}>
+                {projectData.name}
+              </h2>
+            )}
+            <TabsList>
+              <TabsTrigger value='context'>Context</TabsTrigger>
+              <TabsTrigger value='stats'>Statistics</TabsTrigger>
+              <TabsTrigger value='summarization'>Summarization</TabsTrigger>
+              <TabsTrigger value='tickets'>Tickets</TabsTrigger>
+            </TabsList>
+            <div className='ml-auto'>
+              <ProjectSettingsDialog />
+            </div>
+          </div>
+
+          <TabsContent value='context' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            <MainProjectsLayout
+              projectData={projectData}
+              filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
+              promptPanelRef={promptPanelRef as React.RefObject<PromptOverviewPanelRef>}
+            />
+          </TabsContent>
+
+          <TabsContent value='stats' className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? (
+              <ProjectStatsDisplay projectId={selectedProjectId} />
+            ) : (
+              <p>No project selected for stats.</p>
+            )}
+          </TabsContent>
+          <TabsContent
+            value='summarization'
+            className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'
+          >
+            {selectedProjectId ? (
+              <ProjectSummarizationSettingsPage />
+            ) : (
+              <p>No project selected for summarization settings.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='tickets' className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? <TicketsPage /> : <p>No project selected to view tickets.</p>}
+          </TabsContent>
+        </Tabs>
       </div>
     )
   }
 
   return (
-    <>
-      <TooltipProvider>{content}</TooltipProvider>
-
-      {/* Common Dialogs, available in all states if their open state is true */}
-      <Dialog open={projectModalOpen} onOpenChange={setProjectModalOpen}>
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Select or Create Project</DialogTitle>
-          </DialogHeader>
-          <div className='mt-4'>
-            <ProjectList
-              loading={projectsLoading && projects.length === 0} // Show loading only if it's the initial load for an empty list
-              projects={projects}
-              selectedProjectId={selectedProjectId ?? null}
-              onSelectProject={handleSelectProject}
-              onEditProject={handleEditProjectForm}
-              onDeleteProject={handleDeleteProject}
-              onCreateProject={handleOpenNewProjectForm}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <ProjectDialog open={projectFormOpen} projectId={editingProjectId} onOpenChange={setProjectFormOpen} />
-    </>
+    <ErrorBoundary>
+      <>
+        <TooltipProvider>{content}</TooltipProvider>
+        <Dialog open={projectModalOpen} onOpenChange={setProjectModalOpen}>
+          <DialogContent className='sm:max-w-[425px]'>
+            <DialogHeader>
+              <DialogTitle>Select or Create Project</DialogTitle>
+            </DialogHeader>
+            <div className='mt-4'>
+              <ProjectList
+                loading={projectsLoading && projects.length === 0}
+                projects={projects}
+                selectedProjectId={selectedProjectId ?? null}
+                onSelectProject={handleSelectProject}
+                onEditProject={handleEditProjectForm}
+                onDeleteProject={handleDeleteProject}
+                onCreateProject={handleOpenNewProjectForm}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+        <ProjectDialog open={projectFormOpen} projectId={editingProjectId} onOpenChange={setProjectFormOpen} />
+      </>
+    </ErrorBoundary>
   )
 }
 
-export const Route = createFileRoute('/projects')({
-  component: ProjectsPage
-})
+export const Route = createFileRoute('/projects')({ component: ProjectsPage })
 
 type MainProjectsLayoutProps = {
+  projectData: ProjectResponse['data'] | undefined
   filePanelRef: React.RefObject<FilePanelRef>
   promptPanelRef: React.RefObject<PromptOverviewPanelRef>
 }
 
-function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
+function MainProjectsLayout({ projectData, filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
   return (
-    <div className='flex-1 min-h-0 overflow-hidden'>
-      <ResizablePanel
-        leftPanel={<FilePanel ref={filePanelRef} className='h-full w-full' />}
-        rightPanel={<PromptOverviewPanel ref={promptPanelRef} className='h-full w-full' />}
-        initialLeftPanelWidth={40}
-        minLeftPanelWidth={100}
-        storageKey='projects-panel-width'
-        className='h-full w-full'
-      />
-    </div>
+    <ErrorBoundary>
+      <div className='flex-1 min-h-0 overflow-hidden h-full flex flex-col'>
+        <ResizablePanel
+          leftPanel={<FilePanel ref={filePanelRef} className='h-full w-full' />}
+          rightPanel={<PromptOverviewPanel ref={promptPanelRef} className='h-full w-full' />}
+          initialLeftPanelWidth={40}
+          minLeftPanelWidth={100}
+          storageKey='projects-panel-width'
+          className='flex-1 h-full w-full'
+        />
+      </div>
+    </ErrorBoundary>
   )
 }
 
@@ -262,90 +289,52 @@ type NoTabsYetViewProps = {
 }
 
 function NoTabsYetView({ projects, selectedProjectId, createProjectTab, openProjectModal }: NoTabsYetViewProps) {
-  // This component is shown when projects.length > 0 but noTabsYet is true.
-  // The `projects.length === 0` case is handled before this component is rendered.
-
-  let projectForButton: ProjectResponse['data'] | undefined
-  if (selectedProjectId) {
-    projectForButton = projects.find((p) => p.id === selectedProjectId)
-  } else if (projects.length > 0) {
-    // If no project is selected yet (e.g. multiple projects exist),
-    // don't pick one arbitrarily for tab creation.
-    // The user should be prompted to select one via openProjectModal.
-  }
-
+  let projectForButton = selectedProjectId ? projects.find((p) => p.id === selectedProjectId) : undefined
   return (
-    <div className='p-4'>
-      <ProjectsTabManager />
-      <div className='mt-4 flex flex-col items-start gap-3'>
-        <p className='text-sm text-muted-foreground'>Welcome! You need a tab to start working with your projects.</p>
-        {projectForButton ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={() =>
-                  createProjectTab({
-                    projectId: projectForButton!.id,
-                    name: projectForButton!.name || `Tab for ${projectForButton!.id.substring(0, 6)}`
-                  })
-                }
-              >
-                + Create Tab for "{projectForButton!.name}"
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Create a new tab for the project: {projectForButton!.name}</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          // If no specific project is selected to create a tab for, prompt to open/select one.
-          // This happens if there are multiple projects and none is yet `selectedProjectId`.
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button onClick={openProjectModal}>Select a Project to Create a Tab</Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Open the project selector to choose a project for a new tab.</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-        {/* Fallback if projects exist but no project could be determined for button, though less likely with above logic */}
-        {!projectForButton && projects.length > 0 && !selectedProjectId && (
-          <p className='text-sm text-muted-foreground mt-2'>Or, choose an existing project to get started.</p>
-        )}
+    <ErrorBoundary>
+      <div className='p-4'>
+        <ProjectsTabManager />
+        <div className='mt-4 flex flex-col items-start gap-3'>
+          <p className='text-sm text-muted-foreground'>Welcome! You need a tab to start working with your projects.</p>
+
+          {projectForButton ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() =>
+                    createProjectTab({
+                      projectId: projectForButton!.id,
+                      name: projectForButton!.name || `Tab for ${projectForButton!.id.substring(0, 6)}`
+                    })
+                  }
+                >
+                  + Create Tab for "{projectForButton!.name}"
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create a new tab for the project: {projectForButton!.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={openProjectModal}>Select a Project to Create a Tab</Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Open the project selector to choose a project for a new tab.</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {!projectForButton && projects.length > 0 && !selectedProjectId && (
+            <p className='text-sm text-muted-foreground mt-2'>Or, choose an existing project to get started.</p>
+          )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   )
 }
 
-type WelcomeDialogProps = {
-  showWelcomeDialog: boolean
-  setShowWelcomeDialog: (open: boolean) => void
-}
-
-function WelcomeDialog({ showWelcomeDialog, setShowWelcomeDialog }: WelcomeDialogProps) {
-  return (
-    <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
-      <DialogContent className='sm:max-w-[600px]'>
-        <DialogHeader>
-          <DialogTitle>Welcome to Project View!</DialogTitle>
-          <DialogDescription className='space-y-2'>
-            <p>This is where you'll explore and interact with your codebase.</p>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className='gap-2'>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant='outline' onClick={() => setShowWelcomeDialog(false)}>
-                Got it
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Dismiss the welcome message.</p>
-            </TooltipContent>
-          </Tooltip>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
+// WelcomeDialog is not used in this snippet but kept for completeness if it exists in the original file.
+// type WelcomeDialogProps = { showWelcomeDialog: boolean; setShowWelcomeDialog: (open: boolean) => void }
+// function WelcomeDialog({ showWelcomeDialog, setShowWelcomeDialog }: WelcomeDialogProps) { /* ... */ }

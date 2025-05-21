@@ -27,7 +27,7 @@ import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { FileViewerDialog } from '../navigation/file-viewer-dialog'
 import { ProjectFile } from '@/generated'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/api/use-kv-api'
+import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 
 type SelectedFilesListProps = {
   onRemoveFile: (fileId: string) => void

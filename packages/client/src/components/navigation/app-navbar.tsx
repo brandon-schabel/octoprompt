@@ -19,8 +19,8 @@ import {
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
-import { useActiveProjectTab, useSelectSetting } from '@/hooks/api/use-kv-api'
-import { useUpdateActiveProjectTab } from '@/hooks/api/use-kv-api'
+import { useActiveProjectTab, useSelectSetting } from '@/hooks/use-kv-local-storage'
+import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 export function AppNavbar() {
   const [openDialog, setOpenDialog] = useState(false)

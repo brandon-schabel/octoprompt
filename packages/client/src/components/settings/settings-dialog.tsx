@@ -7,7 +7,7 @@ import { Input } from '@ui'
 import { ScrollArea } from '@ui'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Theme } from 'shared/src/schemas/global-state-schema'
-import { useAppSettings } from '@/hooks/api/use-kv-api'
+import { useAppSettings } from '@/hooks/use-kv-local-storage'
 
 type ThemeOption = {
   label: string
