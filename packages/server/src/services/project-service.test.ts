@@ -55,17 +55,19 @@ const mockProjectStorage = {
     updateProjectFile: async (
         projectId: string,
         fileId: string,
-        fileData: Partial<Omit<ProjectFile, 'updatedAt' | 'createdAt' | 'id' | 'projectId'>>
+        fileData: Partial<Omit<ProjectFile, 'updated' | 'created' | 'id' | 'projectId'>>
     ): Promise<ProjectFile> => {
         if (!mockProjectFilesDbPerProject[projectId] || !mockProjectFilesDbPerProject[projectId][fileId]) {
             throw new Error(`File ${fileId} not found in project ${projectId} for mock updateProjectFile`)
         }
         const existingFile = mockProjectFilesDbPerProject[projectId][fileId]
+
+        const unixMs = Date.now()
         const updatedFile: ProjectFile = {
             ...existingFile,
             ...fileData,
-            summaryLastUpdatedAt: fileData.summary !== undefined ? new Date().toISOString() : existingFile.summaryLastUpdatedAt,
-            updatedAt: new Date().toISOString(),
+            summaryLastUpdatedAt: fileData.summary !== undefined ? unixMs : existingFile.summaryLastUpdatedAt,
+            updatedAt: unixMs,
         }
         mockProjectFilesDbPerProject[projectId][fileId] = updatedFile
         return JSON.parse(JSON.stringify(updatedFile))
@@ -106,8 +108,8 @@ const mockSyncProject = mock(async (project: Project) => {
                 summaryLastUpdatedAt: null,
                 meta: '{}',
                 checksum: 'checksum-synced',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
             }
         }
     }

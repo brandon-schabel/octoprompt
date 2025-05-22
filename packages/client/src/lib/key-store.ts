@@ -8,8 +8,8 @@ export type StoredKey = ProviderKey; // Or a simpler version like { id: string; 
 export interface IKeyStore {
     getAllKeys(): Promise<StoredKey[]>;
     getKeyById(id: string): Promise<StoredKey | null>;
-    createKey(keyData: Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey>;
-    updateKey(id: string, updates: Partial<Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'>>): Promise<StoredKey | null>;
+    createKey(keyData: Omit<StoredKey, 'id' | 'created' | 'updated'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey>;
+    updateKey(id: string, updates: Partial<Omit<StoredKey, 'id' | 'created' | 'updated'>>): Promise<StoredKey | null>;
     deleteKey(id: string): Promise<boolean>;
 }
 
@@ -30,7 +30,7 @@ export class LocalStorageKeyStore implements IKeyStore {
         return items.find(item => item.id === id) || null;
     }
 
-    async createKey(keyData: Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey> {
+    async createKey(keyData: Omit<StoredKey, 'id' | 'created' | 'updated'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey> {
         const items = await this.getAllKeys();
         const newKey: StoredKey = {
             ...keyData,
@@ -43,7 +43,7 @@ export class LocalStorageKeyStore implements IKeyStore {
         return newKey;
     }
 
-    async updateKey(id: string, updates: Partial<Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'>>): Promise<StoredKey | null> {
+    async updateKey(id: string, updates: Partial<Omit<StoredKey, 'id' | 'created' | 'updated'>>): Promise<StoredKey | null> {
         const items = await this.getAllKeys();
         const itemIndex = items.findIndex(item => item.id === id);
         if (itemIndex === -1) {

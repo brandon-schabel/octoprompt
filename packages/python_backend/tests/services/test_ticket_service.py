@@ -97,8 +97,8 @@ def default_project_setup():
     now_iso = datetime.now(timezone.utc).isoformat()
 
     mock_project_files_db[project_id] = {
-        file1_id: {"id": file1_id, "name": "file1.txt", "path": "/file1.txt", "projectId": project_id, "createdAt": now_iso, "updatedAt": now_iso},
-        file2_id: {"id": file2_id, "name": "file2.ts", "path": "/file2.ts", "projectId": project_id, "createdAt": now_iso, "updatedAt": now_iso},
+        file1_id: {"id": file1_id, "name": "file1.txt", "path": "/file1.txt", "projectId": project_id, "created": now_iso, "updated": now_iso},
+        file2_id: {"id": file2_id, "name": "file2.ts", "path": "/file2.ts", "projectId": project_id, "created": now_iso, "updated": now_iso},
     }
     return project_id, another_project_id, file1_id, file2_id
 
@@ -124,8 +124,8 @@ async def test_create_ticket_creates_new_ticket(default_project_setup):
     assert created.status == "open"
     assert created.priority == "high"
     assert json.loads(cast(str, created.suggestedFileIds)) == [file1_id]
-    assert created.createdAt == datetime(2024, 5, 20, 12, 0, 0, tzinfo=timezone.utc)
-    assert created.updatedAt == datetime(2024, 5, 20, 12, 0, 0, tzinfo=timezone.utc)
+    assert created.created == datetime(2024, 5, 20, 12, 0, 0, tzinfo=timezone.utc)
+    assert created.updated == datetime(2024, 5, 20, 12, 0, 0, tzinfo=timezone.utc)
 
     assert mock_tickets_db[created.id].id == created.id
     assert mock_ticket_tasks_db.get(created.id) == {}
@@ -219,22 +219,22 @@ async def test_update_ticket(default_project_setup):
     project_id, _, file1_id, file2_id = default_project_setup
     
     with freeze_time("2024-05-20 12:00:00 UTC") as frozen_time:
-        created = await create_ticket(TicketCreate(projectId=project_id, title="Before", overview="Old", status="open", priority="normal"))
-        original_updated_at = created.updatedAt
+        ticket_inserted = await create_ticket(TicketCreate(projectId=project_id, title="Before", overview="Old", status="open", priority="normal"))
+        original_updated_at = ticket_inserted.updated
 
         frozen_time.tick(delta=timedelta(seconds=10))
         updates = TicketUpdate(title="After", overview="New content", status="in_progress", priority="low", suggestedFileIds=[file1_id, file2_id])
-        updated = await update_ticket(created.id, updates)
+        updated = await update_ticket(ticket_inserted.id, updates)
 
     assert updated.title == "After"
     assert updated.overview == "New content"
     assert updated.status == "in_progress"
     assert updated.priority == "low"
     assert json.loads(cast(str, updated.suggestedFileIds)) == [file1_id, file2_id]
-    assert updated.updatedAt > original_updated_at
-    assert updated.updatedAt == datetime(2024, 5, 20, 12, 0, 10, tzinfo=timezone.utc)
+    assert updated.updated > original_updated_at
+    assert updated.updated == datetime(2024, 5, 20, 12, 0, 10, tzinfo=timezone.utc)
     
-    assert mock_tickets_db[created.id].title == "After"
+    assert mock_tickets_db[ticket_inserted.id].title == "After"
 
 
 async def test_update_ticket_throws_if_suggested_file_not_in_project(default_project_setup):
@@ -293,7 +293,7 @@ async def test_link_files_to_ticket(default_project_setup):
     project_id, _, file1_id, file2_id = default_project_setup
     with freeze_time("2024-05-20 12:00:00 UTC") as frozen_time:
         ticket = await create_ticket(TicketCreate(projectId=project_id, title="LinkTest", overview=""))
-        original_updated_at = ticket.updatedAt
+        original_updated_at = ticket.updated
 
         frozen_time.tick(delta=timedelta(seconds=1))
         links = await link_files_to_ticket(ticket.id, [file1_id, file2_id])
@@ -303,17 +303,17 @@ async def test_link_files_to_ticket(default_project_setup):
     assert len(mock_ticket_files_db[ticket.id]) == 2
 
     updated_ticket = await get_ticket_by_id(ticket.id)
-    assert updated_ticket.updatedAt > original_updated_at
+    assert updated_ticket.updated > original_updated_at
 
     # Link again, should not duplicate if no new links
     with freeze_time("2024-05-20 12:00:02 UTC") as frozen_time_2: # Ensure time would pass
-      original_updated_at_2 = updated_ticket.updatedAt
+      original_updated_at_2 = updated_ticket.updated
       links_again = await link_files_to_ticket(ticket.id, [file1_id]) # only existing file1
       ticket_after_redundant_link = await get_ticket_by_id(ticket.id)
     
     assert len(links_again) == 2 # Still 2 links
     # If no *new* links made, timestamp shouldn't change based on python service's current logic
-    assert ticket_after_redundant_link.updatedAt == original_updated_at_2
+    assert ticket_after_redundant_link.updated == original_updated_at_2
 
 
 async def test_link_files_to_ticket_throws_if_file_not_in_project(default_project_setup):
@@ -341,7 +341,7 @@ async def test_create_task(default_project_setup):
     project_id, _, _, _ = default_project_setup
     with freeze_time("2024-05-20 12:00:00 UTC") as frozen_time:
         ticket = await create_ticket(TicketCreate(projectId=project_id, title="TaskTest", overview=""))
-        original_ticket_updated_at = ticket.updatedAt
+        original_ticket_updated_at = ticket.updated
 
         frozen_time.tick(delta=timedelta(seconds=1))
         task1 = await create_task(ticket.id, "First task content")
@@ -351,11 +351,11 @@ async def test_create_task(default_project_setup):
     assert task1.content == "First task content"
     assert task1.done is False
     assert task1.orderIndex == 1
-    assert task1.createdAt == datetime(2024, 5, 20, 12, 0, 1, tzinfo=timezone.utc)
-    assert task1.updatedAt == datetime(2024, 5, 20, 12, 0, 1, tzinfo=timezone.utc)
+    assert task1.created == datetime(2024, 5, 20, 12, 0, 1, tzinfo=timezone.utc)
+    assert task1.updated == datetime(2024, 5, 20, 12, 0, 1, tzinfo=timezone.utc)
 
     updated_ticket = await get_ticket_by_id(ticket.id)
-    assert updated_ticket.updatedAt > original_ticket_updated_at
+    assert updated_ticket.updated > original_ticket_updated_at
 
     task2 = await create_task(ticket.id, "Second task content")
     assert task2.id == "task_mock_2"
@@ -368,7 +368,7 @@ async def test_fetch_task_suggestions_for_ticket(default_project_setup, mocker):
     ticket_obj = TicketBase(
         id="tkt_abc", projectId=project_id, title="AI Suggest", overview="Needs AI tasks",
         status="open", priority="normal", suggestedFileIds="[]",
-        createdAt=datetime.now(timezone.utc), updatedAt=datetime.now(timezone.utc)
+        created=datetime.now(timezone.utc), updated=datetime.now(timezone.utc)
     )
     user_context = "High priority"
 
@@ -395,7 +395,7 @@ async def test_fetch_task_suggestions_for_ticket(default_project_setup, mocker):
 
 async def test_fetch_task_suggestions_for_ticket_throws_if_model_not_configured(mocker, default_project_setup):
     project_id, _, _, _ = default_project_setup
-    ticket_obj = TicketBase(id="tkt_abc", projectId=project_id, title="AI No Model", overview="Overview", createdAt=datetime.now(tz=timezone.utc), updatedAt=datetime.now(tz=timezone.utc))
+    ticket_obj = TicketBase(id="tkt_abc", projectId=project_id, title="AI No Model", overview="Overview", created=datetime.now(tz=timezone.utc), updated=datetime.now(tz=timezone.utc))
     
     mocker.patch("app.services.ticket_service.gen_ai_services.MEDIUM_MODEL_CONFIG", {}) # Simulate model not configured
 
@@ -423,7 +423,7 @@ async def test_auto_generate_tasks_from_overview(default_project_setup):
     project_id, _, _, _ = default_project_setup
     with freeze_time("2024-05-20 12:00:00 UTC") as frozen_time:
       ticket = await create_ticket(TicketCreate(projectId=project_id, title="Auto Gen", overview="Detailed overview"))
-      original_updated_at = ticket.updatedAt
+      original_updated_at = ticket.updated
 
     mock_ai_generate_structured_data.return_value = type('obj', (object,), {'object': TaskSuggestionsModel(
         tasks=[TaskSuggestionItem(title='Generated Task One'), TaskSuggestionItem(title='Generated Task Two')]
@@ -442,7 +442,7 @@ async def test_auto_generate_tasks_from_overview(default_project_setup):
     assert len(all_tasks_after_gen) == 2
 
     ticket_after_gen = await get_ticket_by_id(ticket.id)
-    assert ticket_after_gen.updatedAt > original_updated_at
+    assert ticket_after_gen.updated > original_updated_at
 
     # Test with no suggestions
     mock_ai_generate_structured_data.reset_mock() # Reset call count

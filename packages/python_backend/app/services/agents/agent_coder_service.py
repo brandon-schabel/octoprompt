@@ -397,7 +397,7 @@ async def create_file_change_diff_from_task_plan(
                     "content": new_content,
                     "checksum": new_checksum,
                     "size": len(new_content.encode("utf-8")),
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "updated": datetime.now(timezone.utc).isoformat(),
                 })
                 # Re-validate to ensure all fields are correct for ProjectFile
                 updated_file_record = ProjectFile(**updated_file_record_data)
@@ -420,7 +420,7 @@ async def create_file_change_diff_from_task_plan(
                         "content": updated_content,
                         "checksum": new_checksum,
                         "size": len(updated_content.encode("utf-8")),
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "updated": datetime.now(timezone.utc).isoformat(),
                     })
                     updated_file = ProjectFile(**updated_file_data)
                     current_file_map_state[target_file.id] = updated_file

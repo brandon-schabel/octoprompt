@@ -23,7 +23,7 @@ import { SelectedFilesDrawer } from '../../selected-files-drawer'
 import { AIFileChangeDialog } from '@/components/file-changes/ai-file-change-dialog'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
-import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
+import { useGetProjectFiles, useGetProject } from '@/hooks/python-api/use-projects-api'
 import { ProjectFile } from '@/generated/types.gen'
 import { useCallback, useMemo, useRef, useState } from 'react'
 

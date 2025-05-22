@@ -4,7 +4,7 @@ import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
-import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
+import { useGetProjects, useDeleteProject } from '@/hooks/python-api/use-projects-api'
 import { Link } from '@tanstack/react-router'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {

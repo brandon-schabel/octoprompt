@@ -70,7 +70,7 @@ class ApiError(Exception):
         super().__init__(self.message)
 
 # --- Package Info ---
-package_info = {"name": "OctoPrompt FastAPI Migration", "version": "0.1.0-migrated"}
+package_info = {"name": "OctoPrompt FastAPI Python Server", "version": "0.5.2"}
 PACKAGE_JSON_PATH = PROJECT_ROOT / "package.json"
 if PACKAGE_JSON_PATH.exists():
     try:
@@ -138,15 +138,46 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=package_info["name"], version=package_info["version"],
-    description=package_info.get("description", "OctoPrompt OpenAPI Server Spec"),
+    description=package_info.get("description", "OctoPrompt OpenAPI Python Server Spec"),
     openapi_url="/doc", # To match original /doc for spec
     default_response_class=JSONResponse,
     lifespan=lifespan # Use the lifespan context manager
 )
 
 # CORS Middleware (from app.ts corsConfig)
+# Determine allowed origins based on environment
+_allowed_origins: List[str] = []
+if IS_DEV_ENV:
+    _allowed_origins = [
+        "http://localhost:5173",  # React dev server
+        "https://localhost:5173", # React dev server (HTTPS)
+        # Consider adding the API's own origin if needed for tools like Swagger UI making requests from browser:
+        # f"http://localhost:{SERVER_PORT}",
+        # f"http://127.0.0.1:{SERVER_PORT}",
+    ]
+else:
+    # Production: Configure via an environment variable for security.
+    # Example: ALLOWED_ORIGINS="https://yourdomain.com,https://www.yourdomain.com"
+    prod_origins_env = os.getenv("ALLOWED_ORIGINS")
+    if prod_origins_env:
+        _allowed_origins = [origin.strip() for origin in prod_origins_env.split(',')]
+    else:
+        # Fallback to wildcard if no env var is set.
+        # WARNING: This is insecure for production. Set ALLOWED_ORIGINS.
+        print("Warning: ALLOWED_ORIGINS environment variable not set. Defaulting to '*' for CORS, which is insecure for production.")
+        _allowed_origins = ["*"]
+
+# Ensure there's always a fallback if the list is empty (e.g. misconfiguration or empty env var)
+if not _allowed_origins:
+    print("Warning: CORS allowed origins list resolved to empty. Defaulting to '*'. Review your CORS configuration and ALLOWED_ORIGINS env var.")
+    _allowed_origins = ["*"]
+
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True, # Allows cookies to be sent/received
+    allow_methods=["*"],    # Allows all standard methods
+    allow_headers=["*"]     # Allows all headers
 )
 
 # Logger Middleware (basic, from app.ts logger())

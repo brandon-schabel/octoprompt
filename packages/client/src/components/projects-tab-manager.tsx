@@ -22,7 +22,7 @@ import {
   useUpdateProjectTabById
 } from '@/hooks/use-kv-local-storage'
 import { toast } from 'sonner'
-import { useGetProjects } from '@/hooks/api/use-projects-api'
+import { useGetProjects } from '@/hooks/python-api/use-projects-api'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 export type ProjectsTabManagerProps = {

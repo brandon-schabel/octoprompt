@@ -4,6 +4,8 @@
 # 3. Using aiofiles for async file I/O.
 # 4. Simplified path resolution logic.
 # 5. Adapted error handling to Pythonic exceptions.
+# No changes directly needed in this file as it's a generic utility.
+# The Pydantic models using it will now provide serializable integer timestamps.
 
 import os
 import json
@@ -62,8 +64,6 @@ async def write_json(
         
         dir_name = os.path.dirname(file_path)
         if dir_name: # Create directories if they don't exist
-            # For a fully async solution, asyncio.to_thread could be used for os.makedirs.
-            # However, os.makedirs is generally fast enough for most use cases.
             os.makedirs(dir_name, exist_ok=True) 
             
         async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
@@ -85,10 +85,6 @@ async def read_json(
     file_path = _resolve_and_ensure_json_path(path, base_path)
     
     try:
-        # Check for file existence asynchronously before attempting to open
-        # if not await aiofiles.os.path.exists(file_path): # Requires aiofiles.os explicitly
-        #     return None 
-        # Simpler: try to open and catch FileNotFoundError
         async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
             content = await f.read()
         return json.loads(content)
@@ -99,7 +95,6 @@ async def read_json(
     except Exception as e: # Catch other IOErrors
         raise IOError(f"Failed to read JSON file at {file_path}. Reason: {str(e)}") from e
 
-# Optional: expose as a dictionary-like structure for similar usage pattern
 json_scribe = {
     "write": write_json,
     "read": read_json,

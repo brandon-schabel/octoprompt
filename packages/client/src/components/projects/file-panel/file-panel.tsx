@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { ProjectHeader } from './project-header'
 import { FileExplorer } from './file-explorer/file-explorer'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useGetProject } from '@/hooks/api/use-projects-api'
+import { useGetProject } from '@/hooks/python-api/use-projects-api'
 import { useActiveProjectTab, useSelectSetting } from '@/hooks/use-kv-local-storage'
 
 export type FilePanelRef = {

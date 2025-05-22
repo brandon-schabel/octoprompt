@@ -176,8 +176,8 @@ async def generate_file_change(options: GenerateFileChangeOptions) -> AIFileChan
         "explanation": ai_suggestion.explanation,
         "prompt": options.prompt,
         "status": AIFileChangeStatus.PENDING,
-        "createdAt": now,
-        "updatedAt": now,
+        "created": now,
+        "updated": now,
     }
     try:
         # AIFileChangeRecord model has populate_by_name=True and aliases.
@@ -222,7 +222,7 @@ async def confirm_file_change(project_id: str, ai_file_change_id: str) -> Confir
         )
 
     now = datetime.now(timezone.utc)
-    update_data = {"status": AIFileChangeStatus.CONFIRMED, "updatedAt": now}
+    update_data = {"status": AIFileChangeStatus.CONFIRMED, "updated": now}
     
     # Pydantic v2: .model_copy(update=...)
     # Pydantic v1: .copy(update=...)
@@ -242,7 +242,7 @@ async def reject_file_change(project_id: str, ai_file_change_id: str) -> Confirm
         )
 
     now = datetime.now(timezone.utc)
-    update_data = {"status": AIFileChangeStatus.REJECTED, "updatedAt": now}
+    update_data = {"status": AIFileChangeStatus.REJECTED, "updated": now}
     updated_record = existing_record.model_copy(update=update_data)
         
     await project_storage.save_ai_file_change(project_id, updated_record)

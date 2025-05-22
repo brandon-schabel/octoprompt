@@ -14,18 +14,18 @@ from datetime import datetime
 # Placeholder for schemas that would be imported from other files
 # In a real scenario, these would be proper Pydantic models.
 class ProjectFile(BaseModel):
-    id: str
+    id: int
     project_id: Optional[str] = None
     # Add other fields as per actual ProjectFileSchema definition
     model_config = ConfigDict(title="ProjectFile", extra="allow")
 
 class Project(BaseModel):
-    id: str
+    id: int
     # Add other fields
     model_config = ConfigDict(title="Project", extra="allow")
 
 class Prompt(BaseModel):
-    id: str
+    id: int
     # Add other fields
     model_config = ConfigDict(title="Prompt", extra="allow")
 
@@ -41,7 +41,7 @@ class AgentTaskStatusEnum(str, Enum):
     SKIPPED = "SKIPPED"
 
 class AgentTask(BaseModel):
-    id: str = Field(..., min_length=1, description="A unique ID automatically generated for tracking this specific task.", example="task-123-abc")
+    id: int = Field(..., min_length=1, description="A unique ID automatically generated for tracking this specific task.", example="task-123-abc")
     title: str = Field(..., min_length=5, description="A brief, human-readable title summarizing the task's objective.", example="Refactor User Authentication Logic")
     description: str = Field(..., min_length=20, description="A detailed description of the changes required for the target file. This will be used as the primary instruction for the LLM rewrite.", example="Update the login function in `src/auth.ts` to use asynchronous hashing for passwords and return a JWT token upon successful authentication.")
     target_file_id: Optional[str] = Field(None, validation_alias="targetFileId", serialization_alias="targetFileId", description="The unique ID (from ProjectFileSchema) of the primary source file to be modified or created by this task. Will be populated by orchestrator for new files.", example="file-id-xyz-789")
@@ -66,7 +66,7 @@ class AgentContext(BaseModel):
     project_file_map: ProjectFileMap = Field(..., validation_alias="projectFileMap", serialization_alias="projectFileMap", description="Map representation of project files for quick lookup.")
     project_summary_context: str = Field(..., validation_alias="projectSummaryContext", serialization_alias="projectSummaryContext", description="A summary of the project's purpose and structure.", example="A Node.js backend service for managing user accounts.")
     project: Project
-    agent_job_id: str = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The ID of the agent job that is running this task plan.", example="job-xyz-789")
+    agent_job_id: int = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The ID of the agent job that is running this task plan.", example="job-xyz-789")
     prompts: List[Prompt] = Field(..., description="The prompts to use for the agent.")
     selected_file_ids: List[str] = Field(..., min_items=1, validation_alias="selectedFileIds", serialization_alias="selectedFileIds", description="Array of ProjectFile IDs to provide as initial context.", example=["file-id-1", "file-id-2"])
 
@@ -74,7 +74,7 @@ class AgentContext(BaseModel):
 
 
 class AgentTaskPlan(BaseModel):
-    project_id: str = Field(..., validation_alias="projectId", serialization_alias="projectId", description="The ID of the project context in which these tasks operate.", example="proj-abc-123")
+    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId", description="The ID of the project context in which these tasks operate.", example="proj-abc-123")
     overall_goal: str = Field(..., validation_alias="overallGoal", serialization_alias="overallGoal", description="A concise summary of the original user request being addressed by this plan.", example="Implement JWT-based authentication flow.")
     tasks: List[AgentTask] = Field(..., min_items=1, description="An ordered list of tasks designed to collectively achieve the overall goal. Order implies execution sequence unless overridden by dependencies.")
 
@@ -93,7 +93,7 @@ class AgentCoderRunRequest(BaseModel):
 class AgentCoderRunSuccessData(BaseModel):
     updated_files: List[ProjectFile] = Field(..., validation_alias="updatedFiles", serialization_alias="updatedFiles", description="The state of the project files after the agent's execution.")
     task_plan: Optional[AgentTaskPlan] = Field(None, validation_alias="taskPlan", serialization_alias="taskPlan", description="The final task plan executed by the agent (includes task statuses).")
-    agent_job_id: str = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The unique ID for retrieving the execution logs and data for this run.")
+    agent_job_id: int = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The unique ID for retrieving the execution logs and data for this run.")
 
     model_config = ConfigDict(title="AgentCoderRunSuccessData", populate_by_name=True)
 
@@ -114,8 +114,8 @@ class AgentDataLogFinalStatusEnum(str, Enum):
 
 class AgentDataLog(BaseModel):
     agent_job_dir_path: str = Field(..., validation_alias="agentJobDirPath", serialization_alias="agentJobDirPath", description="Absolute path to the directory containing logs for this job.")
-    project_id: str = Field(..., validation_alias="projectId", serialization_alias="projectId", description="The ID of the project this agent run targeted.")
-    agent_job_id: str = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The unique ID for this agent run.")
+    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId", description="The ID of the project this agent run targeted.")
+    agent_job_id: int = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The unique ID for this agent run.")
     agent_job_start_time: datetime = Field(..., validation_alias="agentJobStartTime", serialization_alias="agentJobStartTime", description="ISO 8601 timestamp when the agent job started.")
     task_plan: Optional[AgentTaskPlan] = Field(None, validation_alias="taskPlan", serialization_alias="taskPlan", description="The initial task plan generated by the planning agent (before execution).")
     final_status: AgentDataLogFinalStatusEnum = Field(..., validation_alias="finalStatus", serialization_alias="finalStatus", description="The final outcome status of the agent run.")

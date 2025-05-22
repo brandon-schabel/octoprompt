@@ -16,19 +16,20 @@ from app.utils.storage.provider_key_storage import provider_key_storage_util, Pr
 # 3. Adapted error handling to FastAPI's HTTPException
 # 4. Used Pydantic models for validation and data shaping
 # 5. Aligned CreateProviderKeyInput with the Body schema used in TS routes
+# 6. Changed ID and timestamp generation/handling to use integer Unix ms.
 
 class ProviderKeyService:
     async def create_key(self, data: CreateProviderKeyBody) -> ProviderKey:
         all_keys = await provider_key_storage_util.read_provider_keys()
-        now = datetime.now(timezone.utc)
-        key_id = provider_key_storage_util.generate_id()
+        now_ms = provider_key_storage_util.generate_id() # For timestamps
+        key_id = provider_key_storage_util.generate_id() # For ID, also int
 
         new_key_data_dict = {
             "id": key_id,
             "provider": data.provider,
             "key": data.key, # Stored in plaintext
-            "created_at": now,
-            "updated_at": now,
+            "created": now_ms,
+            "updated": now_ms,
         }
 
         try:
@@ -55,13 +56,13 @@ class ProviderKeyService:
         key_list.sort(key=lambda k: k.provider)
         return key_list
 
-    async def get_key_by_id(self, key_id: str) -> Optional[ProviderKey]:
+    async def get_key_by_id(self, key_id: int) -> Optional[ProviderKey]:
         all_keys = await provider_key_storage_util.read_provider_keys()
         found_key = all_keys.get(key_id)
         # Data should already be validated by read_validated_json in storage util
         return found_key # Returns ProviderKey or None
 
-    async def update_key(self, key_id: str, data: UpdateProviderKeyBody) -> ProviderKey:
+    async def update_key(self, key_id: int, data: UpdateProviderKeyBody) -> ProviderKey:
         all_keys = await provider_key_storage_util.read_provider_keys()
         existing_key = all_keys.get(key_id)
 
@@ -71,7 +72,7 @@ class ProviderKeyService:
         update_data_dict = data.model_dump(exclude_unset=True) # Get only provided fields
         
         updated_key_data = existing_key.model_copy(update=update_data_dict)
-        updated_key_data.updated_at = datetime.now(timezone.utc)
+        updated_key_data.updated_at = provider_key_storage_util.generate_id() # int timestamp
 
         try:
             # Re-validate the whole model. Pydantic will ensure type correctness.
@@ -85,7 +86,7 @@ class ProviderKeyService:
         await provider_key_storage_util.write_provider_keys(all_keys)
         return updated_key_data
 
-    async def delete_key(self, key_id: str) -> bool:
+    async def delete_key(self, key_id: int) -> bool:
         all_keys = await provider_key_storage_util.read_provider_keys()
         if key_id not in all_keys:
             return False # Key not found, nothing to delete

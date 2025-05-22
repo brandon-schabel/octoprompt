@@ -5,7 +5,7 @@ import {
   useUpdateActiveProjectTab,
   useUpdateProjectTabById
 } from '@/hooks/use-kv-local-storage'
-import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
+import { useGetProjectFiles } from '@/hooks/python-api/use-projects-api'
 import { useMemo } from 'react'
 import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
 import { buildProjectFileMap } from 'shared/src/utils/projects-utils'

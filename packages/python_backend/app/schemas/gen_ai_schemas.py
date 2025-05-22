@@ -28,7 +28,7 @@ class AiSdkOptions(BaseModel):
 
 # --- Schema for Available Models ---
 class UnifiedModel(BaseModel):
-    id: str = Field(..., description="Model identifier")
+    id: int = Field(..., description="Model identifier")
     name: str = Field(..., description="User-friendly model name")
     provider: str = Field(..., description="Provider ID")
     context_length: Optional[int] = Field(None, description="Context window size in tokens")

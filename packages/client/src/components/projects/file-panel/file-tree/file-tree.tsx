@@ -45,8 +45,8 @@ import { buildNodeContent, buildNodeSummaries } from 'shared/src/utils/projects-
 
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useRefreshProject } from '@/hooks/api/use-projects-api'
-import { useSummarizeProjectFiles } from '@/hooks/api/use-projects-api'
+import { useRefreshProject } from '@/hooks/python-api/use-projects-api'
+import { useSummarizeProjectFiles } from '@/hooks/python-api/use-projects-api'
 import { ProjectFile } from 'shared/src/schemas/project.schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'

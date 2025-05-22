@@ -11,7 +11,7 @@ import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useGetProjects, useDeleteProject, useGetProject } from '@/hooks/api/use-projects-api'
+import { useGetProjects, useDeleteProject, useGetProject } from '@/hooks/python-api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
@@ -64,7 +64,7 @@ export function ProjectsPage() {
   useEffect(() => {
     if (projects.length === 1 && noTabsYet) {
       createProjectTabFromHook({
-        displayName: projects[0].name || `Tab for ${projects[0].id.substring(0, 6)}`,
+        displayName: projects[0].name || `Tab for ${projects[0].id.toString().substring(0, 6)}`,
         selectedProjectId: projects[0].id
       })
     }

@@ -84,16 +84,20 @@ def _normalize_path(project_path: str) -> str:
     }
 )
 async def create_project_route(data: CreateProjectBody = Body(...)):
+    print(f"[projects_api.py] create_project_route called with data: {data}")
     normalized_path = _normalize_path(data.path)
     print(f"Creating project - Original path: {data.path}, Normalized path: {normalized_path}")
 
     project_data_for_service = data.model_copy(update={"path": normalized_path})
+    print(f"[projects_api.py] project_data_for_service: {project_data_for_service}")
     created_project = await project_service.create_project(project_data_for_service)
     print(f"Project created with ID: {created_project.id}")
 
     sync_warning: Optional[str] = None
     sync_error: Optional[str] = None
     http_status_code: int = status.HTTP_201_CREATED
+
+
 
     try:
         project_path_obj = Path(created_project.path)
@@ -148,6 +152,7 @@ async def create_project_route(data: CreateProjectBody = Body(...)):
 )
 async def list_projects_route():
     projects = await project_service.list_projects()
+    print(f"[projects_api.py] list_projects_route projects: {projects}")
     return ProjectListResponse(success=True, data=projects)
 
 @router.get(
@@ -505,7 +510,6 @@ async def remove_summaries_route(
             if file_data.summary is not None or file_data.summaryLastUpdatedAt is not None:
                 file_data.summary = None
                 file_data.summaryLastUpdatedAt = None
-                # file_data.updatedAt = datetime.now(timezone.utc) # Update timestamp
                 all_files_map[file_id] = file_data # Pydantic model, re-assign
                 removed_count += 1
                 changes_made = True

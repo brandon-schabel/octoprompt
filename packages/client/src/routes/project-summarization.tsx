@@ -11,7 +11,7 @@ import {
   useGetProjectSummary,
   useRemoveSummariesFromFiles,
   useSummarizeProjectFiles
-} from '@/hooks/api/use-projects-api'
+} from '@/hooks/python-api/use-projects-api'
 import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter'
 
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'

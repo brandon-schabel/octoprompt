@@ -84,7 +84,7 @@ class AnthropicModel(BaseModel):
                                 # The TS version has this, but their actual API might not for all models.
                                 # Let's use ID as name if display_name isn't present.
     name: str # Often the same as ID
-    created_at: Optional[str] = None # datetime string
+    created Optional[str] = None # datetime string
 
 class AnthropicModelsResponse(BaseModel):
     data: List[AnthropicModel]

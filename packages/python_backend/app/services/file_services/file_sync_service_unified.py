@@ -15,93 +15,18 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent, \
 
 # --- Type Definitions (Mirrored from TS) ---
 
-# Assuming these Pydantic schemas exist or will be created in the Python project:
-# from app.schemas.project_schemas import Project, ProjectFile # (Pydantic Models)
-# from app.services.project_service import ( # Python equivalents
-#     get_project_files,
-#     bulk_create_project_files,
-#     bulk_update_project_files,
-#     bulk_delete_project_files,
-#     list_projects,
-#     summarize_single_file,
-#     FileSyncData # This would be a Pydantic model or TypedDict
-# )
+from app.schemas.project_schemas import Project, ProjectFile, FileSyncData # Ensure these are the correct schema imports
+from app.services.project_service import (
+    get_project_files,
+    bulk_create_project_files,
+    bulk_update_project_files,
+    bulk_delete_project_files,
+    list_projects, # If needed by file_sync_service
+    summarize_single_file # If file_sync_service's watcher logic should call the real one
+)
+from app.services.project_service import Project as ProjectSchema # Alias if needed to avoid name clash
 
-# --- Mocks/Placeholders for project_service and schemas (replace with actual) ---
-class Project(BaseModel):
-    id: str
-    name: str
-    path: str # Absolute path to project root
 
-class ProjectFile(BaseModel):
-    id: str
-    path: str # Relative to project root
-    name: str
-    extension: Optional[str] = None
-    content: Optional[str] = None # May not always be loaded
-    size: int
-    checksum: Optional[str] = None
-
-class FileSyncData(BaseModel): # For bulk operations
-    path: str
-    name: str
-    extension: Optional[str] = None
-    content: str
-    size: int
-    checksum: str
-
-# Mock project service functions
-MOCK_DB_PROJECT_FILES: Dict[str, List[ProjectFile]] = {}
-MOCK_PROJECTS: List[Project] = []
-
-async def get_project_files(project_id: str) -> Optional[List[ProjectFile]]:
-    print(f"[MockProjectService] Getting files for project {project_id}")
-    return MOCK_DB_PROJECT_FILES.get(project_id, [])
-
-async def bulk_create_project_files(project_id: str, files_data: List[FileSyncData]) -> List[ProjectFile]:
-    print(f"[MockProjectService] Creating {len(files_data)} files for project {project_id}")
-    if project_id not in MOCK_DB_PROJECT_FILES:
-        MOCK_DB_PROJECT_FILES[project_id] = []
-    
-    created_files = []
-    for data in files_data:
-        new_id = f"file_{os.urandom(4).hex()}"
-        pf = ProjectFile(id=new_id, path=data.path, name=data.name, extension=data.extension, size=data.size, checksum=data.checksum, content=data.content)
-        MOCK_DB_PROJECT_FILES[project_id].append(pf)
-        created_files.append(pf)
-    return created_files
-
-async def bulk_update_project_files(project_id: str, files_to_update: List[Dict[str, Any]]) -> List[ProjectFile]: # files_to_update: [{fileId: str, data: FileSyncData}]
-    print(f"[MockProjectService] Updating {len(files_to_update)} files for project {project_id}")
-    updated_files = []
-    if project_id in MOCK_DB_PROJECT_FILES:
-        for update_item in files_to_update:
-            file_id = update_item['fileId'] # Assuming key is 'fileId' as in TS
-            data = FileSyncData.model_validate(update_item['data'])
-            for i, pf in enumerate(MOCK_DB_PROJECT_FILES[project_id]):
-                if pf.id == file_id:
-                    updated_pf = pf.model_copy(update=data.model_dump(exclude_none=True))
-                    MOCK_DB_PROJECT_FILES[project_id][i] = updated_pf
-                    updated_files.append(updated_pf)
-                    break
-    return updated_files
-
-async def bulk_delete_project_files(project_id: str, file_ids: List[str]) -> Dict[str, int]:
-    print(f"[MockProjectService] Deleting {len(file_ids)} files for project {project_id}")
-    deleted_count = 0
-    if project_id in MOCK_DB_PROJECT_FILES:
-        initial_len = len(MOCK_DB_PROJECT_FILES[project_id])
-        MOCK_DB_PROJECT_FILES[project_id] = [pf for pf in MOCK_DB_PROJECT_FILES[project_id] if pf.id not in file_ids]
-        deleted_count = initial_len - len(MOCK_DB_PROJECT_FILES[project_id])
-    return {"deletedCount": deleted_count}
-
-async def list_projects() -> List[Project]:
-    print("[MockProjectService] Listing projects")
-    return MOCK_PROJECTS
-
-async def summarize_single_file(file: ProjectFile) -> None:
-    print(f"[MockProjectService] Summarizing file {file.path} (ID: {file.id})")
-    await asyncio.sleep(0.1) # Simulate async work
 
 # --- Constants (Mirrored from TS) ---
 ALLOWED_FILE_CONFIGS: List[str] = [

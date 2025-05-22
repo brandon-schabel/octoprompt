@@ -23,7 +23,7 @@ class ApiError(Exception):
 async def get_project_by_id(project_id: str) -> Union[Project, None]:
     # This is a placeholder. Actual implementation will be in project_service.py
     print(f"[get_full_project_summary.py] Placeholder: get_project_by_id({project_id}) called")
-    # Example: return Project(id=project_id, name="Test Project", description="Desc", path="/path", createdAt="2023-01-01T00:00:00Z", updatedAt="2023-01-01T00:00:00Z")
+    # Example: return Project(id=project_id, name="Test Project", description="Desc", path="/path", created="2023-01-01T00:00:00Z", updated="2023-01-01T00:00:00Z")
     return None
 
 async def get_project_files(project_id: str) -> Union[List[ProjectFile], None]:

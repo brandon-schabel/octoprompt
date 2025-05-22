@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from enum import Enum
-from datetime import datetime
+from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
 
 # --- Provider Key Schemas ---
 # Last 5 changes:
@@ -10,6 +10,7 @@ from datetime import datetime
 # 3. Handled .omit and .extend for schema variations.
 # 4. Implemented .refine logic with Pydantic's @field_validator.
 # 5. Mapped .openapi() metadata.
+# 6. Changed ID and timestamp fields to int (Unix ms) and added validators.
 
 class AIProviderEnum(str, Enum):
     OPENAI = "openai"
@@ -23,21 +24,24 @@ class AIProviderEnum(str, Enum):
     TOGETHER = "together"
 
 class ProviderKey(BaseModel):
-    id: str = Field(..., min_length=1, example="key-1a2b3c4d", description="Provider Key ID")
+    id: int = Field(..., min_length=1, example=1677657600000, description="Provider Key ID (Unix ms)")
     provider: str = Field(..., example="openai", description="AI Provider identifier (e.g., openai, anthropic)")
     key: str = Field(..., example="sk-xxxxxxxxxxxxxxxxxxxx", description="The actual API Key (handle with care)")
-    created_at: datetime = Field(..., validation_alias="createdAt", serialization_alias="createdAt", example="2024-03-01T11:00:00.000Z", description="Creation timestamp (ISO 8601)")
-    updated_at: datetime = Field(..., validation_alias="updatedAt", serialization_alias="updatedAt", example="2024-03-01T11:05:00.000Z", description="Last update timestamp (ISO 8601)")
+    created: int = Field(..., validation_alias="created", serialization_alias="created", example=1677657600000, description="Creation timestamp (Unix ms)")
+    updated: int = Field(..., validation_alias="updated", serialization_alias="updated", example=1677657900000, description="Last update timestamp (Unix ms)")
     model_config = ConfigDict(title="ProviderKey", populate_by_name=True)
+
+    _validate_id = field_validator('id', mode='before')(convert_id_to_int)
+    _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
 
 class CreateProviderKeyInput(ProviderKey):
     # Omit id, createdAt, updatedAt by not including them and they are not required in Pydantic by default
     # However, Pydantic models expect all fields of their base if not explicitly overridden.
     # For a true "omit" behavior for input, it's better to define a separate model for input.
-    id: Optional[str] = Field(None, exclude=True) # Exclude from serialization if it exists
-    created_at: Optional[datetime] = Field(None, validation_alias="createdAt", serialization_alias="createdAt", exclude=True)
-    updated_at: Optional[datetime] = Field(None, validation_alias="updatedAt", serialization_alias="updatedAt", exclude=True)
-    model_config = ConfigDict(title="CreateProviderKeyInput", populate_by_name=True) 
+    id: Optional[int] = Field(None, exclude=True) # Exclude from serialization if it exists
+    created: Optional[int] = Field(None, validation_alias="created", serialization_alias="created", exclude=True)
+    updated: Optional[int] = Field(None, validation_alias="updated", serialization_alias="updated", exclude=True)
+    model_config = ConfigDict(title="CreateProviderKeyInput", populate_by_name=True)
     # Re-declare for clarity on input schema if needed, or use a distinct model:
     # provider: str = Field(..., example="openai") 
     # key: str = Field(..., example="sk-xxxx")
@@ -60,7 +64,6 @@ class UpdateProviderKeyBody(BaseModel):
         pass # Placeholder for actual validation logic, best done with model_validator
     
     # Pydantic v2 model_validator for refine logic
-    from pydantic import model_validator
     @model_validator(mode='after')
     def check_at_least_one_field(self):
         if not self.provider and not self.key:
@@ -70,8 +73,9 @@ class UpdateProviderKeyBody(BaseModel):
     model_config = ConfigDict(title="UpdateProviderKeyRequestBody")
 
 class ProviderKeyIdParams(BaseModel):
-    key_id: str = Field(..., min_length=1, validation_alias="keyId", serialization_alias="keyId", json_schema_extra={"param": {"name": "keyId", "in": "path"}}, example="key-1a2b3c4d", description="The ID of the provider key")
+    key_id: int = Field(..., validation_alias="keyId", serialization_alias="keyId", json_schema_extra={"param": {"name": "keyId", "in": "path"}}, example=1677657600000, description="The ID of the provider key (Unix ms)")
     model_config = ConfigDict(title="ProviderKeyIdParams", populate_by_name=True)
+    _validate_key_id = field_validator('key_id', mode='before')(convert_id_to_int)
 
 # ProviderKeyWithSecret is effectively the same as ProviderKey in this Pydantic conversion as key is already included.
 ProviderKeyWithSecret = ProviderKey 

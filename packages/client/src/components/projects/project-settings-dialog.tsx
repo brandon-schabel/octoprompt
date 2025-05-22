@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { Input } from '@ui'
 import { Slider } from '@ui'
-import { useSyncProject, useGetProject } from '@/hooks/api/use-projects-api'
+import { useSyncProject, useGetProject } from '@/hooks/python-api/use-projects-api'
 import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 import { EDITOR_OPTIONS } from 'shared/src/schemas/global-state-schema'
 import { EditorType } from 'shared/src/schemas/global-state-schema'

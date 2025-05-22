@@ -20,17 +20,17 @@ from app.utils.get_full_project_summary import get_full_project_summary
 from app.core.config import MEDIUM_MODEL_CONFIG
 
 # Define StorageModel type aliases here as they are not in ticket_schemas.py
-TicketsStorageModel = Dict[str, TicketBase]
-TicketTasksStorageModel = Dict[str, TicketTaskBase]
+TicketsStorageModel = Dict[int, TicketBase]
+TicketTasksStorageModel = Dict[int, TicketTaskBase]
 TicketFilesStorageModel = List[TicketFileBase]
 
 # --- Placeholders for external dependencies ---
 # (These would be actual imports in a full application)
 class PlaceholderProjectStorage: # Mock for project_storage
-    async def read_project_files(self, project_id: str) -> Dict[str, Any]:
+    async def read_project_files(self, project_id: int) -> Dict[int, Any]:
         print(f"Mock: Reading project files for {project_id}")
-        if project_id == "valid_project_id_for_files":
-            return {"file_abc": {"id": "file_abc", "name": "file_abc.py"}, "file_xyz": {"id": "file_xyz", "name": "file_xyz.txt"}}
+        if project_id == 1234567890000: # Example int project_id
+            return {111: {"id": 111, "name": "file_abc.py"}, 222: {"id": 222, "name": "file_xyz.txt"}}
         return {}
 project_storage = PlaceholderProjectStorage()
 
@@ -72,9 +72,9 @@ IMPORTANT: Return ONLY valid JSON matching this schema:
 }
 """
 
-async def _update_ticket_timestamp_and_save(ticket_id: str, all_tickets: TicketsStorageModel) -> TicketsStorageModel:
+async def _update_ticket_timestamp_and_save(ticket_id: int, all_tickets: TicketsStorageModel) -> TicketsStorageModel:
     if ticket_id in all_tickets:
-        all_tickets[ticket_id].updatedAt = datetime.now(timezone.utc)
+        all_tickets[ticket_id].updated = ticket_storage.generate_id()
         # No need to re-parse, Pydantic model is updated directly
     await ticket_storage.write_tickets(all_tickets)
     return all_tickets
@@ -153,11 +153,12 @@ Break the ticket down into step-by-step tasks that are clear, actionable, and sp
         raise ApiError(500, error_message, "TASK_SUGGESTION_FAILED_PY", {"original_error": str(e)})
 
 async def create_ticket(data: TicketCreate) -> TicketBase:
-    ticket_id = ticket_storage.generate_id('tkt'); now = datetime.now(timezone.utc)
+    ticket_id = ticket_storage.generate_id()
+    now_ms = ticket_storage.generate_id()
     new_ticket_data = TicketBase(
         id=ticket_id, projectId=data.projectId, title=data.title, overview=data.overview or "",
         status=data.status or "open", priority=data.priority or "normal",
-        suggestedFileIds=json.dumps(data.suggestedFileIds or []), createdAt=now, updatedAt=now
+        suggestedFileIds=json.dumps(data.suggestedFileIds or []), created=now_ms, updated=now_ms
     )
     try:
         # Validation happens on Pydantic model instantiation
@@ -172,19 +173,19 @@ async def create_ticket(data: TicketCreate) -> TicketBase:
     except ApiError: raise
     except Exception as e: print(f"Failed to create ticket: {e}"); raise ApiError(500, "Failed to create ticket", "CREATE_TICKET_FAILED", {"originalError": str(e)})
 
-async def get_ticket_by_id(ticket_id: str) -> TicketBase:
+async def get_ticket_by_id(ticket_id: int) -> TicketBase:
     all_tickets = await ticket_storage.read_tickets()
     ticket_data = all_tickets.get(ticket_id)
     if not ticket_data: raise ApiError(404, f"Ticket {ticket_id} not found", 'TICKET_NOT_FOUND')
     return ticket_data
 
-async def list_tickets_by_project(project_id: str, status_filter: Optional[str] = None) -> List[TicketBase]:
+async def list_tickets_by_project(project_id: int, status_filter: Optional[str] = None) -> List[TicketBase]:
     all_tickets = await ticket_storage.read_tickets()
     tickets = [t for t in all_tickets.values() if t.projectId == project_id]
     if status_filter: tickets = [t for t in tickets if t.status == status_filter]
-    return sorted(tickets, key=lambda t: t.createdAt, reverse=True)
+    return sorted(tickets, key=lambda t: t.created, reverse=True)
 
-async def update_ticket(ticket_id: str, data: TicketUpdate) -> TicketBase:
+async def update_ticket(ticket_id: int, data: TicketUpdate) -> TicketBase:
     all_tickets = await ticket_storage.read_tickets()
     existing_ticket = all_tickets.get(ticket_id)
     if not existing_ticket: raise ApiError(404, f"Ticket {ticket_id} not found for update", 'TICKET_NOT_FOUND')
@@ -197,7 +198,7 @@ async def update_ticket(ticket_id: str, data: TicketUpdate) -> TicketBase:
         update_data_dict['suggestedFileIds'] = json.dumps(update_data_dict['suggestedFileIds'])
 
     updated_ticket = existing_ticket.model_copy(update=update_data_dict)
-    updated_ticket.updatedAt = datetime.now(timezone.utc)
+    updated_ticket.updated = ticket_storage.generate_id()
     try:
         # Validate the whole model again (Pydantic does this implicitly on copy+update if types change, but good to be aware)
         all_tickets[ticket_id] = TicketBase.model_validate(updated_ticket.model_dump()) # Ensure it's a clean TicketBase
@@ -207,14 +208,14 @@ async def update_ticket(ticket_id: str, data: TicketUpdate) -> TicketBase:
     except ApiError: raise
     except Exception as e: raise ApiError(500, f"Failed to update ticket {ticket_id}", "UPDATE_TICKET_FAILED", {"originalError": str(e)})
 
-async def delete_ticket(ticket_id: str) -> None:
+async def delete_ticket(ticket_id: int) -> None:
     all_tickets = await ticket_storage.read_tickets()
     if ticket_id not in all_tickets: raise ApiError(404, f"Ticket {ticket_id} not found for deletion", 'TICKET_NOT_FOUND')
     del all_tickets[ticket_id]
     await ticket_storage.write_tickets(all_tickets)
     await ticket_storage.delete_ticket_data(ticket_id)
 
-async def link_files_to_ticket(ticket_id: str, file_ids: List[str]) -> List[TicketFileBase]:
+async def link_files_to_ticket(ticket_id: int, file_ids: List[int]) -> List[TicketFileBase]:
     ticket = await get_ticket_by_id(ticket_id)
     project_files = await project_storage.read_project_files(ticket.projectId)
     for file_id in file_ids:
@@ -223,9 +224,11 @@ async def link_files_to_ticket(ticket_id: str, file_ids: List[str]) -> List[Tick
     ticket_links = await ticket_storage.read_ticket_files(ticket_id)
     existing_file_ids = {link.fileId for link in ticket_links}
     new_links_made = False
+    now_ms = ticket_storage.generate_id()
     for file_id in file_ids:
         if file_id not in existing_file_ids:
-            ticket_links.append(TicketFileBase(ticketId=ticket_id, fileId=file_id)); new_links_made = True
+            link_id = ticket_storage.generate_id()
+            ticket_links.append(TicketFileBase(id=link_id, ticketId=ticket_id, fileId=file_id, uploadedAt=now_ms)); new_links_made = True
     
     if new_links_made:
         await ticket_storage.write_ticket_files(ticket_id, ticket_links)
@@ -233,11 +236,11 @@ async def link_files_to_ticket(ticket_id: str, file_ids: List[str]) -> List[Tick
         await _update_ticket_timestamp_and_save(ticket_id, all_tickets)
     return ticket_links
 
-async def get_ticket_files(ticket_id: str) -> List[TicketFileBase]:
+async def get_ticket_files(ticket_id: int) -> List[TicketFileBase]:
     await get_ticket_by_id(ticket_id) # Ensures ticket exists
     return await ticket_storage.read_ticket_files(ticket_id)
 
-async def suggest_tasks_for_ticket(ticket_id: str, user_context: Optional[str] = None) -> List[str]:
+async def suggest_tasks_for_ticket(ticket_id: int, user_context: Optional[str] = None) -> List[str]:
     ticket = await get_ticket_by_id(ticket_id)
     try:
         suggestions = await fetch_task_suggestions_for_ticket(ticket, user_context)
@@ -247,7 +250,7 @@ async def suggest_tasks_for_ticket(ticket_id: str, user_context: Optional[str] =
         if isinstance(e, ApiError): raise e
         raise ApiError(500, "Failed to suggest tasks", "TASK_SUGGESTION_FAILED", {"originalError": str(e)})
 
-async def get_tickets_with_files(project_id: str) -> List[Dict[str, Any]]:
+async def get_tickets_with_files(project_id: int) -> List[Dict[str, Any]]:
     project_tickets = await list_tickets_by_project(project_id)
     results = []
     for ticket in project_tickets:
@@ -256,12 +259,13 @@ async def get_tickets_with_files(project_id: str) -> List[Dict[str, Any]]:
         results.append(ticket_dict)
     return results
 
-async def create_task(ticket_id: str, content: str) -> TicketTaskBase:
+async def create_task(ticket_id: int, content: str) -> TicketTaskBase:
     await get_ticket_by_id(ticket_id) # Ensure ticket exists
-    task_id = ticket_storage.generate_id('task'); now = datetime.now(timezone.utc)
+    task_id = ticket_storage.generate_id()
+    now_ms = ticket_storage.generate_id()
     ticket_tasks = await ticket_storage.read_ticket_tasks(ticket_id)
     order_idx = max([t.orderIndex for t in ticket_tasks.values()], default=0) + 1
-    new_task_data = TicketTaskBase(id=task_id, ticketId=ticket_id, content=content, orderIndex=order_idx, createdAt=now, updatedAt=now)
+    new_task_data = TicketTaskBase(id=task_id, ticketId=ticket_id, content=content, orderIndex=order_idx, created=now_ms, updated=now_ms)
     try:
         if task_id in ticket_tasks: raise ApiError(509, "Task ID conflict", "TASK_ID_CONFLICT")
         ticket_tasks[task_id] = new_task_data
@@ -273,12 +277,12 @@ async def create_task(ticket_id: str, content: str) -> TicketTaskBase:
     except ApiError: raise
     except Exception as e: raise ApiError(500, "Failed to create task", "CREATE_TASK_FAILED", {"originalError": str(e)})
 
-async def get_tasks(ticket_id: str) -> List[TicketTaskBase]:
+async def get_tasks(ticket_id: int) -> List[TicketTaskBase]:
     await get_ticket_by_id(ticket_id) # Ensure ticket exists
     ticket_tasks_data = await ticket_storage.read_ticket_tasks(ticket_id)
     return sorted(list(ticket_tasks_data.values()), key=lambda t: t.orderIndex)
 
-async def delete_task(ticket_id: str, task_id: str) -> None:
+async def delete_task(ticket_id: int, task_id: int) -> None:
     await get_ticket_by_id(ticket_id) # Ensure ticket exists
     ticket_tasks = await ticket_storage.read_ticket_tasks(ticket_id)
     if task_id not in ticket_tasks: raise ApiError(404, "Task not found for ticket", "TASK_NOT_FOUND_FOR_TICKET")
@@ -287,31 +291,34 @@ async def delete_task(ticket_id: str, task_id: str) -> None:
     all_tickets = await ticket_storage.read_tickets()
     await _update_ticket_timestamp_and_save(ticket_id, all_tickets)
 
-async def reorder_tasks(ticket_id: str, task_reorders: List[Dict[str, Any]]) -> List[TicketTaskBase]: #taskId, orderIndex
+async def reorder_tasks(ticket_id: int, task_reorders: List[Dict[str, Any]]) -> List[TicketTaskBase]:
     await get_ticket_by_id(ticket_id)
-    ticket_tasks = await ticket_storage.read_ticket_tasks(ticket_id); changed = False; now = datetime.now(timezone.utc)
+    ticket_tasks = await ticket_storage.read_ticket_tasks(ticket_id); changed = False; now_ms = ticket_storage.generate_id()
     for reorder_info in task_reorders:
         task_id, order_index = reorder_info.get('taskId'), reorder_info.get('orderIndex')
         if not task_id or order_index is None: continue # or raise error
-        task = ticket_tasks.get(task_id)
-        if not task: raise ApiError(404, f"Task {task_id} not found for reorder", "TASK_NOT_FOUND_FOR_TICKET")
-        if task.orderIndex != order_index: task.orderIndex = order_index; task.updatedAt = now; changed = True
+        current_task_id = int(task_id) if isinstance(task_id, str) else task_id 
+        task = ticket_tasks.get(current_task_id)
+        if not task: raise ApiError(404, f"Task {current_task_id} not found for reorder", "TASK_NOT_FOUND_FOR_TICKET")
+        if task.orderIndex != order_index: task.orderIndex = order_index; task.updated = now_ms; changed = True
     if changed:
         await ticket_storage.write_ticket_tasks(ticket_id, ticket_tasks)
         all_tickets = await ticket_storage.read_tickets()
         await _update_ticket_timestamp_and_save(ticket_id, all_tickets)
     return sorted(list(ticket_tasks.values()), key=lambda t: t.orderIndex)
 
-async def auto_generate_tasks_from_overview(ticket_id: str) -> List[TicketTaskBase]:
+async def auto_generate_tasks_from_overview(ticket_id: int) -> List[TicketTaskBase]:
     ticket = await get_ticket_by_id(ticket_id)
     titles = await suggest_tasks_for_ticket(ticket_id, ticket.overview or '')
     inserted_tasks: List[TicketTaskBase] = []
     if titles:
         ticket_tasks = await ticket_storage.read_ticket_tasks(ticket_id)
-        current_max_order = max([t.orderIndex for t in ticket_tasks.values()], default=0); now = datetime.now(timezone.utc)
+        current_max_order = max([t.orderIndex for t in ticket_tasks.values()], default=0)
+        now_ms = ticket_storage.generate_id()
         for content in titles:
-            current_max_order += 1; task_id = ticket_storage.generate_id('task')
-            new_task_data = TicketTaskBase(id=task_id, ticketId=ticket_id, content=content, orderIndex=current_max_order, createdAt=now, updatedAt=now)
+            current_max_order += 1
+            task_id = ticket_storage.generate_id()
+            new_task_data = TicketTaskBase(id=task_id, ticketId=ticket_id, content=content, orderIndex=current_max_order, created=now_ms, updated=now_ms)
             try:
                 ticket_tasks[task_id] = new_task_data # Assumes TicketTaskBase is validated on creation
                 inserted_tasks.append(new_task_data)
@@ -322,7 +329,7 @@ async def auto_generate_tasks_from_overview(ticket_id: str) -> List[TicketTaskBa
             await _update_ticket_timestamp_and_save(ticket_id, all_tickets)
     return inserted_tasks
 
-async def list_tickets_with_task_count(project_id: str, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+async def list_tickets_with_task_count(project_id: int, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
     tickets = await list_tickets_by_project(project_id, status_filter); results = []
     for ticket in tickets:
         tasks_data = await ticket_storage.read_ticket_tasks(ticket.id)
@@ -332,9 +339,9 @@ async def list_tickets_with_task_count(project_id: str, status_filter: Optional[
         results.append(ticket_dict)
     return results
 
-async def get_tasks_for_tickets(ticket_ids: List[str]) -> Dict[str, List[TicketTaskBase]]:
+async def get_tasks_for_tickets(ticket_ids: List[int]) -> Dict[int, List[TicketTaskBase]]:
     if not ticket_ids: return {}
-    tasks_by_ticket: Dict[str, List[TicketTaskBase]] = {}
+    tasks_by_ticket: Dict[int, List[TicketTaskBase]] = {}
     all_tickets_map = await ticket_storage.read_tickets() # Fetch all tickets metadata once
     for ticket_id in ticket_ids:
         if ticket_id in all_tickets_map: # Check if ticket exists
@@ -342,27 +349,27 @@ async def get_tasks_for_tickets(ticket_ids: List[str]) -> Dict[str, List[TicketT
             tasks_by_ticket[ticket_id] = sorted(list(tasks_data.values()), key=lambda t: t.orderIndex)
     return tasks_by_ticket
 
-async def list_tickets_with_tasks(project_id: str, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+async def list_tickets_with_tasks(project_id: int, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
     base_tickets = await list_tickets_by_project(project_id, status_filter)
     if not base_tickets: return []
     tasks_by_ticket = await get_tasks_for_tickets([t.id for t in base_tickets])
     return [{**t.model_dump(), 'tasks': tasks_by_ticket.get(t.id, [])} for t in base_tickets]
 
-async def get_ticket_with_suggested_files(ticket_id: str) -> Optional[Dict[str, Any]]:
+async def get_ticket_with_suggested_files(ticket_id: int) -> Optional[Dict[str, Any]]:
     ticket = await get_ticket_by_id(ticket_id)
     if not ticket: return None
-    parsed_file_ids: List[str] = []
+    parsed_file_ids: List[int] = []
     try:
         if ticket.suggestedFileIds:
             parsed = json.loads(ticket.suggestedFileIds)
-            if isinstance(parsed, list): parsed_file_ids = [str(id_val) for id_val in parsed if isinstance(id_val, (str, int))] # basic filter
+            if isinstance(parsed, list): parsed_file_ids = [int(id_val) for id_val in parsed if isinstance(id_val, (str, int))] # Ensure int
     except json.JSONDecodeError: print(f"Could not parse suggestedFileIds for {ticket_id}")
     
     ticket_dict = ticket.model_dump()
     ticket_dict['parsedSuggestedFileIds'] = parsed_file_ids
     return ticket_dict
 
-async def update_task(ticket_id: str, task_id: str, updates: Dict[str, Any]) -> TicketTaskBase:
+async def update_task(ticket_id: int, task_id: int, updates: Dict[str, Any]) -> TicketTaskBase:
     await get_ticket_by_id(ticket_id) # Ensure ticket exists
     ticket_tasks = await ticket_storage.read_ticket_tasks(ticket_id)
     existing_task = ticket_tasks.get(task_id)
@@ -375,7 +382,7 @@ async def update_task(ticket_id: str, task_id: str, updates: Dict[str, Any]) -> 
 
     if changed:
         updated_task_model = existing_task.model_copy(update=update_data_dict)
-        updated_task_model.updatedAt = datetime.now(timezone.utc)
+        updated_task_model.updated = ticket_storage.generate_id()
         try:
             ticket_tasks[task_id] = TicketTaskBase.model_validate(updated_task_model.model_dump()) # Re-validate
             await ticket_storage.write_ticket_tasks(ticket_id, ticket_tasks)
@@ -385,7 +392,7 @@ async def update_task(ticket_id: str, task_id: str, updates: Dict[str, Any]) -> 
         except ValidationError as e: raise ApiError(500, f"Validation failed updating task {task_id}", "TASK_VALIDATION_ERROR", e.errors())
     return existing_task
 
-async def suggest_files_for_ticket(ticket_id: str, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def suggest_files_for_ticket(ticket_id: int, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     ticket = await get_ticket_by_id(ticket_id)
     try: # Simplified logic from TS version
         project_files_map = await project_storage.read_project_files(ticket.projectId)

@@ -20,7 +20,7 @@ import { getFullProjectSummary } from '@/utils/get-full-project-summary'
 
 export async function createProject(data: CreateProjectBody): Promise<Project> {
   const projectId = projectStorage.generateId('proj')
-  const now = new Date().toISOString()
+  const now = Date.now()
 
   const newProjectData: Project = {
     id: projectId,
@@ -80,7 +80,7 @@ export async function listProjects(): Promise<Project[]> {
   try {
     const projects = await projectStorage.readProjects()
     const projectList = Object.values(projects)
-    projectList.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    projectList.sort((a, b) => b.updatedAt - a.updatedAt)
     return projectList
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -106,7 +106,7 @@ export async function updateProject(projectId: string, data: UpdateProjectBody):
       name: data.name ?? existingProject.name,
       path: data.path ?? existingProject.path,
       description: data.description ?? existingProject.description,
-      updatedAt: new Date().toISOString()
+      updatedAt: Date.now()
     }
 
     const validatedProject = ProjectSchema.parse(updatedProjectData)
@@ -194,7 +194,7 @@ export async function updateFileContent(
       )
     }
 
-    const newUpdatedAt = options?.updatedAt?.toISOString() ?? new Date().toISOString()
+    const newUpdatedAt = options?.updatedAt?.getTime() ?? Date.now()
 
     const updatedFileData: ProjectFile = {
       ...existingFile,
@@ -274,7 +274,7 @@ export async function removeSummariesFromFiles(
     }
     const files = await projectStorage.readProjectFiles(projectId)
     let removedCount = 0
-    const now = new Date().toISOString()
+    const now = Date.now()
     let changesMade = false
 
     for (const fileId of fileIds) {
@@ -342,7 +342,7 @@ export async function createProjectFileRecord(
   const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath)
 
   const fileId = projectStorage.generateId('file')
-  const now = new Date().toISOString()
+  const now = Date.now()
   const fileName = path.basename(normalizedRelativePath)
   const fileExtension = path.extname(normalizedRelativePath)
   const size = Buffer.byteLength(initialContent, 'utf8')
@@ -413,7 +413,7 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
   }
 
   const createdFiles: ProjectFile[] = []
-  const now = new Date().toISOString()
+  const now = Date.now()
   let filesMap: ProjectFilesStorage
 
   try {
@@ -499,7 +499,7 @@ export async function bulkUpdateProjectFiles(
   }
 
   const updatedFilesResult: ProjectFile[] = []
-  const now = new Date().toISOString()
+  const now = Date.now()
   let files: ProjectFilesStorage
   let changesMade = false
 
@@ -694,7 +694,8 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
     const trimmedSummary = summary.trim()
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
-      summary: trimmedSummary
+      summary: trimmedSummary,
+      summaryLastUpdatedAt: Date.now()
     })
 
     console.log(

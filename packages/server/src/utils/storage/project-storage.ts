@@ -218,7 +218,7 @@ export const projectStorage = {
   async updateProjectFile(
     projectId: string,
     fileId: string,
-    fileData: Partial<Omit<ProjectFile, 'updatedAt' | 'createdAt'>>
+    fileData: Partial<Omit<ProjectFile, 'updated' | 'created'>>
   ): Promise<ProjectFile> {
     //  get current file data
     const currentFile = await this.readProjectFile(projectId, fileId)

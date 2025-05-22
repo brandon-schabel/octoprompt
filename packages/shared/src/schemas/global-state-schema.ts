@@ -18,22 +18,22 @@ export const apiProviders = providerSchema.options
 export const projectTabStateSchema = z
   .object({
     selectedProjectId: z
-      .string()
+      .number()
       .nullable()
       .optional()
       .default(null)
       .openapi({
         description: 'ID of the currently selected project within this tab, or null.',
-        example: 'proj_123abc'
+        example: 30274374372023
       }),
     editProjectId: z
-      .string()
+      .number()
       .nullable()
       .optional()
       .default(null)
       .openapi({
         description: 'ID of the project whose settings are being edited within this tab, or null.',
-        example: null
+        example: 30274374372023
       }),
     promptDialogOpen: z
       .boolean()

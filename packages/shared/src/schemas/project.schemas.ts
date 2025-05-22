@@ -7,8 +7,8 @@ export const ProjectSchema = z
     name: z.string(),
     description: z.string(),
     path: z.string(),
-    createdAt: z.string().datetime().openapi({ example: '2024-03-10T10:00:00.000Z' }),
-    updatedAt: z.string().datetime().openapi({ example: '2024-03-10T10:05:00.000Z' })
+    createdAt: z.number().int().openapi({ example: 1678442400000 }),
+    updatedAt: z.number().int().openapi({ example: 1678442700000 })
   })
   .openapi('Project')
 
@@ -22,11 +22,11 @@ export const ProjectFileSchema = z
     size: z.number(),
     content: z.string().nullable(),
     summary: z.string().nullable(),
-    summaryLastUpdatedAt: z.string().datetime().nullable(),
+    summaryLastUpdatedAt: z.number().int().nullable().openapi({ example: 1678442800000 }),
     meta: z.string().nullable(),
     checksum: z.string().nullable(),
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime()
+    createdAt: z.number().int().openapi({ example: 1678442400000 }),
+    updatedAt: z.number().int().openapi({ example: 1678442700000 })
   })
   .openapi('ProjectFile')
 

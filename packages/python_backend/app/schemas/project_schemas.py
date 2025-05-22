@@ -4,21 +4,28 @@
 # - Mapped Zod types/validators to Pydantic/Python types
 # - Matched OpenAPI examples and descriptions
 # - Handled optional fields and datetime strings
+# - Changed datetime fields to int (Unix ms) and added validators.
 
 from typing import Optional, List, Dict, Any, Literal
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, field_validator
 from datetime import datetime, timezone
+from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int
 
 class Project(BaseModel):
-    id: str = Field(..., example='proj_1a2b3c4d')
+    id: int
     name: str
-    description: str
     path: str
-    createdAt: datetime = Field(..., example='2024-03-10T10:00:00.000Z')
-    updatedAt: datetime = Field(..., example='2024-03-10T10:05:00.000Z')
+    currentBranch: Optional[str] = None
+    description: Optional[str] = None
+    created: int
+    updated: int
+    files: Optional[List['ProjectFile']] = [] # List of ProjectFile, can be empty
+
+    _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
 
     class Config:
-        openapi_extra = {"title": "Project"} # For .openapi('Project')
+        openapi_extra = {"title": "Project"}
+        # No json_encoders needed here as fields are int
 
 class CreateProjectBody(BaseModel):
     name: str = Field(..., min_length=1, example='My Awesome Project')
@@ -30,26 +37,24 @@ class CreateProjectBody(BaseModel):
 
 # Similarly, for ProjectFileSchema:
 class ProjectFile(BaseModel):
-    id: str
-    projectId: str
-    name: str
+    id: int
+    projectid: int
     path: str
-    extension: str
-    size: int # z.number() often means float or int; choose appropriately
     content: Optional[str] = None
+    extractedSymbols: Optional[Dict[str, Any]] = None # Can be any nested structure
+    codeStory: Optional[str] = None
     summary: Optional[str] = None
-    summaryLastUpdatedAt: Optional[datetime] = None
-    meta: Optional[str] = None # Or use Dict[str, Any] if it's parsed JSON
-    checksum: Optional[str] = None
-    createdAt: datetime
-    updatedAt: datetime
+    created: int
+    updated: int
+
+    _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
 
     class Config:
         openapi_extra = {"title": "ProjectFile"}
 
 # For ProjectIdParamsSchema
 class ProjectIdParams(BaseModel):
-    project_id: str = Field(..., min_length=1, alias="projectId", examples=["proj_1a2b3c4d"], description="The ID of the project")
+    project_id: int = Field(..., min_length=1, alias="projectId", examples=["proj_1a2b3c4d"], description="The ID of the project")
 
     model_config = {
         "populate_by_name": True,

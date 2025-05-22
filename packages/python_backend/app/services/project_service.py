@@ -36,6 +36,10 @@ from app.utils.get_full_project_summary import get_full_project_summary
 # Import the new project_storage instance
 from app.utils.storage.project_storage import project_storage, ProjectFilesStorageModel # Import the model for validation if needed elsewhere
 
+# Import AI service functions
+from app.services.gen_ai_service import generate_single_text, generate_structured_data
+from app.schemas.gen_ai_schemas import AiSdkOptions # For AI options
+
 # --- Error Handling ---
 class ApiError(Exception):
     def __init__(self, status_code: int, message: str, code: str, details: Any = None):
@@ -62,31 +66,7 @@ def resolve_path(base_path: str, relative_or_absolute_path: Optional[str] = None
     return str((Path(base_path) / path_obj).resolve())
 
 # --- Placeholder for AI Services (from ./gen-ai-services) ---
-# These need to be implemented, potentially calling external APIs or local models
-class MockAIResponse:
-    def __init__(self, text: Optional[str] = None, object_data: Optional[Dict[str,Any]] = None):
-        self.text = text or ""
-        self.object = object_data or {}
-
-async def generate_single_text(params: Dict[str, Any]) -> MockAIResponse:
-    print(f"[project_service.py] Placeholder: generate_single_text called with prompt: {params.get('prompt')[:50]}...")
-    return MockAIResponse(text="Optimized: " + params.get('prompt', ""))
-
-async def generate_structured_data(params: Dict[str, Any]) -> MockAIResponse:
-    print(f"[project_service.py] Placeholder: generate_structured_data called with prompt: {params.get('prompt')[:50]}...")
-    if hasattr(params.get('schema'), "model_json_schema"):
-        mock_data = {}
-        try:
-            schema_props = params['schema'].model_json_schema().get("properties", {})
-            for field_name, field_props in schema_props.items():
-                if field_props.get("type") == "string": mock_data[field_name] = f"mock {field_name}"
-                elif field_props.get("type") == "integer": mock_data[field_name] = 123
-            if 'summary' in schema_props: mock_data['summary'] = "This is a mock summary of the file content."
-            return MockAIResponse(object_data=mock_data)
-        except Exception as e:
-            print(f"Error generating mock structured data: {e}")
-            return MockAIResponse(object_data={"summary": "Mock summary error"})
-    return MockAIResponse(object_data={"summary": "Default mock summary"})
+# These are now imported from gen_ai_service.py
 
 # --- Placeholder for File Sync Service (from ./file-services/file-sync-service-unified) ---
 async def sync_project(project: Project) -> None:
@@ -96,9 +76,19 @@ async def sync_project(project: Project) -> None:
 # --- Project Service Functions ---
 
 async def create_project(data: CreateProjectBody) -> Project:
-    project_id = project_storage.generate_id("proj")
+    print(f"[project_service.py] create_project called for project {data.name}")
+    print(f"[project_service.py] data: {data}")
+    project_id = project_storage.generate_id()
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    new_project_data = {"id": project_id, "name": data.name, "path": data.path, "description": data.description or "", "created_at": now_iso, "updated_at": now_iso}
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    new_project_data = {
+        "id": project_id,
+        "name": data.name,
+        "path": data.path,
+        "description": data.description or "",
+        "created": now_ms,
+        "updated": now_ms
+    }
     try:
         validated_project = Project(**new_project_data)
         projects = await project_storage.read_projects()
@@ -127,8 +117,11 @@ async def get_project_by_id(project_id: str) -> Optional[Project]:
 async def list_projects() -> List[Project]:
     try:
         projects_dict = await project_storage.read_projects()
-        project_list = [Project(**data) for data in projects_dict.values() if isinstance(data, dict)]
-        project_list.sort(key=lambda p: p.updated_at, reverse=True)
+        # Values from projects_dict are already Pydantic model instances (project_storage.Project)
+        # We need to convert them to app.schemas.project_schemas.Project instances
+        # Safest way is to dump to dict and then parse with the target model
+        project_list = [Project(**p.model_dump()) for p in projects_dict.values()]
+        project_list.sort(key=lambda p: p.updated, reverse=True) # Corrected sort key to 'updated'
         return project_list
     except ApiError as e: raise e
     except Exception as e: raise ApiError(500, f"Failed to list projects. Reason: {str(e)}", "PROJECT_LIST_FAILED")
@@ -142,7 +135,7 @@ async def update_project(project_id: str, data: UpdateProjectBody) -> Optional[P
         update_fields = data.model_dump(exclude_unset=True)
         if not update_fields: raise ApiError(400, "At least one field (name, path, description) must be provided for update", "UPDATE_NO_FIELDS")
         updated_project_data = existing_project.model_copy(update=update_fields)
-        updated_project_data.updated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        updated_project_data.updated = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         validated_project = Project(**updated_project_data.model_dump())
         projects[project_id] = validated_project.model_dump(mode='json')
         await project_storage.write_projects(projects)
@@ -180,12 +173,12 @@ async def update_file_content(project_id: str, file_id: str, content: str, optio
     try:
         # project_storage.update_project_file handles read, merge, validate, write
         now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        updated_at_dt = options.get("updatedAt") if options else None
+        updated_at_dt = options.get("updated") if options else None
         
         update_payload: Dict[str, Any] = {
             "content": content,
             "size": len(content.encode('utf-8')),
-            "updated_at": updated_at_dt.isoformat().replace("+00:00", "Z") if updated_at_dt else now_iso
+            "updated": updated_at_dt.isoformat().replace("+00:00", "Z") if updated_at_dt else now_iso
             # checksum could be updated here if provided or calculated
         }
         
@@ -213,7 +206,7 @@ async def create_project_file_record(project_id: str, file_path: str, initial_co
         raise ApiError(400, f"File path '{file_path}' is not within the project path '{project.path}'.", "FILE_PATH_INVALID")
 
 
-    file_id = project_storage.generate_id("file")
+    file_id = project_storage.generate_id()
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     
     new_file_data = {
@@ -221,7 +214,7 @@ async def create_project_file_record(project_id: str, file_path: str, initial_co
         "path": normalized_relative_path, "extension": absolute_file_path.suffix,
         "size": len(initial_content.encode('utf-8')), "content": initial_content,
         "summary": None, "summaryLastUpdatedAt": None, "meta": "{}", "checksum": None,
-        "createdAt": now_iso, "updatedAt": now_iso,
+        "created": now_iso, "updated": now_iso,
     }
     try:
         validated_file = ProjectFile(**new_file_data)
@@ -258,10 +251,10 @@ async def bulk_create_project_files(project_id: str, files_to_create: List[FileS
                 print(f"[ProjectService] Skipping duplicate path in bulk create: {file_data.path} in project {project_id}")
                 continue
 
-            file_id = project_storage.generate_id("file")
+            file_id = project_storage.generate_id()
             if file_id in files_map: # Highly unlikely, but good to check
                 print(f"[ProjectService] File ID conflict during bulk create: {file_id}. Generating new one.")
-                file_id = project_storage.generate_id("file") # Try once more
+                file_id = project_storage.generate_id() # Try once more
                 if file_id in files_map: # If still conflict, skip
                      print(f"[ProjectService] Persistent File ID conflict for {file_id}. Skipping.")
                      continue
@@ -270,7 +263,7 @@ async def bulk_create_project_files(project_id: str, files_to_create: List[FileS
                 "id": file_id, "projectId": project_id, "name": file_data.name, "path": file_data.path,
                 "extension": file_data.extension, "size": file_data.size, "content": file_data.content,
                 "summary": None, "summaryLastUpdatedAt": None, "meta": "{}", "checksum": file_data.checksum,
-                "createdAt": now_iso, "updatedAt": now_iso
+                "created": now_iso, "updated": now_iso
             }
             try:
                 validated_file = ProjectFile(**new_file_obj_data)
@@ -308,7 +301,7 @@ async def bulk_update_project_files(project_id: str, updates: List[BulkUpdateIte
             
             update_payload = {
                 "content": data.content, "extension": data.extension, "size": data.size,
-                "checksum": data.checksum, "updatedAt": now_iso, "name": data.name, "path": data.path
+                "checksum": data.checksum, "updated": now_iso, "name": data.name, "path": data.path
             }
             # Create a new model with updates. model_copy is good for this.
             # Ensure all fields of ProjectFile are considered if `data` is used directly.
@@ -394,17 +387,30 @@ Ensure your output is valid JSON that conforms to the following Pydantic schema:
         raise ApiError(500, f"AI Model not configured for summarize-file task (file {file.path}).", "AI_MODEL_NOT_CONFIGURED", {"project_id": file.project_id, "file_id": file.id})
     
     try:
-        ai_response_obj = await generate_structured_data({
-            "prompt": file_content, "options": LOW_MODEL_CONFIG,
-            "schema": SummarySchema, "system_message": system_prompt,
-        })
-        if isinstance(ai_response_obj.object, SummarySchema): summary_data = ai_response_obj.object
-        elif isinstance(ai_response_obj.object, dict):
-            try: summary_data = SummarySchema(**ai_response_obj.object)
+        # Use AiSdkOptions for consistency with gen_ai_service
+        ai_options = AiSdkOptions(**LOW_MODEL_CONFIG)
+        
+        structured_response = await generate_structured_data(
+            prompt=file_content, 
+            output_schema=SummarySchema, # Pass the Pydantic model class directly
+            options=ai_options,
+            system_message_content=system_prompt,
+        )
+        # The actual data is in structured_response['object']
+        # The usage data is in structured_response['usage']
+        
+        raw_summary_data = structured_response.get("object")
+
+        if isinstance(raw_summary_data, dict):
+            try: summary_data = SummarySchema(**raw_summary_data)
             except ValidationError as ve:
                 print(f"[SummarizeSingleFile] Failed to validate AI summary for {file.path}: {ve.errors()}")
                 raise ApiError(500, "AI produced invalid summary structure", "AI_INVALID_SUMMARY_STRUCTURE", ve.errors())
-        else: raise ApiError(500, "AI returned unexpected summary object type", "AI_UNEXPECTED_SUMMARY_TYPE")
+        elif isinstance(raw_summary_data, SummarySchema): # If gen_ai_service returns a model instance
+            summary_data = raw_summary_data
+        else: 
+            print(f"[SummarizeSingleFile] Unexpected summary data type from AI: {type(raw_summary_data)}")
+            raise ApiError(500, "AI returned unexpected summary object type", "AI_UNEXPECTED_SUMMARY_TYPE")
         
         trimmed_summary = summary_data.summary.strip()
         updated_file = await project_storage.update_project_file(
@@ -506,7 +512,7 @@ async def remove_summaries_from_files(project_id: str, file_ids: List[str]) -> D
                     updated_file = file.model_copy(update={
                         "summary": None, 
                         "summaryLastUpdatedAt": None, 
-                        "updatedAt": now_iso # Pydantic handles datetime conversion if now_iso is str
+                        "updated": now_iso # Pydantic handles datetime conversion if now_iso is str
                     })
                     files_map[file_id] = updated_file
                     removed_count += 1
@@ -548,12 +554,15 @@ Follow the style guidelines and key requirements below:
     if not user_message: return ""
 
     try:
-        ai_response = await generate_single_text({
-            "systemMessage": system_message, # Ensure generate_single_text uses this
-            "prompt": user_message,
-            "options": LOW_MODEL_CONFIG # Pass model config if generate_single_text expects it
-        })
-        return ai_response.text.strip()
+        # Use AiSdkOptions for consistency with gen_ai_service
+        ai_options = AiSdkOptions(**LOW_MODEL_CONFIG)
+
+        ai_response_text = await generate_single_text(
+            system_message_content=system_message, # Renamed from systemMessage
+            prompt=user_message,
+            options=ai_options
+        )
+        return ai_response_text.strip() # generate_single_text returns a string
     except ApiError as e: raise e
     except Exception as e:
         print(f'[OptimizeUserInput] Failed to optimize prompt: {str(e)}')

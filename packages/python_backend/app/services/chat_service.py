@@ -29,9 +29,9 @@ class ChatService:
             raise ApiError(status_code=500, detail=f"Validation failed updating chat timestamp for {chat_id}.", error_code='CHAT_VALIDATION_ERROR', dev_details=e.errors())
 
     async def create_chat(self, title: str, options: Optional[dict] = None) -> Chat:
-        chat_id = chat_storage.generate_id("chat")
+        chat_id = chat_storage.generate_id()
         now = datetime.now(timezone.utc)
-        new_chat_data = Chat(id=chat_id, title=title, created_at=now, updated_at=now)
+        new_chat_data = Chat(id=chat_id, title=title, created=now, updated=now)
         # Pydantic model_validate would happen on instantiation or via parse_obj
         # No need for explicit Chat.model_validate(new_chat_data) unless data is from untrusted source before this point
 
@@ -51,7 +51,7 @@ class ChatService:
             source_messages_storage = await chat_storage.read_chat_messages(options["currentChatId"])
             messages_to_copy_data = {}
             for msg_id, msg_data in source_messages_storage.data.items():
-                new_msg_id = chat_storage.generate_id("msg")
+                new_msg_id = chat_storage.generate_id()
                 copied_msg = msg_data.model_copy(update={"id": new_msg_id, "chat_id": chat_id}) # Pydantic's copy method
                 # ChatMessage.model_validate(copied_msg) implicitly done by copy and update if types are correct
                 messages_to_copy_data[new_msg_id] = copied_msg
@@ -64,7 +64,7 @@ class ChatService:
         if message.chat_id not in all_chats.data:
             raise ApiError(status_code=404, detail=f"Chat {message.chat_id} not found.", error_code='CHAT_NOT_FOUND_FOR_MESSAGE')
 
-        message_id = message.id or chat_storage.generate_id("msg")
+        message_id = message.id or chat_storage.generate_id()
         now = datetime.now(timezone.utc)
 
         # Ensure role is valid if coming as string
@@ -75,7 +75,7 @@ class ChatService:
             chat_id=message.chat_id,
             role=valid_role,
             content=message.content,
-            created_at=message.created_at or now
+            created=message.created_at or now
         )
         # Pydantic validation happens on instantiation
 
