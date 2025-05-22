@@ -241,7 +241,15 @@ async def sync_project_files_route(project_id: str = FastAPIPath(..., min_length
     }
 )
 async def get_project_files_route(project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project")):
+    print(f"[get_project_files_route] project_id: {project_id}")
+    print(f"[get_project_files_route] project_id_type: {type(project_id)}")
+
+    project_id = int(project_id)
+    print(f"[get_project_files_route] project_id_int: {project_id}")
+    print(f"[get_project_files_route] project_id_int_type: {type(project_id)}")
+
     project = await project_service.get_project_by_id(project_id) # Ensure project exists
+    print(f"[get_project_files_route] project: {project}")
     if not project:
         raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
     
@@ -294,21 +302,52 @@ async def refresh_project_route(
     responses={
         status.HTTP_404_NOT_FOUND: {"model": ApiErrorResponse, "description": "Project not found"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ApiErrorResponse, "description": "Validation Error"},
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ApiErrorResponse, "description": "Internal Server Error"}
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ApiErrorResponse, "description": "Internal Server Error or failed to generate summary for existing project"}
     }
 )
 async def get_project_summary_route(project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project")):
-    # Ensure get_full_project_summary uses actual service calls, not placeholders
-    summary_result = await get_full_project_summary(project_id)
-    
-    if isinstance(summary_result, dict): # Error object from get_full_project_summary
-        # This indicates "No summaries available" or similar, treat as error for this route's expectation
-        raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, summary_result.get("message", "Failed to generate project summary"), "PROJECT_SUMMARY_FAILED_NO_FILES")
 
-    if not isinstance(summary_result, str): # Should be string if successful
-         raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, "Invalid summary format received", "PROJECT_SUMMARY_INVALID_FORMAT")
+    print(f"[get_project_summary_route] project_id: {project_id}")
+    print(f"[get_project_summary_route] project_id_type: {type(project_id)}")
 
-    return ProjectSummaryResponse(success=True, summary=summary_result)
+    project_id = int(project_id)
+    print(f"[get_project_summary_route] project_id_int: {project_id}")
+    print(f"[get_project_summary_route] project_id_int_type: {type(project_id)}")
+
+    try:
+        # Assuming get_full_project_summary handles project existence check internally.
+        # If project doesn't exist, it should raise an ApiError that results in a 404.
+        summary_result = await get_full_project_summary(project_id)
+
+        if isinstance(summary_result, str):
+            # Successfully got a summary string
+            return ProjectSummaryResponse(success=True, summary=summary_result)
+        elif isinstance(summary_result, dict) and ("message" in summary_result or "error" in summary_result):
+            # This case, as per original logic, could mean "No summaries available" or a similar soft error for an existing project.
+            actual_message = summary_result.get("message", summary_result.get("error", "No specific message from get_full_project_summary"))
+            print(f"Project {project_id}: get_full_project_summary returned a dict: '{actual_message}'. Returning empty summary.")
+            return ProjectSummaryResponse(success=True, summary="") # Return empty summary for this case.
+        elif summary_result is None:
+            print(f"Project {project_id}: get_full_project_summary returned None. Returning empty summary.")
+            return ProjectSummaryResponse(success=True, summary="")
+        else:
+            # The result is not a string, not the expected error dict, and not None. This is an unexpected format.
+            print(f"Project {project_id}: get_full_project_summary returned an unexpected format: {type(summary_result)}. Value: {summary_result}")
+            raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, "Invalid summary format received from summary generation process.", "PROJECT_SUMMARY_INVALID_FORMAT")
+
+    except ApiError as e:
+        # If get_full_project_summary raises an ApiError.
+        if e.status_code == status.HTTP_404_NOT_FOUND:
+            print(f"Project {project_id} not found according to get_full_project_summary. Raising 404.")
+            raise # Re-raise the original 404 error.
+        else:
+            # For other ApiErrors (e.g., 500 from an AI provider during summarization for an existing project), re-raise.
+            print(f"Project {project_id}: ApiError during summary generation: {e.detail} (Status: {e.status_code}). Re-raising.")
+            raise
+    except Exception as e:
+        # Catch any other unexpected errors from get_full_project_summary.
+        print(f"Project {project_id}: Unexpected error during summary generation: {str(e)}. Raising 500.")
+        raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, f"An unexpected error occurred while generating project summary: {str(e)}", "PROJECT_SUMMARY_UNEXPECTED_ERROR")
 
 
 @router.post(
