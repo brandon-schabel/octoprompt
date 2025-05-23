@@ -325,8 +325,18 @@ export type BulkTasksResponse = {
 export type Chat = {
     id: number;
     title: string;
+    /**
+     * Creation timestamp (Unix ms)
+     */
     created: number;
+    /**
+     * Last update timestamp (Unix ms)
+     */
     updated: number;
+    /**
+     * Model configuration settings for this chat
+     */
+    chat_model_config?: ModelOptions;
 };
 
 export type ChatListResponse = {
@@ -384,7 +394,11 @@ export type CreateChatBody = {
      * Copy messages from currentChatId if true
      */
     copyExisting?: boolean | null;
-    currentChatId?: string | null;
+    currentChatId?: number | null;
+    /**
+     * Optional model configuration for the chat
+     */
+    modelConfig?: ModelOptions | null;
 };
 
 export type CreateProjectBody = {
@@ -464,7 +478,7 @@ export type ForkChatBody = {
     /**
      * Optional list of message IDs to exclude from the fork
      */
-    excludedMessageIds?: Array<string>;
+    excludedMessageIds?: Array<number>;
 };
 
 export type GenerateAiFileChangeBody = {
@@ -512,6 +526,17 @@ export type MessageListResponse = {
 };
 
 export type MessageRoleEnum = 'assistant' | 'user' | 'system';
+
+export type ModelOptions = {
+    model?: string | null;
+    maxTokens?: number | null;
+    temperature?: number | null;
+    topP?: number | null;
+    topK?: number | null;
+    frequencyPenalty?: number | null;
+    presencePenalty?: number | null;
+    stop?: string | Array<string> | null;
+};
 
 export type ModelsListResponse = {
     success?: true;
@@ -620,11 +645,11 @@ export type ProviderKey = {
      */
     id: number;
     /**
-     * AI Provider identifier (e.g., openai, anthropic)
+     * AI Provider identifier
      */
     provider: string;
     /**
-     * The actual API Key (handle with care)
+     * The actual API Key
      */
     key: string;
     /**
@@ -643,7 +668,7 @@ export type ProviderKeyListItem = {
      */
     id: number;
     /**
-     * AI Provider identifier (e.g., openai, anthropic)
+     * AI Provider identifier
      */
     provider: string;
     /**
@@ -667,7 +692,7 @@ export type ProviderKeyResponse = {
 };
 
 export type RemoveSummariesBody = {
-    fileIds: Array<string>;
+    fileIds: Array<number>;
 };
 
 export type RemoveSummariesResponse = {
@@ -730,7 +755,7 @@ export type SuggestedTasksResponse = {
 };
 
 export type SummarizeFilesBody = {
-    fileIds: Array<string>;
+    fileIds: Array<number>;
     /**
      * Force re-summarization even if summary exists
      */
@@ -937,14 +962,20 @@ export type AppSchemasCommonSchemasOperationSuccessResponse = {
 
 export type AppSchemasProjectSchemasProjectFile = {
     id: number;
-    projectid: number;
+    project_id: number;
+    name: string;
     path: string;
+    extension?: string | null;
+    size: number;
     content?: string | null;
     extractedSymbols?: {
         [key: string]: unknown;
     } | null;
     codeStory?: string | null;
     summary?: string | null;
+    summary_last_updated_at?: number | null;
+    meta?: string | null;
+    checksum?: string | null;
     created: number;
     updated: number;
 };
@@ -2090,7 +2121,7 @@ export type GetProjectSummaryRouteProjectsProjectIdSummaryGetErrors = {
      */
     422: AppSchemasCommonSchemasApiErrorResponse;
     /**
-     * Internal Server Error
+     * Internal Server Error or failed to generate summary for existing project
      */
     500: AppSchemasCommonSchemasApiErrorResponse;
 };
@@ -2307,7 +2338,7 @@ export type DeleteProviderKeyApiKeysKeyIdDeleteData = {
     body?: never;
     path: {
         /**
-         * The ID of the provider key to delete.
+         * The ID of the provider key to delete
          */
         keyId: string;
     };
@@ -2345,7 +2376,7 @@ export type GetProviderKeyByIdApiKeysKeyIdGetData = {
     body?: never;
     path: {
         /**
-         * The ID of the provider key to retrieve.
+         * The ID of the provider key to retrieve
          */
         keyId: string;
     };
@@ -2383,7 +2414,7 @@ export type UpdateProviderKeyApiKeysKeyIdPatchData = {
     body: UpdateProviderKeyBody;
     path: {
         /**
-         * The ID of the provider key to update.
+         * The ID of the provider key to update
          */
         keyId: string;
     };
@@ -3275,10 +3306,10 @@ export type PostAiGenerateTextEndpointApiAiGenerateTextPostResponse = PostAiGene
 
 export type GenerateAiFileChangeApiProjectsProjectIdAiFileChangesPostData = {
     body: GenerateAiFileChangeBody;
-    path: {
-        projectId: number;
+    path?: never;
+    query: {
+        project_id: number;
     };
-    query?: never;
     url: '/api/projects/{projectId}/ai-file-changes';
 };
 

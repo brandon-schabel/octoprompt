@@ -135,7 +135,7 @@ async def update_prompt(prompt_id: int, data: UpdatePromptBody) -> Prompt:
     update_data_dict = data.model_dump(exclude_unset=True) # Get only provided fields
     
     updated_prompt_data = existing_prompt.model_copy(update=update_data_dict)
-    updated_prompt_data.updated_at = prompt_storage_util.generate_id()
+    updated_prompt_data.updated = prompt_storage_util.generate_id()
 
     try:
         # Re-validate the whole model. Pydantic will ensure type correctness.

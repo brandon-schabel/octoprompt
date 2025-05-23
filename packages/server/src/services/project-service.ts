@@ -667,7 +667,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
   `
 
   const cfg = LOW_MODEL_CONFIG
-  const provider = (cfg.provider as APIProviders) || 'openai'
+  const provider = (cfg.provider as APIProviders) || 'openrouter'
   const modelId = cfg.model
 
   if (!modelId) {

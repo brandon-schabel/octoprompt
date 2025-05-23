@@ -1,39 +1,50 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { commonErrorHandler } from './common-mutation-error-handler'
 import {
-  getApiKeysOptions,
-  getApiKeysQueryKey,
-  postApiKeysMutation,
-  patchApiKeysByKeyIdMutation,
-  deleteApiKeysByKeyIdMutation
-} from '../../generated/@tanstack/react-query.gen'
+  listProviderKeysApiKeysGet,
+  createProviderKeyApiKeysPost,
+  updateProviderKeyApiKeysKeyIdPatch,
+  deleteProviderKeyApiKeysKeyIdDelete
+} from '../../generated-python/sdk.gen'
 import type {
   ProviderKeyListResponse,
   ProviderKeyResponse,
-  PostApiKeysData,
-  PostApiKeysError,
-  PatchApiKeysByKeyIdData,
-  PatchApiKeysByKeyIdError,
-  DeleteApiKeysByKeyIdData,
-  DeleteApiKeysByKeyIdError,
-  DeleteApiKeysByKeyIdResponse,
+  CreateProviderKeyApiKeysPostData,
+  CreateProviderKeyApiKeysPostError,
+  UpdateProviderKeyApiKeysKeyIdPatchData,
+  UpdateProviderKeyApiKeysKeyIdPatchError,
+  DeleteProviderKeyApiKeysKeyIdDeleteData,
+  DeleteProviderKeyApiKeysKeyIdDeleteError,
+  CreateProviderKeyBody,
+  UpdateProviderKeyBody,
   ProviderKey
-} from '../../generated/types.gen'
-import { Options } from '../../generated/sdk.gen'
+} from '../../generated-python/types.gen'
+import { Options } from '../../generated-python/sdk.gen'
 
-export type CreateKeyInput = PostApiKeysData['body']
-export type UpdateKeyInput = PatchApiKeysByKeyIdData['body']
+// Define the response type locally since it's missing from generated types
+type OperationSuccessResponse = {
+  success: true
+  message: string
+}
+
+export type CreateKeyInput = CreateProviderKeyBody
+export type UpdateKeyInput = UpdateProviderKeyBody
 
 const KEYS_KEYS = {
-  all: () => getApiKeysQueryKey(),
-  lists: () => getApiKeysQueryKey()
+  all: () => ['keys'] as const,
+  lists: () => ['keys', 'list'] as const
 } as const
 
 export function useGetKeys() {
-  const queryOptions = getApiKeysOptions()
   return useQuery({
-    ...queryOptions,
-
+    queryKey: KEYS_KEYS.lists(),
+    queryFn: async () => {
+      const response = await listProviderKeysApiKeysGet()
+      if ('data' in response && response.data) {
+        return response.data
+      }
+      throw new Error('Failed to fetch keys')
+    },
     select: (response: ProviderKeyListResponse) => {
       if (!response.success) {
         console.error('useGetKeys received unsuccessful response:', response)
@@ -46,17 +57,16 @@ export function useGetKeys() {
 
 export function useCreateKey() {
   const queryClient = useQueryClient()
-  const mutationOptions = postApiKeysMutation()
 
-  return useMutation<ProviderKey, PostApiKeysError, CreateKeyInput>({
+  return useMutation<ProviderKey, CreateProviderKeyApiKeysPostError, CreateKeyInput>({
     mutationFn: async (body: CreateKeyInput) => {
-      const opts: Options<PostApiKeysData> = { body }
-      const response: ProviderKeyResponse = await mutationOptions.mutationFn!(opts)
+      const opts: Options<CreateProviderKeyApiKeysPostData> = { body }
+      const response = await createProviderKeyApiKeysPost(opts)
 
-      if (!response || !response.success || !response.data) {
-        throw new Error('Failed to create key or key missing in response data')
+      if ('data' in response && response.data && response.data.success && response.data.data) {
+        return response.data.data
       }
-      return response.data
+      throw new Error('Failed to create key or key missing in response data')
     },
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: KEYS_KEYS.lists() })
@@ -67,20 +77,19 @@ export function useCreateKey() {
 
 export function useUpdateKey() {
   const queryClient = useQueryClient()
-  const mutationOptions = patchApiKeysByKeyIdMutation()
 
-  return useMutation<ProviderKey, PatchApiKeysByKeyIdError, { keyId: string; data: UpdateKeyInput }>({
+  return useMutation<ProviderKey, UpdateProviderKeyApiKeysKeyIdPatchError, { keyId: string; data: UpdateKeyInput }>({
     mutationFn: async (vars: { keyId: string; data: UpdateKeyInput }) => {
-      const opts: Options<PatchApiKeysByKeyIdData> = {
+      const opts: Options<UpdateProviderKeyApiKeysKeyIdPatchData> = {
         path: { keyId: vars.keyId },
         body: vars.data
       }
-      const response: ProviderKeyResponse = await mutationOptions.mutationFn!(opts)
+      const response = await updateProviderKeyApiKeysKeyIdPatch(opts)
 
-      if (!response || !response.success || !response.data) {
-        throw new Error('Failed to update key or key missing in response data')
+      if ('data' in response && response.data && response.data.success && response.data.data) {
+        return response.data.data
       }
-      return response.data
+      throw new Error('Failed to update key or key missing in response data')
     },
     onSuccess: (data, variables, context) => {
       const keyId = variables.keyId
@@ -92,12 +101,16 @@ export function useUpdateKey() {
 
 export function useDeleteKey() {
   const queryClient = useQueryClient()
-  const mutationOptions = deleteApiKeysByKeyIdMutation()
 
-  return useMutation<DeleteApiKeysByKeyIdResponse, DeleteApiKeysByKeyIdError, string>({
-    mutationFn: (keyId: string) => {
-      const opts: Options<DeleteApiKeysByKeyIdData> = { path: { keyId } }
-      return mutationOptions.mutationFn!(opts)
+  return useMutation<OperationSuccessResponse, DeleteProviderKeyApiKeysKeyIdDeleteError, string>({
+    mutationFn: async (keyId: string) => {
+      const opts: Options<DeleteProviderKeyApiKeysKeyIdDeleteData> = { path: { keyId } }
+      const response = await deleteProviderKeyApiKeysKeyIdDelete(opts)
+
+      if ('data' in response && response.data) {
+        return response.data
+      }
+      throw new Error('Failed to delete key')
     },
     onSuccess: (data, variables, context) => {
       if (!data.success) {

@@ -18,9 +18,11 @@ LMSTUDIO_BASE_URL = "http://localhost:1234/v1" # Default, user configurable
 
 # --- Unified Model Structure ---
 class UnifiedModel(BaseModel):
-    id: str
+    id: str # Original model ID from provider
     name: str
-    description: str
+    description: Optional[str] = None
+    context_length: Optional[int] = None
+    provider_slug: str # e.g., "openai", "anthropic"
 
 # --- Provider Specific Pydantic Models ---
 
@@ -84,7 +86,7 @@ class AnthropicModel(BaseModel):
                                 # The TS version has this, but their actual API might not for all models.
                                 # Let's use ID as name if display_name isn't present.
     name: str # Often the same as ID
-    created Optional[str] = None # datetime string
+    created: Optional[str] = None # datetime string
 
 class AnthropicModelsResponse(BaseModel):
     data: List[AnthropicModel]
@@ -187,7 +189,13 @@ class ModelFetcherService:
             response.raise_for_status()
             data = GeminiListModelsResponse.model_validate(response.json())
             return [
-                UnifiedModel(id=m.name, name=m.display_name, description=m.description)
+                UnifiedModel(
+                    id=m.name,
+                    name=m.display_name,
+                    description=m.description,
+                    context_length=m.input_token_limit,
+                    provider_slug=AIProviderEnum.GOOGLE_GEMINI.value
+                )
                 for m in data.models
             ]
         except httpx.HTTPStatusError as e:
@@ -204,7 +212,13 @@ class ModelFetcherService:
             # Groq's /models is OpenAI compatible
             data = OpenAIModelsListResponse.model_validate(response.json())
             return [
-                UnifiedModel(id=m.id, name=m.id, description=f"Groq model owned by {m.owned_by}, Context: N/A") # Context not directly available in OpenAI list format
+                UnifiedModel(
+                    id=m.id,
+                    name=m.id,
+                    description=f"Groq model owned by {m.owned_by}, Context: N/A", # Context not directly available
+                    context_length=None, # OpenAI list format does not provide context_length easily
+                    provider_slug=AIProviderEnum.GROQ.value
+                )
                 for m in data.data
             ]
         except httpx.HTTPStatusError as e:
@@ -228,7 +242,9 @@ class ModelFetcherService:
                 UnifiedModel(
                     id=m.id,
                     name=m.display_name or m.id,
-                    description=f"{m.organization or 'Together'} model: {m.display_name or m.id} | Context: {m.context_length or 'N/A'} tokens"
+                    description=f"{m.organization or 'Together'} model: {m.display_name or m.id}", # Simplified description
+                    context_length=m.context_length,
+                    provider_slug=AIProviderEnum.TOGETHER.value
                 )
                 for m in data if m.type != "chat-hf" # Filter out some internal/non-standard types if necessary
             ]
@@ -246,7 +262,13 @@ class ModelFetcherService:
             response.raise_for_status()
             data = OpenAIModelsListResponse.model_validate(response.json())
             return [
-                UnifiedModel(id=m.id, name=m.id, description=f"OpenAI model owned by {m.owned_by}")
+                UnifiedModel(
+                    id=m.id,
+                    name=m.id,
+                    description=f"OpenAI model owned by {m.owned_by}",
+                    context_length=None, # Context not standard in this list
+                    provider_slug=AIProviderEnum.OPENAI.value
+                )
                 for m in data.data
             ]
         except httpx.HTTPStatusError as e:
@@ -262,7 +284,13 @@ class ModelFetcherService:
             response.raise_for_status()
             data = AnthropicModelsResponse.model_validate(response.json())
             return [
-                UnifiedModel(id=m.id, name=m.name or m.id, description=f"Anthropic model: {m.id}") # Use m.name if available
+                UnifiedModel(
+                    id=m.id,
+                    name=m.name or m.id, # Use m.name if available, fallback to m.id
+                    description=f"Anthropic model: {m.id}",
+                    context_length=None, # Anthropic /models doesn't list context_length easily
+                    provider_slug=AIProviderEnum.ANTHROPIC.value
+                )
                 for m in data.data
             ]
         except httpx.HTTPStatusError as e:
@@ -278,7 +306,13 @@ class ModelFetcherService:
             response.raise_for_status()
             data = OpenRouterModelsResponse.model_validate(response.json())
             return [
-                UnifiedModel(id=m.id, name=m.name, description=m.description or f"OpenRouter hosted model: {m.name}")
+                UnifiedModel(
+                    id=m.id,
+                    name=m.name,
+                    description=m.description or f"OpenRouter hosted model: {m.name}",
+                    context_length=m.context_length,
+                    provider_slug=AIProviderEnum.OPENROUTER.value
+                )
                 for m in data.data
             ]
         except httpx.HTTPStatusError as e:
@@ -294,7 +328,13 @@ class ModelFetcherService:
             response.raise_for_status()
             data = OpenAIModelsListResponse.model_validate(response.json()) # Assuming XAI is OpenAI compatible
             return [
-                UnifiedModel(id=m.id, name=m.id, description=f"XAI model owned by {m.owned_by}")
+                UnifiedModel(
+                    id=m.id,
+                    name=m.id,
+                    description=f"XAI model owned by {m.owned_by}",
+                    context_length=None, # Assuming no context_length from this OpenAI-like endpoint
+                    provider_slug=AIProviderEnum.XAI.value
+                )
                 for m in data.data
             ]
         except httpx.HTTPStatusError as e:
@@ -312,7 +352,9 @@ class ModelFetcherService:
                 UnifiedModel(
                     id=model.name, # e.g. "llama2:latest"
                     name=model.name,
-                    description=f"{model.details.family or 'Ollama'} family - {model.name} | Size: {model.details.parameter_size or 'N/A'} | Quant: {model.details.quantization_level or 'N/A'}"
+                    description=f"{model.details.family or 'Ollama'} family - {model.name} | Size: {model.details.parameter_size or 'N/A'} | Quant: {model.details.quantization_level or 'N/A'}",
+                    context_length=None, # Ollama /api/tags doesn't provide standard context_length
+                    provider_slug=AIProviderEnum.OLLAMA.value
                 )
                 for model in data.models
             ]
@@ -331,7 +373,13 @@ class ModelFetcherService:
             # Assuming OpenAI compatible list response
             data = OpenAIModelsListResponse.model_validate(response.json())
             return [
-                UnifiedModel(id=m.id, name=m.id, description=f"LM Studio model: {m.id} (Owner: {m.owned_by})")
+                UnifiedModel(
+                    id=m.id,
+                    name=m.id,
+                    description=f"LM Studio model: {m.id} (Owner: {m.owned_by})",
+                    context_length=None, # Assuming no context_length from this OpenAI-like endpoint
+                    provider_slug=AIProviderEnum.LMSTUDIO.value
+                )
                 for m in data.data
             ]
         except httpx.HTTPStatusError as e:

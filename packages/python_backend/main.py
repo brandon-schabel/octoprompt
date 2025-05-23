@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from pydantic import BaseModel, ValidationError, Field
+from app.error_handling.api_error import ApiError
 
 # --- Configuration & Constants ---
 IS_DEV_ENV = os.getenv("NODE_ENV", "development") == "development"
@@ -59,16 +60,6 @@ class ErrorDetailSchema(BaseModel):
 class ApiErrorResponseSchema(BaseModel):
     success: bool = False
     error: ErrorDetailSchema
-
-# --- Custom API Error ---
-class ApiError(Exception):
-    def __init__(self, status: int, message: str, code: str = "API_ERROR", details: Optional[Any] = None):
-        self.status = status
-        self.message = message
-        self.code = code
-        self.details = details
-        super().__init__(self.message)
-
 # --- Package Info ---
 package_info = {"name": "OctoPrompt FastAPI Python Server", "version": "0.5.2"}
 PACKAGE_JSON_PATH = PROJECT_ROOT / "package.json"
@@ -141,7 +132,8 @@ app = FastAPI(
     description=package_info.get("description", "OctoPrompt OpenAPI Python Server Spec"),
     openapi_url="/doc", # To match original /doc for spec
     default_response_class=JSONResponse,
-    lifespan=lifespan # Use the lifespan context manager
+    lifespan=lifespan # Use the lifespan context manager,
+    
 )
 
 # CORS Middleware (from app.ts corsConfig)

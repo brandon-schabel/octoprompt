@@ -29,6 +29,9 @@ def parse_timestamp(ts_value: Any) -> Optional[datetime]:
     """
     if ts_value is None: return None
 
+    # Explicitly check for booleans before checking for int/float since isinstance(True, int) == True
+    if isinstance(ts_value, bool): return None
+
     if isinstance(ts_value, datetime): # Already a datetime object
         return ts_value.astimezone(timezone.utc) if ts_value.tzinfo else ts_value.replace(tzinfo=timezone.utc)
 

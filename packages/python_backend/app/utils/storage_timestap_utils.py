@@ -1,54 +1,107 @@
-# packages/python_backend/app/utils/storage_timestap_utils.py
 import math
-from datetime import datetime, timezone # Ensure timezone is imported
-from typing import Any, Optional
+from datetime import datetime, timezone
+from typing import Optional, Union
 
-# This function is intended to convert various inputs to an integer representing Unix milliseconds.
-# It's used as a Pydantic validator in project_storage.py for fields that are stored as int(ms).
-def convert_timestamp_to_ms_int(value: Any) -> Optional[int]:
+def convert_timestamp_to_ms_int(value: Union[None, str, int, float, datetime]) -> Optional[int]:
+    """
+    Convert various timestamp formats to integer Unix milliseconds.
+    
+    Args:
+        value: Can be None, ISO string, Unix ms (int/float), or datetime object
+        
+    Returns:
+        Integer Unix milliseconds or None if input is None
+        
+    Raises:
+        ValueError: For invalid timestamp formats or NaN values
+        TypeError: For unsupported types (including booleans)
+    """
     if value is None:
-        return None # Pass None through for optional fields
-
+        return None
+    
+    # Check for boolean BEFORE checking for int (since bool is subclass of int in Python)
+    if isinstance(value, bool):
+        raise TypeError("Timestamp for conversion to ms int must be None, string, int, float, or datetime, not bool")
+    
     if isinstance(value, str):
         try:
-            # Handle ISO format strings, including those with 'Z' by ensuring UTC offset
-            dt_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
-            # fromisoformat with an offset (like +00:00) produces an aware datetime object.
-            return int(dt_obj.timestamp() * 1000)
+            # Parse ISO format string to datetime
+            # Handle various ISO formats including with/without milliseconds
+            if value.endswith('Z'):
+                dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            else:
+                dt = datetime.fromisoformat(value)
+            
+            # Convert to Unix milliseconds
+            return int(dt.timestamp() * 1000)
         except ValueError:
-            # Consider if we want to try parsing with parse_timestamp from the other utility for more complex strings
-            # For now, strict ISO with 'Z' or offset.
-            raise ValueError(f"Invalid timestamp string format for conversion to ms int: {value}")
-
+            raise ValueError(f"Invalid timestamp string format: {value}")
+    
     elif isinstance(value, (int, float)):
-        if math.isnan(value): # Check for float NaN
-            raise ValueError("NaN is not a valid timestamp value for conversion to ms int")
-        # For int/float, assume it's already in milliseconds as per original Pydantic validator context.
-        # The system writes millisecond integers, so when reading them, they should be treated as such.
-        # Applying a heuristic here could corrupt small millisecond values (e.g. early epoch times)
-        # or be redundant for values already correctly in milliseconds.
+        # Check for NaN
+        if math.isnan(value):
+            raise ValueError("NaN is not a valid timestamp value")
+        # Already in milliseconds, just ensure it's an int
         return int(value)
-
+    
     elif isinstance(value, datetime):
-        # If datetime object is naive, assume UTC. Otherwise, respect its timezone for conversion.
-        aware_dt = value
-        if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
-            aware_dt = value.replace(tzinfo=timezone.utc)
-        return int(aware_dt.timestamp() * 1000)
+        # Convert datetime to Unix milliseconds
+        # If naive datetime (no timezone), assume UTC
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return int(value.timestamp() * 1000)
+    
+    else:
+        raise TypeError(f"Timestamp for conversion to ms int must be None, string, int, float, or datetime, not {type(value).__name__}")
 
-    raise TypeError(f"Timestamp for conversion to ms int must be an ISO string, int, float, datetime, or None, got {type(value)}")
-
-
-# Validator for IDs (ensuring they are integers)
-def convert_id_to_int(value: Any) -> int:
-    if isinstance(value, (int, float)):
-        if math.isnan(value): # Check for float NaN
-             raise TypeError('ID must be a valid number, not NaN, when converting to int')
+def convert_id_to_int(value: Union[int, float, str]) -> int:
+    """
+    Convert ID values to integer.
+    
+    Args:
+        value: Can be int, float, or string representation of a number
+        
+    Returns:
+        Integer ID
+        
+    Raises:
+        ValueError: For invalid string formats
+        TypeError: For unsupported types or NaN values
+    """
+    if isinstance(value, bool):
+        raise TypeError("ID must be an integer, float, or a string representation of a number, not bool")
+        
+    if isinstance(value, int):
+        return value
+    
+    elif isinstance(value, float):
+        if math.isnan(value):
+            raise TypeError("ID must be a valid number, not NaN")
         return int(value)
-    if isinstance(value, str):
+    
+    elif isinstance(value, str):
         try:
             return int(value)
         except ValueError:
-            # Explicitly raise to indicate the string was not a valid integer representation
-            raise ValueError(f"ID string '{value}' is not a valid integer representation")
-    raise TypeError(f"ID must be an integer, float, or a string convertible to an integer, got {type(value)}")
+            raise ValueError(f"ID string '{value}' is not a valid integer")
+    
+    else:
+        raise TypeError(f"ID must be an integer, float, or a string representation of a number, not {type(value).__name__}")
+
+def convert_optional_id_to_int(value: Optional[Union[int, float, str]]) -> Optional[int]:
+    """
+    Convert optional ID values to integer.
+    
+    Args:
+        value: Can be None, int, float, or string representation of a number
+        
+    Returns:
+        Integer ID or None
+        
+    Raises:
+        ValueError: For invalid string formats
+        TypeError: For unsupported types or NaN values
+    """
+    if value is None:
+        return None
+    return convert_id_to_int(value)

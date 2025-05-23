@@ -96,18 +96,19 @@ function KeysPage() {
 
             {isLoading ? (
               <div>Loading keys...</div>
-            ) : keys && keys.length > 0 ? (
+            ) : keys && keys?.length > 0 ? (
               <ul className='space-y-2'>
-                {keys.map((k) => (
+                {keys?.map((k) => (
                   <li key={k.id} className='flex items-center justify-between border p-2 rounded group'>
                     <div className='flex items-center gap-2'>
                       <div>
                         <div className='font-medium'>
                           {PROVIDERS.find((p) => p.id === k.provider)?.name || k.provider}
                         </div>
-                        <div className='text-sm text-muted-foreground font-mono'>••••••••{k.key.slice(-4)}</div>
+                        {/* <div className='text-sm text-muted-foreground font-mono'>••••••••{k?.key?.slice(-4)}</div> */}
+                        <div className='text-sm text-muted-foreground font-mono'>••••••••</div>
                       </div>
-                      <Button
+                      {/* <Button
                         variant='ghost'
                         size='icon'
                         className='opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8'
@@ -119,7 +120,7 @@ function KeysPage() {
                         }
                       >
                         <Copy className='h-4 w-4' />
-                      </Button>
+                      </Button> */}
                     </div>
                     <Button variant='destructive' size='sm' onClick={() => deleteKeyMutation.mutate(k.id)}>
                       Delete

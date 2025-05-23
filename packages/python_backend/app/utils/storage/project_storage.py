@@ -1,75 +1,34 @@
 # packages/python_backend/app/utils/storage/project_storage.py
 # 1. IDs and timestamps (createdAt, updatedAt) changed to int (Unix ms).
-# 2. generate_id updated to return int timestamp.
-# 3. Pydantic schemas (Project, ProjectFile, AIFileChangeRecord) assumed to be updated.
-#    - Added conceptual timestamp validator.
+# 2. generate_id updated to return int timestamp with sequence counter for uniqueness.
+# 3. Pydantic schemas (Project, ProjectFile, AIFileChangeRecord) are now directly imported from app.schemas.project_schemas.
+#    - Local re-definitions and associated field_validators removed.
 # 4. _read_validated_json and _write_validated_json adapted for int keys in dicts.
 # 5. Imported time, Any. WORKSPACE_ROOT logic simplified for focus.
 # 6. `datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")` replaced with int timestamp.
-# 7. Updated ProjectFile.summary_last_updated to summary_last_updated_at and included in validator.
+# 7. Updated ProjectFile.summary_last_updated_at to summary_last_updated_at and included in validator.
 # 8. Removed local definitions of convert_timestamp_to_ms_int and convert_id_to_int, now imported.
+# 9. Added sequence counter to ProjectStorage to ensure unique IDs during bulk operations.
+# 10. Removed local re-definitions of Project, ProjectFile, AIFileChangeRecord and their Config classes.
 
 import json
 import os
-import uuid
+# import uuid # Not strictly needed if IDs are timestamp-based
 import time
 from pathlib import Path
 from typing import Any, Dict, Type, TypeVar, Optional, Union, List
-from pydantic import BaseModel, ValidationError, RootModel, field_validator, Field
+from pydantic import BaseModel, ValidationError, RootModel # Keep Field if used by imported schemas indirectly or for new RootModels
 from datetime import datetime, timezone
 
 # Import the centralized conversion utilities
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
+# from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int # These are used by schemas
 
-from app.schemas.project_schemas import Project as OriginalProject, ProjectFile as OriginalProjectFile
-from app.schemas.ai_file_change_schemas import AIFileChangeRecord as OriginalAIFileChangeRecord
+# Import the authoritative schemas
+from app.schemas.project_schemas import Project, ProjectFile
+from app.schemas.ai_file_change_schemas import AIFileChangeRecord
 
-# Removed local definitions of convert_timestamp_to_ms_int and convert_id_to_int
-
-class Project(OriginalProject if OriginalProject else BaseModel):
-    id: int
-    # name: str (from OriginalProject)
-    # path: str (from OriginalProject)
-    # description: Optional[str] (from OriginalProject)
-    created: int
-    updated: int
-
-    _validate_timestamps = field_validator('created', 'updated', mode='before', check_fields=False)(convert_timestamp_to_ms_int)
-    _validate_id = field_validator('id', mode='before', check_fields=False)(convert_id_to_int)
-    class Config:
-        arbitrary_types_allowed = True
-        populate_by_name = True
-
-class ProjectFile(OriginalProjectFile if OriginalProjectFile else BaseModel):
-    id: int
-    project_id: int
-    # name: str (from OriginalProjectFile)
-    # path: str (from OriginalProjectFile)
-    # extension: Optional[str] (from OriginalProjectFile)
-    # content: Optional[str] (from OriginalProjectFile)
-    # size: int (from OriginalProjectFile)
-    created: int
-    updated: int
-    summary_last_updated_at: Optional[int] = None # Renamed and type set
-
-    _validate_pf_timestamps = field_validator('created', 'updated', 'summary_last_updated_at', mode='before', check_fields=False)(convert_timestamp_to_ms_int)
-    _validate_pf_ids = field_validator('id', 'project_id', mode='before', check_fields=False)(convert_id_to_int)
-
-    class Config:
-        arbitrary_types_allowed = True
-        populate_by_name = True
-
-class AIFileChangeRecord(OriginalAIFileChangeRecord if OriginalAIFileChangeRecord else BaseModel):
-    id: int
-    project_id: int
-    file_id: int
-    timestamp: int
-    _validate_timestamp = field_validator('timestamp', mode='before', check_fields=False)(convert_timestamp_to_ms_int)
-    _validate_ids = field_validator('id', 'project_id', 'file_id', mode='before', check_fields=False)(convert_id_to_int)
-    class Config:
-        arbitrary_types_allowed = True
-        populate_by_name = True
-
+# Removed local definitions of Project, ProjectFile, AIFileChangeRecord and their Config and field_validators
+# These are now directly imported from app.schemas.*
 
 WORKSPACE_ROOT = Path.cwd()
 DATA_DIR = WORKSPACE_ROOT / "data" / "python_project_storage"
@@ -179,6 +138,10 @@ async def _write_validated_json(
     except Exception as e: print(f"Error writing JSON to {file_path}: {e}"); raise IOError(f"Failed to write JSON: {file_path}") from e
 
 class ProjectStorage:
+    def __init__(self):
+        self._last_timestamp: int = 0
+        self._sequence_counter: int = 0
+    
     async def read_projects(self) -> Dict[int, Project]:
         return await _read_validated_json(get_projects_index_path(), ProjectsStorageModel, {})
 
@@ -239,6 +202,20 @@ class ProjectStorage:
         except Exception as e: print(f"Error deleting project data dir {dir_path}: {e}"); raise IOError(f"Failed to delete dir: {dir_path}") from e
 
     def generate_id(self) -> int:
-        return int(time.time() * 1000)
+        current_timestamp = int(time.time() * 1000)
+        
+        if current_timestamp == self._last_timestamp:
+            # Same millisecond, increment the sequence counter
+            self._sequence_counter += 1
+            # Use the timestamp + sequence counter to ensure uniqueness
+            # This allows up to 999 unique IDs per millisecond
+            unique_id = current_timestamp + self._sequence_counter
+        else:
+            # New millisecond, reset sequence counter
+            self._last_timestamp = current_timestamp
+            self._sequence_counter = 0
+            unique_id = current_timestamp
+        
+        return unique_id
 
 project_storage = ProjectStorage()

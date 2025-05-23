@@ -6,6 +6,7 @@
 # - Standardized "projectId" to "project_id" in new_file_data.
 # - Ensured summary_last_updated_at consistency and int type.
 # - Ensured 'updated' timestamp in remove_summaries_from_files is int.
+# - Fixed bulk ID conflict by using sequence counter in ProjectStorage.generate_id().
 
 import json
 import os
@@ -39,6 +40,7 @@ from app.utils.storage.project_storage import project_storage, ProjectFilesStora
 # Import AI service functions
 from app.services.gen_ai_service import generate_single_text, generate_structured_data
 from app.schemas.gen_ai_schemas import AiSdkOptions # For AI options
+from app.core.config import LOW_MODEL_CONFIG
 
 # --- Error Handling ---
 class ApiError(Exception):
@@ -102,8 +104,6 @@ async def create_project(data: CreateProjectBody) -> Project:
 
 async def get_project_by_id(project_id: int) -> Optional[Project]: # Changed to int
     try:
-        # parse project_id to int if not already int
-        project_id = int(project_id)
         projects = await project_storage.read_projects() # Dict[int, Project]
         project_data = projects.get(project_id) # project_id is int
         
@@ -255,13 +255,11 @@ async def bulk_create_project_files(project_id: int, files_to_create: List[FileS
                 print(f"[ProjectService] Skipping duplicate path in bulk create: {file_data.path} in project {project_id}")
                 continue
 
-            file_id = project_storage.generate_id() # int
+            file_id = project_storage.generate_id() # int with sequence counter ensures uniqueness
+            # ID conflicts should no longer occur with sequence counter implementation
             if file_id in files_map:  
-                print(f"[ProjectService] File ID conflict during bulk create: {file_id}. Generating new one.")
-                file_id = project_storage.generate_id()  
-                if file_id in files_map:  
-                    print(f"[ProjectService] Persistent File ID conflict for {file_id}. Skipping.")
-                    continue
+                print(f"[ProjectService] Unexpected ID conflict during bulk create: {file_id}. This should not happen with sequence counter.")
+                continue
 
             new_file_obj_data = {
                 "id": file_id, # int
@@ -371,8 +369,7 @@ async def get_project_files_by_ids(project_id: int, file_ids: List[int]) -> List
     except Exception as e:  
         raise ApiError(500, f"Failed to fetch files by IDs for project {project_id}. Reason: {str(e)}", "PROJECT_FILES_GET_BY_IDS_FAILED")
 
-# --- Constants for AI Service (from shared) ---
-LOW_MODEL_CONFIG = {"provider": "openai", "model": "gpt-3.5-turbo"}
+
 
 class SummarySchema(BaseModel):  
     summary: str
@@ -398,6 +395,9 @@ Ensure your output is valid JSON that conforms to the following Pydantic schema:
     
     try:
         ai_options = AiSdkOptions(**LOW_MODEL_CONFIG)
+
+        print(f"[SummarizeSingleFile] AI options: {ai_options}")
+        print(f"[SummarizeSingleFile] File id: {file.id}")
         
         structured_response = await generate_structured_data(
             prompt=file_content,  

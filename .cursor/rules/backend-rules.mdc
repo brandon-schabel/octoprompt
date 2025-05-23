@@ -1,7 +1,7 @@
 ---
 description: 
-globs: 
-alwaysApply: true
+globs: packages/server/**.*
+alwaysApply: false
 ---
 Below is a lean “cheat-sheet” version of your guide—same core rules, minimal repetition, sized for fast LLM ingestion. Let me know if you’d like any section expanded or trimmed further!
 

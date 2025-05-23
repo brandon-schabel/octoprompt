@@ -24,7 +24,6 @@ class AiSdkOptions(BaseModel):
     provider: Optional[str] = Field(None, description="AI provider")
     model: Optional[str] = Field(None, description="Model identifier")
 
-    model_config = ConfigDict(title="AiSdkOptions")
 
 # --- Schema for Available Models ---
 class UnifiedModel(BaseModel):

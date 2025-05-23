@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from enum import Enum
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
+from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int, convert_optional_id_to_int
 
 # --- Prompt Schemas ---
 # Last 5 changes:
@@ -20,7 +20,7 @@ class ProjectIdParams(BaseModel):
     _validate_project_id = field_validator('project_id', mode='before')(convert_id_to_int)
 
 class Prompt(BaseModel):
-    id: int = Field(..., min_length=1, example=1675248000000, description="Prompt ID (Unix ms)")
+    id: int = Field(..., example=1675248000000, description="Prompt ID (Unix ms)")
     name: str = Field(..., example="Code Refactoring Prompt", description="Prompt name")
     content: str = Field(..., example="Refactor the following code to be more efficient: {code}", description="Prompt content template")
     project_id: Optional[int] = Field(None, validation_alias="projectId", serialization_alias="projectId", example=1677657600000, description="Optional Project ID this prompt is linked to (Unix ms)")
@@ -28,7 +28,8 @@ class Prompt(BaseModel):
     updated: int = Field(..., validation_alias="updated", serialization_alias="updated", example=1675248300000, description="Last update timestamp (Unix ms)")
     model_config = ConfigDict(title="Prompt", populate_by_name=True)
 
-    _validate_ids = field_validator('id', 'project_id', mode='before')(convert_id_to_int)
+    _validate_id = field_validator('id', mode='before')(convert_id_to_int)
+    _validate_project_id = field_validator('project_id', mode='before')(convert_optional_id_to_int)
     _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
 
 class CreatePromptBody(BaseModel):
@@ -37,7 +38,7 @@ class CreatePromptBody(BaseModel):
     content: str = Field(..., min_length=1, example="Translate this text: {text}")
     model_config = ConfigDict(title="CreatePromptRequestBody", populate_by_name=True)
 
-    _validate_project_id = field_validator('project_id', mode='before')(convert_id_to_int)
+    _validate_project_id = field_validator('project_id', mode='before')(convert_optional_id_to_int)
 
 class UpdatePromptBody(BaseModel):
     name: Optional[str] = Field(None, min_length=1, example="Updated Prompt Name")

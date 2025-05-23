@@ -35,10 +35,13 @@ import type {
   DeleteApiChatsByChatIdResponse,
   PostApiChatsByChatIdForkResponse,
   PostApiChatsByChatIdForkByMessageIdResponse,
-  DeleteApiChatsByChatIdMessagesByMessageIdResponse
+  DeleteApiChatsByChatIdMessagesByMessageIdResponse,
+
 } from '../../generated/types.gen'
 import { Options } from '../../generated/sdk.gen'
 import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
+import { createChatEndpointApiChatsPostMutation, getAllChatsEndpointApiChatsGetOptions } from '@/generated-python/@tanstack/react-query.gen'
+import { CreateChatBody, CreateChatEndpointApiChatsPostData, CreateChatEndpointApiChatsPostResponse } from '@/generated-python'
 
 export type CreateChatInput = PostApiChatsData['body']
 export type UpdateChatInput = PatchApiChatsByChatIdData['body']
@@ -51,7 +54,8 @@ const CHAT_KEYS = {
 } as const
 
 export function useGetChats() {
-  const queryOptions = getApiChatsOptions()
+  const queryOptions = getAllChatsEndpointApiChatsGetOptions()
+
   return useQuery(queryOptions)
 }
 
@@ -65,13 +69,13 @@ export function useGetMessages(chatId: string) {
 
 export function useCreateChat() {
   const queryClient = useQueryClient()
-  const mutationOptions = postApiChatsMutation() // Get the generated mutation config
+  const mutationOptions = createChatEndpointApiChatsPostMutation() // Get the generated mutation config
 
   // Using generated types for better type safety
-  return useMutation<PostApiChatsResponse, PostApiChatsError, CreateChatInput>({
+  return useMutation<CreateChatEndpointApiChatsPostResponse, PostApiChatsError, CreateChatBody>({
     // Input is the body
-    mutationFn: (body: CreateChatInput) => {
-      const opts: Options<PostApiChatsData> = { body }
+    mutationFn: (body: CreateChatBody) => {
+      const opts: Options<CreateChatEndpointApiChatsPostData> = { body }
       return mutationOptions.mutationFn!(opts) // Call generated function
     },
     onSuccess: (data, variables, context) => {

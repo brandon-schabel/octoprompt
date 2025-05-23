@@ -1,13 +1,16 @@
-from typing import List, Dict, Optional, Any, Mapping
-from app.schemas.project_schemas import ProjectFile, ProjectFileMap # Assuming these are Pydantic models
-from app.schemas.prompt_schemas import Prompt, PromptListResponse # Assuming these are Pydantic models
-from app.utils.file_node_tree_utils import FileNode, estimate_token_count # Functions from the new utils file
+from typing import List, Dict, Optional, Any
+from app.schemas.project_schemas import ProjectFile
+from app.schemas.prompt_schemas import Prompt, PromptListResponse
+from app.utils.file_node_tree_utils import FileNode, estimate_token_count
+
+# Updated to use int keys for consistency with project_service.py
+ProjectFileMap = Dict[int, ProjectFile]
 
 def build_prompt_content(
     file_map: ProjectFileMap,
     prompt_data: Optional[PromptListResponse],
-    selected_files: List[str],
-    selected_prompts: List[str],
+    selected_prompts: List[int],    # Changed to int to match schema
+    selected_files: List[int],      # File IDs are ints
     user_prompt: str
 ) -> str:
     """Builds the full prompt content string from selected files, prompts, and user input."""
@@ -36,10 +39,10 @@ def build_prompt_content(
 
 def calculate_total_tokens(
     prompt_data: Optional[PromptListResponse],
-    selected_prompts: List[str],
+    selected_prompts: List[int],    # Changed to int
     user_prompt: str,
-    selected_files: List[str],
-    file_map: ProjectFileMap # Changed from Map<string, ProjectFile> to Dict which is ProjectFileMap
+    selected_files: List[int],      # Updated to int
+    file_map: ProjectFileMap
 ) -> int:
     """Calculates the total estimated tokens for the given inputs."""
     total = 0
@@ -121,5 +124,4 @@ def build_node_summaries(node: FileNode, is_folder: bool) -> str:
 
 def build_project_file_map(files: List[ProjectFile]) -> ProjectFileMap:
     """Builds a dictionary mapping file IDs to ProjectFile objects."""
-    # ProjectFileMap is Dict[str, ProjectFile], so this is direct.
     return {file.id: file for file in files}

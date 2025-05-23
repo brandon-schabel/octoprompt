@@ -28,7 +28,7 @@ LOW_MODEL_CONFIG: ModelOptions = {
     "topP": 0,
     "topK": 0,
     "provider": "openrouter",
-    "model": "google/gemini-flash-1.5" # Updated model
+    "model": "google/gemini-2.5-flash-preview" # Updated model
 }
 
 MEDIUM_MODEL_CONFIG: ModelOptions = {
@@ -39,7 +39,7 @@ MEDIUM_MODEL_CONFIG: ModelOptions = {
     "topP": 0,
     "topK": 0,
     "provider": "openrouter",
-    "model": "google/gemini-flash-1.5" # Updated model
+    "model": "google/gemini-2.5-flash-preview" # Updated model
 }
 
 HIGH_MODEL_CONFIG: ModelOptions = {
@@ -50,11 +50,11 @@ HIGH_MODEL_CONFIG: ModelOptions = {
     "topP": 0,
     "topK": 0,
     "provider": "openrouter",
-    "model": "google/gemini-pro-1.5" # Updated model
+    "model": "google/gemini-2.5-pro-preview" # Updated model
 }
 
 # PLANNING_MODEL_CONFIG uses a more capable model, diverging from HIGH_MODEL_CONFIG's model
 PLANNING_MODEL_CONFIG: ModelOptions = {
     **HIGH_MODEL_CONFIG, # Spread operator equivalent
-    "model": "google/gemini-pro-1.5" # Explicitly set for planning, even if same as HIGH for now
+    "model": "google/gemini-2.5-pro-preview" # Explicitly set for planning, even if same as HIGH for now
 }

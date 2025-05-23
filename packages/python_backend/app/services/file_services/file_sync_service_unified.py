@@ -1,9 +1,10 @@
 # packages/python_backend/app/services/file_services/file_sync_service_unified.py
 # - Changed stop_watching_project project_id to int.
 # - Ensured active_plugins_map key type consistency (implicitly int via project.id).
-# - No changes needed based on previous 3.
-# -
-# -
+# - Added performance optimizations with aiofiles, xxhash, and concurrent processing.
+# - Enhanced sync functions with performance monitoring and chunked processing.
+# - Implemented configurable concurrency limits and benchmarking capabilities.
+# - Fixed bulk ID conflicts with sequence counter in ProjectStorage.generate_id().
 import asyncio
 import hashlib
 import os
@@ -18,6 +19,29 @@ import pathspec # Replaced 'ignore' with 'pathspec'
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, \
     FileModifiedEvent, FileCreatedEvent, FileDeletedEvent, DirModifiedEvent, DirCreatedEvent, DirDeletedEvent
+
+# Performance optimization imports
+import aiofiles
+import aiofiles.os
+try:
+    import xxhash
+    USE_XXHASH = True
+except ImportError:
+    USE_XXHASH = False
+    print("[FileSync-WARN] xxhash not available, falling back to hashlib (slower)")
+
+# Performance configuration
+PERFORMANCE_CONFIG = {
+    "small_project_threshold": 100,
+    "medium_project_threshold": 1000,
+    "small_concurrency": 10,
+    "medium_concurrency": 25,
+    "large_concurrency": 50,
+    "small_chunk_size": 50,
+    "medium_chunk_size": 100,
+    "large_chunk_size": 200,
+    "max_file_size": 10 * 1024 * 1024,  # 10MB
+}
 
 # --- Type Definitions (Mirrored from TS) ---
 
@@ -36,7 +60,7 @@ from app.services.project_service import Project as ProjectSchema # Alias if nee
 
 # --- Constants (Mirrored from TS) ---
 ALLOWED_FILE_CONFIGS: List[str] = [
-    '.txt', '.md', '.py', '.js', '.ts', '.html', '.css', '.json', '.yaml', '.yml',
+    '.txt', '.md', '.py', '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.json', '.yaml', '.yml', '.md', '.mdx',
     '.xml', '.java', '.c', '.cpp', '.h', '.hpp', '.cs', '.go', '.rb', '.php', '.swift',
     '.kt', '.scala', '.rs', '.lua', '.pl', '.sh', '.bash', '.zsh', '.fish',
     '.dockerfile', 'dockerfile', '.env', 'readme.md', 'license', '.gitignore'
@@ -53,6 +77,42 @@ CRITICAL_EXCLUDED_DIRS: Set[str] = {
     'node_modules', '.git', 'dist', 'build', '.vscode', '.idea', 'venv', '.DS_Store',
     '__pycache__', '.cache', 'target', 'out', 'bin', 'obj'
 }
+DEBOUNCE_DELAY_SECONDS = 2.0  # Debounce delay for file change events
+
+# Global performance state
+_global_semaphore: Optional[asyncio.Semaphore] = None
+_performance_stats = {
+    "total_syncs": 0,
+    "total_files_processed": 0,
+    "total_time": 0.0,
+    "sync_times": []
+}
+
+def get_performance_config(file_count: int) -> Dict[str, int]:
+    """Auto-tune performance settings based on project size"""
+    if file_count < PERFORMANCE_CONFIG["small_project_threshold"]:
+        return {
+            "concurrency": PERFORMANCE_CONFIG["small_concurrency"],
+            "chunk_size": PERFORMANCE_CONFIG["small_chunk_size"]
+        }
+    elif file_count < PERFORMANCE_CONFIG["medium_project_threshold"]:
+        return {
+            "concurrency": PERFORMANCE_CONFIG["medium_concurrency"], 
+            "chunk_size": PERFORMANCE_CONFIG["medium_chunk_size"]
+        }
+    else:
+        return {
+            "concurrency": PERFORMANCE_CONFIG["large_concurrency"],
+            "chunk_size": PERFORMANCE_CONFIG["large_chunk_size"]
+        }
+
+def get_global_semaphore(concurrency: int = 25) -> asyncio.Semaphore:
+    """Get or create global semaphore for file operations"""
+    global _global_semaphore
+    if _global_semaphore is None or _global_semaphore._value != concurrency:
+        _global_semaphore = asyncio.Semaphore(concurrency)
+        print(f"[FileSync-Perf] Created semaphore with concurrency: {concurrency}")
+    return _global_semaphore
 
 
 # --- FileChangeEvent Enum ---
@@ -225,86 +285,42 @@ def create_file_change_plugin():
             return
 
         if not _pending_changes:
-            # print("[FileChangePlugin-DebouncedProc] No pending changes to process.")
             return
 
         changes_to_process = list(_pending_changes)
         _pending_changes.clear()
         project_id = current_project_ref.id
-
+        
+        # Performance monitoring
+        start_time = time.time()
+        
         print(f"[FileChangePlugin-DebouncedProc] Processing {len(changes_to_process)} changes for project {project_id}")
 
-        # --- OPTIMIZATION 2: Granular Updates (Illustrative) ---
-        # Instead of full sync_project, handle individual changes.
-        # This requires more intricate logic and potentially new service functions
-        # like `create_single_file`, `update_single_file`, `delete_single_file_by_path`.
-
-        # For simplicity in this example, we'll still call sync_project,
-        # but ideally, you'd iterate through `changes_to_process`
-        # and apply granular updates.
-        #
-        # Example of granular approach (conceptual):
-        # for event_type, path_str in changes_to_process:
-        #     try:
-        #         abs_project_path = resolve_path_py(current_project_ref.path)
-        #         relative_path = normalize_path_for_db(Path(path_str).relative_to(abs_project_path))
-        #         if event_type == FileChangeEvent.DELETED:
-        #             print(f"[FileChangePlugin-Granular] Deleting {relative_path} for project {project_id}")
-        #             # await delete_project_file_by_path(project_id, relative_path)
-        #         else: # CREATED or MODIFIED
-        #             # For CREATED/MODIFIED, you need the file content
-        #             file_path_obj = Path(path_str)
-        #             if not file_path_obj.exists() or not file_path_obj.is_file():
-        #                 print(f"[FileChangePlugin-Granular] File {path_str} no longer exists. Skipping.")
-        #                 # Potentially mark as deleted if it was a create/modify event
-        #                 # await delete_project_file_by_path(project_id, relative_path, missing_ok=True)
-        #                 continue
-        #
-        #             with open(file_path_obj, 'r', encoding='utf-8', errors='ignore') as f:
-        #                 content = f.read()
-        #             checksum = compute_checksum(content)
-        #             file_data = FileSyncData(
-        #                 path=relative_path,
-        #                 name=file_path_obj.name,
-        #                 extension=file_path_obj.suffix.lower() or None,
-        #                 content=content, # For summarization, not necessarily for DB if just checksum needed
-        #                 size=file_path_obj.stat().st_size,
-        #                 checksum=checksum
-        #             )
-        #
-        #             existing_file = await get_project_file_by_path(project_id, relative_path) # Needs this function
-        #
-        #             if event_type == FileChangeEvent.CREATED and not existing_file:
-        #                 print(f"[FileChangePlugin-Granular] Creating {relative_path}")
-        #                 # new_db_file = await create_project_file(project_id, file_data)
-        #                 # await summarize_single_file(new_db_file)
-        #             elif event_type == FileChangeEvent.MODIFIED or (event_type == FileChangeEvent.CREATED and existing_file):
-        #                 if existing_file and existing_file.checksum != checksum:
-        #                     print(f"[FileChangePlugin-Granular] Updating {relative_path}")
-        #                     # updated_db_file = await update_project_file_content_and_checksum(existing_file.id, file_data)
-        #                     # await summarize_single_file(updated_db_file)
-        #                 elif not existing_file: # File was created, but appeared as modified by watcher perhaps
-        #                      print(f"[FileChangePlugin-Granular] Creating {relative_path} (from modified event)")
-        #                      # new_db_file = await create_project_file(project_id, file_data)
-        #                      # await summarize_single_file(new_db_file)
-        #
-        #     except Exception as e:
-        #         print(f"[FileChangePlugin-GranularError] Error processing {event_type} for {path_str}: {e}")
-
-        # Fallback to full sync for now (or if granular fails)
-        print(f"[FileChangePlugin-DebouncedProc] Triggering full sync_project for project {project_id} after {len(changes_to_process)} changes.")
         try:
-            sync_result = await sync_project(current_project_ref) # current_project_ref is ProjectSchema
-            print(f"[FileChangePlugin-DebouncedProc] Sync completed for project {project_id}. Result: {sync_result}")
-            # After a full sync, all files are up-to-date.
-            # If any of the `changes_to_process` were modifications or creations,
-            # we might want to re-summarize them specifically IF sync_project doesn't do it.
-            # However, `sync_project` updates files, and `summarize_single_file` is called by the *old* handler.
-            # The original `handle_file_change_async_impl` called summarize AFTER sync.
-            # Let's replicate that for the files that were *actually* changed and still exist.
+            # Use optimized sync_project
+            sync_result = await sync_project(current_project_ref)
+            
+            sync_time = time.time() - start_time
+            print(f"[FileChangePlugin-DebouncedProc] Sync completed for project {project_id} in {sync_time:.2f}s")
+            print(f"[FileChangePlugin-DebouncedProc] Result: {sync_result}")
+            
+            # Update plugin performance stats
+            if not hasattr(_process_debounced_changes, 'sync_times'):
+                _process_debounced_changes.sync_times = []
+            
+            _process_debounced_changes.sync_times.append(sync_time)
+            if len(_process_debounced_changes.sync_times) > 10:
+                _process_debounced_changes.sync_times.pop(0)
+            
+            avg_time = sum(_process_debounced_changes.sync_times) / len(_process_debounced_changes.sync_times)
+            print(f"[FileChangePlugin-Perf] Average debounced sync time: {avg_time:.2f}s")
+            
+            # Summarize changed files
             all_files_in_db = await get_project_files(project_id)
             if all_files_in_db:
                 abs_project_path = resolve_path_py(current_project_ref.path)
+                summarized_count = 0
+                
                 for event_type, path_str in changes_to_process:
                     if event_type == FileChangeEvent.DELETED:
                         continue
@@ -313,14 +329,18 @@ def create_file_change_plugin():
                         updated_file_in_db = next((f for f in all_files_in_db if normalize_path_for_db(f.path) == relative_changed_path), None)
                         if updated_file_in_db:
                             print(f"[FileChangePlugin-DebouncedProc] Summarizing changed file: {updated_file_in_db.path}")
-                            await summarize_single_file(updated_file_in_db) # summarize_single_file needs ProjectFile from DB
-                    except ValueError: # Path not relative (e.g. temp file)
-                        print(f"[FileChangePlugin-DebouncedProc-WARN] Changed path {path_str} not relative to project. Skipping summarization for it.")
+                            await summarize_single_file(updated_file_in_db)
+                            summarized_count += 1
+                    except ValueError:
+                        print(f"[FileChangePlugin-DebouncedProc-WARN] Changed path {path_str} not relative to project. Skipping summarization.")
                     except Exception as e:
-                        print(f"[FileChangePlugin-DebouncedProc-ERROR] Error summarizing {path_str} after sync: {e}")
+                        print(f"[FileChangePlugin-DebouncedProc-ERROR] Error summarizing {path_str}: {e}")
+                
+                print(f"[FileChangePlugin-DebouncedProc] Summarized {summarized_count} files")
 
         except Exception as e:
-            print(f"[FileChangePlugin-DebouncedProc-ERROR] Error during debounced sync_project for {project_id}: {e}")
+            sync_time = time.time() - start_time
+            print(f"[FileChangePlugin-DebouncedProc-ERROR] Error during debounced sync for project {project_id} after {sync_time:.2f}s: {e}")
 
 
     def schedule_debounced_file_handling(event: FileChangeEvent, path_str: str):
@@ -456,6 +476,79 @@ def create_watchers_manager():
         "stop_all_watchers": stop_all_watchers
     }
 
+# --- Public API for Performance Tuning ---
+def configure_performance(
+    small_threshold: int = 100,
+    medium_threshold: int = 1000,
+    small_concurrency: int = 10,
+    medium_concurrency: int = 25,
+    large_concurrency: int = 50,
+    small_chunk_size: int = 50,
+    medium_chunk_size: int = 100,
+    large_chunk_size: int = 200,
+    max_file_size: int = 10 * 1024 * 1024
+):
+    """Configure performance settings for file sync operations"""
+    global PERFORMANCE_CONFIG
+    
+    PERFORMANCE_CONFIG.update({
+        "small_project_threshold": small_threshold,
+        "medium_project_threshold": medium_threshold,
+        "small_concurrency": small_concurrency,
+        "medium_concurrency": medium_concurrency,
+        "large_concurrency": large_concurrency,
+        "small_chunk_size": small_chunk_size,
+        "medium_chunk_size": medium_chunk_size,
+        "large_chunk_size": large_chunk_size,
+        "max_file_size": max_file_size,
+    })
+    
+    # Reset global semaphore to pick up new concurrency settings
+    global _global_semaphore
+    _global_semaphore = None
+    
+    print(f"[FileSync-Config] Performance configuration updated:")
+    print(f"[FileSync-Config] Small project: <{small_threshold} files (concurrency: {small_concurrency}, chunk: {small_chunk_size})")
+    print(f"[FileSync-Config] Medium project: {small_threshold}-{medium_threshold} files (concurrency: {medium_concurrency}, chunk: {medium_chunk_size})")
+    print(f"[FileSync-Config] Large project: >{medium_threshold} files (concurrency: {large_concurrency}, chunk: {large_chunk_size})")
+    print(f"[FileSync-Config] Max file size: {max_file_size / (1024*1024):.1f}MB")
+
+def tune_for_system(cpu_cores: Optional[int] = None, available_ram_gb: Optional[float] = None, storage_type: str = "ssd"):
+    """Auto-tune performance based on system characteristics"""
+    if cpu_cores is None:
+        cpu_cores = os.cpu_count() or 4
+    
+    if available_ram_gb is None:
+        # Simple estimation - in production you might want to use psutil
+        available_ram_gb = 8.0  # Conservative default
+    
+    # Adjust concurrency based on CPU cores
+    base_concurrency = min(cpu_cores * 2, 50)  # Don't exceed 50
+    
+    # Adjust for storage type
+    if storage_type.lower() == "hdd":
+        base_concurrency = max(base_concurrency // 2, 5)  # Lower for HDD
+        print(f"[FileSync-Config] Detected HDD storage, reducing concurrency")
+    
+    # Adjust chunk sizes based on RAM
+    if available_ram_gb < 4:
+        chunk_multiplier = 0.5
+    elif available_ram_gb > 16:
+        chunk_multiplier = 2.0
+    else:
+        chunk_multiplier = 1.0
+    
+    configure_performance(
+        small_concurrency=max(base_concurrency // 4, 5),
+        medium_concurrency=max(base_concurrency // 2, 10),
+        large_concurrency=base_concurrency,
+        small_chunk_size=int(50 * chunk_multiplier),
+        medium_chunk_size=int(100 * chunk_multiplier),
+        large_chunk_size=int(200 * chunk_multiplier)
+    )
+    
+    print(f"[FileSync-Config] Auto-tuned for system: {cpu_cores} CPU cores, {available_ram_gb:.1f}GB RAM, {storage_type.upper()} storage")
+
 
 def create_file_change_watcher():
     observer_ref: Optional[Observer] = None
@@ -554,7 +647,15 @@ def create_file_change_watcher():
 
 # --- File Sync Logic ---
 def compute_checksum(content: str) -> str:
-    return hashlib.sha256(content.encode('utf-8')).hexdigest()
+    """Optimized checksum computation using xxhash if available"""
+    if USE_XXHASH:
+        return xxhash.xxh64(content.encode('utf-8')).hexdigest()
+    else:
+        return hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+async def compute_checksum_async(content: str) -> str:
+    """Async version of checksum computation for large content"""
+    return await asyncio.get_event_loop().run_in_executor(None, compute_checksum, content)
 
 def is_valid_checksum(checksum: Optional[str]) -> bool:
     return isinstance(checksum, str) and len(checksum) == 64 and all(c in '0123456789abcdef' for c in checksum)
@@ -592,6 +693,74 @@ def load_ignore_rules_sync(project_root_str: str) -> Optional[pathspec.PathSpec]
 async def load_ignore_rules(project_root_str: str) -> Optional[pathspec.PathSpec]:
     # This is technically synchronous now, but kept async signature for compatibility if needed
     return load_ignore_rules_sync(project_root_str)
+
+async def process_single_file_async(
+    abs_file_path: Path, 
+    absolute_project_path: Path,
+    semaphore: asyncio.Semaphore
+) -> Optional[Tuple[str, FileSyncData]]:
+    """Process a single file asynchronously with semaphore control"""
+    async with semaphore:
+        try:
+            relative_path = normalize_path_for_db(abs_file_path.relative_to(absolute_project_path))
+            
+            # Check file size before reading
+            stat_info = await aiofiles.os.stat(abs_file_path)
+            if stat_info.st_size > PERFORMANCE_CONFIG["max_file_size"]:
+                print(f"[FileSync-Skip] File too large ({stat_info.st_size} bytes): {relative_path}")
+                return None
+            
+            # Read file content asynchronously
+            async with aiofiles.open(abs_file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = await f.read()
+            
+            # Compute checksum (async for large files)
+            if len(content) > 100000:  # 100KB threshold for async checksum
+                checksum = await compute_checksum_async(content)
+            else:
+                checksum = compute_checksum(content)
+            
+            file_name = abs_file_path.name
+            extension = abs_file_path.suffix.lower() if abs_file_path.suffix else (file_name if file_name.startswith('.') else None)
+            
+            file_data = FileSyncData(
+                path=relative_path,
+                name=file_name,
+                extension=extension,
+                content=content,
+                size=stat_info.st_size,
+                checksum=checksum
+            )
+            
+            return relative_path, file_data
+            
+        except Exception as e:
+            print(f"[FileSync-ERROR] Error processing file {abs_file_path}: {e}")
+            return None
+
+async def process_file_batch_async(
+    file_paths: List[Path],
+    absolute_project_path: Path,
+    concurrency: int
+) -> List[Tuple[str, FileSyncData]]:
+    """Process a batch of files concurrently"""
+    semaphore = get_global_semaphore(concurrency)
+    tasks = [
+        process_single_file_async(file_path, absolute_project_path, semaphore)
+        for file_path in file_paths
+    ]
+    
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Filter out None results and exceptions
+    processed_files = []
+    for result in results:
+        if isinstance(result, Exception):
+            print(f"[FileSync-ERROR] Exception in batch processing: {result}")
+        elif result is not None:
+            processed_files.append(result)
+    
+    return processed_files
 
 
 def get_text_files(
@@ -681,123 +850,278 @@ def get_text_files(
     return files_found
 
 
+async def sync_file_set_optimized(
+    project: Project,
+    absolute_project_path: Path,
+    absolute_file_paths_on_disk: List[str],
+    spec: Optional[pathspec.PathSpec]
+) -> Dict[str, int]:
+    """Optimized file set sync with concurrent processing and performance monitoring"""
+    start_time = time.time()
+    total_files = len(absolute_file_paths_on_disk)
+    
+    print(f"[FileSync-Optimized] Starting optimized sync for project: {project.id} ({project.name})")
+    print(f"[FileSync-Optimized] Files to process: {total_files}")
+    
+    # Auto-tune performance based on project size
+    perf_config = get_performance_config(total_files)
+    concurrency = perf_config["concurrency"]
+    chunk_size = perf_config["chunk_size"]
+    
+    print(f"[FileSync-Optimized] Using concurrency: {concurrency}, chunk_size: {chunk_size}")
+    
+    files_to_create_data: List[FileSyncData] = []
+    files_to_update_data: List[Dict[str, Any]] = []
+    file_ids_to_delete: List[int] = []
+    skipped_count = 0
+    
+    # Get existing DB files
+    existing_db_files_list = await get_project_files(project.id)
+    if existing_db_files_list is None:
+        print(f"[FileSync-ERROR] Could not retrieve existing files for project {project.id}")
+        raise ConnectionError(f"Could not retrieve existing files for project {project.id}")
+    
+    print(f"[FileSync-Optimized] Found {len(existing_db_files_list)} files in DB")
+    db_file_map = {normalize_path_for_db(f.path): f for f in existing_db_files_list}
+    
+    # Convert to Path objects and chunk for processing
+    file_paths = [Path(path) for path in absolute_file_paths_on_disk]
+    
+    # Process files in chunks
+    processed_files_map = {}
+    
+    for i in range(0, len(file_paths), chunk_size):
+        chunk = file_paths[i:i + chunk_size]
+        chunk_start = time.time()
+        
+        print(f"[FileSync-Optimized] Processing chunk {i//chunk_size + 1}/{(len(file_paths)-1)//chunk_size + 1} ({len(chunk)} files)")
+        
+        # Process chunk concurrently
+        chunk_results = await process_file_batch_async(chunk, absolute_project_path, concurrency)
+        
+        # Add to processed files map
+        for relative_path, file_data in chunk_results:
+            processed_files_map[relative_path] = file_data
+        
+        chunk_time = time.time() - chunk_start
+        chunk_rate = len(chunk) / chunk_time if chunk_time > 0 else 0
+        print(f"[FileSync-Optimized] Chunk processed in {chunk_time:.2f}s ({chunk_rate:.1f} files/sec)")
+    
+    # Compare with DB files
+    print(f"[FileSync-Optimized] Comparing {len(processed_files_map)} processed files with DB")
+    
+    for relative_path, file_data in processed_files_map.items():
+        existing_db_file = db_file_map.get(relative_path)
+        
+        if existing_db_file:
+            if not is_valid_checksum(existing_db_file.checksum) or existing_db_file.checksum != file_data.checksum:
+                files_to_update_data.append({"fileId": existing_db_file.id, "data": file_data})
+            else:
+                skipped_count += 1
+            db_file_map.pop(relative_path, None)
+        else:
+            files_to_create_data.append(file_data)
+    
+    # Handle files that are in DB but not on disk
+    for normalized_db_path, db_file in db_file_map.items():
+        if spec and spec.match_file(normalized_db_path):
+            print(f"[FileSync-Optimized] DB file '{normalized_db_path}' now ignored. Marking for deletion.")
+        else:
+            print(f"[FileSync-Optimized] DB file '{normalized_db_path}' not found on disk. Marking for deletion.")
+        file_ids_to_delete.append(db_file.id)
+    
+    # Execute DB operations
+    created_count = updated_count = deleted_count = 0
+    
+    print(f"[FileSync-Optimized] DB operations: Create: {len(files_to_create_data)}, Update: {len(files_to_update_data)}, Delete: {len(file_ids_to_delete)}")
+    
+    try:
+        if files_to_create_data:
+            created_result = await bulk_create_project_files(project.id, files_to_create_data)
+            created_count = len(created_result)
+            print(f"[FileSync-Optimized] Created {created_count} files")
+            
+        if files_to_update_data:
+            updated_result = await bulk_update_project_files(project.id, files_to_update_data)
+            updated_count = len(updated_result)
+            print(f"[FileSync-Optimized] Updated {updated_count} files")
+            
+        if file_ids_to_delete:
+            delete_result = await bulk_delete_project_files(project.id, file_ids_to_delete)
+            deleted_count = delete_result.get("deleted_count", 0)
+            print(f"[FileSync-Optimized] Deleted {deleted_count} files")
+        
+        # Update performance stats
+        global _performance_stats
+        total_time = time.time() - start_time
+        _performance_stats["total_syncs"] += 1
+        _performance_stats["total_files_processed"] += total_files
+        _performance_stats["total_time"] += total_time
+        _performance_stats["sync_times"].append(total_time)
+        
+        # Keep only last 10 sync times
+        if len(_performance_stats["sync_times"]) > 10:
+            _performance_stats["sync_times"].pop(0)
+        
+        avg_time = sum(_performance_stats["sync_times"]) / len(_performance_stats["sync_times"])
+        file_rate = total_files / total_time if total_time > 0 else 0
+        
+        result_summary = {
+            "created": created_count, 
+            "updated": updated_count, 
+            "deleted": deleted_count, 
+            "skipped": skipped_count
+        }
+        
+        print(f"[FileSync-Optimized] Completed in {total_time:.2f}s ({file_rate:.1f} files/sec)")
+        print(f"[FileSync-Optimized] Average sync time: {avg_time:.2f}s")
+        print(f"[FileSync-Optimized] Summary: {result_summary}")
+        
+        return result_summary
+        
+    except Exception as e:
+        print(f"[FileSync-ERROR] Error during optimized DB operations for project {project.id}: {e}")
+        raise ConnectionError(f"Optimized sync failed during storage ops for {project.id}")
+
+# Legacy function for backward compatibility
 async def sync_file_set(
     project: Project,
     absolute_project_path: Path,
     absolute_file_paths_on_disk: List[str],
-    spec: Optional[pathspec.PathSpec] # Changed from ig: ignore.Ignore
+    spec: Optional[pathspec.PathSpec]
 ) -> Dict[str, int]:
-    print(f"[FileSync-SyncSet] Starting file set sync for project: {project.id} ({project.name}). Files on disk: {len(absolute_file_paths_on_disk)}")
-    
-    files_to_create_data: List[FileSyncData] = []
-    files_to_update_data: List[Dict[str, Any]] = [] # {fileId: int, data: FileSyncData}
-    file_ids_to_delete: List[int] = []
-    skipped_count = 0
-
-    # project.id is already int
-    existing_db_files_list = await get_project_files(project.id)
-    if existing_db_files_list is None:
-        print(f"[FileSync-ERROR] Could not retrieve existing files for project {project.id}. Aborting sync_file_set.")
-        raise ConnectionError(f"Could not retrieve existing files for project {project.id}")
-    print(f"[FileSync-SyncSet] Found {len(existing_db_files_list)} files in DB for project {project.id}")
-
-    db_file_map = {normalize_path_for_db(f.path): f for f in existing_db_files_list}
-
-    for abs_file_path_str in absolute_file_paths_on_disk:
-        abs_file_path = Path(abs_file_path_str)
-        relative_path = normalize_path_for_db(abs_file_path.relative_to(absolute_project_path))
-        # print(f"[FileSync-SyncSet] Processing disk file: {relative_path}")
-
-        try:
-            with open(abs_file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-            
-            stats = abs_file_path.stat()
-            checksum = compute_checksum(content)
-            file_name = abs_file_path.name
-            extension = abs_file_path.suffix.lower() if abs_file_path.suffix else (file_name if file_name.startswith('.') else None)
-                    
-            file_data = FileSyncData(
-                path=relative_path,
-                name=file_name,
-                extension=extension, # Ensure ProjectFile schema has 'extension' matching this logic
-                content=content,
-                size=stats.st_size,
-                checksum=checksum
-            )
-
-            existing_db_file = db_file_map.get(relative_path)
-
-            if existing_db_file:
-                if not is_valid_checksum(existing_db_file.checksum) or existing_db_file.checksum != checksum:
-                    # print(f"[FileSync-SyncSet] File changed (checksum mismatch): {relative_path}. Marking for update.")
-                    files_to_update_data.append({"fileId": existing_db_file.id, "data": file_data}) # existing_db_file.id is int
-                else:
-                    # print(f"[FileSync-SyncSet] File unchanged (checksum match): {relative_path}. Skipping.")
-                    skipped_count += 1
-                db_file_map.pop(relative_path, None) # Processed
-            else:
-                # print(f"[FileSync-SyncSet] New file: {relative_path}. Marking for creation.")
-                files_to_create_data.append(file_data)
-        except Exception as file_error:
-            print(f"[FileSync-ERROR] Error processing file {abs_file_path} (relative: {relative_path}): {file_error}. Skipping.")
-            db_file_map.pop(relative_path, None) # Remove from consideration if error
-    
-    # Any files remaining in db_file_map are on DB but not on disk (or were skipped due to error/ignore)
-    for normalized_db_path, db_file in db_file_map.items():
-        # print(f"[FileSync-SyncSet] File in DB but not on disk (or became ignored): {normalized_db_path}")
-        # We also check if it became ignored by current rules explicitly for files that might have been missed by getTextFiles' initial filter pass
-        # (e.g. if ignore rules changed dramatically and getTextFiles still picked it up before but ig.ignores now catches it).
-        if spec and spec.match_file(normalized_db_path):
-            print(f"[FileSync-SyncSet] DB file '{normalized_db_path}' is now ignored by pathspec. Marking for deletion.")
-            file_ids_to_delete.append(db_file.id) # db_file.id is int
-        else: # Not on disk and not explicitly ignored by *current* rules (implies it was deleted or is outside scope of files_on_disk)
-            print(f"[FileSync-SyncSet] DB file '{normalized_db_path}' not found on disk and not pathspec-ignored. Marking for deletion (presumed deleted).")
-            file_ids_to_delete.append(db_file.id) # db_file.id is int
-
-    created_count, updated_count, deleted_count = 0, 0, 0
-    print(f"[FileSync-SyncSet] DB operations: Create: {len(files_to_create_data)}, Update: {len(files_to_update_data)}, Delete: {len(file_ids_to_delete)}")
-    try:
-        if files_to_create_data:
-            created_result = await bulk_create_project_files(project.id, files_to_create_data) # project.id is int
-            created_count = len(created_result)
-            print(f"[FileSync-SyncSet-DB] Created {created_count} files for project {project.id}")
-        if files_to_update_data:
-            updated_result = await bulk_update_project_files(project.id, files_to_update_data) # project.id is int
-            updated_count = len(updated_result)
-            print(f"[FileSync-SyncSet-DB] Updated {updated_count} files for project {project.id}")
-        if file_ids_to_delete:
-            delete_result = await bulk_delete_project_files(project.id, file_ids_to_delete) # project.id is int, file_ids_to_delete is List[int]
-            deleted_count = delete_result.get("deleted_count", 0) # TS uses deletedCount
-            print(f"[FileSync-SyncSet-DB] Deleted {deleted_count} files for project {project.id}")
-        
-        result_summary = {"created": created_count, "updated": updated_count, "deleted": deleted_count, "skipped": skipped_count}
-        print(f"[FileSync-SyncSet] Completed for project {project.id}. Summary: {result_summary}")
-        return result_summary
-    except Exception as e:
-        print(f"[FileSync-ERROR] Error during DB batch operations for project {project.id}: {e}")
-        raise ConnectionError(f"SyncFileSet failed during storage ops for {project.id}")
+    """Wrapper that calls the optimized version"""
+    return await sync_file_set_optimized(project, absolute_project_path, absolute_file_paths_on_disk, spec)
 
 async def sync_project(project: Project) -> Dict[str, int]:
-    print(f"[FileSync-Project] Starting sync for project ID: {project.id}, Name: {project.name}, Path: {project.path}") # project.id is int
+    """Enhanced sync_project with performance monitoring and optimized processing"""
+    start_time = time.time()
+    
+    print(f"[FileSync-Enhanced] Starting sync for project: {project.id} ({project.name})")
+    print(f"[FileSync-Enhanced] Project path: {project.path}")
+    
     try:
         abs_project_path = resolve_path_py(project.path)
         if not abs_project_path.is_dir():
             print(f"[FileSync-ERROR] Project path is not a valid directory: {project.path}")
             raise ValueError(f"Project path is not a valid directory: {project.path}")
 
+        # Load ignore rules
         pathspec_rules = await load_ignore_rules(str(abs_project_path))
         
+        # Get files on disk
+        discovery_start = time.time()
         project_files_on_disk = get_text_files(
             str(abs_project_path),
             str(abs_project_path),
-            pathspec_rules, # use pathspec_rules
+            pathspec_rules,
             ALLOWED_FILE_CONFIGS
         )
-        return await sync_file_set(project, abs_project_path, project_files_on_disk, pathspec_rules) # use pathspec_rules
+        discovery_time = time.time() - discovery_start
+        
+        print(f"[FileSync-Enhanced] Discovered {len(project_files_on_disk)} files in {discovery_time:.2f}s")
+        
+        # Use optimized sync
+        result = await sync_file_set_optimized(project, abs_project_path, project_files_on_disk, pathspec_rules)
+        
+        total_time = time.time() - start_time
+        total_files = sum(result.values())
+        
+        print(f"[FileSync-Enhanced] Project sync completed in {total_time:.2f}s")
+        if total_time > 0:
+            print(f"[FileSync-Enhanced] Overall rate: {total_files/total_time:.1f} files/second")
+        
+        return result
+        
     except Exception as e:
-        print(f"[FileSync-ERROR] Failed to sync project {project.id} ({project.name}): {e}")
+        total_time = time.time() - start_time
+        print(f"[FileSync-ERROR] Failed to sync project {project.id} after {total_time:.2f}s: {e}")
         raise
+
+async def benchmark_sync_performance(project: Project, iterations: int = 3) -> Dict[str, Any]:
+    """Benchmark sync performance with multiple iterations"""
+    print(f"[Benchmark] Starting performance benchmark for project {project.id} ({iterations} iterations)")
+    
+    times = []
+    results = []
+    
+    for i in range(iterations):
+        print(f"[Benchmark] Running iteration {i+1}/{iterations}")
+        
+        start = time.time()
+        result = await sync_project(project)
+        duration = time.time() - start
+        
+        times.append(duration)
+        results.append(result)
+        total_files = sum(result.values())
+        
+        print(f"[Benchmark] Iteration {i+1}: {duration:.2f}s ({total_files/duration:.1f} files/sec)")
+        
+        # Small delay between iterations
+        if i < iterations - 1:
+            await asyncio.sleep(1)
+    
+    avg_time = sum(times) / len(times)
+    best_time = min(times)
+    worst_time = max(times)
+    
+    # Calculate average file counts
+    avg_files = {}
+    for key in ["created", "updated", "deleted", "skipped"]:
+        avg_files[key] = sum(r.get(key, 0) for r in results) / len(results)
+    
+    total_avg_files = sum(avg_files.values())
+    avg_rate = total_avg_files / avg_time if avg_time > 0 else 0
+    
+    benchmark_result = {
+        "average_time": avg_time,
+        "best_time": best_time,
+        "worst_time": worst_time,
+        "average_files": avg_files,
+        "total_average_files": total_avg_files,
+        "average_rate": avg_rate,
+        "iterations": iterations
+    }
+    
+    print(f"[Benchmark] Results summary:")
+    print(f"[Benchmark] Average: {avg_time:.2f}s ({avg_rate:.1f} files/sec)")
+    print(f"[Benchmark] Best: {best_time:.2f}s")
+    print(f"[Benchmark] Worst: {worst_time:.2f}s")
+    print(f"[Benchmark] Average files processed: {total_avg_files:.1f}")
+    
+    return benchmark_result
+
+def get_performance_stats() -> Dict[str, Any]:
+    """Get current performance statistics"""
+    global _performance_stats
+    
+    stats = _performance_stats.copy()
+    
+    if stats["total_syncs"] > 0:
+        stats["average_time_per_sync"] = stats["total_time"] / stats["total_syncs"]
+        stats["average_files_per_sync"] = stats["total_files_processed"] / stats["total_syncs"]
+    else:
+        stats["average_time_per_sync"] = 0
+        stats["average_files_per_sync"] = 0
+    
+    if len(stats["sync_times"]) > 0:
+        stats["recent_average_time"] = sum(stats["sync_times"]) / len(stats["sync_times"])
+    else:
+        stats["recent_average_time"] = 0
+    
+    return stats
+
+def reset_performance_stats():
+    """Reset performance statistics"""
+    global _performance_stats
+    _performance_stats = {
+        "total_syncs": 0,
+        "total_files_processed": 0,
+        "total_time": 0.0,
+        "sync_times": []
+    }
+    print("[FileSync-Perf] Performance statistics reset")
 
 async def sync_project_folder(project: Project, folder_path_relative: str) -> Dict[str, int]:
     print(f"[FileSync-Folder] Starting sync for folder '{folder_path_relative}' in project {project.id} ({project.name})") # project.id is int

@@ -1,5 +1,5 @@
 export const SERVER_HOSTNAME = 'localhost'
-export const SERVER_PORT_DEV = 3147
+export const SERVER_PORT_DEV = 8000
 export const SERVER_PORT_PROD = 3579
 
 export const isProd = import.meta.env.MODE === 'production'

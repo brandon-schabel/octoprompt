@@ -19,36 +19,14 @@ from typing import Dict, Any, TypeVar, Type, Literal, Optional
 
 from pydantic import BaseModel, ValidationError, field_validator
 from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
+# Import the authoritative schemas
+from app.schemas.chat_schemas import Chat, ChatMessage, MessageRoleEnum, ModelOptions # ModelOptions might be implicitly handled via Chat
 
 # --- Directory and File Constants ---
 DATA_DIR = Path.cwd() / "data" / "chat_storage"
 CHAT_DATA_SUBDIR = "chat_data"
 
 # --- Pydantic Schemas ---
-
-class MessageRoleEnum(str, Enum):
-    USER = "user"; ASSISTANT = "assistant"; SYSTEM = "system"; TOOL = "tool"
-
-
-
-class Chat(BaseModel):
-    id: int
-    title: str
-    created: int # Unix timestamp in milliseconds
-    updated: int # Unix timestamp in milliseconds
-
-    _validate_id = field_validator('id', mode='before')(convert_id_to_int)
-    _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
-
-class ChatMessage(BaseModel):
-    id: int
-    chatId: int
-    role: MessageRoleEnum
-    content: str
-    created: int # Unix timestamp in milliseconds
-
-    _validate_ids = field_validator('id', 'chatId', mode='before')(convert_id_to_int)
-    _validate_timestamp = field_validator('created', mode='before')(convert_timestamp_to_ms_int)
 
 # Storage Schemas (keys are now int)
 ChatsStorage = Dict[int, Chat]
@@ -125,7 +103,7 @@ async def write_validated_json(
             
         json_string = json.dumps(data_to_write, indent=2)
         
-        async def _write_file():
+        def _write_file():
             with open(file_path, 'w', encoding='utf-8') as f: f.write(json_string)
         await asyncio.to_thread(_write_file)
         return data
@@ -166,8 +144,41 @@ async def main_test():
     test_msg_id = chat_storage.generate_id()  # Now int
     current_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
 
-    new_chat = Chat(id=test_chat_id, title="Test Chat", created=current_time_ms, updated=current_time_ms)
-    new_message = ChatMessage(id=test_msg_id, chatId=test_chat_id, role=MessageRoleEnum.USER, content="Hello!", created=current_time_ms)
+    # Use the imported Chat and ChatMessage, and ModelOptions from app.core.config for chat_model_config
+    from app.core.config import LOW_MODEL_CONFIG as CORE_LOW_MODEL_CONFIG # For test data
+
+    # Create a valid ModelOptions instance for testing, ensuring all fields are present if not optional
+    # This needs to match the ModelOptions schema from chat_schemas.py
+    test_model_options_data = CORE_LOW_MODEL_CONFIG.copy()
+    # Ensure all keys expected by ModelOptions in chat_schemas are present, others removed
+    # provider is now part of ModelOptions in chat_schemas based on user's change
+    valid_test_model_options = ModelOptions(
+        model=test_model_options_data.get("model"),
+        max_tokens=test_model_options_data.get("maxTokens"),
+        temperature=test_model_options_data.get("temperature"),
+        top_p=test_model_options_data.get("topP"),
+        top_k=test_model_options_data.get("topK"),
+        frequency_penalty=test_model_options_data.get("frequencyPenalty"),
+        presence_penalty=test_model_options_data.get("presencePenalty"),
+        stop=test_model_options_data.get("stop"),
+        provider=test_model_options_data.get("provider") # Added provider
+    )
+
+
+    new_chat = Chat(
+        id=test_chat_id, 
+        title="Test Chat", 
+        created=current_time_ms, 
+        updated=current_time_ms,
+        chat_model_config=valid_test_model_options # Use the validated ModelOptions
+    )
+    new_message = ChatMessage(
+        id=test_msg_id, 
+        chatId=test_chat_id, 
+        role=MessageRoleEnum.USER, 
+        content="Hello!", 
+        created=current_time_ms
+    )
 
     print("Testing chats...")
     initial_chats = await chat_storage.read_chats()

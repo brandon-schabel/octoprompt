@@ -1,4 +1,6 @@
 # packages/python_backend/app/utils/get_full_project_summary.py
+# - Fixed circular import by using local imports and shared ApiError
+# - Import ApiError from shared location to avoid circular dependency
 # - Converted from TypeScript
 # - Depends on project_service and project_schemas
 # - Needs ApiError and summary_formatter to be defined/converted
@@ -7,47 +9,31 @@
 
 from typing import List, Dict, Any, Coroutine, Union
 
-# Assuming project_schemas.py is in app.schemas
+# Import shared ApiError to avoid circular dependency
+from app.error_handling.api_error import ApiError
 from app.schemas.project_schemas import Project, ProjectFile 
 
-# Placeholder for ApiError - this should be defined in a shared utility module
-class ApiError(Exception):
-    def __init__(self, status_code: int, message: str, code: str, details: Any = None):
-        super().__init__(message)
-        self.status_code = status_code
-        self.message = message
-        self.code = code
-        self.details = details
-
-# Placeholder for project_service functions - these will be imported from the actual service file
-async def get_project_by_id(project_id: str) -> Union[Project, None]:
-    # This is a placeholder. Actual implementation will be in project_service.py
-    print(f"[get_full_project_summary.py] Placeholder: get_project_by_id({project_id}) called")
-    # Example: return Project(id=project_id, name="Test Project", description="Desc", path="/path", created="2023-01-01T00:00:00Z", updated="2023-01-01T00:00:00Z")
-    return None
-
-async def get_project_files(project_id: str) -> Union[List[ProjectFile], None]:
-    # This is a placeholder. Actual implementation will be in project_service.py
-    print(f"[get_full_project_summary.py] Placeholder: get_project_files({project_id}) called")
-    return []
-
-# Placeholder for buildCombinedFileSummariesXml from shared/src/utils/summary-formatter
-# This function needs to be converted or implemented in Python.
+# Fixed build_combined_file_summaries_xml to respect includeEmptySummaries flag
 def build_combined_file_summaries_xml(files: List[ProjectFile], options: Dict[str, Any]) -> str:
-    print(f"[get_full_project_summary.py] Placeholder: build_combined_file_summaries_xml called with {len(files)} files")
     if not files:
         return "<summaries></summaries>"
     
+    include_empty = options.get("includeEmptySummaries", True)
     xml_parts = ["<summaries>"]
+    
     for file_item in files:
+        summary_content = file_item.summary if file_item.summary else ""
+        
+        # Filter based on includeEmptySummaries flag
+        if not include_empty and not summary_content:
+            continue
+            
         xml_parts.append("  <file>")
         xml_parts.append(f"    <path>{file_item.path}</path>")
-        # Pydantic models use .model_dump() to get dict, then access summary
-        # summary = file_item.model_dump().get('summary')
-        summary_content = file_item.summary if file_item.summary else ""
-        if options.get("includeEmptySummaries") or summary_content:
+        if include_empty or summary_content:
             xml_parts.append(f"    <summary>{summary_content}</summary>")
         xml_parts.append("  </file>")
+    
     xml_parts.append("</summaries>")
     return "\n".join(xml_parts)
 
@@ -57,7 +43,10 @@ def build_project_summary(included_files: List[ProjectFile]) -> str:
         "includeEmptySummaries": True
     })
 
-async def get_full_project_summary(project_id: str) -> Union[str, Dict[str, Any]]:
+async def get_full_project_summary(project_id: int) -> Union[str, Dict[str, Any]]:
+    # Use local imports to avoid circular dependency
+    from app.services.project_service import get_project_by_id, get_project_files
+    
     project = await get_project_by_id(project_id)
     if not project:
         raise ApiError(404, "Project not found", "NOT_FOUND")
@@ -76,10 +65,6 @@ async def get_full_project_summary(project_id: str) -> Union[str, Dict[str, Any]
     # For now, assuming all files are included.
     def is_included(file: ProjectFile) -> bool:
         # Placeholder for filtering logic
-        # const matchesIgnore = matchesAnyPattern(file.path, ignorePatterns);
-        # if (matchesIgnore && !matchesAnyPattern(file.path, allowPatterns)) {
-        #     return false;
-        # }
         return True
 
     # Filter down to the "included" files

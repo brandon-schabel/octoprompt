@@ -351,18 +351,17 @@ export const globalStateSchema = z
       description: 'State of all open project tabs, keyed by tab ID.'
     }),
     projectActiveTabId: z
-      .string()
+      .number()
       .optional()
-      .default('defaultTab')
+      .default(1)
       .openapi({
-        description: 'The ID of the currently active project tab, or null if none is active.',
-        example: 'tab_abc123'
+        description: 'The ID (unix timestamp ms)of the currently active project tab, or null if none is active.',
+        example: 1747969916286
       }),
     activeChatId: z
-      .string()
+      .number()
       .optional()
-      .default('')
-      .openapi({ description: 'The ID of the currently active chat session, or null.', example: 'chat_xyz789' }),
+      .openapi({ description: 'The ID (unix timestamp ms) of the currently active chat session, or null.', example: 1747969916286 }),
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: 'Link settings specific to each chat session.' })
   })
   .openapi('GlobalState', { description: 'Represents the entire persistent application state.' })
@@ -379,8 +378,8 @@ export const createInitialGlobalState = (): GlobalState => ({
       // Set any other non-default initial values if needed
     })
   },
-  projectActiveTabId: 'defaultTab', // Assuming project tabs remain
-  activeChatId: '',
+  projectActiveTabId: 1, // Assuming project tabs remain
+  activeChatId: 1,
   chatLinkSettings: {}
 })
 

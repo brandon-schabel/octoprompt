@@ -2,7 +2,6 @@ import { serve } from 'bun'
 import { join } from 'node:path'
 import { statSync } from 'node:fs'
 import { app } from './src/app'
-import { initKvStore } from '@/services/kv-service'
 
 import { listProjects } from '@/services/project-service'
 import { isDevEnv, SERVER_PORT } from '@/constants/server-config'
@@ -25,9 +24,6 @@ type ServerConfig = {
 type Server = ReturnType<typeof serve>
 
 export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {}): Promise<Server> {
-  // initialized the kv store by reading the data/kv-store.json file
-  await initKvStore()
-
   const server = serve({
     idleTimeout: 255,
     port,

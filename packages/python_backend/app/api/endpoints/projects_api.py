@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import List, Optional, Union, Dict, Any
 
-from fastapi import APIRouter, Body, Query, Path as FastAPIPath, status, Depends
+from fastapi import APIRouter, Body, Query, Path as FastAPIPath, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.schemas.project_schemas import (
@@ -59,6 +59,9 @@ import app.services.file_services.file_sync_service_unified as file_sync_service
 from app.utils.get_full_project_summary import get_full_project_summary
 # from app.utils.prompts_map import prompts_map # optimize_user_input in project_service.ts uses this. Assume Python version does too.
 
+# Assuming a generic logger, or if agent_log is to be used here:
+from app.services.agents.agent_logger import log as api_log # Using a generic alias for now
+
 router = APIRouter(
     tags=["Projects"], # Apply tag to all routes in this router
 )
@@ -90,16 +93,19 @@ async def create_project_route(data: CreateProjectBody = Body(...)):
 
     project_data_for_service = data.model_copy(update={"path": normalized_path})
     print(f"[projects_api.py] project_data_for_service: {project_data_for_service}")
-    created_project = await project_service.create_project(project_data_for_service)
-    print(f"Project created with ID: {created_project.id}")
-
-    sync_warning: Optional[str] = None
-    sync_error: Optional[str] = None
+    
+    created_project: Optional[Project] = None # Initialize to allow access in finally/except
     http_status_code: int = status.HTTP_201_CREATED
-
-
+    response_data: Dict[str, Any] = {"success": False} # Default to not success
 
     try:
+        created_project = await project_service.create_project(project_data_for_service)
+        print(f"Project created with ID: {created_project.id}")
+
+        sync_warning: Optional[str] = None
+        sync_error: Optional[str] = None
+        # http_status_code: int = status.HTTP_201_CREATED # Moved up
+
         project_path_obj = Path(created_project.path)
         if not project_path_obj.exists() or not project_path_obj.is_dir():
             print(f"Warning: Project path does not exist or is not a directory: {created_project.path}")
@@ -107,39 +113,64 @@ async def create_project_route(data: CreateProjectBody = Body(...)):
             http_status_code = status.HTTP_207_MULTI_STATUS
         else:
             print(f"Starting sync for project: {created_project.id} at path: {created_project.path}")
-            await file_sync_service.sync_project(created_project) # Assuming this is available
+            await file_sync_service.sync_project(created_project)
             print(f"Finished syncing files for project: {created_project.id}")
-
-            # Placeholder for watcher functionality
-            # print(f"Starting file watchers for project: {created_project.id}")
-            # await watchers_manager.start_watching_project(created_project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
-            # print(f"File watchers started for project: {created_project.id}")
-            
             files = await project_service.get_project_files(created_project.id)
             print(f"Synced {len(files) if files else 0} files for project")
 
+        response_data = {
+            "success": True,
+            "data": created_project.model_dump()
+        }
+        if sync_warning:
+            response_data["warning"] = sync_warning
+        # sync_error is handled by general exception below if it's from sync_project
+
+    except ApiError as e:
+        await api_log(f"[create_project_route] ApiError: {e.message}", "error", {"error_code": e.code, "details": e.details})
+        # For create, if project creation itself fails (ApiError from create_project), we might not have a created_project
+        # If error is from sync part, project exists.
+        # The original code structure implies create_project can throw, then sync happens.
+        # If create_project fails, it's a clear error. If sync fails, it's a 207.
+        # This specific ApiError catch will make it a direct error response matching the ApiError's status.
+        # This might differ from the original 207 logic if sync_project itself raises an ApiError.
+        # For now, let it be handled by the generic ApiError handler.
+        # To preserve original 207 for sync issues, that try-except needs to be more specific.
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise # Re-raise if it's already an HTTPException
     except Exception as e:
-        print(f"Error during project post-creation setup: {e}")
-        sync_error = f"Post-creation setup failed: {str(e)}"
-        http_status_code = status.HTTP_207_MULTI_STATUS
+        print(f"Error during project creation or post-creation setup: {e}")
+        await api_log(f"[create_project_route] Exception: {str(e)}", "error", {"path": data.path})
+        # This part is tricky. If project was created but sync failed, original code sets 207.
+        # If create_project failed, then it's a 500 or other error.
+        if created_project: # Project was created, but a subsequent step failed
+            sync_error = f"Post-creation setup failed: {str(e)}"
+            response_data = {
+                "success": True, # Project was created
+                "data": created_project.model_dump(),
+                "error": sync_error
+            }
+            http_status_code = status.HTTP_207_MULTI_STATUS
+        else: # Project creation itself failed
+            # This might be redundant if create_project raises ApiError handled above
+            # but as a general fallback:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create project: {str(e)}")
     
-    response_data = {
-        "success": True,
-        "data": created_project.model_dump() # Ensure Project model is Pydantic and serializable
-    }
-    if sync_warning:
-        response_data["warning"] = sync_warning
-    if sync_error:
-        response_data["error"] = sync_error
+    # Construct and return response based on http_status_code
+    # This part might need adjustment based on whether an exception was raised and handled.
+    # If an HTTPException was raised, this part is not reached.
+    # This is for the success path or the 207 path where an error string is added.
 
     if http_status_code == status.HTTP_201_CREATED:
-        # Validate against ProjectResponse schema before sending
         validated_payload = ProjectResponse(**response_data)
         return JSONResponse(content=validated_payload.model_dump(), status_code=http_status_code)
-    else: # 207
-        # Validate against ProjectResponseMultiStatus schema
+    elif http_status_code == status.HTTP_207_MULTI_STATUS:
         validated_payload = ProjectResponseMultiStatus(**response_data)
         return JSONResponse(content=validated_payload.model_dump(), status_code=http_status_code)
+    else: # Should not happen if exceptions are raised correctly
+        await api_log(f"[create_project_route] Unexpected http_status_code: {http_status_code}", "error")
+        return JSONResponse(content={"success": False, "error": "Unexpected server state"}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @router.get(
@@ -151,9 +182,18 @@ async def create_project_route(data: CreateProjectBody = Body(...)):
     }
 )
 async def list_projects_route():
-    projects = await project_service.list_projects()
-    print(f"[projects_api.py] list_projects_route projects: {projects}")
-    return ProjectListResponse(success=True, data=projects)
+    try:
+        projects = await project_service.list_projects()
+        print(f"[projects_api.py] list_projects_route projects: {projects}")
+        return ProjectListResponse(success=True, data=projects)
+    except ApiError as e:
+        await api_log(f"[list_projects_route] ApiError: {e.message}", "error", {"error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[list_projects_route] Exception: {str(e)}", "error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to list projects: {str(e)}")
 
 @router.get(
     "/projects/{project_id}",
@@ -165,13 +205,22 @@ async def list_projects_route():
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ApiErrorResponse, "description": "Internal Server Error"}
     }
 )
-async def get_project_by_id_route(project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project", example="proj_1a2b3c4d")):
-    # Validate projectId with ProjectIdParams if complex validation is needed, else FastAPIPath is fine.
-    # ProjectIdParams(projectId=project_id) # Explicit validation
-    project = await project_service.get_project_by_id(project_id)
-    if not project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
-    return ProjectResponse(success=True, data=project)
+async def get_project_by_id_route(project_id: int = FastAPIPath(..., description="The ID of the project")):
+    try:
+        project = await project_service.get_project_by_id(project_id)
+        if not project:
+            # This specific ApiError is raised by the service or should be.
+            # If service returns None, we raise it here.
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
+        return ProjectResponse(success=True, data=project)
+    except ApiError as e:
+        await api_log(f"[get_project_by_id_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[get_project_by_id_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to get project {project_id}: {str(e)}")
 
 @router.patch(
     "/projects/{project_id}",
@@ -184,13 +233,22 @@ async def get_project_by_id_route(project_id: str = FastAPIPath(..., min_length=
     }
 )
 async def update_project_route(
-    project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project", example="proj_1a2b3c4d"),
+    project_id: int = FastAPIPath(..., description="The ID of the project"),
     data: UpdateProjectBody = Body(...)
 ):
-    updated_project = await project_service.update_project(project_id, data)
-    if not updated_project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
-    return ProjectResponse(success=True, data=updated_project)
+    try:
+        updated_project = await project_service.update_project(project_id, data)
+        if not updated_project: # Should be handled by service raising ApiError(404,...)
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id} for update", "PROJECT_NOT_FOUND_FOR_UPDATE")
+        return ProjectResponse(success=True, data=updated_project)
+    except ApiError as e:
+        await api_log(f"[update_project_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[update_project_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update project {project_id}: {str(e)}")
 
 @router.delete(
     "/projects/{project_id}",
@@ -202,13 +260,19 @@ async def update_project_route(
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ApiErrorResponse, "description": "Internal Server Error"}
     }
 )
-async def delete_project_route(project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project", example="proj_1a2b3c4d")):
-    # projectService.delete_project raises ApiError(404,...) if not found, so we don't need to check 'deleted' boolean strictly for 404 here.
-    # The Python service's delete_project raises ApiError if not found, or returns True.
-    await project_service.delete_project(project_id)
-    # Placeholder for watcher stop
-    # watchersManager.stopWatchingProject(projectId)
-    return OperationSuccessResponse(success=True, message="Project deleted successfully.")
+async def delete_project_route(project_id: int = FastAPIPath(..., description="The ID of the project")):
+    try:
+        await project_service.delete_project(project_id) # Expects service to raise ApiError on failure/not found
+        # watchersManager.stopWatchingProject(projectId) # Placeholder
+        return OperationSuccessResponse(success=True, message="Project deleted successfully.")
+    except ApiError as e:
+        await api_log(f"[delete_project_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[delete_project_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete project {project_id}: {str(e)}")
 
 
 @router.post(
@@ -222,12 +286,31 @@ async def delete_project_route(project_id: str = FastAPIPath(..., min_length=1, 
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ApiErrorResponse, "description": "Internal Server Error during sync"}
     }
 )
-async def sync_project_files_route(project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project")):
-    project = await project_service.get_project_by_id(project_id)
-    if not project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
-    await file_sync_service.sync_project(project) # Assuming this is available
-    return OperationSuccessResponse(success=True, message="Project sync initiated.")
+async def sync_project_files_route(project_id: int = FastAPIPath(..., description="The ID of the project")):
+    try:
+        project = await project_service.get_project_by_id(project_id)
+        if not project:
+            # Original code raises ApiError here, which is good.
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
+        
+        await api_log(f"[sync_project_files_route] Syncing project {project_id}", "info", {"project_id": project_id})
+        await file_sync_service.sync_project(project)
+        await api_log(f"[sync_project_files_route] Sync completed for project {project_id}", "info", {"project_id": project_id})
+        return OperationSuccessResponse(success=True, message="Project sync initiated.")
+    except ApiError as e:
+        # Log the ApiError with specific details
+        await api_log(f"[sync_project_files_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        # Convert ApiError to HTTPException
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        # If it's already an HTTPException (e.g., from FastAPI validation), re-raise it
+        await api_log(f"[sync_project_files_route] HTTPException for project {project_id}", "warn", {"project_id": project_id})
+        raise
+    except Exception as e:
+        # Catch any other unexpected exceptions
+        await api_log(f"[sync_project_files_route] Unhandled exception for project {project_id}: {str(e)}", "error", {"project_id": project_id, "error_type": type(e).__name__})
+        # Return a generic 500 error
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred during project sync: {str(e)}")
 
 @router.get(
     "/projects/{project_id}/files",
@@ -240,29 +323,29 @@ async def sync_project_files_route(project_id: str = FastAPIPath(..., min_length
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ApiErrorResponse, "description": "Internal Server Error"}
     }
 )
-async def get_project_files_route(project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project")):
-    print(f"[get_project_files_route] project_id: {project_id}")
-    print(f"[get_project_files_route] project_id_type: {type(project_id)}")
+async def get_project_files_route(project_id: int = FastAPIPath(..., description="The ID of the project")):
+    try:
+        # The explicit int conversion and print statements can be removed if FastAPI handles type coercion well,
+        # but keeping for parity with original snippet if these logs are important.
+        # project_id_int = int(project_id) # FastAPI does this
+        await api_log(f"[get_project_files_route] Request for project files, project_id: {project_id}", "info", {"project_id": project_id})
 
-    project_id = int(project_id)
-    print(f"[get_project_files_route] project_id_int: {project_id}")
-    print(f"[get_project_files_route] project_id_int_type: {type(project_id)}")
-
-    project = await project_service.get_project_by_id(project_id) # Ensure project exists
-    print(f"[get_project_files_route] project: {project}")
-    if not project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
-    
-    # The python project_service.get_project_files (not explicitly in provided context but expected)
-    # For now, assuming project_storage can be used or get_project_files is in project_service
-    # The current `project_service.py` does not have `get_project_files`.
-    # However, `get_full_project_summary.py` implies `get_project_files` in `project_service`.
-    # `project_storage.read_project_files` returns a Dict. We need List[ProjectFile].
-    
-    files_dict = await project_service.project_storage.read_project_files(project_id)
-    files_list = list(files_dict.values()) if files_dict else []
-    
-    return FileListResponse(success=True, data=files_list)
+        project = await project_service.get_project_by_id(project_id)
+        if not project:
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
+        
+        files_dict = await project_service.project_storage.read_project_files(project_id)
+        files_list = list(files_dict.values()) if files_dict else []
+        
+        return FileListResponse(success=True, data=files_list)
+    except ApiError as e:
+        await api_log(f"[get_project_files_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[get_project_files_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to get project files for {project_id}: {str(e)}")
 
 
 @router.post(
@@ -277,21 +360,32 @@ async def get_project_files_route(project_id: str = FastAPIPath(..., min_length=
     }
 )
 async def refresh_project_route(
-    project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project"),
-    folder: Optional[str] = Query(None, description="Optional folder path to limit the refresh scope", example="src/components") # Matches RefreshQuery schema
+    project_id: int = FastAPIPath(..., description="The ID of the project"),
+    folder: Optional[str] = Query(None, description="Optional folder path to limit the refresh scope", example="src/components")
 ):
-    project = await project_service.get_project_by_id(project_id)
-    if not project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
+    try:
+        await api_log(f"[refresh_project_route] Refreshing project {project_id}, folder: {folder}", "info", {"project_id": project_id, "folder": folder})
+        project = await project_service.get_project_by_id(project_id)
+        if not project:
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
 
-    if folder:
-        await file_sync_service.sync_project_folder(project, folder) # Assuming available
-    else:
-        await file_sync_service.sync_project(project) # Assuming available
-    
-    files_dict = await project_service.project_storage.read_project_files(project_id)
-    files_list = list(files_dict.values()) if files_dict else []
-    return FileListResponse(success=True, data=files_list)
+        if folder:
+            await file_sync_service.sync_project_folder(project, folder)
+        else:
+            await file_sync_service.sync_project(project)
+        
+        files_dict = await project_service.project_storage.read_project_files(project_id)
+        files_list = list(files_dict.values()) if files_dict else []
+        await api_log(f"[refresh_project_route] Refresh completed for project {project_id}", "info", {"project_id": project_id, "files_count": len(files_list)})
+        return FileListResponse(success=True, data=files_list)
+    except ApiError as e:
+        await api_log(f"[refresh_project_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "folder": folder, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[refresh_project_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id, "folder": folder})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to refresh project {project_id}: {str(e)}")
 
 
 @router.get(
@@ -305,49 +399,36 @@ async def refresh_project_route(
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ApiErrorResponse, "description": "Internal Server Error or failed to generate summary for existing project"}
     }
 )
-async def get_project_summary_route(project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project")):
-
-    print(f"[get_project_summary_route] project_id: {project_id}")
-    print(f"[get_project_summary_route] project_id_type: {type(project_id)}")
-
-    project_id = int(project_id)
-    print(f"[get_project_summary_route] project_id_int: {project_id}")
-    print(f"[get_project_summary_route] project_id_int_type: {type(project_id)}")
-
+async def get_project_summary_route(project_id: int = FastAPIPath(..., description="The ID of the project")):
     try:
-        # Assuming get_full_project_summary handles project existence check internally.
-        # If project doesn't exist, it should raise an ApiError that results in a 404.
+        # project_id_int = int(project_id) # FastAPI handles
+        await api_log(f"[get_project_summary_route] Request for project summary, project_id: {project_id}", "info", {"project_id": project_id})
+        
         summary_result = await get_full_project_summary(project_id)
 
         if isinstance(summary_result, str):
-            # Successfully got a summary string
             return ProjectSummaryResponse(success=True, summary=summary_result)
         elif isinstance(summary_result, dict) and ("message" in summary_result or "error" in summary_result):
-            # This case, as per original logic, could mean "No summaries available" or a similar soft error for an existing project.
             actual_message = summary_result.get("message", summary_result.get("error", "No specific message from get_full_project_summary"))
-            print(f"Project {project_id}: get_full_project_summary returned a dict: '{actual_message}'. Returning empty summary.")
-            return ProjectSummaryResponse(success=True, summary="") # Return empty summary for this case.
+            await api_log(f"[get_project_summary_route] Project {project_id}: get_full_project_summary returned a dict: '{actual_message}'. Returning empty summary.", "info", {"project_id": project_id, "message": actual_message})
+            return ProjectSummaryResponse(success=True, summary="")
         elif summary_result is None:
-            print(f"Project {project_id}: get_full_project_summary returned None. Returning empty summary.")
+            await api_log(f"[get_project_summary_route] Project {project_id}: get_full_project_summary returned None. Returning empty summary.", "info", {"project_id": project_id})
             return ProjectSummaryResponse(success=True, summary="")
         else:
-            # The result is not a string, not the expected error dict, and not None. This is an unexpected format.
-            print(f"Project {project_id}: get_full_project_summary returned an unexpected format: {type(summary_result)}. Value: {summary_result}")
-            raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, "Invalid summary format received from summary generation process.", "PROJECT_SUMMARY_INVALID_FORMAT")
+            await api_log(f"[get_project_summary_route] Project {project_id}: get_full_project_summary returned an unexpected format: {type(summary_result)}. Value: {summary_result}", "error", {"project_id": project_id, "result_type": str(type(summary_result))})
+            raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, "Invalid summary format received.", "PROJECT_SUMMARY_INVALID_FORMAT")
 
     except ApiError as e:
-        # If get_full_project_summary raises an ApiError.
-        if e.status_code == status.HTTP_404_NOT_FOUND:
-            print(f"Project {project_id} not found according to get_full_project_summary. Raising 404.")
-            raise # Re-raise the original 404 error.
-        else:
-            # For other ApiErrors (e.g., 500 from an AI provider during summarization for an existing project), re-raise.
-            print(f"Project {project_id}: ApiError during summary generation: {e.detail} (Status: {e.status_code}). Re-raising.")
-            raise
+        await api_log(f"[get_project_summary_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details, "status_code": e.status_code})
+        # if e.status_code == status.HTTP_404_NOT_FOUND: # This check is already in get_full_project_summary which raises ApiError
+        #     print(f"Project {project_id} not found according to get_full_project_summary. Raising 404.")
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
     except Exception as e:
-        # Catch any other unexpected errors from get_full_project_summary.
-        print(f"Project {project_id}: Unexpected error during summary generation: {str(e)}. Raising 500.")
-        raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, f"An unexpected error occurred while generating project summary: {str(e)}", "PROJECT_SUMMARY_UNEXPECTED_ERROR")
+        await api_log(f"[get_project_summary_route] Unexpected error for project {project_id}: {str(e)}", "error", {"project_id": project_id, "error_type": type(e).__name__})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred while generating project summary for {project_id}: {str(e)}")
 
 
 @router.post(
@@ -362,21 +443,24 @@ async def get_project_summary_route(project_id: str = FastAPIPath(..., min_lengt
     }
 )
 async def suggest_files_route(
-    project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project"),
+    project_id: int = FastAPIPath(..., description="The ID of the project"),
     body: SuggestFilesBody = Body(...)
 ):
-    project = await project_service.get_project_by_id(project_id) # Ensure project exists
-    if not project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
+    try:
+        # project_id_int = int(project_id) # FastAPI handles
+        await api_log(f"[suggest_files_route] Suggesting files for project {project_id}", "info", {"project_id": project_id, "user_input_length": len(body.userInput)})
+        project = await project_service.get_project_by_id(project_id)
+        if not project:
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
 
-    project_summary = await get_full_project_summary(project_id)
-    if isinstance(project_summary, dict): # Error case from get_full_project_summary
-        # Proceed with empty summary or handle as error. TS version proceeds.
+        project_summary = await get_full_project_summary(project_id)
         project_summary_str = "Project summary is unavailable."
-    else:
-        project_summary_str = project_summary
-
-    system_prompt = """
+        if isinstance(project_summary, str):
+            project_summary_str = project_summary
+        elif isinstance(project_summary, dict): # Error case from get_full_project_summary
+            await api_log(f"[suggest_files_route] Project summary for {project_id} was a dict: {project_summary}. Proceeding with unavailable message.", "warn", {"project_id": project_id})
+        
+        system_prompt = """
 <role>
 You are a code assistant that recommends relevant files based on user input.
 You have a list of file summaries and a user request.
@@ -396,7 +480,7 @@ You have a list of file summaries and a user request.
 </guidelines>
     """
     
-    user_prompt = f"""
+        user_prompt = f"""
 <project_summary>
 {project_summary_str}
 </project_summary>
@@ -405,27 +489,30 @@ You have a list of file summaries and a user request.
 {body.userInput}
 </user_query>
 """
-    try:
         ai_response = await gen_ai_service.generate_structured_data({
             "prompt": user_prompt,
-            "schema": FileSuggestions, # Pydantic model for AI output validation
+            "schema": FileSuggestions,
             "system_message": system_prompt,
-            "options": LOW_MODEL_CONFIG # Or other relevant AI config
+            "options": LOW_MODEL_CONFIG
         })
-        # Assuming ai_response.object is an instance of FileSuggestions or a dict that can be parsed
+        
         if isinstance(ai_response.object, FileSuggestions):
             suggestions = ai_response.object
         elif isinstance(ai_response.object, dict):
             suggestions = FileSuggestions(**ai_response.object)
         else:
-            raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, "AI returned unexpected data structure for file suggestions.", "AI_SUGGESTION_INVALID_STRUCTURE")
+            await api_log(f"[suggest_files_route] AI returned unexpected structure for project {project_id}", "error", {"project_id": project_id, "response_type": str(type(ai_response.object))})
+            raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, "AI returned unexpected data structure.", "AI_SUGGESTION_INVALID_STRUCTURE")
 
         return SuggestFilesResponse(success=True, recommendedFileIds=suggestions.fileIds)
-    except ApiError:
+    except ApiError as e:
+        await api_log(f"[suggest_files_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
         raise
     except Exception as e:
-        print(f'[SuggestFiles Project] Error: {e}')
-        raise ApiError(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to suggest files: {str(e)}", "AI_SUGGESTION_ERROR")
+        await api_log(f"[suggest_files_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id, "error_type": type(e).__name__})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to suggest files for project {project_id}: {str(e)}")
 
 
 @router.post(
@@ -440,78 +527,68 @@ You have a list of file summaries and a user request.
     }
 )
 async def summarize_project_files_route(
-    project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project"),
+    project_id: int = FastAPIPath(..., description="The ID of the project"),
     body: SummarizeFilesBody = Body(...)
 ):
-    project = await project_service.get_project_by_id(project_id) # Ensure project exists
-    if not project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
+    try:
+        # project_id_int = int(project_id) # FastAPI handles
+        await api_log(f"[summarize_project_files_route] Summarizing files for project {project_id}", "info", {"project_id": project_id, "file_ids_count": len(body.fileIds)})
+        project = await project_service.get_project_by_id(project_id)
+        if not project:
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
 
-    # The Python project_service.summarize_files takes List[ProjectFile].
-    # The route receives fileIds. We need to fetch the files first.
-    # `force` parameter from body.force is not directly used in current python summarize_single_file.
-    # It might be used if summarize_single_file is enhanced or if we filter files based on it.
+        files_to_process_check = await project_service.get_project_files_by_ids(project_id, body.fileIds)
+        if len(files_to_process_check) != len(body.fileIds):
+             await api_log(f"[summarize_project_files_route] Warning: Requested {len(body.fileIds)} files for summarization, found {len(files_to_process_check)} for project {project_id}.", "warn", {"project_id": project_id, "requested_count": len(body.fileIds), "found_count": len(files_to_process_check)})
+             if not files_to_process_check and body.fileIds:
+                 raise ApiError(status.HTTP_404_NOT_FOUND, "None of the requested files found for summarization.", "FILES_NOT_FOUND_FOR_SUMMARIZATION")
+        
+        if not files_to_process_check: # If files_to_process_check is empty (either none requested or none found)
+            await api_log(f"[summarize_project_files_route] No files to process for summarization for project {project_id}.", "info", {"project_id": project_id})
+            return SummarizeFilesResponse(
+                success=True,
+                message="No files processed for summarization.",
+                included=0,
+                skipped=len(body.fileIds), # All requested files were skipped as they were not found/processed
+                updated_files=[],
+            )
 
-    files_to_process = await project_service.get_project_files_by_ids(project_id, body.fileIds)
-    if len(files_to_process) != len(body.fileIds):
-         # Some files might not have been found, could log this.
-         # For now, proceed with found files. Or raise if strict matching is needed.
-         print(f"Warning: Requested {len(body.fileIds)} files for summarization, found {len(files_to_process)}.")
-         if not files_to_process and body.fileIds: # If none found but some requested
-             raise ApiError(status.HTTP_404_NOT_FOUND, "None of the requested files found for summarization.", "FILES_NOT_FOUND_FOR_SUMMARIZATION")
+        # Call summarize_files with the original list of file IDs
+        summarization_result = await project_service.summarize_files(
+            project_id,
+            body.fileIds, # Pass the list of file IDs directly
+        )
+        
+        # The summarize_files service now returns a dict: {"included": int, "skipped": int, "updated_files": List[ProjectFile]}
+        updated_project_files_list = summarization_result.get("updated_files", [])
+        included_count = summarization_result.get("included", 0)
+        # The service internally calculates skipped files based on what it processed vs. what was requested (body.fileIds)
+        # So we use the skipped count directly from the service if available.
+        # If not, we fall back to the previous logic, but ideally, the service handles this.
+        service_skipped_count = summarization_result.get("skipped")
 
+        if service_skipped_count is not None:
+            skipped_count = service_skipped_count
+        else:
+            # Fallback logic if service doesn't provide skipped count (it should)
+            total_requested = len(body.fileIds)
+            skipped_count = total_requested - included_count
 
-    # The Python `project_service.summarize_files` returns `List[ProjectFile]`.
-    # To match `SummarizeFilesResponseSchema` (included, skipped counts),
-    # this service function would need to be modified to return these counts.
-    # Assuming for now it's modified or we approximate.
-    # For 1:1, the service function SHOULD return counts.
-    
-    # Current python project_service.summarize_files signature:
-    # async def summarize_files(project_id: str, files_to_process: List[ProjectFile], summarize_single_file_func) -> List[ProjectFile]:
-    
-    updated_project_files = await project_service.summarize_files(
-        project_id,
-        files_to_process,
-        project_service.summarize_single_file # Pass the actual summarization function
-    )
-    
-    # Approximation if service doesn't return counts:
-    included_count = len(updated_project_files)
-    # Skipped count is harder; the service logs it but doesn't return it.
-    # For an exact match to SummarizeFilesResponseSchema, project_service.summarize_files MUST return counts.
-    # Assuming it has been updated like its TS counterpart:
-    # result_obj = await project_service.summarize_files(...) 
-    # e.g., result_obj = {"updated_files": [...], "included": X, "skipped": Y}
-    # For now, I will construct the response based on the current Python service.
-    # This means `skipped` count will be missing or inaccurate.
-    
-    # To fulfill the schema if service is NOT updated:
-    # This is a known deviation if project_service.summarize_files isn't updated.
-    # For the purpose of this conversion, we assume the service WILL align or has an adapter.
-    # If project_service.summarize_files returns a dict like { "updated_files": [], "included": N, "skipped": M }
-    # then:
-    # result_summary = await project_service.summarize_files_with_counts(...)
-    # included_count = result_summary.included 
-    # skipped_count = result_summary.skipped
-    # updated_project_files = result_summary.updated_files
-
-    # If sticking to current project_service.summarize_files:
-    # This is an area that needs alignment between service and route for 1:1 schema.
-    # Let's pretend `project_service.summarize_files` is enhanced or we call an outer function.
-    # For the purpose of this, I will create a placeholder for a more complete result.
-    # If project_service.summarize_files is not changed, this part will not fully match TS behavior.
-    # To make it work "somehow" with the current Python service:
-    total_requested = len(body.fileIds)
-    skipped_count = total_requested - included_count # Very rough approximation, not distinguishing error vs empty
-
-    return SummarizeFilesResponse(
-        success=True,
-        message="Summarization process completed.",
-        included=included_count,
-        skipped=skipped_count, # Placeholder if service doesn't provide accurate count
-        updatedFiles=updated_project_files
-    )
+        return SummarizeFilesResponse(
+            success=True,
+            message="Summarization process completed.",
+            included=included_count,
+            skipped=skipped_count, 
+            updated_files=updated_project_files_list
+        )
+    except ApiError as e:
+        await api_log(f"[summarize_project_files_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[summarize_project_files_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id, "error_type": type(e).__name__})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to summarize files for project {project_id}: {str(e)}")
 
 @router.post(
     "/projects/{project_id}/remove-summaries",
@@ -525,44 +602,64 @@ async def summarize_project_files_route(
     }
 )
 async def remove_summaries_route(
-    project_id: str = FastAPIPath(..., min_length=1, description="The ID of the project"),
+    project_id: int = FastAPIPath(..., description="The ID of the project"),
     body: RemoveSummariesBody = Body(...)
 ):
-    project = await project_service.get_project_by_id(project_id) # Ensure project exists
-    if not project:
-        raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
-    
-    # Assuming project_service.remove_summaries_from_files exists and matches TS version's purpose.
-    # TS: removeSummariesFromFiles(projectId: string, fileIds: string[]): Promise<{ removedCount: number; message: string }>
-    # Python: needs equivalent in project_service.py
-    # For now, let's assume it's added:
-    # result = await project_service.remove_summaries_from_files(project_id, body.fileIds)
-    # return RemoveSummariesResponse(success=True, removedCount=result.removed_count, message=result.message)
+    try:
+        # project_id_int = int(project_id) # FastAPI handles
+        await api_log(f"[remove_summaries_route] Removing summaries for project {project_id}", "info", {"project_id": project_id, "file_ids_count": len(body.fileIds)})
+        project = await project_service.get_project_by_id(project_id)
+        if not project:
+            raise ApiError(status.HTTP_404_NOT_FOUND, f"Project not found: {project_id}", "PROJECT_NOT_FOUND")
+        
+        # Assuming project_service.remove_summaries_from_files is NOT implemented yet
+        # Using the inline logic as before:
+        all_files_map = await project_service.project_storage.read_project_files(project_id)
+        removed_count = 0
+        changes_made = False
+        files_not_found_count = 0
 
-    # If not directly available, an example implementation using project_storage:
-    all_files_map = await project_service.project_storage.read_project_files(project_id)
-    removed_count = 0
-    changes_made = False
-    for file_id in body.fileIds:
-        if file_id in all_files_map:
-            file_data = all_files_map[file_id]
-            if file_data.summary is not None or file_data.summaryLastUpdatedAt is not None:
-                file_data.summary = None
-                file_data.summaryLastUpdatedAt = None
-                all_files_map[file_id] = file_data # Pydantic model, re-assign
+        if not all_files_map: # Handle case where project has no files stored
+            all_files_map = {}
+
+        for file_id in body.fileIds:
+            if file_id in all_files_map:
+                file_data = all_files_map[file_id]
+                if file_data.summary is not None or file_data.summaryLastUpdatedAt is not None:
+                    file_data.summary = None
+                    file_data.summaryLastUpdatedAt = None
+                    # Pydantic models are immutable by default, but if it's a dict from storage, direct update is fine.
+                    # If it's a Pydantic model instance, it might need to be reconstructed or use model_copy.
+                    # Assuming all_files_map contains mutable dicts or project_storage handles Pydantic instances correctly on write.
+                    # For safety with Pydantic models: all_files_map[file_id] = file_data.model_copy(update={"summary": None, "summaryLastUpdatedAt": None})
+                    # However, project_storage.write_project_files probably expects dicts of ProjectFile models, so mutating the model instance before write is typical.
+                all_files_map[file_id] = file_data 
                 removed_count += 1
                 changes_made = True
-        else:
-            print(f"Warning: File ID {file_id} not found in project {project_id} for remove summary.")
+            else:
+                files_not_found_count +=1
+                await api_log(f"[remove_summaries_route] Warning: File ID {file_id} not found in project {project_id} for remove summary.", "warn", {"project_id": project_id, "file_id": file_id})
 
-    if changes_made:
-        await project_service.project_storage.write_project_files(project_id, all_files_map)
+        if changes_made:
+            await project_service.project_storage.write_project_files(project_id, all_files_map)
 
-    message = f"Removed summaries from {removed_count} files."
-    if removed_count == 0 and body.fileIds:
-        message = "No summaries found to remove for the R."
-        
-    return RemoveSummariesResponse(success=True, removedCount=removed_count, message=message)
+        message = f"Removed summaries from {removed_count} file(s)."
+        if files_not_found_count > 0:
+            message += f" {files_not_found_count} requested file(s) not found."
+        if removed_count == 0 and files_not_found_count == 0 and body.fileIds: # files requested, none found with summaries, none missing
+             message = "No summaries found to remove for the provided file IDs."
+        elif not body.fileIds:
+            message = "No file IDs provided to remove summaries from."
+            
+        return RemoveSummariesResponse(success=True, removedCount=removed_count, message=message)
+    except ApiError as e:
+        await api_log(f"[remove_summaries_route] ApiError for project {project_id}: {e.message}", "error", {"project_id": project_id, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[remove_summaries_route] Exception for project {project_id}: {str(e)}", "error", {"project_id": project_id, "error_type": type(e).__name__})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to remove summaries for project {project_id}: {str(e)}")
 
 
 @router.post(
@@ -576,20 +673,24 @@ async def remove_summaries_route(
     }
 )
 async def optimize_user_input_route(body: OptimizeUserInputRequest = Body(...)):
-    # This function `optimize_user_input` is in TS project-service.
-    # It needs to be implemented in Python's `app.services.project_service.py`.
-    # Assuming it exists:
-    # optimized_text = await project_service.optimize_user_input(body.projectId, body.userContext)
-    
-    # Placeholder if not yet implemented in project_service.py:
-    # For 1:1 this service function MUST exist in Python.
-    if not hasattr(project_service, 'optimize_user_input'):
-        raise ApiError(status.HTTP_501_NOT_IMPLEMENTED, "Prompt optimization service not implemented in Python backend.", "SERVICE_NOT_IMPLEMENTED")
+    try:
+        await api_log(f"[optimize_user_input_route] Optimizing prompt for project {body.projectId}", "info", {"project_id": body.projectId, "context_length": len(body.userContext or "")})
+        if not hasattr(project_service, 'optimize_user_input'):
+            await api_log(f"[optimize_user_input_route] Service 'optimize_user_input' not implemented.", "error", {"project_id": body.projectId})
+            raise ApiError(status.HTTP_501_NOT_IMPLEMENTED, "Prompt optimization service not implemented.", "SERVICE_NOT_IMPLEMENTED")
 
-    optimized_text = await project_service.optimize_user_input(body.projectId, body.userContext)
-    
-    response_data = OptimizedPromptData(optimizedPrompt=optimized_text)
-    return OptimizePromptResponse(success=True, data=response_data)
+        optimized_text = await project_service.optimize_user_input(body.projectId, body.userContext)
+        
+        response_data = OptimizedPromptData(optimizedPrompt=optimized_text)
+        return OptimizePromptResponse(success=True, data=response_data)
+    except ApiError as e:
+        await api_log(f"[optimize_user_input_route] ApiError for project {body.projectId}: {e.message}", "error", {"project_id": body.projectId, "error_code": e.code, "details": e.details})
+        raise HTTPException(status_code=e.status_code, detail=e.to_dict())
+    except HTTPException:
+        raise
+    except Exception as e:
+        await api_log(f"[optimize_user_input_route] Exception for project {body.projectId}: {str(e)}", "error", {"project_id": body.projectId, "error_type": type(e).__name__})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to optimize prompt for project {body.projectId}: {str(e)}")
 
 # To be included in app/api/routes.py:
 # from .endpoints import projects
