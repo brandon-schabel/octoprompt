@@ -118,7 +118,7 @@ describe('Import Resolver', () => {
         DialogTitle,
       } from "@ui"
       import { ProjectList } from "@/components/projects/project-list"
-      import { useGetProjects, useDeleteProject } from "@/hooks/python-api/use-projects-api"
+      import { useGetProjects, useDeleteProject } from "@/hooks/api/use-projects-api"
       import { useGlobalState } from "@/hooks/use-global-state"
       import { useNavigate } from "@tanstack/react-router"
       import { ProjectDialog } from "@/components/projects/project-dialog"

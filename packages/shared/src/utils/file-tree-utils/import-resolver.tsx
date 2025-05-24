@@ -263,7 +263,7 @@ export function getRecursiveImports(
   }
   visitedIds.add(fileId)
 
-  const file = allFiles.find((f) => f.id === fileId)
+  const file = allFiles.find((f) => String(f.id) === fileId)
   if (!file || !file.content) {
     return []
   }
@@ -274,10 +274,10 @@ export function getRecursiveImports(
 
   for (const imp of imports) {
     const resolvedFile = resolveImportPath(imp, file, allFiles, tsconfigCache)
-    if (resolvedFile && resolvedFile.id !== fileId) {
-      if (!visitedIds.has(resolvedFile.id)) {
-        result.push(resolvedFile.id)
-        const subImports = getRecursiveImports(resolvedFile.id, allFiles, tsconfigCache, visitedIds)
+    if (resolvedFile && String(resolvedFile.id) !== fileId) {
+      if (!visitedIds.has(String(resolvedFile.id))) {
+        result.push(String(resolvedFile.id))
+        const subImports = getRecursiveImports(String(resolvedFile.id), allFiles, tsconfigCache, visitedIds)
         for (const si of subImports) {
           if (!result.includes(si)) {
             result.push(si)

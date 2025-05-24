@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime, timezone
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int
+from app.utils.storage_timestamp_utils import convert_timestamp_to_ms_int
 
 class Project(BaseModel):
     id: int

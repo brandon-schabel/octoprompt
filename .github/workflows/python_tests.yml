@@ -40,7 +40,7 @@ jobs:
         run: |
           echo "🧪 Running Python Backend Tests..."
           cd packages/python_backend
-          uv run test
+          uv run pytest
 
       # Optional: Add test coverage reporting
       # - name: Upload coverage reports
