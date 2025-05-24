@@ -253,7 +253,7 @@ function extractImportsFromContent(content: string): string[] {
  * Returns an array of fileIds (excluding the root fileId) that the file depends on.
  */
 export function getRecursiveImports(
-  fileId: string,
+  fileId: number,
   allFiles: ProjectFile[],
   tsconfigCache: TsconfigCache,
   visitedIds = new Set<string>()

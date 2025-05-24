@@ -19,7 +19,7 @@ import type {
 import { Options } from '../../generated/sdk.gen'
 
 export type GenerateChangeInput = {
-  projectId: string
+  projectId: number
   filePath: string
   prompt: string
 }
@@ -28,9 +28,9 @@ type FileChangeDetailsResponse = GetApiProjectsByProjectIdAiFileChangesByAiFileC
 
 const FILE_CHANGE_KEYS = {
   all: ['fileChange'] as const,
-  detail: (projectId: string, changeId: string) =>
+  detail: (projectId: number, changeId: number) =>
     getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdQueryKey({
-      path: { projectId: projectId, aiFileChangeId: changeId.toString() }
+      path: { projectId: projectId, aiFileChangeId: changeId }
     } as Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData>)
 }
 
@@ -58,7 +58,7 @@ export function useGenerateFileChange() {
   })
 }
 
-export function useGetFileChange(projectId: string | null, changeId: string | null) {
+export function useGetFileChange(projectId: number | null, changeId: number | null) {
   const queryKey =
     projectId && changeId
       ? FILE_CHANGE_KEYS.detail(projectId, changeId)
@@ -71,7 +71,7 @@ export function useGetFileChange(projectId: string | null, changeId: string | nu
 
       try {
         const options = getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdOptions({
-          path: { projectId, aiFileChangeId: changeId.toString() }
+          path: { projectId, aiFileChangeId: changeId, }
         } as Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData>)
 
         if (!options?.queryFn) {
@@ -107,8 +107,8 @@ export function useGetFileChange(projectId: string | null, changeId: string | nu
 }
 
 export type ConfirmFileChangeInput = {
-  projectId: string
-  changeId: string
+  projectId: number
+  changeId: number
 }
 
 export function useConfirmFileChange() {
@@ -123,7 +123,7 @@ export function useConfirmFileChange() {
     mutationFn: async (variables: ConfirmFileChangeInput) => {
       const { projectId, changeId } = variables
       const opts: Options<PostApiProjectsByProjectIdAiFileChangesByAiFileChangeIdConfirmData> = {
-        path: { projectId, aiFileChangeId: changeId.toString() }
+        path: { projectId, aiFileChangeId: changeId }
       }
       if (!mutationOptions.mutationFn) {
         throw new Error('Mutation function not available')

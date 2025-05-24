@@ -565,7 +565,7 @@ const ChatMessageItem = React.memo(
 ChatMessageItem.displayName = 'ChatMessageItem'
 
 interface ChatMessagesProps {
-  chatId: string | null
+  chatId: number | null
   messages: Message[]
   isLoading: boolean
   excludedMessageIds?: string[]
@@ -760,7 +760,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, [createChatMutation, setActiveChatId, onClose])
 
   const handleDeleteChat = useCallback(
-    async (chatId: string, e: React.MouseEvent) => {
+    async (chatId: number, e: React.MouseEvent) => {
       e.stopPropagation()
       if (!window.confirm('Are you sure you want to delete this chat?')) return
       try {
@@ -788,7 +788,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, [])
 
   const handleUpdateChat = useCallback(
-    async (chatId: string) => {
+    async (chatId: number) => {
       if (!editingTitle.trim()) {
         toast.error('Chat title cannot be empty.')
         return
@@ -815,7 +815,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, [])
 
   const handleSelectChat = useCallback(
-    (chatId: string) => {
+    (chatId: number) => {
       if (!editingChatId) {
         setActiveChatId(chatId)
         onClose()
@@ -834,7 +834,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     }
   }, [activeChatId, visibleChats])
 
-  const handleKeyDownEdit = (e: React.KeyboardEvent<HTMLInputElement>, chatId: string) => {
+  const handleKeyDownEdit = (e: React.KeyboardEvent<HTMLInputElement>, chatId: number) => {
     if (e.key === 'Enter') {
       handleUpdateChat(chatId)
     } else if (e.key === 'Escape') {

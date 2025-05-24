@@ -187,7 +187,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       }
     }
 
-    async function handleUpdatePromptContent(promptId: string, updates: { name: string; content: string }) {
+    async function handleUpdatePromptContent(promptId: number, updates: { name: string; content: string }) {
       if (!activeProjectTabState?.selectedProjectId) return
       await updatePromptMutation.mutateAsync({ promptId, data: updates })
       toast.success('Prompt updated')

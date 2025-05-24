@@ -24,10 +24,10 @@ export const AgentTaskSchema = z
       example:
         'Update the login function in `src/auth.ts` to use asynchronous hashing for passwords and return a JWT token upon successful authentication.'
     }),
-    targetFileId: z.string().optional().openapi({
+    targetFileId: z.number().optional().openapi({
       description:
         'The unique ID (from ProjectFileSchema) of the primary source file to be modified or created by this task. Will be populated by orchestrator for new files.',
-      example: 'file-id-xyz-789'
+      example: 1716537600000
     }),
     targetFilePath: z.string().min(1).openapi({
       description:
@@ -38,10 +38,10 @@ export const AgentTaskSchema = z
       description: 'Tracks the progress of the task through the workflow.',
       example: 'PENDING'
     }),
-    relatedTestFileId: z.string().optional().openapi({
+    relatedTestFileId: z.number().optional().openapi({
       description:
         "Optional: The unique ID (from ProjectFileSchema) of the corresponding unit test file (e.g., 'src/utils/auth.test.ts'), if applicable.",
-      example: 'file-id-test-abc-123'
+      example: 1716537600000
     }),
     estimatedComplexity: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional().openapi({
       description: "Optional: AI's estimation of the task's complexity.",
@@ -99,16 +99,14 @@ export const AgentContextSchema = z
         example: 'A Node.js backend service for managing user accounts.'
       }),
     project: ProjectSchema,
-    agentJobId: z
-      .string()
-      .openapi({ description: 'The ID of the agent job that is running this task plan.', example: 'job-xyz-789' }),
+    agentJobId: z.number().openapi({ description: 'The ID of the agent job that is running this task plan.', example: 1716537600000 }),
     prompts: z.array(PromptSchema).openapi({ description: 'The prompts to use for the agent.' }),
     selectedFileIds: z
       .array(z.number())
       .min(1)
       .openapi({
         description: 'Array of ProjectFile IDs to provide as initial context.',
-          example: [1716537600000, 1716537600000]
+        example: [1716537600000, 1716537600000]
       })
   })
   .refine((ctx) => ctx.projectFiles[0]?.projectId, {
@@ -156,7 +154,7 @@ export const AgentCoderRunRequestSchema = z
         example: [1716537600000, 1716537600000]
       }),
     // generated on the client side and passed to the server to retrieve the execution logs and data for this run.
-    agentJobId: z.string().optional().openapi({
+    agentJobId: z.number().optional().openapi({
       description: 'The unique ID for retrieving the execution logs and data for this run.'
     }),
     selectedPromptIds: z
@@ -177,7 +175,7 @@ export const AgentCoderRunSuccessDataSchema = z
     taskPlan: AgentTaskPlanSchema.optional().openapi({
       description: 'The final task plan executed by the agent (includes task statuses).'
     }),
-    agentJobId: z.string().openapi({
+    agentJobId: z.number().openapi({
       description: 'The unique ID for retrieving the execution logs and data for this run.'
     })
   })
@@ -199,7 +197,7 @@ export const AgentDataLogSchema = z
       .string()
       .openapi({ description: 'Absolute path to the directory containing logs for this job.' }),
     projectId: z.number().openapi({ description: 'The ID of the project this agent run targeted.' }),
-    agentJobId: z.string().openapi({ description: 'The unique ID for this agent run.' }),
+    agentJobId: z.number().openapi({ description: 'The unique ID for this agent run.' }),
     agentJobStartTime: z.number().openapi({ description: 'ISO 8601 timestamp when the agent job started.' }),
     // The initial plan generated before execution steps
     taskPlan: AgentTaskPlanSchema.optional().openapi({
@@ -215,7 +213,7 @@ export const AgentDataLogSchema = z
         'The task plan reflecting the state after execution attempts (tasks will have final statuses like COMPLETED, FAILED).'
     }),
     agentJobEndTime: z
-        .number()
+      .number()
       .openapi({ description: 'ISO 8601 timestamp when the agent job finished or errored.' }),
     // Optional fields only present on error
     errorMessage: z.string().optional().openapi({ description: 'Error message if the agent run failed.' }),

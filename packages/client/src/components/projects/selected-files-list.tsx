@@ -30,7 +30,7 @@ import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 
 type SelectedFilesListProps = {
-  onRemoveFile: (fileId: string) => void
+  onRemoveFile: (fileId: number) => void
   onNavigateLeft?: () => void
   onNavigateRight?: () => void
   className?: string
@@ -140,7 +140,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
       }
     }))
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, fileId: string, index: number) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, fileId: number, index: number) => {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault()

@@ -68,14 +68,14 @@ const PROJECT_KEYS = {
     all: () => listProjectsRouteProjectsGetQueryKey(), // Updated name
     lists: () => listProjectsRouteProjectsGetQueryKey(), // Updated name
     details: () => [...listProjectsRouteProjectsGetQueryKey(), 'detail'] as const,
-    detail: (projectId: string) =>
+    detail: (projectId: number) =>
         getProjectByIdRouteProjectsProjectIdGetQueryKey({ path: { project_id: projectId } } as Options<GetProjectByIdRouteProjectsProjectIdGetData>) // Updated name
 } as const
 
 const PROJECT_FILES_KEYS = {
     all: ['project-files'] as const,
     lists: () => [...PROJECT_FILES_KEYS.all, 'list'] as const,
-    list: (projectId: string) =>
+    list: (projectId: number) =>
         getProjectFilesRouteProjectsProjectIdFilesGetQueryKey({ path: { project_id: projectId } } as Options<GetProjectFilesRouteProjectsProjectIdFilesGetData>) // Updated name
 } as const
 
@@ -86,7 +86,7 @@ export const useGetProjects = () => {
     return useQuery(queryOptions)
 }
 
-export const useGetProject = (projectId: string) => {
+export const useGetProject = (projectId: number) => {
     const queryOptions = getProjectByIdRouteProjectsProjectIdGetOptions({ // Updated name
         path: { project_id: projectId }
     } as Options<GetProjectByIdRouteProjectsProjectIdGetData>)
@@ -96,7 +96,7 @@ export const useGetProject = (projectId: string) => {
     })
 }
 
-export const useGetProjectFiles = (projectId: string) => {
+export const useGetProjectFiles = (projectId: number) => {
     const queryOptions = getProjectFilesRouteProjectsProjectIdFilesGetOptions({ // Updated name
         path: { project_id: projectId }
     } as Options<GetProjectFilesRouteProjectsProjectIdFilesGetData>)
@@ -135,9 +135,9 @@ export const useUpdateProject = () => {
     return useMutation<
         UpdateProjectRouteProjectsProjectIdPatchResponse, // Updated name
         UpdateProjectRouteProjectsProjectIdPatchError, // Updated name
-        { projectId: string; data: UpdateProjectInput }
+        { projectId: number; data: UpdateProjectInput }
     >({
-        mutationFn: (vars: { projectId: string; data: UpdateProjectInput }) => {
+        mutationFn: (vars: { projectId: number; data: UpdateProjectInput }) => {
             const opts: Options<UpdateProjectRouteProjectsProjectIdPatchData> = { path: { project_id: vars.projectId }, body: vars.data } // Updated type
             return mutationOptions.mutationFn!(opts)
         },
@@ -155,7 +155,7 @@ export const useDeleteProject = () => {
     const mutationOptions = deleteProjectRouteProjectsProjectIdDeleteMutation() // Updated name
 
     return useMutation<DeleteProjectRouteProjectsProjectIdDeleteResponse, DeleteProjectRouteProjectsProjectIdDeleteError, string>({ // Updated types
-        mutationFn: (projectId: string) => {
+        mutationFn: (projectId: number) => {
             const opts: Options<DeleteProjectRouteProjectsProjectIdDeleteData> = { path: { project_id: projectId } } // Updated type
             return mutationOptions.mutationFn!(opts)
         },
@@ -168,7 +168,7 @@ export const useDeleteProject = () => {
     })
 }
 
-export const useSyncProject = (projectId: string) => {
+export const useSyncProject = (projectId: number) => {
     const queryClient = useQueryClient()
     const mutationOptions = syncProjectFilesRouteProjectsProjectIdSyncPostMutation() // Updated name
 
@@ -186,7 +186,7 @@ export const useSyncProject = (projectId: string) => {
 }
 
 // useFindSuggestedFiles is similar to useSuggestFiles, assuming one is preferred or an alias
-export const useFindSuggestedFiles = (projectId: string) => {
+export const useFindSuggestedFiles = (projectId: number) => {
     const mutationOptions = suggestFilesRouteProjectsProjectIdSuggestFilesPostMutation() // Updated name
 
     return useMutation<
@@ -203,7 +203,7 @@ export const useFindSuggestedFiles = (projectId: string) => {
     })
 }
 
-export const useRemoveSummariesFromFiles = (projectId: string) => {
+export const useRemoveSummariesFromFiles = (projectId: number) => {
     const queryClient = useQueryClient()
     const mutationOptions = removeSummariesRouteProjectsProjectIdRemoveSummariesPostMutation() // Updated name
 
@@ -224,7 +224,7 @@ export const useRemoveSummariesFromFiles = (projectId: string) => {
     })
 }
 
-export function useRefreshProject(projectId: string) {
+export function useRefreshProject(projectId: number) {
     const queryClient = useQueryClient()
     const mutationOptions = refreshProjectRouteProjectsProjectIdRefreshPostMutation() // Updated name
 
@@ -247,7 +247,7 @@ export function useRefreshProject(projectId: string) {
     })
 }
 
-export const useSuggestFiles = (projectId: string) => { // Refactored from direct SDK call
+export const useSuggestFiles = (projectId: number) => { // Refactored from direct SDK call
     const mutationHookOptions = suggestFilesRouteProjectsProjectIdSuggestFilesPostMutation() // Updated name
 
     return useMutation<
@@ -270,7 +270,7 @@ export const useSuggestFiles = (projectId: string) => { // Refactored from direc
 }
 
 
-export const useSummarizeProjectFiles = (projectId: string) => {
+export const useSummarizeProjectFiles = (projectId: number) => {
     const mutationOptions = summarizeProjectFilesRouteProjectsProjectIdSummarizePostMutation() // Updated name
     const queryClient = useQueryClient()
 
@@ -294,8 +294,8 @@ export const useSummarizeProjectFiles = (projectId: string) => {
 
 export const useOptimzeUserInput = () => { // Corrected spelling: useOptimizeUserInput
     const mutationOptions = optimizeUserInputRoutePromptOptimizePostMutation() // Updated name
-    return useMutation<OptimizeUserInputRoutePromptOptimizePostResponse, OptimizeUserInputRoutePromptOptimizePostError, { userContext: string; projectId: string }>({ // Updated types
-        mutationFn: (vars: { userContext: string; projectId: string }) => {
+    return useMutation<OptimizeUserInputRoutePromptOptimizePostResponse, OptimizeUserInputRoutePromptOptimizePostError, { userContext: string; projectId: number }>({ // Updated types
+        mutationFn: (vars: { userContext: string; projectId: number }) => {
             const opts: Options<OptimizeUserInputRoutePromptOptimizePostData> = { body: { userContext: vars.userContext, projectId: vars.projectId } } // Updated type
             return mutationOptions.mutationFn!(opts)
         },
@@ -303,7 +303,7 @@ export const useOptimzeUserInput = () => { // Corrected spelling: useOptimizeUse
     })
 }
 
-export const useGetProjectSummary = (projectId: string) => {
+export const useGetProjectSummary = (projectId: number) => {
     const queryOptions = getProjectSummaryRouteProjectsProjectIdSummaryGetOptions({ // Updated name
         path: { project_id: projectId }
     } as Options<GetProjectSummaryRouteProjectsProjectIdSummaryGetData>)

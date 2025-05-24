@@ -283,8 +283,8 @@ function MainProjectsLayout({ projectData, filePanelRef, promptPanelRef }: MainP
 
 type NoTabsYetViewProps = {
   projects: ProjectResponse['data'][]
-  selectedProjectId?: string | null
-  createProjectTab: (args: { projectId?: string; name?: string }) => Promise<any>
+  selectedProjectId?: number | null
+  createProjectTab: (args: { projectId?: number; name?: string }) => Promise<any>
   openProjectModal: () => void
 }
 

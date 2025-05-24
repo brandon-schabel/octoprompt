@@ -34,7 +34,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const { deleteTab } = useDeleteProjectTabById()
   const [activeProjectTabState] = useActiveProjectTab()
 
-  const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null)
+  const [editingTabName, setEditingTabName] = useState<{ Id: number; name: string } | null>(null)
   const [localOrder, setLocalOrder] = useState<string[] | null>(null)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [dialogEditingTab, setDialogEditingTab] = useState<string | null>(null)
@@ -154,12 +154,12 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
   }
 
-  const handleRenameTab = (tabId: string, newName: string) => {
+  const handleRenameTab = (tabId: number, newName: string) => {
     updateProjectTabById(tabId, { displayName: newName })
     setEditingTabName(null)
   }
 
-  const handleDeleteTab = (tabId: string) => {
+  const handleDeleteTab = (tabId: number) => {
     deleteTab(tabId)
     if (dialogEditingTab === tabId) {
       setDialogEditingTab(null)
@@ -170,7 +170,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     }
   }
 
-  const startDialogRename = (tabId: string) => {
+  const startDialogRename = (tabId: number) => {
     const currentName = tabs?.[tabId]?.displayName || `Tab ${tabId.substring(0, 4)}`
     setDialogEditingTab(tabId)
     setDialogEditingName(currentName)
@@ -190,7 +190,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     setDialogEditingName('')
   }
 
-  function getTabStats(tabId: string): string {
+  function getTabStats(tabId: number): string {
     const tabData = tabs?.[tabId]
     if (!tabData) return 'No data'
     const fileCount = tabData.selectedFiles?.length ?? 0
@@ -399,14 +399,14 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 }
 
 function SortableTab(props: {
-  tabId: string
+  tabId: number
   index: number
   displayName: string
   hasLink: boolean
   isEditingInline: boolean
   editingInlineName: string
   setEditingInlineName: (name: string) => void
-  onSaveInlineRename: (tabId: string, newName: string) => void
+  onSaveInlineRename: (tabId: number, newName: string) => void
   onCancelInlineRename: () => void
   isActive: boolean
   hotkeyPrefix: string

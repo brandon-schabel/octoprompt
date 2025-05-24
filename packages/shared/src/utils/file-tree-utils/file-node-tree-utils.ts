@@ -93,11 +93,11 @@ export function isFolderPartiallySelected(folderNode: FileNode, selectedFiles: s
 }
 
 export function toggleFile(
-  fileId: string,
+  fileId: number,
   selectedFiles: string[],
   resolveImports: boolean,
   fileMap: ProjectFileMap,
-  getRecursiveImports: (fileId: string, allFiles: ProjectFile[], tsconfigCache: TsconfigCache) => string[],
+  getRecursiveImports: (fileId: number, allFiles: ProjectFile[], tsconfigCache: TsconfigCache) => string[],
   buildTsconfigAliasMap: (allFiles: ProjectFile[]) => TsconfigCache
 ): string[] {
   if (selectedFiles.includes(fileId)) {

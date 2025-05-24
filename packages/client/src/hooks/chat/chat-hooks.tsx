@@ -7,7 +7,7 @@ export function useCreateChatHandler() {
   const createChatMutation = useCreateChat()
 
   const handleCreateChat = useCallback(
-    async (chatTitle: string, currentChatId?: string) => {
+    async (chatTitle: string, currentChatId?: number) => {
       try {
         const input: CreateChatInput = {
           title: chatTitle,
@@ -26,7 +26,7 @@ export function useCreateChatHandler() {
   return { handleCreateChat }
 }
 
-export function useChatMessages(chatId: string) {
+export function useChatMessages(chatId: number) {
   const { data: messagesResponse, refetch: refetchMessages, isFetching, isError } = useGetMessages(chatId)
 
   return {
@@ -37,7 +37,7 @@ export function useChatMessages(chatId: string) {
   }
 }
 
-export function useForkChatHandler({ chatId }: { chatId: string }) {
+export function useForkChatHandler({ chatId }: { chatId: number }) {
   const forkChatMutation = useForkChat()
 
   const handleForkChat = useCallback(async () => {

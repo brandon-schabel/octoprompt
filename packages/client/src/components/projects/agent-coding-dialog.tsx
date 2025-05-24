@@ -60,7 +60,7 @@ interface AgentCoderLogDialogProps {
   onOpenChange: (open: boolean) => void
   userInput: string
   selectedFiles: string[]
-  projectId: string
+  projectId: number
   selectedPrompts: string[]
   promptData: Prompt[] | undefined
   totalTokens: number
@@ -73,7 +73,7 @@ type UpdatedFileData = {
   path: string
   id: string
   content: string | null
-  projectId: string
+  projectId: number
   name: string
   extension: string
   size: number

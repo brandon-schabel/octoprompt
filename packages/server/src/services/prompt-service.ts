@@ -145,7 +145,7 @@ export async function listAllPrompts(): Promise<Prompt[]> {
   return promptList
 }
 
-export const getPromptsByIds = async (promptIds: string[]): Promise<Prompt[]> => {
+export const getPromptsByIds = async (promptIds: number[]): Promise<Prompt[]> => {
   const allPrompts = await promptStorage.readPrompts()
   return promptIds.map(id => allPrompts[id]).filter(Boolean) as Prompt[]
 }

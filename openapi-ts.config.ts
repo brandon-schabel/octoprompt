@@ -2,9 +2,9 @@ import { defaultPlugins, defineConfig } from '@hey-api/openapi-ts'
 // import { server } from 'typescript'; // This import seems unused, consider removing if not needed.
 
 const isProduction = import.meta.env.ENVIRONMENT === 'prod';
-// const serverPort = isProduction ? 3579 : 3147;
+const serverPort = isProduction ? 3579 : 3147;
 // 8000 is python fastapi server port
-const serverPort = isProduction ? 3579 : 8000;
+// const serverPort = isProduction ? 3579 : 8000;
 // uncomment to use server-side openapi spec
 const openApiDevUrl = `http://localhost:${serverPort}/doc`;
 
@@ -34,7 +34,7 @@ export default defineConfig({
   // input: openApiUrl,
   input: isProduction ? './openapi.json' : openApiDevUrl,
   // output: './packages/client/src/generated',
-  output: './packages/client/src/generated-python',
+  output: './packages/client/src/generated',
   plugins: [...defaultPlugins, '@hey-api/client-fetch', '@tanstack/react-query'],
   // clean: true
 

@@ -40,7 +40,7 @@ type SortOption =
   | 'sizeAsc'
   | 'sizeDesc'
 
-function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string; fileId: string; disabled: boolean }) {
+function ResummarizeButton({ projectId, fileId, disabled }: { projectId: number; fileId: number; disabled: boolean }) {
   const summarizeMutation = useSummarizeProjectFiles(projectId)
 
   return (
@@ -188,7 +188,7 @@ export function ProjectSummarizationSettingsPage() {
     }
   })
 
-  function toggleFileSelection(fileId: string) {
+  function toggleFileSelection(fileId: number) {
     setSelectedFileIds((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]))
   }
 
@@ -250,7 +250,7 @@ export function ProjectSummarizationSettingsPage() {
     })
   }
 
-  function handleToggleSummary(fileId: string) {
+  function handleToggleSummary(fileId: number) {
     const f = summariesMap.get(fileId)
     if (f) {
       setSelectedFileRecord(f)

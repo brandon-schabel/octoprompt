@@ -11,7 +11,7 @@ export function TicketAttachmentsPanel({ ticketId, projectFiles }: TicketAttachm
   const [selectedFiles, setSelectedFiles] = React.useState<string[]>([])
   const { mutateAsync: linkFiles, isPending } = useLinkFilesToTicket()
 
-  function toggleFile(fileId: string) {
+  function toggleFile(fileId: number) {
     setSelectedFiles((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]))
   }
 

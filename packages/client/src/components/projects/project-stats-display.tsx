@@ -20,7 +20,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
 
-type ProjectStatsDisplayProps = { projectId: string }
+type ProjectStatsDisplayProps = { projectId: number }
 
 const CHART_COLORS_HSL = [
   'hsl(var(--chart-1))',

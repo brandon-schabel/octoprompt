@@ -15,7 +15,7 @@ type AiSdkOptions = NonNullable<PostAiChatSdkEndpointApiChatsApiAiChatPostData['
 type AiChatStreamRequest = PostAiChatSdkEndpointApiChatsApiAiChatPostData['body']
 
 interface UseAIChatProps {
-    chatId: string
+    chatId: number
     provider: APIProviders | string // This provider might be part of AiSdkOptions
     model: string // This model might be part of AiSdkOptions
     systemMessage?: string

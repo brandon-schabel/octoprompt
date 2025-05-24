@@ -57,7 +57,7 @@ export const CreateChatBodySchema = z
   .object({
     title: z.string().min(1).openapi({ example: 'New Chat Session' }),
     copyExisting: z.boolean().optional().openapi({ description: 'Copy messages from currentChatId if true' }),
-    currentChatId: z.string().min(1).optional().openapi({ example: 'chat-a1b2c3d4' })
+    currentChatId: z.number().optional().openapi({ example: 1716537600000 })
   })
   .openapi('CreateChatRequestBody')
 
@@ -325,6 +325,6 @@ export type CreateChatBody = z.infer<typeof CreateChatBodySchema>
 export type UpdateChatBody = z.infer<typeof UpdateChatBodySchema>
 export type CreateChatMessageBody = z.infer<typeof CreateChatMessageBodySchema>
 export type ExtendedChatMessage = ChatMessage & {
-  tempId?: string
+  tempId?: number
 }
 export type AiChatStreamRequest = z.infer<typeof AiChatStreamRequestSchema>

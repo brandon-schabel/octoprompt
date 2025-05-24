@@ -25,7 +25,7 @@ import { createTicketSchema, linkFilesSchema, reorderTasksSchema, suggestTasksSc
 const TicketSchema = z
   .object({
     id: z.string().openapi({ description: 'Unique ticket identifier' }),
-    projectId: z.string().openapi({ description: 'Project this ticket belongs to' }),
+    projectId: z.number().openapi({ description: 'Project this ticket belongs to' }),
     title: z.string().openapi({ description: 'Ticket title' }),
     overview: z.string().openapi({ description: 'Ticket description' }),
     status: z.enum(['open', 'in_progress', 'closed']).openapi({ description: 'Current ticket status' }),

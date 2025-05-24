@@ -53,7 +53,7 @@ type AgentCoderRunFrontendResponse = RunAgentCoderApiProjectsProjectIdAgentCoder
 };
 
 
-export const useRunAgentCoder = (projectId: string) => {
+export const useRunAgentCoder = (projectId: number) => {
     const queryClient = useQueryClient()
     const mutationOptionsFn = runAgentCoderApiProjectsProjectIdAgentCoderPostMutation() // Updated name
 
@@ -72,16 +72,16 @@ export const useRunAgentCoder = (projectId: string) => {
         },
         onSuccess: (response: RunAgentCoderApiProjectsProjectIdAgentCoderPostResponse, variables) => { // Updated type
             // Adjust access to agentJobId based on the actual structure of RunAgentCoderApiProjectsProjectIdAgentCoderPostResponse
-            // If it's flat like { success: boolean, agentJobId?: string, ... }
-            // Or if it's { success: boolean, data: { agentJobId?: string, ... } }
+            // If it's flat like { success: boolean, agentJobId?: number, ... }
+            // Or if it's { success: boolean, data: { agentJobId?: number, ... } }
             // Let's assume it's flat for now or directly accessible for simplicity.
             // The original code used `data.data.agentJobId` for a differently typed `data` object.
             // Now `response` is the direct response object.
             // We need to know the exact structure of RunAgentCoderApiProjectsProjectIdAgentCoderPostResponse.
-            // For example, if RunAgentCoderApiProjectsProjectIdAgentCoderPostResponse is { success: boolean, agentJobId?: string, ... }
-            // or { success: boolean, details?: { agentJobId?: string } ... }
+            // For example, if RunAgentCoderApiProjectsProjectIdAgentCoderPostResponse is { success: boolean, agentJobId?: number, ... }
+            // or { success: boolean, details?: { agentJobId?: number } ... }
             // The example `react-query.gen.ts` shows `return data` from `await sdkFunction(...)`, so the `response` here is the content.
-            // Assuming response is like: { success: boolean, agentJobId?: string, taskPlan?: TaskPlan | null, error?: { message: string } }
+            // Assuming response is like: { success: boolean, agentJobId?: number, taskPlan?: TaskPlan | null, error?: { message: string } }
 
             if (response.success && (response as any).agentJobId) { // Cast to any if agentJobId is not directly on the type but expected
                 toast.success(`Agent Coder job ${(response as any).agentJobId} finished successfully!`)
@@ -116,12 +116,12 @@ export const useRunAgentCoder = (projectId: string) => {
     })
 }
 
-export const useListAgentCoderRuns = (projectId: string) => {
+export const useListAgentCoderRuns = (projectId: number) => {
     return useQuery(listProjectAgentRunsApiProjectsProjectIdAgentCoderRunsGetOptions({ path: { project_id: projectId } })) // Updated name
 }
 
 export const useGetAgentCoderRunLogs = (
-    options: { enabled?: boolean; isAgentRunning: boolean; projectId: string; agentJobId: string } = {
+    options: { enabled?: boolean; isAgentRunning: boolean; projectId: number; agentJobId: number } = {
         enabled: false,
         isAgentRunning: false,
         projectId: '',
@@ -145,7 +145,7 @@ export const useGetAgentCoderRunLogs = (
 }
 
 // This seems duplicative of useListAgentCoderRuns, verify if needed. If so, update name.
-export const useGetAgentCoderRuns = (projectId: string) => {
+export const useGetAgentCoderRuns = (projectId: number) => {
     return useQuery(listProjectAgentRunsApiProjectsProjectIdAgentCoderRunsGetOptions({ path: { project_id: projectId } })) // Updated name
 }
 
@@ -156,10 +156,10 @@ export const useGetAgentCoderRunData = ({
     isAgentRunning = false,
     projectId
 }: {
-    agentJobId: string
+    agentJobId: number
     enabled?: boolean
     isAgentRunning?: boolean
-    projectId: string
+    projectId: number
 }) => {
     // Assuming AgentRunData (AgentCoderRunSuccessData) is the correct type for GetAgentRunDataApiProjectsProjectIdAgentCoderRunsAgentJobIdDataGetData
     const queryOptions = getAgentRunDataApiProjectsProjectIdAgentCoderRunsAgentJobIdDataGetOptions({ // Updated name
@@ -180,7 +180,7 @@ export const useConfirmAgentRunChanges = () => {
     return useMutation<
         ConfirmAgentRunChangesApiProjectsProjectIdAgentCoderRunsAgentJobIdConfirmPostResponse, // Updated name
         ConfirmAgentRunChangesApiProjectsProjectIdAgentCoderRunsAgentJobIdConfirmPostError, // Updated name
-        { agentJobId: string; projectId: string }
+        { agentJobId: number; projectId: number }
     >({
         mutationFn: async ({ agentJobId, projectId }) => {
             const options: Options<ConfirmAgentRunChangesApiProjectsProjectIdAgentCoderRunsAgentJobIdConfirmPostData> = { // Updated name
@@ -227,7 +227,7 @@ export const useDeleteAgentCoderRun = () => {
     return useMutation<
         DeleteAgentRunApiProjectsProjectIdAgentCoderRunsAgentJobIdDeleteResponse, // Updated name
         DeleteAgentRunApiProjectsProjectIdAgentCoderRunsAgentJobIdDeleteError, // Updated name
-        { agentJobId: string; projectId: string }
+        { agentJobId: number; projectId: number }
     >({
         mutationFn: async ({ agentJobId, projectId }) => {
             const options: Options<DeleteAgentRunApiProjectsProjectIdAgentCoderRunsAgentJobIdDeleteData> = { // Updated name

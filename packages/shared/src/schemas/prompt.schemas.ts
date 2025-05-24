@@ -97,8 +97,8 @@ export type ProjectAndPromptIdParams = z.infer<typeof ProjectAndPromptIdParamsSc
 // --- Request Body Schema ---
 export const OptimizeUserInputRequestSchema = z
   .object({
-    projectId: z.string().min(1).openapi({
-      example: 'project-123',
+    projectId: z.number().openapi({
+      example: 1716537600000,
       description: 'The ID of the project'
     }),
     userContext: z.string().min(1).openapi({

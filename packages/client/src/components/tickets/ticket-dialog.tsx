@@ -13,7 +13,7 @@ interface TicketDialogProps {
   isOpen: boolean
   onClose: () => void
   ticketWithTasks: TicketWithTasks | null
-  projectId: string
+  projectId: number
 }
 
 export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks, projectId }: TicketDialogProps) {
@@ -24,7 +24,7 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
   const [overview, setOverview] = useState('')
   const [priority, setPriority] = useState<'low' | 'normal' | 'high'>('normal')
   const [status, setStatus] = useState<'open' | 'in_progress' | 'closed'>('open')
-  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
+  const [selectedFileIds, setSelectedFileIds] = useState<number[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {

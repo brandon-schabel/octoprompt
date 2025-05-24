@@ -61,9 +61,9 @@ import { Options } from '../../generated/sdk.gen'
 
 const TICKET_KEYS = {
   all: ['tickets'] as const,
-  listByProject: (projectId: string) =>
+  listByProject: (projectId: number) =>
     getApiProjectsByProjectIdTicketsQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdTicketsData>),
-  listWithCount: (projectId: string, status?: string) =>
+  listWithCount: (projectId: number, status?: string) =>
     getApiProjectsByProjectIdTicketsWithCountQueryKey({
       path: { projectId },
       query: status && status !== 'all' ? { status } : undefined
@@ -74,14 +74,14 @@ const TICKET_KEYS = {
     getApiTicketsByTicketIdTasksQueryKey({ path: { ticketId } } as Options<GetApiTicketsByTicketIdTasksData>),
   bulkTasks: (ticketIds: string[]) =>
     getApiTicketsBulkTasksQueryKey({ query: { ids: ticketIds.join(',') } } as Options<GetApiTicketsBulkTasksData>),
-  listWithTasks: (projectId: string, status?: string) =>
+  listWithTasks: (projectId: number, status?: string) =>
     getApiProjectsByProjectIdTicketsWithTasksQueryKey({
       path: { projectId },
       query: status && status !== 'all' ? { status } : undefined
     } as Options<GetApiProjectsByProjectIdTicketsWithTasksData>)
 }
 
-export function useListTickets(projectId: string, status?: string) {
+export function useListTickets(projectId: number, status?: string) {
   const queryOptions = getApiProjectsByProjectIdTicketsOptions({
     path: { projectId },
     query: status ? { status } : undefined
@@ -93,7 +93,7 @@ export function useListTickets(projectId: string, status?: string) {
   })
 }
 
-export function useListTicketsWithCount(projectId: string, status?: string) {
+export function useListTicketsWithCount(projectId: number, status?: string) {
   const queryOptions = getApiProjectsByProjectIdTicketsWithCountOptions({
     path: { projectId },
     query: status && status !== 'all' ? { status } : undefined
@@ -105,7 +105,7 @@ export function useListTicketsWithCount(projectId: string, status?: string) {
   })
 }
 
-export function useCreateTicket(projectId: string) {
+export function useCreateTicket(projectId: number) {
   const queryClient = useQueryClient()
   const mutationOptions = postApiTicketsMutation()
 
@@ -129,7 +129,7 @@ export function useCreateTicket(projectId: string) {
   })
 }
 
-export function useUpdateTicket(projectId: string) {
+export function useUpdateTicket(projectId: number) {
   const queryClient = useQueryClient()
   const mutationOptions = patchApiTicketsByTicketIdMutation()
 
@@ -157,7 +157,7 @@ export function useUpdateTicket(projectId: string) {
   })
 }
 
-export function useDeleteTicket(projectId: string) {
+export function useDeleteTicket(projectId: number) {
   const queryClient = useQueryClient()
   const mutationOptions = deleteApiTicketsByTicketIdMutation()
 
@@ -369,7 +369,7 @@ export function useBulkTicketTasks(ticketIds: string[]) {
   })
 }
 
-export function useListTicketsWithTasks(projectId: string, status?: string) {
+export function useListTicketsWithTasks(projectId: number, status?: string) {
   const queryOptions = getApiProjectsByProjectIdTicketsWithTasksOptions({
     path: { projectId },
     query: status && status !== 'all' ? { status } : undefined

@@ -136,7 +136,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const folderIndeterminate = isFolder && isFolderPartiallySelected(item.node, selectedFiles)
 
   const handleToggleFile = useCallback(
-    (fileId: string) => {
+    (fileId: number) => {
       selectFiles(
         toggleFileUtil(
           fileId,

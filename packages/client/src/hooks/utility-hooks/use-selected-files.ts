@@ -28,7 +28,7 @@ const undoRedoKeys = {
 export function useSelectedFiles({
   tabId = null
 }: {
-  tabId?: string | null
+  tabId?: number | null
 } = {}) {
   const queryClient = useQueryClient()
   const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
@@ -148,7 +148,7 @@ export function useSelectedFiles({
   }
 
   // Toggle a single file's selection
-  const toggleFile = (fileId: string) => {
+  const toggleFile = (fileId: number) => {
     if (!isInitialized) return
     commitSelectionChange(
       selectedFiles.includes(fileId) ? selectedFiles.filter((id) => id !== fileId) : [...selectedFiles, fileId]
@@ -156,7 +156,7 @@ export function useSelectedFiles({
   }
 
   // Remove a file from selection
-  const removeSelectedFile = (fileId: string) => {
+  const removeSelectedFile = (fileId: number) => {
     if (!isInitialized) return
     commitSelectionChange(selectedFiles.filter((id) => id !== fileId))
   }
@@ -183,7 +183,7 @@ export function useSelectedFiles({
   }
 
   // Check if a file is selected
-  const isFileSelected = (fileId: string) => {
+  const isFileSelected = (fileId: number) => {
     return selectedFiles.includes(fileId)
   }
 

@@ -69,7 +69,7 @@ export function AppNavbar() {
     handleOpenNewProject()
   })
 
-  const handleSelectProject = (id: string) => {
+  const handleSelectProject = (id: number) => {
     updateActiveProjectTab((prev) => ({
       ...prev,
       selectedProjectId: id,
@@ -85,7 +85,7 @@ export function AppNavbar() {
     setProjectDialogOpen(true)
   }
 
-  const handleEditProject = (id: string) => {
+  const handleEditProject = (id: number) => {
     setEditProjectId(id)
     setProjectDialogOpen(true)
     setOpenDialog(false)

@@ -144,7 +144,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
     setPromptDialogOpen(false)
   }
 
-  const handleDeletePrompt = async (promptId: string) => {
+  const handleDeletePrompt = async (promptId: number) => {
     if (!selectedProjectId) return
     await deletePromptMutation.mutateAsync({
       promptId
@@ -168,7 +168,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   }, [editPromptId, prompts, promptForm])
 
   // Keyboard navigation
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, index: number, promptId: string) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, index: number, promptId: number) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
@@ -213,7 +213,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
     content: string
     createdAt: string
     updatedAt: string
-    projectId?: string
+    projectId?: number
   }) => {
     setViewedPrompt({
       id: prompt.id,

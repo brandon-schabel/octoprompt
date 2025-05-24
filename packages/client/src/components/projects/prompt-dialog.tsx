@@ -8,7 +8,7 @@ import { ExpandableTextarea } from '@/components/expandable-textarea'
 
 interface PromptDialogProps {
   open: boolean
-  editPromptId: string | null
+  editpromptId: number | null
   promptForm: UseFormReturn<any, any>
   handleCreatePrompt: (values: any) => Promise<void>
   handleUpdatePrompt: (values: any) => Promise<void>

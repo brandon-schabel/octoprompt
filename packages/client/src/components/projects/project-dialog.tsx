@@ -11,7 +11,7 @@ import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ProjectDialogProps = {
   open: boolean
-  projectId: string | null
+  projectId: number | null
   onOpenChange: (open: boolean) => void
 }
 

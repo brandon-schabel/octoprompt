@@ -54,7 +54,7 @@ export function useGetPrompt(id: string) {
     })
 }
 
-export function useGetProjectPrompts(projectId: string) {
+export function useGetProjectPrompts(projectId: number) {
     const queryOptions = listProjectPromptsEndpointApiProjectsProjectIdPromptsGetOptions({ // Updated name
         path: { projectId }
     } as Options<ListProjectPromptsEndpointApiProjectsProjectIdPromptsGetData>) // Updated type
@@ -64,7 +64,7 @@ export function useGetProjectPrompts(projectId: string) {
     })
 }
 
-export function useCreatePrompt(projectId?: string) {
+export function useCreatePrompt(projectId?: number) {
     const queryClient = useQueryClient()
     const mutationOptions = createPromptEndpointApiPromptsPostMutation() // Updated name
 
@@ -80,16 +80,16 @@ export function useCreatePrompt(projectId?: string) {
     })
 }
 
-export function useUpdatePrompt(projectId?: string) { // projectId from closure for invalidation
+export function useUpdatePrompt(projectId?: number) { // projectId from closure for invalidation
     const queryClient = useQueryClient()
     const mutationOptions = updatePromptEndpointApiPromptsPromptIdPatchMutation() // Updated name
 
     return useMutation<
         UpdatePromptEndpointApiPromptsPromptIdPatchResponse, // Updated name
         UpdatePromptEndpointApiPromptsPromptIdPatchError, // Updated name
-        { promptId: string; data: UpdatePromptInput }
+        { promptId: number; data: UpdatePromptInput }
     >({
-        mutationFn: (vars: { promptId: string; data: UpdatePromptInput }) => {
+        mutationFn: (vars: { promptId: number; data: UpdatePromptInput }) => {
             const opts: Options<UpdatePromptEndpointApiPromptsPromptIdPatchData> = { path: { promptId: vars.promptId }, body: vars.data } // Updated type
             return mutationOptions.mutationFn!(opts)
         },
@@ -105,11 +105,11 @@ export function useUpdatePrompt(projectId?: string) { // projectId from closure 
     })
 }
 
-export function useDeletePrompt(projectId?: string) { // projectId from closure for invalidation
+export function useDeletePrompt(projectId?: number) { // projectId from closure for invalidation
     const queryClient = useQueryClient()
     const mutationOptions = deletePromptEndpointApiPromptsPromptIdDeleteMutation() // Updated name
 
-    return useMutation<DeletePromptEndpointApiPromptsPromptIdDeleteResponse, DeletePromptEndpointApiPromptsPromptIdDeleteError, { promptId: string }>({ // Updated types
+    return useMutation<DeletePromptEndpointApiPromptsPromptIdDeleteResponse, DeletePromptEndpointApiPromptsPromptIdDeleteError, { promptId: number }>({ // Updated types
         mutationFn: (vars) => {
             const opts: Options<DeletePromptEndpointApiPromptsPromptIdDeleteData> = { path: { promptId: vars.promptId } } // Updated type
             return mutationOptions.mutationFn!(opts)
@@ -133,9 +133,9 @@ export function useAddPromptToProject() {
     return useMutation<
         AddPromptToProjectEndpointApiProjectsProjectIdPromptsPromptIdPostResponse, // Updated name
         AddPromptToProjectEndpointApiProjectsProjectIdPromptsPromptIdPostError, // Updated name
-        { promptId: string; projectId: string }
+        { promptId: number; projectId: number }
     >({
-        mutationFn: (vars: { promptId: string; projectId: string }) => {
+        mutationFn: (vars: { promptId: number; projectId: number }) => {
             const opts: Options<AddPromptToProjectEndpointApiProjectsProjectIdPromptsPromptIdPostData> = { // Updated type
                 path: { promptId: vars.promptId, projectId: vars.projectId }
             }
@@ -156,9 +156,9 @@ export function useRemovePromptFromProject() {
     return useMutation<
         RemovePromptFromProjectEndpointApiProjectsProjectIdPromptsPromptIdDeleteResponse, // Updated name
         RemovePromptFromProjectEndpointApiProjectsProjectIdPromptsPromptIdDeleteError, // Updated name
-        { promptId: string; projectId: string }
+        { promptId: number; projectId: number }
     >({
-        mutationFn: (vars: { promptId: string; projectId: string }) => {
+        mutationFn: (vars: { promptId: number; projectId: number }) => {
             const opts: Options<RemovePromptFromProjectEndpointApiProjectsProjectIdPromptsPromptIdDeleteData> = { // Updated type
                 path: { promptId: vars.promptId, projectId: vars.projectId }
             }

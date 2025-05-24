@@ -49,7 +49,7 @@ export type ForkChatFromMessageRequestBody = ForkChatFromMessageEndpointApiChats
 const CHAT_KEYS = {
     all: () => getAllChatsEndpointApiChatsGetQueryKey(), // Updated name
     lists: () => getAllChatsEndpointApiChatsGetQueryKey(), // Updated name
-    messages: (chatId: string) =>
+    messages: (chatId: number) =>
         getChatMessagesEndpointApiChatsChatIdMessagesGetQueryKey({ path: { chatId } } as Options<GetChatMessagesEndpointApiChatsChatIdMessagesGetData>) // Updated names
 } as const
 
@@ -58,7 +58,7 @@ export function useGetChats() {
     return useQuery(queryOptions)
 }
 
-export function useGetMessages(chatId: string) {
+export function useGetMessages(chatId: number) {
     const queryOptions = getChatMessagesEndpointApiChatsChatIdMessagesGetOptions({ path: { chatId } } as Options<GetChatMessagesEndpointApiChatsChatIdMessagesGetData>) // Updated names
     return useQuery({
         ...queryOptions,
@@ -86,8 +86,8 @@ export function useUpdateChat() {
     const queryClient = useQueryClient()
     const mutationOptions = updateChatEndpointApiChatsChatIdPatchMutation() // Updated name
 
-    return useMutation<UpdateChatEndpointApiChatsChatIdPatchResponse, UpdateChatEndpointApiChatsChatIdPatchError, { chatId: string; data: UpdateChatInput }>({ // Updated types
-        mutationFn: (vars: { chatId: string; data: UpdateChatInput }) => {
+    return useMutation<UpdateChatEndpointApiChatsChatIdPatchResponse, UpdateChatEndpointApiChatsChatIdPatchError, { chatId: number; data: UpdateChatInput }>({ // Updated types
+        mutationFn: (vars: { chatId: number; data: UpdateChatInput }) => {
             const opts: Options<UpdateChatEndpointApiChatsChatIdPatchData> = { path: { chatId: vars.chatId }, body: vars.data } // Updated type
             return mutationOptions.mutationFn!(opts)
         },
@@ -105,7 +105,7 @@ export function useDeleteChat() {
     const mutationOptions = deleteChatEndpointApiChatsChatIdDeleteMutation() // Updated name
 
     return useMutation<DeleteChatEndpointApiChatsChatIdDeleteResponse, DeleteChatEndpointApiChatsChatIdDeleteError, string>({ // Updated types
-        mutationFn: (chatId: string) => {
+        mutationFn: (chatId: number) => {
             const opts: Options<DeleteChatEndpointApiChatsChatIdDeleteData> = { path: { chatId } } // Updated type
             return mutationOptions.mutationFn!(opts)
         },
@@ -126,9 +126,9 @@ export function useForkChat() {
     return useMutation<
         ForkChatEndpointApiChatsChatIdForkPostResponse, // Updated name
         ForkChatEndpointApiChatsChatIdForkPostError, // Updated name
-        { chatId: string; body: ForkChatRequestBody }
+        { chatId: number; body: ForkChatRequestBody }
     >({
-        mutationFn: (vars: { chatId: string; body: ForkChatRequestBody }) => {
+        mutationFn: (vars: { chatId: number; body: ForkChatRequestBody }) => {
             const opts: Options<ForkChatEndpointApiChatsChatIdForkPostData> = { path: { chatId: vars.chatId }, body: vars.body } // Updated type
             return mutationOptions.mutationFn!(opts)
         },
@@ -146,9 +146,9 @@ export function useForkChatFromMessage() {
     return useMutation<
         ForkChatFromMessageEndpointApiChatsChatIdForkMessageIdPostResponse, // Updated name
         ForkChatFromMessageEndpointApiChatsChatIdForkMessageIdPostError, // Updated name
-        { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }
+        { chatId: number; messageId: string; body: ForkChatFromMessageRequestBody }
     >({
-        mutationFn: (vars: { chatId: string; messageId: string; body: ForkChatFromMessageRequestBody }) => {
+        mutationFn: (vars: { chatId: number; messageId: string; body: ForkChatFromMessageRequestBody }) => {
             const opts: Options<ForkChatFromMessageEndpointApiChatsChatIdForkMessageIdPostData> = { // Updated type
                 path: { chatId: vars.chatId, messageId: vars.messageId },
                 body: vars.body
@@ -166,8 +166,8 @@ export function useDeleteMessage() {
     const queryClient = useQueryClient()
     const mutationOptions = deleteMessageEndpointApiChatsChatIdMessagesMessageIdDeleteMutation() // Updated name
 
-    return useMutation<DeleteMessageEndpointApiChatsChatIdMessagesMessageIdDeleteResponse, DeleteMessageEndpointApiChatsChatIdMessagesMessageIdDeleteError, { chatId: string; messageId: string }>({ // Updated types
-        mutationFn: (vars: { chatId: string; messageId: string }) => {
+    return useMutation<DeleteMessageEndpointApiChatsChatIdMessagesMessageIdDeleteResponse, DeleteMessageEndpointApiChatsChatIdMessagesMessageIdDeleteError, { chatId: number; messageId: string }>({ // Updated types
+        mutationFn: (vars: { chatId: number; messageId: string }) => {
             const opts: Options<DeleteMessageEndpointApiChatsChatIdMessagesMessageIdDeleteData> = { path: { chatId: vars.chatId, messageId: vars.messageId } } // Updated type
             return mutationOptions.mutationFn!(opts)
         },

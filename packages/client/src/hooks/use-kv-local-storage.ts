@@ -79,7 +79,7 @@ export const useUpdateProjectTabById = () => {
     throw new Error('Project tabs not found');
   }
 
-  const updateProjectTabById = (tabId: string, partialData: Partial<ProjectTabState>) => {
+  const updateProjectTabById = (tabId: number, partialData: Partial<ProjectTabState>) => {
     const tabData = projectTabs[tabId];
     setProjectTabs({
       ...projectTabs,
@@ -101,7 +101,7 @@ export const useGetProjectTabs = () => {
   return useGetKvValue('projectTabs');
 };
 
-export const useGetProjectTab = (tabId: string) => {
+export const useGetProjectTab = (tabId: number) => {
   const [projectTabs, ...rest] = useGetProjectTabs();
 
   const projectTab = useMemo(() => {
@@ -151,7 +151,7 @@ export const useDeleteProjectTabById = () => {
   const [projectTabs] = useGetProjectTabs();
   const { mutate: setProjectTabs, isPending: isDeleting } = useSetKvValue('projectTabs');
 
-  const deleteTab = (tabIdToDelete: string) => {
+  const deleteTab = (tabIdToDelete: number) => {
     if (!projectTabs) {
       console.error('Cannot delete tab: project tabs data not available.');
       return;
@@ -170,7 +170,7 @@ export const useDeleteProjectTabById = () => {
 export const useSetActiveProjectTabId = () => {
   const { mutate: setActiveProjectTabId, ...rest } = useSetKvValue('activeProjectTabId');
 
-  const setActiveProjectTab = (tabId: string) => {
+  const setActiveProjectTab = (tabId: number) => {
     setActiveProjectTabId(tabId);
   };
 
@@ -222,7 +222,7 @@ export const useCreateProjectTab = () => {
   return { ...rest, createProjectTab };
 };
 
-export const useProjectTabById = (tabId: string) => {
+export const useProjectTabById = (tabId: number) => {
   const [projectTabs] = useGetProjectTabs();
 
   return useMemo(() => {
@@ -232,7 +232,7 @@ export const useProjectTabById = (tabId: string) => {
 
 export function useProjectTabField<K extends keyof ProjectTabState>(
   fieldKey: K,
-  projectTabId?: string // Optional specific tab ID
+  projectTabId?: number // Optional specific tab ID
 ) {
   const [activeProjectTabId] = useGetActiveProjectTabId();
   const targetTabId = projectTabId ?? activeProjectTabId;
@@ -296,7 +296,7 @@ export function useAppSettings(): [AppSettings, (partialSettings: PartialOrFn<Ap
 export function useActiveProjectTab(): [
   ProjectTabState | undefined,
   (partialData: Partial<ProjectTabState>) => void,
-  string | null
+  number | null
 ] {
   const [activeProjectTabId] = useGetActiveProjectTabId();
   const { projectTab: activeProjectTabData } = useGetProjectTab(activeProjectTabId ?? '');
@@ -308,20 +308,20 @@ export function useActiveProjectTab(): [
     }
   };
 
-  return [activeProjectTabData, updateActiveProjectTab, activeProjectTabId as string | null];
+  return [activeProjectTabData, updateActiveProjectTab, activeProjectTabId as number | null];
 }
 
-export function useActiveChatId(): [string | null, (chatId: string | null) => void] {
+export function useActiveChatId(): [number | null, (chatId: number | null) => void] {
   const [activeChatId] = useGetKvValue('activeChatId');
   const { mutate: setActiveChatIdKvFn } = useSetKvValue('activeChatId');
 
-  const setActiveChatId = (chatId: string | null) => {
+  const setActiveChatId = (chatId: number | null) => {
     if (!chatId) {
       console.error('Cannot set active chat id to null');
     }
-    setActiveChatIdKvFn(chatId ?? '');
+    setActiveChatIdKvFn(chatId ?? -1);
   };
-  return [activeChatId as string | null, setActiveChatId];
+  return [activeChatId ?? null, setActiveChatId];
 }
 
 export type PartialOrFn<T> = Partial<T> | ((prev: T) => Partial<T>);
@@ -337,18 +337,18 @@ export function useDeleteProjectTab() {
   const { deleteTab } = useDeleteProjectTabById();
   const { setActiveProjectTabId } = useSetActiveProjectTabId();
 
-  return (tabIdToDelete: string) => {
+  return (tabIdToDelete: number) => {
     if (!tabIdToDelete) {
       console.warn('Cannot delete tab without a tabId.');
       return;
     }
 
     // Determine potential next active tab *before* deleting
-    let nextActiveTabId: string | null = null;
+    let nextActiveTabId: number | null = null;
     if (activeProjectTabId === tabIdToDelete) {
-      const remainingTabIds = Object.keys(tabs ?? {}).filter((id) => id !== tabIdToDelete);
+      const remainingTabIds = Object.keys(tabs ?? {}).filter((id) => parseInt(id) !== tabIdToDelete);
       // Simple logic: activate the first remaining tab. Could be more sophisticated.
-      nextActiveTabId = remainingTabIds[0] ?? null;
+      nextActiveTabId = parseInt(remainingTabIds[0] ?? '') ?? null;
     }
 
     // Call the delete action from the store
@@ -356,7 +356,7 @@ export function useDeleteProjectTab() {
 
     // Activate the next tab *after* successful deletion
     if (activeProjectTabId === tabIdToDelete) {
-      setActiveProjectTabId(nextActiveTabId ?? ''); // Call the activation action
+      setActiveProjectTabId(nextActiveTabId ?? -1); // Call the activation action
     }
   };
 }
@@ -367,7 +367,7 @@ export function useDeleteProjectTab() {
  * Convenience hook to update the state of a *specific* project tab
  * identified by its ID. Accepts a partial update or a function.
  */
-export function useUpdateProjectTabState(projectTabId: string) {
+export function useUpdateProjectTabState(projectTabId: number) {
   const [tabs] = useGetProjectTabs();
   const { updateProjectTabById } = useUpdateProjectTabById();
   const projectTab = tabs?.[projectTabId]; // Get current state directly

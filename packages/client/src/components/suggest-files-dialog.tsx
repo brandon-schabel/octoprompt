@@ -20,7 +20,7 @@ export function SuggestedFilesDialog({ open, onClose, suggestedFiles }: Suggeste
     }
   }, [open, selectedFiles])
 
-  const toggleLocalFile = (fileId: string) => {
+  const toggleLocalFile = (fileId: number) => {
     setLocalSelectedFiles((prev) => {
       const next = new Set(prev)
       if (next.has(fileId)) {

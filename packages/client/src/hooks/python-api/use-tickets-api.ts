@@ -77,9 +77,9 @@ export type SuggestedFilesResponse = SuggestFilesRouteTicketsTicketIdSuggestFile
 
 const TICKET_KEYS = {
     all: ['tickets'] as const, // This can be a generic prefix
-    listByProject: (projectId: string) =>
+    listByProject: (projectId: number) =>
         listTicketsByProjectRouteProjectsProjectIdTicketsGetQueryKey({ path: { projectId } } as Options<ListTicketsByProjectRouteProjectsProjectIdTicketsGetData>), // Updated names
-    listWithCount: (projectId: string, status?: string) =>
+    listWithCount: (projectId: number, status?: string) =>
         listTicketsWithCountRouteProjectsProjectIdTicketsWithCountGetQueryKey({ // Updated name
             path: { projectId },
             query: status && status !== 'all' ? { status } : undefined
@@ -90,14 +90,14 @@ const TICKET_KEYS = {
         getTasksRouteTicketsTicketIdTasksGetQueryKey({ path: { ticketId } } as Options<GetTasksRouteTicketsTicketIdTasksGetData>), // Updated name
     bulkTasks: (ticketIds: string[]) =>
         getTasksForTicketsRouteTicketsBulkTasksGetQueryKey({ query: { ticket_ids: ticketIds } } as Options<GetTasksForTicketsRouteTicketsBulkTasksGetData>), // query param might be ticket_ids
-    listWithTasks: (projectId: string, status?: string) =>
+    listWithTasks: (projectId: number, status?: string) =>
         listTicketsWithTasksRouteProjectsProjectIdTicketsWithTasksGetQueryKey({ // Updated name
             path: { projectId },
             query: status && status !== 'all' ? { status } : undefined
         } as Options<ListTicketsWithTasksRouteProjectsProjectIdTicketsWithTasksGetData>)
 }
 
-export function useListTickets(projectId: string, status?: string) {
+export function useListTickets(projectId: number, status?: string) {
     const queryOptions = listTicketsByProjectRouteProjectsProjectIdTicketsGetOptions({ // Updated name
         path: { projectId },
         query: status ? { status } : undefined
@@ -109,7 +109,7 @@ export function useListTickets(projectId: string, status?: string) {
     })
 }
 
-export function useListTicketsWithCount(projectId: string, status?: string) {
+export function useListTicketsWithCount(projectId: number, status?: string) {
     const queryOptions = listTicketsWithCountRouteProjectsProjectIdTicketsWithCountGetOptions({ // Updated name
         path: { projectId },
         query: status && status !== 'all' ? { status } : undefined
@@ -121,7 +121,7 @@ export function useListTicketsWithCount(projectId: string, status?: string) {
     })
 }
 
-export function useCreateTicket(projectId: string) {
+export function useCreateTicket(projectId: number) {
     const queryClient = useQueryClient()
     const mutationOptions = createTicketRouteTicketsPostMutation() // Updated name
 
@@ -139,7 +139,7 @@ export function useCreateTicket(projectId: string) {
     })
 }
 
-export function useUpdateTicket(projectId: string) {
+export function useUpdateTicket(projectId: number) {
     const queryClient = useQueryClient()
     const mutationOptions = updateTicketRouteTicketsTicketIdPatchMutation() // Updated name
 
@@ -161,7 +161,7 @@ export function useUpdateTicket(projectId: string) {
     })
 }
 
-export function useDeleteTicket(projectId: string) {
+export function useDeleteTicket(projectId: number) {
     const queryClient = useQueryClient()
     const mutationOptions = deleteTicketRouteTicketsTicketIdDeleteMutation() // Updated name
 
@@ -351,7 +351,7 @@ export function useBulkTicketTasks(ticketIds: string[]) {
     })
 }
 
-export function useListTicketsWithTasks(projectId: string, status?: string) {
+export function useListTicketsWithTasks(projectId: number, status?: string) {
     const queryOptions = listTicketsWithTasksRouteProjectsProjectIdTicketsWithTasksGetOptions({ // Updated name
         path: { projectId },
         query: status && status !== 'all' ? { status } : undefined

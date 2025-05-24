@@ -18,10 +18,10 @@ import { Project } from '@/generated'
 interface ProjectListProps {
   loading: boolean
   projects: Project[]
-  selectedProjectId: string | null
-  onSelectProject: (id: string) => void
-  onEditProject: (id: string) => void
-  onDeleteProject: (id: string) => void
+  selectedProjectId: number | null
+  onSelectProject: (id: number) => void
+  onEditProject: (id: number) => void
+  onDeleteProject: (id: number) => void
   onCreateProject: () => void
 }
 

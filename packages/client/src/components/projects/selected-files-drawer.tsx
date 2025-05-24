@@ -13,7 +13,7 @@ import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-t
 type SelectedFilesDrawerProps = {
   selectedFiles: string[]
   fileMap: ProjectFileMap
-  onRemoveFile: (fileId: string) => void
+  onRemoveFile: (fileId: number) => void
   trigger?: React.ReactNode
   projectTabId: string
 }

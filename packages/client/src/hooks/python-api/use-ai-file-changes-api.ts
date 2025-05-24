@@ -20,7 +20,7 @@ import type {
 import { Options } from '../../generated-python/sdk.gen' // Ensure path
 
 export type GenerateChangeInput = { // This should align with GenerateAiFileChangeApiProjectsProjectIdAiFileChangesPostData['body']
-    projectId: string // This will be part of path for the mutation
+    projectId: number // This will be part of path for the mutation
 } & GenerateAiFileChangeApiProjectsProjectIdAiFileChangesPostData['body']; // filePath and prompt are in body
 
 // The queryFn returns GetData type directly
@@ -28,7 +28,7 @@ type FileChangeDetailsResponse = GetAiFileChangeDetailsApiProjectsProjectIdAiFil
 
 const FILE_CHANGE_KEYS = {
     all: ['fileChange'] as const, // Keep as is, or align with new query key prefixes if desired
-    detail: (projectId: string, changeId: string) =>
+    detail: (projectId: number, changeId: number) =>
         getAiFileChangeDetailsApiProjectsProjectIdAiFileChangesAiFileChangeIdGetQueryKey({ // Updated name
             path: { projectId: projectId, aiFileChangeId: changeId } // No .toString() needed if type is string
         } as Options<GetAiFileChangeDetailsApiProjectsProjectIdAiFileChangesAiFileChangeIdGetData>)
@@ -40,7 +40,7 @@ export function useGenerateFileChange() {
     return useMutation<
         GenerateAiFileChangeApiProjectsProjectIdAiFileChangesPostResponse, // Updated name
         GenerateAiFileChangeApiProjectsProjectIdAiFileChangesPostError, // Updated name
-        { projectId: string } & GenerateAiFileChangeApiProjectsProjectIdAiFileChangesPostData['body'] // Combined type for variables
+        { projectId: number } & GenerateAiFileChangeApiProjectsProjectIdAiFileChangesPostData['body'] // Combined type for variables
     >({
         mutationFn: (variables) => { // variables now contain projectId and body
             const { projectId, ...body } = variables
@@ -57,7 +57,7 @@ export function useGenerateFileChange() {
     })
 }
 
-export function useGetFileChange(projectId: string | null, changeId: string | null) {
+export function useGetFileChange(projectId: number | null, changeId: number | null) {
     const queryKey =
         projectId && changeId
             ? FILE_CHANGE_KEYS.detail(projectId, changeId)
@@ -109,8 +109,8 @@ export function useGetFileChange(projectId: string | null, changeId: string | nu
 }
 
 export type ConfirmFileChangeInput = {
-    projectId: string
-    changeId: string
+    projectId: number
+    changeId: number
 } // This matches ConfirmAiFileChangeApiProjectsProjectIdAiFileChangesAiFileChangeIdConfirmPostData['path']
 
 export function useConfirmFileChange() {
