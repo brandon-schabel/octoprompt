@@ -4,7 +4,7 @@ import type { TsconfigCache } from './import-resolver'
 export type FileNode = {
   _folder: boolean
   file?: ProjectFile
-  children?: Record<string, FileNode>
+  children?: Record<number, FileNode>
 }
 
 // take in raw string or number which would be an already estimated token count
@@ -43,10 +43,11 @@ export function countTotalFiles(root: Record<string, FileNode>): number {
   return count
 }
 
-export function collectFiles(node: FileNode): string[] {
-  let ids: string[] = []
+export function collectFiles(node: FileNode): number[] {
+  let ids: number[] = []
   if (node._folder && node.children) {
     for (const key of Object.keys(node.children)) {
+      // @ts-expect-error - key is a number
       ids = ids.concat(collectFiles(node.children[key]))
     }
   } else if (node.file?.id) {
@@ -57,7 +58,7 @@ export function collectFiles(node: FileNode): string[] {
 
 export function calculateFolderTokens(
   folderNode: FileNode,
-  selectedFiles: string[]
+  selectedFiles: number[]
 ): { selectedTokens: number; totalTokens: number } {
   let total = 0
   let selected = 0
@@ -80,12 +81,12 @@ export function calculateFolderTokens(
   return { selectedTokens: selected, totalTokens: total }
 }
 
-export function areAllFolderFilesSelected(folderNode: FileNode, selectedFiles: string[]): boolean {
+export function areAllFolderFilesSelected(folderNode: FileNode, selectedFiles: number[]): boolean {
   const allFiles = collectFiles(folderNode)
   return allFiles.length > 0 && allFiles.every((id) => selectedFiles.includes(id))
 }
 
-export function isFolderPartiallySelected(folderNode: FileNode, selectedFiles: string[]): boolean {
+export function isFolderPartiallySelected(folderNode: FileNode, selectedFiles: number[]): boolean {
   if (!folderNode._folder) return false
   const allFiles = collectFiles(folderNode)
   const selectedCount = allFiles.filter((id) => selectedFiles.includes(id)).length
@@ -94,12 +95,12 @@ export function isFolderPartiallySelected(folderNode: FileNode, selectedFiles: s
 
 export function toggleFile(
   fileId: number,
-  selectedFiles: string[],
+  selectedFiles: number[],
   resolveImports: boolean,
   fileMap: ProjectFileMap,
-  getRecursiveImports: (fileId: number, allFiles: ProjectFile[], tsconfigCache: TsconfigCache) => string[],
+  getRecursiveImports: (fileId: number, allFiles: ProjectFile[], tsconfigCache: TsconfigCache) => number[],
   buildTsconfigAliasMap: (allFiles: ProjectFile[]) => TsconfigCache
-): string[] {
+): number[] {
   if (selectedFiles.includes(fileId)) {
     return selectedFiles.filter((id) => id !== fileId)
   } else {
@@ -113,9 +114,9 @@ export function toggleFile(
   }
 }
 
-export function toggleFolder(folderNode: FileNode, select: boolean, selectedFiles: string[]): string[] {
+export function toggleFolder(folderNode: FileNode, select: boolean, selectedFiles: number[]): number[] {
   const allFiles = collectFiles(folderNode)
-  const newSet = new Set(selectedFiles)
+  const newSet = new Set<number>(selectedFiles)
   if (select) {
     for (const id of allFiles) newSet.add(id)
   } else {

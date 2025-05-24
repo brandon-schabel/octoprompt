@@ -6,7 +6,7 @@ import { buildFileTree } from 'shared/src/utils/projects-utils'
 export const useProjectFileTree = () => {
   const [activeProjectTabState] = useActiveProjectTab()
   const projectId = activeProjectTabState?.selectedProjectId
-  const { data: projectFiles } = useGetProjectFiles(projectId ?? '')
+  const { data: projectFiles } = useGetProjectFiles(projectId ?? -1)
   const fileTree = useMemo(() => buildFileTree(projectFiles?.data ?? []), [projectFiles])
   return fileTree
 }

@@ -22,7 +22,7 @@ export const ProjectFileSchema = z
     size: z.number(),
     content: z.string().nullable(),
     summary: z.string().nullable(),
-    summaryLastUpdatedAt: z.number().int().nullable().openapi({ example: 1678442800000 }),
+    summaryLastUpdated: z.number().int().nullable().openapi({ example: 1678442800000 }),
     meta: z.string().nullable(),
     checksum: z.string().nullable(),
     created: z.number().int().openapi({ example: 1678442400000 }),

@@ -130,7 +130,7 @@ export type ForkChatRequestBody = {
   /**
    * Optional list of message IDs to exclude from the fork
    */
-  excludedMessageIds?: Array<string>
+  excludedMessageIds?: Array<number>
 }
 
 export type ForkChatFromMessageRequestBody = {
@@ -153,7 +153,7 @@ export type Ticket = {
   /**
    * Unique ticket identifier
    */
-  id: string
+  id: number
   /**
    * Project this ticket belongs to
    */
@@ -177,7 +177,7 @@ export type Ticket = {
   /**
    * JSON string of suggested file IDs
    */
-  suggestedFileIds: number
+  suggestedFileIds: Array<number>
   /**
    * Creation timestamp (unix timestamp in milliseconds)
    */
@@ -223,7 +223,7 @@ export type LinkedFilesResponse = {
 
 export type SuggestedFilesResponse = {
   success: true
-  recommendedFileIds: Array<string>
+  recommendedFileIds: Array<number>
   combinedSummaries?: string
   message?: string
 }
@@ -260,7 +260,7 @@ export type Task = {
   /**
    * Unique task identifier
    */
-  id: string
+  id: number
   /**
    * Ticket this task belongs to
    */
@@ -359,7 +359,7 @@ export type ProjectFile = {
   size: number
   content: string
   summary: string
-  summaryLastUpdatedAt: number
+  summaryLastUpdated: number
   meta: string
   checksum: string
   created: number
@@ -378,7 +378,7 @@ export type ProjectSummaryResponse = {
 
 export type SuggestFilesResponse = {
   success: true
-  recommendedFileIds: Array<string>
+  recommendedFileIds: Array<number>
 }
 
 export type SuggestFilesRequestBody = {

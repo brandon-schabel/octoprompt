@@ -13,12 +13,12 @@ import {
 interface PromptsDialogAllProps {
   open: boolean
   onClose: () => void
-  selectedprojectId: number | null
+  selectedProjectId: number | null
 }
 
 export function PromptsDialogAll({ open, onClose, selectedProjectId }: PromptsDialogAllProps) {
   const { data: allPromptsResponse, isLoading, error } = useGetAllPrompts()
-  const { data: projectPromptData } = useGetProjectPrompts(selectedProjectId ?? '')
+  const { data: projectPromptData } = useGetProjectPrompts(selectedProjectId ?? -1)
   const addPromptToProject = useAddPromptToProject()
   const removePromptFromProject = useRemovePromptFromProject()
 

@@ -56,7 +56,7 @@ export interface CleanupOptions {
 // MinimalProject was defined in cleanup-service.ts but not directly used by its exported functions' signatures.
 // If it's needed elsewhere, it can be kept. For now, it's not strictly necessary for the combined service exports.
 // export type MinimalProject = {
-//     id: string;
+//     id: number;
 //     path: string;
 // };
 

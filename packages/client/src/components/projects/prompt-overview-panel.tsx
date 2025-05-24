@@ -30,7 +30,7 @@ import { ProjectFile } from '@/generated'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Binoculars, Bot, Copy, FileText, MessageCircleCode, Search } from 'lucide-react'
-import { useGetProjectSummary, useSuggestFiles } from '@/hooks/python-api/use-projects-api'
+import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-api'
 import { AgentCoderControlDialog } from './agent-coding-dialog'
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
@@ -50,9 +50,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const updateActiveProjectTab = useUpdateActiveProjectTab()
     const [isLogDialogOpen, setIsLogDialogOpen] = useState(false)
 
-    const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId || '')
-    const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId || '')
-    const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId || '')
+    const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId ?? -1)
+    const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId ?? -1)
+    const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId ?? -1)
     const [suggestedFiles, setSuggestedFiles] = useState<ProjectFile[]>([])
 
     // Keep a local copy of userPrompt so that typing is instantly reflected in the textarea
@@ -64,18 +64,18 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     const { copyToClipboard } = useCopyClipboard()
     const promptInputRef = useRef<HTMLTextAreaElement>(null)
-    const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
+    const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId ?? -1)
     const [showSuggestions, setShowSuggestions] = useState(false)
 
     // Prompt creation/editing dialog states
     const [promptDialogOpen, setPromptDialogOpen] = useState(false)
-    const [editPromptId] = useState<string | null>(null)
+    const [editPromptId] = useState<number | null>(null)
 
     // Load the project's prompts
-    const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId || '')
-    const createPromptMutation = useCreatePrompt(activeProjectTabState?.selectedProjectId || '')
-    const updatePromptMutation = useUpdatePrompt(activeProjectTabState?.selectedProjectId || '')
-    const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId || '')
+    const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
+    const createPromptMutation = useCreatePrompt(activeProjectTabState?.selectedProjectId ?? -1)
+    const updatePromptMutation = useUpdatePrompt(activeProjectTabState?.selectedProjectId ?? -1)
+    const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // React Hook Form for creating/editing prompts
     const promptForm = useForm<z.infer<typeof promptSchema>>({
@@ -297,7 +297,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 topPanel={
                   <PromptsList
                     ref={promptsListRef}
-                    projectTabId={activeProjectTabId || 'default'}
+                    projectTabId={activeProjectTabId || -1}
                     className='h-full w-full'
                   />
                 }
@@ -439,7 +439,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               onOpenChange={setIsLogDialogOpen}
               userInput={localUserPrompt}
               selectedFiles={selectedFiles}
-              projectId={activeProjectTabState?.selectedProjectId || ''}
+              projectId={activeProjectTabState?.selectedProjectId || -1}
               selectedPrompts={selectedPrompts}
               promptData={promptData?.data}
               totalTokens={totalTokens}

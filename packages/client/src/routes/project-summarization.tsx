@@ -11,7 +11,7 @@ import {
   useGetProjectSummary,
   useRemoveSummariesFromFiles,
   useSummarizeProjectFiles
-} from '@/hooks/python-api/use-projects-api'
+} from '@/hooks/api/use-projects-api'
 import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter'
 
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
@@ -78,7 +78,7 @@ export function ProjectSummarizationSettingsPage() {
 
   const [isPending, startTransition] = useTransition()
 
-  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
+  const [selectedFileIds, setSelectedFileIds] = useState<number[]>([])
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false)
   const [selectedFileRecord, setSelectedFileRecord] = useState<ProjectFile | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('nameAsc')
@@ -89,12 +89,12 @@ export function ProjectSummarizationSettingsPage() {
     data: summaryData,
     isLoading: summaryLoading,
     isError: summaryError
-  } = useGetProjectSummary(selectedProjectId ?? '')
+  } = useGetProjectSummary(selectedProjectId ?? -1)
 
-  const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? '')
+  const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? -1)
   const projectFiles = (data?.data || []) as ProjectFile[]
 
-  const summariesMap = new Map<string, ProjectFile>()
+  const summariesMap = new Map<number, ProjectFile>()
 
   for (const f of data?.data || []) {
     // Only add files that actually have a summary string to the map
@@ -104,10 +104,10 @@ export function ProjectSummarizationSettingsPage() {
     }
   }
 
-  const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? '')
-  const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? '')
+  const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? -1)
+  const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? -1)
 
-  const tokensMap = new Map<string, number>()
+  const tokensMap = new Map<number, number>()
   for (const file of projectFiles) {
     if (file.content) {
       tokensMap.set(file.id, estimateTokenCount(file.content))
@@ -116,7 +116,7 @@ export function ProjectSummarizationSettingsPage() {
     }
   }
 
-  const summaryTokensMap = new Map<string, number>()
+  const summaryTokensMap = new Map<number, number>()
   for (const file of projectFiles) {
     // Use summariesMap to get the summary for included files
     const fileSummary = summariesMap.get(file.id)?.summary
@@ -144,8 +144,8 @@ export function ProjectSummarizationSettingsPage() {
 
     const nameA = a.path ?? ''
     const nameB = b.path ?? ''
-    const updatedA = fileAData?.summaryLastUpdatedAt ? new Date(fileAData.summaryLastUpdatedAt).getTime() : 0
-    const updatedB = fileBData?.summaryLastUpdatedAt ? new Date(fileBData.summaryLastUpdatedAt).getTime() : 0
+    const updatedA = fileAData?.summaryLastUpdated ? new Date(fileAData.summaryLastUpdated).getTime() : 0
+    const updatedB = fileBData?.summaryLastUpdated ? new Date(fileBData.summaryLastUpdated).getTime() : 0
     const fileTokensA = tokensMap.get(a.id) ?? 0
     const fileTokensB = tokensMap.get(b.id) ?? 0
     const summaryTokensA = summaryTokensMap.get(a.id) ?? 0
@@ -382,7 +382,7 @@ export function ProjectSummarizationSettingsPage() {
                   updateSettings({
                     summarizationEnabledProjectIds: check
                       ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId]
-                      : (summarizationEnabledProjectIds ?? []).filter((id: string) => id !== selectedProjectId)
+                      : (summarizationEnabledProjectIds ?? []).filter((id: number) => id !== selectedProjectId)
                   })
                 }}
               />
@@ -492,8 +492,8 @@ export function ProjectSummarizationSettingsPage() {
                 {sortedProjectFiles.map((file) => {
                   const fileRecordWithSummary = summariesMap.get(file.id) // Check if summary exists
                   const hasSummary = !!fileRecordWithSummary
-                  const lastSummarized = fileRecordWithSummary?.summaryLastUpdatedAt
-                    ? new Date(fileRecordWithSummary.summaryLastUpdatedAt).toLocaleString()
+                  const lastSummarized = fileRecordWithSummary?.summaryLastUpdated
+                    ? new Date(fileRecordWithSummary.summaryLastUpdated).toLocaleString()
                     : null
                   const tokenCount = tokensMap.get(file.id) ?? 0
                   const summaryTokenCount = summaryTokensMap.get(file.id) ?? 0 // From summaryTokensMap
@@ -557,7 +557,7 @@ export function ProjectSummarizationSettingsPage() {
                             </Button>
                           )}
                           <ResummarizeButton
-                            projectId={selectedProjectId ?? ''}
+                            projectId={selectedProjectId ?? -1}
                             fileId={file.id}
                             disabled={!isProjectSummarizationEnabled || summarizeMutation.isPending}
                           />

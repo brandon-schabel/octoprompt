@@ -34,7 +34,7 @@ type SelectedFilesListProps = {
   onNavigateLeft?: () => void
   onNavigateRight?: () => void
   className?: string
-  projectTabId: string
+  projectTabId: number
 }
 
 export type SelectedFilesListRef = {

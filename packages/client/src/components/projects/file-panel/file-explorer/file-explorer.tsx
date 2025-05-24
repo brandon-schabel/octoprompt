@@ -23,7 +23,7 @@ import { SelectedFilesDrawer } from '../../selected-files-drawer'
 import { AIFileChangeDialog } from '@/components/file-changes/ai-file-change-dialog'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
-import { useGetProjectFiles, useGetProject } from '@/hooks/python-api/use-projects-api'
+import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@/generated/types.gen'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
@@ -45,10 +45,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const queryClient = useQueryClient()
 
   const { data: fileDataResponse, isLoading: filesLoading } = useGetProjectFiles(
-    activeProjectTabState?.selectedProjectId || ''
+    activeProjectTabState?.selectedProjectId || -1
   )
 
-  const { data: projectDataResponse } = useGetProject(activeProjectTabState?.selectedProjectId || '')
+  const { data: projectDataResponse } = useGetProject(activeProjectTabState?.selectedProjectId || -1)
 
   const projectFiles = useMemo(() => fileDataResponse?.data || [], [fileDataResponse])
   const project = useMemo(() => projectDataResponse?.data, [projectDataResponse])
@@ -58,10 +58,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
   const { data: searchByContent = false, mutate: setSearchByContent } = useProjectTabField(
     'searchByContent',
-    activeProjectTabId || ''
+    activeProjectTabId || -1
   )
-  const { data: preferredEditor = 'vscode' } = useProjectTabField('preferredEditor', activeProjectTabId || '')
-  const { data: resolveImports = false } = useProjectTabField('resolveImports', activeProjectTabId || '')
+  const { data: preferredEditor = 'vscode' } = useProjectTabField('preferredEditor', activeProjectTabId || -1)
+  const { data: resolveImports = false } = useProjectTabField('resolveImports', activeProjectTabId || -1)
 
   const [localFileSearch, setLocalFileSearch] = useState('')
   const debouncedSetFileSearch = useDebounce(setLocalFileSearch, 300)
@@ -112,7 +112,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   }, [filteredFiles])
 
   const filteredFilesMap = useMemo(() => {
-    const m = new Map<string, ProjectFile>()
+    const m = new Map<number, ProjectFile>()
     filteredFiles.forEach((f) => m.set(f.id, f))
     return m
   }, [filteredFiles])
@@ -152,7 +152,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         fileMap={projectFileMap}
         onRemoveFile={() => {}}
         trigger={trigger}
-        projectTabId={activeProjectTabId ?? ''}
+        projectTabId={activeProjectTabId ?? -1}
       />
     )
   }
@@ -391,7 +391,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           onOpenChange={setAiDialogOpen}
           filePath={`${project.path}/${selectedFile?.path || ''}`}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['projectFiles', selectedProjectId || ''] })
+            queryClient.invalidateQueries({ queryKey: ['projectFiles', selectedProjectId || -1] })
             setAiDialogOpen(false)
             setSelectedFile(undefined)
           }}

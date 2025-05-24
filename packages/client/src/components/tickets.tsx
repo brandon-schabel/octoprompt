@@ -2,7 +2,7 @@ import React from 'react'
 import { TicketDialog } from './tickets/ticket-dialog'
 import { Button } from './ui/button'
 import { Plus } from 'lucide-react'
-import { useGetProject } from '@/hooks/python-api/use-projects-api'
+import { useGetProject } from '@/hooks/api/use-projects-api'
 import { TicketListPanel } from '@/components/tickets/ticket-list-panel'
 import { TicketWithTasks } from '@/generated'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
@@ -18,7 +18,7 @@ export function TicketsPage() {
   // const projectActiveTabId = projectTabState?.id ?? null;
   const projectId = projectTabState?.selectedProjectId ?? null
 
-  const { data: projectData, isPending: isProjectLoading, error: projectError } = useGetProject(projectId ?? '')
+  const { data: projectData, isPending: isProjectLoading, error: projectError } = useGetProject(projectId ?? -1)
 
   // Because TicketListPanel calls onSelectTicket with a TicketWithTasks,
   // this callback must accept a TicketWithTasks too.
@@ -59,7 +59,7 @@ export function TicketsPage() {
       </div>
 
       <div className='flex-1'>
-        <TicketListPanel projectTabId={projectActiveTabId || 'defaultTab'} onSelectTicket={handleSelectTicket} />
+        <TicketListPanel projectTabId={projectActiveTabId || -1} onSelectTicket={handleSelectTicket} />
       </div>
 
       <TicketDialog

@@ -6,7 +6,7 @@
 // 4. Implemented helper functions for data processing and formatting.
 // 5. Added loading and error states.
 import React from 'react'
-import { useGetProjectFiles } from '@/hooks/python-api/use-projects-api'
+import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from 'shared/src/schemas/project.schemas' // Using direct schema type
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {

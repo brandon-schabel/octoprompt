@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { ProjectHeader } from './project-header'
 import { FileExplorer } from './file-explorer/file-explorer'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useGetProject } from '@/hooks/python-api/use-projects-api'
+import { useGetProject } from '@/hooks/api/use-projects-api'
 import { useActiveProjectTab, useSelectSetting } from '@/hooks/use-kv-local-storage'
 
 export type FilePanelRef = {
@@ -22,7 +22,7 @@ export const FilePanel = forwardRef<FilePanelRef, FilePanelProps>(function FileP
   // If not passed in, get from store
   const [activeProjectTabState] = useActiveProjectTab()
   const projectId = activeProjectTabState?.selectedProjectId
-  const { data: projectData } = useGetProject(activeProjectTabState?.selectedProjectId ?? '')
+  const { data: projectData } = useGetProject(activeProjectTabState?.selectedProjectId ?? -1)
 
   // We still keep references to let parent call `focusSearch`, etc.
   const searchInputRef = useRef<HTMLInputElement>(null)

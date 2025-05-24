@@ -116,8 +116,8 @@ export const useGetAgentCoderRunLogs = (
   }
 ) => {
   const pathParams: Options<GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsData>['path'] = {
-    agentJobId: options.agentJobId ?? '',
-    projectId: options.projectId ?? ''
+    agentJobId: options.agentJobId ?? -1,
+    projectId: options.projectId ?? -1
   }
 
   return useQuery({

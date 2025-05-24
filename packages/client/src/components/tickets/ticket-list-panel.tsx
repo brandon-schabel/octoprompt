@@ -27,7 +27,7 @@ import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 
 interface TicketListPanelProps {
-  projectTabId: string
+  projectTabId: number
   onSelectTicket?: (ticket: TicketWithTasks) => void
 }
 
@@ -53,7 +53,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
   const navigate = useNavigate()
   const updateProjectTabState = useUpdateProjectTabState(projectTabId)
   const tabState = useProjectTabById(projectTabId)
-  const projectId = tabState?.selectedProjectId || ''
+  const projectId = tabState?.selectedProjectId ?? -1
   const { copyToClipboard } = useCopyClipboard()
   // Read from the global tabState
   const ticketSearch = tabState?.ticketSearch ?? ''
@@ -120,14 +120,14 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
     switch (ticketSort) {
       case 'created_asc':
         return arr.sort((a, b) => {
-          const aTime = a.ticket.createdAt ? new Date(a.ticket.createdAt).getTime() : 0
-          const bTime = b.ticket.createdAt ? new Date(b.ticket.createdAt).getTime() : 0
+          const aTime = a.ticket.created ? new Date(a.ticket.created).getTime() : 0
+          const bTime = b.ticket.created ? new Date(b.ticket.created).getTime() : 0
           return aTime - bTime
         })
       case 'created_desc':
         return arr.sort((a, b) => {
-          const aTime = a.ticket.createdAt ? new Date(a.ticket.createdAt).getTime() : 0
-          const bTime = b.ticket.createdAt ? new Date(b.ticket.createdAt).getTime() : 0
+          const aTime = a.ticket.created ? new Date(a.ticket.created).getTime() : 0
+          const bTime = b.ticket.created ? new Date(b.ticket.created).getTime() : 0
           return bTime - aTime
         })
       case 'status':

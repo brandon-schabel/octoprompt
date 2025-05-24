@@ -4,7 +4,7 @@ import type { ProjectFile } from '../schemas/project.schemas' // Assuming this p
 
 // Use a compatible interface for testing, ProjectFile might have more fields
 interface TestProjectFile {
-  id: string
+  id: number
   name: string
   summary?: string
 }

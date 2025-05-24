@@ -42,7 +42,7 @@ let nextTestIdBase = normalizeToUnixMs(new Date());
 interface TestFileSyncData extends FileSyncData {
     meta: string | null;
     summary: string | null;
-    summaryLastUpdatedAt: number | null;
+    summaryLastUpdated: number | null;
 }
 
 // --- Mocking projectStorage ---
@@ -80,7 +80,7 @@ const mockProjectStorage = {
         const updatedFile: ProjectFile = {
             ...existingFile,
             ...fileData,
-            summaryLastUpdatedAt: fileData.summary !== undefined ? unixMs : existingFile.summaryLastUpdatedAt,
+            summaryLastUpdated: fileData.summary !== undefined ? unixMs : existingFile.summaryLastUpdated,
             updated: unixMs,
         }
         mockProjectFilesDbPerProject[projectId][fileId] = updatedFile
@@ -119,7 +119,7 @@ const mockSyncProject = mock(async (project: Project) => {
                 size: 10,
                 content: 'synced content',
                 summary: null,
-                summaryLastUpdatedAt: null,
+                summaryLastUpdated: null,
                 meta: '{}',
                 checksum: 'checksum-synced',
                 created: normalizeToUnixMs(Date.now()),
@@ -218,7 +218,7 @@ describe('Project Service (File Storage)', () => {
             const project = await createProject({ name: 'DelMe', path: '/del/me' })
             const fileIdForDeleteTest = normalizeToUnixMs(new Date());
             mockProjectFilesDbPerProject[project.id] = { // Simulate some files
-                [fileIdForDeleteTest]: { id: fileIdForDeleteTest, projectId: project.id, name: 'f.txt', path: 'f.txt', content: '', extension: '.txt', size: 0, created: normalizeToUnixMs(Date.now() - 100), updated: normalizeToUnixMs(Date.now() - 50), summary: null, summaryLastUpdatedAt: null, meta: '{}', checksum: null }
+                [fileIdForDeleteTest]: { id: fileIdForDeleteTest, projectId: project.id, name: 'f.txt', path: 'f.txt', content: '', extension: '.txt', size: 0, created: normalizeToUnixMs(Date.now() - 100), updated: normalizeToUnixMs(Date.now() - 50), summary: null, summaryLastUpdated: null, meta: '{}', checksum: null }
             }
 
             expect(mockProjectsDb[project.id]).toBeDefined()
@@ -371,8 +371,8 @@ describe('Project Service (File Storage)', () => {
             const f2_created = await createProjectFileRecord(projectId, 'up2.txt', 'old2');
 
             const updates: Array<{ fileId: number; data: TestFileSyncData }> = [
-                { fileId: f1_created.id, data: { path: f1_created.path, name: f1_created.name, extension: f1_created.extension, content: 'new1', size: 4, checksum: 'cs_new1', meta: null, summary: null, summaryLastUpdatedAt: null } },
-                { fileId: f2_created.id, data: { path: f2_created.path, name: f2_created.name, extension: f2_created.extension, content: 'new2', size: 4, checksum: 'cs_new2', meta: null, summary: null, summaryLastUpdatedAt: null } },
+                { fileId: f1_created.id, data: { path: f1_created.path, name: f1_created.name, extension: f1_created.extension, content: 'new1', size: 4, checksum: 'cs_new1', meta: null, summary: null, summaryLastUpdated: null } },
+                { fileId: f2_created.id, data: { path: f2_created.path, name: f2_created.name, extension: f2_created.extension, content: 'new2', size: 4, checksum: 'cs_new2', meta: null, summary: null, summaryLastUpdated: null } },
             ];
 
             const updatedResult = await bulkUpdateProjectFiles(projectId, updates);
@@ -420,7 +420,7 @@ describe('Project Service (File Storage)', () => {
             if (!summarized) throw new Error("Summarization failed");
 
             expect(summarized.summary).toBe('Mocked AI summary');
-            expect(summarized.summaryLastUpdatedAt).toBeDefined();
+            expect(summarized.summaryLastUpdated).toBeDefined();
             expect(mockProjectFilesDbPerProject[projectId][file1.id].summary).toBe('Mocked AI summary');
             expect(mockGenerateStructuredData).toHaveBeenCalledTimes(1);
         });
@@ -468,7 +468,7 @@ describe('Project Service (File Storage)', () => {
             const file1_created = await createProjectFileRecord(projectId, 'summarize-me.js', 'function hello() { console.log("world"); }');
             await summarizeSingleFile(file1_created); // Use the created file object
             expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summary).toBe('Mocked AI summary');
-            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summaryLastUpdatedAt).toBeDefined();
+            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summaryLastUpdated).toBeDefined();
 
             const fileWithNoSummary_created = await createProjectFileRecord(projectId, 'no-summary.txt', 'content');
             const nonExistentFileId = normalizeToUnixMs(new Date()) + 11000;
@@ -478,7 +478,7 @@ describe('Project Service (File Storage)', () => {
             expect(removedCount).toBe(1);
             expect(message).toBe('Removed summaries from 1 files.');
             expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summary).toBeNull();
-            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summaryLastUpdatedAt).toBeNull();
+            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summaryLastUpdated).toBeNull();
             expect(mockProjectFilesDbPerProject[projectId][fileWithNoSummary_created.id].summary).toBeNull();
         });
 

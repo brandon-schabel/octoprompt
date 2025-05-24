@@ -54,14 +54,15 @@ import { OctoCombobox } from '../octo/octo-combobox'
 import { v4 as uuidv4 } from 'uuid'
 import { DiffViewer } from '../file-changes/diff-viewer'
 import { FileViewerDialog } from '../navigation/file-viewer-dialog'
+// import { normalizeToUnixMs } from 'shared/src/utils/date-utils'
 
 interface AgentCoderLogDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   userInput: string
-  selectedFiles: string[]
+  selectedFiles: number[]
   projectId: number
-  selectedPrompts: string[]
+  selectedPrompts: number[]
   promptData: Prompt[] | undefined
   totalTokens: number
   projectFileMap: ProjectFileMap
@@ -71,16 +72,16 @@ type UpdatedFileData = {
   meta: string | null
   summary: string | null
   path: string
-  id: string
+  id: number
   content: string | null
   projectId: number
   name: string
   extension: string
   size: number
-  summaryLastUpdatedAt: string | null
+  summaryLastUpdated: number | null
   checksum: string | null
-  createdAt: string
-  updatedAt: string
+  created: number
+  updated: number
 }
 
 type LogEntry = {
@@ -104,7 +105,7 @@ function FileChangePreview({ file, projectFileMap }: { file: UpdatedFileData; pr
     summary: fileData.summary || '',
     meta: fileData.meta || '',
     checksum: fileData.checksum || '',
-    summaryLastUpdatedAt: fileData.summaryLastUpdatedAt || new Date().toISOString()
+    summaryLastUpdated: fileData.summaryLastUpdated ?? 0
   })
 
   // Calculate line changes
@@ -186,7 +187,7 @@ export function AgentCoderControlDialog({
   totalTokens,
   projectFileMap
 }: AgentCoderLogDialogProps) {
-  const [selectedJobId, setSelectedJobId] = useLocalStorage<string>('selectedJobId', 'NO_JOB_ID')
+  const [selectedJobId, setSelectedJobId] = useLocalStorage<number>('selectedJobId', -1)
   const [activeTab, setActiveTab] = useState<'new-job' | 'logs' | 'confirm'>('new-job')
   const [showDataInLogsTab, setShowDataInLogsTab] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
@@ -198,9 +199,9 @@ export function AgentCoderControlDialog({
     error: dataError,
     refetch: refetchData
   } = useGetAgentCoderRunData({
-    agentJobId: selectedJobId ?? '',
+    agentJobId: selectedJobId ?? -1,
     projectId,
-    enabled: open && !!selectedJobId && selectedJobId !== 'NO_JOB_ID'
+    enabled: open && !!selectedJobId && selectedJobId !== -1
   })
   const runAgentCoderMutation = useRunAgentCoder(projectId)
 
@@ -217,7 +218,7 @@ export function AgentCoderControlDialog({
   } = useGetAgentCoderRunLogs({
     projectId,
     agentJobId: selectedJobId,
-    enabled: open && !!selectedJobId && selectedJobId !== 'NO_JOB_ID',
+    enabled: open && !!selectedJobId && selectedJobId !== -1,
     isAgentRunning
   })
 
@@ -242,7 +243,8 @@ export function AgentCoderControlDialog({
 
   const handleRunAgentCoder = () => {
     const selectedFileIds = selectedFileIdsFromProps
-    const newAgentJobId = uuidv4()
+    // unix timestamp in milliseconds
+    const newAgentJobId = new Date().getTime()
 
     if (!projectId) {
       toast.error('No project selected.')
@@ -281,7 +283,7 @@ export function AgentCoderControlDialog({
   }
 
   const handleConfirmChanges = () => {
-    if (!selectedJobId || selectedJobId === 'NO_JOB_ID') {
+    if (!selectedJobId || selectedJobId === -1) {
       // check selectedJobId directly
       toast.error('Agent Job ID is missing.')
       return
@@ -290,7 +292,7 @@ export function AgentCoderControlDialog({
   }
 
   const handleDeleteRun = () => {
-    if (!selectedJobId || selectedJobId === 'NO_JOB_ID') {
+    if (!selectedJobId || selectedJobId === -1) {
       // check selectedJobId directly
       toast.error('Agent Job ID is missing.')
       return
@@ -303,7 +305,7 @@ export function AgentCoderControlDialog({
         {
           onSuccess: () => {
             toast.success(`Agent run ${selectedJobId} deleted.`)
-            setSelectedJobId('NO_JOB_ID') // Reset selected job ID
+            setSelectedJobId(-1) // Reset selected job ID
             setActiveTab('new-job') // Switch to new job tab
             onOpenChange(false) // Optionally close dialog, or let user decide
           },
@@ -326,7 +328,7 @@ export function AgentCoderControlDialog({
     )
   }, [agentRunData])
 
-  const canDelete = !!selectedJobId && selectedJobId !== 'NO_JOB_ID' && !deleteRunMutation.isPending // Ensure job ID is valid
+  const canDelete = !!selectedJobId && selectedJobId !== -1 && !deleteRunMutation.isPending // Ensure job ID is valid
   const { data: listData, isLoading: isListLoading, refetch: refetchList } = useListAgentCoderRuns(projectId)
 
   const runOptions = useMemo(() => {
@@ -337,15 +339,16 @@ export function AgentCoderControlDialog({
     if (currentMutationJobId) {
       allRuns.add(currentMutationJobId)
     }
-    if (selectedJobId && selectedJobId !== 'NO_JOB_ID') {
+    if (selectedJobId && selectedJobId !== -1) {
       allRuns.add(selectedJobId)
     }
 
     return Array.from(allRuns)
       .sort()
       .reverse()
-      .map((jobId: string) => ({
-        value: jobId,
+      .map((jobId: number) => ({
+        // has to be parsed from string to number on select
+        value: jobId.toString(),
         label: `${jobId} ${jobId === currentMutationJobId && runAgentCoderMutation.isPending ? ' (Running...)' : ''}`
       }))
   }, [listData, selectedJobId, runAgentCoderMutation.variables?.agentJobId, runAgentCoderMutation.isPending])
@@ -355,7 +358,7 @@ export function AgentCoderControlDialog({
       const isRunForSelectedJobPending =
         runAgentCoderMutation.isPending &&
         runAgentCoderMutation.variables?.agentJobId === selectedJobId &&
-        selectedJobId !== 'NO_JOB_ID'
+        selectedJobId !== -1
 
       if (isRunForSelectedJobPending) {
         // If a relevant job is actively running, go to logs.
@@ -399,12 +402,12 @@ export function AgentCoderControlDialog({
             {activeTab !== 'new-job' && (
               <>
                 <div className='flex items-center gap-2 bg-muted rounded'>
-                  {selectedJobId && selectedJobId !== 'NO_JOB_ID' && (
+                  {selectedJobId && selectedJobId !== -1 && (
                     <Button
                       variant='ghost'
                       size='icon'
                       className='h-8 w-8'
-                      onClick={() => copyToClipboard(selectedJobId, { successMessage: 'Run ID copied!' })}
+                      onClick={() => copyToClipboard(String(selectedJobId), { successMessage: 'Run ID copied!' })}
                       title={`Copy Run ID: ${selectedJobId}`}
                     >
                       <Copy className='h-4 w-4' />
@@ -446,14 +449,14 @@ export function AgentCoderControlDialog({
                 <div className='flex-1'>
                   <OctoCombobox
                     options={runOptions}
-                    value={selectedJobId}
+                    value={selectedJobId.toString()}
                     onValueChange={(id) => {
-                      const newId = id ?? 'NO_JOB_ID'
+                      const newId = Number(id) ?? -1
                       setSelectedJobId(newId)
                       if (runAgentCoderMutation.variables?.agentJobId !== newId) {
                         runAgentCoderMutation.reset()
                       }
-                      if (newId !== 'NO_JOB_ID') {
+                      if (newId !== -1) {
                         setActiveTab('logs')
                         setShowDataInLogsTab(false) // Default to logs view
                       } else {
@@ -507,7 +510,7 @@ export function AgentCoderControlDialog({
                             const prompt = promptData?.find((p) => p.id === id)
                             return (
                               <li key={id} title={prompt?.content || 'Prompt content missing'}>
-                                {prompt?.name || `ID: ${id.substring(0, 8)}...`}
+                                {prompt?.name || `ID: ${id.toString().substring(0, 8)}...`}
                               </li>
                             )
                           })}
@@ -531,7 +534,7 @@ export function AgentCoderControlDialog({
                           {selectedFileIdsFromProps.map((fileId) => {
                             const file = projectFileMap.get(fileId)
                             return (
-                              <li key={fileId} className='truncate' title={file?.path || fileId}>
+                              <li key={fileId} className='truncate' title={file?.path || fileId.toString()}>
                                 {file?.name}
                               </li>
                             )
@@ -581,7 +584,7 @@ export function AgentCoderControlDialog({
 
           {activeTab === 'logs' && (
             <TabsContent value='logs' className='flex-1 min-h-0 flex flex-col border rounded-md bg-muted/20 p-2'>
-              {!selectedJobId || selectedJobId === 'NO_JOB_ID' ? (
+              {!selectedJobId || selectedJobId === -1 ? (
                 <p className='text-center p-4 text-muted-foreground'>
                   Select or start an agent run to view logs or data.
                 </p>
@@ -612,7 +615,8 @@ export function AgentCoderControlDialog({
                         )}
                         {!isDataLoading && !isDataError && !agentRunData && (
                           <p className='text-center pt-2 text-muted-foreground'>
-                            No data found for run <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.
+                            No data found for run{' '}
+                            <code className='text-xs'>{selectedJobId.toString().substring(0, 8)}</code>.
                           </p>
                         )}
                         {!isDataLoading && !isDataError && agentRunData && (
@@ -634,7 +638,7 @@ export function AgentCoderControlDialog({
                         {!isLogLoading && !isLogError && logEntries.length === 0 && !isAgentRunning && (
                           <p className='text-center pt-2 text-muted-foreground'>
                             No log entries found for run{' '}
-                            <code className='text-xs'>{selectedJobId.substring(0, 8)}</code>.
+                            <code className='text-xs'>{selectedJobId.toString().substring(0, 8)}</code>.
                           </p>
                         )}
                         {!isLogLoading && !isLogError && logEntries.length === 0 && isAgentRunning && (
@@ -745,12 +749,12 @@ export function AgentCoderControlDialog({
                 !isDataError &&
                 (!agentRunData?.updatedFiles || agentRunData.updatedFiles.length === 0) &&
                 selectedJobId &&
-                selectedJobId !== 'NO_JOB_ID' && (
+                selectedJobId !== -1 && (
                   <p className='text-center p-4 text-muted-foreground'>
                     No proposed changes found for this run, or changes have already been confirmed.
                   </p>
                 )}
-              {(!selectedJobId || selectedJobId === 'NO_JOB_ID') && (
+              {(!selectedJobId || selectedJobId === -1) && (
                 <p className='text-center p-4 text-muted-foreground'>Select an agent run to view proposed changes.</p>
               )}
               {!isDataLoading && !isDataError && agentRunData?.updatedFiles && agentRunData.updatedFiles.length > 0 && (

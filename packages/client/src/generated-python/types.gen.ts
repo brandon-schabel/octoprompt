@@ -216,7 +216,7 @@ export type UpdateTicketBody = {
 export type LinkedFilesResponse = {
     success: true;
     linkedFiles: Array<{
-        ticketId: string;
+        ticketId: number;
         fileId: number;
     }>;
 };
@@ -359,7 +359,7 @@ export type ProjectFile = {
     size: number;
     content: string;
     summary: string;
-    summaryLastUpdatedAt: number;
+    summaryLastUpdated: number;
     meta: string;
     checksum: string;
     created: number;

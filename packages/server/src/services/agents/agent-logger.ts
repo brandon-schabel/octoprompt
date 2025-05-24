@@ -157,10 +157,10 @@ export async function closeLogger() {
   }
 }
 
-export async function listAgentJobs(projectId: number): Promise<string[]> {
+export async function listAgentJobs(projectId: number): Promise<number[]> {
   try {
     const entries = await readdir(join(AGENT_LOGS_DIR, 'projects', projectId.toString()), { withFileTypes: true })
-    const jobIds = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+    const jobIds = entries.filter((entry) => entry.isDirectory()).map((entry) => Number(entry.name))
     console.log(`[Agent Logger] Found ${jobIds.length} agent job directories in ${AGENT_LOGS_DIR}`)
     return jobIds
   } catch (error: any) {

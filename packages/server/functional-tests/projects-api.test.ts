@@ -14,7 +14,7 @@ const BASE_URL = process.env.API_URL || 'http://localhost:3000'
 const API_URL = `${BASE_URL}/api`
 
 interface TestProject {
-    id: string
+    id: number
     name: string
     path: string
     description: string
@@ -23,7 +23,7 @@ interface TestProject {
 }
 
 interface TestFile {
-    id: string
+    id: number
     projectId: number
     name: string
     path: string
@@ -31,7 +31,7 @@ interface TestFile {
     size: number
     content: string | null
     summary: string | null
-    summaryLastUpdatedAt: number | null
+    summaryLastUpdated: number | null
     meta: string | null
     checksum: string | null
     created: number
@@ -41,7 +41,7 @@ interface TestFile {
 describe('Project API Tests', () => {
     let testProjects: TestProject[] = []
     let testProjectPaths: string[] = []
-    let testFileIds: string[] = []
+    let testFileIds: number[] = []
 
     beforeAll(() => {
         console.log('Starting Project API Tests...')

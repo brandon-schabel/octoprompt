@@ -34,7 +34,7 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
       setPriority(ticketWithTasks.ticket.priority as 'low' | 'normal' | 'high')
       setStatus(ticketWithTasks.ticket.status as 'open' | 'in_progress' | 'closed')
       try {
-        setSelectedFileIds(JSON.parse(ticketWithTasks.ticket.suggestedFileIds || '[]'))
+        setSelectedFileIds(ticketWithTasks.ticket.suggestedFileIds ?? [])
       } catch {
         setSelectedFileIds([])
       }

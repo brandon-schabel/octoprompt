@@ -10,7 +10,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'
 import exp from 'constants'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useOptimzeUserInput } from '@/hooks/python-api/use-projects-api'
+import { useOptimzeUserInput } from '@/hooks/api/use-projects-api'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ExpandableTextareaProps = {

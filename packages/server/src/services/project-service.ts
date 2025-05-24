@@ -290,11 +290,11 @@ export async function removeSummariesFromFiles(
     for (const fileId of fileIds) {
       if (files[fileId]) {
         const file = files[fileId]
-        if (file.summary !== null || file.summaryLastUpdatedAt !== null) {
+        if (file.summary !== null || file.summaryLastUpdated !== null) {
           const updatedFileData: ProjectFile = {
             ...file,
             summary: null,
-            summaryLastUpdatedAt: null,
+            summaryLastUpdated: null,
             updated: now
           }
           files[fileId] = ProjectFileSchema.parse(updatedFileData)
@@ -368,7 +368,7 @@ export async function createProjectFileRecord(
     size: size,
     content: initialContent,
     summary: null,
-    summaryLastUpdatedAt: null,
+    summaryLastUpdated: null,
     meta: '{}',
     checksum: null,
     created: now,
@@ -475,7 +475,7 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         size: fileData.size,
         content: fileData.content,
         summary: null,
-        summaryLastUpdatedAt: null,
+        summaryLastUpdated: null,
         meta: '{}',
         checksum: fileData.checksum,
         created: now,
@@ -728,7 +728,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
       summary: trimmedSummary,
-      summaryLastUpdatedAt: Date.now()
+      summaryLastUpdated: Date.now()
     })
 
     console.log(

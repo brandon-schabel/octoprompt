@@ -36,8 +36,8 @@ import { ApiError, MEDIUM_MODEL_CONFIG } from 'shared'
 
 // In-memory stores for our mocks
 let mockTicketsDb: TicketsStorage = {}
-let mockTicketTasksDb: { [ticketId: string]: TicketTasksStorage } = {}
-let mockTicketFilesDb: { [ticketId: string]: TicketFilesStorage } = {}
+let mockTicketTasksDb: { [ticketId: number]: TicketTasksStorage } = {}
+let mockTicketFilesDb: { [ticketId: number]: TicketFilesStorage } = {}
 let mockProjectFilesDb: { [projectId: number]: ProjectFilesStorage } = {}
 
 // Mock ID generator
@@ -58,17 +58,17 @@ mock.module('@/utils/storage/ticket-storage', () => ({
       mockTicketsDb = JSON.parse(JSON.stringify(data))
       return mockTicketsDb
     },
-    readTicketTasks: async (ticketId: string) => JSON.parse(JSON.stringify(mockTicketTasksDb[ticketId] || {})),
-    writeTicketTasks: async (ticketId: string, data: TicketTasksStorage) => {
+    readTicketTasks: async (ticketId: number) => JSON.parse(JSON.stringify(mockTicketTasksDb[ticketId] || {})),
+    writeTicketTasks: async (ticketId: number, data: TicketTasksStorage) => {
       mockTicketTasksDb[ticketId] = JSON.parse(JSON.stringify(data))
       return mockTicketTasksDb[ticketId]
     },
-    readTicketFiles: async (ticketId: string) => JSON.parse(JSON.stringify(mockTicketFilesDb[ticketId] || [])),
-    writeTicketFiles: async (ticketId: string, data: TicketFilesStorage) => {
+    readTicketFiles: async (ticketId: number) => JSON.parse(JSON.stringify(mockTicketFilesDb[ticketId] || [])),
+    writeTicketFiles: async (ticketId: number, data: TicketFilesStorage) => {
       mockTicketFilesDb[ticketId] = JSON.parse(JSON.stringify(data))
       return mockTicketFilesDb[ticketId]
     },
-    deleteTicketData: async (ticketId: string) => {
+    deleteTicketData: async (ticketId: number) => {
       delete mockTicketTasksDb[ticketId]
       delete mockTicketFilesDb[ticketId]
     },
@@ -139,8 +139,8 @@ describe('Ticket Service (File Storage Mock)', () => {
 
     // Setup default project files for validation
     mockProjectFilesDb[defaultProjectId] = {
-      [existingFileId1]: { id: existingFileId1, name: "file1.txt", path: "/file1.txt", content: "content1", projectId: defaultProjectId, created: new Date().getTime(), updated: new Date().getTime(), summary: "summary1", extension: ".txt", size: 8, summaryLastUpdatedAt: null, meta: null, checksum: null },
-      [existingFileId2]: { id: existingFileId2, name: "file2.ts", path: "/file2.ts", content: "content2", projectId: defaultProjectId, created: new Date().getTime(), updated: new Date().getTime(), summary: "summary2", extension: ".ts", size: 8, summaryLastUpdatedAt: null, meta: null, checksum: null },
+      [existingFileId1]: { id: existingFileId1, name: "file1.txt", path: "/file1.txt", content: "content1", projectId: defaultProjectId, created: new Date().getTime(), updated: new Date().getTime(), summary: "summary1", extension: ".txt", size: 8, summaryLastUpdated: null, meta: null, checksum: null },
+      [existingFileId2]: { id: existingFileId2, name: "file2.ts", path: "/file2.ts", content: "content2", projectId: defaultProjectId, created: new Date().getTime(), updated: new Date().getTime(), summary: "summary2", extension: ".ts", size: 8, summaryLastUpdated: null, meta: null, checksum: null },
     }
   })
 
@@ -683,7 +683,7 @@ describe('Ticket Service (File Storage Mock)', () => {
     for (let i = 0; i < 7; i++) {
       const fileId = 8979 + i;
       manyFileIds.push(fileId);
-      mockProjectFilesDb[projManyFiles][fileId] = { id: fileId, name: `many${i}.txt`, path: `/many${i}.txt`, content: "", projectId: projManyFiles, created: new Date().getTime(), updated: new Date().getTime(), summary: "", extension: ".txt", size: 0, summaryLastUpdatedAt: null, meta: null, checksum: null };
+      mockProjectFilesDb[projManyFiles][fileId] = { id: fileId, name: `many${i}.txt`, path: `/many${i}.txt`, content: "", projectId: projManyFiles, created: new Date().getTime(), updated: new Date().getTime(), summary: "", extension: ".txt", size: 0, summaryLastUpdated: null, meta: null, checksum: null };
     }
     const ticketManyFiles = await createTicket({ projectId: projManyFiles, title: 'ManyFilesTicket', overview: '', status: 'open', priority: 'normal' });
     const suggestionsManyFiles = await suggestFilesForTicket(ticketManyFiles.id, {})

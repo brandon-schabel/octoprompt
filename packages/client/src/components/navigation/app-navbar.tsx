@@ -4,7 +4,7 @@ import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
-import { useGetProjects, useDeleteProject } from '@/hooks/python-api/use-projects-api'
+import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
 import { Link } from '@tanstack/react-router'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
@@ -25,7 +25,7 @@ import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 export function AppNavbar() {
   const [openDialog, setOpenDialog] = useState(false)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
-  const [editProjectId, setEditProjectId] = useState<string | null>(null)
+  const [editProjectId, setEditProjectId] = useState<number | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 

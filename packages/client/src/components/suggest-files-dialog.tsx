@@ -12,7 +12,7 @@ type SuggestedFilesDialogProps = {
 
 export function SuggestedFilesDialog({ open, onClose, suggestedFiles }: SuggestedFilesDialogProps) {
   const { selectedFiles, selectFiles } = useSelectedFiles()
-  const [localSelectedFiles, setLocalSelectedFiles] = useState<Set<string>>(new Set())
+  const [localSelectedFiles, setLocalSelectedFiles] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (open) {
@@ -34,7 +34,7 @@ export function SuggestedFilesDialog({ open, onClose, suggestedFiles }: Suggeste
 
   const handleSelectAll = () => {
     setLocalSelectedFiles((prev) => {
-      const next = new Set(prev)
+      const next = new Set<number>(prev)
       const allSelected = suggestedFiles.every((f) => next.has(f.id))
 
       if (allSelected) {

@@ -127,7 +127,7 @@ export const useInvalidateKv = (key: KVKey) => {
   return () => { };
 };
 
-export const useGetProjectTabById = (tabIdInput: string): [ProjectTabState | undefined, (partialData: Partial<ProjectTabState>) => void] => {
+export const useGetProjectTabById = (tabIdInput: number): [ProjectTabState | undefined, (partialData: Partial<ProjectTabState>) => void] => {
   const [projectTabs, setProjectTabs] = useGetProjectTabs();
 
   const projectTab = useMemo(() => {
@@ -188,7 +188,7 @@ export const useCreateProjectTab = () => {
   const { mutate: updateProjectTabs, ...rest } = useSetKvValue('projectTabs');
   const [projectTabs] = useGetProjectTabs();
   const [activeProjectTabId] = useGetActiveProjectTabId();
-  const currentSelectedProjectId = useProjectTabById(activeProjectTabId ?? '')?.selectedProjectId;
+  const currentSelectedProjectId = useProjectTabById(activeProjectTabId ?? -1)?.selectedProjectId;
 
   const createProjectTab = (payload: ProjectTabStatePartial) => {
     const newTabId = uuidv4();
@@ -299,7 +299,7 @@ export function useActiveProjectTab(): [
   number | null
 ] {
   const [activeProjectTabId] = useGetActiveProjectTabId();
-  const { projectTab: activeProjectTabData } = useGetProjectTab(activeProjectTabId ?? '');
+  const { projectTab: activeProjectTabData } = useGetProjectTab(activeProjectTabId ?? -1);
   const { updateProjectTabById } = useUpdateProjectTabById();
 
   const updateActiveProjectTab = (partialData: Partial<ProjectTabState>) => {

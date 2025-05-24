@@ -17,13 +17,13 @@ interface AIFileChangeDialogProps {
 
 export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSuccess }: AIFileChangeDialogProps) {
   const [prompt, setPrompt] = useState('')
-  const [changeId, setChangeId] = useState<string | null>(null)
+  const [changeId, setChangeId] = useState<number | null>(null)
   const [activeProject] = useActiveProjectTab()
   const projectId = activeProject?.selectedProjectId
 
   const generateMutation = useGenerateFileChange()
   const confirmMutation = useConfirmFileChange()
-  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(projectId ?? '', changeId)
+  const { data: changeResponse, isLoading: isLoadingChange } = useGetFileChange(projectId ?? -1, changeId)
 
   const handleGenerate = async () => {
     if (!filePath) return
@@ -32,7 +32,7 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
       const response = await generateMutation.mutateAsync({
         filePath,
         prompt,
-        projectId: projectId ?? ''
+        projectId: projectId ?? -1
       })
 
       if (response?.result?.id) {
@@ -47,7 +47,7 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
     if (!changeId) return
 
     try {
-      await confirmMutation.mutateAsync({ changeId: changeId, projectId: projectId ?? '' })
+      await confirmMutation.mutateAsync({ changeId: changeId, projectId: projectId ?? -1 })
       onSuccess?.()
       onOpenChange(false)
     } catch (error) {

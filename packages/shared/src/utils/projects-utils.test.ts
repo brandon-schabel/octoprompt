@@ -35,7 +35,7 @@ const mockProjectFiles = [
     updatedAt: new Date().toISOString(),
     checksum: 'checksum1',
     summary: 'Summary of App.tsx',
-    summaryLastUpdatedAt: new Date().toISOString(),
+    summaryLastUpdated: new Date().toISOString(),
     meta: ''
   },
   {
@@ -50,7 +50,7 @@ const mockProjectFiles = [
     updatedAt: new Date().toISOString(),
     checksum: 'checksum2',
     summary: 'Summary of helper.ts',
-    summaryLastUpdatedAt: new Date().toISOString(),
+    summaryLastUpdated: new Date().toISOString(),
     meta: ''
   },
   {
@@ -65,7 +65,7 @@ const mockProjectFiles = [
     updatedAt: new Date().toISOString(),
     checksum: 'checksum3',
     summary: 'Summary of index.ts',
-    summaryLastUpdatedAt: new Date().toISOString(),
+    summaryLastUpdated: new Date().toISOString(),
     meta: ''
   }
 ] satisfies ProjectFile[]
@@ -264,7 +264,7 @@ describe('buildFileTree', () => {
         updatedAt: new Date().toISOString(),
         checksum: 'checksum4',
         summary: 'Summary of file.ts',
-        summaryLastUpdatedAt: new Date().toISOString(),
+        summaryLastUpdated: new Date().toISOString(),
         meta: ''
       }
     ]

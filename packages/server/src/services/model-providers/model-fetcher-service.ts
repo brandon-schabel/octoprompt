@@ -78,14 +78,14 @@ export type AnthropicModel = {
   type: string
   id: string
   display_name: string
-  created string
+  created: string
 }
 
 export type AnthropicModelsResponse = {
   data: AnthropicModel[]
   has_more: boolean
-  first_id: string | null
-  last_id: string | null
+  first_id: number | null
+  last_id: number | null
 }
 
 export type OpenAIModelObject = {

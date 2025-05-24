@@ -171,7 +171,7 @@ export function createChatService() {
     }
 
     chatMessages[messageId].content = content
-    // chatMessages[messageId].updatedAt = new Date().toISOString(); // If messages had an updatedAt field
+    // chatMessages[messageId].updated = new Date().toISOString(); // If messages had an updatedAt field
 
     try {
       ChatMessageSchema.parse(chatMessages[messageId]); // Re-validate before writing

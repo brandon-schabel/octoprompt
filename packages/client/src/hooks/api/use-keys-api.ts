@@ -69,10 +69,10 @@ export function useUpdateKey() {
   const queryClient = useQueryClient()
   const mutationOptions = patchApiKeysByKeyIdMutation()
 
-  return useMutation<ProviderKey, PatchApiKeysByKeyIdError, { keyId: string; data: UpdateKeyInput }>({
-    mutationFn: async (vars: { keyId: string; data: UpdateKeyInput }) => {
+  return useMutation<ProviderKey, PatchApiKeysByKeyIdError, { keyId: number; data: UpdateKeyInput }>({
+    mutationFn: async (vars: { keyId: number; data: UpdateKeyInput }) => {
       const opts: Options<PatchApiKeysByKeyIdData> = {
-        path: { keyId: vars.keyId },
+        path: { keyId: vars.keyId.toString() },
         body: vars.data
       }
       const response: ProviderKeyResponse = await mutationOptions.mutationFn!(opts)
@@ -94,9 +94,9 @@ export function useDeleteKey() {
   const queryClient = useQueryClient()
   const mutationOptions = deleteApiKeysByKeyIdMutation()
 
-  return useMutation<DeleteApiKeysByKeyIdResponse, DeleteApiKeysByKeyIdError, string>({
-    mutationFn: (keyId: string) => {
-      const opts: Options<DeleteApiKeysByKeyIdData> = { path: { keyId } }
+  return useMutation<DeleteApiKeysByKeyIdResponse, DeleteApiKeysByKeyIdError, number>({
+    mutationFn: (keyId: number) => {
+      const opts: Options<DeleteApiKeysByKeyIdData> = { path: { keyId: keyId.toString() } }
       return mutationOptions.mutationFn!(opts)
     },
     onSuccess: (data, variables, context) => {

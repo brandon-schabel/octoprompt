@@ -39,7 +39,7 @@ export const FooSchema = z.object({ id: z.string() }).openapi('Foo');
 export type Foo = z.infer<typeof FooSchema>;
 
 // Service
-export async function getFoo(id: string): Promise<Foo | null> {
+export async function getFoo(id: number): Promise<Foo | null> {
   const row = db.prepare('SELECT * FROM foo WHERE id=?').get(id);
   return row ? FooSchema.parse(row) : null;
 }

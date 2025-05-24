@@ -144,11 +144,11 @@ export const ForkChatParamsSchema = z
 export const ForkChatBodySchema = z
   .object({
     excludedMessageIds: z
-      .array(z.string().min(1))
+      .array(z.number())
       .default([])
       .openapi({
         description: 'Optional list of message IDs to exclude from the fork',
-        example: ['msg-m1a2b3c4']
+        example: [1, 2, 3]
       })
   })
   .openapi('ForkChatRequestBody')

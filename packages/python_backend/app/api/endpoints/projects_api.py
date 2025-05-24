@@ -548,9 +548,9 @@ async def remove_summaries_route(
         for file_id in body.fileIds:
             if file_id in all_files_map:
                 file_data = all_files_map[file_id]
-                if file_data.summary is not None or file_data.summaryLastUpdatedAt is not None:
+                if file_data.summary is not None or file_data.summaryLastUpdated is not None:
                     file_data.summary = None
-                    file_data.summaryLastUpdatedAt = None
+                    file_data.summaryLastUpdated = None
                 all_files_map[file_id] = file_data 
                 removed_count += 1
                 changes_made = True

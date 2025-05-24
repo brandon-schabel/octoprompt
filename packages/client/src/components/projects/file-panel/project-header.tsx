@@ -31,7 +31,7 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
   const selectedProjectId = projectTabData?.selectedProjectId
 
   // Tickets for this project
-  const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? '')
+  const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? -1)
   const openTicketsCount = ticketsData?.ticketsWithTasks?.filter((t) => t.ticket.status === 'open').length ?? 0
 
   if (!projectData) return null
@@ -56,7 +56,7 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
     setNewTabName(activeProjectTabData?.displayName || '')
   }, [activeProjectTabData?.displayName])
 
-  if (!activeProjectTabData && activeProjectTabId === 'unset') return null
+  if (!activeProjectTabData && activeProjectTabId === -1) return null
 
   return (
     <>
@@ -151,7 +151,7 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
                   <Button
                     variant='destructive'
                     onClick={() => {
-                      if (activeProjectTabId && activeProjectTabId !== 'unset') {
+                      if (activeProjectTabId && activeProjectTabId !== -1) {
                         deleteTab(activeProjectTabId)
                       }
                       setIsDeleteDialogOpen(false)

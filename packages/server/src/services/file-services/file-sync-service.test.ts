@@ -405,7 +405,7 @@ describe('FileSync Service', () => {
       content: content,
       checksum: checksum,
       summary: null,
-      summaryLastUpdatedAt: null,
+      summaryLastUpdated: null,
       meta: '{}',
       created: Date.now(),
       updated: Date.now()
