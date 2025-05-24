@@ -34,24 +34,27 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
   }
 
   try {
-    const projectsReturn = await projectStorage.readProjects()
-    const projects = new Map<number, Project>()
+    const existingProjectsObject = await projectStorage.readProjects()
+    const projectsMap = new Map<number, Project>(
+      Object.entries(existingProjectsObject).map(([id, proj]) => [Number(id), proj as Project])
+    );
 
-    while (projects.get(projectId)) {
+    while (projectsMap.has(projectId)) {
       // console.warn(`Project ID conflict for ${projectId}. Incrementing.`); // Original warning can be kept or removed
       projectId++;
       incrementCount++;
     }
 
     if (incrementCount > 0) {
+      newProjectData.id = projectId; // Update the ID in the data object if it was changed
       console.log(`Project ID ${initialProjectId} was taken. Found available ID ${projectId} after ${incrementCount} increment(s).`);
     }
 
     const validatedProject = ProjectSchema.parse(newProjectData)
 
-    projects.set(validatedProject.id, validatedProject)
+    projectsMap.set(validatedProject.id, validatedProject)
 
-    await projectStorage.writeProjects(Object.fromEntries(projects))
+    await projectStorage.writeProjects(Object.fromEntries(projectsMap))
     await projectStorage.writeProjectFiles(validatedProject.id, {})
 
     return validatedProject
