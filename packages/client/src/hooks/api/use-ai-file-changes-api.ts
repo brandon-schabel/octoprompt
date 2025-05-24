@@ -59,51 +59,56 @@ export function useGenerateFileChange() {
 }
 
 export function useGetFileChange(projectId: number | null, changeId: number | null) {
+  const queryClient = useQueryClient()
   const queryKey =
     projectId && changeId
       ? FILE_CHANGE_KEYS.detail(projectId, changeId)
       : [...FILE_CHANGE_KEYS.all, null] // Use a consistent key structure
 
+  const queryOptions =
+    projectId && changeId
+      ? getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdOptions({
+        path: { projectId, aiFileChangeId: changeId }
+      } as Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData>)
+      : undefined;
+
   return useQuery<FileChangeDetailsResponse | null, Error, FileChangeDetailsResponse | null, typeof queryKey>({
     queryKey: queryKey,
     queryFn: async ({ signal }) => {
-      if (!changeId || !projectId) return null
+      if (!queryOptions || !queryOptions.queryFn) {
+        // This case should ideally not be hit if enabled is false when queryOptions is undefined
+        console.error('Generated query options or queryFn not found');
+        return null;
+      }
+      if (!changeId || !projectId) return null; // Should be caught by enabled, but as a safeguard
 
       try {
-        const options = getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdOptions({
-          path: { projectId, aiFileChangeId: changeId, }
-        } as Options<GetApiProjectsByProjectIdAiFileChangesByAiFileChangeIdData>)
-
-        if (!options?.queryFn) {
-          console.error('Generated query options or queryFn not found')
-          return null
-        }
-
-        const result = await options.queryFn({
+        // The queryKey passed to the generated queryFn needs to be the specific one.
+        const specificQueryKey = FILE_CHANGE_KEYS.detail(projectId, changeId);
+        return await queryOptions.queryFn({
           signal,
-          queryKey: queryKey as ReturnType<typeof getApiProjectsByProjectIdAiFileChangesByAiFileChangeIdQueryKey>,
-          meta: undefined
-        })
-
-        return result
+          queryKey: specificQueryKey, // Use the more specific key here
+          meta: undefined,
+          client: queryClient
+        });
       } catch (error) {
         if (error instanceof Error && error.message.includes('404')) {
-          return null
+          return null;
         }
-        console.error('Error fetching file change:', error)
-        commonErrorHandler(error as Error)
-        throw error
+        console.error('Error fetching file change:', error);
+        commonErrorHandler(error as Error);
+        throw error;
       }
     },
-    enabled: changeId !== null && projectId !== null,
+    enabled: !!queryOptions && changeId !== null && projectId !== null, // Ensure queryOptions exist
     retry: (failureCount, error) => {
       if (error instanceof Error && error.message.includes('404')) {
-        return false
+        return false;
       }
-      return failureCount < 3
+      return failureCount < 3;
     },
     refetchOnWindowFocus: false
-  })
+  });
 }
 
 export type ConfirmFileChangeInput = {
