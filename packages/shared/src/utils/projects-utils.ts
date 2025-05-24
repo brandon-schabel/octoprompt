@@ -24,9 +24,9 @@ export function buildPromptContent({
   userPrompt
 }: {
   promptData: PromptListResponse | null | undefined
-  selectedPrompts: string[]
+  selectedPrompts: number[]
   userPrompt: string
-  selectedFiles: string[]
+  selectedFiles: number[]
   fileMap: ProjectFileMap
 }): string {
   let contentToCopy = ''
@@ -61,10 +61,10 @@ export function buildPromptContent({
 
 export function calculateTotalTokens(
   promptData: PromptListResponse | null | undefined,
-  selectedPrompts: string[],
+  selectedPrompts: number[],
   userPrompt: string,
-  selectedFiles: string[],
-  fileMap: Map<string, ProjectFile>
+  selectedFiles: number[],
+  fileMap: ProjectFileMap
 ): number {
   let total = 0
   for (const prompt of promptData?.data ?? []) {

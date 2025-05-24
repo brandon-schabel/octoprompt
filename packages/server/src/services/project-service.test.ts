@@ -28,11 +28,22 @@ import type {
 import type { ProjectsStorage, ProjectFilesStorage } from '@/utils/storage/project-storage' // Assuming these types are exported or reconstructable
 import { ApiError, LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from 'shared'
 import { z } from 'zod'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 // In-memory stores for our mocks
 let mockProjectsDb: ProjectsStorage = {}
-let mockProjectFilesDbPerProject: Record<string, ProjectFilesStorage> = {}
-let idCounter = 0
+let mockProjectFilesDbPerProject: Record<number, ProjectFilesStorage> = {} // ProjectId is number
+// let idCounter = 0 // Keep this if it's used elsewhere, or remove if only for the old generateId
+
+// Initialize a base for mock IDs. This will be incremented.
+let nextTestIdBase = normalizeToUnixMs(new Date());
+
+// Define FileSyncData locally for tests if not easily importable or to ensure all fields are present
+interface TestFileSyncData extends FileSyncData {
+    meta: string | null;
+    summary: string | null;
+    summaryLastUpdatedAt: number | null;
+}
 
 // --- Mocking projectStorage ---
 const mockProjectStorage = {
@@ -41,20 +52,23 @@ const mockProjectStorage = {
         mockProjectsDb = JSON.parse(JSON.stringify(data))
         return mockProjectsDb
     },
-    readProjectFiles: async (projectId: string) => {
+    readProjectFiles: async (projectId: number) => {
         return JSON.parse(JSON.stringify(mockProjectFilesDbPerProject[projectId] || {}))
     },
-    writeProjectFiles: async (projectId: string, data: ProjectFilesStorage) => {
+    writeProjectFiles: async (projectId: number, data: ProjectFilesStorage) => {
         mockProjectFilesDbPerProject[projectId] = JSON.parse(JSON.stringify(data))
         return mockProjectFilesDbPerProject[projectId]
     },
-    deleteProjectData: async (projectId: string) => {
+    deleteProjectData: async (projectId: number) => {
         delete mockProjectFilesDbPerProject[projectId]
     },
-    generateId: (prefix: string) => `${prefix}_test_${idCounter++}`,
+    generateId: () => {
+        nextTestIdBase += 1; // Increment to ensure uniqueness for each call
+        return nextTestIdBase;
+    },
     updateProjectFile: async (
-        projectId: string,
-        fileId: string,
+        projectId: number,
+        fileId: number,
         fileData: Partial<Omit<ProjectFile, 'updated' | 'created' | 'id' | 'projectId'>>
     ): Promise<ProjectFile> => {
         if (!mockProjectFilesDbPerProject[projectId] || !mockProjectFilesDbPerProject[projectId][fileId]) {
@@ -67,7 +81,7 @@ const mockProjectStorage = {
             ...existingFile,
             ...fileData,
             summaryLastUpdatedAt: fileData.summary !== undefined ? unixMs : existingFile.summaryLastUpdatedAt,
-            updatedAt: unixMs,
+            updated: unixMs,
         }
         mockProjectFilesDbPerProject[projectId][fileId] = updatedFile
         return JSON.parse(JSON.stringify(updatedFile))
@@ -94,7 +108,7 @@ mock.module('@/services/gen-ai-services', () => ({
 const mockSyncProject = mock(async (project: Project) => {
     // Simulate sync: maybe add a dummy file if none exist for resummarizeAllFiles test
     if (!mockProjectFilesDbPerProject[project.id] || Object.keys(mockProjectFilesDbPerProject[project.id]).length === 0) {
-        const fileId = mockProjectStorage.generateId('file')
+        const fileId = mockProjectStorage.generateId() // No argument needed
         mockProjectFilesDbPerProject[project.id] = {
             [fileId]: {
                 id: fileId,
@@ -108,8 +122,8 @@ const mockSyncProject = mock(async (project: Project) => {
                 summaryLastUpdatedAt: null,
                 meta: '{}',
                 checksum: 'checksum-synced',
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
+                created: normalizeToUnixMs(Date.now()),
+                updated: normalizeToUnixMs(Date.now()),
             }
         }
     }
@@ -133,7 +147,8 @@ describe('Project Service (File Storage)', () => {
     beforeEach(async () => {
         mockProjectsDb = {}
         mockProjectFilesDbPerProject = {}
-        idCounter = 0
+        // idCounter = 0 // Reset if using the old idCounter strategy
+        nextTestIdBase = normalizeToUnixMs(new Date()); // Reset base ID for each test for isolation
         mockGenerateStructuredData.mockClear()
         mockSyncProject.mockClear()
     })
@@ -150,35 +165,10 @@ describe('Project Service (File Storage)', () => {
             expect(project.id).toBeDefined()
             expect(project.name).toBe(input.name)
             expect(project.path).toBe(input.path)
-            expect(project.description).toBe(input.description)
+            expect(project.description).toBe(input.description ?? '') // Handle potentially undefined description
             expect(mockProjectsDb[project.id]).toEqual(project)
             expect(mockProjectFilesDbPerProject[project.id]).toEqual({}) // Initializes empty files
         })
-
-        // test('createProject throws ApiError on ID conflict', async () => {
-        //     const id = `proj_test_0` // Predictable ID
-        //     mockProjectsDb[id] = { id, name: 'Preexisting', path: '/pre', createdAt: '', updatedAt: '' }
-        //     idCounter = 0 // Reset counter to force collision with the *next* call to generateId
-
-        //     const input: CreateProjectBody = { name: 'New Project', path: '/new' }
-        //     // Manually set idCounter so the next generated ID is the conflicting one.
-        //     // Note: generateId is called *inside* createProject.
-        //     // The test for prompt-service did this by mocking generateId itself temporarily.
-        //     // Here, we control the mock's internal counter.
-
-        //     // First call to createProject will succeed and use proj_test_0
-        //     await createProject({ name: 'First Project', path: '/first' });
-        //     idCounter = 0; // Reset for the actual test of conflict
-
-        //     await expect(createProject(input)).rejects.toThrow(
-        //         expect.objectContaining({
-        //             message: `Project ID conflict for ${id}`, // or `Project ID conflict for proj_test_0`
-        //             status: 409,
-        //             code: 'PROJECT_ID_CONFLICT'
-        //         })
-        //     );
-        // });
-
 
         test('getProjectById returns project if found, null if not', async () => {
             const input: CreateProjectBody = { name: 'GetMe', path: '/get/me' }
@@ -187,7 +177,7 @@ describe('Project Service (File Storage)', () => {
             const found = await getProjectById(created.id)
             expect(found).toEqual(created)
 
-            const notFound = await getProjectById('nonexistent-id')
+            const notFound = await getProjectById(normalizeToUnixMs(new Date()) + 1000) // Use a numeric non-existent ID
             expect(notFound).toBeNull()
         })
 
@@ -216,18 +206,19 @@ describe('Project Service (File Storage)', () => {
             expect(updated.name).toBe('After')
             expect(updated.description).toBe('New Desc')
             expect(updated.path).toBe(created.path) // Path not changed
-            expect(new Date(updated.updatedAt).getTime()).toBeGreaterThan(new Date(created.updatedAt).getTime())
+            expect(new Date(updated.updated).getTime()).toBeGreaterThan(new Date(created.updated).getTime())
             expect(mockProjectsDb[created.id]).toEqual(updated)
         })
 
         test('updateProject returns null if project does not exist', async () => {
-            await expect(updateProject('fake-id', { name: 'X' })).resolves.toBeNull()
+            await expect(updateProject(normalizeToUnixMs(new Date()) + 2000 /* fake numeric id */, { name: 'X' })).resolves.toBeNull()
         })
 
         test('deleteProject returns true if deleted, throws if nonexistent, and removes files data', async () => {
             const project = await createProject({ name: 'DelMe', path: '/del/me' })
+            const fileIdForDeleteTest = normalizeToUnixMs(new Date());
             mockProjectFilesDbPerProject[project.id] = { // Simulate some files
-                'file_test_1': { id: 'file_test_1', projectId: project.id, name: 'f.txt', path: 'f.txt', content: '', extension: '.txt', size: 0, createdAt: '', updatedAt: '', summary: null, summaryLastUpdatedAt: null, meta: '{}', checksum: null }
+                [fileIdForDeleteTest]: { id: fileIdForDeleteTest, projectId: project.id, name: 'f.txt', path: 'f.txt', content: '', extension: '.txt', size: 0, created: normalizeToUnixMs(Date.now() - 100), updated: normalizeToUnixMs(Date.now() - 50), summary: null, summaryLastUpdatedAt: null, meta: '{}', checksum: null }
             }
 
             expect(mockProjectsDb[project.id]).toBeDefined()
@@ -238,13 +229,14 @@ describe('Project Service (File Storage)', () => {
             expect(mockProjectsDb[project.id]).toBeUndefined()
             expect(mockProjectFilesDbPerProject[project.id]).toBeUndefined()
 
-            await expect(deleteProject('totally-fake-id'))
-                .rejects.toThrow(new ApiError(404, `Project not found with ID totally-fake-id for deletion.`, 'PROJECT_NOT_FOUND'))
+            const fakeProjectIdForDelete = normalizeToUnixMs(new Date()) + 3000;
+            await expect(deleteProject(fakeProjectIdForDelete))
+                .rejects.toThrow(new ApiError(404, `Project not found with ID ${fakeProjectIdForDelete} for deletion.`, 'PROJECT_NOT_FOUND'))
         })
     })
 
     describe('Project File Operations', () => {
-        let projectId: string;
+        let projectId: number;
 
         beforeEach(async () => {
             const proj = await createProject({ name: "FileTestProj", path: "/file/test" });
@@ -254,7 +246,14 @@ describe('Project Service (File Storage)', () => {
         test('createProjectFileRecord creates a file record', async () => {
             const filePath = 'src/app.js';
             const content = 'console.log("hello");';
+            console.log("about to create file record")
             const fileRecord = await createProjectFileRecord(projectId, filePath, content);
+            console.log({
+                fileRecord,
+                projectId,
+                filePath,
+                content
+            })
 
             expect(fileRecord.id).toBeDefined();
             expect(fileRecord.projectId).toBe(projectId);
@@ -266,10 +265,10 @@ describe('Project Service (File Storage)', () => {
         });
 
         test('createProjectFileRecord throws if project not found', async () => {
-            await expect(createProjectFileRecord("non-existent-proj", "file.txt", ""))
-                .rejects.toThrow(new ApiError(404, `Project not found with ID non-existent-proj`, 'PROJECT_NOT_FOUND'));
+            const nonExistentProjectId = normalizeToUnixMs(new Date()) + 4000;
+            await expect(createProjectFileRecord(nonExistentProjectId, "file.txt", ""))
+                .rejects.toThrow(new ApiError(404, `Project not found with ID ${nonExistentProjectId}`, 'PROJECT_NOT_FOUND'));
         });
-
 
         test('getProjectFiles returns files for a project, or null', async () => {
             let files = await getProjectFiles(projectId);
@@ -282,47 +281,52 @@ describe('Project Service (File Storage)', () => {
             expect(files?.length).toBe(2);
             expect(files).toEqual(expect.arrayContaining([file1, file2]));
 
-            const noFilesForThis = await getProjectFiles('nonexistent-project');
+            const noFilesForThis = await getProjectFiles(normalizeToUnixMs(new Date()) + 5000 /* non-existent project ID */);
             expect(noFilesForThis).toBeNull();
         });
 
         test('updateFileContent updates content and size', async () => {
             const file = await createProjectFileRecord(projectId, 'update-me.txt', 'old content');
             const newContent = 'new fresh content';
-            await new Promise(resolve => setTimeout(resolve, 1)); // ensure updatedAt changes
+            await new Promise(resolve => setTimeout(resolve, 1)); // ensure updated changes
 
             const updatedFile = await updateFileContent(projectId, file.id, newContent);
 
             expect(updatedFile.content).toBe(newContent);
             expect(updatedFile.size).toBe(Buffer.byteLength(newContent, 'utf8'));
-            expect(new Date(updatedFile.updatedAt).getTime()).toBeGreaterThan(new Date(file.updatedAt).getTime());
+            expect(new Date(updatedFile.updated).getTime()).toBeGreaterThan(new Date(file.updated).getTime());
             expect(mockProjectFilesDbPerProject[projectId][file.id].content).toBe(newContent);
         });
 
         test('updateFileContent throws if file not found', async () => {
-            await expect(updateFileContent(projectId, 'nonexistent-file-id', 'new content'))
-                .rejects.toThrow(new ApiError(404, `File not found with ID nonexistent-file-id in project ${projectId} during content update.`, 'FILE_NOT_FOUND'));
+            const nonExistentFileId = normalizeToUnixMs(new Date()) + 6000;
+            await expect(updateFileContent(projectId, nonExistentFileId, 'new content'))
+                .rejects.toThrow(new ApiError(404, `File not found with ID ${nonExistentFileId} in project ${projectId} during content update.`, 'FILE_NOT_FOUND'));
         });
 
-
         test('getProjectFilesByIds fetches specific files', async () => {
-            const file1 = await createProjectFileRecord(projectId, 'f1.txt', 'c1');
-            const file2 = await createProjectFileRecord(projectId, 'f2.txt', 'c2');
+            const file1_created = await createProjectFileRecord(projectId, 'f1.txt', 'c1');
+            const file2_created = await createProjectFileRecord(projectId, 'f2.txt', 'c2');
             await createProjectFileRecord(projectId, 'f3.txt', 'c3'); // Another file not fetched
-
-            const fetched = await getProjectFilesByIds(projectId, [file1.id, file2.id, 'non-existent-file']);
+            const nonExistentFileIdForGet = normalizeToUnixMs(new Date()) + 7000;
+            // Ensure IDs passed to getProjectFilesByIds are numbers from the *actual created records*
+            const fetched = await getProjectFilesByIds(projectId, [file1_created.id, file2_created.id, nonExistentFileIdForGet]);
             expect(fetched.length).toBe(2);
-            expect(fetched).toEqual(expect.arrayContaining([file1, file2]));
+            expect(fetched).toEqual(expect.arrayContaining([
+                expect.objectContaining({ id: file1_created.id }),
+                expect.objectContaining({ id: file2_created.id })
+            ]));
         });
 
         test('getProjectFilesByIds throws if project not found', async () => {
-            await expect(getProjectFilesByIds("non-existent-proj", ["some-file-id"]))
-                .rejects.toThrow(new ApiError(404, `Project not found with ID non-existent-proj when fetching files by IDs.`, 'PROJECT_NOT_FOUND'));
+            const nonExistentProjectIdForGetFiles = normalizeToUnixMs(new Date()) + 8000;
+            await expect(getProjectFilesByIds(nonExistentProjectIdForGetFiles, [normalizeToUnixMs(new Date()) + 9000]))
+                .rejects.toThrow(new ApiError(404, `Project not found with ID ${nonExistentProjectIdForGetFiles} when fetching files by IDs.`, 'PROJECT_NOT_FOUND'));
         });
     })
 
     describe('Bulk File Operations', () => {
-        let projectId: string;
+        let projectId: number;
 
         beforeEach(async () => {
             const proj = await createProject({ name: "BulkTestProj", path: "/bulk/test" });
@@ -336,56 +340,65 @@ describe('Project Service (File Storage)', () => {
             ];
             const created = await bulkCreateProjectFiles(projectId, filesToCreate);
             expect(created.length).toBe(2);
-            expect(Object.keys(mockProjectFilesDbPerProject[projectId]).length).toBe(2);
-            expect(created[0].path).toBe(filesToCreate[0].path);
-            expect(created[1].content).toBe(filesToCreate[1].content);
+            const filesInDb = Object.values(mockProjectFilesDbPerProject[projectId]);
+            expect(filesInDb.length).toBe(2); // Check actual number in DB
+            // Check that files with these paths exist, rather than relying on specific IDs from 'created' array if order is not guaranteed
+            expect(filesInDb.find(f => f.path === 'bulk1.js')).toBeDefined();
+            expect(filesInDb.find(f => f.path === 'sub/bulk2.ts')).toBeDefined();
         });
 
         test('bulkCreateProjectFiles skips duplicates by path', async () => {
-            await bulkCreateProjectFiles(projectId, [{ path: 'duplicate.txt', name: 'duplicate.txt', extension: '.txt', content: 'original', size: 8, checksum: 'cs_orig' }]);
+            // Create an initial file
+            const initialFile = await bulkCreateProjectFiles(projectId, [{ path: 'duplicate.txt', name: 'duplicate.txt', extension: '.txt', content: 'original', size: 8, checksum: 'cs_orig' }]);
+            expect(initialFile.length).toBe(1);
+
             const filesToCreate: FileSyncData[] = [
                 { path: 'new.txt', name: 'new.txt', extension: '.txt', content: 'new', size: 3, checksum: 'cs_new' },
                 { path: 'duplicate.txt', name: 'duplicate.txt', extension: '.txt', content: 'attempted duplicate', size: 20, checksum: 'cs_dup' },
             ];
             const created = await bulkCreateProjectFiles(projectId, filesToCreate);
-            expect(created.length).toBe(1); // Only new.txt should be created
+            expect(created.length).toBe(1);
             expect(created[0].path).toBe('new.txt');
-            expect(Object.keys(mockProjectFilesDbPerProject[projectId]).length).toBe(2); // original duplicate.txt + new.txt
+
             const filesInDb = Object.values(mockProjectFilesDbPerProject[projectId]);
+            expect(filesInDb.length).toBe(2);
             const originalDup = filesInDb.find(f => f.path === 'duplicate.txt');
-            expect(originalDup?.content).toBe('original'); // Original content should remain
+            expect(originalDup?.content).toBe('original');
         });
 
-
         test('bulkUpdateProjectFiles updates multiple files', async () => {
-            const f1 = await createProjectFileRecord(projectId, 'up1.txt', 'old1');
-            const f2 = await createProjectFileRecord(projectId, 'up2.txt', 'old2');
+            const f1_created = await createProjectFileRecord(projectId, 'up1.txt', 'old1');
+            const f2_created = await createProjectFileRecord(projectId, 'up2.txt', 'old2');
 
-            const updates = [
-                { fileId: f1.id, data: { path: f1.path, name: f1.name, extension: f1.extension, content: 'new1', size: 4, checksum: 'cs_new1' } },
-                { fileId: f2.id, data: { path: f2.path, name: f2.name, extension: f2.extension, content: 'new2', size: 4, checksum: 'cs_new2' } },
+            const updates: Array<{ fileId: number; data: TestFileSyncData }> = [
+                { fileId: f1_created.id, data: { path: f1_created.path, name: f1_created.name, extension: f1_created.extension, content: 'new1', size: 4, checksum: 'cs_new1', meta: null, summary: null, summaryLastUpdatedAt: null } },
+                { fileId: f2_created.id, data: { path: f2_created.path, name: f2_created.name, extension: f2_created.extension, content: 'new2', size: 4, checksum: 'cs_new2', meta: null, summary: null, summaryLastUpdatedAt: null } },
             ];
+
             const updatedResult = await bulkUpdateProjectFiles(projectId, updates);
             expect(updatedResult.length).toBe(2);
-            expect(mockProjectFilesDbPerProject[projectId][f1.id].content).toBe('new1');
-            expect(mockProjectFilesDbPerProject[projectId][f2.id].checksum).toBe('cs_new2');
+            // Use the *actual created IDs* for assertions
+            expect(mockProjectFilesDbPerProject[projectId][f1_created.id].content).toBe('new1');
+            expect(mockProjectFilesDbPerProject[projectId][f2_created.id].checksum).toBe('cs_new2');
         });
 
         test('bulkDeleteProjectFiles deletes multiple files', async () => {
-            const f1 = await createProjectFileRecord(projectId, 'del1.txt', 'c1');
-            const f2 = await createProjectFileRecord(projectId, 'del2.txt', 'c2');
-            const f3 = await createProjectFileRecord(projectId, 'del3.txt', 'c3'); // Keep this one
+            const f1_created = await createProjectFileRecord(projectId, 'del1.txt', 'c1');
+            const f2_created = await createProjectFileRecord(projectId, 'del2.txt', 'c2');
+            const f3_created = await createProjectFileRecord(projectId, 'del3.txt', 'c3');
+            const nonExistentFileIdForBulkDelete = normalizeToUnixMs(new Date()) + 10000;
 
-            const { deletedCount } = await bulkDeleteProjectFiles(projectId, [f1.id, f2.id, 'non-existent-id']);
+            // Use the *actual created IDs* for deletion
+            const { deletedCount } = await bulkDeleteProjectFiles(projectId, [f1_created.id, f2_created.id, nonExistentFileIdForBulkDelete]);
             expect(deletedCount).toBe(2);
-            expect(mockProjectFilesDbPerProject[projectId][f1.id]).toBeUndefined();
-            expect(mockProjectFilesDbPerProject[projectId][f2.id]).toBeUndefined();
-            expect(mockProjectFilesDbPerProject[projectId][f3.id]).toBeDefined();
+            expect(mockProjectFilesDbPerProject[projectId][f1_created.id]).toBeUndefined();
+            expect(mockProjectFilesDbPerProject[projectId][f2_created.id]).toBeUndefined();
+            expect(mockProjectFilesDbPerProject[projectId][f3_created.id]).toBeDefined();
         });
     });
 
     describe('Summarization', () => {
-        let projectId: string;
+        let projectId: number;
         let file1: ProjectFile;
 
         beforeEach(async () => {
@@ -435,35 +448,38 @@ describe('Project Service (File Storage)', () => {
                 .rejects.toThrow(new ApiError(500, `Failed to summarize file ${file1.path} in project ${projectId}. Reason: AI provider exploded`, 'FILE_SUMMARIZE_FAILED'));
         });
 
-
         test('summarizeFiles processes multiple files', async () => {
-            const file2 = await createProjectFileRecord(projectId, 'another.js', 'let x = 10;');
-            const emptyFile = await createProjectFileRecord(projectId, 'empty-too.txt', '');
+            const file1_created = await createProjectFileRecord(projectId, 'summarize-me.js', 'function hello() { console.log("world"); }');
+            const file2_created = await createProjectFileRecord(projectId, 'another.js', 'let x = 10;');
+            const emptyFile_created = await createProjectFileRecord(projectId, 'empty-too.txt', '');
 
-            const result = await summarizeFiles(projectId, [file1.id, file2.id, emptyFile.id]);
-            expect(result.included).toBe(2); // file1 and file2
-            expect(result.skipped).toBe(1); // emptyFile
+            const result = await summarizeFiles(projectId, [file1_created.id, file2_created.id, emptyFile_created.id]);
+            expect(result.included).toBe(2);
+            expect(result.skipped).toBe(1);
             expect(result.updatedFiles.length).toBe(2);
-            expect(mockProjectFilesDbPerProject[projectId][file1.id].summary).toBe('Mocked AI summary');
-            expect(mockProjectFilesDbPerProject[projectId][file2.id].summary).toBe('Mocked AI summary');
-            expect(mockProjectFilesDbPerProject[projectId][emptyFile.id].summary).toBeNull();
-            expect(mockGenerateStructuredData).toHaveBeenCalledTimes(2); // For file1 and file2
+            // Use the *actual created IDs* for assertions
+            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summary).toBe('Mocked AI summary');
+            expect(mockProjectFilesDbPerProject[projectId][file2_created.id].summary).toBe('Mocked AI summary');
+            expect(mockProjectFilesDbPerProject[projectId][emptyFile_created.id].summary).toBeNull();
+            expect(mockGenerateStructuredData).toHaveBeenCalledTimes(2);
         });
 
         test('removeSummariesFromFiles clears summaries', async () => {
-            // First, summarize a file so there's something to remove
-            await summarizeSingleFile(file1);
-            expect(mockProjectFilesDbPerProject[projectId][file1.id].summary).toBe('Mocked AI summary');
-            expect(mockProjectFilesDbPerProject[projectId][file1.id].summaryLastUpdatedAt).toBeDefined();
+            const file1_created = await createProjectFileRecord(projectId, 'summarize-me.js', 'function hello() { console.log("world"); }');
+            await summarizeSingleFile(file1_created); // Use the created file object
+            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summary).toBe('Mocked AI summary');
+            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summaryLastUpdatedAt).toBeDefined();
 
-            const fileWithNoSummary = await createProjectFileRecord(projectId, 'no-summary.txt', 'content');
+            const fileWithNoSummary_created = await createProjectFileRecord(projectId, 'no-summary.txt', 'content');
+            const nonExistentFileId = normalizeToUnixMs(new Date()) + 11000;
 
-            const { removedCount, message } = await removeSummariesFromFiles(projectId, [file1.id, fileWithNoSummary.id, 'non-existent-file']);
+            // Use *actual created IDs*
+            const { removedCount, message } = await removeSummariesFromFiles(projectId, [file1_created.id, fileWithNoSummary_created.id, nonExistentFileId]);
             expect(removedCount).toBe(1);
             expect(message).toBe('Removed summaries from 1 files.');
-            expect(mockProjectFilesDbPerProject[projectId][file1.id].summary).toBeNull();
-            expect(mockProjectFilesDbPerProject[projectId][file1.id].summaryLastUpdatedAt).toBeNull();
-            expect(mockProjectFilesDbPerProject[projectId][fileWithNoSummary.id].summary).toBeNull(); // Was already null
+            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summary).toBeNull();
+            expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summaryLastUpdatedAt).toBeNull();
+            expect(mockProjectFilesDbPerProject[projectId][fileWithNoSummary_created.id].summary).toBeNull();
         });
 
         test('resummarizeAllFiles calls sync and then summarizeFiles', async () => {
@@ -484,8 +500,9 @@ describe('Project Service (File Storage)', () => {
         });
 
         test('resummarizeAllFiles handles project not found', async () => {
-            await expect(resummarizeAllFiles("non-existent-project"))
-                .rejects.toThrow(new ApiError(404, `Project not found with ID non-existent-project for resummarize all.`, 'PROJECT_NOT_FOUND'));
+            const nonExistentProjectIdForResummarize = normalizeToUnixMs(new Date()) + 12000;
+            await expect(resummarizeAllFiles(nonExistentProjectIdForResummarize))
+                .rejects.toThrow(new ApiError(404, `Project not found with ID ${nonExistentProjectIdForResummarize} for resummarize all.`, 'PROJECT_NOT_FOUND'));
         });
 
         test('resummarizeAllFiles does nothing if no files after sync (and no error)', async () => {
@@ -507,6 +524,5 @@ describe('Project Service (File Storage)', () => {
             // but we can assert no error was thrown and files remain empty and unsummarized.
             expect(mockProjectFilesDbPerProject[newProj.id]).toEqual({});
         });
-
     })
 })

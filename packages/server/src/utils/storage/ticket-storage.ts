@@ -5,11 +5,8 @@ import {
     TicketReadSchema,
     TicketTaskReadSchema,
     TicketFileReadSchema,
-    type Ticket,
-    type TicketTask,
-    type TicketFile
 } from 'shared/src/schemas/ticket.schemas'
-import { randomUUID } from 'crypto'
+import { normalizeToUnixMs } from '../parse-timestamp'
 
 // Define the base directory for storing ticket data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'ticket_storage')
@@ -23,7 +20,7 @@ export const TicketsStorageSchema = z.record(z.string(), TicketReadSchema)
 export type TicketsStorage = z.infer<typeof TicketsStorageSchema>
 
 // Tasks for a single ticket, keyed by taskId
-export const TicketTasksStorageSchema = z.record(z.string(), TicketTaskReadSchema)
+export const TicketTasksStorageSchema = z.record(z.number(), TicketTaskReadSchema)
 export type TicketTasksStorage = z.infer<typeof TicketTasksStorageSchema>
 
 // File links for a single ticket (array of objects)
@@ -38,17 +35,17 @@ function getTicketsIndexPath(): string {
 }
 
 /** Gets the absolute path to a specific ticket's data directory. */
-function getTicketDataDir(ticketId: string): string {
-    return path.join(DATA_DIR, TICKET_DATA_SUBDIR, ticketId)
+function getTicketDataDir(ticketId: number): string {
+    return path.join(DATA_DIR, TICKET_DATA_SUBDIR, ticketId.toString())
 }
 
 /** Gets the absolute path to a specific ticket's tasks file. */
-function getTicketTasksPath(ticketId: string): string {
+function getTicketTasksPath(ticketId: number): string {
     return path.join(getTicketDataDir(ticketId), 'tasks.json')
 }
 
 /** Gets the absolute path to a specific ticket's linked files file. */
-function getTicketFilesPath(ticketId: string): string {
+function getTicketFilesPath(ticketId: number): string {
     return path.join(getTicketDataDir(ticketId), 'files.json')
 }
 
@@ -139,27 +136,27 @@ export const ticketStorage = {
     },
 
     /** Reads a specific ticket's tasks file. */
-    async readTicketTasks(ticketId: string): Promise<TicketTasksStorage> {
+    async readTicketTasks(ticketId: number): Promise<TicketTasksStorage> {
         return readValidatedJson(getTicketTasksPath(ticketId), TicketTasksStorageSchema, {})
     },
 
     /** Writes a specific ticket's tasks file. */
-    async writeTicketTasks(ticketId: string, tasks: TicketTasksStorage): Promise<TicketTasksStorage> {
+    async writeTicketTasks(ticketId: number, tasks: TicketTasksStorage): Promise<TicketTasksStorage> {
         return writeValidatedJson(getTicketTasksPath(ticketId), tasks, TicketTasksStorageSchema)
     },
 
     /** Reads a specific ticket's linked files file. */
-    async readTicketFiles(ticketId: string): Promise<TicketFilesStorage> {
+    async readTicketFiles(ticketId: number): Promise<TicketFilesStorage> {
         return readValidatedJson(getTicketFilesPath(ticketId), TicketFilesStorageSchema, [])
     },
 
     /** Writes a specific ticket's linked files file. */
-    async writeTicketFiles(ticketId: string, files: TicketFilesStorage): Promise<TicketFilesStorage> {
+    async writeTicketFiles(ticketId: number, files: TicketFilesStorage): Promise<TicketFilesStorage> {
         return writeValidatedJson(getTicketFilesPath(ticketId), files, TicketFilesStorageSchema)
     },
 
     /** Deletes a ticket's data directory (including its tasks.json and files.json). */
-    async deleteTicketData(ticketId: string): Promise<void> {
+    async deleteTicketData(ticketId: number): Promise<void> {
         const dirPath = getTicketDataDir(ticketId)
         try {
             await fs.access(dirPath) // Check if directory exists
@@ -175,7 +172,8 @@ export const ticketStorage = {
     },
 
     /** Generates a unique ID. */
-    generateId: (prefix: string): string => {
-        return `${prefix}_${randomUUID()}`
+    generateId: (): number => {
+        // return unix timestamp in milliseconds
+        return normalizeToUnixMs(new Date())
     }
 }

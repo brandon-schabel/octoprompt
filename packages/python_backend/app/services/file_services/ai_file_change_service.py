@@ -2,28 +2,25 @@ import os
 from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field, ValidationError, ConfigDict
 from datetime import datetime, timezone
-from fastapi import HTTPException, status # Added status for HTTP codes
+from fastapi import HTTPException, status
 import aiofiles
 from enum import Enum
+from app.core.config import MEDIUM_MODEL_CONFIG
 
 from app.schemas.ai_file_change_schemas import AIFileChangeRecord, AIFileChangeStatusEnum, ConfirmRejectResult
-# Assuming AIProviderEnum might not be defined if provider_key_schemas.py is not available.
-# from app.schemas.provider_key_schemas import AIProviderEnum
-class AIProviderEnum(str, Enum): # Placeholder if not available
+class AIProviderEnum(str, Enum): 
     OPENAI = "openai"
     MOCK = "mock"
 
-from app.utils.storage.project_storage import project_storage # Assuming this exists and is configured
+from app.utils.storage.project_storage import project_storage
 
-AIFileChangeStatus = AIFileChangeStatusEnum # Alias for convenience
+AIFileChangeStatus = AIFileChangeStatusEnum
 
-MEDIUM_MODEL_CONFIG = {"temperature": 0.5, "max_tokens": 2000}
 
-class FileChangeResponse(BaseModel): # Internal DTO for AI response
+class FileChangeResponse(BaseModel):
     updated_content: str = Field(..., description="The complete, updated content of the file after applying the changes.", alias="updatedContent")
     explanation: str = Field(..., description="A brief explanation of the changes made.")
     model_config = ConfigDict(populate_by_name=True)
-
 
 async def generate_structured_data(
     system_message: str,
@@ -33,7 +30,6 @@ async def generate_structured_data(
     provider: Optional[AIProviderEnum] = None,
     model: Optional[str] = None
 ) -> FileChangeResponse:
-    print(f"\n--- MOCKING generate_structured_data for {schema.__name__} ---")
     mock_explanation = "Mock explanation: The user's request was processed and changes were applied."
     if "User Request: Add a comment" in prompt:
         original_start_index = prompt.find("Original File Content:\n```\n") + len("Original File Content:\n```\n")
@@ -48,24 +44,10 @@ async def generate_structured_data(
     try:
         return FileChangeResponse(updatedContent=mock_updated_content, explanation=mock_explanation)
     except ValidationError as ve:
-        print(f"Mock validation error for FileChangeResponse: {ve}")
-        # Fallback to ensure it always returns the schema type
         return FileChangeResponse(updatedContent="Error in mock generation: Validation failed", explanation="Mock validation failed to produce valid FileChangeResponse")
 
-
 async def read_local_file_content(file_path: str) -> str:
-    # This mock might need adjustment based on actual project base paths if file_path is relative
-    # For now, assuming file_path could be an absolute path or a path that can be found.
-    if not os.path.isabs(file_path): # Simple check; real app needs better path logic
-        # Try to make it relative to a mock project root if needed for testing
-        # For this example, let's assume it refers to a path that might exist or will be created.
-        pass
-
     if not os.path.exists(file_path):
-        print(f"Mock file not found: {file_path}, returning placeholder content.")
-        # For 'generate_file_change', the file *must* exist to get original_content.
-        # If it's called, it implies the file should be there or the caller handles it.
-        # Raising an error might be more appropriate here if the file is expected.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"message": f"Original file not found at path: {file_path}", "code": "ORIGINAL_FILE_NOT_FOUND"}
@@ -74,7 +56,7 @@ async def read_local_file_content(file_path: str) -> str:
         async with aiofiles.open(file_path, mode='r', encoding='utf-8') as f:
             content = await f.read()
         return content
-    except FileNotFoundError: # Should be caught by os.path.exists for this mock
+    except FileNotFoundError: 
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"message": f"File not found: {file_path}", "code": "FILE_NOT_FOUND_ERROR"}
@@ -97,7 +79,7 @@ async def perform_ai_file_generation(
     if temperature is not None:
         cfg["temperature"] = temperature
 
-    system_message = "You are an AI assistant that modifies files based on user instructions. Output only the new file content and a brief explanation in the specified JSON format." # Simplified
+    system_message = "You are an AI assistant that modifies files based on user instructions. Output only the new file content and a brief explanation in the specified JSON format."
     user_prompt = f"Original File Content:\n```\n{original_content}\n```\n\nUser Request: {prompt}"
     
     try:
@@ -111,33 +93,24 @@ async def perform_ai_file_generation(
         )
         return ai_response_obj
     except Exception as e:
-        print(f"[AIFileChangeService] Failed to generate AI file change for {file_path}: {e}")
+        # Removed print statement
         error_message = str(e) if isinstance(e, (HTTPException, ValueError)) else "AI generation failed"
         error_detail = {"message": f"AI failed to generate changes for {file_path}: {error_message}", "code": "AI_GENERATION_FAILED"}
         status_code = e.status_code if isinstance(e, HTTPException) else 500
         raise HTTPException(status_code=status_code, detail=error_detail)
 
-# This DTO is for passing options to the generate_file_change service function
 class GenerateFileChangeOptions(BaseModel):
     project_id: str = Field(..., alias="projectId")
-    file_path: str = Field(..., alias="filePath") # Relative to project root in TS, ensure consistency
+    file_path: str = Field(..., alias="filePath")
     prompt: str
     provider: Optional[AIProviderEnum] = None
     model: Optional[str] = None
     temperature: Optional[float] = None
     model_config = ConfigDict(populate_by_name=True)
 
-
 async def generate_file_change(options: GenerateFileChangeOptions) -> AIFileChangeRecord:
-    # Assuming options.file_path is a path that read_local_file_content can handle.
-    # In a real app, project_id would be used to resolve the absolute path for options.file_path.
-    # For this mock, let's assume options.file_path can be used directly or is made absolute.
-    
-    # Mock: Create a dummy file if it doesn't exist to simulate reading original content
-    # This part is for making the mock runnable without pre-existing files.
-    # A real service would rely on the file system / project context.
-    absolute_file_path = options.file_path # Simplification
-    if "mock_test_files/" in absolute_file_path: # Example condition for test setup
+    absolute_file_path = options.file_path
+    if "mock_test_files/" in absolute_file_path:
         os.makedirs(os.path.dirname(absolute_file_path), exist_ok=True)
         if not os.path.exists(absolute_file_path):
             async with aiofiles.open(absolute_file_path, "w") as f:
@@ -146,16 +119,15 @@ async def generate_file_change(options: GenerateFileChangeOptions) -> AIFileChan
     try:
         original_content = await read_local_file_content(absolute_file_path)
     except HTTPException as e:
-        # Re-raise if file not found, as it's a prerequisite
         if e.status_code == status.HTTP_404_NOT_FOUND:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, # Or 404 if project context implies file should exist
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"message": f"File to change not found at path: {options.file_path}", "code": "FILE_PATH_NOT_FOUND_FOR_CHANGE"}
             ) from e
-        raise # Re-raise other read errors
+        raise
 
     ai_suggestion = await perform_ai_file_generation(
-        file_path=options.file_path, # Relative path is fine for AI context
+        file_path=options.file_path,
         prompt=options.prompt,
         original_content=original_content,
         provider=options.provider,
@@ -164,7 +136,7 @@ async def generate_file_change(options: GenerateFileChangeOptions) -> AIFileChan
     )
 
     now = datetime.now(timezone.utc)
-    change_id = project_storage.generate_id("aifc") # Assumes project_storage is available
+    change_id = project_storage.generate_id("aifc")
 
     new_record_data = {
         "id": change_id,
@@ -172,7 +144,7 @@ async def generate_file_change(options: GenerateFileChangeOptions) -> AIFileChan
         "filePath": options.file_path,
         "originalContent": original_content,
         "suggestedContent": ai_suggestion.updated_content,
-        "diff": None, # Diff generation would be a separate step or part of AI
+        "diff": None,
         "explanation": ai_suggestion.explanation,
         "prompt": options.prompt,
         "status": AIFileChangeStatus.PENDING,
@@ -180,12 +152,8 @@ async def generate_file_change(options: GenerateFileChangeOptions) -> AIFileChan
         "updated": now,
     }
     try:
-        # AIFileChangeRecord model has populate_by_name=True and aliases.
-        # So, initializing with keys like "projectId" is fine.
         new_record = AIFileChangeRecord.model_validate(new_record_data)
     except ValidationError as e:
-        # This indicates an issue with the data generated by the service for its own schema.
-        print(f"SERVICE VALIDATION ERROR: {e.errors()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"message": "Validation error creating file change record internally.", "code": "SERVICE_DATA_VALIDATION_ERROR", "details": e.errors()}
@@ -201,7 +169,6 @@ async def generate_file_change(options: GenerateFileChangeOptions) -> AIFileChan
         )
     return retrieved_record
 
-
 async def get_file_change(project_id: str, ai_file_change_id: str) -> Optional[AIFileChangeRecord]:
     record = await project_storage.get_ai_file_change_by_id(project_id, ai_file_change_id)
     if not record:
@@ -211,9 +178,8 @@ async def get_file_change(project_id: str, ai_file_change_id: str) -> Optional[A
         )
     return record
 
-
 async def confirm_file_change(project_id: str, ai_file_change_id: str) -> ConfirmRejectResult:
-    existing_record = await get_file_change(project_id, ai_file_change_id) # Uses the one that raises 404
+    existing_record = await get_file_change(project_id, ai_file_change_id)
 
     if existing_record.status != AIFileChangeStatus.PENDING:
         raise HTTPException(
@@ -224,16 +190,13 @@ async def confirm_file_change(project_id: str, ai_file_change_id: str) -> Confir
     now = datetime.now(timezone.utc)
     update_data = {"status": AIFileChangeStatus.CONFIRMED, "updated": now}
     
-    # Pydantic v2: .model_copy(update=...)
-    # Pydantic v1: .copy(update=...)
     updated_record = existing_record.model_copy(update=update_data) 
     
     await project_storage.save_ai_file_change(project_id, updated_record)
     return ConfirmRejectResult(status=AIFileChangeStatus.CONFIRMED.value, message=f"File change {ai_file_change_id} confirmed.")
 
-
 async def reject_file_change(project_id: str, ai_file_change_id: str) -> ConfirmRejectResult:
-    existing_record = await get_file_change(project_id, ai_file_change_id) # Uses the one that raises 404
+    existing_record = await get_file_change(project_id, ai_file_change_id)
         
     if existing_record.status != AIFileChangeStatus.PENDING:
         raise HTTPException(

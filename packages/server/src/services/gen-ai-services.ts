@@ -27,7 +27,7 @@ export async function handleChatMessage({
   tempId,
   debug = false
 }: AiChatStreamRequest): Promise<ReturnType<typeof streamText>> {
-  let finalAssistantMessageId: string | undefined
+  let finalAssistantMessageId: number | undefined
   const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
   const provider = finalOptions.provider as APIProviders
   const chatService = createChatService()

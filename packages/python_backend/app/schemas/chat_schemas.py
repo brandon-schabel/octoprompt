@@ -2,38 +2,23 @@ from typing import Optional, List, Dict, Any, Literal, Union
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime
 from enum import Enum
+from app.core.config import LOW_MODEL_CONFIG as CORE_LOW_MODEL_CONFIG
 
-# --- Chat Schemas ---
-# Last 5 changes:
-# 1. Initial conversion from Zod to Pydantic.
-# 2. Added try-except import placeholders for common_schemas and gen_ai_schemas.
-# 3. Used datetime for Zod's .datetime().
-# 4. Mapped z.enum to Python Enum and z.literal to Literal.
-# 5. Handled .openapi() metadata (title, example, param details via json_schema_extra and aliases).
-# 6. Changed datetime fields to int (Unix ms) and added validators.
-# 7. Added `chat_model_config` to `Chat` schema, defaulting to a filtered `LOW_MODEL_CONFIG` (omitting 'provider') to ensure validation passes when parsing existing data.
-
-# Import default model configuration
-from app.core.config import LOW_MODEL_CONFIG as CORE_LOW_MODEL_CONFIG # Aliased import
-
-# Validator for timestamps (int Unix ms)
 def convert_timestamp_to_ms_int(value: Any) -> Optional[int]:
     if value is None:
-        return None  # Allow None for optional fields
+        return None
     if isinstance(value, str):
         try:
-            # Handle ISO format strings, including those with 'Z'
             dt_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
             return int(dt_obj.timestamp() * 1000)
         except ValueError:
             raise ValueError(f"Invalid timestamp string format: {value}")
     elif isinstance(value, (int, float)):
-        return int(value) # Assume it's already in ms or can be directly converted
+        return int(value)
     elif isinstance(value, datetime):
         return int(value.timestamp() * 1000)
     raise TypeError(f"Timestamp must be an ISO string, int, float, datetime, or None, got {type(value)}")
 
-# Assuming these are available from other schema files in the Python backend
 try:
     from .common_schemas import MessageRoleEnum
 except ImportError:
@@ -62,7 +47,6 @@ except ImportError:
         content: str
         model_config = ConfigDict(title="AiMessage")
 
-
 class ModelOptions(BaseModel):
     model: Optional[str] = None
     max_tokens: Optional[int] = Field(None, validation_alias="maxTokens", serialization_alias="maxTokens")
@@ -77,8 +61,6 @@ class ModelOptions(BaseModel):
 
 def _get_default_chat_model_config():
     config_data = CORE_LOW_MODEL_CONFIG.copy()
-
-    # Add other .pop("key_name", None) if CORE_LOW_MODEL_CONFIG contains other extraneous keys
     return ModelOptions(**config_data)
 
 class Chat(BaseModel):

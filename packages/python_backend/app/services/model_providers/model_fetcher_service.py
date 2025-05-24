@@ -3,30 +3,25 @@ from pydantic import BaseModel, Field, HttpUrl
 import httpx
 from enum import Enum
 
-from app.schemas.provider_key_schemas import AIProviderEnum # Assuming this exists
+from app.schemas.provider_key_schemas import AIProviderEnum
 
-# --- Provider Default URLs ---
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-TOGETHER_BASE_URL = "https://api.together.ai" # Often /v1 is appended for specific endpoints
+TOGETHER_BASE_URL = "https://api.together.ai"
 OPENAI_BASE_URL = "https://api.openai.com/v1"
-ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1" # Base, specific endpoints like /models
+ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-XAI_BASE_URL = "https://api.xai.com/v1" # Placeholder, actual URL might differ
-OLLAMA_BASE_URL = "http://localhost:11434" # Default, user configurable
-LMSTUDIO_BASE_URL = "http://localhost:1234/v1" # Default, user configurable
+XAI_BASE_URL = "https://api.xai.com/v1"
+OLLAMA_BASE_URL = "http://localhost:11434"
+LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
 
-# --- Unified Model Structure ---
 class UnifiedModel(BaseModel):
-    id: str # Original model ID from provider
+    id: str
     name: str
     description: Optional[str] = None
     context_length: Optional[int] = None
-    provider_slug: str # e.g., "openai", "anthropic"
+    provider_slug: str
 
-# --- Provider Specific Pydantic Models ---
-
-# OpenRouter
 class OpenRouterModelContext(BaseModel):
     description: Optional[str] = None
     tokens: Optional[int] = None
@@ -42,27 +37,13 @@ class OpenRouterModel(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    context_length: Optional[int] = Field(None, alias="context_length") # from docs, not in original TS
-    # The original TS had 'context: OpenRouterModelContext'. Let's check OpenRouter docs.
-    # Docs show context_length directly on the model. Pricing object seems correct.
-    # For simplicity, let's stick to id, name, description directly on the model.
-    # If detailed context and pricing are needed, we can expand.
-    # Let's assume the UnifiedModel structure is sufficient for now from OpenRouter.
-    # If not, this model needs to be more detailed like the TS version.
-    # For now, we'll map OpenRouter's output to UnifiedModel. The fields below are if we need more detail.
-    # context: Optional[OpenRouterModelContext] = None # Keep if detailed context is needed
-    # pricing: Optional[OpenRouterModelPricing] = None # Keep if detailed pricing is needed
-    # top_provider: Optional[str] = None
-    # architecture: Optional[str] = None
-    # per_request_limits: Optional[Dict[str, int]] = None
+    context_length: Optional[int] = Field(None, alias="context_length")
 
 class OpenRouterModelsResponse(BaseModel):
     data: List[OpenRouterModel]
 
-
-# Gemini
 class GeminiAPIModel(BaseModel):
-    name: str # format: "models/gemini-pro"
+    name: str
     base_model_id: Optional[str] = Field(None, alias="baseModelId")
     version: str
     display_name: str = Field(..., alias="displayName")
@@ -78,35 +59,26 @@ class GeminiAPIModel(BaseModel):
 class GeminiListModelsResponse(BaseModel):
     models: List[GeminiAPIModel]
 
-# Anthropic
 class AnthropicModel(BaseModel):
-    type: Optional[str] = None # e.g. "model"
+    type: Optional[str] = None
     id: str
-    display_name: Optional[str] = None # Anthropic's API might not have this; typically ID is the name.
-                                # The TS version has this, but their actual API might not for all models.
-                                # Let's use ID as name if display_name isn't present.
-    name: str # Often the same as ID
-    created: Optional[str] = None # datetime string
+    display_name: Optional[str] = None
+    name: str
+    created: Optional[str] = None
 
 class AnthropicModelsResponse(BaseModel):
     data: List[AnthropicModel]
-    # has_more: bool # Not essential for mapping to UnifiedModel
-    # first_id: Optional[str] = None
-    # last_id: Optional[str] = None
 
-
-# OpenAI / XAI (similar structure for listing)
 class OpenAIModelObject(BaseModel):
     id: str
-    object: str # e.g. "model"
-    created: int # Unix timestamp
+    object: str
+    created: int
     owned_by: str = Field(..., alias="owned_by")
 
 class OpenAIModelsListResponse(BaseModel):
-    object: str # e.g. "list"
+    object: str
     data: List[OpenAIModelObject]
 
-# Together
 class TogetherModel(BaseModel):
     id: str
     object: Optional[str] = None
@@ -118,10 +90,7 @@ class TogetherModel(BaseModel):
     link: Optional[HttpUrl] = None
     license: Optional[str] = None
     context_length: Optional[int] = Field(None, alias="context_length")
-    # config: Optional[Dict] = None # Can be added if needed
-    # pricing: Optional[Dict] = None # Can be added if needed
 
-# Ollama
 class OllamaModelDetails(BaseModel):
     parent_model: Optional[str] = Field(None, alias="parent_model")
     format: Optional[str] = None
@@ -131,9 +100,9 @@ class OllamaModelDetails(BaseModel):
     quantization_level: Optional[str] = Field(None, alias="quantization_level")
 
 class OllamaModel(BaseModel):
-    name: str # This is the model ID like "llama2:latest"
-    model: str # This is the base model name like "llama2:latest"
-    modified_at: str # datetime string
+    name: str
+    model: str
+    modified_at: str
     size: int
     digest: str
     details: OllamaModelDetails
@@ -141,17 +110,12 @@ class OllamaModel(BaseModel):
 class OllamaModelsResponse(BaseModel):
     models: List[OllamaModel]
 
-# LMStudio (Often mimics OpenAI API for /models)
-# We'll assume it returns something like OpenAIModelsListResponse or a simple list of IDs.
-# For now, using OpenAIModelObject as a common structure if it's OpenAI compatible.
-class LMStudioModel(BaseModel): # Simplified for now
+class LMStudioModel(BaseModel):
     id: str
-    # Add other fields if known and different from OpenAI's listing
 
 class LMStudioModelsResponse(BaseModel):
-    data: List[LMStudioModel] # Assuming a 'data' key like OpenAI
+    data: List[LMStudioModel]
 
-# --- Configuration ---
 class ProviderKeysConfig(BaseModel):
     openai_key: Optional[str] = Field(None, alias="openaiKey")
     anthropic_key: Optional[str] = Field(None, alias="anthropicKey")
@@ -162,17 +126,15 @@ class ProviderKeysConfig(BaseModel):
     openrouter_key: Optional[str] = Field(None, alias="openrouterKey")
     model_config = {"populate_by_name": True}
 
-
 class ListModelsOptions(BaseModel):
     ollama_base_url: Optional[HttpUrl] = Field(None, alias="ollamaBaseUrl")
     lmstudio_base_url: Optional[HttpUrl] = Field(None, alias="lmstudioBaseUrl")
     model_config = {"populate_by_name": True}
 
-
 class ModelFetcherService:
     def __init__(self, config: ProviderKeysConfig):
         self.config = config
-        self.http_client = httpx.AsyncClient(timeout=20.0) # 20 seconds timeout
+        self.http_client = httpx.AsyncClient(timeout=20.0)
 
     def _ensure_key(self, key: Optional[str], provider_name: str) -> str:
         if not key:
@@ -209,14 +171,13 @@ class ModelFetcherService:
         try:
             response = await self.http_client.get(f"{GROQ_BASE_URL}/models", headers=headers)
             response.raise_for_status()
-            # Groq's /models is OpenAI compatible
             data = OpenAIModelsListResponse.model_validate(response.json())
             return [
                 UnifiedModel(
                     id=m.id,
                     name=m.id,
-                    description=f"Groq model owned by {m.owned_by}, Context: N/A", # Context not directly available
-                    context_length=None, # OpenAI list format does not provide context_length easily
+                    description=f"Groq model owned by {m.owned_by}, Context: N/A",
+                    context_length=None,
                     provider_slug=AIProviderEnum.GROQ.value
                 )
                 for m in data.data
@@ -230,29 +191,23 @@ class ModelFetcherService:
         api_key = self._ensure_key(self.config.together_key, "Together")
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         try:
-            # Together API for listing models is usually at /models or /models/info, check their docs.
-            # The TS code uses /models.
-            response = await self.http_client.get(f"{TOGETHER_BASE_URL}/models", headers=headers) # Or TOGETHER_BASE_URL/models/info
+            response = await self.http_client.get(f"{TOGETHER_BASE_URL}/models", headers=headers)
             response.raise_for_status()
-            # The TS version maps this to TogetherModel[] then to UnifiedModel[].
-            # The actual JSON response for /models needs to be verified from Together docs.
-            # Assuming it's a list of TogetherModel objects directly.
             data = [TogetherModel.model_validate(item) for item in response.json()]
             return [
                 UnifiedModel(
                     id=m.id,
                     name=m.display_name or m.id,
-                    description=f"{m.organization or 'Together'} model: {m.display_name or m.id}", # Simplified description
+                    description=f"{m.organization or 'Together'} model: {m.display_name or m.id}",
                     context_length=m.context_length,
                     provider_slug=AIProviderEnum.TOGETHER.value
                 )
-                for m in data if m.type != "chat-hf" # Filter out some internal/non-standard types if necessary
+                for m in data if m.type != "chat-hf"
             ]
         except httpx.HTTPStatusError as e:
             raise ConnectionError(f"Together models API error: {e.response.status_code} - {e.response.text}")
         except Exception as e:
             raise ConnectionError(f"An error occurred while fetching Together models: {str(e)}")
-
 
     async def list_openai_models(self) -> List[UnifiedModel]:
         api_key = self._ensure_key(self.config.openai_key, "OpenAI")
@@ -266,7 +221,7 @@ class ModelFetcherService:
                     id=m.id,
                     name=m.id,
                     description=f"OpenAI model owned by {m.owned_by}",
-                    context_length=None, # Context not standard in this list
+                    context_length=None,
                     provider_slug=AIProviderEnum.OPENAI.value
                 )
                 for m in data.data
@@ -286,9 +241,9 @@ class ModelFetcherService:
             return [
                 UnifiedModel(
                     id=m.id,
-                    name=m.name or m.id, # Use m.name if available, fallback to m.id
+                    name=m.name or m.id,
                     description=f"Anthropic model: {m.id}",
-                    context_length=None, # Anthropic /models doesn't list context_length easily
+                    context_length=None,
                     provider_slug=AIProviderEnum.ANTHROPIC.value
                 )
                 for m in data.data
@@ -326,13 +281,13 @@ class ModelFetcherService:
         try:
             response = await self.http_client.get(f"{XAI_BASE_URL}/models", headers=headers)
             response.raise_for_status()
-            data = OpenAIModelsListResponse.model_validate(response.json()) # Assuming XAI is OpenAI compatible
+            data = OpenAIModelsListResponse.model_validate(response.json())
             return [
                 UnifiedModel(
                     id=m.id,
                     name=m.id,
                     description=f"XAI model owned by {m.owned_by}",
-                    context_length=None, # Assuming no context_length from this OpenAI-like endpoint
+                    context_length=None,
                     provider_slug=AIProviderEnum.XAI.value
                 )
                 for m in data.data
@@ -350,10 +305,10 @@ class ModelFetcherService:
             data = OllamaModelsResponse.model_validate(response.json())
             return [
                 UnifiedModel(
-                    id=model.name, # e.g. "llama2:latest"
+                    id=model.name,
                     name=model.name,
                     description=f"{model.details.family or 'Ollama'} family - {model.name} | Size: {model.details.parameter_size or 'N/A'} | Quant: {model.details.quantization_level or 'N/A'}",
-                    context_length=None, # Ollama /api/tags doesn't provide standard context_length
+                    context_length=None,
                     provider_slug=AIProviderEnum.OLLAMA.value
                 )
                 for model in data.models
@@ -363,28 +318,25 @@ class ModelFetcherService:
         except Exception as e:
             raise ConnectionError(f"An error occurred while fetching Ollama models from {url_to_use}: {str(e)}")
 
-
     async def list_lmstudio_models(self, base_url: Optional[Union[HttpUrl, str]] = None) -> List[UnifiedModel]:
         url_to_use = str(base_url) if base_url else LMSTUDIO_BASE_URL
         try:
-            # LMStudio /models endpoint usually mirrors OpenAI's /v1/models
-            response = await self.http_client.get(f"{url_to_use}/models") # Corrected, TS had just /models
+            response = await self.http_client.get(f"{url_to_use}/models")
             response.raise_for_status()
-            # Assuming OpenAI compatible list response
             data = OpenAIModelsListResponse.model_validate(response.json())
             return [
                 UnifiedModel(
                     id=m.id,
                     name=m.id,
                     description=f"LM Studio model: {m.id} (Owner: {m.owned_by})",
-                    context_length=None, # Assuming no context_length from this OpenAI-like endpoint
+                    context_length=None,
                     provider_slug=AIProviderEnum.LMSTUDIO.value
                 )
                 for m in data.data
             ]
         except httpx.HTTPStatusError as e:
             raise ConnectionError(f"LM Studio error: {e.response.status_code} - {e.response.text} from {url_to_use}")
-        except Exception as e: # Broad exception for JSON parsing, validation etc.
+        except Exception as e:
             raise ConnectionError(f"An error occurred while fetching LMStudio models from {url_to_use}: {str(e)}")
 
     async def list_models(
@@ -414,34 +366,8 @@ class ModelFetcherService:
             try:
                 return await self.list_openai_models()
             except Exception as e:
-                print(f"Warning: Failed to fetch OpenAI models: {str(e)}")
+                # Removed print warning
                 return []
         else:
-            # Fallback or raise error for unknown provider
-            print(f"Warning: Model fetching for provider '{provider.value}' is not implemented.")
+            # Removed print warning
             return []
-
-# Example Usage (Optional, for testing)
-# async def main():
-#     config = ProviderKeysConfig(
-#         openaiKey="sk-...",
-#         # anthropicKey="...",
-#         # googleGeminiKey="...",
-#         # etc.
-#     )
-#     service = ModelFetcherService(config)
-#     try:
-#         # models = await service.list_models(AIProviderEnum.OPENAI)
-#         # print("OpenAI Models:", models)
-#
-#         ollama_models = await service.list_models(AIProviderEnum.OLLAMA)
-#         print("Ollama Models:", ollama_models)
-#
-#     except Exception as e:
-#         print(f"Error: {e}")
-#     finally:
-#         await service.close()
-
-# if __name__ == "__main__":
-#     import asyncio
-#     asyncio.run(main())

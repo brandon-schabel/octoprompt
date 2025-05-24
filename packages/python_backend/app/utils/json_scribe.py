@@ -1,18 +1,9 @@
-# json_scribe.py
-# 1. Initial Python conversion from TypeScript.
-# 2. Using Pydantic for optional schema validation.
-# 3. Using aiofiles for async file I/O.
-# 4. Simplified path resolution logic.
-# 5. Adapted error handling to Pythonic exceptions.
-# No changes directly needed in this file as it's a generic utility.
-# The Pydantic models using it will now provide serializable integer timestamps.
-
 import os
 import json
 from typing import Any, List, Union, Optional, Type, TypeVar
 from pydantic import BaseModel, ValidationError as PydanticValidationError
 import aiofiles
-import aiofiles.os # For aiofiles.os.path.exists
+import aiofiles.os
 
 DataT = TypeVar('DataT')
 PydanticModelT = TypeVar('PydanticModelT', bound=BaseModel)
@@ -21,7 +12,6 @@ def _resolve_and_ensure_json_path(
     raw_path: Union[str, List[str]], 
     base_path: Optional[str] = None
 ) -> str:
-    """Resolves input to an absolute path string ending with '.json'."""
     eff_base = base_path if base_path is not None else os.getcwd()
     
     path_str: str
@@ -44,9 +34,6 @@ async def write_json(
     schema: Optional[Type[PydanticModelT]] = None,
     base_path: Optional[str] = None
 ) -> Union[PydanticModelT, DataT]:
-    """Writes data to JSON, optionally validating with a Pydantic schema.
-    Returns the validated Pydantic model instance if schema is used, else original data.
-    """
     file_path = _resolve_and_ensure_json_path(path, base_path)
     data_to_serialize: Any = data
     validated_data_obj: Union[PydanticModelT, DataT] = data
@@ -63,25 +50,22 @@ async def write_json(
         json_string = json.dumps(data_to_serialize, indent=2)
         
         dir_name = os.path.dirname(file_path)
-        if dir_name: # Create directories if they don't exist
+        if dir_name:
             os.makedirs(dir_name, exist_ok=True) 
             
         async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
             await f.write(json_string)
         
         return validated_data_obj
-    except PydanticValidationError: # Re-raise if it's a Pydantic error
+    except PydanticValidationError:
         raise
-    except Exception as e: # Catch other IOErrors or general errors
+    except Exception as e:
         raise IOError(f"Failed to write JSON file at {file_path}. Reason: {str(e)}") from e
 
 async def read_json(
     path: Union[str, List[str]],
     base_path: Optional[str] = None
 ) -> Optional[Any]:
-    """Reads and parses a JSON file.
-    Returns None if file not found, raises error on parsing or other read issues.
-    """
     file_path = _resolve_and_ensure_json_path(path, base_path)
     
     try:
@@ -89,10 +73,10 @@ async def read_json(
             content = await f.read()
         return json.loads(content)
     except FileNotFoundError:
-        return None # File does not exist
+        return None
     except json.JSONDecodeError as e:
         raise ValueError(f"Failed to parse JSON from {file_path}. Reason: {str(e)}") from e
-    except Exception as e: # Catch other IOErrors
+    except Exception as e:
         raise IOError(f"Failed to read JSON file at {file_path}. Reason: {str(e)}") from e
 
 json_scribe = {

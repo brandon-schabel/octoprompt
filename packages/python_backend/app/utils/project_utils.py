@@ -3,17 +3,15 @@ from app.schemas.project_schemas import ProjectFile
 from app.schemas.prompt_schemas import Prompt, PromptListResponse
 from app.utils.file_node_tree_utils import FileNode, estimate_token_count
 
-# Updated to use int keys for consistency with project_service.py
 ProjectFileMap = Dict[int, ProjectFile]
 
 def build_prompt_content(
     file_map: ProjectFileMap,
     prompt_data: Optional[PromptListResponse],
-    selected_prompts: List[int],    # Changed to int to match schema
-    selected_files: List[int],      # File IDs are ints
+    selected_prompts: List[int],
+    selected_files: List[int],
     user_prompt: str
 ) -> str:
-    """Builds the full prompt content string from selected files, prompts, and user input."""
     content_to_copy = ""
     prompt_count = 1
     if prompt_data and prompt_data.data:
@@ -27,7 +25,7 @@ def build_prompt_content(
     if files_with_content:
         content_to_copy += "<file_context>\n"
         for file_obj in files_with_content:
-            if file_obj: # Ensure file_obj is not None
+            if file_obj:
                 content_to_copy += f"  <file>\n    <path>{file_obj.path}</path>\n    <content><![CDATA[\n{file_obj.content}\n]]></content>\n  </file>\n\n"
         content_to_copy += "</file_context>\n"
 
@@ -35,16 +33,15 @@ def build_prompt_content(
     if trimmed_user_prompt:
         content_to_copy += f"<user_instructions>\n<![CDATA[\n{trimmed_user_prompt}\n]]>\n</user_instructions>\n\n"
 
-    return content_to_copy.rstrip() # Remove trailing newline
+    return content_to_copy.rstrip()
 
 def calculate_total_tokens(
     prompt_data: Optional[PromptListResponse],
-    selected_prompts: List[int],    # Changed to int
+    selected_prompts: List[int],
     user_prompt: str,
-    selected_files: List[int],      # Updated to int
+    selected_files: List[int],
     file_map: ProjectFileMap
 ) -> int:
-    """Calculates the total estimated tokens for the given inputs."""
     total = 0
     if prompt_data and prompt_data.data:
         for prompt in prompt_data.data:
@@ -61,7 +58,6 @@ def calculate_total_tokens(
     return total
 
 def build_file_tree(files: List[ProjectFile]) -> Dict[str, Any]:
-    """Builds a hierarchical file tree from a flat list of project files."""
     root: Dict[str, Any] = {}
     for f in files:
         parts = f.path.split('/')
@@ -71,7 +67,7 @@ def build_file_tree(files: List[ProjectFile]) -> Dict[str, Any]:
                 current[part] = {}
             if i == len(parts) - 1:
                 current[part]['_folder'] = False
-                current[part]['file'] = f # Storing the Pydantic model directly
+                current[part]['file'] = f
             else:
                 current[part]['_folder'] = True
                 if 'children' not in current[part]:
@@ -80,10 +76,8 @@ def build_file_tree(files: List[ProjectFile]) -> Dict[str, Any]:
     return root
 
 def build_node_content(node: FileNode, is_folder: bool) -> str:
-    """Builds a string containing file contents within a node, formatted with XML-like tags."""
     content_to_copy = ""
     if is_folder:
-        # Use node.file.path if available for the folder path, otherwise a placeholder.
         folder_path = node.file.path if node.file and node.file.path else "unknown_folder_path"
         content_to_copy += f'<folder_context path="{folder_path}">\n'
         
@@ -103,19 +97,16 @@ def build_node_content(node: FileNode, is_folder: bool) -> str:
     return content_to_copy.rstrip()
 
 def build_node_summaries(node: FileNode, is_folder: bool) -> str:
-    """Builds a string containing the path and summary of files within a node."""
     summaries_to_copy = ""
-
     if is_folder:
         def process_node(current_node: FileNode, indent=""):
             nonlocal summaries_to_copy
             if not current_node.is_folder and current_node.file and current_node.file.summary:
                 summaries_to_copy += f"{indent}File: {current_node.file.path}\n{indent}Summary: {current_node.file.summary}\n\n"
             if current_node.children:
-                # Sort children alphabetically by key (name)
                 sorted_children_items = sorted(current_node.children.items(), key=lambda item: item[0])
                 for _, child_node in sorted_children_items:
-                    process_node(child_node, indent) # Keep same indent
+                    process_node(child_node, indent)
         process_node(node)
     elif node.file and node.file.summary:
         summaries_to_copy += f"File: {node.file.path}\nSummary: {node.file.summary}\n"
@@ -123,5 +114,4 @@ def build_node_summaries(node: FileNode, is_folder: bool) -> str:
     return summaries_to_copy.strip()
 
 def build_project_file_map(files: List[ProjectFile]) -> ProjectFileMap:
-    """Builds a dictionary mapping file IDs to ProjectFile objects."""
     return {file.id: file for file in files}

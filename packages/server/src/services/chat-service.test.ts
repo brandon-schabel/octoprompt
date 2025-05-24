@@ -3,6 +3,7 @@ import { createChatService } from '@/services/chat-service'
 import { randomString } from '../utils/test-utils'
 import fs from 'node:fs/promises';
 import nodePath from 'node:path';
+import { normalizeToUnixMs } from '@/utils/parse-timestamp';
 
 // Helper function to reset JSON chat storage
 const TEST_CHAT_STORAGE_DIR = nodePath.resolve(process.cwd(), 'data', 'chat_storage');
@@ -36,8 +37,8 @@ describe('Chat Service (JSON Storage)', () => {
     const chat = await chatService.createChat(title);
     expect(chat.id).toBeDefined();
     expect(chat.title).toBe(title);
-    expect(chat.createdAt).toBeDefined();
-    expect(chat.updatedAt).toBeDefined();
+    expect(chat.created).toBeDefined();
+    expect(chat.updated).toBeDefined();
 
     // Verify by trying to get it via the service, or by reading the chats.json directly
     const allChats = await chatService.getAllChats();
@@ -48,9 +49,10 @@ describe('Chat Service (JSON Storage)', () => {
 
   test('createChat with copyExisting copies messages from another chat', async () => {
     const source = await chatService.createChat('SourceChat');
+    const now = Date.now();
     // Insert two messages
-    await chatService.saveMessage({ chatId: source.id, role: 'system', content: 'Hello' });
-    await chatService.saveMessage({ chatId: source.id, role: 'user', content: 'World' });
+    await chatService.saveMessage({ chatId: source.id, role: 'system', content: 'Hello', id: -1, created: normalizeToUnixMs(now - 1000) });
+    await chatService.saveMessage({ chatId: source.id, role: 'user', content: 'World', id: -2, created: normalizeToUnixMs(now - 500) });
 
     const newChat = await chatService.createChat('CopyTarget', {
       copyExisting: true,
@@ -79,15 +81,17 @@ describe('Chat Service (JSON Storage)', () => {
     const chat = await chatService.createChat('MessageTest');
     const msgData = {
       chatId: chat.id,
-      role: 'user' as const, // Ensure role is of the correct type
-      content: 'Sample content'
+      role: 'user' as const,
+      content: 'Sample content',
+      id: -1, // Dummy ID for test
+      created: normalizeToUnixMs(Date.now()) // Dummy timestamp for test
     };
     const msg = await chatService.saveMessage(msgData);
     expect(msg.id).toBeDefined();
     expect(msg.chatId).toBe(chat.id);
     expect(msg.role).toBe(msgData.role);
     expect(msg.content).toBe(msgData.content);
-    expect(msg.createdAt).toBeDefined();
+    expect(msg.created).toBeDefined();
 
     // Verify by getting messages for the chat
     const messages = await chatService.getChatMessages(chat.id);
@@ -101,7 +105,9 @@ describe('Chat Service (JSON Storage)', () => {
     const msg = await chatService.saveMessage({
       chatId: chat.id,
       role: 'user' as const,
-      content: 'Old content'
+      content: 'Old content',
+      id: -1, // Dummy ID
+      created: normalizeToUnixMs(Date.now()) // Dummy timestamp
     });
 
     // CORRECTED: Pass chatId as the first argument
@@ -113,21 +119,21 @@ describe('Chat Service (JSON Storage)', () => {
     expect(messages[0].content).toBe('New content');
   });
 
-  test('getAllChats returns all chats sorted by updatedAt', async () => {
-    const chatA = await chatService.createChat('ChatA'); // Will have earliest updatedAt
+  test('getAllChats returns all chats sorted by updated', async () => {
+    const chatA = await chatService.createChat('ChatA'); // Will have earliest updated
     await new Promise(resolve => setTimeout(resolve, 10)); // Ensure timestamp difference
     const chatB = await chatService.createChat('ChatB');
     await new Promise(resolve => setTimeout(resolve, 10));
-    const chatC = await chatService.createChat('ChatC'); // Will have latest updatedAt
+    const chatC = await chatService.createChat('ChatC'); // Will have latest updated
 
-    // Update chatA to make its updatedAt more recent than B but less than C for a better sort test
+    // Update chatA to make its updated more recent than B but less than C for a better sort test
     await new Promise(resolve => setTimeout(resolve, 10));
     await chatService.updateChat(chatA.id, "ChatA Updated");
 
 
     const chats = await chatService.getAllChats();
     expect(chats.length).toBe(3);
-    // Sorted by updatedAt DESC. C should be first, then A (updated), then B.
+    // Sorted by updated DESC. C should be first, then A (updated), then B.
     // This depends on precise timing of updates; a more robust check might involve verifying specific order
     // For now, just checking length after resetJsonChatStorage is key.
     const initialChats = await chatService.getAllChats();
@@ -135,7 +141,7 @@ describe('Chat Service (JSON Storage)', () => {
 
     // More robust sorting check:
     const titles = initialChats.map(c => c.title);
-    // The default sorting is updatedAt DESC.
+    // The default sorting is updated DESC.
     // If we created C last, it should be first.
     // If we updated A after B was created, A is before B.
     // So, order could be C, A (updated), B if timestamps differ enough.
@@ -151,13 +157,13 @@ describe('Chat Service (JSON Storage)', () => {
 
   test('updateChat changes the chat title and updates timestamp', async () => {
     const chat = await chatService.createChat('InitialTitle');
-    const originalUpdatedAt = chat.updatedAt;
+    const originalUpdated = chat.updated;
     await new Promise(resolve => setTimeout(resolve, 10)); // Ensure time passes
 
     const updated = await chatService.updateChat(chat.id, 'NewTitle');
     expect(updated.title).toBe('NewTitle');
     expect(updated.id).toBe(chat.id);
-    expect(new Date(updated.updatedAt).getTime()).toBeGreaterThan(new Date(originalUpdatedAt).getTime());
+    expect(new Date(updated.updated).getTime()).toBeGreaterThan(new Date(originalUpdated).getTime());
 
     const allChats = await chatService.getAllChats();
     const foundChat = allChats.find(c => c.id === chat.id);
@@ -166,8 +172,9 @@ describe('Chat Service (JSON Storage)', () => {
 
   test('deleteChat removes chat and its messages', async () => {
     const chat = await chatService.createChat('DeleteMe');
-    await chatService.saveMessage({ chatId: chat.id, role: 'user' as const, content: 'Hello' });
-    await chatService.saveMessage({ chatId: chat.id, role: 'assistant' as const, content: 'World' });
+    const now = Date.now();
+    await chatService.saveMessage({ chatId: chat.id, role: 'user' as const, content: 'Hello', id: -1, created: normalizeToUnixMs(now - 100) });
+    await chatService.saveMessage({ chatId: chat.id, role: 'assistant' as const, content: 'World', id: -2, created: normalizeToUnixMs(now) });
 
     await chatService.deleteChat(chat.id);
 
@@ -183,15 +190,18 @@ describe('Chat Service (JSON Storage)', () => {
 
   test('deleteMessage removes only that message', async () => {
     const chat = await chatService.createChat('MsgDelete');
+    const now = Date.now();
     const m1 = await chatService.saveMessage({
       chatId: chat.id,
       role: 'user' as const,
-      content: 'First'
+      content: 'First',
+      id: -1, created: normalizeToUnixMs(now - 100)
     });
     const m2 = await chatService.saveMessage({
       chatId: chat.id,
       role: 'assistant' as const,
-      content: 'Second'
+      content: 'Second',
+      id: -2, created: normalizeToUnixMs(now)
     });
 
     // CORRECTED: Pass chatId as the first argument
@@ -204,9 +214,10 @@ describe('Chat Service (JSON Storage)', () => {
 
   test('forkChat duplicates chat and messages except excluded IDs', async () => {
     const source = await chatService.createChat('SourceFork');
-    const msgA = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'A' });
-    const msgB = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'B' });
-    const msgC = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'C' });
+    const now = Date.now();
+    const msgA = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'A', id: -1, created: normalizeToUnixMs(now - 200) });
+    const msgB = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'B', id: -2, created: normalizeToUnixMs(now - 100) });
+    const msgC = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'C', id: -3, created: normalizeToUnixMs(now) });
 
     const newChat = await chatService.forkChat(source.id, [msgB.id]); // Exclude original msgB.id
     const newMessages = await chatService.getChatMessages(newChat.id);
@@ -225,11 +236,12 @@ describe('Chat Service (JSON Storage)', () => {
 
   test('forkChatFromMessage only copies messages up to a given message, excluding any if needed', async () => {
     const source = await chatService.createChat('ForkFromMsg');
-    const msg1 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg1' });
+    const now = Date.now();
+    const msg1 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg1', id: -1, created: normalizeToUnixMs(now - 200) });
     await new Promise(resolve => setTimeout(resolve, 1)); // ensure order
-    const msg2 = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'Msg2' });
+    const msg2 = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'Msg2', id: -2, created: normalizeToUnixMs(now - 100) });
     await new Promise(resolve => setTimeout(resolve, 1));
-    const msg3 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg3' });
+    const msg3 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg3', id: -3, created: normalizeToUnixMs(now) });
 
     // Fork from original msg2, exclude original msg1
     const newChat = await chatService.forkChatFromMessage(source.id, msg2.id, [msg1.id]);

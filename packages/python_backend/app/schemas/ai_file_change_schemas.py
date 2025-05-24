@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
+from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int
 
 # --- AI File Change Schemas ---
 
@@ -24,9 +24,6 @@ class AIFileChangeRecord(BaseModel):
     updated: int = Field(..., alias="updated", description="Timestamp of when the change was last updated (Unix ms)", example=1678886500000)
     explanation: Optional[str] = Field(None, description="Explanation from the AI about the change.")
     
-    _validate_ids = field_validator('id', 'project_id', mode='before')(convert_id_to_int)
-    _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
-
     model_config = ConfigDict(
         title="AIFileChangeRecord", # Matches .openapi('AIFileChangeRecord')
         populate_by_name=True, # Handles camelCase input for snake_case fields if aliases are set
@@ -55,8 +52,6 @@ class FullGenerateChangeBody(BaseModel):
     file_path: str = Field(..., min_length=1, alias="filePath", example="src/components/Button.tsx", description="Path to the file to modify")
     prompt: str = Field(..., min_length=1, example="Add hover effects to the button", description="Instruction for the AI to follow")
     
-    _validate_project_id = field_validator('project_id', mode='before')(convert_id_to_int)
-
     model_config = ConfigDict(
         title="GenerateAIChangeBody", # from .openapi('GenerateAIChangeBody') in TS
         populate_by_name=True
@@ -91,7 +86,6 @@ class FileChangeIdParams(BaseModel):
             "example": 1678886400002
         }
     )
-    _validate_ids = field_validator('project_id', 'ai_file_change_id', mode='before')(convert_id_to_int)
 
     model_config = ConfigDict(
         title="AIFileChangeIdParams", # from .openapi('AIFileChangeIdParams')

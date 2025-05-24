@@ -10,7 +10,7 @@ from app.schemas.prompt_schemas import (
     PromptProject
 )
 from app.utils.storage.prompt_storage import prompt_storage_util, PromptsStorage, PromptProjectsStorage
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
+from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int
 
 # Last 5 changes (from .ts):
 # 1. Converted createPrompt

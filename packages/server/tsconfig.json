@@ -26,6 +26,6 @@
     "src",
     "src/middleware.ts",
     "server.ts",
-    "build.ts",
+    "build.ts", "functional-tests",
   ]
 }

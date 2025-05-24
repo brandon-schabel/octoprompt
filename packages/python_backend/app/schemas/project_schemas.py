@@ -1,11 +1,3 @@
-# app/schemas/project_schemas.py
-# - Converted ProjectSchema, CreateProjectBodySchema
-# - Used Pydantic's BaseModel and Field
-# - Mapped Zod types/validators to Pydantic/Python types
-# - Matched OpenAPI examples and descriptions
-# - Handled optional fields and datetime strings
-# - Changed datetime fields to int (Unix ms) and added validators.
-
 from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime, timezone
@@ -19,14 +11,13 @@ class Project(BaseModel):
     description: Optional[str] = None
     created: int
     updated: int
-    files: Optional[List['ProjectFile']] = [] # List of ProjectFile, can be empty
+    files: Optional[List['ProjectFile']] = []
 
     _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
 
     model_config = {
         "openapi_extra": {"title": "Project"}
     }
-    # No json_encoders needed here as fields are int
 
 class CreateProjectBody(BaseModel):
     name: str = Field(..., min_length=1, json_schema_extra={'example': 'My Awesome Project'})
@@ -37,7 +28,6 @@ class CreateProjectBody(BaseModel):
         "openapi_extra": {"title": "CreateProjectRequestBody"}
     }
 
-# Similarly, for ProjectFileSchema:
 class ProjectFile(BaseModel):
     id: int
     project_id: int
@@ -46,7 +36,7 @@ class ProjectFile(BaseModel):
     extension: Optional[str] = None
     size: int
     content: Optional[str] = None
-    extractedSymbols: Optional[Dict[str, Any]] = None # Can be any nested structure
+    extractedSymbols: Optional[Dict[str, Any]] = None
     codeStory: Optional[str] = None
     summary: Optional[str] = None
     summary_last_updated_at: Optional[int] = None
@@ -61,7 +51,6 @@ class ProjectFile(BaseModel):
         "openapi_extra": {"title": "ProjectFile"}
     }
 
-# For ProjectIdParamsSchema
 class ProjectIdParams(BaseModel):
     project_id: int = Field(..., description="The ID of the project", json_schema_extra={'examples': [12345]})
 
@@ -70,7 +59,6 @@ class ProjectIdParams(BaseModel):
         "openapi_extra": {"alias": "projectId"}
     }
 
-# For UpdateProjectBodySchema with refine
 class UpdateProjectBody(BaseModel):
     name: Optional[str] = Field(None, min_length=1, json_schema_extra={'example': 'Updated Project Name'})
     path: Optional[str] = Field(None, min_length=1, json_schema_extra={'example': '/new/path/to/project'})
@@ -93,7 +81,6 @@ class UpdateProjectBody(BaseModel):
         "openapi_extra": {"title": "UpdateProjectRequestBody"}
     }
 
-# Common response structure can also be generic
 class SuccessResponse(BaseModel):
     success: Literal[True] = True
 
@@ -157,16 +144,8 @@ class RefreshQuery(BaseModel):
         "openapi_extra": {"title": "RefreshQuery"}
     }
 
-# ProjectFileMap equivalent
 ProjectFileMap = Dict[str, ProjectFile]
 
-# Type alias for clarity, though Pydantic models are already types
-# type Project = Project (class name itself)
-# type ProjectFile = ProjectFile (class name itself)
-# type CreateProjectBody = CreateProjectBody (class name itself)
-# type UpdateProjectBody = UpdateProjectBody (class name itself)
-
-# Added for agent_coder_service to align with TypeScript's FileSyncData
 class FileSyncData(BaseModel):
     path: str
     name: str
@@ -174,4 +153,3 @@ class FileSyncData(BaseModel):
     content: str
     size: int
     checksum: str
-    # project_id is not part of FileSyncData in TS, it's passed to bulk_create_project_files

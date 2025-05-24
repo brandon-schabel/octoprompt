@@ -78,8 +78,6 @@ async def sync_project(project: Project) -> None: # project.id is int
 # --- Project Service Functions ---
 
 async def create_project(data: CreateProjectBody) -> Project:
-    print(f"[project_service.py] create_project called for project {data.name}")
-    print(f"[project_service.py] data: {data}")
     project_id = project_storage.generate_id() # Returns int
     now_ms = int(datetime.now(timezone.utc).timestamp() * 1000) # For new schema
     new_project_data = {
@@ -301,6 +299,7 @@ async def bulk_update_project_files(project_id: int, updates: List[BulkUpdateIte
     now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
     files_map = await project_storage.read_project_files(project_id) # Dict[int, ProjectFile]
     changes_made = False
+
     try:
         for item in updates:
             file_id = item.fileId # int
@@ -395,9 +394,6 @@ Ensure your output is valid JSON that conforms to the following Pydantic schema:
     
     try:
         ai_options = AiSdkOptions(**LOW_MODEL_CONFIG)
-
-        print(f"[SummarizeSingleFile] AI options: {ai_options}")
-        print(f"[SummarizeSingleFile] File id: {file.id}")
         
         structured_response = await generate_structured_data(
             prompt=file_content,  
@@ -416,7 +412,7 @@ Ensure your output is valid JSON that conforms to the following Pydantic schema:
         elif isinstance(raw_summary_data, SummarySchema):  
             summary_data = raw_summary_data
         else:  
-            print(f"[SummarizeSingleFile] Unexpected summary data type from AI: {type(raw_summary_data)}")
+            print(f"[SummarizeSingleFile] Unexpected summary data type from AI")
             raise ApiError(500, "AI returned unexpected summary object type", "AI_UNEXPECTED_SUMMARY_TYPE")
         
         trimmed_summary = summary_data.summary.strip()
@@ -471,12 +467,6 @@ async def summarize_files(project_id: int, file_ids_to_summarize: List[int]) -> 
     total_to_process = len(files_to_process)
     final_skipped_count = skipped_by_empty_count + error_count
     
-    print(
-        f"[BatchSummarize] File summarization batch complete for project {project_id}. "
-        f"Total to process: {total_to_process}, Successfully summarized: {summarized_count}, "
-        f"Skipped (empty): {skipped_by_empty_count}, Skipped (errors): {error_count}, "
-        f"Total not summarized: {final_skipped_count}"
-    )
     return {"included": summarized_count, "skipped": final_skipped_count, "updated_files": updated_files_result}
 
 async def resummarize_all_files(project_id: int) -> None: # Changed project_id to int
@@ -497,7 +487,6 @@ async def resummarize_all_files(project_id: int) -> None: # Changed project_id t
 
     try:
         summary_results = await summarize_files(project_id, file_ids) # project_id is int, file_ids is List[int]
-        print(f"[ProjectService] Completed resummarizeAllFiles for project {project_id}. Summarized: {summary_results['included']}, Skipped: {summary_results['skipped']}")
     except ApiError as e: raise e
     except Exception as e:
         raise ApiError(500, f"Failed during resummarization process for project {project_id}. Reason: {str(e)}", "RESUMMARIZE_ALL_FAILED")

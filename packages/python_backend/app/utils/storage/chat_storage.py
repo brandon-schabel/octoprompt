@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Dict, Any, TypeVar, Type, Literal, Optional
 
 from pydantic import BaseModel, ValidationError, field_validator
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
+from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int
 # Import the authoritative schemas
 from app.schemas.chat_schemas import Chat, ChatMessage, MessageRoleEnum, ModelOptions # ModelOptions might be implicitly handled via Chat
 

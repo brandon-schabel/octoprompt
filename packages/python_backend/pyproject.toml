@@ -9,6 +9,7 @@ dependencies = [
     "fastapi>=0.115.12",
     "freezegun>=1.5.1",
     "ignore>=0.1.4",
+    "jupyterlab>=4.4.2",
     "pathspec>=0.12.1",
     "psutil>=7.0.0",
     "pydantic-ai>=0.2.4",

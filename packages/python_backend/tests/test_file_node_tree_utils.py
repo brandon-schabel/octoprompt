@@ -41,11 +41,27 @@ class TestCountTotalFiles:
                         children={
                             'file1.ts': FileNode(
                                 is_folder=False,
-                                file=ProjectFile(id='1', path='src/components/file1.ts')
+                                file=ProjectFile(
+                                    id=1,  # Changed to int
+                                    project_id=1,  # Added required field
+                                    name='file1.ts',  # Added required field
+                                    path='src/components/file1.ts',
+                                    size=100,  # Added required field
+                                    created=1234567890,  # Added required field
+                                    updated=1234567890  # Added required field
+                                )
                             ),
                             'file2.ts': FileNode(
                                 is_folder=False,
-                                file=ProjectFile(id='2', path='src/components/file2.ts')
+                                file=ProjectFile(
+                                    id=2,  # Changed to int
+                                    project_id=1,  # Added required field
+                                    name='file2.ts',  # Added required field
+                                    path='src/components/file2.ts',
+                                    size=200,  # Added required field
+                                    created=1234567890,  # Added required field
+                                    updated=1234567890  # Added required field
+                                )
                             )
                         }
                     ),
@@ -54,7 +70,15 @@ class TestCountTotalFiles:
                         children={
                             'file3.ts': FileNode(
                                 is_folder=False,
-                                file=ProjectFile(id='3', path='src/utils/file3.ts')
+                                file=ProjectFile(
+                                    id=3,  # Changed to int
+                                    project_id=1,  # Added required field
+                                    name='file3.ts',  # Added required field
+                                    path='src/utils/file3.ts',
+                                    size=300,  # Added required field
+                                    created=1234567890,  # Added required field
+                                    updated=1234567890  # Added required field
+                                )
                             )
                         }
                     )
@@ -70,21 +94,38 @@ class TestCollectFiles:
             children={
                 'file1.ts': FileNode(
                     is_folder=False,
-                    file=ProjectFile(id='1', path='file1.ts')
+                    file=ProjectFile(
+                        id=1,  # Changed to int
+                        project_id=1,  # Added required field
+                        name='file1.ts',  # Added required field
+                        path='file1.ts',
+                        size=100,  # Added required field
+                        created=1234567890,  # Added required field
+                        updated=1234567890  # Added required field
+                    )
                 ),
                 'nested': FileNode(
                     is_folder=True,
                     children={
                         'file2.ts': FileNode(
                             is_folder=False,
-                            file=ProjectFile(id='2', path='nested/file2.ts')
+                            file=ProjectFile(
+                                id=2,  # Changed to int
+                                project_id=1,  # Added required field
+                                name='file2.ts',  # Added required field
+                                path='nested/file2.ts',
+                                size=200,  # Added required field
+                                created=1234567890,  # Added required field
+                                updated=1234567890  # Added required field
+                            )
                         )
                     }
                 )
             }
         )
         file_ids = collect_files(mock_node)
-        assert file_ids == ['1', '2']
+        # Note: collect_files returns integers (file IDs)
+        assert file_ids == [1, 2]
 
 class TestCalculateFolderTokens:
     def test_should_calculate_tokens_correctly(self):
@@ -93,20 +134,38 @@ class TestCalculateFolderTokens:
             children={
                 'file1.ts': FileNode(
                     is_folder=False,
-                    file=ProjectFile(id='1', path='file1.ts', content='hello world')
+                    file=ProjectFile(
+                        id=1,  # Changed to int
+                        project_id=1,  # Added required field
+                        name='file1.ts',  # Added required field
+                        path='file1.ts',
+                        size=100,  # Added required field
+                        content='hello world',
+                        created=1234567890,  # Added required field
+                        updated=1234567890  # Added required field
+                    )
                 ),
                 'nested': FileNode(
                     is_folder=True,
                     children={
                         'file2.ts': FileNode(
                             is_folder=False,
-                            file=ProjectFile(id='2', path='nested/file2.ts', content='test content')
+                            file=ProjectFile(
+                                id=2,  # Changed to int
+                                project_id=1,  # Added required field
+                                name='file2.ts',  # Added required field
+                                path='nested/file2.ts',
+                                size=200,  # Added required field
+                                content='test content',
+                                created=1234567890,  # Added required field
+                                updated=1234567890  # Added required field
+                            )
                         )
                     }
                 )
             }
         )
-        selected_files = ['1']
+        selected_files = [1]  # Changed to int
         result = calculate_folder_tokens(mock_folder, selected_files)
         assert result['selected_tokens'] == 3  # tokens for 'hello world'
         assert result['total_tokens'] == 6  # total tokens for both files
@@ -119,21 +178,37 @@ class TestFolderSelection:
             children={
                 'file1.ts': FileNode(
                     is_folder=False,
-                    file=ProjectFile(id='1', path='file1.ts')
+                    file=ProjectFile(
+                        id=1,  # Changed to int
+                        project_id=1,  # Added required field
+                        name='file1.ts',  # Added required field
+                        path='file1.ts',
+                        size=100,  # Added required field
+                        created=1234567890,  # Added required field
+                        updated=1234567890  # Added required field
+                    )
                 ),
                 'file2.ts': FileNode(
                     is_folder=False,
-                    file=ProjectFile(id='2', path='file2.ts')
+                    file=ProjectFile(
+                        id=2,  # Changed to int
+                        project_id=1,  # Added required field
+                        name='file2.ts',  # Added required field
+                        path='file2.ts',
+                        size=200,  # Added required field
+                        created=1234567890,  # Added required field
+                        updated=1234567890  # Added required field
+                    )
                 )
             }
         )
 
     def test_should_correctly_identify_when_all_files_are_selected(self, mock_folder):
-        selected_files = ['1', '2']
+        selected_files = [1, 2]  # Changed to int
         assert are_all_folder_files_selected(mock_folder, selected_files) is True
 
     def test_should_correctly_identify_partial_selection(self, mock_folder):
-        selected_files = ['1']
+        selected_files = [1]  # Changed to int
         assert is_folder_partially_selected(mock_folder, selected_files) is True
 
     def test_should_return_false_for_no_selection(self, mock_folder):
@@ -160,19 +235,36 @@ class TestToggleFolder:
             children={
                 'file1.ts': FileNode(
                     is_folder=False,
-                    file=ProjectFile(id='1', path='file1.ts')
+                    file=ProjectFile(
+                        id=1,  # Changed to int
+                        project_id=1,  # Added required field
+                        name='file1.ts',  # Added required field
+                        path='file1.ts',
+                        size=100,  # Added required field
+                        created=1234567890,  # Added required field
+                        updated=1234567890  # Added required field
+                    )
                 ),
                 'file2.ts': FileNode(
                     is_folder=False,
-                    file=ProjectFile(id='2', path='file2.ts')
+                    file=ProjectFile(
+                        id=2,  # Changed to int
+                        project_id=1,  # Added required field
+                        name='file2.ts',  # Added required field
+                        path='file2.ts',
+                        size=200,  # Added required field
+                        created=1234567890,  # Added required field
+                        updated=1234567890  # Added required field
+                    )
                 )
             }
         )
 
     def test_should_select_all_files_in_folder(self, mock_folder):
         result = toggle_folder(mock_folder, True, [])
-        assert set(result) == {'1', '2'}
+        # toggle_folder calls collect_files which returns integers
+        assert set(result) == {1, 2}
 
     def test_should_deselect_all_files_in_folder(self, mock_folder):
-        result = toggle_folder(mock_folder, False, ['1', '2'])
-        assert result == [] 
+        result = toggle_folder(mock_folder, False, [1, 2])
+        assert result == []

@@ -3,19 +3,19 @@ import { z } from '@hono/zod-openapi'
 // Base schema - Represents the API structure
 export const ProjectSchema = z
   .object({
-    id: z.string().openapi({ example: 'proj_1a2b3c4d' }),
+    id: z.number().int().openapi({ example: 1716537600000 }),
     name: z.string(),
     description: z.string(),
     path: z.string(),
-    createdAt: z.number().int().openapi({ example: 1678442400000 }),
-    updatedAt: z.number().int().openapi({ example: 1678442700000 })
+    created: z.number().int().openapi({ example: 1678442400000 }),
+    updated: z.number().int().openapi({ example: 1678442700000 })
   })
   .openapi('Project')
 
 export const ProjectFileSchema = z
   .object({
-    id: z.string(),
-    projectId: z.string(),
+    id: z.number().int().openapi({ example: 1716537600000 }),
+    projectId: z.number().int().openapi({ example: 1716537600000 }),
     name: z.string(),
     path: z.string(),
     extension: z.string(),
@@ -25,8 +25,8 @@ export const ProjectFileSchema = z
     summaryLastUpdatedAt: z.number().int().nullable().openapi({ example: 1678442800000 }),
     meta: z.string().nullable(),
     checksum: z.string().nullable(),
-    createdAt: z.number().int().openapi({ example: 1678442400000 }),
-    updatedAt: z.number().int().openapi({ example: 1678442700000 })
+    created: z.number().int().openapi({ example: 1678442400000 }),
+    updated: z.number().int().openapi({ example: 1678442700000 })
   })
   .openapi('ProjectFile')
 
@@ -34,11 +34,11 @@ export const ProjectFileSchema = z
 export const ProjectIdParamsSchema = z
   .object({
     projectId: z
-      .string()
-      .min(1)
+      .number()
+      .int()
       .openapi({
         param: { name: 'projectId', in: 'path' },
-        example: 'proj_1a2b3c4d',
+        example: 1716537600000,
         description: 'The ID of the project'
       })
   })
@@ -66,10 +66,11 @@ export const UpdateProjectBodySchema = z
 
 export const SummarizeFilesBodySchema = z
   .object({
+    // file ids are unix timestamp in milliseconds
     fileIds: z
-      .array(z.string().min(1))
+      .array(z.number().int())
       .min(1)
-      .openapi({ example: ['file_1a2b3c4d', 'file_e5f6g7h8'] }),
+      .openapi({ example: [1716537600000, 1716537600000, 1716537600000] }),
     force: z
       .boolean()
       .optional()
@@ -81,9 +82,9 @@ export const SummarizeFilesBodySchema = z
 export const RemoveSummariesBodySchema = z
   .object({
     fileIds: z
-      .array(z.string().min(1))
+      .array(z.number().int())
       .min(1)
-      .openapi({ example: ['file_1a2b3c4d', 'file_e5f6g7h8'] })
+      .openapi({ example: [1716537600000, 1716537600000, 1716537600000] })
   })
   .openapi('RemoveSummariesRequestBody')
 
@@ -150,7 +151,7 @@ export const ProjectSummaryResponseSchema = z
 
 // Define ProjectFileMapSchema using z.map
 export const ProjectFileMapSchema = z
-  .map(z.string(), ProjectFileSchema)
+  .map(z.number(), ProjectFileSchema)
   .describe('A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects.')
   .openapi('ProjectFileMap')
 

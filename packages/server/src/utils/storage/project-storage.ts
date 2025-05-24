@@ -4,6 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises' // Using Node's fs promises
 import { ProjectSchema, ProjectFileSchema, type ProjectFile } from 'shared/src/schemas/project.schemas'
 import { AIFileChangesStorageSchema, type AIFileChangesStorage, type AIFileChangeRecord, AIFileChangeRecordSchema } from 'shared/src/schemas/ai-file-change.schemas'
+import { normalizeToUnixMs } from '../parse-timestamp'
 
 // Define the base directory for storing project data
 // Adjust this path as needed, e.g., use an environment variable
@@ -11,10 +12,10 @@ const DATA_DIR = path.resolve(process.cwd(), 'data', 'project_storage')
 
 // --- Schemas for Storage ---
 // Store projects as a map (Record) keyed by projectId
-export const ProjectsStorageSchema = z.record(z.string(), ProjectSchema)
+export const ProjectsStorageSchema = z.record(z.number(), ProjectSchema)
 export type ProjectsStorage = z.infer<typeof ProjectsStorageSchema>
 
-// Store files within a project as a map (Record) keyed by fileId
+// even though the keys are numbers, they are saved as string because that is default javascript behavior
 export const ProjectFilesStorageSchema = z.record(z.string(), ProjectFileSchema)
 export type ProjectFilesStorage = z.infer<typeof ProjectFilesStorageSchema>
 
@@ -26,17 +27,17 @@ function getProjectsIndexPath(): string {
 }
 
 /** Gets the absolute path to a specific project's directory. */
-function getProjectDataDir(projectId: string): string {
-  return path.join(DATA_DIR, 'project_data', projectId)
+function getProjectDataDir(projectId: number): string {
+  return path.join(DATA_DIR, 'project_data', projectId.toString())
 }
 
 /** Gets the absolute path to a specific project's files index file. */
-function getProjectFilesPath(projectId: string): string {
+function getProjectFilesPath(projectId: number): string {
   return path.join(getProjectDataDir(projectId), 'files.json')
 }
 
 /** Gets the absolute path to a specific project's AI file changes index file. */
-function getProjectAIFileChangesPath(projectId: string): string {
+function getProjectAIFileChangesPath(projectId: number): string {
   return path.join(getProjectDataDir(projectId), 'ai-file-changes.json')
 }
 
@@ -77,7 +78,30 @@ async function readValidatedJson<T extends ZodTypeAny>(
       return defaultValue;
     }
 
-    const jsonData = JSON.parse(fileContent) // This can throw SyntaxError
+    let jsonData = JSON.parse(fileContent) // This can throw SyntaxError
+
+    console.log('jsonData', jsonData)
+
+    // If the schema is a ZodRecord with numeric keys, transform string keys to numbers
+    if (schema instanceof z.ZodRecord && schema.keySchema instanceof z.ZodNumber) {
+      const transformedData: Record<number, unknown> = {};
+      for (const key in jsonData) {
+        if (Object.prototype.hasOwnProperty.call(jsonData, key)) {
+          const numKey = Number(key);
+          if (!isNaN(numKey)) {
+            transformedData[numKey] = jsonData[key];
+          } else {
+            // If the key is not a valid number for a schema expecting numeric keys,
+            // log a warning and omit this key-value pair from the transformed data.
+            // This ensures that 'transformedData' only contains numeric keys,
+            // allowing Zod validation for z.record(z.number(), ...) to pass if values are correct.
+            console.warn(`Omitting non-numeric key "${key}" from object in ${filePath} as schema expects numeric keys.`);
+          }
+        }
+      }
+      jsonData = transformedData;
+    }
+
     const validationResult = await schema.safeParseAsync(jsonData)
 
     if (!validationResult.success) {
@@ -154,22 +178,22 @@ export const projectStorage = {
   },
 
   /** Reads a specific project's file data. */
-  async readProjectFiles(projectId: string): Promise<ProjectFilesStorage> {
+  async readProjectFiles(projectId: number): Promise<ProjectFilesStorage> {
     return readValidatedJson(getProjectFilesPath(projectId), ProjectFilesStorageSchema, {})
   },
 
   /** Writes a specific project's file data. */
-  async writeProjectFiles(projectId: string, files: ProjectFilesStorage): Promise<ProjectFilesStorage> {
+  async writeProjectFiles(projectId: number, files: ProjectFilesStorage): Promise<ProjectFilesStorage> {
     return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema)
   },
 
   /** Reads a specific project's AI file changes data. */
-  async readAIFileChanges(projectId: string): Promise<AIFileChangesStorage> {
+  async readAIFileChanges(projectId: number): Promise<AIFileChangesStorage> {
     return readValidatedJson(getProjectAIFileChangesPath(projectId), AIFileChangesStorageSchema, {})
   },
 
   /** Writes a specific project's AI file changes data. */
-  async writeAIFileChanges(projectId: string, changes: AIFileChangesStorage): Promise<AIFileChangesStorage> {
+  async writeAIFileChanges(projectId: number, changes: AIFileChangesStorage): Promise<AIFileChangesStorage> {
     return writeValidatedJson(getProjectAIFileChangesPath(projectId), changes, AIFileChangesStorageSchema)
   },
 
@@ -179,7 +203,7 @@ export const projectStorage = {
    * @param changeData The AI file change data to add or update.
    * @returns The validated and saved AIFileChangeRecord data.
    */
-  async saveAIFileChange(projectId: string, changeData: AIFileChangeRecord): Promise<AIFileChangeRecord> {
+  async saveAIFileChange(projectId: number, changeData: AIFileChangeRecord): Promise<AIFileChangeRecord> {
     const validationResult = await AIFileChangeRecordSchema.safeParseAsync(changeData);
     if (!validationResult.success) {
       console.error(`Zod validation failed for AI file change in project ${projectId}:`, validationResult.error.errors);
@@ -200,64 +224,61 @@ export const projectStorage = {
    * @param aiFileChangeId The ID of the AI file change record.
    * @returns The AIFileChangeRecord or undefined if not found.
    */
-  async getAIFileChangeById(projectId: string, aiFileChangeId: string): Promise<AIFileChangeRecord | undefined> {
+  async getAIFileChangeById(projectId: number, aiFileChangeId: number): Promise<AIFileChangeRecord | undefined> {
     const changes = await this.readAIFileChanges(projectId);
     return changes[aiFileChangeId];
   },
 
   /**
    * Updates a specific file within a project.
-   * Reads the project's files, validates the new data, updates the entry, and writes back.
+   * Reads the project's files, merges the new data, sets the `updated` timestamp,
+   * validates the complete object, and writes the entire file map back.
    * @param projectId The ID of the project containing the file.
    * @param fileId The ID of the file to update.
-   * @param fileData The new data for the file (will be validated).
+   * @param fileData A partial object of file properties to update. Fields like id, projectId, created, and updated are ignored.
    * @returns The validated and saved ProjectFile data.
    * @throws ZodError if validation fails.
-   * @throws Error if reading/writing fails.
+   * @throws Error if the file is not found or if reading/writing fails.
    */
   async updateProjectFile(
-    projectId: string,
-    fileId: string,
-    fileData: Partial<Omit<ProjectFile, 'updated' | 'created'>>
+    projectId: number,
+    fileId: number,
+    fileData: Partial<Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>>
   ): Promise<ProjectFile> {
-    //  get current file data
-    const currentFile = await this.readProjectFile(projectId, fileId)
+    const currentFiles = await this.readProjectFiles(projectId)
+    const currentFile = currentFiles[fileId]
     if (!currentFile) {
       throw new Error(`File not found: ${fileId} in project ${projectId}`)
     }
-    // 1. Validate the incoming data first
-    const validationResult = await ProjectFileSchema.safeParseAsync({
+
+    const updatedFileObject = {
       ...currentFile,
       ...fileData,
-      updatedAt: new Date().toISOString()
-    })
+      updated: Date.now() // Always set a new update timestamp in milliseconds
+    }
+
+    // ProjectFileSchema is expected to be updated to match Python's schema
+    // with `created` and `updated` as number fields.
+    const validationResult = await ProjectFileSchema.safeParseAsync(updatedFileObject)
+
     if (!validationResult.success) {
       console.error(`Zod validation failed for file ${fileId} in project ${projectId}:`, validationResult.error.errors)
       throw new ZodError(validationResult.error.errors)
     }
     const validatedFileData = validationResult.data
 
-    // 2. Read the existing files for the project
-    const currentFiles = await this.readProjectFiles(projectId)
-
-    // 3. Update the specific file entry
     currentFiles[fileId] = validatedFileData
-
-    // 4. Write the updated file storage back
-    // Note: writeProjectFiles already handles validation of the *entire* storage object
     await this.writeProjectFiles(projectId, currentFiles)
-
-    // 5. Return the validated data that was just saved
     return validatedFileData
   },
 
-  async readProjectFile(projectId: string, fileId: string): Promise<ProjectFile | undefined> {
+  async readProjectFile(projectId: number, fileId: number): Promise<ProjectFile | undefined> {
     const files = await this.readProjectFiles(projectId)
     return files[fileId]
   },
 
   /** Deletes a project's data directory. */
-  async deleteProjectData(projectId: string): Promise<void> {
+  async deleteProjectData(projectId: number): Promise<void> {
     const dirPath = getProjectDataDir(projectId)
     try {
       // Check if directory exists before attempting removal
@@ -275,8 +296,7 @@ export const projectStorage = {
   },
 
   /** Generates a simple unique ID (replace with more robust method if needed) */
-  generateId: (prefix: string): string => {
-    // Basic example, consider UUIDs for production
-    return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`
+  generateId: (): number => {
+    return normalizeToUnixMs(new Date())
   }
 }

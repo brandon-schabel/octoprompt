@@ -1,4 +1,3 @@
-// packages/server/src/services/prompt-service.ts
 import { promptStorage, type PromptsStorage, type PromptProjectsStorage } from '@/utils/storage/prompt-storage'
 import {
   CreatePromptBody,
@@ -9,19 +8,20 @@ import {
   PromptProjectSchema
 } from 'shared/src/schemas/prompt.schemas'
 
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 import { ApiError } from 'shared'
 import { ZodError } from 'zod'
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
-  const promptId = promptStorage.generateId('prompt')
-  const now = new Date().toISOString()
+  const promptId = promptStorage.generateId()
+  const now = normalizeToUnixMs(new Date())
 
   const newPromptData: Prompt = {
     id: promptId,
     name: data.name,
     content: data.content,
-    createdAt: now,
-    updatedAt: now
+    created: now,
+    updated: now
     // projectId is not part of the core Prompt schema, handled by associations
   }
 
@@ -51,7 +51,7 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
   return newPromptData
 }
 
-export async function addPromptToProject(promptId: string, projectId: string): Promise<void> {
+export async function addPromptToProject(promptId: number, projectId: number): Promise<void> {
   const allPrompts = await promptStorage.readPrompts()
   if (!allPrompts[promptId]) {
     throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND')
@@ -87,7 +87,7 @@ export async function addPromptToProject(promptId: string, projectId: string): P
   promptProjects = promptProjects.filter(link => link.promptId !== promptId)
 
   const newLink: PromptProject = {
-    id: promptStorage.generateId('link'), // ID for the association itself
+    id: promptStorage.generateId(), // ID for the association itself
     promptId: promptId,
     projectId: projectId
   }
@@ -106,7 +106,7 @@ export async function addPromptToProject(promptId: string, projectId: string): P
   await promptStorage.writePromptProjects(promptProjects)
 }
 
-export async function removePromptFromProject(promptId: string, projectId: string): Promise<void> {
+export async function removePromptFromProject(promptId: number, projectId: number): Promise<void> {
   let promptProjects = await promptStorage.readPromptProjects()
   const initialLinkCount = promptProjects.length
 
@@ -128,7 +128,7 @@ export async function removePromptFromProject(promptId: string, projectId: strin
   await promptStorage.writePromptProjects(promptProjects)
 }
 
-export async function getPromptById(promptId: string): Promise<Prompt> {
+export async function getPromptById(promptId: number): Promise<Prompt> {
   const allPrompts = await promptStorage.readPrompts()
   const found = allPrompts[promptId]
   if (!found) {
@@ -140,7 +140,7 @@ export async function getPromptById(promptId: string): Promise<Prompt> {
 export async function listAllPrompts(): Promise<Prompt[]> {
   const allPromptsData = await promptStorage.readPrompts()
   const promptList = Object.values(allPromptsData)
-  // Optional: sort if needed, e.g., by updatedAt or name
+  // Optional: sort if needed, e.g., by upated or name
   promptList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   return promptList
 }
@@ -150,7 +150,7 @@ export const getPromptsByIds = async (promptIds: string[]): Promise<Prompt[]> =>
   return promptIds.map(id => allPrompts[id]).filter(Boolean) as Prompt[]
 }
 
-export async function listPromptsByProject(projectId: string): Promise<Prompt[]> {
+export async function listPromptsByProject(projectId: number): Promise<Prompt[]> {
   const promptProjects = await promptStorage.readPromptProjects()
   const relevantPromptIds = promptProjects
     .filter(link => link.projectId === projectId)
@@ -163,7 +163,7 @@ export async function listPromptsByProject(projectId: string): Promise<Prompt[]>
   return relevantPromptIds.map(promptId => allPrompts[promptId]).filter(Boolean) as Prompt[] // filter(Boolean) to remove undefined if a link exists for a deleted prompt
 }
 
-export async function updatePrompt(promptId: string, data: UpdatePromptBody): Promise<Prompt> {
+export async function updatePrompt(promptId: number, data: UpdatePromptBody): Promise<Prompt> {
   const allPrompts = await promptStorage.readPrompts()
   const existingPrompt = allPrompts[promptId]
 
@@ -175,7 +175,7 @@ export async function updatePrompt(promptId: string, data: UpdatePromptBody): Pr
     ...existingPrompt,
     name: data.name ?? existingPrompt.name,
     content: data.content ?? existingPrompt.content,
-    updatedAt: new Date().toISOString()
+    updated: normalizeToUnixMs(new Date())
   }
 
   try {
@@ -193,7 +193,7 @@ export async function updatePrompt(promptId: string, data: UpdatePromptBody): Pr
   return updatedPromptData
 }
 
-export async function deletePrompt(promptId: string): Promise<boolean> {
+export async function deletePrompt(promptId: number): Promise<boolean> {
   const allPrompts = await promptStorage.readPrompts()
   if (!allPrompts[promptId]) {
     return false // Prompt not found, nothing to delete
@@ -214,7 +214,7 @@ export async function deletePrompt(promptId: string): Promise<boolean> {
   return true
 }
 
-export async function getPromptProjects(promptId: string): Promise<PromptProject[]> {
+export async function getPromptProjects(promptId: number): Promise<PromptProject[]> {
   const promptProjects = await promptStorage.readPromptProjects()
   return promptProjects.filter(link => link.promptId === promptId)
 }

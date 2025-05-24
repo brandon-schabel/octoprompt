@@ -1,24 +1,19 @@
-# packages/python_backend/app/utils/storage/prompt_storage.py
-# 1. Migrated to Unix ms timestamps for ID and time fields.
-# 2. Updated generate_id to return Unix ms timestamp.
-# 3. Assumed Prompt schema has createdAt/updatedAt, changed to int.
-# 4. Added field_validator for backward compatibility of timestamps.
-# 5. Imported time, Any, datetime, timezone.
 import json
 import os
-import uuid # Kept for now, but generate_id will use time
 import time
 from pathlib import Path
 from typing import Type, TypeVar, Dict, List, Union, Any
 from datetime import datetime, timezone
-
-from pydantic import BaseModel, ValidationError, field_validator
-
-from app.schemas.prompt_schemas import Prompt, PromptProject # Assuming these will be updated
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
+from pydantic import BaseModel, ValidationError
+from app.schemas.prompt_schemas import Prompt, PromptProject
 
 # Define the base directory for storing prompt data
 DATA_DIR = Path(os.getcwd()) / "data" / "prompt_storage"
+
+# --- Custom Exceptions ---
+class StorageError(IOError):
+    """Custom exception for storage-related errors."""
+    pass
 
 # --- Schemas for Storage ---
 # Store all prompts (metadata) as a map (Record) keyed by promptId (now int)
@@ -47,7 +42,11 @@ def get_prompt_projects_path() -> Path:
 def ensure_dir_exists(dir_path: Path) -> None:
     """Ensures the specified directory exists."""
     try: dir_path.mkdir(parents=True, exist_ok=True)
-    except Exception as e: print(f"Error creating directory {dir_path}: {e}"); raise IOError(f"Failed to ensure directory exists: {dir_path}")
+    except FileNotFoundError: raise
+    except PermissionError: raise
+    except IsADirectoryError: raise # Or handle as success if appropriate for use case
+    except OSError as e: raise StorageError(f"Failed to ensure directory exists: {dir_path}. OS error: {e}")
+    except Exception as e: raise StorageError(f"An unexpected error occurred creating directory: {dir_path}. Error: {e}")
 
 async def read_validated_json(
     file_path: Path,
@@ -69,22 +68,24 @@ async def read_validated_json(
                 try:
                     k_int = int(k_str) # Convert string key from JSON to int
                     validated_data[k_int] = model.model_validate(v_data)
-                except (ValidationError, ValueError) as e: print(f"Validation/KeyConv failed for item {k_str} in {file_path}: {e}")
+                except (ValidationError, ValueError): pass # Skip on error
             return validated_data
         elif isinstance(default_value, list) and isinstance(json_data, list):
             validated_list = []
             # In PromptProjectsStorage = List[PromptProject], model is PromptProject
             for item_data in json_data:
                 try: validated_list.append(model.model_validate(item_data))
-                except ValidationError as e: print(f"Validation failed for an item in list {file_path}: {e}")
+                except ValidationError: pass # Skip on error
             return validated_list
-        else: # Should ideally not happen if called correctly
-            print(f"Mismatch in default_value type and json_data type for {file_path}")
-            return default_value # Or model.model_validate(json_data) if it's a single object
+        else: 
+            return default_value
 
-    except FileNotFoundError: return default_value
-    except json.JSONDecodeError as e: print(f"Error decoding JSON from {file_path}: {e}"); return default_value
-    except Exception as e: print(f"Error reading/parsing {file_path}: {e}"); raise IOError(f"Failed to read/parse JSON: {file_path}")
+    except FileNotFoundError: return default_value # Or re-raise if file must exist
+    except PermissionError as e: raise StorageError(f"Permission denied reading {file_path}: {e}")
+    except json.JSONDecodeError: return default_value # Or raise custom error for malformed JSON
+    except IsADirectoryError as e: raise StorageError(f"Expected a file, but got a directory: {file_path}. Error: {e}")
+    except OSError as e: raise StorageError(f"OS error reading {file_path}: {e}")
+    except Exception as e: raise StorageError(f"Failed to read/parse JSON: {file_path}. Unexpected error: {e}")
 
 async def write_validated_json(
     file_path: Path,
@@ -104,7 +105,11 @@ async def write_validated_json(
         json_string = json.dumps(json_to_write, indent=2)
         with open(file_path, "w", encoding="utf-8") as f: f.write(json_string)
         return data
-    except Exception as e: print(f"Error writing JSON to {file_path}: {e}"); raise IOError(f"Failed to write JSON: {file_path}")
+    except FileNotFoundError as e: raise StorageError(f"File not found during write: {file_path}. Error: {e}") # Should not happen if ensure_dir_exists is robust
+    except PermissionError as e: raise StorageError(f"Permission denied writing to {file_path}: {e}")
+    except IsADirectoryError as e: raise StorageError(f"Cannot write to a directory: {file_path}. Error: {e}")
+    except OSError as e: raise StorageError(f"OS error writing to {file_path}: {e}")
+    except Exception as e: raise StorageError(f"Failed to write JSON: {file_path}. Unexpected error: {e}")
 
 
 class PromptStorageUtil:
@@ -122,7 +127,7 @@ class PromptStorageUtil:
     async def write_prompt_projects(self, prompt_projects: PromptProjectsStorage) -> PromptProjectsStorage:
         return await write_validated_json(get_prompt_projects_path(), prompt_projects)
 
-    def generate_id(self) -> int: # Removed prefix argument
+    def generate_id(self) -> int:
         """Generates a unique ID as Unix timestamp in milliseconds."""
         return int(time.time() * 1000)
 

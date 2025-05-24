@@ -19,9 +19,9 @@ from app.utils.storage.prompt_storage import (
     Prompt, PromptProject, # Schemas used by storage
     PromptsStorage, PromptProjectsStorage, # Type hints for storage structures
     get_prompts_index_path, get_prompt_projects_path,
-    ensure_dir_exists, read_validated_json, write_validated_json
+    ensure_dir_exists, read_validated_json, write_validated_json,
+    StorageError  # Import StorageError from the module
 )
-from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int
 
 
 # Use fixed timestamps for predictability
@@ -62,7 +62,7 @@ async def test_ensure_dir_exists_storage():
 
     mock_path_error = MagicMock(spec=Path)
     mock_path_error.mkdir = MagicMock(side_effect=OSError("Test OS Error"))
-    with pytest.raises(IOError, match="Failed to ensure directory exists"):
+    with pytest.raises(StorageError, match="Failed to ensure directory exists"):
         ensure_dir_exists(mock_path_error)
     mock_path_error.mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
@@ -195,16 +195,11 @@ async def test_prompt_storage_write_prompt_projects(mock_write_json, mock_prompt
     assert result == links_to_write
     mock_write_json.assert_called_once_with(get_prompt_projects_path(), links_to_write)
 
-# --- Schema tests relevant to storage (conversion from string/datetime) ---
 def test_prompt_schema_validation_from_storage_like_data(mock_prompt_data_dict):
-    # Simulate data that might come from an older string-based format if conversion is needed
     data_str_ids = mock_prompt_data_dict.copy()
     data_str_ids["id"] = str(MOCK_PROMPT_ID_1)
     data_str_ids["project_id"] = str(MOCK_PROJECT_ID_1)
-    # Timestamps as ISO strings before conversion by Pydantic validator
-    data_str_ids["created"] = datetime.fromtimestamp(FIXED_CREATED_TS / 1000, tz=timezone.utc).isoformat()
-    data_str_ids["updated"] = datetime.fromtimestamp(FIXED_UPDATED_TS / 1000, tz=timezone.utc).isoformat()
-
+    
     prompt = Prompt(**data_str_ids)
     assert prompt.id == MOCK_PROMPT_ID_1
     assert prompt.project_id == MOCK_PROJECT_ID_1
@@ -216,8 +211,7 @@ def test_prompt_project_schema_validation_from_storage_like_data(mock_prompt_pro
     data_str_ids["id"] = str(MOCK_LINK_ID_1)
     data_str_ids["prompt_id"] = str(MOCK_PROMPT_ID_1)
     data_str_ids["project_id"] = str(MOCK_PROJECT_ID_1)
-    data_str_ids["created"] = datetime.fromtimestamp(FIXED_CREATED_TS / 1000, tz=timezone.utc).isoformat()
-
+    
     link = PromptProject(**data_str_ids)
     assert link.id == MOCK_LINK_ID_1
     assert link.prompt_id == MOCK_PROMPT_ID_1

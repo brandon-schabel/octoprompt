@@ -7,6 +7,7 @@ import { MEDIUM_MODEL_CONFIG } from 'shared/src/constants/model-default-configs'
 import { projectStorage } from '@/utils/storage/project-storage'
 import { type AIFileChangeRecord, AIFileChangeStatusSchema, type AIFileChangeStatus } from 'shared/src/schemas/ai-file-change.schemas'
 import { ApiError } from 'shared'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 export const FileChangeResponseSchema = z.object({
   updatedContent: z.string().describe('The complete, updated content of the file after applying the changes.'),
@@ -16,7 +17,7 @@ export const FileChangeResponseSchema = z.object({
 export type FileChangeResponse = z.infer<typeof FileChangeResponseSchema>
 
 export interface GenerateAIFileChangeParams {
-  projectId: string
+  projectId: number
   filePath: string
   prompt: string
   provider?: APIProviders
@@ -80,7 +81,7 @@ User Request: ${prompt}
 }
 
 export type GenerateFileChangeOptions = {
-  projectId: string
+  projectId: number
   filePath: string
   prompt: string
 }
@@ -91,8 +92,8 @@ export async function generateFileChange(options: GenerateFileChangeOptions): Pr
 
   const aiSuggestion = await performAIFileGeneration({ filePath, prompt, originalContent })
 
-  const now = new Date().toISOString()
-  const changeId = projectStorage.generateId('aifc')
+  const now = new Date()
+  const changeId = projectStorage.generateId()
 
   const newRecord: AIFileChangeRecord = {
     id: changeId,
@@ -104,8 +105,8 @@ export async function generateFileChange(options: GenerateFileChangeOptions): Pr
     explanation: aiSuggestion.explanation,
     prompt,
     status: 'pending' as AIFileChangeStatus,
-    createdAt: now,
-    updatedAt: now,
+    created: normalizeToUnixMs(now),
+    updated: normalizeToUnixMs(now),
   }
 
   await projectStorage.saveAIFileChange(projectId, newRecord)
@@ -117,13 +118,13 @@ export async function generateFileChange(options: GenerateFileChangeOptions): Pr
   return retrievedRecord
 }
 
-export async function getFileChange(projectId: string, aiFileChangeId: string): Promise<AIFileChangeRecord | null> {
+export async function getFileChange(projectId: number, aiFileChangeId: number): Promise<AIFileChangeRecord | null> {
   const record = await projectStorage.getAIFileChangeById(projectId, aiFileChangeId)
   if (!record) return null;
   return record
 }
 
-export async function confirmFileChange(projectId: string, aiFileChangeId: string): Promise<{ status: AIFileChangeStatus; message: string }> {
+export async function confirmFileChange(projectId: number, aiFileChangeId: number): Promise<{ status: AIFileChangeStatus; message: string }> {
   const existingRecord = await projectStorage.getAIFileChangeById(projectId, aiFileChangeId)
 
   if (!existingRecord) {
@@ -137,7 +138,7 @@ export async function confirmFileChange(projectId: string, aiFileChangeId: strin
   const updatedRecord: AIFileChangeRecord = {
     ...existingRecord,
     status: 'confirmed' as AIFileChangeStatus,
-    updatedAt: now,
+    updated: normalizeToUnixMs(now),
   }
 
   await projectStorage.saveAIFileChange(projectId, updatedRecord)
@@ -145,7 +146,7 @@ export async function confirmFileChange(projectId: string, aiFileChangeId: strin
   return { status: 'confirmed', message: `File change ${aiFileChangeId} confirmed successfully.` }
 }
 
-export async function rejectFileChange(projectId: string, aiFileChangeId: string): Promise<{ status: AIFileChangeStatus; message: string }> {
+export async function rejectFileChange(projectId: number, aiFileChangeId: number): Promise<{ status: AIFileChangeStatus; message: string }> {
   const existingRecord = await projectStorage.getAIFileChangeById(projectId, aiFileChangeId)
 
   if (!existingRecord) {
@@ -159,7 +160,7 @@ export async function rejectFileChange(projectId: string, aiFileChangeId: string
   const updatedRecord: AIFileChangeRecord = {
     ...existingRecord,
     status: 'rejected' as AIFileChangeStatus,
-    updatedAt: now,
+    updated: normalizeToUnixMs(now),
   }
 
   await projectStorage.saveAIFileChange(projectId, updatedRecord)

@@ -1,34 +1,15 @@
-# packages/python_backend/app/utils/storage/project_storage.py
-# 1. IDs and timestamps (createdAt, updatedAt) changed to int (Unix ms).
-# 2. generate_id updated to return int timestamp with sequence counter for uniqueness.
-# 3. Pydantic schemas (Project, ProjectFile, AIFileChangeRecord) are now directly imported from app.schemas.project_schemas.
-#    - Local re-definitions and associated field_validators removed.
-# 4. _read_validated_json and _write_validated_json adapted for int keys in dicts.
-# 5. Imported time, Any. WORKSPACE_ROOT logic simplified for focus.
-# 6. `datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")` replaced with int timestamp.
-# 7. Updated ProjectFile.summary_last_updated_at to summary_last_updated_at and included in validator.
-# 8. Removed local definitions of convert_timestamp_to_ms_int and convert_id_to_int, now imported.
-# 9. Added sequence counter to ProjectStorage to ensure unique IDs during bulk operations.
-# 10. Removed local re-definitions of Project, ProjectFile, AIFileChangeRecord and their Config classes.
 
 import json
 import os
-# import uuid # Not strictly needed if IDs are timestamp-based
 import time
 from pathlib import Path
 from typing import Any, Dict, Type, TypeVar, Optional, Union, List
-from pydantic import BaseModel, ValidationError, RootModel # Keep Field if used by imported schemas indirectly or for new RootModels
+from pydantic import BaseModel, ValidationError, RootModel
 from datetime import datetime, timezone
-
-# Import the centralized conversion utilities
-# from app.utils.storage_timestap_utils import convert_timestamp_to_ms_int, convert_id_to_int # These are used by schemas
 
 # Import the authoritative schemas
 from app.schemas.project_schemas import Project, ProjectFile
 from app.schemas.ai_file_change_schemas import AIFileChangeRecord
-
-# Removed local definitions of Project, ProjectFile, AIFileChangeRecord and their Config and field_validators
-# These are now directly imported from app.schemas.*
 
 WORKSPACE_ROOT = Path.cwd()
 DATA_DIR = WORKSPACE_ROOT / "data" / "python_project_storage"
@@ -47,7 +28,7 @@ def get_ai_file_changes_path(project_id: int) -> Path: return get_project_data_d
 
 async def _ensure_dir_exists(dir_path: Path) -> None:
     try: dir_path.mkdir(parents=True, exist_ok=True)
-    except Exception as e: print(f"Error creating directory {dir_path}: {e}"); raise IOError(f"Failed to ensure directory exists: {dir_path}") from e
+    except Exception as e: raise IOError(f"Failed to ensure directory exists: {dir_path}") from e
 
 async def _read_validated_json(
     file_path: Path,
@@ -78,9 +59,8 @@ async def _read_validated_json(
                         try:
                             int_k = int(str_k)
                             parsed_dict[int_k] = value_model_type.model_validate(v_data)
-                        except (ValueError, ValidationError) as e:
-                            print(f"Skipping item {str_k} due to key/validation error: {e} in file {file_path}")
-                            continue
+                        except (ValueError, ValidationError):
+                            continue 
                 return model_type(root=parsed_dict).root
             else:
                 parsed_model = model_type.model_validate(json_data)
@@ -93,9 +73,9 @@ async def _read_validated_json(
         else: raise TypeError("model_type must be a Pydantic BaseModel or RootModel subclass")
 
     except FileNotFoundError: return default_value
-    except json.JSONDecodeError as e: print(f"JSON decoding failed for {file_path}: {e}. Returning default."); return default_value
-    except ValidationError as e: print(f"Pydantic validation failed reading {file_path}: {e}. Returning default."); return default_value
-    except Exception as e: print(f"Error reading or parsing JSON from {file_path}: {e}"); raise IOError(f"Failed to read/parse JSON: {file_path}") from e
+    except json.JSONDecodeError: return default_value
+    except ValidationError: return default_value
+    except Exception as e: raise IOError(f"Failed to read/parse JSON: {file_path}") from e
 
 async def _write_validated_json(
     file_path: Path,
@@ -134,8 +114,8 @@ async def _write_validated_json(
         if isinstance(output_data_structure, RootModel): return output_data_structure.root
         return output_data_structure
 
-    except ValidationError as e: print(f"Pydantic validation failed before writing {file_path}: {e}"); raise e
-    except Exception as e: print(f"Error writing JSON to {file_path}: {e}"); raise IOError(f"Failed to write JSON: {file_path}") from e
+    except ValidationError as e: raise e
+    except Exception as e: raise IOError(f"Failed to write JSON: {file_path}") from e
 
 class ProjectStorage:
     def __init__(self):
@@ -147,7 +127,6 @@ class ProjectStorage:
 
     async def write_projects(self, projects: Dict[int, Union[Project, Dict]]) -> Dict[int, Project]:
         return await _write_validated_json(get_projects_index_path(), projects, ProjectsStorageModel)
-
 
     async def read_project_files(self, project_id: int) -> Dict[int, ProjectFile]:
         return await _read_validated_json(get_project_files_path(project_id), ProjectFilesStorageModel, {})
@@ -177,13 +156,12 @@ class ProjectStorage:
         updated_file_model = current_file.model_copy(update=file_update_data)
 
         try: validated_file_data = ProjectFile(**updated_file_model.model_dump())
-        except ValidationError as e: print(f"Validation failed for file {file_id} update: {e}"); raise e
+        except ValidationError as e: raise e
 
         current_project_files = await self.read_project_files(project_id)
         current_project_files[file_id] = validated_file_data
         await self.write_project_files(project_id, current_project_files)
         return validated_file_data
-
 
     async def get_ai_file_change_by_id(self, project_id: int, change_id: int) -> Optional[AIFileChangeRecord]:
         changes = await self.read_ai_file_changes(project_id)
@@ -198,24 +176,18 @@ class ProjectStorage:
         dir_path = get_project_data_dir(project_id)
         try:
             if dir_path.exists(): import shutil; shutil.rmtree(dir_path)
-        except FileNotFoundError: print(f"Project data dir not found: {dir_path}")
-        except Exception as e: print(f"Error deleting project data dir {dir_path}: {e}"); raise IOError(f"Failed to delete dir: {dir_path}") from e
+        except FileNotFoundError: pass
+        except Exception as e: raise IOError(f"Failed to delete dir: {dir_path}") from e
 
     def generate_id(self) -> int:
         current_timestamp = int(time.time() * 1000)
-        
         if current_timestamp == self._last_timestamp:
-            # Same millisecond, increment the sequence counter
             self._sequence_counter += 1
-            # Use the timestamp + sequence counter to ensure uniqueness
-            # This allows up to 999 unique IDs per millisecond
             unique_id = current_timestamp + self._sequence_counter
         else:
-            # New millisecond, reset sequence counter
             self._last_timestamp = current_timestamp
             self._sequence_counter = 0
             unique_id = current_timestamp
-        
         return unique_id
 
 project_storage = ProjectStorage()

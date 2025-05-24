@@ -14,12 +14,3 @@ class ApiError(Exception):
             "code": self.code,
             "details": self.details
         }
-
-# Example usage:
-# if __name__ == "__main__":
-#     try:
-#         raise ApiError(404, "Resource not found", "NOT_FOUND", {"id": 123})
-#     except ApiError as e:
-#         print(f"Caught ApiError: Status={e.status_code}, Message='{e.message}', Code='{e.code}', Details={e.details}")
-#     except Exception as e:
-#         print(f"Caught other exception: {e}")

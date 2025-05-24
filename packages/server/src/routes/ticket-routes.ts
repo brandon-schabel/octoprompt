@@ -19,8 +19,8 @@ import {
   listTicketsWithTasks,
   suggestFilesForTicket
 } from '../services/ticket-service'
-import { ticketsApiValidation } from 'shared/src/schemas/ticket.schemas'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import { createTicketSchema, linkFilesSchema, reorderTasksSchema, suggestTasksSchema, updateTaskSchema, updateTicketSchema } from 'shared/src/schemas/ticket.schemas'
 
 const TicketSchema = z
   .object({
@@ -30,21 +30,21 @@ const TicketSchema = z
     overview: z.string().openapi({ description: 'Ticket description' }),
     status: z.enum(['open', 'in_progress', 'closed']).openapi({ description: 'Current ticket status' }),
     priority: z.enum(['low', 'normal', 'high']).openapi({ description: 'Ticket priority' }),
-    suggestedFileIds: z.string().openapi({ description: 'JSON string of suggested file IDs' }),
-    createdAt: z.string().datetime().openapi({ description: 'Creation timestamp' }),
-    updatedAt: z.string().datetime().openapi({ description: 'Last update timestamp' })
+    suggestedFileIds: z.number().openapi({ description: 'JSON string of suggested file IDs' }),
+    created: z.number().int().openapi({ description: 'Creation timestamp (unix timestamp in milliseconds)' }),
+    updated: z.number().int().openapi({ description: 'Last update timestamp (unix timestamp in milliseconds)' })
   })
   .openapi('Ticket')
 
 const TaskSchema = z
   .object({
     id: z.string().openapi({ description: 'Unique task identifier' }),
-    ticketId: z.string().openapi({ description: 'Ticket this task belongs to' }),
+    ticketId: z.number().openapi({ description: 'Ticket this task belongs to' }),
     content: z.string().openapi({ description: 'Task content/description' }),
     done: z.boolean().openapi({ description: 'Whether the task is completed' }),
     orderIndex: z.number().openapi({ description: 'Task order within the ticket' }),
-    createdAt: z.string().datetime().openapi({ description: 'Creation timestamp' }),
-    updatedAt: z.string().datetime().openapi({ description: 'Last update timestamp' })
+    created: z.number().int().openapi({ description: 'Creation timestamp (unix timestamp in milliseconds)' }),
+    updated: z.number().int().openapi({ description: 'Last update timestamp (unix timestamp in milliseconds)' })
   })
   .openapi('Task')
 
@@ -140,11 +140,11 @@ const BulkTasksResponseSchema = z
   })
   .openapi('BulkTasksResponse')
 
-const CreateTicketBodySchema = ticketsApiValidation.create.body.openapi('CreateTicketBody')
-const UpdateTicketBodySchema = ticketsApiValidation.update.body.openapi('UpdateTicketBody')
+const CreateTicketBodySchema = createTicketSchema.openapi('CreateTicketBody')
+const UpdateTicketBodySchema = updateTicketSchema.openapi('UpdateTicketBody')
 const TicketIdParamsSchema = z
   .object({
-    ticketId: z.string().openapi({
+    ticketId: z.number().openapi({
       param: { name: 'ticketId', in: 'path' },
       description: 'Ticket identifier'
     })
@@ -153,7 +153,7 @@ const TicketIdParamsSchema = z
 
 const ProjectIdParamsSchema = z
   .object({
-    projectId: z.string().openapi({
+    projectId: z.number().openapi({
       param: { name: 'projectId', in: 'path' },
       description: 'Project identifier'
     })
@@ -172,8 +172,8 @@ const StatusQuerySchema = z
   })
   .openapi('StatusQuery')
 
-const LinkFilesBodySchema = ticketsApiValidation.linkFiles.body.openapi('LinkFilesBody')
-const SuggestTasksBodySchema = ticketsApiValidation.suggestTasks.body.openapi('SuggestTasksBody')
+const LinkFilesBodySchema = linkFilesSchema
+const SuggestTasksBodySchema = suggestTasksSchema
 const SuggestFilesBodySchema = z
   .object({
     extraUserInput: z.string().optional().openapi({
@@ -182,11 +182,11 @@ const SuggestFilesBodySchema = z
   })
   .openapi('SuggestFilesBody')
 
-const CreateTaskBodySchema = ticketsApiValidation.createTask.body.openapi('CreateTaskBody')
-const UpdateTaskBodySchema = ticketsApiValidation.updateTask.body.openapi('UpdateTaskBody')
+const CreateTaskBodySchema = createTicketSchema
+const UpdateTaskBodySchema = updateTaskSchema
 const TaskIdParamsSchema = z
   .object({
-    taskId: z.string().openapi({
+    taskId: z.number().openapi({
       param: { name: 'taskId', in: 'path' },
       description: 'Task identifier'
     })
@@ -200,7 +200,7 @@ const TicketTaskIdParamsSchema = z
   })
   .openapi('TicketTaskIdParams')
 
-const ReorderTasksBodySchema = ticketsApiValidation.reorderTasks.body.openapi('ReorderTasksBody')
+const ReorderTasksBodySchema = reorderTasksSchema
 const BulkTasksQuerySchema = z
   .object({
     ids: z
@@ -523,8 +523,8 @@ const formatTicketData = (ticket: any): z.infer<typeof TicketSchema> => {
   const dataToValidate = {
     ...ticket,
 
-    createdAt: ticket.createdAt instanceof Date ? ticket.createdAt.toISOString() : ticket.createdAt,
-    updatedAt: ticket.updatedAt instanceof Date ? ticket.updatedAt.toISOString() : ticket.updatedAt,
+    created: normalizeToUnixMs(ticket.created),
+    updated: normalizeToUnixMs(ticket.updated),
 
     suggestedFileIds:
       typeof ticket.suggestedFileIds === 'string'
@@ -543,8 +543,8 @@ const formatTaskData = (task: any): z.infer<typeof TaskSchema> => {
     ...task,
     done: Boolean(task.done),
 
-    createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
-    updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
+    created: normalizeToUnixMs(task.created),
+    updated: normalizeToUnixMs(task.updated),
     orderIndex: Number(task.orderIndex)
   }
   return TaskSchema.parse(dataToValidate)

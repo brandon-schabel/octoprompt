@@ -6,7 +6,7 @@ export const AGENT_LOGS_DIR = './data/agent-logs'
 const ORCHESTRATOR_LOG_FILENAME = 'orchestrator-log.jsonl'
 const AGENT_DATA_FILENAME = 'agent-data.json'
 
-export async function getOrchestratorLogFilePaths(projectId: string, agentJobId: string) {
+export async function getOrchestratorLogFilePaths(projectId: number, agentJobId: string) {
   const jobLogDir = join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId)
   console.log({
     ORCHESTRATOR_LOG_PATH: join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId, ORCHESTRATOR_LOG_FILENAME)
@@ -16,7 +16,7 @@ export async function getOrchestratorLogFilePaths(projectId: string, agentJobId:
   return { jobLogDir, filePath, agentJobId }
 }
 
-export async function getAgentDataLogFilePath(projectId: string, agentJobId: string): Promise<string> {
+export async function getAgentDataLogFilePath(projectId: number, agentJobId: string): Promise<string> {
   const jobLogDir = join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId)
   console.log({
     DATA_LOG_PATH: join(AGENT_LOGS_DIR, 'projects', projectId, 'jobs', agentJobId, AGENT_DATA_FILENAME)
@@ -126,7 +126,7 @@ export async function log(message: string, level: LogLevel = 'info', data?: Reco
   }
 }
 
-export async function writeAgentDataLog(projectId: string, agentJobId: string, data: any): Promise<void> {
+export async function writeAgentDataLog(projectId: number, agentJobId: string, data: any): Promise<void> {
   const filePath = await getAgentDataLogFilePath(projectId, agentJobId)
   console.log({
     DATA_LOG_PATH: filePath
@@ -157,7 +157,7 @@ export async function closeLogger() {
   }
 }
 
-export async function listAgentJobs(projectId: string): Promise<string[]> {
+export async function listAgentJobs(projectId: number): Promise<string[]> {
   try {
     const entries = await readdir(join(AGENT_LOGS_DIR, 'projects', projectId), { withFileTypes: true })
     const jobIds = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)

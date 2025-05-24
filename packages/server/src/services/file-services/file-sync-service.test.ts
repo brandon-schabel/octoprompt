@@ -11,6 +11,7 @@ import type { PathOrFileDescriptor, PathLike, Dirent, Stats } from 'node:fs' // 
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import * as pathUtils from '../../utils/path-utils'
 import { createCleanupService } from './file-sync-service-unified'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 // No direct DB usage here, so no raw queries needed
 // This file only tests the cleanup service logic/mocks
 
@@ -35,7 +36,7 @@ describe('FileSync Service', () => {
     name: 'Sync Test Project',
     path: projectPath,
     description: 'Test',
-    createdAt: Date.now(),
+    created: Date.now(),
     updatedAt: Date.now()
   }
 
@@ -390,7 +391,7 @@ describe('FileSync Service', () => {
     const ignoredChecksum = fileSyncService.computeChecksum(ignoredContent)
 
     const createMockDbFile = (
-      id: string,
+      id: number,
       relPath: string,
       checksum: string | null,
       content: string | null = null
@@ -406,8 +407,8 @@ describe('FileSync Service', () => {
       summary: null,
       summaryLastUpdatedAt: null,
       meta: '{}',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
+      created: Date.now(),
+      updated: Date.now()
     })
 
     beforeEach(() => {
@@ -894,16 +895,16 @@ describe('cleanup-service', () => {
         name: 'Proj1',
         path: '/test/project1',
         description: 'Test project 1',
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+        created: normalizeToUnixMs(Date.now()),
+        updatedAt: normalizeToUnixMs(Date.now())
       },
       {
         id: 'p2',
         name: 'Proj2',
         path: '/test/project2',
         description: 'Test project 2',
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+        created: normalizeToUnixMs(Date.now()),
+        updatedAt: normalizeToUnixMs(Date.now())
       }
     ]
     listProjectsMock.mockResolvedValue([...mockProjectsList])

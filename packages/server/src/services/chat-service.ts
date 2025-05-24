@@ -2,10 +2,11 @@ import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage }
 import { ApiError } from 'shared'
 import { chatStorage, type ChatsStorage, type ChatMessagesStorage } from '@/utils/storage/chat-storage' // New import
 import { ZodError } from 'zod'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 export type CreateChatOptions = {
   copyExisting?: boolean
-  currentChatId?: string
+  currentChatId?: number
 }
 /**
  * Returns an object of functions handling chat logic in a functional style
@@ -13,14 +14,14 @@ export type CreateChatOptions = {
  */
 export function createChatService() {
   async function createChat(title: string, options?: CreateChatOptions): Promise<Chat> {
-    const chatId = chatStorage.generateId('chat')
-    const now = new Date().toISOString()
+    const chatId = chatStorage.generateId()
+    const now = normalizeToUnixMs(new Date())
 
     const newChatData: Chat = {
       id: chatId,
       title,
-      createdAt: now,
-      updatedAt: now
+      created: now,
+      updated: now
     }
 
     try {
@@ -57,18 +58,31 @@ export function createChatService() {
     if (options?.copyExisting && options?.currentChatId) {
       const sourceMessages = await chatStorage.readChatMessages(options.currentChatId)
       const messagesToCopy: ChatMessagesStorage = {}
+      let newMessagesData = await chatStorage.readChatMessages(chatId) // Get existing messages in new chat (should be empty)
+
       for (const msg of Object.values(sourceMessages)) {
-        const newMessageId = chatStorage.generateId('msg')
+        let newMessageId = chatStorage.generateId()
+        const initialMessageId = newMessageId;
+        let incrementCount = 0;
+
+        // Handle potential ID conflicts for messages within the new chat
+        while (newMessagesData[newMessageId]) {
+          newMessageId++;
+          incrementCount++;
+        }
+        if (incrementCount > 0) {
+          console.log(`Copied Message ID ${initialMessageId} for new chat ${chatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`);
+        }
+
         // Preserve original creation timestamp for ordering, assign new ID and new chatId
         const copiedMsg: ChatMessage = {
           ...msg,
           id: newMessageId,
           chatId: chatId,
-          // createdAt is already part of msg and should be a valid ISO string
         }
         try {
           ChatMessageSchema.parse(copiedMsg);
-          messagesToCopy[newMessageId] = copiedMsg;
+          newMessagesData[newMessageId] = copiedMsg; // Add to the new chat's message data directly
         } catch (error) {
           if (error instanceof ZodError) {
             console.error(`Validation failed for copied message ${msg.id} to new chat ${chatId}: ${error.message}`, error.flatten().fieldErrors);
@@ -76,19 +90,19 @@ export function createChatService() {
           }
         }
       }
-      if (Object.keys(messagesToCopy).length > 0) {
-        await chatStorage.writeChatMessages(chatId, messagesToCopy)
+      if (Object.keys(newMessagesData).length > 0) {
+        await chatStorage.writeChatMessages(chatId, newMessagesData)
       }
     }
     return newChatData
   }
 
-  async function updateChatTimestamp(chatId: string): Promise<void> {
+  async function updateChatTimestamp(chatId: number): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
       throw new ApiError(404, `Chat with ID ${chatId} not found for timestamp update.`, 'CHAT_NOT_FOUND')
     }
-    allChats[chatId].updatedAt = new Date().toISOString()
+    allChats[chatId].updated = normalizeToUnixMs(new Date())
     try {
       ChatSchema.parse(allChats[chatId]); // Re-validate before writing
       await chatStorage.writeChats(allChats)
@@ -110,7 +124,7 @@ export function createChatService() {
       )
     }
 
-    const messageId = message.id || chatStorage.generateId('msg')
+    const messageId = message.id || chatStorage.generateId()
     const now = new Date().toISOString()
 
     const finalMessageData: ChatMessage = {
@@ -118,7 +132,7 @@ export function createChatService() {
       chatId: message.chatId,
       role: message.role,
       content: message.content,
-      createdAt: message.createdAt || now, // Use provided createdAt if exists (e.g. for imported messages), else new
+      created: message.created || normalizeToUnixMs(now), // Use provided createdAt if exists (e.g. for imported messages), else new
     }
 
     try {
@@ -144,7 +158,7 @@ export function createChatService() {
     return { ...finalMessageData, tempId: message.tempId }
   }
 
-  async function updateMessageContent(chatId: string, messageId: string, content: string): Promise<void> {
+  async function updateMessageContent(chatId: number, messageId: number, content: string): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
       // This check could be redundant if readChatMessages implies chat existence
@@ -176,11 +190,11 @@ export function createChatService() {
   async function getAllChats(): Promise<Chat[]> {
     const allChatsData = await chatStorage.readChats()
     const chatList = Object.values(allChatsData)
-    chatList.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) // Sort by most recently updated
+    chatList.sort((a, b) => b.updated - a.updated) // Sort by most recently updated
     return chatList
   }
 
-  async function getChatMessages(chatId: string): Promise<ChatMessage[]> {
+  async function getChatMessages(chatId: number): Promise<ChatMessage[]> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
       throw new ApiError(404, `Chat with ID ${chatId} not found.`, 'CHAT_NOT_FOUND')
@@ -188,18 +202,18 @@ export function createChatService() {
 
     const chatMessagesData = await chatStorage.readChatMessages(chatId)
     const messageList = Object.values(chatMessagesData)
-    messageList.sort((a, b) => a.createdAt.localeCompare(b.createdAt)) // Sort by creation time
+    messageList.sort((a, b) => a.created - b.created) // Sort by creation time
     return messageList
   }
 
-  async function updateChat(chatId: string, title: string): Promise<Chat> {
+  async function updateChat(chatId: number, title: string): Promise<Chat> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
       throw new ApiError(404, `Chat with ID ${chatId} not found for update.`, 'CHAT_NOT_FOUND')
     }
 
     allChats[chatId].title = title
-    allChats[chatId].updatedAt = new Date().toISOString()
+    allChats[chatId].updated = normalizeToUnixMs(new Date())
 
     try {
       ChatSchema.parse(allChats[chatId]);
@@ -214,7 +228,7 @@ export function createChatService() {
     return allChats[chatId]
   }
 
-  async function deleteChat(chatId: string): Promise<void> {
+  async function deleteChat(chatId: number): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
       throw new ApiError(404, `Chat with ID ${chatId} not found for deletion.`, 'CHAT_NOT_FOUND')
@@ -226,7 +240,7 @@ export function createChatService() {
   }
 
   // MODIFIED: Added chatId parameter
-  async function deleteMessage(chatId: string, messageId: string): Promise<void> {
+  async function deleteMessage(chatId: number, messageId: number): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
       throw new ApiError(404, `Chat with ID ${chatId} not found when attempting to delete message ${messageId}.`, 'CHAT_NOT_FOUND')
@@ -241,7 +255,7 @@ export function createChatService() {
     await updateChatTimestamp(chatId)
   }
 
-  async function forkChat(sourceChatId: string, excludedMessageIds: string[] = []): Promise<Chat> {
+  async function forkChat(sourceChatId: number, excludedMessageIds: number[] = []): Promise<Chat> {
     const allChats = await chatStorage.readChats()
     const sourceChat = allChats[sourceChatId]
     if (!sourceChat) {
@@ -249,13 +263,13 @@ export function createChatService() {
     }
 
     const newTitle = `Fork of ${sourceChat.title} (${new Date().toLocaleTimeString()})`
-    const newChatId = chatStorage.generateId('chat')
+    const newChatId = chatStorage.generateId()
     const now = new Date().toISOString()
     const newChatData: Chat = {
       id: newChatId,
       title: newTitle,
-      createdAt: now,
-      updatedAt: now
+      created: normalizeToUnixMs(now),
+      updated: normalizeToUnixMs(now)
     }
     ChatSchema.parse(newChatData); // Validate
 
@@ -267,11 +281,24 @@ export function createChatService() {
 
     for (const msg of Object.values(sourceMessagesAll)) {
       if (!excludedMessageIds.includes(msg.id)) {
-        const newMessageId = chatStorage.generateId('msg') // New ID for the message in the new chat
+        let newMessageId = chatStorage.generateId() // New ID for the message in the new chat
+        const initialMessageId = newMessageId;
+        let incrementCount = 0;
+
+        // Handle potential ID conflicts for messages within the new forked chat
+        // It's less likely here if messagesToCopyRecord starts empty, but good practice
+        while (messagesToCopyRecord[newMessageId]) {
+          newMessageId++;
+          incrementCount++;
+        }
+        if (incrementCount > 0) {
+          console.log(`Forked Message ID ${initialMessageId} for new chat ${newChatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`);
+        }
+
         const copiedMsgData: ChatMessage = {
           ...msg,
           id: newMessageId,
-          chatId: newChatId, // Point to the new chat
+          chatId: newChatId,
           // createdAt is preserved from original message
         }
         ChatMessageSchema.parse(copiedMsgData); // Validate
@@ -284,9 +311,9 @@ export function createChatService() {
   }
 
   async function forkChatFromMessage(
-    sourceChatId: string,
-    messageId: string, // The message ID to fork *up to and including*
-    excludedMessageIds: string[] = []
+    sourceChatId: number,
+    messageId: number,
+    excludedMessageIds: number[] = []
   ): Promise<Chat> {
     const allChats = await chatStorage.readChats()
     const sourceChat = allChats[sourceChatId]
@@ -301,17 +328,17 @@ export function createChatService() {
     }
     // No need for: if (startMessage.chat_id !== sourceChatId) as we fetched from the correct file.
 
-    const newTitle = `Fork from ${sourceChat.title} at message (${messageId.substring(0, 8)})`
-    const newChatId = chatStorage.generateId('chat')
+    const newTitle = `Fork from ${sourceChat.title} at message (${messageId})`
+    const newChatId = chatStorage.generateId()
     const now = new Date().toISOString()
-    const newChatData: Chat = { id: newChatId, title: newTitle, createdAt: now, updatedAt: now }
+    const newChatData: Chat = { id: newChatId, title: newTitle, created: normalizeToUnixMs(now), updated: normalizeToUnixMs(now) }
     ChatSchema.parse(newChatData); // Validate
 
     allChats[newChatId] = newChatData
     await chatStorage.writeChats(allChats)
 
     // Get messages up to and including the startMessage
-    const sourceMessagesArray = Object.values(sourceMessagesAll).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    const sourceMessagesArray = Object.values(sourceMessagesAll).sort((a, b) => a.created - b.created)
     const indexOfStart = sourceMessagesArray.findIndex((m) => m.id === messageId)
 
     if (indexOfStart === -1) {
@@ -324,7 +351,20 @@ export function createChatService() {
 
     for (const msg of messagesToConsider) {
       if (!excludedMessageIds.includes(msg.id)) {
-        const newMessageId = chatStorage.generateId('msg')
+        let newMessageId = chatStorage.generateId()
+        const initialMessageId = newMessageId;
+        let incrementCount = 0;
+
+        // Handle potential ID conflicts for messages within the new forked chat
+        // It's less likely here if messagesToCopyRecord starts empty, but good practice
+        while (messagesToCopyRecord[newMessageId]) {
+          newMessageId++;
+          incrementCount++;
+        }
+        if (incrementCount > 0) {
+          console.log(`Forked (from message) Message ID ${initialMessageId} for new chat ${newChatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`);
+        }
+
         const copiedMsgData: ChatMessage = { ...msg, id: newMessageId, chatId: newChatId }
         ChatMessageSchema.parse(copiedMsgData); // Validate
         messagesToCopyRecord[newMessageId] = copiedMsgData
