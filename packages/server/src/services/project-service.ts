@@ -34,8 +34,10 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
   }
 
   try {
-    const projects = await projectStorage.readProjects()
-    while (projects[projectId]) {
+    const projectsReturn = await projectStorage.readProjects()
+    const projects = new Map<number, Project>()
+
+    while (projects.get(projectId)) {
       // console.warn(`Project ID conflict for ${projectId}. Incrementing.`); // Original warning can be kept or removed
       projectId++;
       incrementCount++;
@@ -47,8 +49,9 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
 
     const validatedProject = ProjectSchema.parse(newProjectData)
 
-    projects[validatedProject.id] = validatedProject
-    await projectStorage.writeProjects(projects)
+    projects.set(validatedProject.id, validatedProject)
+
+    await projectStorage.writeProjects(Object.fromEntries(projects))
     await projectStorage.writeProjectFiles(validatedProject.id, {})
 
     return validatedProject

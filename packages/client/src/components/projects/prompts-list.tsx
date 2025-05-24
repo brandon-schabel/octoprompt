@@ -1,4 +1,4 @@
-import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle } from 'react'
+import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle, useMemo } from 'react'
 import { Button } from '@ui'
 import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy } from 'lucide-react'
 import {
@@ -81,14 +81,17 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
 
   const [sortOrder, setSortOrder] = useState<'alphabetical' | 'default' | 'size_asc' | 'size_desc'>('alphabetical')
 
-  let sortedPrompts = [...prompts]
-  if (sortOrder === 'alphabetical') {
-    sortedPrompts.sort((a, b) => a.name.localeCompare(b.name))
-  } else if (sortOrder === 'size_desc') {
-    sortedPrompts.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0))
-  } else if (sortOrder === 'size_asc') {
-    sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0))
-  }
+  const sortedPrompts = useMemo(() => {
+    let sortedPrompts = [...prompts]
+    if (sortOrder === 'alphabetical') {
+      sortedPrompts.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortOrder === 'size_desc') {
+      sortedPrompts.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0))
+    } else if (sortOrder === 'size_asc') {
+      sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0))
+    }
+    return sortedPrompts
+  }, [sortOrder])
 
   const copySelectedPrompts = () => {
     if (!selectedPrompts.length) return
@@ -156,22 +159,6 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
     toast.success('Prompt deleted successfully')
   }
 
-  // When user clicks Pencil icon, load the existing name/content
-  useEffect(() => {
-    if (!editPromptId) {
-      promptForm.reset()
-      return
-    }
-    const found = prompts.find((p: { id: number; name: string; content: string }) => p.id === editPromptId)
-    if (found) {
-      promptForm.setValue('name', found.name || '')
-      promptForm.setValue('content', found.content || '')
-    } else {
-      promptForm.reset()
-    }
-  }, [editPromptId, prompts, promptForm])
-
-  // Keyboard navigation
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, index: number, promptId: number) => {
     switch (e.key) {
       case 'ArrowDown':
@@ -244,16 +231,16 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
     console.log('TODO: handleSavePrompt, new content = ', newContent)
   }
 
-  // Expose a focus method
-  useImperativeHandle(
-    ref,
-    () => ({
-      focusPrompts: () => {
-        if (prompts.length > 0) setFocusedIndex(0)
-      }
-    }),
-    [prompts]
-  )
+  // // Expose a focus method
+  // useImperativeHandle(
+  //   ref,
+  //   () => ({
+  //     focusPrompts: () => {
+  //       if (prompts.length > 0) setFocusedIndex(0)
+  //     }
+  //   }),
+  //   [prompts]
+  // )
 
   return (
     <>

@@ -1,11 +1,3 @@
-// packages/client/src/routes/projects.tsx
-// Recent changes:
-// 1. Added Tabs component for Explorer/Statistics views.
-// 2. Integrated ProjectStatsDisplay component.
-// 3. Adjusted styling for TabsContent to fill height and enable scroll.
-// 4. Ensured selectedProjectId is passed to ProjectStatsDisplay.
-// 5. Imported necessary Tab components and ProjectStatsDisplay.
-
 import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'

@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@ui'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { ProjectFile } from '@/generated'
+import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 type SuggestedFilesDialogProps = {
   open: boolean
@@ -54,32 +55,34 @@ export function SuggestedFilesDialog({ open, onClose, suggestedFiles }: Suggeste
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className='max-w-lg'>
-        <DialogHeader>
-          <DialogTitle>Recommended Files</DialogTitle>
-          <DialogDescription>Based on your prompt, the system recommends:</DialogDescription>
-        </DialogHeader>
+        <ErrorBoundary>
+          <DialogHeader>
+            <DialogTitle>Recommended Files</DialogTitle>
+            <DialogDescription>Based on your prompt, the system recommends:</DialogDescription>
+          </DialogHeader>
 
-        <div className='mt-2 space-y-2 max-h-[300px] overflow-y-auto pr-2'>
-          {suggestedFiles.map((file) => {
-            const isSelected = localSelectedFiles.has(file.id)
-            return (
-              <div key={file.id} className='flex items-center gap-2'>
-                <input type='checkbox' checked={isSelected} onChange={() => toggleLocalFile(file.id)} />
-                <div className='text-sm leading-tight break-all'>
-                  <div className='font-medium'>{file.name}</div>
-                  <div className='text-xs text-muted-foreground'>{file.path}</div>
+          <div className='mt-2 space-y-2 max-h-[300px] overflow-y-auto pr-2'>
+            {suggestedFiles.map((file) => {
+              const isSelected = localSelectedFiles.has(file.id)
+              return (
+                <div key={file.id} className='flex items-center gap-2'>
+                  <input type='checkbox' checked={isSelected} onChange={() => toggleLocalFile(file.id)} />
+                  <div className='text-sm leading-tight break-all'>
+                    <div className='font-medium'>{file.name}</div>
+                    <div className='text-xs text-muted-foreground'>{file.path}</div>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
 
-        <DialogFooter>
-          <Button onClick={handleSelectAll} variant='outline'>
-            {suggestedFiles.every((file) => localSelectedFiles.has(file.id)) ? 'Deselect All' : 'Select All'}
-          </Button>
-          <Button onClick={handleDialogClose}>Confirm</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button onClick={handleSelectAll} variant='outline'>
+              {suggestedFiles.every((file) => localSelectedFiles.has(file.id)) ? 'Deselect All' : 'Select All'}
+            </Button>
+            <Button onClick={handleDialogClose}>Confirm</Button>
+          </DialogFooter>
+        </ErrorBoundary>
       </DialogContent>
     </Dialog>
   )

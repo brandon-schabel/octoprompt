@@ -4,7 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises' // Using Node's fs promises
 import { ProjectSchema, ProjectFileSchema, type ProjectFile } from 'shared/src/schemas/project.schemas'
 import { AIFileChangesStorageSchema, type AIFileChangesStorage, type AIFileChangeRecord, AIFileChangeRecordSchema } from 'shared/src/schemas/ai-file-change.schemas'
-import { normalizeToUnixMs } from '../parse-timestamp'
+import { unixTimestampSchema } from 'shared/src/utils/unix-ts-utils';
 
 // Define the base directory for storing project data
 // Adjust this path as needed, e.g., use an environment variable
@@ -12,7 +12,7 @@ const DATA_DIR = path.resolve(process.cwd(), 'data', 'project_storage')
 
 // --- Schemas for Storage ---
 // Store projects as a map (Record) keyed by projectId
-export const ProjectsStorageSchema = z.record(z.number(), ProjectSchema)
+export const ProjectsStorageSchema = z.record(z.string(), ProjectSchema)
 export type ProjectsStorage = z.infer<typeof ProjectsStorageSchema>
 
 // even though the keys are numbers, they are saved as string because that is default javascript behavior
@@ -78,24 +78,22 @@ async function readValidatedJson<T extends ZodTypeAny>(
       return defaultValue;
     }
 
-    let jsonData = JSON.parse(fileContent) // This can throw SyntaxError
-
-    console.log('jsonData', jsonData)
+    let jsonData = JSON.parse(fileContent) 
 
     // If the schema is a ZodRecord with numeric keys, transform string keys to numbers
     if (schema instanceof z.ZodRecord && schema.keySchema instanceof z.ZodNumber) {
       const transformedData: Record<number, unknown> = {};
       for (const key in jsonData) {
         if (Object.prototype.hasOwnProperty.call(jsonData, key)) {
-          const numKey = Number(key);
-          if (!isNaN(numKey)) {
-            transformedData[numKey] = jsonData[key];
+          const parseResult = unixTimestampSchema.safeParse(key);
+          if (parseResult.success) {
+            transformedData[parseResult.data] = jsonData[key];
           } else {
             // If the key is not a valid number for a schema expecting numeric keys,
             // log a warning and omit this key-value pair from the transformed data.
             // This ensures that 'transformedData' only contains numeric keys,
             // allowing Zod validation for z.record(z.number(), ...) to pass if values are correct.
-            console.warn(`Omitting non-numeric key "${key}" from object in ${filePath} as schema expects numeric keys.`);
+            console.warn(`Omitting non-numeric or invalid timestamp key "${key}" from object in ${filePath} as schema expects valid numeric timestamp keys. Zod issues: ${parseResult.error.issues.map(i => i.message).join('; ')}`);
           }
         }
       }
@@ -153,7 +151,6 @@ async function writeValidatedJson<T extends ZodTypeAny>(
     const jsonString = JSON.stringify(validatedData, null, 2) // Pretty print
     await fs.writeFile(filePath, jsonString, 'utf-8')
 
-    // console.log(`Successfully validated and wrote JSON to: ${filePath}`);
     return validatedData
   } catch (error: any) {
     console.error(`Error writing JSON to ${filePath}:`, error)
@@ -297,6 +294,17 @@ export const projectStorage = {
 
   /** Generates a simple unique ID (replace with more robust method if needed) */
   generateId: (): number => {
-    return normalizeToUnixMs(new Date())
+    try {
+      // Date.now() should always produce a valid timestamp within reasonable bounds.
+      // The unixTimestampSchema will validate its range (e.g., 1970-2050).
+      return unixTimestampSchema.parse(Date.now());
+    } catch (error) {
+      // This case is highly unlikely if Date.now() is within the unixTimestampSchema's valid range
+      // and the system clock is correct.
+      console.error(`CRITICAL: Date.now() produced a value (${Date.now()}) that could not be parsed by unixTimestampSchema for ID generation. Error: ${error instanceof Error ? error.message : String(error)}`);
+      // Throwing an error is important here as it might indicate a system clock issue
+      // or a misconfiguration of the valid timestamp range in unix-ts-utils.
+      throw new Error("Failed to generate a valid timestamp-based ID from the current time. The current time is outside the configured valid range or could not be parsed.");
+    }
   }
 }

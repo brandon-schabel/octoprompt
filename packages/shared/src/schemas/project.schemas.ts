@@ -1,45 +1,44 @@
 import { z } from '@hono/zod-openapi'
+import { unixTimestampSchema } from '../utils/unix-ts-utils'
 
 // Base schema - Represents the API structure
 export const ProjectSchema = z
   .object({
-    id: z.number().int().openapi({ example: 1716537600000 }),
+    id: unixTimestampSchema.openapi({ example: 1716537600000, description: 'Project ID (Unix MS Timestamp)' }),
     name: z.string(),
     description: z.string(),
     path: z.string(),
-    created: z.number().int().openapi({ example: 1678442400000 }),
-    updated: z.number().int().openapi({ example: 1678442700000 })
+    created: unixTimestampSchema.openapi({ example: 1678442400000, description: 'Creation timestamp (Unix MS)' }),
+    updated: unixTimestampSchema.openapi({ example: 1678442700000, description: 'Last update timestamp (Unix MS)' })
   })
   .openapi('Project')
 
 export const ProjectFileSchema = z
   .object({
-    id: z.number().int().openapi({ example: 1716537600000 }),
-    projectId: z.number().int().openapi({ example: 1716537600000 }),
+    id: unixTimestampSchema.openapi({ example: 1716537600000, description: 'File ID (Unix MS Timestamp)' }),
+    projectId: unixTimestampSchema.openapi({ example: 1716537600000, description: 'Project ID (Unix MS Timestamp)' }),
     name: z.string(),
     path: z.string(),
     extension: z.string(),
     size: z.number(),
     content: z.string().nullable(),
     summary: z.string().nullable(),
-    summaryLastUpdated: z.number().int().nullable().openapi({ example: 1678442800000 }),
+    summaryLastUpdated: unixTimestampSchema.nullable().openapi({ example: 1678442800000, description: 'Summary last update timestamp (Unix MS), or null' }),
     meta: z.string().nullable(),
     checksum: z.string().nullable(),
-    created: z.number().int().openapi({ example: 1678442400000 }),
-    updated: z.number().int().openapi({ example: 1678442700000 })
+    created: unixTimestampSchema.openapi({ example: 1678442400000, description: 'Creation timestamp (Unix MS)' }),
+    updated: unixTimestampSchema.openapi({ example: 1678442700000, description: 'Last update timestamp (Unix MS)' })
   })
   .openapi('ProjectFile')
 
 // Request Parameter Schemas
 export const ProjectIdParamsSchema = z
   .object({
-    projectId: z
-      .number()
-      .int()
+    projectId: unixTimestampSchema
       .openapi({
         param: { name: 'projectId', in: 'path' },
         example: 1716537600000,
-        description: 'The ID of the project'
+        description: 'The ID of the project (Unix MS Timestamp)'
       })
   })
   .openapi('ProjectIdParams')
@@ -68,9 +67,9 @@ export const SummarizeFilesBodySchema = z
   .object({
     // file ids are unix timestamp in milliseconds
     fileIds: z
-      .array(z.number().int())
+      .array(unixTimestampSchema)
       .min(1)
-      .openapi({ example: [1716537600000, 1716537600000, 1716537600000] }),
+      .openapi({ example: [1716537600000, 1716537600001], description: 'Array of File IDs (Unix MS Timestamps)' }),
     force: z
       .boolean()
       .optional()
@@ -82,9 +81,9 @@ export const SummarizeFilesBodySchema = z
 export const RemoveSummariesBodySchema = z
   .object({
     fileIds: z
-      .array(z.number().int())
+      .array(unixTimestampSchema)
       .min(1)
-      .openapi({ example: [1716537600000, 1716537600000, 1716537600000] })
+      .openapi({ example: [1716537600000, 1716537600001], description: 'Array of File IDs (Unix MS Timestamps)' })
   })
   .openapi('RemoveSummariesRequestBody')
 

@@ -295,11 +295,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               {/* Resizable panels for Prompts List and User Input */}
               <VerticalResizablePanel
                 topPanel={
-                  <PromptsList
-                    ref={promptsListRef}
-                    projectTabId={activeProjectTabId || -1}
-                    className='h-full w-full'
-                  />
+                  <PromptsList ref={promptsListRef} projectTabId={activeProjectTabId || -1} className='h-full w-full' />
                 }
                 bottomPanel={
                   <div className='flex flex-col h-full w-full'>
