@@ -4,6 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from 'shared/src/schemas/chat.schemas'
 import { randomUUID } from 'crypto' // Assuming access to crypto
+import { normalizeToUnixMs } from '../parse-timestamp'
 
 // Define the base directory for storing chat data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'chat_storage')
@@ -26,12 +27,12 @@ function getChatsIndexPath(): string {
 }
 
 /** Gets the absolute path to a specific chat's data directory. */
-function getChatDataDir(chatId: string): string {
-    return path.join(DATA_DIR, CHAT_DATA_SUBDIR, chatId)
+function getChatDataDir(chatId: number): string {
+    return path.join(DATA_DIR, CHAT_DATA_SUBDIR, chatId.toString())
 }
 
 /** Gets the absolute path to a specific chat's messages file. */
-function getChatMessagesPath(chatId: string): string {
+function getChatMessagesPath(chatId: number): string {
     return path.join(getChatDataDir(chatId), 'messages.json')
 }
 
@@ -121,17 +122,17 @@ export const chatStorage = {
     },
 
     /** Reads a specific chat's messages file. */
-    async readChatMessages(chatId: string): Promise<ChatMessagesStorage> {
+    async readChatMessages(chatId: number): Promise<ChatMessagesStorage> {
         return readValidatedJson(getChatMessagesPath(chatId), ChatMessagesStorageSchema, {})
     },
 
     /** Writes a specific chat's messages file. */
-    async writeChatMessages(chatId: string, messages: ChatMessagesStorage): Promise<ChatMessagesStorage> {
+    async writeChatMessages(chatId: number, messages: ChatMessagesStorage): Promise<ChatMessagesStorage> {
         return writeValidatedJson(getChatMessagesPath(chatId), messages, ChatMessagesStorageSchema)
     },
 
     /** Deletes a chat's data directory (including its messages.json). */
-    async deleteChatData(chatId: string): Promise<void> {
+    async deleteChatData(chatId: number): Promise<void> {
         const dirPath = getChatDataDir(chatId)
         try {
             await fs.access(dirPath) // Check if directory exists
@@ -147,7 +148,7 @@ export const chatStorage = {
     },
 
     /** Generates a unique ID. */
-    generateId: (prefix: string): string => {
-        return `${prefix}_${randomUUID()}`
+    generateId: (): number => {
+        return normalizeToUnixMs(new Date())
     }
 }

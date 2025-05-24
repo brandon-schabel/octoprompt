@@ -4,6 +4,7 @@ import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas'
 import type { ProviderKeysStorage } from '@/utils/storage/provider-key-storage' // ADDED
 import { randomUUID } from 'crypto' // For mocking generateId
 import { ApiError } from 'shared/src/error/api-error'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 // In-memory store for our mock
 let mockProviderKeysDb: ProviderKeysStorage = {}
@@ -19,7 +20,7 @@ mock.module('@/utils/storage/provider-key-storage', () => ({
       return mockProviderKeysDb
     },
     // Ensure the mocked generateId matches the one in the actual module or is sufficient for tests
-    generateId: (prefix: string = 'pk') => `${prefix}_${randomUUID()}`
+    generateId: () => normalizeToUnixMs(new Date())
   }
 }))
 
@@ -38,9 +39,9 @@ describe('provider-key-service (File Storage)', () => {
     expect(pk.id).toBeDefined()
     expect(pk.provider).toBe(input.provider)
     expect(pk.key).toBe(input.key)
-    expect(pk.createdAt).toBeDefined()
-    expect(pk.updatedAt).toBeDefined()
-    expect(pk.createdAt).toEqual(pk.updatedAt) // Initially, they should be the same
+    expect(pk.created).toBeDefined()
+    expect(pk.updated).toBeDefined()
+    expect(pk.created).toEqual(pk.updated) // Initially, they should be the same
 
     // Verify it's in our mock DB
     expect(mockProviderKeysDb[pk.id]).toEqual(pk)
@@ -83,7 +84,7 @@ describe('provider-key-service (File Storage)', () => {
 
   test('updateKey modifies existing row and updates timestamp', async () => {
     const created = await svc.createKey({ provider: 'initial_provider', key: 'initial_key' })
-    const originalUpdatedAt = created.updatedAt
+    const originalUpdated = created.updated
 
     // Ensure a small delay for distinct timestamps
     await new Promise(resolve => setTimeout(resolve, 5));
@@ -95,9 +96,9 @@ describe('provider-key-service (File Storage)', () => {
     expect(updated.id).toBe(created.id)
     expect(updated.key).toBe(updates.key)
     expect(updated.provider).toBe(updates.provider)
-    expect(updated.createdAt).toBe(created.createdAt) // createdAt should not change
-    expect(updated.updatedAt).not.toBe(originalUpdatedAt)
-    expect(new Date(updated.updatedAt).getTime()).toBeGreaterThan(new Date(originalUpdatedAt).getTime())
+    expect(updated.created).toBe(created.created) // created should not change
+    expect(updated.updated).not.toBe(originalUpdated)
+    expect(new Date(updated.updated).getTime()).toBeGreaterThan(new Date(originalUpdated).getTime())
 
     // Verify it's updated in our mock DB
     expect(mockProviderKeysDb[created.id]).toEqual(updated)
@@ -107,13 +108,13 @@ describe('provider-key-service (File Storage)', () => {
     const keyOnlyUpdate = await svc.updateKey(created.id, { key: 'final_key_value' });
     expect(keyOnlyUpdate.key).toBe('final_key_value');
     expect(keyOnlyUpdate.provider).toBe(updates.provider); // Provider should persist from previous update
-    expect(new Date(keyOnlyUpdate.updatedAt).getTime()).toBeGreaterThan(new Date(updated.updatedAt).getTime());
+    expect(new Date(keyOnlyUpdate.updated).getTime()).toBeGreaterThan(new Date(updated.updated).getTime());
   })
 
   test('updateKey throws ApiError if key not found', async () => {
-    await expect(svc.updateKey('this-id-is-fake', { key: 'some_key' }))
+    await expect(svc.updateKey(9999, { key: 'some_key' }))
       .rejects
-      .toThrow(new ApiError(404, `Provider key with ID this-id-is-fake not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE'));
+      .toThrow(new ApiError(404, `Provider key with ID 9999 not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE'));
   });
 
   test('deleteKey removes row, returns boolean indicating success', async () => {
@@ -127,7 +128,7 @@ describe('provider-key-service (File Storage)', () => {
     const result2 = await svc.deleteKey(created.id) // Try deleting again
     expect(result2).toBe(false)
 
-    const result3 = await svc.deleteKey('nonexistent-id-for-delete') // Try deleting non-existent
+    const result3 = await svc.deleteKey(9999) // Try deleting non-existent
     expect(result3).toBe(false)
   })
 })

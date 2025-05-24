@@ -1,6 +1,4 @@
-# packages/python_backend/app/routes/provider_key_api.py
 from typing import List
-
 from fastapi import APIRouter, HTTPException, Path, status, Body
 from app.schemas.provider_key_schemas import (
     CreateProviderKeyBody,
@@ -14,9 +12,6 @@ from app.services.provider_key_service import provider_key_service
 router = APIRouter(
     prefix="/api/keys",
     tags=["Provider Keys"],
-    # Common responses for all routes in this router can be defined here
-    # For example, if all routes could return 422 or 500 with ApiErrorResponse model.
-    # However, Hono defined them per route, so we'll stick to that for specificity.
 )
 
 @router.post(
@@ -33,11 +28,6 @@ router = APIRouter(
 async def create_provider_key(
     body: CreateProviderKeyBody = Body(...)
 ):
-    """
-    Add a new API key for an AI provider.
-    - **provider**: The name of the AI provider (e.g., openai, anthropic).
-    - **key**: The API key string.
-    """
     new_key = await provider_key_service.create_key(data=body)
     return ProviderKeyResponse(data=new_key)
 
@@ -51,13 +41,7 @@ async def create_provider_key(
     }
 )
 async def list_provider_keys():
-    """
-    List all configured provider keys. Secrets are not included in the response.
-    Keys are sorted by provider (ascending) and then by creation date (descending).
-    """
     keys = await provider_key_service.list_keys()
-    # The ProviderKeyListResponse model and its ProviderKeyListItem sub-model
-    # will ensure the 'key' (secret) is excluded from the response.
     return ProviderKeyListResponse(data=keys)
 
 @router.get(
@@ -72,12 +56,17 @@ async def list_provider_keys():
     }
 )
 async def get_provider_key_by_id(
-    keyId: str = Path(..., min_length=1, description="The ID of the provider key to retrieve.", example="key-1a2b3c4d")
+    keyId: str = Path(..., description="The ID of the provider key to retrieve", example="1677657600000")
 ):
-    """
-    Get a specific provider key by its unique ID. Includes the secret key.
-    """
-    key = await provider_key_service.get_key_by_id(key_id=keyId)
+    try:
+        key_id_int = int(keyId)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=ErrorDetail(message="Invalid key ID format", code="INVALID_KEY_ID").model_dump(exclude_none=True)
+        )
+    
+    key = await provider_key_service.get_key_by_id(key_id=key_id_int)
     if not key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -98,19 +87,17 @@ async def get_provider_key_by_id(
 )
 async def update_provider_key(
     body: UpdateProviderKeyBody = Body(...),
-    keyId: str = Path(..., min_length=1, description="The ID of the provider key to update.", example="key-1a2b3c4d")
+    keyId: str = Path(..., description="The ID of the provider key to update", example="1677657600000")
 ):
-    """
-    Update a provider key's details.
-    Allows updating the `provider` and/or `key`.
-    - **provider** (optional): The new AI provider identifier.
-    - **key** (optional): The new API key string.
-    At least one of `provider` or `key` must be supplied.
-    """
-    # The provider_key_service.update_key method will raise HTTPException
-    # for 404 if keyId is not found, or 500/422 for validation issues.
-    # Pydantic model UpdateProviderKeyBody also validates that at least one field is present.
-    updated_key = await provider_key_service.update_key(key_id=keyId, data=body)
+    try:
+        key_id_int = int(keyId)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=ErrorDetail(message="Invalid key ID format", code="INVALID_KEY_ID").model_dump(exclude_none=True)
+        )
+    
+    updated_key = await provider_key_service.update_key(key_id=key_id_int, data=body)
     return ProviderKeyResponse(data=updated_key)
 
 @router.delete(
@@ -125,14 +112,18 @@ async def update_provider_key(
     }
 )
 async def delete_provider_key(
-    keyId: str = Path(..., min_length=1, description="The ID of the provider key to delete.", example="key-1a2b3c4d")
+    keyId: str = Path(..., description="The ID of the provider key to delete", example="1677657600000")
 ):
-    """
-    Delete a provider key by its unique ID.
-    """
-    success = await provider_key_service.delete_key(key_id=keyId)
+    try:
+        key_id_int = int(keyId)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=ErrorDetail(message="Invalid key ID format", code="INVALID_KEY_ID").model_dump(exclude_none=True)
+        )
+    
+    success = await provider_key_service.delete_key(key_id=key_id_int)
     if not success:
-        # This explicit check is needed because the service method returns False if not found.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorDetail(message="Provider key not found", code="PROVIDER_KEY_NOT_FOUND").model_dump(exclude_none=True)

@@ -67,6 +67,8 @@ function AdminPage() {
     }
   }
 
+  console.log('envInfo', envInfo)
+
   return (
     <div className='container p-2'>
       <Tabs defaultValue='env-info'>
@@ -154,30 +156,30 @@ function AdminPage() {
                       <TableBody>
                         <TableRow>
                           <TableCell className='font-medium'>Node Version</TableCell>
-                          <TableCell>{envInfo.serverInfo.version}</TableCell>
+                          <TableCell>{envInfo?.serverInfo?.version}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell className='font-medium'>Bun Version</TableCell>
-                          <TableCell>{envInfo.serverInfo.bunVersion}</TableCell>
+                          <TableCell>{envInfo?.serverInfo?.bunVersion}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell className='font-medium'>Platform</TableCell>
-                          <TableCell>{envInfo.serverInfo.platform}</TableCell>
+                          <TableCell>{envInfo?.serverInfo?.platform}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell className='font-medium'>Architecture</TableCell>
-                          <TableCell>{envInfo.serverInfo.arch}</TableCell>
+                          <TableCell>{envInfo?.serverInfo?.arch}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell className='font-medium'>Uptime</TableCell>
-                          <TableCell>{formatUptime(envInfo.serverInfo.uptime)}</TableCell>
+                          <TableCell>{formatUptime(envInfo?.serverInfo?.uptime)}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
                   </CardContent>
                 </Card>
 
-                <Card>
+                {/* <Card>
                   <CardHeader>
                     <CardTitle>Memory Usage</CardTitle>
                   </CardHeader>
@@ -190,7 +192,7 @@ function AdminPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Object.entries(envInfo.serverInfo.memoryUsage).map(([key, value]) => (
+                        {Object.entries(envInfo?.serverInfo?.memoryUsage).map(([key, value]) => (
                           <TableRow key={key}>
                             <TableCell className='font-medium'>{key}</TableCell>
                             <TableCell>{formatBytes(value)}</TableCell>
@@ -199,7 +201,7 @@ function AdminPage() {
                       </TableBody>
                     </Table>
                   </CardContent>
-                </Card>
+                </Card> */}
               </>
             ) : null}
           </div>
@@ -305,7 +307,7 @@ function AdminPage() {
               </Alert>
             )}
 
-            {isLoadingEnv && !envInfo ? (
+            {/* {!envInfo?.databaseStats && isLoadingEnv && !envInfo ? (
               <div className='flex flex-col items-center justify-center py-10'>
                 <Loader2 className='h-8 w-8 animate-spin text-primary' />
                 <p className='mt-4 text-muted-foreground'>Loading database statistics...</p>
@@ -324,7 +326,7 @@ function AdminPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Object.entries(envInfo.databaseStats).map(([table, { count }]) => (
+                      {Object.entries(envInfo?.databaseStats ?? {}).map(([table, { count }]) => (
                         <TableRow key={table}>
                           <TableCell className='font-medium'>{table}</TableCell>
                           <TableCell>{count}</TableCell>
@@ -334,7 +336,7 @@ function AdminPage() {
                   </Table>
                 </CardContent>
               </Card>
-            ) : null}
+            ) : null} */}
           </div>
         </TabsContent>
 

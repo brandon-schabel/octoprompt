@@ -61,27 +61,27 @@ import { Options } from '../../generated/sdk.gen'
 
 const TICKET_KEYS = {
   all: ['tickets'] as const,
-  listByProject: (projectId: string) =>
+  listByProject: (projectId: number) =>
     getApiProjectsByProjectIdTicketsQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdTicketsData>),
-  listWithCount: (projectId: string, status?: string) =>
+  listWithCount: (projectId: number, status?: string) =>
     getApiProjectsByProjectIdTicketsWithCountQueryKey({
       path: { projectId },
       query: status && status !== 'all' ? { status } : undefined
     } as Options<GetApiProjectsByProjectIdTicketsWithCountData>),
-  detail: (ticketId: string) =>
+  detail: (ticketId: number) =>
     getApiTicketsByTicketIdQueryKey({ path: { ticketId } } as Options<GetApiTicketsByTicketIdData>),
-  tasks: (ticketId: string) =>
+  tasks: (ticketId: number) =>
     getApiTicketsByTicketIdTasksQueryKey({ path: { ticketId } } as Options<GetApiTicketsByTicketIdTasksData>),
-  bulkTasks: (ticketIds: string[]) =>
+  bulkTasks: (ticketIds: number[]) =>
     getApiTicketsBulkTasksQueryKey({ query: { ids: ticketIds.join(',') } } as Options<GetApiTicketsBulkTasksData>),
-  listWithTasks: (projectId: string, status?: string) =>
+  listWithTasks: (projectId: number, status?: string) =>
     getApiProjectsByProjectIdTicketsWithTasksQueryKey({
       path: { projectId },
       query: status && status !== 'all' ? { status } : undefined
     } as Options<GetApiProjectsByProjectIdTicketsWithTasksData>)
 }
 
-export function useListTickets(projectId: string, status?: string) {
+export function useListTickets(projectId: number, status?: string) {
   const queryOptions = getApiProjectsByProjectIdTicketsOptions({
     path: { projectId },
     query: status ? { status } : undefined
@@ -93,7 +93,7 @@ export function useListTickets(projectId: string, status?: string) {
   })
 }
 
-export function useListTicketsWithCount(projectId: string, status?: string) {
+export function useListTicketsWithCount(projectId: number, status?: string) {
   const queryOptions = getApiProjectsByProjectIdTicketsWithCountOptions({
     path: { projectId },
     query: status && status !== 'all' ? { status } : undefined
@@ -105,7 +105,7 @@ export function useListTicketsWithCount(projectId: string, status?: string) {
   })
 }
 
-export function useCreateTicket(projectId: string) {
+export function useCreateTicket(projectId: number) {
   const queryClient = useQueryClient()
   const mutationOptions = postApiTicketsMutation()
 
@@ -129,11 +129,11 @@ export function useCreateTicket(projectId: string) {
   })
 }
 
-export function useUpdateTicket(projectId: string) {
+export function useUpdateTicket(projectId: number) {
   const queryClient = useQueryClient()
   const mutationOptions = patchApiTicketsByTicketIdMutation()
 
-  return useMutation<unknown, PatchApiTicketsByTicketIdError, { ticketId: string; updates: UpdateTicketBody }>({
+  return useMutation<unknown, PatchApiTicketsByTicketIdError, { ticketId: number; updates: UpdateTicketBody }>({
     mutationFn: ({ ticketId, updates }) => {
       const opts: Options<PatchApiTicketsByTicketIdData> = {
         path: { ticketId },
@@ -157,12 +157,12 @@ export function useUpdateTicket(projectId: string) {
   })
 }
 
-export function useDeleteTicket(projectId: string) {
+export function useDeleteTicket(projectId: number) {
   const queryClient = useQueryClient()
   const mutationOptions = deleteApiTicketsByTicketIdMutation()
 
-  return useMutation<unknown, DeleteApiTicketsByTicketIdError, string>({
-    mutationFn: (ticketId: string) => {
+  return useMutation<unknown, DeleteApiTicketsByTicketIdError, number>({
+    mutationFn: (ticketId: number) => {
       const opts: Options<DeleteApiTicketsByTicketIdData> = { path: { ticketId } }
       return mutationOptions.mutationFn!(opts)
     },
@@ -194,7 +194,7 @@ export function useLinkFilesToTicket() {
   const queryClient = useQueryClient()
   const mutationOptions = postApiTicketsByTicketIdLinkFilesMutation()
 
-  return useMutation<unknown, PostApiTicketsByTicketIdLinkFilesError, { ticketId: string; fileIds: string[] }>({
+  return useMutation<unknown, PostApiTicketsByTicketIdLinkFilesError, { ticketId: number; fileIds: number[] }>({
     mutationFn: ({ ticketId, fileIds }) => {
       const opts: Options<PostApiTicketsByTicketIdLinkFilesData> = {
         path: { ticketId },
@@ -214,7 +214,7 @@ export function useLinkFilesToTicket() {
 export function useSuggestTasksForTicket() {
   const mutationOptions = postApiTicketsByTicketIdSuggestTasksMutation()
 
-  return useMutation<unknown, PostApiTicketsByTicketIdSuggestTasksError, { ticketId: string; userContext?: string }>({
+  return useMutation<unknown, PostApiTicketsByTicketIdSuggestTasksError, { ticketId: number; userContext?: string }>({
     mutationFn: ({ ticketId, userContext }) => {
       const opts: Options<PostApiTicketsByTicketIdSuggestTasksData> = {
         path: { ticketId },
@@ -226,7 +226,7 @@ export function useSuggestTasksForTicket() {
   })
 }
 
-export function useListTasks(ticketId: string) {
+export function useListTasks(ticketId: number) {
   const queryOptions = getApiTicketsByTicketIdTasksOptions({
     path: { ticketId }
   } as Options<GetApiTicketsByTicketIdTasksData>)
@@ -241,11 +241,12 @@ export function useCreateTask() {
   const queryClient = useQueryClient()
   const mutationOptions = postApiTicketsByTicketIdTasksMutation()
 
-  return useMutation<unknown, PostApiTicketsByTicketIdTasksError, { ticketId: string; content: string }>({
+  return useMutation<unknown, PostApiTicketsByTicketIdTasksError, { ticketId: number; content: string }>({
     mutationFn: ({ ticketId, content }) => {
       const opts: Options<PostApiTicketsByTicketIdTasksData> = {
         path: { ticketId },
-        body: { content }
+        // @ts-expect-error - TODO: fix this
+        body: { overview: content }
       }
       return mutationOptions.mutationFn!(opts)
     },
@@ -265,7 +266,7 @@ export function useUpdateTask() {
   return useMutation<
     unknown,
     PatchApiTicketsByTicketIdTasksByTaskIdError,
-    { ticketId: string; taskId: string; updates: Partial<{ content: string; done: boolean }> }
+    { ticketId: number; taskId: number; updates: Partial<{ content: string; done: boolean }> }
   >({
     mutationFn: ({ ticketId, taskId, updates }) => {
       const opts: Options<PatchApiTicketsByTicketIdTasksByTaskIdData> = {
@@ -287,7 +288,7 @@ export function useDeleteTask() {
   const queryClient = useQueryClient()
   const mutationOptions = deleteApiTicketsByTicketIdTasksByTaskIdMutation()
 
-  return useMutation<unknown, DeleteApiTicketsByTicketIdTasksByTaskIdError, { ticketId: string; taskId: string }>({
+  return useMutation<unknown, DeleteApiTicketsByTicketIdTasksByTaskIdError, { ticketId: number; taskId: number }>({
     mutationFn: ({ ticketId, taskId }) => {
       const opts: Options<DeleteApiTicketsByTicketIdTasksByTaskIdData> = {
         path: { ticketId, taskId }
@@ -310,7 +311,7 @@ export function useReorderTasks() {
   return useMutation<
     unknown,
     PatchApiTicketsByTicketIdTasksReorderError,
-    { ticketId: string; tasks: Array<{ taskId: string; orderIndex: number }> }
+    { ticketId: number; tasks: Array<{ taskId: number; orderIndex: number }> }
   >({
     mutationFn: ({ ticketId, tasks }) => {
       const opts: Options<PatchApiTicketsByTicketIdTasksReorderData> = {
@@ -332,7 +333,7 @@ export function useAutoGenerateTasks() {
   const queryClient = useQueryClient()
   const mutationOptions = postApiTicketsByTicketIdAutoGenerateTasksMutation()
 
-  return useMutation<unknown, PostApiTicketsByTicketIdAutoGenerateTasksError, { ticketId: string }>({
+  return useMutation<unknown, PostApiTicketsByTicketIdAutoGenerateTasksError, { ticketId: number }>({
     mutationFn: ({ ticketId }) => {
       const opts: Options<PostApiTicketsByTicketIdAutoGenerateTasksData> = {
         path: { ticketId }
@@ -348,7 +349,7 @@ export function useAutoGenerateTasks() {
   })
 }
 
-export function useBulkTicketTasks(ticketIds: string[]) {
+export function useBulkTicketTasks(ticketIds: number[]) {
   const queryClient = useQueryClient()
   const queryOptions = getApiTicketsBulkTasksOptions({
     query: { ids: ticketIds.join(',') }
@@ -361,7 +362,7 @@ export function useBulkTicketTasks(ticketIds: string[]) {
       // Prefill the cache for individual ticket tasks
       if (data.tasks) {
         Object.entries(data.tasks).forEach(([ticketId, tasks]) => {
-          queryClient.setQueryData(TICKET_KEYS.tasks(ticketId), { success: true, tasks })
+          queryClient.setQueryData(TICKET_KEYS.tasks(Number(ticketId)), { success: true, tasks })
         })
       }
       return data
@@ -369,7 +370,7 @@ export function useBulkTicketTasks(ticketIds: string[]) {
   })
 }
 
-export function useListTicketsWithTasks(projectId: string, status?: string) {
+export function useListTicketsWithTasks(projectId: number, status?: string) {
   const queryOptions = getApiProjectsByProjectIdTicketsWithTasksOptions({
     path: { projectId },
     query: status && status !== 'all' ? { status } : undefined
@@ -381,7 +382,7 @@ export function useListTicketsWithTasks(projectId: string, status?: string) {
   })
 }
 
-export function useSuggestFilesForTicket(ticketId: string) {
+export function useSuggestFilesForTicket(ticketId: number) {
   const mutationOptions = postApiTicketsByTicketIdSuggestFilesMutation()
 
   return useMutation<SuggestedFilesResponse, PostApiTicketsByTicketIdSuggestFilesError, { extraUserInput?: string }>({

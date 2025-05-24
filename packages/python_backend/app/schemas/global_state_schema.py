@@ -2,24 +2,12 @@ from typing import Optional, List, Dict, Any, Literal, Union
 from pydantic import BaseModel, Field, ConfigDict, AnyUrl
 from enum import Enum
 
-# --- Global State Schemas ---
-# Last 5 changes:
-# 1. Initial conversion from Zod to Pydantic.
-# 2. Added placeholders for APIProviders and defaultModelConfigs.
-# 3. Handled z.record as Dict.
-# 4. Mapped z.enum to Python Enum and .openapi() metadata.
-# 5. Used AnyUrl for URL validation.
-
-# Placeholder for APIProviders, assuming it's an Enum or a Literal type
-# In a real scenario, this would be imported or defined based on provider-key.schemas.ts
 class APIProvidersEnum(str, Enum):
     OPENROUTER = "openrouter"
     OPENAI = "openai"
     AZURE_OPENAI = "azure_openai"
     ANTHROPIC = "anthropic"
-    # Add other providers as defined in providerSchema.options
 
-# Placeholder for default model configurations from LOW_MODEL_CONFIG
 class DefaultModelConfigs:
     temperature: float = 0.7
     max_tokens: int = 4096
@@ -98,11 +86,11 @@ class AppSettings(BaseModel):
     auto_scroll_enabled: bool = Field(default=True, validation_alias="autoScrollEnabled", serialization_alias="autoScrollEnabled", description="Whether the chat view should automatically scroll to the bottom on new messages.")
     provider: APIProvidersEnum = Field(default=default_model_configs.provider, description="Default AI provider to use for chat.", example="openrouter")
     model: str = Field(default=default_model_configs.model, description="Default AI model name to use for chat.", example="gpt-4o")
-    temperature: float = Field(default=default_model_configs.temperature, ge=0, le=2, description="Controls randomness. Lower values make the model more deterministic.", example=0.7) # from ChatModelSettings
-    max_tokens: int = Field(default=default_model_configs.max_tokens, ge=100, validation_alias="maxTokens", serialization_alias="maxTokens", description="Maximum number of tokens to generate in the chat completion.", example=4096) # from ChatModelSettings
-    top_p: float = Field(default=default_model_configs.top_p, ge=0, le=1, validation_alias="topP", serialization_alias="topP", description="Nucleus sampling parameter. Considers tokens with top_p probability mass.", example=1.0) # from ChatModelSettings
-    frequency_penalty: float = Field(default=default_model_configs.frequency_penalty, ge=-2, le=2, validation_alias="frequencyPenalty", serialization_alias="frequencyPenalty", description="Penalizes new tokens based on their frequency in the text so far.", example=0.0) # from ChatModelSettings
-    presence_penalty: float = Field(default=default_model_configs.presence_penalty, ge=-2, le=2, validation_alias="presencePenalty", serialization_alias="presencePenalty", description="Penalizes new tokens based on whether they appear in the text so far.", example=0.0) # from ChatModelSettings
+    temperature: float = Field(default=default_model_configs.temperature, ge=0, le=2, description="Controls randomness. Lower values make the model more deterministic.", example=0.7)
+    max_tokens: int = Field(default=default_model_configs.max_tokens, ge=100, validation_alias="maxTokens", serialization_alias="maxTokens", description="Maximum number of tokens to generate in the chat completion.", example=4096)
+    top_p: float = Field(default=default_model_configs.top_p, ge=0, le=1, validation_alias="topP", serialization_alias="topP", description="Nucleus sampling parameter. Considers tokens with top_p probability mass.", example=1.0)
+    frequency_penalty: float = Field(default=default_model_configs.frequency_penalty, ge=-2, le=2, validation_alias="frequencyPenalty", serialization_alias="frequencyPenalty", description="Penalizes new tokens based on their frequency in the text so far.", example=0.0)
+    presence_penalty: float = Field(default=default_model_configs.presence_penalty, ge=-2, le=2, validation_alias="presencePenalty", serialization_alias="presencePenalty", description="Penalizes new tokens based on whether they appear in the text so far.", example=0.0)
     model_config = ConfigDict(title="AppSettings", populate_by_name=True)
 
 ProjectTabsStateRecord = Dict[str, ProjectTabState]
@@ -119,27 +107,7 @@ ChatLinkSettingsMap = Dict[str, ChatLinkSetting]
 class GlobalState(BaseModel):
     app_settings: AppSettings = Field(..., validation_alias="appSettings", serialization_alias="appSettings", description="Application-wide settings.")
     project_tabs: ProjectTabsStateRecord = Field(..., validation_alias="projectTabs", serialization_alias="projectTabs", description="State of all open project tabs, keyed by tab ID.")
-    project_active_tab_id: str = Field(default="defaultTab", validation_alias="projectActiveTabId", serialization_alias="projectActiveTabId", description="The ID of the currently active project tab, or null if none is active.", example="tab_abc123")
-    active_chat_id: str = Field(default="", validation_alias="activeChatId", serialization_alias="activeChatId", description="The ID of the currently active chat session, or null.", example="chat_xyz789")
+    project_active_tab_id: int = Field(default="defaultTab", validation_alias="projectActiveTabId", serialization_alias="projectActiveTabId", description="The ID of the currently active project tab, or null if none is active.", example="tab_abc123")
+    active_chat_id: int = Field(default="", validation_alias="activeChatId", serialization_alias="activeChatId", description="The ID of the currently active chat session, or null.", example="chat_xyz789")
     chat_link_settings: ChatLinkSettingsMap = Field(default={}, validation_alias="chatLinkSettings", serialization_alias="chatLinkSettings", description="Link settings specific to each chat session.")
     model_config = ConfigDict(title="GlobalState", populate_by_name=True)
-
-# Helper functions like createInitialGlobalState, getDefaultAppSettings, getDefaultProjectTabState
-# are TypeScript specific for object creation with defaults.
-# In Pydantic, defaults are part of the model definition.
-# Instantiating the model (e.g., AppSettings()) will apply these defaults.
-
-# Example of creating default AppSettings:
-# default_app_settings = AppSettings()
-
-# Example of creating default ProjectTabState:
-# default_project_tab_state = ProjectTabState(displayName="My Default Tab")
-
-# Example of creating initial GlobalState:
-# initial_global_state = GlobalState(
-#     app_settings=AppSettings(),
-#     project_tabs={
-#         "defaultTab": ProjectTabState(display_name="Default Project Tab")
-#     }
-#     # active_chat_id and chat_link_settings will use their defaults
-# )

@@ -10,7 +10,6 @@ import { providerKeyRoutes } from './routes/provider-key-routes'
 import { adminRoutes } from './routes/admin-routes'
 import { aiFileChangeRoutes } from './routes/ai-file-change-routes'
 import { promptRoutes } from './routes/prompt-routes'
-import { kvRoutes } from './routes/kv-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { corsConfig } from './constants/server-config'
@@ -60,7 +59,6 @@ app.route('/', aiFileChangeRoutes)
 app.route('/', promptRoutes)
 app.route('/', genAiRoutes)
 app.route('/', agentCoderRoutes)
-app.route('/', kvRoutes)
 // Global error handler
 app.onError((err, c) => {
   console.error('[ErrorHandler]', err)

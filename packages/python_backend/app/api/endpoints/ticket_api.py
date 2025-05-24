@@ -1,13 +1,7 @@
 # packages/python_backend/app/api/endpoints/ticket_api.py
-# - Migrated Hono ticket routes to FastAPI.
-# - Defined Pydantic response models for ticket operations.
-# - Implemented all 17 ticket and task-related API endpoints.
-# - Used Python type hints and FastAPI specific features (Path, Query, Body).
-# - Matched request/response structures and status codes from TS.
 
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Path, Query, Body, status
-
 from app.schemas.common_schemas import (
     ApiErrorResponse,
     OperationSuccessResponse,
@@ -23,15 +17,11 @@ from app.schemas.ticket_schemas import (
     CreateTaskBody,
     UpdateTaskBody,
     ReorderTasksBody,
-    # For params not explicitly defined as models but used as types
 )
 from app.services import ticket_service
 from pydantic import BaseModel, Field
 
 router = APIRouter()
-
-# --- Pydantic Response Models ---
-# These wrap the base schemas with a "success" flag, common in the TS API
 
 class TicketResponse(BaseModel):
     success: bool = True
@@ -51,13 +41,13 @@ class TaskListResponse(BaseModel):
 
 class LinkedFilesResponse(BaseModel):
     success: bool = True
-    linkedFiles: List[TicketFileBase] # TS: linkedFiles, schema matches TicketFileBase
+    linkedFiles: List[TicketFileBase]
 
 class SuggestedTasksResponse(BaseModel):
     success: bool = True
     suggestedTasks: List[str]
 
-class SuggestedFilesBody(BaseModel): # For request body of suggest_files route
+class SuggestedFilesBody(BaseModel):
     extraUserInput: Optional[str] = None
 
 class SuggestedFilesResponse(BaseModel):
@@ -86,9 +76,6 @@ class TicketWithTasksListResponse(BaseModel):
 class BulkTasksResponse(BaseModel):
     success: bool = True
     tasks: Dict[str, List[TicketTaskBase]]
-
-
-# --- API Routes ---
 
 common_error_responses = {
     400: {"model": ApiErrorResponse, "description": "Validation Error"},
@@ -169,7 +156,6 @@ async def suggest_tasks_route(
     ticketId: str = Path(..., description="Ticket identifier"),
     body: SuggestTasksBody = Body(...),
 ):
-    # TS service takes (ticketId, userContext), Python service takes (ticket_id, user_context)
     tasks = await ticket_service.suggest_tasks_for_ticket(ticketId, body.user_context)
     return SuggestedTasksResponse(suggestedTasks=tasks)
 
@@ -182,9 +168,8 @@ async def suggest_tasks_route(
 )
 async def suggest_files_route(
     ticketId: str = Path(..., description="Ticket identifier"),
-    body: SuggestedFilesBody = Body(...), # TS body: { extraUserInput?: string }
+    body: SuggestedFilesBody = Body(...),
 ):
-    # Python service takes options: Optional[Dict[str, Any]]
     options = {"extraUserInput": body.extraUserInput} if body.extraUserInput else {}
     result = await ticket_service.suggest_files_for_ticket(ticketId, options)
     return SuggestedFilesResponse(
@@ -220,11 +205,8 @@ async def list_tickets_with_count_route(
     status: Optional[str] = Query(None, description="Filter tickets by status (or 'all')"),
 ):
     status_filter = None if status == "all" else status
-    # Service returns List[Dict[str, Any]] which Pydantic models will parse
     results = await ticket_service.list_tickets_with_task_count(projectId, status_filter)
-    # Pydantic should auto-map dicts to TicketWithTaskCount if fields match
     return TicketWithTaskCountListResponse(ticketsWithCount=results)
-
 
 @router.get(
     "/projects/{projectId}/tickets-with-tasks",
@@ -238,7 +220,6 @@ async def list_tickets_with_tasks_route(
     status: Optional[str] = Query(None, description="Filter tickets by status (or 'all')"),
 ):
     status_filter = None if status == "all" else status
-    # Service returns List[Dict[str, Any]] which Pydantic models will parse
     tickets_with_tasks = await ticket_service.list_tickets_with_tasks(projectId, status_filter)
     return TicketWithTasksListResponse(ticketsWithTasks=tickets_with_tasks)
 
@@ -308,8 +289,6 @@ async def reorder_tasks_route(
     ticketId: str = Path(..., description="Ticket identifier"),
     body: ReorderTasksBody = Body(...),
 ):
-    # The service expects List[Dict[str, Any]] where dicts are {'taskId': str, 'orderIndex': int}
-    # Pydantic ReorderTasksBody.tasks is List[ReorderTaskItem], ReorderTaskItem.model_dump() will give dicts
     task_reorders_list = [task_item.model_dump() for task_item in body.tasks]
     updated_tasks = await ticket_service.reorder_tasks(ticketId, task_reorders_list)
     return TaskListResponse(tasks=updated_tasks)
@@ -337,7 +316,6 @@ async def get_tasks_for_tickets_route(
 ):
     ticket_ids_list = [item.strip() for item in ids.split(',') if item.strip()]
     if not ticket_ids_list:
-        # Or raise HTTPException for bad request if ids param is required but empty after split
         return BulkTasksResponse(tasks={})
     tasks_by_ticket_id = await ticket_service.get_tasks_for_tickets(ticket_ids_list)
     return BulkTasksResponse(tasks=tasks_by_ticket_id)

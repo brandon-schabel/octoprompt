@@ -46,11 +46,11 @@ type AgentRunDataQueryKey = ReturnType<typeof getApiAgentCoderProjectByProjectId
 // Corresponds to AgentCoderRunResponseSchema in agent-coder-routes.ts
 type AgentCoderRunResponse = {
   success: boolean
-  data?: AgentRunData & { agentJobId: string; taskPlan?: TaskPlan | null } // Combine types for the run response
+  data?: AgentRunData & { agentJobId: number; taskPlan?: TaskPlan | null } // Combine types for the run response
   error?: ApiErrorResponse['error']
 }
 
-export const useRunAgentCoder = (projectId: string) => {
+export const useRunAgentCoder = (projectId: number) => {
   const queryClient = useQueryClient()
   const mutationOptionsFn = postApiProjectsByProjectIdAgentCoderMutation()
 
@@ -103,21 +103,21 @@ export const useRunAgentCoder = (projectId: string) => {
   })
 }
 
-export const useListAgentCoderRuns = (projectId: string) => {
+export const useListAgentCoderRuns = (projectId: number) => {
   return useQuery(getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }))
 }
 
 export const useGetAgentCoderRunLogs = (
-  options: { enabled?: boolean; isAgentRunning: boolean; projectId: string; agentJobId: string } = {
+  options: { enabled?: boolean; isAgentRunning: boolean; projectId: number; agentJobId: number } = {
     enabled: false,
     isAgentRunning: false,
-    projectId: '',
-    agentJobId: ''
+    projectId: 0,
+    agentJobId: 0
   }
 ) => {
   const pathParams: Options<GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsData>['path'] = {
-    agentJobId: options.agentJobId ?? '',
-    projectId: options.projectId ?? ''
+    agentJobId: options.agentJobId ?? -1,
+    projectId: options.projectId ?? -1
   }
 
   return useQuery({
@@ -132,7 +132,7 @@ export const useGetAgentCoderRunLogs = (
   })
 }
 
-export const useGetAgentCoderRuns = (projectId: string) => {
+export const useGetAgentCoderRuns = (projectId: number) => {
   return useQuery(getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }))
 }
 
@@ -142,10 +142,10 @@ export const useGetAgentCoderRunData = ({
   isAgentRunning = false,
   projectId
 }: {
-  agentJobId: string
+  agentJobId: number
   enabled?: boolean
   isAgentRunning?: boolean
-  projectId: string
+  projectId: number
 }) => {
   // Use the specific query key type here
   const queryOptions = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({
@@ -168,7 +168,7 @@ export const useConfirmAgentRunChanges = () => {
   return useMutation<
     PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse,
     PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError,
-    { agentJobId: string; projectId: string }
+    { agentJobId: number; projectId: number }
   >({
     mutationFn: async ({ agentJobId, projectId }) => {
       const options: Options<PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmData> = {
@@ -219,7 +219,7 @@ export const useDeleteAgentCoderRun = () => {
   return useMutation<
     DeleteApiAgentCoderRunsByAgentJobIdResponse, // Success response type
     DeleteApiAgentCoderRunsByAgentJobIdError, // Error type
-    { agentJobId: string; projectId: string } // Variables type ({ agentJobId })
+    { agentJobId: number; projectId: number } // Variables type ({ agentJobId })
   >({
     mutationFn: async ({ agentJobId, projectId }) => {
       const options: Options<DeleteApiAgentCoderRunsByAgentJobIdData> = {

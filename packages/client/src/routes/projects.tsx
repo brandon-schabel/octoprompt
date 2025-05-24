@@ -1,11 +1,3 @@
-// packages/client/src/routes/projects.tsx
-// Recent changes:
-// 1. Added Tabs component for Explorer/Statistics views.
-// 2. Integrated ProjectStatsDisplay component.
-// 3. Adjusted styling for TabsContent to fill height and enable scroll.
-// 4. Ensured selectedProjectId is passed to ProjectStatsDisplay.
-// 5. Imported necessary Tab components and ProjectStatsDisplay.
-
 import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
@@ -51,7 +43,7 @@ export function ProjectsPage() {
 
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [projectFormOpen, setProjectFormOpen] = useState(false)
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
+  const [editingProjectId, setEditingProjectId] = useState<number | null>(null)
 
   const projects = allProjectsData?.data || []
   const tabsLen = Object.keys(tabs || {}).length
@@ -64,7 +56,7 @@ export function ProjectsPage() {
   useEffect(() => {
     if (projects.length === 1 && noTabsYet) {
       createProjectTabFromHook({
-        displayName: projects[0].name || `Tab for ${projects[0].id.substring(0, 6)}`,
+        displayName: projects[0].name || `Tab for ${projects[0].id.toString().substring(0, 6)}`,
         selectedProjectId: projects[0].id
       })
     }
@@ -72,7 +64,7 @@ export function ProjectsPage() {
       updateProjectTabs({
         [tabsKeys[0]]: { ...tabsArray[0], selectedProjectId: projects[0].id }
       })
-      setActiveProjectTabId(tabsKeys[0])
+      setActiveProjectTabId(parseInt(tabsKeys[0]))
     }
   }, [
     projects,
@@ -87,7 +79,7 @@ export function ProjectsPage() {
     tabsLen
   ])
 
-  const handleSelectProject = (id: string) => {
+  const handleSelectProject = (id: number) => {
     updateActiveProjectTab((prev) => ({
       ...(prev || {}),
       selectedProjectId: id,
@@ -102,12 +94,12 @@ export function ProjectsPage() {
     setProjectFormOpen(true)
     setProjectModalOpen(false)
   }
-  const handleEditProjectForm = (id: string) => {
+  const handleEditProjectForm = (id: number) => {
     setEditingProjectId(id)
     setProjectFormOpen(true)
     setProjectModalOpen(false)
   }
-  const handleDeleteProject = (id: string) => {
+  const handleDeleteProject = (id: number) => {
     deleteProjectMutate(id, {
       onSuccess: () => {
         if (selectedProjectId === id) {
@@ -283,8 +275,8 @@ function MainProjectsLayout({ projectData, filePanelRef, promptPanelRef }: MainP
 
 type NoTabsYetViewProps = {
   projects: ProjectResponse['data'][]
-  selectedProjectId?: string | null
-  createProjectTab: (args: { projectId?: string; name?: string }) => Promise<any>
+  selectedProjectId?: number | null
+  createProjectTab: (args: { projectId?: number; name?: string }) => Promise<any>
   openProjectModal: () => void
 }
 
@@ -304,7 +296,7 @@ function NoTabsYetView({ projects, selectedProjectId, createProjectTab, openProj
                   onClick={() =>
                     createProjectTab({
                       projectId: projectForButton!.id,
-                      name: projectForButton!.name || `Tab for ${projectForButton!.id.substring(0, 6)}`
+                      name: projectForButton!.name || `Tab for ${projectForButton!.id.toString()}`
                     })
                   }
                 >

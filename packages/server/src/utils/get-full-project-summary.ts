@@ -10,7 +10,7 @@ const buildProjectSummary = (includedFiles: ProjectFile[]) => {
   })
 }
 
-export const getFullProjectSummary = async (projectId: string) => {
+export const getFullProjectSummary = async (projectId: number) => {
   const project = await getProjectById(projectId)
   if (!project) {
     throw new ApiError(404, 'Project not found', 'NOT_FOUND')

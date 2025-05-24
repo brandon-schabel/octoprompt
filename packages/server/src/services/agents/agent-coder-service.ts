@@ -31,6 +31,7 @@ import {
 import { FileSyncData, bulkCreateProjectFiles } from '../project-service'
 import { basename, extname } from 'path'
 import { ApiError } from 'shared'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 const agentCoderPrompts = {
   planningAgent: {
@@ -52,15 +53,15 @@ const agentCoderPrompts = {
       const selectedFilesContext = `
             <selected_files>
     ${selectedFiles
-      .map(
-        (f) => `
+          .map(
+            (f) => `
       <file>
         <id>${f.id}</id>
         <name>${f.name}</name>
         <path>${f.path}</path>
     </file>`
-      )
-      .join('')}
+          )
+          .join('')}
     </selected_files>
             `
 
@@ -73,18 +74,6 @@ const agentCoderPrompts = {
     Specify the targetFilePath for every task.
     </goal>
 `
-
-      const lengthObject = {
-        goal: goal.length,
-        promptContext: promptContext.length,
-        projectSummaryContext: projectSummaryContext.length,
-        selectedFilesContext: selectedFilesContext.length,
-        userRequest: agentContext.userInput.length,
-        projectId: agentContext.projectFiles[0].projectId.length,
-        projectName: agentContext.project.name.length
-      }
-
-      console.log({ lengthObject })
 
       return `
     ${goal}
@@ -333,7 +322,7 @@ export async function createFileChangeDiffFromTaskPlan(
   agentContext: CoderAgentDataContext,
   taskPlan: TaskPlan
 ): Promise<{ files: ProjectFile[]; tasks: TaskPlan }> {
-  let currentFileMapState = new Map<string, ProjectFile>(agentContext.projectFileMap)
+  let currentFileMapState = new Map<number, ProjectFile>(agentContext.projectFileMap)
 
   //  Execute Tasks Sequentially (Respecting Dependencies could be added here)
   for (let i = 0; i < taskPlan.tasks.length; i++) {
@@ -463,7 +452,7 @@ export async function createFileChangeDiffFromTaskPlan(
           content: newContent,
           checksum: newChecksum,
           size: Buffer.byteLength(newContent, 'utf8'),
-          updatedAt: new Date().toISOString()
+          updated: normalizeToUnixMs(new Date())
           // Ensure all ProjectFile fields are present
         }
 
@@ -500,7 +489,7 @@ export async function createFileChangeDiffFromTaskPlan(
             content: updatedContent,
             checksum: newChecksum,
             size: Buffer.byteLength(updatedContent, 'utf8'),
-            updatedAt: new Date().toISOString()
+            updated: normalizeToUnixMs(new Date())
           }
           currentFileMapState.set(targetFile.id, updatedFile)
           await log(`[Orchestrator] Updated file content in state map for ${normalizedTaskPath}`, 'verbose', {
@@ -550,7 +539,7 @@ export async function createFileChangeDiffFromTaskPlan(
 export type CoderAgentOrchestratorSuccessResult = {
   updatedFiles: ProjectFile[]
   taskPlan: TaskPlan | null
-  agentJobId: string
+  agentJobId: number
   agentDataLog: AgentDataLog // Use the specific type here
 }
 
@@ -563,10 +552,10 @@ export async function mainOrchestrator(
   // Initialize agentDataLog early to ensure it's available in catch/finally
   const agentDataLog: AgentDataLog = {
     // agentJobDirPath will be set once log paths are confirmed or from AGENT_LOGS_DIR structure
-    agentJobDirPath: join(AGENT_LOGS_DIR, 'projects', rawAgentContext.project.id, 'jobs', agentJobId), // Initial sensible default
+    agentJobDirPath: join(AGENT_LOGS_DIR, 'projects', rawAgentContext.project.id.toString(), 'jobs', agentJobId.toString()), // Initial sensible default
     projectId: rawAgentContext.project.id,
     agentJobId,
-    agentJobStartTime: new Date().toISOString(),
+    agentJobStartTime: normalizeToUnixMs(new Date()),
     taskPlan: {
       overallGoal: rawAgentContext.userInput || 'User input not provided',
       tasks: [],
@@ -576,7 +565,7 @@ export async function mainOrchestrator(
     finalTaskPlan: null,
     errorMessage: '',
     errorStack: '',
-    agentJobEndTime: '',
+    agentJobEndTime: normalizeToUnixMs(new Date()),
     updatedFiles: [] // Ensure it's always an array
   }
 
@@ -601,7 +590,7 @@ export async function mainOrchestrator(
     agentDataLog.finalStatus = 'Error'
     agentDataLog.errorMessage = `Logger initialization failed: ${initError.message}`
     agentDataLog.errorStack = initError.stack
-    agentDataLog.agentJobEndTime = new Date().toISOString()
+    agentDataLog.agentJobEndTime = normalizeToUnixMs(new Date())
     try {
       // Attempt to write data log even if orchestrator logger init fails, path might be guess but better than nothing
       await writeAgentDataLog(rawAgentContext.project.id, agentJobId, agentDataLog)
@@ -635,7 +624,7 @@ export async function mainOrchestrator(
     agentDataLog.finalStatus = 'Error'
     agentDataLog.errorMessage = errorMsg
     agentDataLog.errorStack = JSON.stringify(contextValidation.error.format())
-    agentDataLog.agentJobEndTime = new Date().toISOString() // Set end time on error
+    agentDataLog.agentJobEndTime = normalizeToUnixMs(new Date()) // Set end time on error
     // No throw here, let finally block handle writing the data log
     // Then rethrow from main catch if this was the primary error
     // For now, we assume this is caught by the main try-catch block of the orchestrator.
@@ -729,7 +718,7 @@ export async function mainOrchestrator(
       originalStack: errorStack
     })
   } finally {
-    agentDataLog.agentJobEndTime = new Date().toISOString()
+    agentDataLog.agentJobEndTime = normalizeToUnixMs(new Date())
     try {
       await writeAgentDataLog(rawAgentContext.project.id, agentJobId, agentDataLog)
       const agentDataLogPath = await getAgentDataLogFilePath(rawAgentContext.project.id, agentJobId)

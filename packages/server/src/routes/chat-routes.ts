@@ -19,7 +19,6 @@ import {
     ForkChatParamsSchema,
     GetMessagesParamsSchema,
     MessageListResponseSchema,
-    ModelsQuerySchema,
     UpdateChatBodySchema,
     UpdateChatParamsSchema,
     AiChatStreamRequestSchema
@@ -32,7 +31,6 @@ import { handleChatMessage } from '@/services/gen-ai-services'
 
 const chatService = createChatService()
 
-// --- Model Routes (/models) ---
 
 // GET /chats
 const getAllChatsRoute = createRoute({

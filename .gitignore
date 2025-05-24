@@ -203,3 +203,4 @@ openapi.json
 .venv
 
 __pycache__
+**/data/*

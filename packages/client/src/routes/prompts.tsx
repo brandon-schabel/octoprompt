@@ -160,12 +160,7 @@ export function PromptsPage() {
 
 // Prompt Card Component
 interface PromptCardProps {
-  prompt: {
-    id: string
-    name: string
-    content: string
-    createdAt: string | Date
-  }
+  prompt: Prompt
   onEdit: () => void
   onDelete: () => Promise<void>
 }
@@ -173,9 +168,9 @@ interface PromptCardProps {
 function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
   const { copyToClipboard, status } = useCopyClipboard()
 
-  const formatDate = (date: string | Date) => {
+  const formatDate = (date: string | Date | number) => {
     try {
-      return typeof date === 'string' ? new Date(date).toLocaleDateString() : date.toLocaleDateString()
+      return typeof date === 'string' ? new Date(date).toLocaleDateString() : new Date(date).toLocaleDateString()
     } catch (e) {
       return 'Invalid date'
     }
@@ -204,7 +199,7 @@ function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps) {
           <CardTitle>{prompt.name}</CardTitle>
           <span className={`text-xs ${getTokenCountClass()}`}>{formatTokenCount(tokenCount)} tokens</span>
         </div>
-        <CardDescription>Created: {formatDate(prompt.createdAt)}</CardDescription>
+        <CardDescription>Created: {formatDate(prompt.created)}</CardDescription>
       </CardHeader>
       <CardContent>
         <p className='text-sm text-muted-foreground line-clamp-3'>{prompt.content}</p>

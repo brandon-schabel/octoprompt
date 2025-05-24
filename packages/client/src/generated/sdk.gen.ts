@@ -207,13 +207,7 @@ import type {
   PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError,
   DeleteApiAgentCoderRunsByAgentJobIdData,
   DeleteApiAgentCoderRunsByAgentJobIdResponse,
-  DeleteApiAgentCoderRunsByAgentJobIdError,
-  DeleteApiKvData,
-  DeleteApiKvResponse,
-  DeleteApiKvError,
-  GetApiKvData,
-  GetApiKvResponse,
-  GetApiKvError
+  DeleteApiAgentCoderRunsByAgentJobIdError
 } from './types.gen'
 import { client as _heyApiClient } from './client.gen'
 
@@ -1382,26 +1376,6 @@ export const deleteApiAgentCoderRunsByAgentJobId = <ThrowOnError extends boolean
     ThrowOnError
   >({
     url: '/api/agent-coder/runs/{agentJobId}',
-    ...options
-  })
-}
-
-/**
- * Delete a key-value pair from the KV store
- */
-export const deleteApiKv = <ThrowOnError extends boolean = false>(options: Options<DeleteApiKvData, ThrowOnError>) => {
-  return (options.client ?? _heyApiClient).delete<DeleteApiKvResponse, DeleteApiKvError, ThrowOnError>({
-    url: '/api/kv',
-    ...options
-  })
-}
-
-/**
- * Get a value from the KV store by key
- */
-export const getApiKv = <ThrowOnError extends boolean = false>(options: Options<GetApiKvData, ThrowOnError>) => {
-  return (options.client ?? _heyApiClient).get<GetApiKvResponse, GetApiKvError, ThrowOnError>({
-    url: '/api/kv',
     ...options
   })
 }

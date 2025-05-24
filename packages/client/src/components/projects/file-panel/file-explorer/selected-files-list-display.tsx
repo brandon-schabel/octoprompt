@@ -49,7 +49,7 @@ const SelectedFilesListDisplay = function SelectedFilesSidebar({
           {activeProjectTabId && (
             <SelectedFilesList
               ref={selectedFilesListRef}
-              onRemoveFile={(fileId: string) => {
+              onRemoveFile={(fileId: number) => {
                 removeSelectedFile(fileId)
               }}
               onNavigateLeft={onNavigateToFileTree}

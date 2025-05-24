@@ -16,15 +16,15 @@ export const kvKeyEnumSchema = z.enum(Object.values(KVKeyEnum) as [KVKey, ...KVK
 export const KvSchemas = {
   [KVKeyEnum.appSettings]: appSettingsSchema,
   [KVKeyEnum.projectTabs]: projectTabsStateRecordSchema,
-  [KVKeyEnum.activeProjectTabId]: z.string().nullable().default('defaultTab'),
-  [KVKeyEnum.activeChatId]: z.string().nullable().default('')
+  [KVKeyEnum.activeProjectTabId]: z.number().default(1),
+  [KVKeyEnum.activeChatId]: z.number().default(1)
 } as const
 
 const initialGlobalState = createInitialGlobalState()
 
 export const KVDefaultValues: { [K in KVKey]: KVValue<K> } = {
-  activeChatId: initialGlobalState.activeChatId,
-  activeProjectTabId: initialGlobalState.projectActiveTabId,
+  activeChatId: initialGlobalState.activeChatId ?? 1,
+  activeProjectTabId: initialGlobalState.projectActiveTabId ?? 1,
   appSettings: initialGlobalState.appSettings,
   projectTabs: initialGlobalState.projectTabs
 }

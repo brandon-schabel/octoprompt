@@ -3,14 +3,14 @@ import { ProviderKey } from '@/generated/types.gen';
 // Re-define or import a simplified StoredKey type if ProviderKey is too complex or has API-specific parts
 // For now, let's assume ProviderKey can be stored directly or we'll adapt it.
 // If ProviderKey has methods or non-serializable parts, we'll need a plain object type.
-export type StoredKey = ProviderKey; // Or a simpler version like { id: string; name: string; key: string; provider: string; createdAt?: string; updatedAt?: string; }
+export type StoredKey = ProviderKey; // Or a simpler version like { id: number; name: string; key: string; provider: string; createdAt?: string; updatedAt?: string; }
 
 export interface IKeyStore {
     getAllKeys(): Promise<StoredKey[]>;
-    getKeyById(id: string): Promise<StoredKey | null>;
-    createKey(keyData: Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey>;
-    updateKey(id: string, updates: Partial<Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'>>): Promise<StoredKey | null>;
-    deleteKey(id: string): Promise<boolean>;
+    getKeyById(id: number): Promise<StoredKey | null>;
+    createKey(keyData: Omit<StoredKey, 'id' | 'created' | 'updated'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey>;
+    updateKey(id: number, updates: Partial<Omit<StoredKey, 'id' | 'created' | 'updated'>>): Promise<StoredKey | null>;
+    deleteKey(id: number): Promise<boolean>;
 }
 
 const LOCAL_STORAGE_PROVIDER_KEYS = 'providerApiKeys';
@@ -25,25 +25,26 @@ export class LocalStorageKeyStore implements IKeyStore {
         return itemsJson ? JSON.parse(itemsJson) : [];
     }
 
-    async getKeyById(id: string): Promise<StoredKey | null> {
+    async getKeyById(id: number): Promise<StoredKey | null> {
         const items = await this.getAllKeys();
         return items.find(item => item.id === id) || null;
     }
 
-    async createKey(keyData: Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey> {
+    async createKey(keyData: Omit<StoredKey, 'id' | 'created' | 'updated'> & Partial<Pick<StoredKey, 'id'>>): Promise<StoredKey> {
         const items = await this.getAllKeys();
         const newKey: StoredKey = {
             ...keyData,
             id: keyData.id || this.generateId(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            // unix timestamp in milliseconds
+            created: new Date().getTime(),
+            updated: new Date().getTime(),
         } as StoredKey; // Cast needed if StoredKey has more non-optional fields from ProviderKey
         items.push(newKey);
         localStorage.setItem(LOCAL_STORAGE_PROVIDER_KEYS, JSON.stringify(items));
         return newKey;
     }
 
-    async updateKey(id: string, updates: Partial<Omit<StoredKey, 'id' | 'createdAt' | 'updatedAt'>>): Promise<StoredKey | null> {
+    async updateKey(id: number, updates: Partial<Omit<StoredKey, 'id' | 'created' | 'updated'>>): Promise<StoredKey | null> {
         const items = await this.getAllKeys();
         const itemIndex = items.findIndex(item => item.id === id);
         if (itemIndex === -1) {
@@ -52,13 +53,13 @@ export class LocalStorageKeyStore implements IKeyStore {
         items[itemIndex] = {
             ...items[itemIndex],
             ...updates,
-            updatedAt: new Date().toISOString(),
+            updated: new Date().getTime(),
         };
         localStorage.setItem(LOCAL_STORAGE_PROVIDER_KEYS, JSON.stringify(items));
         return items[itemIndex];
     }
 
-    async deleteKey(id: string): Promise<boolean> {
+    async deleteKey(id: number): Promise<boolean> {
         let items = await this.getAllKeys();
         const initialLength = items.length;
         items = items.filter(item => item.id !== id);

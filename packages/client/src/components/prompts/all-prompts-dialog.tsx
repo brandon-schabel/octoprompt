@@ -13,12 +13,12 @@ import {
 interface PromptsDialogAllProps {
   open: boolean
   onClose: () => void
-  selectedProjectId: string | null
+  selectedProjectId: number | null
 }
 
 export function PromptsDialogAll({ open, onClose, selectedProjectId }: PromptsDialogAllProps) {
   const { data: allPromptsResponse, isLoading, error } = useGetAllPrompts()
-  const { data: projectPromptData } = useGetProjectPrompts(selectedProjectId ?? '')
+  const { data: projectPromptData } = useGetProjectPrompts(selectedProjectId ?? -1)
   const addPromptToProject = useAddPromptToProject()
   const removePromptFromProject = useRemovePromptFromProject()
 
@@ -36,11 +36,11 @@ export function PromptsDialogAll({ open, onClose, selectedProjectId }: PromptsDi
   }, [allPrompts, searchTerm])
 
   // Check if a prompt is in the project
-  function isPromptInProject(promptId: string): boolean {
+  function isPromptInProject(promptId: number): boolean {
     return projectPrompts.some((pp) => pp.id === promptId)
   }
 
-  async function handleAddPromptToProject(promptId: string) {
+  async function handleAddPromptToProject(promptId: number) {
     if (!selectedProjectId) {
       toast.error('No project selected!')
       return
@@ -53,7 +53,7 @@ export function PromptsDialogAll({ open, onClose, selectedProjectId }: PromptsDi
     }
   }
 
-  async function handleRemovePromptFromProject(promptId: string) {
+  async function handleRemovePromptFromProject(promptId: number) {
     if (!selectedProjectId) {
       toast.error('No project selected!')
       return

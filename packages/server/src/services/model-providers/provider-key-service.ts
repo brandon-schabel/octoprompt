@@ -8,6 +8,7 @@ import {
 } from 'shared/src/schemas/provider-key.schemas'
 import { ApiError } from 'shared'
 import { z } from '@hono/zod-openapi'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 // The mapDbRowToProviderKey function is no longer needed as we store objects directly
 // that should conform to the ProviderKey schema.
@@ -21,15 +22,15 @@ export type CreateProviderKeyInput = z.infer<typeof CreateProviderKeyInputSchema
 export function createProviderKeyService() {
   async function createKey(data: CreateProviderKeyInput): Promise<ProviderKey> {
     const allKeys = await providerKeyStorage.readProviderKeys()
-    const now = new Date().toISOString()
+    const now = normalizeToUnixMs(new Date())
     const id = providerKeyStorage.generateId()
 
     const newKeyData: ProviderKey = {
       id,
       provider: data.provider,
       key: data.key, // Stored in plaintext initially
-      createdAt: now,
-      updatedAt: now,
+      created: now,
+      updated: now,
       // Add any other fields from ProviderKeySchema with defaults if necessary
       // e.g., metadata: data.metadata ?? null, if metadata was part of your schema
     }
@@ -61,19 +62,19 @@ export function createProviderKeyService() {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const keyList = Object.values(allKeys)
 
-    // Sort by provider, then by createdAt descending (as in original SQL)
+    // Sort by provider, then by created descending (as in original SQL)
     keyList.sort((a, b) => {
       if (a.provider < b.provider) return -1
       if (a.provider > b.provider) return 1
-      // Assuming createdAt are valid ISO strings, direct string comparison for descending order
-      if (a.createdAt > b.createdAt) return -1
-      if (a.createdAt < b.createdAt) return 1
+      // Assuming created are valid ISO strings, direct string comparison for descending order
+      if (a.created > b.created) return -1
+      if (a.created < b.created) return 1
       return 0
     })
     return keyList
   }
 
-  async function getKeyById(id: string): Promise<ProviderKey | null> {
+  async function getKeyById(id: number): Promise<ProviderKey | null> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const foundKeyData = allKeys[id]
 
@@ -102,7 +103,7 @@ export function createProviderKeyService() {
     return foundKeyData
   }
 
-  async function updateKey(id: string, data: UpdateProviderKeyInput): Promise<ProviderKey> {
+  async function updateKey(id: number, data: UpdateProviderKeyInput): Promise<ProviderKey> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const existingKey = allKeys[id]
 
@@ -114,7 +115,7 @@ export function createProviderKeyService() {
       ...existingKey,
       provider: data.provider ?? existingKey.provider,
       key: data.key ?? existingKey.key, // Stored in plaintext initially
-      updatedAt: new Date().toISOString()
+      updated: normalizeToUnixMs(new Date())
       // any other updatable fields
     }
 
@@ -135,7 +136,7 @@ export function createProviderKeyService() {
     return validatedUpdatedKey
   }
 
-  async function deleteKey(id: string): Promise<boolean> {
+  async function deleteKey(id: number): Promise<boolean> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     if (!allKeys[id]) {
       return false // Key not found, nothing to delete

@@ -3,15 +3,15 @@ import { useLinkFilesToTicket } from '../../hooks/api/use-tickets-api'
 import { ProjectFile } from '@/generated'
 
 interface TicketAttachmentsPanelProps {
-  ticketId: string
+  ticketId: number
   projectFiles: ProjectFile[]
 }
 
 export function TicketAttachmentsPanel({ ticketId, projectFiles }: TicketAttachmentsPanelProps) {
-  const [selectedFiles, setSelectedFiles] = React.useState<string[]>([])
+  const [selectedFiles, setSelectedFiles] = React.useState<number[]>([])
   const { mutateAsync: linkFiles, isPending } = useLinkFilesToTicket()
 
-  function toggleFile(fileId: string) {
+  function toggleFile(fileId: number) {
     setSelectedFiles((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]))
   }
 

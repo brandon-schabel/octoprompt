@@ -61,7 +61,7 @@ export function useGetAllPrompts(options?: Partial<GetApiPromptsData['query']>) 
 /**
  * Fetches a single prompt by its ID.
  */
-export function useGetPrompt(id: string) {
+export function useGetPrompt(id: number) {
   const queryOptions = getApiPromptsByPromptIdOptions({
     path: { promptId: id }
   } as Options<GetApiPromptsByPromptIdData>)
@@ -74,7 +74,7 @@ export function useGetPrompt(id: string) {
 /**
  * Fetches prompts associated with a specific project.
  */
-export function useGetProjectPrompts(projectId: string) {
+export function useGetProjectPrompts(projectId: number) {
   const queryOptions = getApiProjectsByProjectIdPromptsOptions({
     path: { projectId }
   } as Options<GetApiProjectsByProjectIdPromptsData>)
@@ -89,7 +89,7 @@ export function useGetProjectPrompts(projectId: string) {
 /**
  * Creates a new prompt.
  */
-export function useCreatePrompt(projectId?: string) {
+export function useCreatePrompt(projectId?: number) {
   const queryClient = useQueryClient()
   const mutationOptions = postApiPromptsMutation()
 
@@ -109,7 +109,7 @@ export function useCreatePrompt(projectId?: string) {
 /**
  * Updates an existing prompt.
  */
-export function useUpdatePrompt(projectId?: string) {
+export function useUpdatePrompt(projectId?: number) {
   const queryClient = useQueryClient()
   const mutationOptions = patchApiPromptsByPromptIdMutation()
 
@@ -117,9 +117,9 @@ export function useUpdatePrompt(projectId?: string) {
   return useMutation<
     PatchApiPromptsByPromptIdResponse,
     PatchApiPromptsByPromptIdError,
-    { promptId: string; data: UpdatePromptInput }
+    { promptId: number; data: UpdatePromptInput }
   >({
-    mutationFn: (vars: { promptId: string; data: UpdatePromptInput }) => {
+    mutationFn: (vars: { promptId: number; data: UpdatePromptInput }) => {
       // projectId is now available in vars but not directly used in API call path/body
       const opts: Options<PatchApiPromptsByPromptIdData> = { path: { promptId: vars.promptId }, body: vars.data }
       return mutationOptions.mutationFn!(opts)
@@ -146,12 +146,12 @@ export function useUpdatePrompt(projectId?: string) {
  * Deletes a prompt by its ID.
  */
 // optional projectId used for invalidating project-specific prompts list
-export function useDeletePrompt(projectId?: string) {
+export function useDeletePrompt(projectId?: number) {
   const queryClient = useQueryClient()
   const mutationOptions = deleteApiPromptsByPromptIdMutation()
 
   // *** MODIFIED: Variables are now an object including projectId ***
-  return useMutation<DeleteApiPromptsByPromptIdResponse, DeleteApiPromptsByPromptIdError, { promptId: string }>({
+  return useMutation<DeleteApiPromptsByPromptIdResponse, DeleteApiPromptsByPromptIdError, { promptId: number }>({
     mutationFn: (vars) => {
       // projectId is now available in vars but only promptId is needed for API call path
       const opts: Options<DeleteApiPromptsByPromptIdData> = { path: { promptId: vars.promptId } }
@@ -186,9 +186,9 @@ export function useAddPromptToProject() {
   return useMutation<
     PostApiProjectsByProjectIdPromptsByPromptIdResponse,
     PostApiProjectsByProjectIdPromptsByPromptIdError,
-    { promptId: string; projectId: string }
+    { promptId: number; projectId: number }
   >({
-    mutationFn: (vars: { promptId: string; projectId: string }) => {
+    mutationFn: (vars: { promptId: number; projectId: number }) => {
       const opts: Options<PostApiProjectsByProjectIdPromptsByPromptIdData> = {
         path: { promptId: vars.promptId, projectId: vars.projectId }
       }
@@ -212,9 +212,9 @@ export function useRemovePromptFromProject() {
   return useMutation<
     DeleteApiProjectsByProjectIdPromptsByPromptIdResponse,
     DeleteApiProjectsByProjectIdPromptsByPromptIdError,
-    { promptId: string; projectId: string }
+    { promptId: number; projectId: number }
   >({
-    mutationFn: (vars: { promptId: string; projectId: string }) => {
+    mutationFn: (vars: { promptId: number; projectId: number }) => {
       const opts: Options<DeleteApiProjectsByProjectIdPromptsByPromptIdData> = {
         path: { promptId: vars.promptId, projectId: vars.projectId }
       }

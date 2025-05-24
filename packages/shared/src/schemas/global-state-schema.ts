@@ -18,22 +18,22 @@ export const apiProviders = providerSchema.options
 export const projectTabStateSchema = z
   .object({
     selectedProjectId: z
-      .string()
+      .number()
       .nullable()
       .optional()
       .default(null)
       .openapi({
         description: 'ID of the currently selected project within this tab, or null.',
-        example: 'proj_123abc'
+        example: 30274374372023
       }),
     editProjectId: z
-      .string()
+      .number()
       .nullable()
       .optional()
       .default(null)
       .openapi({
         description: 'ID of the project whose settings are being edited within this tab, or null.',
-        example: null
+        example: 30274374372023
       }),
     promptDialogOpen: z
       .boolean()
@@ -52,16 +52,16 @@ export const projectTabStateSchema = z
       .default('')
       .openapi({ description: 'Current search query for files within this project tab.', example: 'userService' }),
     selectedFiles: z
-      .array(z.string())
+      .array(z.number())
       .nullable()
       .optional()
       .default([])
-      .openapi({ description: 'Array of file IDs currently selected in this tab.', example: ['file_abc', 'file_def'] }),
+      .openapi({ description: 'Array of file IDs currently selected in this tab.', example: [1, 2] }),
     selectedPrompts: z
-      .array(z.string())
+      .array(z.number())
       .optional()
       .default([])
-      .openapi({ description: 'Array of prompt IDs currently selected in this tab.', example: ['prompt_ghi'] }),
+      .openapi({ description: 'Array of prompt IDs currently selected in this tab.', example: [1, 2] }),
     userPrompt: z
       .string()
       .optional()
@@ -99,20 +99,20 @@ export const projectTabStateSchema = z
       .default('vscode')
       .openapi({ description: 'The preferred editor to open files with from this tab.', example: 'cursor' }),
     suggestedFileIds: z
-      .array(z.string())
+      .array(z.number())
       .optional()
       .default([])
       .openapi({
         description: 'Array of file IDs suggested by the AI for the current context.',
-        example: ['file_sug1', 'file_sug2']
+        example: [1, 2, 3, 4, 5]
       }),
     bookmarkedFileGroups: z
-      .record(z.string(), z.array(z.string()))
+      .record(z.string(), z.array(z.number()))
       .optional()
       .default({})
       .openapi({
         description: 'A record of user-defined file groups (bookmarks), mapping group names to arrays of file IDs.',
-        example: { 'Auth Files': ['file_auth1', 'file_auth2'] }
+        example: { 'Auth Files': [1, 2] }
       }),
     ticketSearch: z
       .string()
@@ -249,12 +249,12 @@ export const appSettingsSchema = z
         example: ['src/**/*.ts']
       }),
     summarizationEnabledProjectIds: z
-      .array(z.string())
+      .array(z.number())
       .optional()
       .default([])
       .openapi({
         description: 'List of project IDs for which automatic summarization is enabled.',
-        example: ['proj_123', 'proj_456']
+        example: [123, 456]
       }),
     useSpacebarToSelectAutocomplete: z
       .boolean()
@@ -351,18 +351,17 @@ export const globalStateSchema = z
       description: 'State of all open project tabs, keyed by tab ID.'
     }),
     projectActiveTabId: z
-      .string()
+      .number()
       .optional()
-      .default('defaultTab')
+      .default(1)
       .openapi({
-        description: 'The ID of the currently active project tab, or null if none is active.',
-        example: 'tab_abc123'
+        description: 'The ID (unix timestamp ms)of the currently active project tab, or null if none is active.',
+        example: 1747969916286
       }),
     activeChatId: z
-      .string()
+      .number()
       .optional()
-      .default('')
-      .openapi({ description: 'The ID of the currently active chat session, or null.', example: 'chat_xyz789' }),
+      .openapi({ description: 'The ID (unix timestamp ms) of the currently active chat session, or null.', example: 1747969916286 }),
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: 'Link settings specific to each chat session.' })
   })
   .openapi('GlobalState', { description: 'Represents the entire persistent application state.' })
@@ -379,8 +378,8 @@ export const createInitialGlobalState = (): GlobalState => ({
       // Set any other non-default initial values if needed
     })
   },
-  projectActiveTabId: 'defaultTab', // Assuming project tabs remain
-  activeChatId: '',
+  projectActiveTabId: 1, // Assuming project tabs remain
+  activeChatId: 1,
   chatLinkSettings: {}
 })
 
