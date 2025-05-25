@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi'
+import { unixTSSchemaSpec } from './schema-utils'
 
 export const AI_API_PROVIDERS = [
   'openai',
@@ -18,7 +19,7 @@ export type APIProviders = z.infer<typeof providerSchema>
 
 export const ProviderKeySchema = z
   .object({
-    id: z.number().openapi({ example: 1716537600000, description: 'Provider Key ID' }),
+    id: unixTSSchemaSpec,
     provider: z
       .string()
       .openapi({ example: 'openai', description: 'AI Provider identifier (e.g., openai, anthropic)' }),
@@ -64,14 +65,7 @@ export const UpdateProviderKeyBodySchema = z
 // --- Request Parameter Schemas ---
 export const ProviderKeyIdParamsSchema = z
   .object({
-    keyId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'keyId', in: 'path' },
-        example: 'key-1a2b3c4d',
-        description: 'The ID of the provider key'
-      })
+    keyId: unixTSSchemaSpec.openapi({ param: { name: 'keyId', in: 'path' } })
   })
   .openapi('ProviderKeyIdParams')
 

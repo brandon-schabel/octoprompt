@@ -1,45 +1,43 @@
 import { z } from '@hono/zod-openapi'
 import { unixTimestampSchema } from '../utils/unix-ts-utils'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
+
+
 
 // Base schema - Represents the API structure
 export const ProjectSchema = z
   .object({
-    id: unixTimestampSchema.openapi({ example: 1716537600000, description: 'Project ID (Unix MS Timestamp)' }),
+    id: unixTSSchemaSpec,
     name: z.string(),
     description: z.string(),
     path: z.string(),
-    created: unixTimestampSchema.openapi({ example: 1678442400000, description: 'Creation timestamp (Unix MS)' }),
-    updated: unixTimestampSchema.openapi({ example: 1678442700000, description: 'Last update timestamp (Unix MS)' })
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
   })
   .openapi('Project')
 
 export const ProjectFileSchema = z
   .object({
-    id: unixTimestampSchema.openapi({ example: 1716537600000, description: 'File ID (Unix MS Timestamp)' }),
-    projectId: unixTimestampSchema.openapi({ example: 1716537600000, description: 'Project ID (Unix MS Timestamp)' }),
+    id: unixTSSchemaSpec,
+    projectId: unixTSSchemaSpec,
     name: z.string(),
     path: z.string(),
     extension: z.string(),
     size: z.number(),
     content: z.string().nullable(),
     summary: z.string().nullable(),
-    summaryLastUpdated: unixTimestampSchema.nullable().openapi({ example: 1678442800000, description: 'Summary last update timestamp (Unix MS), or null' }),
+    summaryLastUpdated: unixTSSchemaSpec.nullable(),
     meta: z.string().nullable(),
     checksum: z.string().nullable(),
-    created: unixTimestampSchema.openapi({ example: 1678442400000, description: 'Creation timestamp (Unix MS)' }),
-    updated: unixTimestampSchema.openapi({ example: 1678442700000, description: 'Last update timestamp (Unix MS)' })
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
   })
   .openapi('ProjectFile')
 
 // Request Parameter Schemas
 export const ProjectIdParamsSchema = z
   .object({
-    projectId: unixTimestampSchema
-      .openapi({
-        param: { name: 'projectId', in: 'path' },
-        example: 1716537600000,
-        description: 'The ID of the project (Unix MS Timestamp)'
-      })
+    projectId: unixTSSchemaSpec.openapi({ param: { name: 'projectId', in: 'path' } })
   })
   .openapi('ProjectIdParams')
 
@@ -66,10 +64,7 @@ export const UpdateProjectBodySchema = z
 export const SummarizeFilesBodySchema = z
   .object({
     // file ids are unix timestamp in milliseconds
-    fileIds: z
-      .array(unixTimestampSchema)
-      .min(1)
-      .openapi({ example: [1716537600000, 1716537600001], description: 'Array of File IDs (Unix MS Timestamps)' }),
+    fileIds: unixTSArraySchemaSpec,
     force: z
       .boolean()
       .optional()
@@ -80,10 +75,7 @@ export const SummarizeFilesBodySchema = z
 
 export const RemoveSummariesBodySchema = z
   .object({
-    fileIds: z
-      .array(unixTimestampSchema)
-      .min(1)
-      .openapi({ example: [1716537600000, 1716537600001], description: 'Array of File IDs (Unix MS Timestamps)' })
+    fileIds: unixTSArraySchemaSpec,
   })
   .openapi('RemoveSummariesRequestBody')
 

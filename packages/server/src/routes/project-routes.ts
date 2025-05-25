@@ -535,9 +535,12 @@ ${userInput}
         systemMessage: systemPrompt
       })
 
+      // Ensure fileIds from AI (potentially strings) are converted to numbers
+      const numericFileIds = result.object.fileIds.map((id: string | number) => typeof id === 'string' ? parseInt(id, 10) : id).filter((id: number) => !isNaN(id));
+
       const payload = {
         success: true,
-        recommendedFileIds: result.object.fileIds
+        recommendedFileIds: numericFileIds
       } satisfies z.infer<typeof SuggestFilesResponseSchema>
 
       return c.json(payload, 200)

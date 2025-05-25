@@ -2,6 +2,7 @@ import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas' // Assume this exists
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs' // Assume this exists
 import { ProjectFileSchema } from './project.schemas'
+import { unixTSArraySchemaSpec } from './schema-utils'
 
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z
@@ -297,7 +298,7 @@ export const RemoveSummariesResponseSchema = z
 export const SuggestFilesResponseSchema = z
   .object({
     success: z.literal(true),
-    recommendedFileIds: z.array(z.number()).openapi({ example: [1, 2, 3, 4, 5] })
+    recommendedFileIds: unixTSArraySchemaSpec
   })
   .openapi('SuggestFilesResponse')
 

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { providerSchema, type APIProviders } from './provider-key.schemas'
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
 const defaultModelConfigs = LOW_MODEL_CONFIG
 
@@ -14,54 +15,26 @@ export type EditorType = (typeof EDITOR_OPTIONS)[number]['value']
 
 export const apiProviders = providerSchema.options
 
+
+// the following schemas are used for the state/store, they aren't used in teh API
 // Project tab state - (Keep as is, unless project tabs are also removed)
 export const projectTabStateSchema = z
   .object({
-    selectedProjectId: z
-      .number()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({
-        description: 'ID of the currently selected project within this tab, or null.',
-        example: 30274374372023
-      }),
-    editProjectId: z
-      .number()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({
-        description: 'ID of the project whose settings are being edited within this tab, or null.',
-        example: 30274374372023
-      }),
+    selectedProjectId: unixTSSchemaSpec,
+    editProjectId: unixTSSchemaSpec,
     promptDialogOpen: z
       .boolean()
       .optional()
       .default(false)
       .openapi({ description: 'Whether the prompt selection/creation dialog is open in this tab.' }),
-    editPromptId: z
-      .string()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({ description: 'ID of the prompt being edited in this tab, or null.', example: 'prompt_xyz789' }),
+    editPromptId: unixTSSchemaSpec,
     fileSearch: z
       .string()
       .optional()
       .default('')
       .openapi({ description: 'Current search query for files within this project tab.', example: 'userService' }),
-    selectedFiles: z
-      .array(z.number())
-      .nullable()
-      .optional()
-      .default([])
-      .openapi({ description: 'Array of file IDs currently selected in this tab.', example: [1, 2] }),
-    selectedPrompts: z
-      .array(z.number())
-      .optional()
-      .default([])
-      .openapi({ description: 'Array of prompt IDs currently selected in this tab.', example: [1, 2] }),
+    selectedFiles: unixTSArraySchemaSpec,
+    selectedPrompts: unixTSArraySchemaSpec,
     userPrompt: z
       .string()
       .optional()
@@ -129,12 +102,7 @@ export const projectTabStateSchema = z
       .optional()
       .default('all')
       .openapi({ description: 'Filter criteria for ticket status.' }),
-    ticketId: z
-      .string()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({ description: 'ID of the currently selected ticket, or null.', example: 'ticket_999' }),
+    ticketId: unixTSSchemaSpec,
     sortOrder: z
       .number()
       .optional()
@@ -350,18 +318,8 @@ export const globalStateSchema = z
     projectTabs: projectTabsStateRecordSchema.openapi({
       description: 'State of all open project tabs, keyed by tab ID.'
     }),
-    projectActiveTabId: z
-      .number()
-      .optional()
-      .default(1)
-      .openapi({
-        description: 'The ID (unix timestamp ms)of the currently active project tab, or null if none is active.',
-        example: 1747969916286
-      }),
-    activeChatId: z
-      .number()
-      .optional()
-      .openapi({ description: 'The ID (unix timestamp ms) of the currently active chat session, or null.', example: 1747969916286 }),
+    projectActiveTabId: unixTSSchemaSpec,
+    activeChatId: unixTSSchemaSpec,
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: 'Link settings specific to each chat session.' })
   })
   .openapi('GlobalState', { description: 'Represents the entire persistent application state.' })
@@ -379,7 +337,7 @@ export const createInitialGlobalState = (): GlobalState => ({
     })
   },
   projectActiveTabId: 1, // Assuming project tabs remain
-  activeChatId: 1,
+  activeChatId: -1,
   chatLinkSettings: {}
 })
 

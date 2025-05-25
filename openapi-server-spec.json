@@ -1,0 +1,6623 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "description": "OctoPrompt OpenAPI Server Spec",
+    "version": "0.5.2",
+    "title": "octoprompt"
+  },
+  "components": {
+    "schemas": {
+      "Chat": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1716537600000
+          },
+          "title": {
+            "type": "string"
+          },
+          "created": {
+            "type": "number",
+            "example": 1716537600000
+          },
+          "updated": {
+            "type": "number",
+            "example": 1716537600000
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created",
+          "updated"
+        ]
+      },
+      "ChatListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Chat"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "ApiErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string",
+                "example": "An error occurred"
+              },
+              "code": {
+                "type": "string",
+                "example": "ERROR_CODE"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            },
+            "required": [
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "error"
+        ]
+      },
+      "ChatResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Chat"
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "CreateChatRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "example": "New Chat Session"
+          },
+          "copyExisting": {
+            "type": "boolean",
+            "description": "Copy messages from currentChatId if true"
+          },
+          "currentChatId": {
+            "type": "number",
+            "example": 1716537600000
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "ChatMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1716537600000
+          },
+          "chatId": {
+            "type": "number",
+            "example": 1716537600000
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "assistant",
+              "user",
+              "system"
+            ],
+            "description": "Role of the message sender",
+            "example": "user"
+          },
+          "content": {
+            "type": "string",
+            "description": "Message content",
+            "example": "Hello, world!"
+          },
+          "created": {
+            "type": "number",
+            "example": 1716537600000
+          }
+        },
+        "required": [
+          "id",
+          "chatId",
+          "role",
+          "content",
+          "created"
+        ]
+      },
+      "MessageListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "AiSdkOptions": {
+        "type": "object",
+        "properties": {
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2,
+            "description": "Controls the randomness of the output. Lower values (e.g., 0.2) make the output more focused, deterministic, and suitable for factual tasks. Higher values (e.g., 0.8) increase randomness and creativity, useful for brainstorming or creative writing. A value of 0 typically means greedy decoding (always picking the most likely token).",
+            "example": 0.7
+          },
+          "maxTokens": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "The maximum number of tokens (words or parts of words) the model is allowed to generate in the response. This limits the output length and can affect cost. Note: This limit usually applies only to the *generated* tokens, not the input prompt tokens.",
+            "example": 10000
+          },
+          "topP": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Controls diversity via nucleus sampling. It defines a probability threshold (e.g., 0.9). The model considers only the smallest set of most probable tokens whose cumulative probability exceeds this threshold for the next token selection. Lower values (e.g., 0.5) restrict choices more, leading to less random outputs. A value of 1 considers all tokens. It's often recommended to alter *either* `temperature` *or* `topP`, not both.",
+            "example": 0
+          },
+          "frequencyPenalty": {
+            "type": "number",
+            "minimum": -2,
+            "maximum": 2,
+            "description": "Applies a penalty to tokens based on how frequently they have already appeared in the generated text *and* the prompt. Positive values (e.g., 0.5) decrease the likelihood of the model repeating the same words or phrases verbatim, making the output less repetitive. Negative values encourage repetition.",
+            "example": 0
+          },
+          "presencePenalty": {
+            "type": "number",
+            "minimum": -2,
+            "maximum": 2,
+            "description": "Applies a penalty to tokens based on whether they have appeared *at all* in the generated text *and* the prompt so far (regardless of frequency). Positive values (e.g., 0.5) encourage the model to introduce new concepts and topics, reducing the likelihood of repeating *any* previously mentioned word. Negative values encourage staying on topic.",
+            "example": 0
+          },
+          "topK": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "Restricts the model's choices for the next token to the `k` most likely candidates. For example, if `topK` is 40, the model will only consider the top 40 most probable tokens at each step. A lower value restricts choices more. Setting `topK` to 1 is equivalent to greedy decoding (same as `temperature: 0`). Less commonly used than `topP`.",
+            "example": 0
+          },
+          "stop": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "Specifies one or more sequences of text where the AI should stop generating. Once the model generates a stop sequence, it will halt output immediately, even if `maxTokens` hasn't been reached. Useful for structured output or controlling conversational turns.",
+            "example": [
+              "\nHuman:",
+              "\n---"
+            ]
+          },
+          "response_format": {
+            "nullable": true,
+            "description": "Specifies the desired format for the model's response. This is highly provider-specific. A common use case is enforcing JSON output, often requiring specific model versions.",
+            "example": {
+              "type": "json_object"
+            }
+          },
+          "provider": {
+            "type": "string",
+            "description": "The provider to use for the AI request.",
+            "example": "openrouter"
+          },
+          "model": {
+            "type": "string",
+            "description": "The model to use for the AI request.",
+            "example": "google/gemini-2.5-flash-preview"
+          }
+        },
+        "description": "Optional parameters for the AI model."
+      },
+      "AiChatStreamRequest": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "number",
+            "description": "Required ID of the chat session to continue.",
+            "example": 1716537600000
+          },
+          "userMessage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The latest message content from the user.",
+            "example": "Thanks! Can you elaborate on the E=mc^2 part?"
+          },
+          "options": {
+            "$ref": "#/components/schemas/AiSdkOptions"
+          },
+          "systemMessage": {
+            "type": "string",
+            "description": "Optional system message override for this specific request.",
+            "example": "Respond concisely."
+          },
+          "tempId": {
+            "type": "number",
+            "description": "Temporary client-side ID for optimistic UI updates.",
+            "example": 1716537600000
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Enable debug mode for detailed logging.",
+            "example": true
+          }
+        },
+        "required": [
+          "chatId",
+          "userMessage"
+        ]
+      },
+      "ForkChatRequestBody": {
+        "type": "object",
+        "properties": {
+          "excludedMessageIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "default": [],
+            "description": "Optional list of message IDs to exclude from the fork",
+            "example": [
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      },
+      "ForkChatFromMessageRequestBody": {
+        "type": "object",
+        "properties": {
+          "excludedMessageIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "default": [],
+            "description": "Optional list of message IDs to exclude from the fork",
+            "example": [
+              1716537600000
+            ]
+          }
+        }
+      },
+      "OperationSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation completed successfully"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      },
+      "UpdateChatRequestBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Updated Chat Title"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique ticket identifier"
+          },
+          "projectId": {
+            "type": "number",
+            "description": "Project this ticket belongs to"
+          },
+          "title": {
+            "type": "string",
+            "description": "Ticket title"
+          },
+          "overview": {
+            "type": "string",
+            "description": "Ticket description"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "closed"
+            ],
+            "description": "Current ticket status"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high"
+            ],
+            "description": "Ticket priority"
+          },
+          "suggestedFileIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "JSON string of suggested file IDs"
+          },
+          "created": {
+            "type": "integer",
+            "description": "Creation timestamp (unix timestamp in milliseconds)"
+          },
+          "updated": {
+            "type": "integer",
+            "description": "Last update timestamp (unix timestamp in milliseconds)"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "title",
+          "overview",
+          "status",
+          "priority",
+          "suggestedFileIds",
+          "created",
+          "updated"
+        ]
+      },
+      "TicketResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "ticket": {
+            "$ref": "#/components/schemas/Ticket"
+          }
+        },
+        "required": [
+          "success",
+          "ticket"
+        ]
+      },
+      "CreateTicketBody": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "description": "Project this ticket belongs to"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "overview": {
+            "type": "string",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "closed"
+            ],
+            "default": "open"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high"
+            ],
+            "default": "normal"
+          },
+          "suggestedFileIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "title"
+        ]
+      },
+      "UpdateTicketBody": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "overview": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "closed"
+            ]
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high"
+            ]
+          },
+          "suggestedFileIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "LinkedFilesResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "linkedFiles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ticketId": {
+                  "type": "string"
+                },
+                "fileId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ticketId",
+                "fileId"
+              ]
+            }
+          }
+        },
+        "required": [
+          "success",
+          "linkedFiles"
+        ]
+      },
+      "SuggestedFilesResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "recommendedFileIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "combinedSummaries": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "recommendedFileIds"
+        ]
+      },
+      "SuggestFilesBody": {
+        "type": "object",
+        "properties": {
+          "extraUserInput": {
+            "type": "string",
+            "description": "Optional additional context for file suggestions"
+          }
+        }
+      },
+      "SuggestedTasksResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "suggestedTasks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "suggestedTasks"
+        ]
+      },
+      "TicketListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "tickets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ticket"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "tickets"
+        ]
+      },
+      "TicketWithTaskCount": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "$ref": "#/components/schemas/Ticket"
+          },
+          "taskCount": {
+            "type": "number"
+          },
+          "completedTaskCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "ticket",
+          "taskCount",
+          "completedTaskCount"
+        ]
+      },
+      "TicketWithTaskCountListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "ticketsWithCount": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketWithTaskCount"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "ticketsWithCount"
+        ]
+      },
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique task identifier"
+          },
+          "ticketId": {
+            "type": "number",
+            "description": "Ticket this task belongs to"
+          },
+          "content": {
+            "type": "string",
+            "description": "Task content/description"
+          },
+          "done": {
+            "type": "boolean",
+            "description": "Whether the task is completed"
+          },
+          "orderIndex": {
+            "type": "number",
+            "description": "Task order within the ticket"
+          },
+          "created": {
+            "type": "integer",
+            "description": "Creation timestamp (unix timestamp in milliseconds)"
+          },
+          "updated": {
+            "type": "integer",
+            "description": "Last update timestamp (unix timestamp in milliseconds)"
+          }
+        },
+        "required": [
+          "id",
+          "ticketId",
+          "content",
+          "done",
+          "orderIndex",
+          "created",
+          "updated"
+        ]
+      },
+      "TicketWithTasks": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "$ref": "#/components/schemas/Ticket"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          }
+        },
+        "required": [
+          "ticket",
+          "tasks"
+        ]
+      },
+      "TicketWithTasksListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "ticketsWithTasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketWithTasks"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "ticketsWithTasks"
+        ]
+      },
+      "TaskResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "task": {
+            "$ref": "#/components/schemas/Task"
+          }
+        },
+        "required": [
+          "success",
+          "task"
+        ]
+      },
+      "TaskListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "tasks"
+        ]
+      },
+      "BulkTasksResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "tasks": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Task"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "tasks"
+        ]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1716537600000
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "created": {
+            "type": "integer",
+            "example": 1678442400000
+          },
+          "updated": {
+            "type": "integer",
+            "example": 1678442700000
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "path",
+          "created",
+          "updated"
+        ]
+      },
+      "ProjectResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Project"
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "ProjectResponseMultiStatus": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ProjectResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "warning": {
+                "type": "string"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "CreateProjectRequestBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "My Awesome Project"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "example": "/path/to/project"
+          },
+          "description": {
+            "type": "string",
+            "example": "Optional project description"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ]
+      },
+      "ProjectListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "UpdateProjectRequestBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Updated Project Name"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "example": "/new/path/to/project"
+          },
+          "description": {
+            "type": "string",
+            "example": "Updated description"
+          }
+        }
+      },
+      "ProjectFile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1716537600000
+          },
+          "projectId": {
+            "type": "integer",
+            "example": 1716537600000
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "summaryLastUpdated": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1678442800000
+          },
+          "meta": {
+            "type": "string",
+            "nullable": true
+          },
+          "checksum": {
+            "type": "string",
+            "nullable": true
+          },
+          "created": {
+            "type": "integer",
+            "example": 1678442400000
+          },
+          "updated": {
+            "type": "integer",
+            "example": 1678442700000
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "name",
+          "path",
+          "extension",
+          "size",
+          "content",
+          "summary",
+          "summaryLastUpdated",
+          "meta",
+          "checksum",
+          "created",
+          "updated"
+        ]
+      },
+      "FileListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectFile"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "ProjectSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "summary"
+        ]
+      },
+      "SuggestFilesResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "recommendedFileIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "recommendedFileIds"
+        ]
+      },
+      "SuggestFilesRequestBody": {
+        "type": "object",
+        "properties": {
+          "userInput": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Implement authentication using JWT"
+          }
+        },
+        "required": [
+          "userInput"
+        ]
+      },
+      "SummarizeFilesResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "included": {
+            "type": "integer",
+            "example": 5
+          },
+          "skipped": {
+            "type": "integer",
+            "example": 2
+          },
+          "updatedFiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectFile"
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Files summarized successfully."
+          }
+        },
+        "required": [
+          "success",
+          "included",
+          "skipped",
+          "updatedFiles",
+          "message"
+        ]
+      },
+      "SummarizeFilesRequestBody": {
+        "type": "object",
+        "properties": {
+          "fileIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "example": [
+              1716537600000,
+              1716537600000,
+              1716537600000
+            ]
+          },
+          "force": {
+            "type": "boolean",
+            "default": false,
+            "description": "Force re-summarization even if summary exists",
+            "example": false
+          }
+        },
+        "required": [
+          "fileIds"
+        ]
+      },
+      "RemoveSummariesResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "removedCount": {
+            "type": "integer",
+            "example": 3
+          },
+          "message": {
+            "type": "string",
+            "example": "Summaries removed."
+          }
+        },
+        "required": [
+          "success",
+          "removedCount",
+          "message"
+        ]
+      },
+      "RemoveSummariesRequestBody": {
+        "type": "object",
+        "properties": {
+          "fileIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "example": [
+              1716537600000,
+              1716537600000,
+              1716537600000
+            ]
+          }
+        },
+        "required": [
+          "fileIds"
+        ]
+      },
+      "OptimizePromptResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Indicates successful optimization"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "optimizedPrompt": {
+                "type": "string",
+                "description": "The optimized prompt generated by the service.",
+                "example": "Optimize the user experience for the login form, focusing on clarity, security, and accessibility. Suggest improvements for field labels, error handling, password requirements display, and button text."
+              }
+            },
+            "required": [
+              "optimizedPrompt"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "OptimizePromptRequest": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "number",
+            "description": "The ID of the project",
+            "example": 1716537600000
+          },
+          "userContext": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The user's initial prompt or context to be optimized.",
+            "example": "Make my login form better."
+          }
+        },
+        "required": [
+          "projectId",
+          "userContext"
+        ]
+      },
+      "ProviderKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Provider Key ID",
+            "example": 1716537600000
+          },
+          "provider": {
+            "type": "string",
+            "description": "AI Provider identifier (e.g., openai, anthropic)",
+            "example": "openai"
+          },
+          "key": {
+            "type": "string",
+            "description": "The actual API Key (handle with care)",
+            "example": "sk-xxxxxxxxxxxxxxxxxxxx"
+          },
+          "created": {
+            "type": "number",
+            "description": "Creation timestamp (ISO 8601)",
+            "example": 1716537600000
+          },
+          "updated": {
+            "type": "number",
+            "description": "Last update timestamp (ISO 8601)",
+            "example": 1716537600000
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "key",
+          "created",
+          "updated"
+        ]
+      },
+      "ProviderKeyWithSecret": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ProviderKey"
+          },
+          {
+            "type": "object",
+            "properties": {}
+          }
+        ]
+      },
+      "ProviderKeyResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ProviderKeyWithSecret"
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "CreateProviderKeyRequestBody": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "example": "anthropic"
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "example": "sk-ant-xxxxxxxx"
+          }
+        },
+        "required": [
+          "provider",
+          "key"
+        ]
+      },
+      "ProviderKeyListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderKey"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "UpdateProviderKeyRequestBody": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "example": "google"
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "example": "aizaxxxxxxxxxxxxx"
+          }
+        }
+      },
+      "EnvironmentInfo": {
+        "type": "object",
+        "properties": {
+          "NODE_ENV": {
+            "type": "string",
+            "nullable": true
+          },
+          "BUN_ENV": {
+            "type": "string",
+            "nullable": true
+          },
+          "SERVER_PORT": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "NODE_ENV",
+          "BUN_ENV",
+          "SERVER_PORT"
+        ]
+      },
+      "ServerInfo": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "bunVersion": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "arch": {
+            "type": "string"
+          },
+          "memoryUsage": {
+            "type": "object",
+            "properties": {
+              "rss": {
+                "type": "number"
+              },
+              "heapTotal": {
+                "type": "number"
+              },
+              "heapUsed": {
+                "type": "number"
+              },
+              "external": {
+                "type": "number"
+              },
+              "arrayBuffers": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "rss",
+              "heapTotal",
+              "heapUsed",
+              "external",
+              "arrayBuffers"
+            ]
+          },
+          "uptime": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "version",
+          "bunVersion",
+          "platform",
+          "arch",
+          "memoryUsage",
+          "uptime"
+        ]
+      },
+      "DatabaseStats": {
+        "type": "object",
+        "properties": {
+          "chats": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "chat_messages": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "projects": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "files": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "prompts": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "prompt_projects": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "provider_keys": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "tickets": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "ticket_files": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "ticket_tasks": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          },
+          "file_changes": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "count"
+            ]
+          }
+        },
+        "required": [
+          "chats",
+          "chat_messages",
+          "projects",
+          "files",
+          "prompts",
+          "prompt_projects",
+          "provider_keys",
+          "tickets",
+          "ticket_files",
+          "ticket_tasks",
+          "file_changes"
+        ]
+      },
+      "EnvInfoResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "environment": {
+            "$ref": "#/components/schemas/EnvironmentInfo"
+          },
+          "serverInfo": {
+            "$ref": "#/components/schemas/ServerInfo"
+          },
+          "databaseStats": {
+            "$ref": "#/components/schemas/DatabaseStats"
+          }
+        },
+        "required": [
+          "success",
+          "environment",
+          "serverInfo",
+          "databaseStats"
+        ]
+      },
+      "SystemStatusResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "checks": {
+            "type": "object",
+            "properties": {
+              "api": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "api",
+              "timestamp"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "status",
+          "checks"
+        ]
+      },
+      "AIFileChangeRecordResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique ID for the AI file change record",
+            "example": 1716537600000
+          },
+          "projectId": {
+            "type": "number",
+            "description": "ID of the project this change belongs to"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Path to the file that was modified",
+            "example": "src/components/Button.tsx"
+          },
+          "originalContent": {
+            "type": "string",
+            "description": "The original content of the file before changes."
+          },
+          "suggestedContent": {
+            "type": "string",
+            "description": "The AI suggested content for the file."
+          },
+          "diff": {
+            "type": "string",
+            "nullable": true,
+            "description": "The diff between original and suggested content, or an explanation."
+          },
+          "prompt": {
+            "type": "string",
+            "nullable": true,
+            "description": "The user prompt that initiated this change."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "rejected"
+            ],
+            "description": "Status of the file change."
+          },
+          "created": {
+            "type": "integer",
+            "description": "Timestamp of when the change was created."
+          },
+          "updated": {
+            "type": "integer",
+            "description": "Timestamp of when the change was last updated."
+          },
+          "explanation": {
+            "type": "string",
+            "nullable": true,
+            "description": "Explanation from the AI about the change."
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "filePath",
+          "originalContent",
+          "suggestedContent",
+          "diff",
+          "prompt",
+          "status",
+          "created",
+          "updated",
+          "explanation"
+        ]
+      },
+      "GenerateAIFileChangeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "result": {
+            "$ref": "#/components/schemas/AIFileChangeRecordResponse"
+          }
+        },
+        "required": [
+          "success",
+          "result"
+        ]
+      },
+      "GetAIFileChangeDetailsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "fileChange": {
+            "$ref": "#/components/schemas/AIFileChangeRecordResponse"
+          }
+        },
+        "required": [
+          "success",
+          "fileChange"
+        ]
+      },
+      "ConfirmAIFileChangeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "result"
+        ]
+      },
+      "Prompt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Prompt ID",
+            "example": 1716537600000
+          },
+          "name": {
+            "type": "string",
+            "description": "Prompt name",
+            "example": "Code Refactoring Prompt"
+          },
+          "content": {
+            "type": "string",
+            "description": "Prompt content template",
+            "example": "Refactor the following code to be more efficient: {code}"
+          },
+          "projectId": {
+            "type": "number",
+            "description": "Optional Project ID this prompt is linked to (contextual)",
+            "example": 1716537600000
+          },
+          "created": {
+            "type": "number",
+            "description": "Creation timestamp (ISO 8601)",
+            "example": 1716537600000
+          },
+          "updated": {
+            "type": "number",
+            "description": "Last update timestamp (ISO 8601)",
+            "example": 1716537600000
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "content",
+          "created",
+          "updated"
+        ]
+      },
+      "PromptResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Prompt"
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "CreatePromptRequestBody": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "number",
+            "description": "Optional Project ID to link the prompt to upon creation",
+            "example": 1716537600000
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "My New Prompt"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Translate this text: {text}"
+          }
+        },
+        "required": [
+          "name",
+          "content"
+        ]
+      },
+      "PromptListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Prompt"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "UpdatePromptRequestBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Updated Prompt Name"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Updated content: {variable}"
+          }
+        }
+      },
+      "AiGenerateTextRequest": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The text prompt for the AI.",
+            "example": "Suggest 5 suitable filenames for a typescript utility file containing helper functions for string manipulation."
+          },
+          "options": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AiSdkOptions"
+              },
+              {
+                "description": "Optional parameters to override default model behavior (temperature, maxTokens, etc.)."
+              }
+            ]
+          },
+          "systemMessage": {
+            "type": "string",
+            "description": "Optional system message to guide the AI behavior and persona.",
+            "example": "You are an expert programmer. Provide concise and relevant suggestions."
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "AiGenerateTextResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "The generated text response from the AI."
+              }
+            },
+            "required": [
+              "text"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "AiGenerateStructuredResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "output": {
+                "nullable": true,
+                "description": "The generated structured data, validated against the schema defined by the 'schemaKey'."
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "AiGenerateStructuredRequest": {
+        "type": "object",
+        "properties": {
+          "schemaKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The key identifying the predefined structured task configuration.",
+            "example": "filenameSuggestion"
+          },
+          "userInput": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The user's input or context for the structured generation task.",
+            "example": "A react component for displaying user profiles"
+          },
+          "options": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AiSdkOptions"
+              },
+              {
+                "description": "Optional: Override default model options (temperature, etc.) defined in the task configuration."
+              }
+            ]
+          }
+        },
+        "required": [
+          "schemaKey",
+          "userInput"
+        ]
+      },
+      "UnifiedModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Model identifier",
+            "example": "google/gemini-2.5-flash-preview"
+          },
+          "name": {
+            "type": "string",
+            "description": "User-friendly model name",
+            "example": "GPT-4o Mini"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provider ID",
+            "example": "openrouter"
+          },
+          "context_length": {
+            "type": "number",
+            "description": "Context window size in tokens",
+            "example": 128000
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider"
+        ]
+      },
+      "ModelsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnifiedModel"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "AgentTask": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "A unique ID automatically generated for tracking this specific task.",
+            "example": 1716537600000
+          },
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "description": "A brief, human-readable title summarizing the task's objective.",
+            "example": "Refactor User Authentication Logic"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "description": "A detailed description of the changes required for the target file. This will be used as the primary instruction for the LLM rewrite.",
+            "example": "Update the login function in `src/auth.ts` to use asynchronous hashing for passwords and return a JWT token upon successful authentication."
+          },
+          "targetFileId": {
+            "type": "number",
+            "description": "The unique ID (from ProjectFileSchema) of the primary source file to be modified or created by this task. Will be populated by orchestrator for new files.",
+            "example": 1716537600000
+          },
+          "targetFilePath": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The relative path of the primary source file (e.g., 'src/utils/auth.ts'). Required for all tasks. Used for creation path.",
+            "example": "src/utils/auth.ts"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "IN_PROGRESS",
+              "COMPLETED",
+              "FAILED",
+              "SKIPPED"
+            ],
+            "default": "PENDING",
+            "description": "Tracks the progress of the task through the workflow.",
+            "example": "PENDING"
+          },
+          "relatedTestFileId": {
+            "type": "number",
+            "description": "Optional: The unique ID (from ProjectFileSchema) of the corresponding unit test file (e.g., 'src/utils/auth.test.ts'), if applicable.",
+            "example": 1716537600000
+          },
+          "estimatedComplexity": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "description": "Optional: AI's estimation of the task's complexity.",
+            "example": "MEDIUM"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Optional: A list of other Task IDs that must be completed before this task can start.",
+            "example": [
+              1716537600000,
+              1716537600000
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "targetFilePath"
+        ],
+        "description": "Represents a single, well-defined unit of work required to fulfill part of the user's overall request, typically focused on one file."
+      },
+      "AgentTaskPlan": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "number",
+            "description": "The ID of the project context in which these tasks operate.",
+            "example": 1716537600000
+          },
+          "overallGoal": {
+            "type": "string",
+            "description": "A concise summary of the original user request being addressed by this plan.",
+            "example": "Implement JWT-based authentication flow."
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentTask"
+            },
+            "minItems": 1,
+            "description": "An ordered list of tasks designed to collectively achieve the overall goal. Order implies execution sequence unless overridden by dependencies."
+          }
+        },
+        "required": [
+          "projectId",
+          "overallGoal",
+          "tasks"
+        ],
+        "description": "The final task plan executed by the agent (includes task statuses)."
+      },
+      "AgentCoderRunSuccessData": {
+        "type": "object",
+        "properties": {
+          "updatedFiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectFile"
+            },
+            "description": "The state of the project files after the agent's execution."
+          },
+          "taskPlan": {
+            "$ref": "#/components/schemas/AgentTaskPlan"
+          },
+          "agentJobId": {
+            "type": "number",
+            "description": "The unique ID for retrieving the execution logs and data for this run."
+          }
+        },
+        "required": [
+          "updatedFiles",
+          "agentJobId"
+        ]
+      },
+      "AgentCoderRunResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentCoderRunSuccessData"
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "AgentCoderRunRequest": {
+        "type": "object",
+        "properties": {
+          "userInput": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The main instruction or goal for the agent.",
+            "example": "Refactor the authentication logic in auth.ts to use JWT."
+          },
+          "selectedFileIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 1,
+            "description": "Array of ProjectFile IDs to provide as initial context.",
+            "example": [
+              1716537600000,
+              1716537600000
+            ]
+          },
+          "agentJobId": {
+            "type": "number",
+            "description": "The unique ID for retrieving the execution logs and data for this run."
+          },
+          "selectedPromptIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Array of Prompt IDs to provide as initial context.",
+            "example": [
+              1716537600000,
+              1716537600000
+            ]
+          }
+        },
+        "required": [
+          "userInput",
+          "selectedFileIds"
+        ]
+      },
+      "AgentDataLog": {
+        "type": "object",
+        "properties": {
+          "agentJobDirPath": {
+            "type": "string",
+            "description": "Absolute path to the directory containing logs for this job."
+          },
+          "projectId": {
+            "type": "number",
+            "description": "The ID of the project this agent run targeted."
+          },
+          "agentJobId": {
+            "type": "number",
+            "description": "The unique ID for this agent run."
+          },
+          "agentJobStartTime": {
+            "type": "number",
+            "description": "ISO 8601 timestamp when the agent job started."
+          },
+          "taskPlan": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentTaskPlan"
+              },
+              {
+                "description": "The initial task plan generated by the planning agent (before execution)."
+              }
+            ]
+          },
+          "finalStatus": {
+            "type": "string",
+            "enum": [
+              "Success",
+              "Failed",
+              "No tasks generated",
+              "Error"
+            ],
+            "description": "The final outcome status of the agent run."
+          },
+          "finalTaskPlan": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AgentTaskPlan"
+              },
+              {
+                "nullable": true,
+                "description": "The task plan reflecting the state after execution attempts (tasks will have final statuses like COMPLETED, FAILED)."
+              }
+            ]
+          },
+          "agentJobEndTime": {
+            "type": "number",
+            "description": "ISO 8601 timestamp when the agent job finished or errored."
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Error message if the agent run failed."
+          },
+          "errorStack": {
+            "type": "string",
+            "description": "Stack trace if the agent run failed."
+          },
+          "updatedFiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectFile"
+            },
+            "description": "List of files with proposed changes (new files or modified files with different checksums)."
+          }
+        },
+        "required": [
+          "agentJobDirPath",
+          "projectId",
+          "agentJobId",
+          "agentJobStartTime",
+          "finalStatus",
+          "finalTaskPlan",
+          "agentJobEndTime"
+        ]
+      },
+      "ConfirmAgentRunChangesResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string",
+            "example": "Agent run changes successfully written to filesystem."
+          },
+          "writtenFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Relative paths of files proposed for writing (actual writes depend on checksums).",
+            "example": [
+              "src/new-feature.ts",
+              "test/new-feature.test.ts"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "writtenFiles"
+        ]
+      },
+      "DeleteAgentRunResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string",
+            "example": "Agent run job-xyz-123 deleted successfully."
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/chats": {
+      "get": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Get all chat sessions",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved all chats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Create a new chat session",
+        "requestBody": {
+          "required": true,
+          "description": "Data for the new chat session",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChatRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Chat created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Referenced chat not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chatId}/messages": {
+      "get": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Get messages for a specific chat",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the chat to retrieve messages for",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "chatId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Chat not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/chat": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Chat completion (streaming, chat-associated)",
+        "description": "Continues a chat session identified by chatId, streams response using Vercel AI SDK via UnifiedProviderService.",
+        "requestBody": {
+          "required": true,
+          "description": "Chat ID, user message, provider, model, and options for the streaming AI chat completion.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiChatStreamRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully initiated AI response stream.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Stream of response tokens (Vercel AI SDK format)"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (e.g., missing API key for provider, invalid provider/model)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Chat session (chatId) not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error (invalid request body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or AI provider communication error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chatId}/fork": {
+      "post": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Fork a chat session",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the chat to fork",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "chatId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Optional message IDs to exclude from the fork",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForkChatRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Chat forked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Original chat not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chatId}/fork/{messageId}": {
+      "post": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Fork a chat session from a specific message",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the chat to fork",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "chatId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the message to fork from",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "messageId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Optional message IDs to exclude from the fork",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForkChatFromMessageRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Chat forked successfully from message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Original chat or message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chatId}/messages/{messageId}": {
+      "delete": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Delete a specific message",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the chat to delete",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "chatId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the message to delete",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "messageId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chats/{chatId}": {
+      "patch": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Update chat properties (e.g., title)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the chat to update",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "chatId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Data to update for the chat",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChatRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Chat not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Delete a chat session and its messages",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the chat to delete",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "chatId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Chat not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Create a new ticket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Get a ticket by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Update a ticket",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTicketBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Delete a ticket",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/link-files": {
+      "post": {
+        "tags": [
+          "Tickets",
+          "Files"
+        ],
+        "summary": "Link files to a ticket",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "fileIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Files linked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkedFilesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/suggest-files": {
+      "post": {
+        "tags": [
+          "Tickets",
+          "Files",
+          "AI"
+        ],
+        "summary": "Get AI suggestions for relevant files",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestFilesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Files suggested successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestedFilesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/suggest-tasks": {
+      "post": {
+        "tags": [
+          "Tickets",
+          "AI"
+        ],
+        "summary": "Get AI suggestions for tasks",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userContext": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tasks suggested successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestedTasksResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/tickets": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Tickets"
+        ],
+        "summary": "List all tickets for a project",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Project identifier"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter tickets by status"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tickets listed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/tickets-with-count": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Tickets"
+        ],
+        "summary": "List tickets with task counts",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Project identifier"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter tickets by status"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tickets with counts listed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketWithTaskCountListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/tickets-with-tasks": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Tickets",
+          "Tasks"
+        ],
+        "summary": "List tickets with their tasks",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Project identifier"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter tickets by status"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tickets with tasks listed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketWithTasksListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/tasks": {
+      "post": {
+        "tags": [
+          "Tickets",
+          "Tasks"
+        ],
+        "summary": "Create a new task for a ticket",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projectId": {
+                    "type": "integer",
+                    "description": "Project this ticket belongs to"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "overview": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "in_progress",
+                      "closed"
+                    ],
+                    "default": "open"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "normal",
+                      "high"
+                    ],
+                    "default": "normal"
+                  },
+                  "suggestedFileIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "required": [
+                  "projectId",
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Task created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tickets",
+          "Tasks"
+        ],
+        "summary": "Get all tasks for a ticket",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasks retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/tasks/{taskId}": {
+      "patch": {
+        "tags": [
+          "Tickets",
+          "Tasks"
+        ],
+        "summary": "Update a task",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "Task identifier"
+            },
+            "required": true,
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "done": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tickets",
+          "Tasks"
+        ],
+        "summary": "Delete a task",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "Task identifier"
+            },
+            "required": true,
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/tasks/reorder": {
+      "patch": {
+        "tags": [
+          "Tickets",
+          "Tasks"
+        ],
+        "summary": "Reorder tasks within a ticket",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tasks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "taskId": {
+                          "type": "number"
+                        },
+                        "orderIndex": {
+                          "type": "number",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "taskId",
+                        "orderIndex"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "tasks"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tasks reordered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{ticketId}/auto-generate-tasks": {
+      "post": {
+        "tags": [
+          "Tickets",
+          "Tasks",
+          "AI"
+        ],
+        "summary": "Auto-generate tasks from ticket overview",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "Ticket identifier"
+            },
+            "required": true,
+            "name": "ticketId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasks generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/bulk-tasks": {
+      "get": {
+        "tags": [
+          "Tickets",
+          "Tasks"
+        ],
+        "summary": "Get tasks for multiple tickets",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated list of ticket IDs"
+            },
+            "required": true,
+            "name": "ids",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasks retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkTasksResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Create a new project and sync its files",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Project created and initial sync started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Project created, but post-creation steps encountered issues",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseMultiStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List all projects",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved all projects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get a specific project by ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved project details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error (invalid projectId format)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update a project's details",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Delete a project and its associated data",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/sync": {
+      "post": {
+        "tags": [
+          "Projects",
+          "Files"
+        ],
+        "summary": "Manually trigger a full file sync for a project",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project sync initiated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error during sync",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/files": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Files"
+        ],
+        "summary": "Get the list of files associated with a project",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved project files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/refresh": {
+      "post": {
+        "tags": [
+          "Projects",
+          "Files"
+        ],
+        "summary": "Refresh project files (sync) optionally limited to a folder",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional folder path to limit the refresh scope",
+              "example": "src/components"
+            },
+            "required": false,
+            "name": "folder",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully refreshed project files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error during refresh/sync",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/summary": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Files",
+          "AI"
+        ],
+        "summary": "Get a combined summary of all files in the project",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully generated combined project summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummaryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/suggest-files": {
+      "post": {
+        "tags": [
+          "Projects",
+          "Files",
+          "AI"
+        ],
+        "summary": "Suggest relevant files based on user input and project context",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestFilesRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully suggested files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestFilesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or AI processing error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/summarize": {
+      "post": {
+        "tags": [
+          "Projects",
+          "Files",
+          "AI"
+        ],
+        "summary": "Summarize selected files in a project (or force re-summarize)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummarizeFilesRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File summarization process completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummarizeFilesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or some files not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error during summarization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/remove-summaries": {
+      "post": {
+        "tags": [
+          "Projects",
+          "Files"
+        ],
+        "summary": "Remove summaries from selected files",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveSummariesRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Summaries removed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveSummariesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or some files not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompt/optimize": {
+      "post": {
+        "tags": [
+          "Prompts",
+          "AI"
+        ],
+        "summary": "Optimize a user-provided prompt using an AI model",
+        "requestBody": {
+          "required": true,
+          "description": "The user prompt context to optimize",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptimizePromptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully optimized the prompt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptimizePromptResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or AI provider error during optimization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys": {
+      "post": {
+        "tags": [
+          "Provider Keys"
+        ],
+        "summary": "Add a new API key for an AI provider",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProviderKeyRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Provider key created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderKeyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Provider Keys"
+        ],
+        "summary": "List all configured provider keys (excluding secrets)",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved provider keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderKeyListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/keys/{keyId}": {
+      "get": {
+        "tags": [
+          "Provider Keys"
+        ],
+        "summary": "Get a specific provider key by ID (including secret)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ID of the provider key",
+              "example": "key-1a2b3c4d"
+            },
+            "required": true,
+            "name": "keyId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved provider key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderKeyResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Provider key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Provider Keys"
+        ],
+        "summary": "Update a provider key's details",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ID of the provider key",
+              "example": "key-1a2b3c4d"
+            },
+            "required": true,
+            "name": "keyId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProviderKeyRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provider key updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderKeyResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Provider key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Provider Keys"
+        ],
+        "summary": "Delete a provider key",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ID of the provider key",
+              "example": "key-1a2b3c4d"
+            },
+            "required": true,
+            "name": "keyId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider key deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Provider key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/env-info": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get system environment information and database statistics",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved environment information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvInfoResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error retrieving environment information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/system-status": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Check system operational status",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved system status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error retrieving system status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/ai-file-changes": {
+      "post": {
+        "tags": [
+          "Projects",
+          "AI File Changes"
+        ],
+        "summary": "Generate AI-assisted file changes for a project file",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filePath": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Path to the file to modify",
+                    "example": "src/components/Button.tsx"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Instruction for the AI to follow",
+                    "example": "Add hover effects to the button"
+                  }
+                },
+                "required": [
+                  "filePath",
+                  "prompt"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully generated file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateAIFileChangeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error generating file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/ai-file-changes/{aiFileChangeId}": {
+      "get": {
+        "tags": [
+          "Projects",
+          "AI File Changes"
+        ],
+        "summary": "Retrieve details for a specific AI file change",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "ID of the project"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "ID of the AI file change record",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "aiFileChangeId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAIFileChangeDetailsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error retrieving file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/ai-file-changes/{aiFileChangeId}/confirm": {
+      "post": {
+        "tags": [
+          "Projects",
+          "AI File Changes"
+        ],
+        "summary": "Confirm and apply an AI-generated file change",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "ID of the project"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "ID of the AI file change record",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "aiFileChangeId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully confirmed file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmAIFileChangeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID or state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error confirming file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/ai-file-changes/{aiFileChangeId}/reject": {
+      "post": {
+        "tags": [
+          "Projects",
+          "AI File Changes"
+        ],
+        "summary": "Reject an AI-generated file change",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "ID of the project"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "ID of the AI file change record",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "aiFileChangeId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully rejected file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmAIFileChangeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID or state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error rejecting file change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts": {
+      "post": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "Create a new prompt",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Prompt created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Referenced project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "List all available prompts",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved all prompts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/prompts": {
+      "get": {
+        "tags": [
+          "Projects",
+          "Prompts"
+        ],
+        "summary": "List prompts associated with a specific project",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved project prompts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/prompts/{promptId}": {
+      "post": {
+        "tags": [
+          "Projects",
+          "Prompts"
+        ],
+        "summary": "Associate a prompt with a project",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the prompt",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "promptId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt successfully associated with project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or Prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects",
+          "Prompts"
+        ],
+        "summary": "Disassociate a prompt from a project",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the prompt",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "promptId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt successfully disassociated from project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or Prompt not found, or association does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/{promptId}": {
+      "get": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "Get a specific prompt by its ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the prompt",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "promptId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved prompt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "Update a prompt's details",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the prompt",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "promptId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePromptRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prompt updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "Delete a prompt",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The ID of the prompt",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "promptId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gen-ai/stream": {
+      "post": {
+        "tags": [
+          "GenAI"
+        ],
+        "summary": "Generate text using a specified model and prompt",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiGenerateTextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully initiated AI response stream.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Stream of response tokens (Vercel AI SDK format)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gen-ai/text": {
+      "post": {
+        "tags": [
+          "GenAI"
+        ],
+        "summary": "Generate text using a specified model and prompt",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiGenerateTextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully generated text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGenerateTextResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error (invalid input)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or AI Provider Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gen-ai/structured": {
+      "post": {
+        "tags": [
+          "GenAI"
+        ],
+        "summary": "Generate structured data based on a predefined schema key and user input",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiGenerateStructuredRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully generated structured data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGenerateStructuredResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request: Invalid or unknown schemaKey provided.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error (invalid input)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or AI Provider Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "List available AI models for a provider",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The provider to filter models by",
+              "example": "openrouter"
+            },
+            "required": true,
+            "name": "provider",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved model list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid provider or configuration error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api//ai/generate/text": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Generate text (one-off, non-streaming)",
+        "description": "Generates text based on a prompt using the specified provider and model. Does not use chat history or save messages.",
+        "requestBody": {
+          "required": true,
+          "description": "Prompt, provider, model, and options for text generation.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiGenerateTextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully generated text response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGenerateTextResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (e.g., missing API key, invalid provider/model)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error (invalid request body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or AI provider communication error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/agent-coder": {
+      "post": {
+        "tags": [
+          "Projects",
+          "AI",
+          "Agent"
+        ],
+        "summary": "Run the Agent Coder on selected files with a user prompt",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "description": "The ID of the project",
+              "example": 1716537600000
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCoderRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent Coder executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCoderRunResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or specified files not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error (invalid input)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or Agent Coder execution failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-coder/project/{projectId}/runs": {
+      "get": {
+        "tags": [
+          "AI",
+          "Agent",
+          "Logs"
+        ],
+        "summary": "List available Agent Coder run job IDs",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the project."
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of available agent run job IDs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "description": "List of available agent run job IDs"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error retrieving run list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-coder/project/{projectId}/runs/{agentJobId}/logs": {
+      "get": {
+        "tags": [
+          "AI",
+          "Agent",
+          "Logs"
+        ],
+        "summary": "Retrieve the orchestrator execution logs (.jsonl) for a specific Agent Coder run",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the agent run."
+            },
+            "required": true,
+            "name": "agentJobId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the project."
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent orchestrator log content as an array of JSON objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent run or log file not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error reading log file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-coder/project/{projectId}/runs/{agentJobId}/data": {
+      "get": {
+        "tags": [
+          "AI",
+          "Agent",
+          "Data"
+        ],
+        "summary": "Retrieve the agent data log (.json) for a specific Agent Coder run",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the agent run."
+            },
+            "required": true,
+            "name": "agentJobId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the project."
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent data log content as a JSON object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDataLog"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent run or data file not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error reading or parsing data file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-coder/project/{projectId}/runs/{agentJobId}/confirm": {
+      "post": {
+        "tags": [
+          "AI",
+          "Agent",
+          "Filesystem"
+        ],
+        "summary": "Confirm and write agent-generated file changes to the filesystem",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the agent run."
+            },
+            "required": true,
+            "name": "agentJobId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the project."
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent run changes successfully written to filesystem.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmAgentRunChangesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent run data, project, or original files not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error reading data log or writing files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent-coder/runs/{agentJobId}": {
+      "delete": {
+        "tags": [
+          "AI",
+          "Agent",
+          "Admin"
+        ],
+        "summary": "Delete an Agent Coder run and its associated logs/data",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the agent run."
+            },
+            "required": true,
+            "name": "agentJobId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "description": "The unique ID of the project."
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent run successfully deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAgentRunResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agent run directory not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error during deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

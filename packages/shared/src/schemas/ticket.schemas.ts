@@ -1,8 +1,9 @@
 import { z } from 'zod'
+import { unixTSArrayOptionalSchemaSpec, unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
 // Zod schemas for the 'tickets' table
 export const TicketCreateSchema = z.object({
-  projectId: z.number().int().openapi({ description: 'Project this ticket belongs to' }),
+  projectId: unixTSSchemaSpec,
   title: z.string(),
   overview: z.string().optional(),
   status: z.string().optional(),
@@ -11,15 +12,15 @@ export const TicketCreateSchema = z.object({
 })
 
 export const TicketReadSchema = z.object({
-  projectId: z.number().int().openapi({ description: 'Project this ticket belongs to' }),
-  id: z.number().int().openapi({ description: 'Unique ticket identifier' }),
+  projectId: unixTSSchemaSpec,
+  id: unixTSSchemaSpec,
   title: z.string(),
   overview: z.string(),
   status: z.string(),
   priority: z.string(),
   suggestedFileIds: z.array(z.number()).optional(),
-  created: z.number().int().openapi({ description: 'Creation timestamp (unix timestamp in milliseconds)' }),
-  updated: z.number().int().openapi({ description: 'Last update timestamp (unix timestamp in milliseconds)' })
+  created: unixTSSchemaSpec,
+  updated: unixTSSchemaSpec,
 })
 
 export const TicketUpdateSchema = z.object({
@@ -27,25 +28,25 @@ export const TicketUpdateSchema = z.object({
   overview: z.string().optional(),
   status: z.string().optional(),
   priority: z.string().optional(),
-  suggestedFileIds: z.number().array().optional()
+  suggestedFileIds: unixTSArrayOptionalSchemaSpec
 })
 
 export const TicketFileReadSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this file belongs to' }),
-  fileId: z.number().int().openapi({ description: 'File this ticket belongs to' })
+  ticketId: unixTSSchemaSpec,
+  fileId: unixTSSchemaSpec,
 })
 
 // Zod schemas for the 'ticket_tasks' table
 export const TicketTaskCreateSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' }),
+  ticketId: unixTSSchemaSpec,
   content: z.string(),
   done: z.boolean().optional(),
   orderIndex: z.number().optional()
 })
 
 export const TicketTaskReadSchema = z.object({
-  id: z.number().int().openapi({ description: 'Unique task identifier' }),
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' }),
+  id: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec,
   content: z.string(),
   done: z.preprocess((val) => {
     if (typeof val === 'number') return val === 1
@@ -53,8 +54,8 @@ export const TicketTaskReadSchema = z.object({
     return false
   }, z.boolean()),
   orderIndex: z.number(),
-  created: z.number().int().openapi({ description: 'Creation timestamp (unix timestamp in milliseconds)' }),
-  updated: z.number().int().openapi({ description: 'Last update timestamp (unix timestamp in milliseconds)' })
+  created: unixTSSchemaSpec,
+  updated: unixTSSchemaSpec,
 })
 
 export const TaskSuggestionsZodSchema = z.object({
@@ -67,7 +68,7 @@ export const TaskSuggestionsZodSchema = z.object({
       files: z
         .array(
           z.object({
-            fileId: z.number().int().openapi({ description: 'Unique file identifier' }),
+            fileId: unixTSSchemaSpec,
             fileName: z.string()
           })
         )
@@ -78,7 +79,7 @@ export const TaskSuggestionsZodSchema = z.object({
 export type TaskSuggestions = z.infer<typeof TaskSuggestionsZodSchema>
 
 export const createTicketSchema = z.object({
-  projectId: z.number().int().openapi({ description: 'Project this ticket belongs to' }),
+  projectId: unixTSSchemaSpec,
   title: z.string().min(1),
   overview: z.string().default(''),
   status: z.enum(['open', 'in_progress', 'closed']).default('open'),
@@ -91,11 +92,11 @@ export const updateTicketSchema = z.object({
   overview: z.string().optional(),
   status: z.enum(['open', 'in_progress', 'closed']).optional(),
   priority: z.enum(['low', 'normal', 'high']).optional(),
-  suggestedFileIds: z.array(z.number()).optional()
+  suggestedFileIds: unixTSArrayOptionalSchemaSpec
 })
 
 export const linkFilesSchema = z.object({
-  fileIds: z.array(z.number().int()).nonempty()
+  fileIds: unixTSArraySchemaSpec
 })
 
 export const suggestTasksSchema = z.object({
@@ -123,72 +124,72 @@ export const reorderTasksSchema = z.object({
 })
 
 export const updateSuggestedFilesSchema = z.object({
-  suggestedFileIds: z.array(z.number().int()).nonempty()
+  suggestedFileIds: unixTSArraySchemaSpec
 })
 
 
 
 
 export const updateTicketParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const getOrDeleteTicketParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const linkFilesParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const suggestTasksParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const updateSuggestedFilesParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const createTaskParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const updateTaskParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const deleteTaskParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 export const reorderTasksParamsSchema = z.object({
-  ticketId: z.number().int().openapi({ description: 'Ticket this task belongs to' })
+  ticketId: unixTSSchemaSpec,
 })
 
 
 export const TicketSchema = z
   .object({
-    id: z.number().openapi({ description: 'Unique ticket identifier' }),
-    projectId: z.number().openapi({ description: 'Project this ticket belongs to' }),
+    id: unixTSSchemaSpec,
+    projectId: unixTSSchemaSpec,
     title: z.string().openapi({ description: 'Ticket title' }),
     overview: z.string().openapi({ description: 'Ticket description' }),
     status: z.enum(['open', 'in_progress', 'closed']).openapi({ description: 'Current ticket status' }),
     priority: z.enum(['low', 'normal', 'high']).openapi({ description: 'Ticket priority' }),
     suggestedFileIds: z.array(z.number()).openapi({ description: 'JSON string of suggested file IDs' }),
-    created: z.number().int().openapi({ description: 'Creation timestamp (unix timestamp in milliseconds)' }),
-    updated: z.number().int().openapi({ description: 'Last update timestamp (unix timestamp in milliseconds)' })
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec,
   })
   .openapi('Ticket')
 
 export const TaskSchema = z
   .object({
-    id: z.number().openapi({ description: 'Unique task identifier' }),
-    ticketId: z.number().openapi({ description: 'Ticket this task belongs to' }),
+    id: unixTSSchemaSpec,
+    ticketId: unixTSSchemaSpec,
     content: z.string().openapi({ description: 'Task content/description' }),
     done: z.boolean().openapi({ description: 'Whether the task is completed' }),
     orderIndex: z.number().openapi({ description: 'Task order within the ticket' }),
-    created: z.number().int().openapi({ description: 'Creation timestamp (unix timestamp in milliseconds)' }),
-    updated: z.number().int().openapi({ description: 'Last update timestamp (unix timestamp in milliseconds)' })
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec,
   })
   .openapi('Task')
 
@@ -225,8 +226,8 @@ export const LinkedFilesResponseSchema = z
     success: z.literal(true),
     linkedFiles: z.array(
       z.object({
-        ticketId: z.string(),
-        fileId: z.string()
+        ticketId: unixTSSchemaSpec,
+        fileId: unixTSSchemaSpec,
       })
     )
   })
@@ -242,7 +243,7 @@ export const SuggestedTasksResponseSchema = z
 export const SuggestedFilesResponseSchema = z
   .object({
     success: z.literal(true),
-    recommendedFileIds: z.array(z.number()),
+    recommendedFileIds: unixTSArraySchemaSpec,
     combinedSummaries: z.string().optional(),
     message: z.string().optional()
   })
@@ -252,7 +253,7 @@ export const TicketWithTaskCountSchema = z
   .object({
     ticket: TicketSchema,
     taskCount: z.number(),
-    completedTaskCount: z.number()
+    completedTaskCount: z.number(),
   })
   .openapi('TicketWithTaskCount')
 
@@ -288,19 +289,13 @@ export const CreateTicketBodySchema = createTicketSchema.openapi('CreateTicketBo
 export const UpdateTicketBodySchema = updateTicketSchema.openapi('UpdateTicketBody')
 export const TicketIdParamsSchema = z
   .object({
-    ticketId: z.number().openapi({
-      param: { name: 'ticketId', in: 'path' },
-      description: 'Ticket identifier'
-    })
+    ticketId: unixTSSchemaSpec,
   })
   .openapi('TicketIdParams')
 
 export const ProjectIdParamsSchema = z
   .object({
-    projectId: z.number().openapi({
-      param: { name: 'projectId', in: 'path' },
-      description: 'Project identifier'
-    })
+    projectId: unixTSSchemaSpec,
   })
   .openapi('ProjectIdParams')
 

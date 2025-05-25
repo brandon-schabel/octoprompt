@@ -76,10 +76,14 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
   }
 }
 
-export async function getProjectById(projectId: number): Promise<Project | null> {
+export async function getProjectById(projectId: number): Promise<Project> {
   try {
     const projects = await projectStorage.readProjects()
-    return projects[projectId] || null
+    const project = projects[projectId]
+    if (!project) {
+      throw new ApiError(404, `Project not found with ID ${projectId}.`, 'PROJECT_NOT_FOUND')
+    }
+    return project
   } catch (error) {
     if (error instanceof ApiError) throw error
     throw new ApiError(
@@ -108,12 +112,8 @@ export async function listProjects(): Promise<Project[]> {
 
 export async function updateProject(projectId: number, data: UpdateProjectBody): Promise<Project | null> {
   try {
+    const existingProject = await getProjectById(projectId)
     const projects = await projectStorage.readProjects()
-    const existingProject = projects[projectId]
-
-    if (!existingProject) {
-      return null
-    }
 
     const updatedProjectData: Project = {
       ...existingProject,
@@ -172,15 +172,13 @@ export async function deleteProject(projectId: number): Promise<boolean> {
 
 export async function getProjectFiles(projectId: number): Promise<ProjectFile[] | null> {
   try {
-    const projectExists = await getProjectById(projectId)
-    if (!projectExists) {
-      console.warn(`[ProjectService] Attempted to get files for non-existent project: ${projectId}`)
-      return null
-    }
-
+    await getProjectById(projectId) // Throws 404 if project not found
     const files = await projectStorage.readProjectFiles(projectId)
     return Object.values(files)
   } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null // Maintain original behavior of returning null for not found project
+    }
     if (error instanceof ApiError) throw error
     throw new ApiError(
       500,
@@ -246,10 +244,6 @@ export async function updateFileContent(
 
 export async function resummarizeAllFiles(projectId: number): Promise<void> {
   const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for resummarize all.`, 'PROJECT_NOT_FOUND')
-  }
-
   await syncProject(project)
 
   const allFiles = await getProjectFiles(projectId)
@@ -284,10 +278,7 @@ export async function removeSummariesFromFiles(
     return { removedCount: 0, message: 'No file IDs provided' }
   }
   try {
-    const project = await getProjectById(projectId)
-    if (!project) {
-      throw new ApiError(404, `Project not found with ID ${projectId} for removing summaries.`, 'PROJECT_NOT_FOUND')
-    }
+    await getProjectById(projectId) // Check for project existence
     const files = await projectStorage.readProjectFiles(projectId)
     let removedCount = 0
     const now = Date.now()
@@ -345,10 +336,6 @@ export async function createProjectFileRecord(
   initialContent: string = ''
 ): Promise<ProjectFile> {
   const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId}`, 'PROJECT_NOT_FOUND')
-  }
-
   const absoluteProjectPath = resolvePath(project.path)
   const absoluteFilePath = resolvePath(
     filePath.startsWith('/') || filePath.startsWith('~') || path.isAbsolute(filePath)
@@ -437,11 +424,7 @@ export interface FileSyncData {
 /** Creates multiple file records in the project's JSON file. */
 export async function bulkCreateProjectFiles(projectId: number, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
   if (filesToCreate.length === 0) return []
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for bulk file creation.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   const createdFiles: ProjectFile[] = []
   const now = Date.now()
   let filesMap: ProjectFilesStorage
@@ -532,11 +515,7 @@ export async function bulkUpdateProjectFiles(
   updates: { fileId: number; data: FileSyncData }[]
 ): Promise<ProjectFile[]> {
   if (updates.length === 0) return []
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for bulk file update.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   const updatedFilesResult: ProjectFile[] = []
   const now = Date.now()
   let files: ProjectFilesStorage
@@ -609,11 +588,7 @@ export async function bulkDeleteProjectFiles(
   if (fileIdsToDelete.length === 0) {
     return { deletedCount: 0 }
   }
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for bulk file deletion.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   let files: ProjectFilesStorage
   let deletedCount = 0
   let changesMade = false
@@ -660,11 +635,7 @@ export async function getProjectFilesByIds(projectId: number, fileIds: number[])
   if (!fileIds || fileIds.length === 0) {
     return []
   }
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} when fetching files by IDs.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   const uniqueFileIds = [...new Set(fileIds)]
 
   try {

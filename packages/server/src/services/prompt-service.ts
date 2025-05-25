@@ -8,13 +8,24 @@ import {
   PromptProjectSchema
 } from 'shared/src/schemas/prompt.schemas'
 
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 import { ApiError } from 'shared'
 import { ZodError } from 'zod'
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
-  const promptId = promptStorage.generateId()
-  const now = normalizeToUnixMs(new Date())
+  let promptId = promptStorage.generateId()
+  const now = Date.now()
+  const allPrompts = await promptStorage.readPrompts()
+  const initialPromptId = promptId
+  let incrementCount = 0
+
+  while (allPrompts[promptId]) {
+    promptId++
+    incrementCount++
+  }
+
+  if (incrementCount > 0) {
+    console.log(`[PromptService] Prompt ID ${initialPromptId} was taken. Found available ID ${promptId} after ${incrementCount} increment(s).`)
+  }
 
   const newPromptData: Prompt = {
     id: promptId,
@@ -33,12 +44,6 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
       throw new ApiError(500, `Internal validation error creating prompt.`, 'PROMPT_VALIDATION_ERROR', error.flatten().fieldErrors)
     }
     throw error // Should not happen if data is constructed correctly
-  }
-
-  const allPrompts = await promptStorage.readPrompts()
-
-  if (allPrompts[promptId]) {
-    throw new ApiError(500, `Prompt ID conflict for ${promptId}`, 'PROMPT_ID_CONFLICT')
   }
 
   allPrompts[promptId] = newPromptData
@@ -86,8 +91,22 @@ export async function addPromptToProject(promptId: number, projectId: number): P
   // To replicate: filter out existing links for this promptId, then add the new one.
   promptProjects = promptProjects.filter(link => link.promptId !== promptId)
 
+  let associationId = promptStorage.generateId()
+  const initialAssociationId = associationId;
+  let associationIncrementCount = 0;
+
+  // Ensure the association ID itself is unique within the promptProjects array
+  while (promptProjects.some(link => link.id === associationId)) {
+    associationId++;
+    associationIncrementCount++;
+  }
+
+  if (associationIncrementCount > 0) {
+    console.log(`[PromptService] Prompt-Project link ID ${initialAssociationId} was taken. Found available ID ${associationId} after ${associationIncrementCount} increment(s).`);
+  }
+
   const newLink: PromptProject = {
-    id: promptStorage.generateId(), // ID for the association itself
+    id: associationId, // ID for the association itself
     promptId: promptId,
     projectId: projectId
   }
@@ -175,7 +194,7 @@ export async function updatePrompt(promptId: number, data: UpdatePromptBody): Pr
     ...existingPrompt,
     name: data.name ?? existingPrompt.name,
     content: data.content ?? existingPrompt.content,
-    updated: normalizeToUnixMs(new Date())
+    updated: Date.now()
   }
 
   try {

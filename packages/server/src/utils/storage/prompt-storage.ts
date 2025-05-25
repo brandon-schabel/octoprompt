@@ -2,7 +2,6 @@ import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { PromptSchema, PromptProjectSchema, type Prompt, type PromptProject } from 'shared/src/schemas/prompt.schemas'
-import { normalizeToUnixMs } from '../parse-timestamp'
 
 // Define the base directory for storing prompt data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'prompt_storage')
@@ -125,6 +124,6 @@ export const promptStorage = {
 
   /** Generates a unique ID. */
   generateId: (): number => {
-    return normalizeToUnixMs(new Date())
+    return Date.now()
   }
 }

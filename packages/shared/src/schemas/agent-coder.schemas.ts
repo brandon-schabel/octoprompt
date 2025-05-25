@@ -1,6 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import { ProjectFileSchema, ProjectFileMapSchema, ProjectSchema } from 'shared/src/schemas/project.schemas'
 import { PromptSchema } from './prompt.schemas'
+import { unixTSArrayOptionalSchemaSpec, unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
 // Project/Task related schemas remain largely the same
 export const AgentTaskStatusSchema = z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'SKIPPED']).openapi({
@@ -10,10 +11,7 @@ export const AgentTaskStatusSchema = z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETE
 
 export const AgentTaskSchema = z
   .object({
-    id: z.number().openapi({
-      description: 'A unique ID automatically generated for tracking this specific task.',
-      example: 1716537600000
-    }),
+    id: unixTSSchemaSpec,
     title: z.string().min(5).openapi({
       description: "A brief, human-readable title summarizing the task's objective.",
       example: 'Refactor User Authentication Logic'
@@ -24,11 +22,7 @@ export const AgentTaskSchema = z
       example:
         'Update the login function in `src/auth.ts` to use asynchronous hashing for passwords and return a JWT token upon successful authentication.'
     }),
-    targetFileId: z.number().optional().openapi({
-      description:
-        'The unique ID (from ProjectFileSchema) of the primary source file to be modified or created by this task. Will be populated by orchestrator for new files.',
-      example: 1716537600000
-    }),
+    targetFileId: unixTSSchemaSpec.optional(),
     targetFilePath: z.string().min(1).openapi({
       description:
         "The relative path of the primary source file (e.g., 'src/utils/auth.ts'). Required for all tasks. Used for creation path.",
@@ -38,22 +32,12 @@ export const AgentTaskSchema = z
       description: 'Tracks the progress of the task through the workflow.',
       example: 'PENDING'
     }),
-    relatedTestFileId: z.number().optional().openapi({
-      description:
-        "Optional: The unique ID (from ProjectFileSchema) of the corresponding unit test file (e.g., 'src/utils/auth.test.ts'), if applicable.",
-      example: 1716537600000
-    }),
+    relatedTestFileId: unixTSSchemaSpec.optional(),
     estimatedComplexity: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional().openapi({
       description: "Optional: AI's estimation of the task's complexity.",
       example: 'MEDIUM'
     }),
-    dependencies: z
-      .array(z.number())
-      .optional()
-      .openapi({
-        description: 'Optional: A list of other Task IDs that must be completed before this task can start.',
-        example: [1716537600000, 1716537600000]
-      })
+    dependencies: unixTSArraySchemaSpec.optional(),
   })
   .openapi('AgentTask', {
     description:
@@ -99,15 +83,9 @@ export const AgentContextSchema = z
         example: 'A Node.js backend service for managing user accounts.'
       }),
     project: ProjectSchema,
-    agentJobId: z.number().openapi({ description: 'The ID of the agent job that is running this task plan.', example: 1716537600000 }),
+    agentJobId: unixTSSchemaSpec,
     prompts: z.array(PromptSchema).openapi({ description: 'The prompts to use for the agent.' }),
-    selectedFileIds: z
-      .array(z.number())
-      .min(1)
-      .openapi({
-        description: 'Array of ProjectFile IDs to provide as initial context.',
-        example: [1716537600000, 1716537600000]
-      })
+    selectedFileIds: unixTSArraySchemaSpec,
   })
   .refine((ctx) => ctx.projectFiles[0]?.projectId, {
     message: 'Could not determine projectId from the first project file.',
@@ -117,9 +95,7 @@ export const AgentContextSchema = z
 
 export const AgentTaskPlanSchema = z
   .object({
-    projectId: z
-      .number()
-      .openapi({ description: 'The ID of the project context in which these tasks operate.', example: 1716537600000 }),
+    projectId: unixTSSchemaSpec,
     overallGoal: z
       .string()
       .openapi({
@@ -146,30 +122,16 @@ export const AgentCoderRunRequestSchema = z
       description: 'The main instruction or goal for the agent.',
       example: 'Refactor the authentication logic in auth.ts to use JWT.'
     }),
-    selectedFileIds: z
-      .array(z.number())
-      .min(1)
-      .openapi({
-        description: 'Array of ProjectFile IDs to provide as initial context.',
-        example: [1716537600000, 1716537600000]
-      }),
+    selectedFileIds: unixTSArraySchemaSpec,
     // generated on the client side and passed to the server to retrieve the execution logs and data for this run.
-    agentJobId: z.number().optional().openapi({
-      description: 'The unique ID for retrieving the execution logs and data for this run.'
-    }),
-    selectedPromptIds: z
-      .array(z.number())
-      .optional()
-      .openapi({
-        description: 'Array of Prompt IDs to provide as initial context.',
-        example: [1716537600000, 1716537600000]
-      })
+    agentJobId: unixTSSchemaSpec.optional(),
+    selectedPromptIds: unixTSArrayOptionalSchemaSpec,
   })
   .openapi('AgentCoderRunRequest')
 
 export const AgentCoderRunSuccessDataSchema = z
   .object({
-    updatedFiles: z.array(ProjectFileSchema).openapi({
+    updatedFiles: unixTSArrayOptionalSchemaSpec.openapi({
       description: "The state of the project files after the agent's execution."
     }),
     taskPlan: AgentTaskPlanSchema.optional().openapi({
@@ -196,9 +158,9 @@ export const AgentDataLogSchema = z
     agentJobDirPath: z
       .string()
       .openapi({ description: 'Absolute path to the directory containing logs for this job.' }),
-    projectId: z.number().openapi({ description: 'The ID of the project this agent run targeted.' }),
-    agentJobId: z.number().openapi({ description: 'The unique ID for this agent run.' }),
-    agentJobStartTime: z.number().openapi({ description: 'ISO 8601 timestamp when the agent job started.' }),
+    projectId: unixTSSchemaSpec,
+    agentJobId: unixTSSchemaSpec,
+    agentJobStartTime: unixTSSchemaSpec,
     // The initial plan generated before execution steps
     taskPlan: AgentTaskPlanSchema.optional().openapi({
       description: 'The initial task plan generated by the planning agent (before execution).'
@@ -212,19 +174,12 @@ export const AgentDataLogSchema = z
       description:
         'The task plan reflecting the state after execution attempts (tasks will have final statuses like COMPLETED, FAILED).'
     }),
-    agentJobEndTime: z
-      .number()
-      .openapi({ description: 'ISO 8601 timestamp when the agent job finished or errored.' }),
+    agentJobEndTime: unixTSSchemaSpec,
     // Optional fields only present on error
     errorMessage: z.string().optional().openapi({ description: 'Error message if the agent run failed.' }),
     errorStack: z.string().optional().openapi({ description: 'Stack trace if the agent run failed.' }),
     // Crucial for the confirm route: list of files proposed for writing
-    updatedFiles: z
-      .array(ProjectFileSchema)
-      .optional()
-      .openapi({
-        description: 'List of files with proposed changes (new files or modified files with different checksums).'
-      })
+    updatedFiles: unixTSArrayOptionalSchemaSpec,
   })
   .openapi('AgentDataLog') // Give it a unique OpenAPI name
 

@@ -35,7 +35,7 @@
     "src/middleware.ts",
     "server.ts",
     "build.ts",
-    "functional-tests",
+    "../api-tests/src/tests",
     "src/utils/parse-timestamp.test.ts",
     "src/utils/parse-timestamp.ts",
   ]
