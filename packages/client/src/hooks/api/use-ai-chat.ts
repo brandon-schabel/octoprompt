@@ -7,7 +7,7 @@ import { nanoid } from 'nanoid'
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
 
 interface UseAIChatProps {
-  chatId: string
+  chatId: number
   provider: APIProviders | string
   model: string
   systemMessage?: string
@@ -29,8 +29,8 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
     stop,
     setInput
   } = useChat({
-    api: `${SERVER_HTTP_ENDPOINT}/ai/chat`,
-    id: chatId, // Primarily for SDK internal state management
+    api: `${SERVER_HTTP_ENDPOINT}/api/ai/chat`,
+    id: chatId.toString(), // Primarily for SDK internal state management
     initialMessages: [], // Load messages via useEffect
     onError: (err) => {
       // Optionally add more user-friendly error handling (e.g., toast notifications)
@@ -50,11 +50,11 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
   useEffect(() => {
     if (initialMessagesData?.data && messages.length === 0 && !isFetchingInitialMessages) {
       const formattedMessages: Message[] = initialMessagesData.data.map((msg) => ({
-        id: msg.id,
+        id: msg.id.toString(),
         // Ensure role mapping handles potential future roles if schema changes
         role: msg.role as 'user' | 'assistant' | 'system',
         content: msg.content,
-        createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date() // Handle potential date parsing issues
+        created: msg.created ? new Date(msg.created) : new Date() // Handle potential date parsing issues
       }))
       // Prevent infinite loops by checking if messages are truly different if needed
       setMessages(formattedMessages)
@@ -67,11 +67,12 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
     async (messageContent: string, modelSettings?: AiSdkOptions) => {
       if (!messageContent.trim()) return
 
-      const userMessageId = nanoid() // Used for optimistic UI and maybe tempId
+      // unix timestamp in milliseconds
+      const userMessageId = Date.now()
 
       // 1. Prepare the message object for the useChat hook's state
       const messageForSdkState: Message = {
-        id: userMessageId,
+        id: userMessageId.toString(),
         role: 'user',
         content: messageContent.trim(),
         createdAt: new Date()

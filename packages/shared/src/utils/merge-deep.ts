@@ -4,12 +4,12 @@
  * Arrays and primitive values are overwritten by later objects.
  *
  * @param objects - One or more objects to merge.
- * @returns A new object with merged properties.
+ * @returns A new object with merged properties, typed as T if specified.
  */
-export function mergeDeep(...objects: any[]): any {
+export function mergeDeep<T extends Record<string, any> = Record<string, any>>(...objects: any[]): T {
   // Return an empty object if no objects are provided.
   if (objects.length === 0) {
-    return {}
+    return {} as T
   }
 
   const result: Record<string, any> = {}
@@ -43,5 +43,5 @@ export function mergeDeep(...objects: any[]): any {
     }
   }
 
-  return result
+  return result as T
 }

@@ -27,7 +27,7 @@ export async function handleChatMessage({
   tempId,
   debug = false
 }: AiChatStreamRequest): Promise<ReturnType<typeof streamText>> {
-  let finalAssistantMessageId: string | undefined
+  let finalAssistantMessageId: number | undefined
   const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
   const provider = finalOptions.provider as APIProviders
   const chatService = createChatService()
@@ -120,17 +120,17 @@ export async function handleChatMessage({
   })
 }
 
-async function loadKeys(): Promise<ProviderKey[]> {
+async function loadUncensoredKeys(): Promise<ProviderKey[]> {
   const providerKeyService = createProviderKeyService()
   // Simple cache invalidation on update/delete could be added if keys change often
   if (providerKeysCache === null) {
-    providerKeysCache = await providerKeyService.listKeys()
+    providerKeysCache = await providerKeyService.listKeysUncensored()
   }
   return providerKeysCache
 }
 
 async function getKey(provider: APIProviders, debug: boolean): Promise<string | undefined> {
-  const keys = await loadKeys()
+  const keys = await loadUncensoredKeys()
   const keyEntry = keys.find((k) => k.provider === provider)
   if (!keyEntry && debug) {
     console.warn(
@@ -189,6 +189,7 @@ async function getProviderLanguageModelInterface(
     }
     case 'openrouter': {
       const apiKey = await getKey('openrouter', debug)
+      console.log({ apiKey })
       if (!apiKey && !process.env.OPENROUTER_API_KEY)
         throw new ApiError(400, 'OpenRouter API Key not found in DB or environment.', 'OPENROUTER_KEY_MISSING')
       return createOpenRouter({ apiKey })(modelId)

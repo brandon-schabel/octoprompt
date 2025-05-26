@@ -25,7 +25,7 @@ export function ProjectSettingsDialog() {
   const projectData = projectResponse?.data
   const { copyToClipboard } = useCopyClipboard()
 
-  const { isPending: isSyncing, mutate: syncProject } = useSyncProject(projectId ?? '')
+  const { isPending: isSyncing, mutate: syncProject } = useSyncProject(projectId ?? -1)
 
   // call sync project on interval
   useEffect(() => {
@@ -107,7 +107,7 @@ export function ProjectSettingsDialog() {
                 <div>
                   <span className='text-sm font-medium'>Project ID</span>
                   <div className='flex items-center gap-2 mt-1'>
-                    <p className='text-sm text-muted-foreground truncate' title={projectData.id}>
+                    <p className='text-sm text-muted-foreground truncate' title={projectData.id.toString()}>
                       {projectData.id}
                     </p>
                     <Tooltip>
@@ -118,7 +118,7 @@ export function ProjectSettingsDialog() {
                           className='h-6 w-6 hover:bg-accent hover:text-accent-foreground flex-shrink-0'
                           onClick={(e) => {
                             e.preventDefault()
-                            copyToClipboard(projectData.id || '', {
+                            copyToClipboard(projectData.id.toString(), {
                               successMessage: 'Project ID copied',
                               errorMessage: 'Failed to copy ID'
                             })

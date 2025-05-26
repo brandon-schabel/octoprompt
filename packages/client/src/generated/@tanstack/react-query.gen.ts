@@ -12,6 +12,7 @@ import {
   deleteApiChatsByChatId,
   patchApiChatsByChatId,
   postApiTickets,
+  getApiTicketsBulkTasks,
   deleteApiTicketsByTicketId,
   getApiTicketsByTicketId,
   patchApiTicketsByTicketId,
@@ -23,11 +24,10 @@ import {
   getApiProjectsByProjectIdTicketsWithTasks,
   getApiTicketsByTicketIdTasks,
   postApiTicketsByTicketIdTasks,
-  deleteApiTicketsByTicketIdTasksByTaskId,
-  patchApiTicketsByTicketIdTasksByTaskId,
   patchApiTicketsByTicketIdTasksReorder,
   postApiTicketsByTicketIdAutoGenerateTasks,
-  getApiTicketsBulkTasks,
+  deleteApiTicketsByTicketIdTasksByTaskId,
+  patchApiTicketsByTicketIdTasksByTaskId,
   getApiProjects,
   postApiProjects,
   deleteApiProjectsByProjectId,
@@ -70,9 +70,7 @@ import {
   getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogs,
   getApiAgentCoderProjectByProjectIdRunsByAgentJobIdData,
   postApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirm,
-  deleteApiAgentCoderRunsByAgentJobId,
-  deleteApiKv,
-  getApiKv
+  deleteApiAgentCoderRunsByAgentJobId
 } from '../sdk.gen'
 import { queryOptions, type UseMutationOptions, type DefaultError } from '@tanstack/react-query'
 import type {
@@ -102,6 +100,7 @@ import type {
   PostApiTicketsData,
   PostApiTicketsError,
   PostApiTicketsResponse,
+  GetApiTicketsBulkTasksData,
   DeleteApiTicketsByTicketIdData,
   DeleteApiTicketsByTicketIdError,
   DeleteApiTicketsByTicketIdResponse,
@@ -125,19 +124,18 @@ import type {
   PostApiTicketsByTicketIdTasksData,
   PostApiTicketsByTicketIdTasksError,
   PostApiTicketsByTicketIdTasksResponse,
-  DeleteApiTicketsByTicketIdTasksByTaskIdData,
-  DeleteApiTicketsByTicketIdTasksByTaskIdError,
-  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
-  PatchApiTicketsByTicketIdTasksByTaskIdData,
-  PatchApiTicketsByTicketIdTasksByTaskIdError,
-  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
   PatchApiTicketsByTicketIdTasksReorderData,
   PatchApiTicketsByTicketIdTasksReorderError,
   PatchApiTicketsByTicketIdTasksReorderResponse,
   PostApiTicketsByTicketIdAutoGenerateTasksData,
   PostApiTicketsByTicketIdAutoGenerateTasksError,
   PostApiTicketsByTicketIdAutoGenerateTasksResponse,
-  GetApiTicketsBulkTasksData,
+  DeleteApiTicketsByTicketIdTasksByTaskIdData,
+  DeleteApiTicketsByTicketIdTasksByTaskIdError,
+  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
+  PatchApiTicketsByTicketIdTasksByTaskIdData,
+  PatchApiTicketsByTicketIdTasksByTaskIdError,
+  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
   GetApiProjectsData,
   PostApiProjectsData,
   PostApiProjectsError,
@@ -233,11 +231,7 @@ import type {
   PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse,
   DeleteApiAgentCoderRunsByAgentJobIdData,
   DeleteApiAgentCoderRunsByAgentJobIdError,
-  DeleteApiAgentCoderRunsByAgentJobIdResponse,
-  DeleteApiKvData,
-  DeleteApiKvError,
-  DeleteApiKvResponse,
-  GetApiKvData
+  DeleteApiAgentCoderRunsByAgentJobIdResponse
 } from '../types.gen'
 import { client as _heyApiClient } from '../client.gen'
 
@@ -573,6 +567,24 @@ export const postApiTicketsMutation = (
   return mutationOptions
 }
 
+export const getApiTicketsBulkTasksQueryKey = (options: Options<GetApiTicketsBulkTasksData>) =>
+  createQueryKey('getApiTicketsBulkTasks', options)
+
+export const getApiTicketsBulkTasksOptions = (options: Options<GetApiTicketsBulkTasksData>) => {
+  return queryOptions({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getApiTicketsBulkTasks({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true
+      })
+      return data
+    },
+    queryKey: getApiTicketsBulkTasksQueryKey(options)
+  })
+}
+
 export const deleteApiTicketsByTicketIdMutation = (
   options?: Partial<Options<DeleteApiTicketsByTicketIdData>>
 ): UseMutationOptions<
@@ -891,54 +903,6 @@ export const postApiTicketsByTicketIdTasksMutation = (
   return mutationOptions
 }
 
-export const deleteApiTicketsByTicketIdTasksByTaskIdMutation = (
-  options?: Partial<Options<DeleteApiTicketsByTicketIdTasksByTaskIdData>>
-): UseMutationOptions<
-  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
-  DeleteApiTicketsByTicketIdTasksByTaskIdError,
-  Options<DeleteApiTicketsByTicketIdTasksByTaskIdData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
-    DeleteApiTicketsByTicketIdTasksByTaskIdError,
-    Options<DeleteApiTicketsByTicketIdTasksByTaskIdData>
-  > = {
-    mutationFn: async (localOptions) => {
-      const { data } = await deleteApiTicketsByTicketIdTasksByTaskId({
-        ...options,
-        ...localOptions,
-        throwOnError: true
-      })
-      return data
-    }
-  }
-  return mutationOptions
-}
-
-export const patchApiTicketsByTicketIdTasksByTaskIdMutation = (
-  options?: Partial<Options<PatchApiTicketsByTicketIdTasksByTaskIdData>>
-): UseMutationOptions<
-  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
-  PatchApiTicketsByTicketIdTasksByTaskIdError,
-  Options<PatchApiTicketsByTicketIdTasksByTaskIdData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    PatchApiTicketsByTicketIdTasksByTaskIdResponse,
-    PatchApiTicketsByTicketIdTasksByTaskIdError,
-    Options<PatchApiTicketsByTicketIdTasksByTaskIdData>
-  > = {
-    mutationFn: async (localOptions) => {
-      const { data } = await patchApiTicketsByTicketIdTasksByTaskId({
-        ...options,
-        ...localOptions,
-        throwOnError: true
-      })
-      return data
-    }
-  }
-  return mutationOptions
-}
-
 export const patchApiTicketsByTicketIdTasksReorderMutation = (
   options?: Partial<Options<PatchApiTicketsByTicketIdTasksReorderData>>
 ): UseMutationOptions<
@@ -1008,22 +972,52 @@ export const postApiTicketsByTicketIdAutoGenerateTasksMutation = (
   return mutationOptions
 }
 
-export const getApiTicketsBulkTasksQueryKey = (options: Options<GetApiTicketsBulkTasksData>) =>
-  createQueryKey('getApiTicketsBulkTasks', options)
-
-export const getApiTicketsBulkTasksOptions = (options: Options<GetApiTicketsBulkTasksData>) => {
-  return queryOptions({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await getApiTicketsBulkTasks({
+export const deleteApiTicketsByTicketIdTasksByTaskIdMutation = (
+  options?: Partial<Options<DeleteApiTicketsByTicketIdTasksByTaskIdData>>
+): UseMutationOptions<
+  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
+  DeleteApiTicketsByTicketIdTasksByTaskIdError,
+  Options<DeleteApiTicketsByTicketIdTasksByTaskIdData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
+    DeleteApiTicketsByTicketIdTasksByTaskIdError,
+    Options<DeleteApiTicketsByTicketIdTasksByTaskIdData>
+  > = {
+    mutationFn: async (localOptions) => {
+      const { data } = await deleteApiTicketsByTicketIdTasksByTaskId({
         ...options,
-        ...queryKey[0],
-        signal,
+        ...localOptions,
         throwOnError: true
       })
       return data
-    },
-    queryKey: getApiTicketsBulkTasksQueryKey(options)
-  })
+    }
+  }
+  return mutationOptions
+}
+
+export const patchApiTicketsByTicketIdTasksByTaskIdMutation = (
+  options?: Partial<Options<PatchApiTicketsByTicketIdTasksByTaskIdData>>
+): UseMutationOptions<
+  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
+  PatchApiTicketsByTicketIdTasksByTaskIdError,
+  Options<PatchApiTicketsByTicketIdTasksByTaskIdData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    PatchApiTicketsByTicketIdTasksByTaskIdResponse,
+    PatchApiTicketsByTicketIdTasksByTaskIdError,
+    Options<PatchApiTicketsByTicketIdTasksByTaskIdData>
+  > = {
+    mutationFn: async (localOptions) => {
+      const { data } = await patchApiTicketsByTicketIdTasksByTaskId({
+        ...options,
+        ...localOptions,
+        throwOnError: true
+      })
+      return data
+    }
+  }
+  return mutationOptions
 }
 
 export const getApiProjectsQueryKey = (options?: Options<GetApiProjectsData>) =>
@@ -2305,37 +2299,4 @@ export const deleteApiAgentCoderRunsByAgentJobIdMutation = (
     }
   }
   return mutationOptions
-}
-
-export const deleteApiKvMutation = (
-  options?: Partial<Options<DeleteApiKvData>>
-): UseMutationOptions<DeleteApiKvResponse, DeleteApiKvError, Options<DeleteApiKvData>> => {
-  const mutationOptions: UseMutationOptions<DeleteApiKvResponse, DeleteApiKvError, Options<DeleteApiKvData>> = {
-    mutationFn: async (localOptions) => {
-      const { data } = await deleteApiKv({
-        ...options,
-        ...localOptions,
-        throwOnError: true
-      })
-      return data
-    }
-  }
-  return mutationOptions
-}
-
-export const getApiKvQueryKey = (options: Options<GetApiKvData>) => createQueryKey('getApiKv', options)
-
-export const getApiKvOptions = (options: Options<GetApiKvData>) => {
-  return queryOptions({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await getApiKv({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true
-      })
-      return data
-    },
-    queryKey: getApiKvQueryKey(options)
-  })
 }

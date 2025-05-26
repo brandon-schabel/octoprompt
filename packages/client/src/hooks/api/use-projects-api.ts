@@ -65,14 +65,14 @@ const PROJECT_KEYS = {
   all: () => getApiProjectsQueryKey(),
   lists: () => getApiProjectsQueryKey(),
   details: () => [...getApiProjectsQueryKey(), 'detail'] as const, // Custom structure if needed, but direct ID key is better
-  detail: (projectId: string) =>
+  detail: (projectId: number) =>
     getApiProjectsByProjectIdQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdData>) // Corresponds to old ['projects', 'detail', id]
 } as const
 
 const PROJECT_FILES_KEYS = {
   all: ['project-files'] as const,
   lists: () => [...PROJECT_FILES_KEYS.all, 'list'] as const,
-  list: (projectId: string) =>
+  list: (projectId: number) =>
     getApiProjectsByProjectIdFilesQueryKey({ path: { projectId } } as Options<GetApiProjectsByProjectIdFilesData>)
 } as const
 
@@ -86,7 +86,7 @@ export const useGetProjects = () => {
   return useQuery(queryOptions)
 }
 
-export const useGetProject = (projectId: string) => {
+export const useGetProject = (projectId: number) => {
   const queryOptions = getApiProjectsByProjectIdOptions({
     path: { projectId }
   } as Options<GetApiProjectsByProjectIdData>)
@@ -96,7 +96,7 @@ export const useGetProject = (projectId: string) => {
   })
 }
 
-export const useGetProjectFiles = (projectId: string) => {
+export const useGetProjectFiles = (projectId: number) => {
   const queryOptions = getApiProjectsByProjectIdFilesOptions({
     path: { projectId }
   } as Options<GetApiProjectsByProjectIdFilesData>)
@@ -135,9 +135,9 @@ export const useUpdateProject = () => {
   return useMutation<
     PatchApiProjectsByProjectIdResponse,
     PatchApiProjectsByProjectIdError,
-    { projectId: string; data: UpdateProjectInput }
+    { projectId: number; data: UpdateProjectInput }
   >({
-    mutationFn: (vars: { projectId: string; data: UpdateProjectInput }) => {
+    mutationFn: (vars: { projectId: number; data: UpdateProjectInput }) => {
       const opts: Options<PatchApiProjectsByProjectIdData> = { path: { projectId: vars.projectId }, body: vars.data }
       return mutationOptions.mutationFn!(opts)
     },
@@ -154,8 +154,8 @@ export const useDeleteProject = () => {
   const queryClient = useQueryClient()
   const mutationOptions = deleteApiProjectsByProjectIdMutation()
 
-  return useMutation<DeleteApiProjectsByProjectIdResponse, DeleteApiProjectsByProjectIdError, string>({
-    mutationFn: (projectId: string) => {
+  return useMutation<DeleteApiProjectsByProjectIdResponse, DeleteApiProjectsByProjectIdError, number>({
+    mutationFn: (projectId: number) => {
       const opts: Options<DeleteApiProjectsByProjectIdData> = { path: { projectId } }
       return mutationOptions.mutationFn!(opts)
     },
@@ -169,7 +169,7 @@ export const useDeleteProject = () => {
   })
 }
 
-export const useSyncProject = (projectId: string) => {
+export const useSyncProject = (projectId: number) => {
   const queryClient = useQueryClient()
   const mutationOptions = postApiProjectsByProjectIdSyncMutation()
 
@@ -186,7 +186,7 @@ export const useSyncProject = (projectId: string) => {
   })
 }
 
-export const useFindSuggestedFiles = (projectId: string) => {
+export const useFindSuggestedFiles = (projectId: number) => {
   const mutationOptions = postApiProjectsByProjectIdSuggestFilesMutation()
 
   return useMutation<
@@ -203,16 +203,16 @@ export const useFindSuggestedFiles = (projectId: string) => {
   })
 }
 
-export const useRemoveSummariesFromFiles = (projectId: string) => {
+export const useRemoveSummariesFromFiles = (projectId: number) => {
   const queryClient = useQueryClient()
   const mutationOptions = postApiProjectsByProjectIdRemoveSummariesMutation()
 
   return useMutation<
     PostApiProjectsByProjectIdRemoveSummariesResponse,
     PostApiProjectsByProjectIdRemoveSummariesError,
-    string[]
+    number[]
   >({
-    mutationFn: (fileIds: string[]) => {
+    mutationFn: (fileIds: number[]) => {
       const body: RemoveSummariesInput = { fileIds }
       const opts: Options<PostApiProjectsByProjectIdRemoveSummariesData> = { path: { projectId }, body }
       return mutationOptions.mutationFn!(opts)
@@ -224,7 +224,7 @@ export const useRemoveSummariesFromFiles = (projectId: string) => {
   })
 }
 
-export function useRefreshProject(projectId: string) {
+export function useRefreshProject(projectId: number) {
   const queryClient = useQueryClient()
   const mutationOptions = postApiProjectsByProjectIdRefreshMutation()
 
@@ -248,7 +248,7 @@ export function useRefreshProject(projectId: string) {
   })
 }
 
-export const useSuggestFiles = (projectId: string) => {
+export const useSuggestFiles = (projectId: number) => {
   return useMutation({
     mutationFn: async (requestBody: SuggestFilesRequestBody) => {
       return await postApiProjectsByProjectIdSuggestFiles({
@@ -263,7 +263,7 @@ export const useSuggestFiles = (projectId: string) => {
   })
 }
 
-export const useSummarizeProjectFiles = (projectId: string) => {
+export const useSummarizeProjectFiles = (projectId: number) => {
   const mutationOptions = postApiProjectsByProjectIdSummarizeMutation()
   const queryClient = useQueryClient()
 
@@ -296,8 +296,8 @@ export const useSummarizeProjectFiles = (projectId: string) => {
  */
 export const useOptimzeUserInput = () => {
   const mutationOptions = postApiPromptOptimizeMutation()
-  return useMutation<PostApiPromptOptimizeResponse, PostApiPromptOptimizeError, { userContext: string; projectId: string }>({
-    mutationFn: (vars: { userContext: string; projectId: string }) => {
+  return useMutation<PostApiPromptOptimizeResponse, PostApiPromptOptimizeError, { userContext: string; projectId: number }>({
+    mutationFn: (vars: { userContext: string; projectId: number }) => {
       const opts: Options<PostApiPromptOptimizeData> = { body: { userContext: vars.userContext, projectId: vars.projectId } }
       return mutationOptions.mutationFn!(opts)
     },
@@ -306,7 +306,7 @@ export const useOptimzeUserInput = () => {
 }
 
 
-export const useGetProjectSummary = (projectId: string) => {
+export const useGetProjectSummary = (projectId: number) => {
   const queryOptions = getApiProjectsByProjectIdSummaryOptions({
     path: { projectId }
   } as Options<GetApiProjectsByProjectIdSummaryData>)

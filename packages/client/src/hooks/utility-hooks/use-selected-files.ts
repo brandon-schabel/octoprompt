@@ -13,14 +13,14 @@ import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
 const MAX_HISTORY_SIZE = 50
 
 type UndoRedoState = {
-  history: string[][]
+  history: number[][]
   index: number
 }
 
 // Query key factory for type safety
 const undoRedoKeys = {
   all: ['undoRedo'] as const,
-  tab: (tabId: string) => [...undoRedoKeys.all, tabId] as const
+  tab: (tabId: number) => [...undoRedoKeys.all, tabId] as const
 }
 
 // TODO Implment the ability to pass in a tab id instead of it just defaulting to the
@@ -28,7 +28,7 @@ const undoRedoKeys = {
 export function useSelectedFiles({
   tabId = null
 }: {
-  tabId?: string | null
+  tabId?: number | null
 } = {}) {
   const queryClient = useQueryClient()
   const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
@@ -42,12 +42,12 @@ export function useSelectedFiles({
     : activeProjectTabState?.selectedFiles
 
   // Get all project files and build the file map
-  const { data: fileData } = useGetProjectFiles(activeProjectTabState?.selectedProjectId || '')
+  const { data: fileData } = useGetProjectFiles(activeProjectTabState?.selectedProjectId ?? -1)
   const fileMap: ProjectFileMap = useMemo(() => buildProjectFileMap(fileData?.data ?? []), [fileData?.data])
 
   // Query for getting the undo/redo state
   const { data: undoRedoState } = useQuery({
-    queryKey: undoRedoKeys.tab(effectiveTabId ?? ''),
+    queryKey: undoRedoKeys.tab(effectiveTabId ?? -1),
     queryFn: () => {
       // Initialize new state if we have selectedFiles
       if (effectiveTabState !== null) {
@@ -75,13 +75,13 @@ export function useSelectedFiles({
   })
 
   // The actual 'selectedFiles' is whatever is at the current index, or empty array if not initialized
-  const selectedFiles: string[] = undoRedoState?.history[undoRedoState.index] ?? []
+  const selectedFiles: number[] = undoRedoState?.history[undoRedoState.index] ?? []
 
   // Only allow operations once we have initialized the state
   const isInitialized = undoRedoState !== null
 
   // Commit a new selection to local history, and also update global selection
-  const commitSelectionChange = (newSelected: string[]) => {
+  const commitSelectionChange = (newSelected: number[]) => {
     if (!isInitialized || !undoRedoState || !effectiveTabId) return
 
     // Update global store's selection based on which tab we're working with
@@ -148,7 +148,7 @@ export function useSelectedFiles({
   }
 
   // Toggle a single file's selection
-  const toggleFile = (fileId: string) => {
+  const toggleFile = (fileId: number) => {
     if (!isInitialized) return
     commitSelectionChange(
       selectedFiles.includes(fileId) ? selectedFiles.filter((id) => id !== fileId) : [...selectedFiles, fileId]
@@ -156,13 +156,13 @@ export function useSelectedFiles({
   }
 
   // Remove a file from selection
-  const removeSelectedFile = (fileId: string) => {
+  const removeSelectedFile = (fileId: number) => {
     if (!isInitialized) return
     commitSelectionChange(selectedFiles.filter((id) => id !== fileId))
   }
 
   // Toggle multiple files at once
-  const toggleFiles = (fileIds: string[]) => {
+  const toggleFiles = (fileIds: number[]) => {
     if (!isInitialized) return
     const toAdd = fileIds.filter((id) => !selectedFiles.includes(id))
     const toRemove = fileIds.filter((id) => selectedFiles.includes(id))
@@ -170,7 +170,7 @@ export function useSelectedFiles({
   }
 
   // Select multiple files (replacing current selection)
-  const selectFiles = (fileIdsOrUpdater: string[] | ((prev: string[]) => string[])) => {
+  const selectFiles = (fileIdsOrUpdater: number[] | ((prev: number[]) => number[])) => {
     if (!isInitialized) return
     const newFileIds = typeof fileIdsOrUpdater === 'function' ? fileIdsOrUpdater(selectedFiles) : fileIdsOrUpdater
     commitSelectionChange(newFileIds)
@@ -183,7 +183,7 @@ export function useSelectedFiles({
   }
 
   // Check if a file is selected
-  const isFileSelected = (fileId: string) => {
+  const isFileSelected = (fileId: number) => {
     return selectedFiles.includes(fileId)
   }
 

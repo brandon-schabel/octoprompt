@@ -1,6 +1,5 @@
 import { forwardRef, useState, useEffect, useRef, useImperativeHandle, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -9,9 +8,8 @@ import { Button } from '@ui'
 import { Progress } from '@ui'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-list'
-import { PromptDialog } from '@/components/projects/prompt-dialog'
-import { useCreatePrompt, useUpdatePrompt, useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
-import { buildPromptContent, calculateTotalTokens, promptSchema } from 'shared/src/utils/projects-utils'
+import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
+import { buildPromptContent, calculateTotalTokens } from 'shared/src/utils/projects-utils'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { OctoTooltip } from '@/components/octo/octo-tooltip'
@@ -23,7 +21,7 @@ import {
   useActiveChatId
 } from '@/hooks/use-kv-local-storage'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { z } from 'zod'
+
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '@ui'
 import { ProjectFile } from '@/generated'
@@ -50,9 +48,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const updateActiveProjectTab = useUpdateActiveProjectTab()
     const [isLogDialogOpen, setIsLogDialogOpen] = useState(false)
 
-    const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId || '')
-    const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId || '')
-    const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId || '')
+    const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId ?? -1)
+    const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId ?? -1)
+    const { data: contextLimit = 128000 } = useProjectTabField('contextLimit', activeProjectTabId ?? -1)
     const [suggestedFiles, setSuggestedFiles] = useState<ProjectFile[]>([])
 
     // Keep a local copy of userPrompt so that typing is instantly reflected in the textarea
@@ -64,24 +62,12 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     const { copyToClipboard } = useCopyClipboard()
     const promptInputRef = useRef<HTMLTextAreaElement>(null)
-    const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId || '')
+    const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId ?? -1)
     const [showSuggestions, setShowSuggestions] = useState(false)
 
-    // Prompt creation/editing dialog states
-    const [promptDialogOpen, setPromptDialogOpen] = useState(false)
-    const [editPromptId] = useState<string | null>(null)
-
     // Load the project's prompts
-    const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId || '')
-    const createPromptMutation = useCreatePrompt(activeProjectTabState?.selectedProjectId || '')
-    const updatePromptMutation = useUpdatePrompt(activeProjectTabState?.selectedProjectId || '')
-    const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId || '')
-
-    // React Hook Form for creating/editing prompts
-    const promptForm = useForm<z.infer<typeof promptSchema>>({
-      resolver: zodResolver(promptSchema),
-      defaultValues: { name: '', content: '' }
-    })
+    const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
+    const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // Read selected files
     const { selectedFiles, projectFileMap } = useSelectedFiles()
@@ -156,42 +142,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
           }
         }
       )
-    }
-
-    useEffect(() => {
-      if (editPromptId && promptData?.data) {
-        const p = promptData.data.find((x) => x.id === editPromptId)
-        if (p) {
-          promptForm.setValue('name', p.name)
-          promptForm.setValue('content', p.content)
-        }
-      } else {
-        promptForm.reset()
-      }
-    }, [editPromptId, promptData?.data])
-
-    async function handleCreatePrompt(values: z.infer<typeof promptSchema>) {
-      if (!activeProjectTabState?.selectedProjectId) return
-      const result = await createPromptMutation.mutateAsync({
-        body: {
-          projectId: activeProjectTabState.selectedProjectId,
-          name: values.name,
-          content: values.content
-        }
-      })
-
-      // @ts-ignore
-      if (result.success) {
-        toast.success('Prompt created')
-        setPromptDialogOpen(false)
-      }
-    }
-
-    async function handleUpdatePromptContent(promptId: string, updates: { name: string; content: string }) {
-      if (!activeProjectTabState?.selectedProjectId) return
-      await updatePromptMutation.mutateAsync({ promptId, data: updates })
-      toast.success('Prompt updated')
-      setPromptDialogOpen(false)
     }
 
     async function handleChatWithContext() {
@@ -295,11 +245,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               {/* Resizable panels for Prompts List and User Input */}
               <VerticalResizablePanel
                 topPanel={
-                  <PromptsList
-                    ref={promptsListRef}
-                    projectTabId={activeProjectTabId || 'default'}
-                    className='h-full w-full'
-                  />
+                  <PromptsList ref={promptsListRef} projectTabId={activeProjectTabId || -1} className='h-full w-full' />
                 }
                 bottomPanel={
                   <div className='flex flex-col h-full w-full'>
@@ -420,26 +366,12 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               />
             </div>
 
-            <PromptDialog
-              open={promptDialogOpen}
-              editPromptId={editPromptId}
-              promptForm={promptForm}
-              handleCreatePrompt={handleCreatePrompt}
-              handleUpdatePrompt={async (updates) => {
-                if (!editPromptId) return
-                return handleUpdatePromptContent(editPromptId, updates)
-              }}
-              createPromptPending={createPromptMutation.isPending}
-              updatePromptPending={updatePromptMutation.isPending}
-              onClose={() => setPromptDialogOpen(false)}
-            />
-
             <AgentCoderControlDialog
               open={isLogDialogOpen}
               onOpenChange={setIsLogDialogOpen}
               userInput={localUserPrompt}
               selectedFiles={selectedFiles}
-              projectId={activeProjectTabState?.selectedProjectId || ''}
+              projectId={activeProjectTabState?.selectedProjectId || -1}
               selectedPrompts={selectedPrompts}
               promptData={promptData?.data}
               totalTokens={totalTokens}

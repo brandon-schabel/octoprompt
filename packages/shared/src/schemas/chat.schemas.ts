@@ -2,6 +2,7 @@ import { z } from '@hono/zod-openapi'
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
 export type MessageRole = z.infer<typeof MessageRoleEnum> // Export the type if needed elsewhere
 
@@ -21,37 +22,28 @@ export type ModelOptions = z.infer<typeof baseModelOptionsSchema>
 // Base schemas for chat entities
 export const ChatSchema = z
   .object({
-    id: z.string().openapi({ example: 'chat_1a2b3c4d' }),
+    id: unixTSSchemaSpec,
     title: z.string(),
-    createdAt: z.string().datetime().openapi({ example: '2024-03-10T10:00:00.000Z' }),
-    updatedAt: z.string().datetime().openapi({ example: '2024-03-10T10:05:00.000Z' })
+    // unix timestamp in milliseconds
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
   })
   .openapi('Chat')
 
 export const ChatMessageSchema = z
   .object({
-    id: z.string().min(1).openapi({ example: 'msg-m1a2b3c4', description: 'Message ID' }),
-    chatId: z.string().min(1).openapi({ example: 'chat-a1b2c3d4', description: 'Parent Chat ID' }),
+    id: unixTSSchemaSpec,
+    chatId: unixTSSchemaSpec,
     role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
     content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
-    createdAt: z
-      .string()
-      .datetime()
-      .openapi({ example: '2024-01-01T12:00:05.000Z', description: 'Creation timestamp (ISO 8601)' })
+    created: unixTSSchemaSpec
   })
   .openapi('ChatMessage')
 
 // Request Parameter Schemas
 export const ChatIdParamsSchema = z
   .object({
-    chatId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'chatId', in: 'path' },
-        example: 'chat_1a2b3c4d',
-        description: 'The ID of the chat'
-      })
+    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('ChatIdParams')
 
@@ -60,7 +52,7 @@ export const CreateChatBodySchema = z
   .object({
     title: z.string().min(1).openapi({ example: 'New Chat Session' }),
     copyExisting: z.boolean().optional().openapi({ description: 'Copy messages from currentChatId if true' }),
-    currentChatId: z.string().min(1).optional().openapi({ example: 'chat-a1b2c3d4' })
+    currentChatId: unixTSSchemaSpec.optional()
   })
   .openapi('CreateChatRequestBody')
 
@@ -122,120 +114,52 @@ export const ModelListResponseSchema = z
 
 export const GetMessagesParamsSchema = z
   .object({
-    chatId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'chatId', in: 'path' },
-        example: 'chat-a1b2c3d4',
-        description: 'The ID of the chat to retrieve messages for'
-      })
+    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('GetMessagesParams')
 
 export const ForkChatParamsSchema = z
   .object({
-    chatId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'chatId', in: 'path' },
-        example: 'chat-a1b2c3d4',
-        description: 'The ID of the chat to fork'
-      })
+    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('ForkChatParams')
 
 export const ForkChatBodySchema = z
   .object({
-    excludedMessageIds: z
-      .array(z.string().min(1))
-      .default([])
-      .openapi({
-        description: 'Optional list of message IDs to exclude from the fork',
-        example: ['msg-m1a2b3c4']
-      })
+    excludedMessageIds: unixTSArraySchemaSpec
   })
   .openapi('ForkChatRequestBody')
 
 // --- UPDATED: ForkChatFromMessageParamsSchema ---
 export const ForkChatFromMessageParamsSchema = z
   .object({
-    chatId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'chatId', in: 'path' },
-        example: 'chat-a1b2c3d4',
-        description: 'The ID of the chat to fork'
-      }),
-    messageId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'messageId', in: 'path' },
-        example: 'msg-m1a2b3c4',
-        description: 'The ID of the message to fork from'
-      })
+    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } }),
+    messageId: unixTSSchemaSpec.openapi({ param: { name: 'messageId', in: 'path' } })
   })
   .openapi('ForkChatFromMessageParams')
 
 export const ForkChatFromMessageBodySchema = z
   .object({
-    excludedMessageIds: z
-      .array(z.string().min(1))
-      .default([])
-      .openapi({
-        description: 'Optional list of message IDs to exclude from the fork',
-        example: ['msg-m1a2b3c4']
-      })
+    excludedMessageIds: unixTSArraySchemaSpec
   })
   .openapi('ForkChatFromMessageRequestBody')
 
 export const UpdateChatParamsSchema = z
   .object({
-    chatId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'chatId', in: 'path' },
-        example: 'chat-a1b2c3d4',
-        description: 'The ID of the chat to update'
-      })
+    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('UpdateChatParams')
 
 export const DeleteChatParamsSchema = z
   .object({
-    chatId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'chatId', in: 'path' },
-        example: 'chat-a1b2c3d4',
-        description: 'The ID of the chat to delete'
-      })
+    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } })
   })
   .openapi('DeleteChatParams')
 
 export const DeleteMessageParamsSchema = z
   .object({
-    chatId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'chatId', in: 'path' },
-        example: 'chat-a1b2c3d4',
-        description: 'The ID of the chat to delete'
-      }),
-    messageId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'messageId', in: 'path' },
-        example: 'msg-m1a2b3c4',
-        description: 'The ID of the message to delete'
-      })
+    chatId: unixTSSchemaSpec.openapi({ param: { name: 'chatId', in: 'path' } }),
+    messageId: unixTSSchemaSpec.openapi({ param: { name: 'messageId', in: 'path' } })
   })
   .openapi('DeleteMessageParams')
 
@@ -265,10 +189,7 @@ export const messageSchema = z
 // Renamed for clarity and modified fields
 export const AiChatStreamRequestSchema = z
   .object({
-    chatId: z.string().min(1).openapi({
-      example: 'chat-a1b2c3d4',
-      description: 'Required ID of the chat session to continue.'
-    }),
+    chatId: unixTSSchemaSpec,
     userMessage: z.string().min(1, { message: 'User message cannot be empty.' }).openapi({
       description: 'The latest message content from the user.',
       example: 'Thanks! Can you elaborate on the E=mc^2 part?'
@@ -281,10 +202,7 @@ export const AiChatStreamRequestSchema = z
       example: 'Respond concisely.',
       description: 'Optional system message override for this specific request.'
     }),
-    tempId: z.string().optional().openapi({
-      example: 'temp_msg_456',
-      description: 'Temporary client-side ID for optimistic UI updates.'
-    }),
+    tempId: unixTSSchemaSpec.optional(),
     debug: z.boolean().optional().openapi({
       example: true,
       description: 'Enable debug mode for detailed logging.'
@@ -297,9 +215,9 @@ export const AiChatStreamRequestSchema = z
 
 export type CreateMessageBodyGeneric = {
   message: string
-  chatId: string
-  excludedMessageIds?: string[]
-  tempId?: string
+  chatId: number
+  excludedMessageIds?: number[]
+  tempId?: number
 } & ModelOptions
 
 // --- Validation Schemas with OpenAPI Enhancements (Keep as is, looks good) ---
@@ -337,6 +255,6 @@ export type CreateChatBody = z.infer<typeof CreateChatBodySchema>
 export type UpdateChatBody = z.infer<typeof UpdateChatBodySchema>
 export type CreateChatMessageBody = z.infer<typeof CreateChatMessageBodySchema>
 export type ExtendedChatMessage = ChatMessage & {
-  tempId?: string
+  tempId?: number
 }
 export type AiChatStreamRequest = z.infer<typeof AiChatStreamRequestSchema>

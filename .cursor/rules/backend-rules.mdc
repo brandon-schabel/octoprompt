@@ -1,7 +1,7 @@
 ---
 description: 
-globs: 
-alwaysApply: true
+globs: packages/server/**.*
+alwaysApply: false
 ---
 Below is a lean “cheat-sheet” version of your guide—same core rules, minimal repetition, sized for fast LLM ingestion. Let me know if you’d like any section expanded or trimmed further!
 
@@ -20,7 +20,7 @@ All data shapes are declared **once** as Zod schemas in `packages/shared`. Servi
 | Services | `packages/server/src/services` |
 | Schemas  | `packages/shared/src/schemas` |
 | Utilities| `packages/server/src/services/*-service.ts` |
-| Database | `packages/server/src/utils/database.ts` |
+| Database(JSON based storage) | `packages/server/src/utils/storage/*-storage.ts` | ?
 
 ## 3  Naming & Conventions
 | Kind    | File suffix        | Key rules |
@@ -39,7 +39,7 @@ export const FooSchema = z.object({ id: z.string() }).openapi('Foo');
 export type Foo = z.infer<typeof FooSchema>;
 
 // Service
-export async function getFoo(id: string): Promise<Foo | null> {
+export async function getFoo(id: number): Promise<Foo | null> {
   const row = db.prepare('SELECT * FROM foo WHERE id=?').get(id);
   return row ? FooSchema.parse(row) : null;
 }

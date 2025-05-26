@@ -122,21 +122,21 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const resolveImports = projectTabState?.resolveImports ?? false
   const preferredEditor = projectTabState?.preferredEditor ?? 'vscode'
   const { copyToClipboard } = useCopyClipboard()
-  const projectId = projectTabState?.selectedProjectId ?? ''
+  const projectId = projectTabState?.selectedProjectId ?? -1
 
-  const { mutate: refreshProject } = useRefreshProject(projectId ?? '')
-  const summarizeMutation = useSummarizeProjectFiles(projectId ?? '')
+  const { mutate: refreshProject } = useRefreshProject(projectId ?? -1)
+  const summarizeMutation = useSummarizeProjectFiles(projectId ?? -1)
 
   const isFolder = item.node._folder === true
 
   const folderChecked = isFolder
     ? areAllFolderFilesSelected(item.node, selectedFiles)
-    : selectedFiles.includes(item.node.file?.id ?? '')
+    : selectedFiles.includes(item.node.file?.id ?? -1)
 
   const folderIndeterminate = isFolder && isFolderPartiallySelected(item.node, selectedFiles)
 
   const handleToggleFile = useCallback(
-    (fileId: string) => {
+    (fileId: number) => {
       selectFiles(
         toggleFileUtil(
           fileId,
@@ -261,7 +261,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                   <span
                     className={cn(
                       'text-xs',
-                      selectedFiles.includes(item.node.file?.id ?? '')
+                      selectedFiles.includes(item.node.file?.id ?? -1)
                         ? 'text-primary font-medium'
                         : 'text-muted-foreground'
                     )}

@@ -1,4 +1,4 @@
-import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle } from 'react'
+import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle, useMemo } from 'react'
 import { Button } from '@ui'
 import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy } from 'lucide-react'
 import {
@@ -16,12 +16,13 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { ScrollArea } from '@ui'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
-import { useGetProjectPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
+import { useGetProjectPrompts, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { PromptSchema } from 'shared/src/schemas/prompt.schemas'
 
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import {
@@ -40,8 +41,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '@ui'
 import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { ProjectFile } from '@/generated'
-import { promptSchema } from 'shared/src/utils/projects-utils'
+import { ProjectFile, Prompt } from '@/generated'
 import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -50,7 +50,7 @@ export type PromptsListRef = {
 }
 
 interface PromptsListProps {
-  projectTabId: string
+  projectTabId: number
   className?: string
 }
 
@@ -58,14 +58,11 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   const updateProjectTabState = useUpdateProjectTabState(projectTabId)
   const [projectTab, setProjectTab] = useGetProjectTabById(projectTabId)
   const selectedPrompts = projectTab?.selectedPrompts || []
-  const selectedProjectId = projectTab?.selectedProjectId || ''
+  const selectedProjectId = projectTab?.selectedProjectId || -1
   const { copyToClipboard } = useCopyClipboard()
 
   const { data: promptData } = useGetProjectPrompts(selectedProjectId)
-  const prompts = promptData?.data || []
 
-  const createPromptMutation = useCreatePrompt(selectedProjectId)
-  const updatePromptMutation = useUpdatePrompt(selectedProjectId)
   const deletePromptMutation = useDeletePrompt(selectedProjectId)
 
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
@@ -73,24 +70,36 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   const [viewedPrompt, setViewedPrompt] = useState<ProjectFile | null>(null)
 
   const [promptDialogOpen, setPromptDialogOpen] = useState(false)
-  const [editPromptId, setEditPromptId] = useState<string | null>(null)
+  const [editPromptId, setEditPromptId] = useState<number | null>(null)
 
   const [sortOrder, setSortOrder] = useState<'alphabetical' | 'default' | 'size_asc' | 'size_desc'>('alphabetical')
 
-  let sortedPrompts = [...prompts]
-  if (sortOrder === 'alphabetical') {
-    sortedPrompts.sort((a, b) => a.name.localeCompare(b.name))
-  } else if (sortOrder === 'size_desc') {
-    sortedPrompts.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0))
-  } else if (sortOrder === 'size_asc') {
-    sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0))
-  }
+  const prompts = useMemo(() => {
+    return (
+      promptData?.data.map((prompt) => ({
+        ...prompt,
+        id: Number(prompt.id)
+      })) || []
+    )
+  }, [promptData?.data])
+
+  const sortedPrompts = useMemo(() => {
+    let sortedPrompts = [...prompts]
+    if (sortOrder === 'alphabetical') {
+      sortedPrompts.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortOrder === 'size_desc') {
+      sortedPrompts.sort((a, b) => (b.content?.length || 0) - (a.content?.length || 0))
+    } else if (sortOrder === 'size_asc') {
+      sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0))
+    }
+    return sortedPrompts
+  }, [sortOrder, prompts])
 
   const copySelectedPrompts = () => {
     if (!selectedPrompts.length) return
     const allPrompts = selectedPrompts
       .map((id) => {
-        const p = promptData?.data?.find((x: { id: string }) => x.id === id)
+        const p = promptData?.data?.find((x: { id: number }) => x.id === id)
         return p ? `# ${p.name}\n${p.content}\n` : ''
       })
       .join('\n')
@@ -104,47 +113,15 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   const [allPromptsDialogOpen, setAllPromptsDialogOpen] = useState(false)
 
   // Our form for creating/updating
-  const promptForm = useForm<z.infer<typeof promptSchema>>({
-    resolver: zodResolver(promptSchema),
+  const promptForm = useForm<z.infer<typeof PromptSchema>>({
+    resolver: zodResolver(PromptSchema),
     defaultValues: {
       name: '',
       content: ''
     }
   })
 
-  // ---------------
-  // Create prompt
-  // ---------------
-  const handleCreatePrompt = async (values: z.infer<typeof promptSchema>) => {
-    if (!selectedProjectId) return
-    const result = await createPromptMutation.mutateAsync({
-      // projectId: selectedProjectId,
-      body: {
-        projectId: selectedProjectId,
-        name: values.name,
-        content: values.content
-      }
-    })
-
-    // @ts-ignore
-    if (result.success && result.data) {
-      toast.success('Prompt created successfully')
-      promptForm.reset()
-      setPromptDialogOpen(false)
-    }
-  }
-
-  const handleUpdatePrompt = async (updates: { name: string; content: string }) => {
-    if (!editPromptId) return
-    await updatePromptMutation.mutateAsync({
-      promptId: editPromptId,
-      data: updates
-    })
-    toast.success('Prompt updated successfully')
-    setPromptDialogOpen(false)
-  }
-
-  const handleDeletePrompt = async (promptId: string) => {
+  const handleDeletePrompt = async (promptId: number) => {
     if (!selectedProjectId) return
     await deletePromptMutation.mutateAsync({
       promptId
@@ -152,23 +129,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
     toast.success('Prompt deleted successfully')
   }
 
-  // When user clicks Pencil icon, load the existing name/content
-  useEffect(() => {
-    if (!editPromptId) {
-      promptForm.reset()
-      return
-    }
-    const found = prompts.find((p: { id: string; name: string; content: string }) => p.id === editPromptId)
-    if (found) {
-      promptForm.setValue('name', found.name || '')
-      promptForm.setValue('content', found.content || '')
-    } else {
-      promptForm.reset()
-    }
-  }, [editPromptId, prompts, promptForm])
-
-  // Keyboard navigation
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, index: number, promptId: string) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, index: number, promptId: number) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
@@ -208,12 +169,12 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   }, [focusedIndex])
 
   const handleOpenPromptViewer = (prompt: {
-    id: string
+    id: number
     name: string
     content: string
-    createdAt: string
-    updatedAt: string
-    projectId?: string
+    created: number
+    updated: number
+    projectId?: number
   }) => {
     setViewedPrompt({
       id: prompt.id,
@@ -222,12 +183,12 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       path: prompt.name,
       extension: '.txt',
       projectId: prompt.projectId || selectedProjectId,
-      createdAt: new Date(prompt.createdAt).toISOString(),
-      updatedAt: new Date(prompt.updatedAt).toISOString(),
+      created: new Date(prompt.created).getTime(),
+      updated: new Date(prompt.updated).getTime(),
       size: prompt.content?.length || 0,
       meta: '',
       summary: '',
-      summaryLastUpdatedAt: new Date().toISOString(),
+      summaryLastUpdated: new Date().getTime(),
       checksum: ''
     })
   }
@@ -240,16 +201,16 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
     console.log('TODO: handleSavePrompt, new content = ', newContent)
   }
 
-  // Expose a focus method
-  useImperativeHandle(
-    ref,
-    () => ({
-      focusPrompts: () => {
-        if (prompts.length > 0) setFocusedIndex(0)
-      }
-    }),
-    [prompts]
-  )
+  // // Expose a focus method
+  // useImperativeHandle(
+  //   ref,
+  //   () => ({
+  //     focusPrompts: () => {
+  //       if (prompts.length > 0) setFocusedIndex(0)
+  //     }
+  //   }),
+  //   [prompts]
+  // )
 
   return (
     <>
@@ -511,11 +472,18 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         open={promptDialogOpen}
         editPromptId={editPromptId}
         promptForm={promptForm}
-        handleCreatePrompt={handleCreatePrompt}
-        handleUpdatePrompt={handleUpdatePrompt}
-        createPromptPending={createPromptMutation.isPending}
-        updatePromptPending={updatePromptMutation.isPending}
-        onClose={() => setPromptDialogOpen(false)}
+        projectId={selectedProjectId}
+        onClose={() => {
+          setPromptDialogOpen(false)
+          setEditPromptId(null)
+          promptForm.reset()
+        }}
+        onSuccess={() => {
+          // THIS IS THE KEY FIX - Close the dialog on success
+          setPromptDialogOpen(false)
+          setEditPromptId(null)
+          promptForm.reset()
+        }}
       />
     </>
   )

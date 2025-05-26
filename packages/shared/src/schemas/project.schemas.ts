@@ -1,46 +1,43 @@
 import { z } from '@hono/zod-openapi'
+import { unixTimestampSchema } from '../utils/unix-ts-utils'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
+
+
 
 // Base schema - Represents the API structure
 export const ProjectSchema = z
   .object({
-    id: z.string().openapi({ example: 'proj_1a2b3c4d' }),
+    id: unixTSSchemaSpec,
     name: z.string(),
     description: z.string(),
     path: z.string(),
-    createdAt: z.string().datetime().openapi({ example: '2024-03-10T10:00:00.000Z' }),
-    updatedAt: z.string().datetime().openapi({ example: '2024-03-10T10:05:00.000Z' })
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
   })
   .openapi('Project')
 
 export const ProjectFileSchema = z
   .object({
-    id: z.string(),
-    projectId: z.string(),
+    id: unixTSSchemaSpec,
+    projectId: unixTSSchemaSpec,
     name: z.string(),
     path: z.string(),
     extension: z.string(),
     size: z.number(),
     content: z.string().nullable(),
     summary: z.string().nullable(),
-    summaryLastUpdatedAt: z.string().datetime().nullable(),
+    summaryLastUpdated: unixTSSchemaSpec.nullable(),
     meta: z.string().nullable(),
     checksum: z.string().nullable(),
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime()
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
   })
   .openapi('ProjectFile')
 
 // Request Parameter Schemas
 export const ProjectIdParamsSchema = z
   .object({
-    projectId: z
-      .string()
-      .min(1)
-      .openapi({
-        param: { name: 'projectId', in: 'path' },
-        example: 'proj_1a2b3c4d',
-        description: 'The ID of the project'
-      })
+    projectId: unixTSSchemaSpec.openapi({ param: { name: 'projectId', in: 'path' } })
   })
   .openapi('ProjectIdParams')
 
@@ -66,10 +63,8 @@ export const UpdateProjectBodySchema = z
 
 export const SummarizeFilesBodySchema = z
   .object({
-    fileIds: z
-      .array(z.string().min(1))
-      .min(1)
-      .openapi({ example: ['file_1a2b3c4d', 'file_e5f6g7h8'] }),
+    // file ids are unix timestamp in milliseconds
+    fileIds: unixTSArraySchemaSpec,
     force: z
       .boolean()
       .optional()
@@ -80,10 +75,7 @@ export const SummarizeFilesBodySchema = z
 
 export const RemoveSummariesBodySchema = z
   .object({
-    fileIds: z
-      .array(z.string().min(1))
-      .min(1)
-      .openapi({ example: ['file_1a2b3c4d', 'file_e5f6g7h8'] })
+    fileIds: unixTSArraySchemaSpec,
   })
   .openapi('RemoveSummariesRequestBody')
 
@@ -150,7 +142,7 @@ export const ProjectSummaryResponseSchema = z
 
 // Define ProjectFileMapSchema using z.map
 export const ProjectFileMapSchema = z
-  .map(z.string(), ProjectFileSchema)
+  .map(z.number(), ProjectFileSchema)
   .describe('A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects.')
   .openapi('ProjectFileMap')
 

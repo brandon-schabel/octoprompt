@@ -8,7 +8,7 @@ import { Input } from '@ui'
 import { Badge } from '@ui'
 import { OctoTooltip } from './octo/octo-tooltip'
 import { ShortcutDisplay } from './app-shortcut-display'
-import { LinkIcon, Plus, Pencil, Trash2, Settings, Icon } from 'lucide-react'
+import { LinkIcon, Plus, Pencil, Trash2, Settings } from 'lucide-react'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -34,10 +34,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const { deleteTab } = useDeleteProjectTabById()
   const [activeProjectTabState] = useActiveProjectTab()
 
-  const [editingTabName, setEditingTabName] = useState<{ id: string; name: string } | null>(null)
-  const [localOrder, setLocalOrder] = useState<string[] | null>(null)
+  const [editingTabName, setEditingTabName] = useState<{ id: number; name: string } | null>(null)
+  const [localOrder, setLocalOrder] = useState<number[] | null>(null)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const [dialogEditingTab, setDialogEditingTab] = useState<string | null>(null)
+  const [dialogEditingTab, setDialogEditingTab] = useState<number | null>(null)
   const [dialogEditingName, setDialogEditingName] = useState('')
   const { updateProjectTabById } = useUpdateProjectTabById()
   const { setActiveProjectTabId } = useSetActiveProjectTabId()
@@ -50,13 +50,15 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const scrollableTabsRef = useRef<HTMLDivElement>(null)
   const [showFade, setShowFade] = useState(false)
 
-  const calculateInitialOrder = (): string[] => {
+  const calculateInitialOrder = (): number[] => {
     if (!tabs) return []
-    return Object.keys(tabs).sort((a, b) => {
-      const orderA = tabs[a]?.sortOrder ?? Infinity
-      const orderB = tabs[b]?.sortOrder ?? Infinity
-      return orderA - orderB
-    })
+    return Object.keys(tabs)
+      .map(Number)
+      .sort((a, b) => {
+        const orderA = tabs[a]?.sortOrder ?? Infinity
+        const orderB = tabs[b]?.sortOrder ?? Infinity
+        return orderA - orderB
+      })
   }
 
   const initialTabOrderFromState = calculateInitialOrder()
@@ -68,8 +70,11 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     const { active, over } = event
     if (!tabs || !over || active.id === over.id) return
 
-    const oldIndex = finalTabOrder.indexOf(active.id as string)
-    const newIndex = finalTabOrder.indexOf(over.id as string)
+    const activeId = Number(active.id)
+    const overId = Number(over.id)
+
+    const oldIndex = finalTabOrder.indexOf(activeId)
+    const newIndex = finalTabOrder.indexOf(overId)
     if (oldIndex === -1 || newIndex === -1) return
 
     const newOrder = arrayMove(finalTabOrder, oldIndex, newIndex)
@@ -154,12 +159,12 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
   }
 
-  const handleRenameTab = (tabId: string, newName: string) => {
+  const handleRenameTab = (tabId: number, newName: string) => {
     updateProjectTabById(tabId, { displayName: newName })
     setEditingTabName(null)
   }
 
-  const handleDeleteTab = (tabId: string) => {
+  const handleDeleteTab = (tabId: number) => {
     deleteTab(tabId)
     if (dialogEditingTab === tabId) {
       setDialogEditingTab(null)
@@ -170,8 +175,8 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     }
   }
 
-  const startDialogRename = (tabId: string) => {
-    const currentName = tabs?.[tabId]?.displayName || `Tab ${tabId.substring(0, 4)}`
+  const startDialogRename = (tabId: number) => {
+    const currentName = tabs?.[tabId]?.displayName || `Tab ${tabId.toString().slice(-4)}`
     setDialogEditingTab(tabId)
     setDialogEditingName(currentName)
   }
@@ -190,7 +195,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     setDialogEditingName('')
   }
 
-  function getTabStats(tabId: string): string {
+  function getTabStats(tabId: number): string {
     const tabData = tabs?.[tabId]
     if (!tabData) return 'No data'
     const fileCount = tabData.selectedFiles?.length ?? 0
@@ -238,9 +243,9 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
     <ErrorBoundary>
       <>
         <Tabs
-          value={activeTabId ?? ''}
+          value={activeTabId?.toString() ?? ''}
           onValueChange={(value) => {
-            setActiveProjectTabId(value)
+            setActiveProjectTabId(Number(value))
           }}
           className={cn('flex flex-col justify-start rounded-none border-b', className)}
         >
@@ -278,7 +283,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
                     {finalTabOrder.map((tabId, index) => {
                       const tabData = tabs[tabId]
                       if (!tabData) return null
-                      const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`
+                      const displayName = tabData.displayName || `Tab ${tabId.toString().slice(-4)}`
 
                       return (
                         <SortableTab
@@ -316,7 +321,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
               {finalTabOrder.map((tabId) => {
                 const tabData = tabs[tabId]
                 if (!tabData) return null
-                const displayName = tabData.displayName || `Tab ${tabId.substring(0, 4)}`
+                const displayName = tabData.displayName || `Tab ${tabId.toString().slice(-4)}`
                 const isEditing = dialogEditingTab === tabId
 
                 return (
@@ -399,14 +404,14 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 }
 
 function SortableTab(props: {
-  tabId: string
+  tabId: number
   index: number
   displayName: string
   hasLink: boolean
   isEditingInline: boolean
   editingInlineName: string
   setEditingInlineName: (name: string) => void
-  onSaveInlineRename: (tabId: string, newName: string) => void
+  onSaveInlineRename: (tabId: number, newName: string) => void
   onCancelInlineRename: () => void
   isActive: boolean
   hotkeyPrefix: string
@@ -461,7 +466,7 @@ function SortableTab(props: {
         {...attributes}
       >
         <TabsTrigger
-          value={tabId}
+          value={tabId.toString()}
           className={cn(
             'flex-1 flex items-center gap-1.5 px-2.5 py-1.5 h-full text-sm rounded-md',
             'data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-inner',

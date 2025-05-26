@@ -19,29 +19,43 @@ import { promptsMap } from '../utils/prompts-map'
 import { getFullProjectSummary } from '@/utils/get-full-project-summary'
 
 export async function createProject(data: CreateProjectBody): Promise<Project> {
-  const projectId = projectStorage.generateId('proj')
-  const now = new Date().toISOString()
+  let projectId = projectStorage.generateId()
+  const initialProjectId = projectId; // Store initial ID for logging
+  let incrementCount = 0; // Counter for increments
+  const now = Date.now()
 
   const newProjectData: Project = {
     id: projectId,
     name: data.name,
     path: data.path,
     description: data.description || '',
-    createdAt: now,
-    updatedAt: now
+    created: now,
+    updated: now
   }
 
   try {
+    const existingProjectsObject = await projectStorage.readProjects()
+    const projectsMap = new Map<number, Project>(
+      Object.entries(existingProjectsObject).map(([id, proj]) => [Number(id), proj as Project])
+    );
+
+    while (projectsMap.has(projectId)) {
+      // console.warn(`Project ID conflict for ${projectId}. Incrementing.`); // Original warning can be kept or removed
+      projectId++;
+      incrementCount++;
+    }
+
+    if (incrementCount > 0) {
+      newProjectData.id = projectId; // Update the ID in the data object if it was changed
+      console.log(`Project ID ${initialProjectId} was taken. Found available ID ${projectId} after ${incrementCount} increment(s).`);
+    }
+
     const validatedProject = ProjectSchema.parse(newProjectData)
 
-    const projects = await projectStorage.readProjects()
-    if (projects[projectId]) {
-      throw new ApiError(409, `Project ID conflict for ${projectId}`, 'PROJECT_ID_CONFLICT')
-    }
-    projects[projectId] = validatedProject
-    await projectStorage.writeProjects(projects)
-    await projectStorage.writeProjectFiles(projectId, {})
+    projectsMap.set(validatedProject.id, validatedProject)
 
+    await projectStorage.writeProjects(Object.fromEntries(projectsMap))
+    await projectStorage.writeProjectFiles(validatedProject.id, {})
 
     return validatedProject
   } catch (error) {
@@ -62,10 +76,14 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
   }
 }
 
-export async function getProjectById(projectId: string): Promise<Project | null> {
+export async function getProjectById(projectId: number): Promise<Project> {
   try {
     const projects = await projectStorage.readProjects()
-    return projects[projectId] || null
+    const project = projects[projectId]
+    if (!project) {
+      throw new ApiError(404, `Project not found with ID ${projectId}.`, 'PROJECT_NOT_FOUND')
+    }
+    return project
   } catch (error) {
     if (error instanceof ApiError) throw error
     throw new ApiError(
@@ -80,7 +98,7 @@ export async function listProjects(): Promise<Project[]> {
   try {
     const projects = await projectStorage.readProjects()
     const projectList = Object.values(projects)
-    projectList.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    projectList.sort((a, b) => b.updated - a.updated)
     return projectList
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -92,21 +110,17 @@ export async function listProjects(): Promise<Project[]> {
   }
 }
 
-export async function updateProject(projectId: string, data: UpdateProjectBody): Promise<Project | null> {
+export async function updateProject(projectId: number, data: UpdateProjectBody): Promise<Project | null> {
   try {
+    const existingProject = await getProjectById(projectId)
     const projects = await projectStorage.readProjects()
-    const existingProject = projects[projectId]
-
-    if (!existingProject) {
-      return null
-    }
 
     const updatedProjectData: Project = {
       ...existingProject,
       name: data.name ?? existingProject.name,
       path: data.path ?? existingProject.path,
       description: data.description ?? existingProject.description,
-      updatedAt: new Date().toISOString()
+      updated: Date.now()
     }
 
     const validatedProject = ProjectSchema.parse(updatedProjectData)
@@ -133,7 +147,7 @@ export async function updateProject(projectId: string, data: UpdateProjectBody):
   }
 }
 
-export async function deleteProject(projectId: string): Promise<boolean> {
+export async function deleteProject(projectId: number): Promise<boolean> {
   try {
     const projects = await projectStorage.readProjects()
     if (!projects[projectId]) {
@@ -156,17 +170,15 @@ export async function deleteProject(projectId: string): Promise<boolean> {
   }
 }
 
-export async function getProjectFiles(projectId: string): Promise<ProjectFile[] | null> {
+export async function getProjectFiles(projectId: number): Promise<ProjectFile[] | null> {
   try {
-    const projectExists = await getProjectById(projectId)
-    if (!projectExists) {
-      console.warn(`[ProjectService] Attempted to get files for non-existent project: ${projectId}`)
-      return null
-    }
-
+    await getProjectById(projectId) // Throws 404 if project not found
     const files = await projectStorage.readProjectFiles(projectId)
     return Object.values(files)
   } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null // Maintain original behavior of returning null for not found project
+    }
     if (error instanceof ApiError) throw error
     throw new ApiError(
       500,
@@ -177,12 +189,13 @@ export async function getProjectFiles(projectId: string): Promise<ProjectFile[] 
 }
 
 export async function updateFileContent(
-  projectId: string,
-  fileId: string,
+  projectId: number,
+  fileId: number,
   content: string,
-  options?: { updatedAt?: Date }
+  options?: { updated?: Date }
 ): Promise<ProjectFile> {
   try {
+
     const files = await projectStorage.readProjectFiles(projectId)
     const existingFile = files[fileId]
 
@@ -194,15 +207,16 @@ export async function updateFileContent(
       )
     }
 
-    const newUpdatedAt = options?.updatedAt?.toISOString() ?? new Date().toISOString()
+    const newUpdatedAt = options?.updated?.getTime() ?? Date.now()
 
     const updatedFileData: ProjectFile = {
       ...existingFile,
       content: content,
       size: Buffer.byteLength(content, 'utf8'),
-      updatedAt: newUpdatedAt
+      updated: newUpdatedAt
       // checksum: calculateChecksum(content),
     }
+
 
     const validatedFile = ProjectFileSchema.parse(updatedFileData)
 
@@ -228,12 +242,8 @@ export async function updateFileContent(
   }
 }
 
-export async function resummarizeAllFiles(projectId: string): Promise<void> {
+export async function resummarizeAllFiles(projectId: number): Promise<void> {
   const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for resummarize all.`, 'PROJECT_NOT_FOUND')
-  }
-
   await syncProject(project)
 
   const allFiles = await getProjectFiles(projectId)
@@ -261,31 +271,28 @@ export async function resummarizeAllFiles(projectId: string): Promise<void> {
 }
 
 export async function removeSummariesFromFiles(
-  projectId: string,
-  fileIds: string[]
+  projectId: number,
+  fileIds: number[]
 ): Promise<{ removedCount: number; message: string }> {
   if (fileIds.length === 0) {
     return { removedCount: 0, message: 'No file IDs provided' }
   }
   try {
-    const project = await getProjectById(projectId)
-    if (!project) {
-      throw new ApiError(404, `Project not found with ID ${projectId} for removing summaries.`, 'PROJECT_NOT_FOUND')
-    }
+    await getProjectById(projectId) // Check for project existence
     const files = await projectStorage.readProjectFiles(projectId)
     let removedCount = 0
-    const now = new Date().toISOString()
+    const now = Date.now()
     let changesMade = false
 
     for (const fileId of fileIds) {
       if (files[fileId]) {
         const file = files[fileId]
-        if (file.summary !== null || file.summaryLastUpdatedAt !== null) {
+        if (file.summary !== null || file.summaryLastUpdated !== null) {
           const updatedFileData: ProjectFile = {
             ...file,
             summary: null,
-            summaryLastUpdatedAt: null,
-            updatedAt: now
+            summaryLastUpdated: null,
+            updated: now
           }
           files[fileId] = ProjectFileSchema.parse(updatedFileData)
           removedCount++
@@ -324,15 +331,11 @@ export async function removeSummariesFromFiles(
 }
 
 export async function createProjectFileRecord(
-  projectId: string,
+  projectId: number,
   filePath: string,
   initialContent: string = ''
 ): Promise<ProjectFile> {
   const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId}`, 'PROJECT_NOT_FOUND')
-  }
-
   const absoluteProjectPath = resolvePath(project.path)
   const absoluteFilePath = resolvePath(
     filePath.startsWith('/') || filePath.startsWith('~') || path.isAbsolute(filePath)
@@ -341,8 +344,10 @@ export async function createProjectFileRecord(
   )
   const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath)
 
-  const fileId = projectStorage.generateId('file')
-  const now = new Date().toISOString()
+  let fileId = projectStorage.generateId()
+  const initialFileId = fileId; // Store initial ID for logging
+  let incrementCount = 0; // Counter for increments
+  const now = Date.now()
   const fileName = path.basename(normalizedRelativePath)
   const fileExtension = path.extname(normalizedRelativePath)
   const size = Buffer.byteLength(initialContent, 'utf8')
@@ -356,22 +361,34 @@ export async function createProjectFileRecord(
     size: size,
     content: initialContent,
     summary: null,
-    summaryLastUpdatedAt: null,
+    summaryLastUpdated: null,
     meta: '{}',
     checksum: null,
-    createdAt: now,
-    updatedAt: now
+    created: now,
+    updated: now
   }
 
   try {
     const validatedFile = ProjectFileSchema.parse(newFileData)
 
+
     const files = await projectStorage.readProjectFiles(projectId)
-    if (files[fileId]) {
-      throw new ApiError(409, `File ID conflict for ${fileId} in project ${projectId}`, 'FILE_ID_CONFLICT')
+    // Handle potential file ID conflicts by incrementing
+    while (files[newFileData.id]) {
+      // console.warn(`File ID conflict for ${newFileData.id} in project ${projectId}. Incrementing.`);
+      newFileData.id++;
+      incrementCount++;
     }
+    // Update fileId if it was changed due to conflict resolution
+    fileId = newFileData.id;
+
+    if (incrementCount > 0) {
+      console.log(`File ID ${initialFileId} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`);
+    }
+
     files[fileId] = validatedFile
 
+    // even though the keys are numbers, they are saved as string because that is default javascript behavior
     const validatedMap = ProjectFilesStorageSchema.parse(files)
     await projectStorage.writeProjectFiles(projectId, validatedMap)
 
@@ -405,33 +422,41 @@ export interface FileSyncData {
 }
 
 /** Creates multiple file records in the project's JSON file. */
-export async function bulkCreateProjectFiles(projectId: string, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
+export async function bulkCreateProjectFiles(projectId: number, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
   if (filesToCreate.length === 0) return []
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for bulk file creation.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   const createdFiles: ProjectFile[] = []
-  const now = new Date().toISOString()
+  const now = Date.now()
   let filesMap: ProjectFilesStorage
 
   try {
     filesMap = await projectStorage.readProjectFiles(projectId)
 
     for (const fileData of filesToCreate) {
-      const fileId = projectStorage.generateId('file')
+      let fileId = projectStorage.generateId()
+      const initialFileId = fileId;
+      let incrementCount = 0;
 
-      const existingInMap = Object.values(filesMap).find((f) => f.path === fileData.path)
-      if (existingInMap) {
+      const existingInMapByPath = Object.values(filesMap).find((f) => f.path === fileData.path)
+
+      if (existingInMapByPath) {
         console.warn(
           `[ProjectService] Skipping duplicate path in bulk create: ${fileData.path} in project ${projectId}`
         )
         continue
       }
 
+      // Handle potential file ID conflicts by incrementing for this specific file
+      while (filesMap[fileId]) {
+        fileId++;
+        incrementCount++;
+      }
+      if (incrementCount > 0) {
+        console.log(`[ProjectService] Bulk create: File ID ${initialFileId} for path ${fileData.path} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`);
+      }
+
       const newFileData: ProjectFile = {
-        id: fileId,
+        id: fileId, // Use the conflict-resolved fileId
         projectId: projectId,
         name: fileData.name,
         path: fileData.path,
@@ -439,20 +464,17 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
         size: fileData.size,
         content: fileData.content,
         summary: null,
-        summaryLastUpdatedAt: null,
+        summaryLastUpdated: null,
         meta: '{}',
         checksum: fileData.checksum,
-        createdAt: now,
-        updatedAt: now
+        created: now,
+        updated: now
       }
 
       try {
         const validatedFile = ProjectFileSchema.parse(newFileData)
-        if (filesMap[fileId]) {
-          console.error(`[ProjectService] File ID conflict during bulk create: ${fileId}. Skipping.`)
-          continue
-        }
-        filesMap[fileId] = validatedFile
+
+        filesMap[validatedFile.id] = validatedFile
         createdFiles.push(validatedFile)
       } catch (validationError) {
         console.error(
@@ -489,17 +511,13 @@ export async function bulkCreateProjectFiles(projectId: string, filesToCreate: F
 
 /** Updates multiple existing file records based on their IDs. */
 export async function bulkUpdateProjectFiles(
-  projectId: string,
-  updates: { fileId: string; data: FileSyncData }[]
+  projectId: number,
+  updates: { fileId: number; data: FileSyncData }[]
 ): Promise<ProjectFile[]> {
   if (updates.length === 0) return []
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for bulk file update.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   const updatedFilesResult: ProjectFile[] = []
-  const now = new Date().toISOString()
+  const now = Date.now()
   let files: ProjectFilesStorage
   let changesMade = false
 
@@ -521,7 +539,7 @@ export async function bulkUpdateProjectFiles(
         extension: data.extension,
         size: data.size,
         checksum: data.checksum,
-        updatedAt: now
+        updated: now
       }
 
       try {
@@ -564,17 +582,13 @@ export async function bulkUpdateProjectFiles(
 
 /** Deletes multiple files by their IDs for a specific project. */
 export async function bulkDeleteProjectFiles(
-  projectId: string,
-  fileIdsToDelete: string[]
+  projectId: number,
+  fileIdsToDelete: number[]
 ): Promise<{ deletedCount: number }> {
   if (fileIdsToDelete.length === 0) {
     return { deletedCount: 0 }
   }
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} for bulk file deletion.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   let files: ProjectFilesStorage
   let deletedCount = 0
   let changesMade = false
@@ -617,15 +631,11 @@ export async function bulkDeleteProjectFiles(
 }
 
 /** Retrieves specific files by ID for a project */
-export async function getProjectFilesByIds(projectId: string, fileIds: string[]): Promise<ProjectFile[]> {
+export async function getProjectFilesByIds(projectId: number, fileIds: number[]): Promise<ProjectFile[]> {
   if (!fileIds || fileIds.length === 0) {
     return []
   }
-  const project = await getProjectById(projectId)
-  if (!project) {
-    throw new ApiError(404, `Project not found with ID ${projectId} when fetching files by IDs.`, 'PROJECT_NOT_FOUND')
-  }
-
+  await getProjectById(projectId)
   const uniqueFileIds = [...new Set(fileIds)]
 
   try {
@@ -667,7 +677,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
   `
 
   const cfg = LOW_MODEL_CONFIG
-  const provider = (cfg.provider as APIProviders) || 'openai'
+  const provider = (cfg.provider as APIProviders) || 'openrouter'
   const modelId = cfg.model
 
   if (!modelId) {
@@ -694,7 +704,8 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
     const trimmedSummary = summary.trim()
 
     const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
-      summary: trimmedSummary
+      summary: trimmedSummary,
+      summaryLastUpdated: Date.now()
     })
 
     console.log(
@@ -714,8 +725,8 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
 
 /** Summarize multiple files, respecting summarization rules. Processes files sequentially to avoid storage write conflicts. */
 export async function summarizeFiles(
-  projectId: string,
-  fileIdsToSummarize: string[]
+  projectId: number,
+  fileIdsToSummarize: number[]
 ): Promise<{ included: number; skipped: number; updatedFiles: ProjectFile[] }> {
   const allProjectFiles = await getProjectFiles(projectId)
 
@@ -773,10 +784,8 @@ export async function summarizeFiles(
  * to generate a refined (optimized) version of that prompt.
  * This function does not interact with prompt storage for CRUD and remains unchanged.
  */
-export async function optimizeUserInput(projectId: string, userContext: string): Promise<string> {
+export async function optimizeUserInput(projectId: number, userContext: string): Promise<string> {
   const projectSummary = await getFullProjectSummary(projectId)
-
-
 
 
   const systemMessage = `

@@ -53,7 +53,7 @@ const mainNavItems = [
 export function AppSidebar() {
   const [openProjectListDialog, setOpenProjectListDialog] = useState(false)
   const [projectFormDialogOpen, setProjectFormDialogOpen] = useState(false)
-  const [editProjectId, setEditProjectId] = useState<string | null>(null)
+  const [editProjectId, setEditProjectId] = useState<number | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -89,7 +89,7 @@ export function AppSidebar() {
     handleOpenNewProject()
   })
 
-  const handleSelectProjectInDialog = (id: string) => {
+  const handleSelectProjectInDialog = (id: number) => {
     updateActiveProjectTab((prev) => ({
       ...(prev || {}), // Ensure prev is not null
       selectedProjectId: id,
@@ -106,7 +106,7 @@ export function AppSidebar() {
     setOpenProjectListDialog(false) // Close project list if it was open
   }
 
-  const handleEditProjectInDialog = (id: string) => {
+  const handleEditProjectInDialog = (id: number) => {
     setEditProjectId(id)
     setProjectFormDialogOpen(true)
     setOpenProjectListDialog(false)
@@ -163,6 +163,9 @@ export function AppSidebar() {
                   <HelpCircleIcon className='h-4 w-4 flex-shrink-0' />
                   <span className='truncate'>Help</span>
                 </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
+                <span className='px-3'>v0.5.3</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

@@ -11,7 +11,7 @@ import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ProjectDialogProps = {
   open: boolean
-  projectId: string | null
+  projectId: number | null
   onOpenChange: (open: boolean) => void
 }
 
@@ -26,11 +26,11 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
 
   const { mutate: createProject, isPending: isCreating } = useCreateProject()
   const { mutate: updateProject, isPending: isUpdating } = useUpdateProject()
-  const { data: projectData } = useGetProject(projectId ?? '')
+  const { data: projectData } = useGetProject(projectId ?? -1)
 
   // We'll use this state to know when we have a newly created project to sync
-  const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<string | null>(null)
-  const { mutate: syncProject } = useSyncProject(newlyCreatedProjectId ?? '')
+  const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<number | null>(null)
+  const { mutate: syncProject } = useSyncProject(newlyCreatedProjectId ?? -1)
 
   useEffect(() => {
     if (projectData?.data?.id && projectId) {

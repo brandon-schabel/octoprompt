@@ -4,6 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import { ProviderKeySchema, type ProviderKey } from 'shared/src/schemas/provider-key.schemas'
 import { randomUUID } from 'crypto'
+import { normalizeToUnixMs } from '../parse-timestamp'
 
 // Define the base directory for storing provider key data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'provider_key_storage')
@@ -99,7 +100,7 @@ export const providerKeyStorage = {
   },
 
   /** Generates a unique ID for provider keys. */
-  generateId: (prefix: string = 'pk'): string => {
-    return `${prefix}_${randomUUID()}`
+  generateId: (): number => {
+    return normalizeToUnixMs(new Date())
   }
 }

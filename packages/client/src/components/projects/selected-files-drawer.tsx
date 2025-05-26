@@ -11,14 +11,14 @@ import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
 import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
 
 type SelectedFilesDrawerProps = {
-  selectedFiles: string[]
+  selectedFiles: number[]
   fileMap: ProjectFileMap
-  onRemoveFile: (fileId: string) => void
+  onRemoveFile: (fileId: number) => void
   trigger?: React.ReactNode
-  projectTabId: string
+  projectTabId: number
 }
 
-const getTotalFileTokens = ({ files, fileMap }: { files: string[]; fileMap: ProjectFileMap }) => {
+const getTotalFileTokens = ({ files, fileMap }: { files: number[]; fileMap: ProjectFileMap }) => {
   return files.reduce((total, fileId) => {
     const file = fileMap.get(fileId)
     if (file?.content) {

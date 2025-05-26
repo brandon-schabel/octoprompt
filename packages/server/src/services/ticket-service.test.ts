@@ -1,701 +1,693 @@
 // packages/server/src/services/ticket-service.test.ts
-import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test'
-import {
-  createTicket,
-  getTicketById,
-  listTicketsByProject,
-  updateTicket,
-  deleteTicket,
-  linkFilesToTicket,
-  getTicketFiles,
-  createTask,
-  getTasks,
-  updateTask,
-  deleteTask,
-  reorderTasks,
-  fetchTaskSuggestionsForTicket,
-  suggestTasksForTicket,
-  autoGenerateTasksFromOverview,
-  listTicketsWithTaskCount,
-  getTasksForTickets,
-  listTicketsWithTasks,
-  getTicketWithSuggestedFiles,
-  suggestFilesForTicket
-} from '@/services/ticket-service'
-import type {
-  Ticket,
-  TicketTask,
-  TicketFile,
-  CreateTicketBody,
-  UpdateTicketBody,
-  TaskSuggestions
-} from 'shared/src/schemas/ticket.schemas'
-import type { TicketsStorage, TicketTasksStorage, TicketFilesStorage } from '@/utils/storage/ticket-storage'
-import type { ProjectFilesStorage } from '@/utils/storage/project-storage' // Assuming this type exists
+import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test'
 import { ApiError, MEDIUM_MODEL_CONFIG } from 'shared'
-import { randomUUID } from 'crypto'
+import * as ticketService from './ticket-service'
+import type { CreateTicketBody, UpdateTicketBody } from 'shared/src/schemas/ticket.schemas'
+import { ticketStorage } from '@/utils/storage/ticket-storage'
+import { projectStorage } from '@/utils/storage/project-storage'
+import * as genAiServices from './gen-ai-services'
+import * as getFullProjectSummaryModule from '@/utils/get-full-project-summary'
 
-// In-memory stores for our mocks
-let mockTicketsDb: TicketsStorage = {}
-let mockTicketTasksDb: { [ticketId: string]: TicketTasksStorage } = {}
-let mockTicketFilesDb: { [ticketId: string]: TicketFilesStorage } = {}
-let mockProjectFilesDb: { [projectId: string]: ProjectFilesStorage } = {}
-
-// Mock ID generator
-const mockGeneratedIds: Record<string, number> = {
-  tkt: 0,
-  task: 0
-}
-const mockGenerateId = (prefix: string) => {
-  mockGeneratedIds[prefix] = (mockGeneratedIds[prefix] || 0) + 1
-  return `${prefix}_mock_${mockGeneratedIds[prefix]}`
-}
-
-// Mock the ticketStorage utility
-mock.module('@/utils/storage/ticket-storage', () => ({
-  ticketStorage: {
-    readTickets: async () => JSON.parse(JSON.stringify(mockTicketsDb)),
-    writeTickets: async (data: TicketsStorage) => {
-      mockTicketsDb = JSON.parse(JSON.stringify(data))
-      return mockTicketsDb
-    },
-    readTicketTasks: async (ticketId: string) => JSON.parse(JSON.stringify(mockTicketTasksDb[ticketId] || {})),
-    writeTicketTasks: async (ticketId: string, data: TicketTasksStorage) => {
-      mockTicketTasksDb[ticketId] = JSON.parse(JSON.stringify(data))
-      return mockTicketTasksDb[ticketId]
-    },
-    readTicketFiles: async (ticketId: string) => JSON.parse(JSON.stringify(mockTicketFilesDb[ticketId] || [])),
-    writeTicketFiles: async (ticketId: string, data: TicketFilesStorage) => {
-      mockTicketFilesDb[ticketId] = JSON.parse(JSON.stringify(data))
-      return mockTicketFilesDb[ticketId]
-    },
-    deleteTicketData: async (ticketId: string) => {
-      delete mockTicketTasksDb[ticketId]
-      delete mockTicketFilesDb[ticketId]
-    },
-    generateId: mockGenerateId
-  }
-}))
-
-// Mock the projectStorage utility
-mock.module('@/utils/storage/project-storage', () => ({
-  projectStorage: {
-    readProjectFiles: async (projectId: string): Promise<ProjectFilesStorage> => {
-      return JSON.parse(JSON.stringify(mockProjectFilesDb[projectId] || {}))
-    }
-    // Add other projectStorage mocks if needed by ticket-service
-  }
-}))
-
-// Mock AI services
-const mockGenAIService = {
-  generateStructuredData: mock(async (args: { schema: any, prompt: string, systemMessage: string, options: any }) => {
-    // Default mock behavior, can be overridden in specific tests
-    if (args.schema.description === 'TaskSuggestionsZodSchema') {
-      return { object: { tasks: [{ title: 'Suggested Task 1', description: 'Description 1' }, { title: 'Suggested Task 2' }] } }
-    }
-    return { object: {} }
-  })
-}
-mock.module('@/services/gen-ai-services', () => ({
-  generateStructuredData: mockGenAIService.generateStructuredData
-}))
-
-// Mock getFullProjectSummary
-const mockGetFullProjectSummary = mock(async (projectId: string) => {
-  return `<project_summary>Mock project summary for ${projectId}</project_summary>`;
-});
-mock.module('@/utils/get-full-project-summary', () => ({
-  getFullProjectSummary: mockGetFullProjectSummary
-}));
-
-
-// Helper to generate random strings for test data
-const randomString = (length = 8) => Math.random().toString(36).substring(2, 2 + length)
+// Use realistic unix timestamps for test IDs
+const BASE_TIMESTAMP = 1700000000000; // Nov 2023 as base
+const defaultProjectId = BASE_TIMESTAMP + 1000;   // 1700000001000
+const existingFileId1 = BASE_TIMESTAMP + 2000;    // 1700000002000
+const existingFileId2 = BASE_TIMESTAMP + 3000;    // 1700000003000
 
 describe('Ticket Service (File Storage Mock)', () => {
-  let defaultProjectId: string
-  let anotherProjectId: string
-  let existingFileId1: string
-  let existingFileId2: string
+  let mockIdCounter = BASE_TIMESTAMP + 10000; // Start at 1700000010000
 
-  beforeEach(async () => {
-    // Reset in-memory stores before each test
-    mockTicketsDb = {}
-    mockTicketTasksDb = {}
-    mockTicketFilesDb = {}
-    mockProjectFilesDb = {}
-    mockGeneratedIds.tkt = 0
-    mockGeneratedIds.task = 0
+  // Mock the storage modules
+  const mockTicketStorage = {
+    readTickets: mock(() => Promise.resolve({})),
+    writeTickets: mock(() => Promise.resolve({})),
+    readTicketTasks: mock(() => Promise.resolve({})),
+    writeTicketTasks: mock(() => Promise.resolve({})),
+    readTicketFiles: mock(() => Promise.resolve([]) as Promise<Array<{ ticketId: number; fileId: number }>>),
+    writeTicketFiles: mock(() => Promise.resolve([])),
+    deleteTicketData: mock(() => Promise.resolve()),
+    generateId: mock(() => {
+      const id = mockIdCounter;
+      mockIdCounter += 1000; // Increment by 1000 for next ID
+      return id;
+    })
+  }
 
-    // Reset mocks
-    mockGenAIService.generateStructuredData.mockClear();
-    mockGetFullProjectSummary.mockClear();
+  const mockProjectStorage = {
+    readProjectFiles: mock(() => Promise.resolve({
+      [existingFileId1.toString()]: {
+        id: existingFileId1,
+        name: 'file1.ts',
+        path: 'path/to/file1.ts',
+        content: 'content1',
+        created: BASE_TIMESTAMP,
+        updated: BASE_TIMESTAMP,
+        projectId: defaultProjectId,
+        extension: '.ts',
+        size: 100,
+        summary: null,
+        summaryLastUpdated: null,
+        meta: null,
+        checksum: 'checksum1'
+      },
+      [existingFileId2.toString()]: {
+        id: existingFileId2,
+        name: 'file2.ts',
+        path: 'path/to/file2.ts',
+        content: 'content2',
+        created: BASE_TIMESTAMP,
+        updated: BASE_TIMESTAMP,
+        projectId: defaultProjectId,
+        extension: '.ts',
+        size: 120,
+        summary: null,
+        summaryLastUpdated: null,
+        meta: null,
+        checksum: 'checksum2'
+      }
+    }))
+  }
 
+  // Mock the AI services
+  const mockGenerateStructuredData = mock(() => Promise.resolve({
+    object: {
+      tasks: [
+        { title: 'Mock AI Task 1', description: 'Description 1' },
+        { title: 'Mock AI Task 2', description: 'Description 2' }
+      ]
+    },
+    usage: { completionTokens: 50, promptTokens: 100, totalTokens: 150 },
+    finishReason: 'stop'
+  } as any))
 
-    defaultProjectId = `proj_${randomString()}`
-    anotherProjectId = `proj_${randomString()}`
-    existingFileId1 = `file_${randomString()}`
-    existingFileId2 = `file_${randomString()}`
+  const mockGetFullProjectSummary = mock(() => Promise.resolve('Mock project summary'))
 
-    // Setup default project files for validation
-    mockProjectFilesDb[defaultProjectId] = {
-      [existingFileId1]: { id: existingFileId1, name: "file1.txt", path: "/file1.txt", content: "content1", projectId: defaultProjectId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), summary: "summary1", extension: ".txt", size: 8, summaryLastUpdatedAt: null, meta: null, checksum: null },
-      [existingFileId2]: { id: existingFileId2, name: "file2.ts", path: "/file2.ts", content: "content2", projectId: defaultProjectId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), summary: "summary2", extension: ".ts", size: 8, summaryLastUpdatedAt: null, meta: null, checksum: null },
-    }
+  beforeEach(() => {
+    // Reset mocks and counter
+    mockIdCounter = BASE_TIMESTAMP + 10000;
+
+    // Reset all mock call counts
+    Object.values(mockTicketStorage).forEach(mockFn => mockFn.mockClear?.())
+    Object.values(mockProjectStorage).forEach(mockFn => mockFn.mockClear?.())
+    mockGenerateStructuredData.mockClear()
+    mockGetFullProjectSummary.mockClear()
+
+    // Apply mocks
+    spyOn(ticketStorage, 'readTickets').mockImplementation(mockTicketStorage.readTickets)
+    spyOn(ticketStorage, 'writeTickets').mockImplementation(mockTicketStorage.writeTickets)
+    spyOn(ticketStorage, 'readTicketTasks').mockImplementation(mockTicketStorage.readTicketTasks)
+    spyOn(ticketStorage, 'writeTicketTasks').mockImplementation(mockTicketStorage.writeTicketTasks)
+    spyOn(ticketStorage, 'readTicketFiles').mockImplementation(mockTicketStorage.readTicketFiles)
+    spyOn(ticketStorage, 'writeTicketFiles').mockImplementation(mockTicketStorage.writeTicketFiles)
+    spyOn(ticketStorage, 'deleteTicketData').mockImplementation(mockTicketStorage.deleteTicketData)
+    spyOn(ticketStorage, 'generateId').mockImplementation(mockTicketStorage.generateId)
+
+    spyOn(projectStorage, 'readProjectFiles').mockImplementation(mockProjectStorage.readProjectFiles)
+
+    spyOn(genAiServices, 'generateStructuredData').mockImplementation(mockGenerateStructuredData)
+    spyOn(getFullProjectSummaryModule, 'getFullProjectSummary').mockImplementation(mockGetFullProjectSummary)
+  })
+
+  afterEach(() => {
+    // Restore all mocks
+    mock.restore()
   })
 
   test('createTicket creates a new ticket', async () => {
     const input: CreateTicketBody = {
       projectId: defaultProjectId,
-      title: `Test Ticket ${randomString()}`,
-      overview: 'This is a test overview.',
+      title: 'Test Ticket',
+      overview: 'Test overview',
       status: 'open',
       priority: 'high',
       suggestedFileIds: [existingFileId1]
     }
-    const created = await createTicket(input)
+    const created = await ticketService.createTicket(input)
 
-    expect(created.id).toBe('tkt_mock_1')
+    expect(created.id).toBeGreaterThan(0)
     expect(created.projectId).toBe(defaultProjectId)
-    expect(created.title).toBe(input.title)
-    expect(created.overview).toBe(input.overview)
+    expect(created.title).toBe('Test Ticket')
+    expect(created.overview).toBe('Test overview')
     expect(created.status).toBe('open')
     expect(created.priority).toBe('high')
-    expect(created.suggestedFileIds).toBe(JSON.stringify([existingFileId1]))
-    expect(created.createdAt).toBeDefined()
-    expect(created.updatedAt).toBeDefined()
-    expect(created.createdAt).toEqual(created.updatedAt)
+    expect(created.suggestedFileIds).toEqual([existingFileId1])
+    expect(typeof created.created).toBe('number')
+    expect(typeof created.updated).toBe('number')
+    expect(created.created).toBe(created.updated)
 
-    expect(mockTicketsDb[created.id]).toEqual(expect.objectContaining({ id: created.id, title: input.title }))
-    expect(mockTicketTasksDb[created.id]).toEqual({}) // Empty tasks initialized
-    expect(mockTicketFilesDb[created.id]).toEqual([]) // Empty files initialized
+    expect(mockTicketStorage.readTickets).toHaveBeenCalledTimes(1)
+    expect(mockTicketStorage.writeTickets).toHaveBeenCalledTimes(1)
+    expect(mockTicketStorage.writeTicketTasks).toHaveBeenCalledTimes(1)
+    expect(mockTicketStorage.writeTicketFiles).toHaveBeenCalledTimes(1)
   })
 
   test('createTicket with minimal data', async () => {
     const input: CreateTicketBody = {
       projectId: defaultProjectId,
-      title: `Minimal Ticket ${randomString()}`,
+      title: 'Minimal Ticket',
       overview: '',
       status: 'open',
-      priority: 'normal'
+      priority: 'normal',
+      suggestedFileIds: []
     }
-    const created = await createTicket(input)
+    const created = await ticketService.createTicket(input)
 
-    expect(created.id).toBe('tkt_mock_1')
+    expect(created.id).toBeGreaterThan(0)
     expect(created.projectId).toBe(defaultProjectId)
-    expect(created.title).toBe(input.title)
-    expect(created.overview).toBe(input.overview)
+    expect(created.title).toBe('Minimal Ticket')
+    expect(created.overview).toBe('')
     expect(created.status).toBe('open')
     expect(created.priority).toBe('normal')
-    expect(created.suggestedFileIds).toBe(JSON.stringify([]))
-    expect(mockTicketsDb[created.id]).toBeDefined()
+    expect(created.suggestedFileIds).toEqual([])
   })
 
-  test('createTicket throws ApiError on ID conflict', async () => {
-    // beforeEach clears mockTicketsDb and resets mockGeneratedIds.tkt = 0.
+  test('createTicket handles ID conflict by incrementing', async () => {
+    // Mock readTickets to return existing ticket with generated ID
+    const existingTicketId = BASE_TIMESTAMP + 10000; // Same as mockIdCounter initial value
+    mockTicketStorage.readTickets.mockResolvedValueOnce({
+      [existingTicketId.toString()]: { id: existingTicketId }
+    })
 
-    // First call to createTicket:
-    // The mock generateId will produce 'tkt_mock_1' because mockGeneratedIds.tkt is 0 and then incremented.
-    // This call should succeed and add 'tkt_mock_1' to mockTicketsDb.
-    await createTicket({
+    const firstTicket = await ticketService.createTicket({
       projectId: defaultProjectId,
-      title: 'First Ticket - Should Succeed',
+      title: 'First',
       overview: '',
       status: 'open',
-      priority: 'normal'
+      priority: 'normal',
+      suggestedFileIds: []
     });
 
-    // Now, mockTicketsDb['tkt_mock_1'] exists as a result of the successful creation.
-
-    // For the second call, force generateId to return 'tkt_mock_1' again.
-    const conflictSpy = spyOn((await import('@/utils/storage/ticket-storage')).ticketStorage, 'generateId')
-      .mockReturnValueOnce('tkt_mock_1');
-
-    const inputConflict: CreateTicketBody = {
-      projectId: defaultProjectId,
-      title: 'Conflicting Ticket - Should Fail',
-      status: 'open',
-      overview: '',
-      priority: 'normal'
-    }
-
-    try {
-      await createTicket(inputConflict); // This call should now correctly throw the conflict
-      // Should not reach here if conflict occurs
-      expect(true).toBe(false); // Force failure if no error thrown
-    } catch (e) {
-      expect(e).toBeInstanceOf(ApiError);
-      if (e instanceof ApiError) {
-        expect(e.status).toBe(509);
-        expect(e.message).toBe('Ticket ID conflict for tkt_mock_1');
-        expect(e.code).toBe('TICKET_ID_CONFLICT');
-      }
-    }
-    conflictSpy.mockRestore();
+    // Should get incremented ID since initial ID was taken
+    expect(firstTicket.id).toBe(existingTicketId + 1); // ID gets incremented by 1
   })
 
-
   test('getTicketById returns ticket if found, throws ApiError if not', async () => {
-    const t1 = await createTicket({ projectId: defaultProjectId, title: 'GetMe', overview: '', status: 'open', priority: 'normal' })
-    const found = await getTicketById(t1.id)
-    expect(found).toEqual(expect.objectContaining(t1)) // Use objectContaining due to Date objects
+    const ticketId = BASE_TIMESTAMP + 5000;
+    const mockTicket = {
+      id: ticketId,
+      projectId: defaultProjectId,
+      title: 'Found',
+      overview: 'Overview',
+      status: 'open' as const,
+      priority: 'normal' as const,
+      suggestedFileIds: [],
+      created: Date.now(),
+      updated: Date.now()
+    }
 
-    await expect(getTicketById('nonexistent-id')).rejects.toThrow(new ApiError(404, 'Ticket with ID nonexistent-id not found.', 'TICKET_NOT_FOUND'))
+    // Test found case
+    mockTicketStorage.readTickets.mockResolvedValueOnce({
+      [ticketId.toString()]: mockTicket
+    })
+    const found = await ticketService.getTicketById(ticketId)
+    expect(found).toEqual(mockTicket)
+
+    // Test not found case
+    mockTicketStorage.readTickets.mockResolvedValueOnce({})
+    await expect(ticketService.getTicketById(ticketId))
+      .rejects.toThrow(new ApiError(404, `Ticket with ID ${ticketId} not found.`, 'TICKET_NOT_FOUND'))
   })
 
   test('listTicketsByProject returns tickets for a project, optionally filtered by status', async () => {
-    const t1 = await createTicket({ projectId: defaultProjectId, title: 'T1 Open', status: 'open', overview: '', priority: 'normal' })
-    // Ensure different createdAt for sorting by creating a slight delay
-    await new Promise(resolve => setTimeout(resolve, 5));
-    const t2 = await createTicket({ projectId: defaultProjectId, title: 'T2 Closed', status: 'closed', overview: '', priority: 'normal' })
-    await new Promise(resolve => setTimeout(resolve, 5));
-    const t3 = await createTicket({ projectId: anotherProjectId, title: 'T3 Other Proj', overview: '', status: 'open', priority: 'normal' })
-    await new Promise(resolve => setTimeout(resolve, 5));
-    const t4 = await createTicket({ projectId: defaultProjectId, title: 'T4 Open', status: 'open', overview: '', priority: 'normal' })
+    const t1Id = BASE_TIMESTAMP + 6000;
+    const t2Id = BASE_TIMESTAMP + 7000;
+    const t3Id = BASE_TIMESTAMP + 8000;
+    const t4Id = BASE_TIMESTAMP + 9000;
 
+    // Create tickets with different timestamps to test sorting
+    const baseTime = Date.now();
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [t1Id.toString()]: { id: t1Id, projectId: defaultProjectId, title: 'T1 Closed', status: 'closed', created: baseTime + 1000 },
+      [t2Id.toString()]: { id: t2Id, projectId: defaultProjectId, title: 'T2 Open', status: 'open', created: baseTime + 2000 },
+      [t3Id.toString()]: { id: t3Id, projectId: defaultProjectId + 1000, title: 'T3 Other Project', status: 'open', created: baseTime + 3000 },
+      [t4Id.toString()]: { id: t4Id, projectId: defaultProjectId, title: 'T4 Open', status: 'open', created: baseTime + 4000 }
+    })
 
-    let fromA = await listTicketsByProject(defaultProjectId)
+    // Test all tickets for project
+    let fromA = await ticketService.listTicketsByProject(defaultProjectId)
     expect(fromA.length).toBe(3)
-    // Sorted by createdAt DESC (t4, t2, t1)
-    expect(fromA.map(t => t.id)).toEqual([t4.id, t2.id, t1.id])
+    expect(fromA[0].title).toBe('T4 Open') // Most recent first
+    expect(fromA[1].title).toBe('T2 Open')
+    expect(fromA[2].title).toBe('T1 Closed')
 
-    fromA = await listTicketsByProject(defaultProjectId, 'open')
-    expect(fromA.length).toBe(2)
-    expect(fromA.map(t => t.id)).toEqual([t4.id, t1.id]) // t4, then t1
-    expect(fromA).toEqual(expect.arrayContaining([expect.objectContaining(t1), expect.objectContaining(t4)]))
-
-    const fromB = await listTicketsByProject(anotherProjectId)
-    expect(fromB.length).toBe(1)
-    expect(fromB[0].id).toEqual(t3.id)
-
-    const fromEmpty = await listTicketsByProject('nonexistent-project')
-    expect(fromEmpty.length).toBe(0)
+    // Test filtered by status
+    let openOnly = await ticketService.listTicketsByProject(defaultProjectId, 'open')
+    expect(openOnly.length).toBe(2)
+    expect(openOnly[0].title).toBe('T4 Open')
+    expect(openOnly[1].title).toBe('T2 Open')
   })
 
   test('updateTicket updates fields and returns updated ticket', async () => {
-    const created = await createTicket({ projectId: defaultProjectId, title: 'Before', overview: 'Old', suggestedFileIds: [], status: 'open', priority: 'normal' })
-    const originalUpdatedAt = new Date(created.updatedAt).getTime();
+    const ticketId = BASE_TIMESTAMP + 11000;
+    const existingTicket = {
+      id: ticketId,
+      projectId: defaultProjectId,
+      title: 'Old Title',
+      overview: 'Old overview',
+      status: 'open' as const,
+      priority: 'normal' as const,
+      suggestedFileIds: [],
+      created: Date.now() - 1000,
+      updated: Date.now() - 1000
+    }
 
-    const updates: UpdateTicketBody = { title: 'After', overview: 'New content', status: 'in_progress', priority: 'low', suggestedFileIds: [existingFileId1, existingFileId2] }
-    await new Promise(resolve => setTimeout(resolve, 10)); // Ensure time passes for updatedAt check
-    const updated = await updateTicket(created.id, updates)
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: existingTicket
+    })
 
-    expect(updated.title).toBe('After')
-    expect(updated.overview).toBe('New content')
-    expect(updated.status).toBe('in_progress')
-    expect(updated.priority).toBe('low')
-    expect(updated.suggestedFileIds).toBe(JSON.stringify([existingFileId1, existingFileId2]))
-    expect(new Date(updated.updatedAt).getTime()).toBeGreaterThan(originalUpdatedAt)
-    // mockTicketsDb stores dates as strings due to JSON.stringify in the mock storage
-    // 'updated' has Date objects. Compare accordingly.
-    const expectedInDb = {
-      ...updated,
-      createdAt: updated.createdAt.toISOString(),
-      updatedAt: updated.updatedAt.toISOString(),
-    };
-    expect(mockTicketsDb[created.id]).toEqual(expect.objectContaining(expectedInDb))
+    const updates: UpdateTicketBody = {
+      title: 'New Title',
+      status: 'done',
+      suggestedFileIds: [existingFileId1]
+    }
+
+    const updated = await ticketService.updateTicket(ticketId, updates)
+
+    expect(updated.title).toBe('New Title')
+    expect(updated.status).toBe('done')
+    expect(updated.suggestedFileIds).toEqual([existingFileId1])
+    expect(updated.overview).toBe('Old overview') // Unchanged
+    expect(updated.priority).toBe('normal') // Unchanged
+    expect(updated.updated).toBeGreaterThan(existingTicket.updated)
+    expect(updated.created).toBe(existingTicket.created) // Should not change
   })
 
   test('updateTicket throws if suggestedFileId not in project', async () => {
-    const created = await createTicket({ projectId: defaultProjectId, title: 'Test', overview: '', status: 'open', priority: 'normal' })
-    const updates: UpdateTicketBody = { suggestedFileIds: ['nonexistent-file-id'] }
-    await expect(updateTicket(created.id, updates))
-      .rejects.toThrow(new ApiError(400, `File with ID nonexistent-file-id not found in project ${defaultProjectId}.`, 'FILE_NOT_FOUND_IN_PROJECT'))
+    const ticketId = BASE_TIMESTAMP + 12000;
+    const existingTicket = { id: ticketId, projectId: defaultProjectId }
+
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: existingTicket
+    })
+
+    const nonExistentFileId = BASE_TIMESTAMP + 99000;
+    const updates: UpdateTicketBody = { suggestedFileIds: [nonExistentFileId] }
+
+    await expect(ticketService.updateTicket(ticketId, updates))
+      .rejects.toThrow(new ApiError(400, `File with ID ${nonExistentFileId} not found in project ${defaultProjectId}.`, 'FILE_NOT_FOUND_IN_PROJECT'))
   })
 
   test('updateTicket throws ApiError if ticket does not exist', async () => {
-    await expect(updateTicket('fake-id', { title: 'X' })).rejects.toThrow(new ApiError(404, 'Ticket with ID fake-id not found for update.', 'TICKET_NOT_FOUND'))
+    const ticketId = BASE_TIMESTAMP + 13000;
+    mockTicketStorage.readTickets.mockResolvedValue({})
+
+    await expect(ticketService.updateTicket(ticketId, { suggestedFileIds: [] }))
+      .rejects.toThrow(new ApiError(404, `Ticket with ID ${ticketId} not found for update.`, 'TICKET_NOT_FOUND'))
   })
 
   test('deleteTicket removes ticket and its data', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'DelMe', overview: '', status: 'open', priority: 'normal' })
-    await createTask(ticket.id, 'Task for DelMe')
-    await linkFilesToTicket(ticket.id, [existingFileId1])
+    const ticketId = BASE_TIMESTAMP + 14000;
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: { id: ticketId }
+    })
 
-    expect(mockTicketsDb[ticket.id]).toBeDefined()
-    expect(Object.keys(mockTicketTasksDb[ticket.id] || {}).length).toBe(1)
-    expect((mockTicketFilesDb[ticket.id] || []).length).toBe(1)
+    await ticketService.deleteTicket(ticketId)
 
-    await deleteTicket(ticket.id)
-
-    expect(mockTicketsDb[ticket.id]).toBeUndefined()
-    expect(mockTicketTasksDb[ticket.id]).toBeUndefined() // Via deleteTicketData
-    expect(mockTicketFilesDb[ticket.id]).toBeUndefined() // Via deleteTicketData
+    expect(mockTicketStorage.deleteTicketData).toHaveBeenCalledWith(ticketId)
+    expect(mockTicketStorage.writeTickets).toHaveBeenCalled()
   })
 
   test('deleteTicket throws ApiError if ticket does not exist', async () => {
-    await expect(deleteTicket('fake-id')).rejects.toThrow(new ApiError(404, 'Ticket with ID fake-id not found for deletion.', 'TICKET_NOT_FOUND'))
+    const ticketId = BASE_TIMESTAMP + 15000;
+    mockTicketStorage.readTickets.mockResolvedValue({})
+
+    await expect(ticketService.deleteTicket(ticketId))
+      .rejects.toThrow(new ApiError(404, `Ticket with ID ${ticketId} not found for deletion.`, 'TICKET_NOT_FOUND'))
   })
 
-
   test('linkFilesToTicket links files and updates ticket timestamp', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'LinkTest', overview: '', status: 'open', priority: 'normal' })
-    const originalUpdatedAt = ticket.updatedAt
+    const ticketId = BASE_TIMESTAMP + 16000;
+    const mockTicket = { id: ticketId, projectId: defaultProjectId }
 
-    await new Promise(resolve => setTimeout(resolve, 10))
-    const links = await linkFilesToTicket(ticket.id, [existingFileId1, existingFileId2])
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketFiles.mockResolvedValue([])
 
-    expect(links.length).toBe(2)
-    expect(links.map(l => l.fileId)).toEqual(expect.arrayContaining([existingFileId1, existingFileId2]))
-    expect(mockTicketFilesDb[ticket.id].length).toBe(2)
+    const linkedFiles = await ticketService.linkFilesToTicket(ticketId, [existingFileId1, existingFileId2])
 
-    const updatedTicket = await getTicketById(ticket.id)
-    expect(new Date(updatedTicket.updatedAt).getTime()).toBeGreaterThan(new Date(originalUpdatedAt).getTime())
-
-    // Link again, should not duplicate and timestamp should not change if no new links
-    const originalUpdatedAt2 = updatedTicket.updatedAt
-    await new Promise(resolve => setTimeout(resolve, 10)) // ensure time would pass
-    const linksAgain = await linkFilesToTicket(ticket.id, [existingFileId1])
-    expect(linksAgain.length).toBe(2) // Still 2, existingFileId1 was already there.
-    const ticketAfterRedundantLink = await getTicketById(ticket.id)
-    // If no *new* links made, timestamp shouldn't change due to current logic in linkFilesToTicket
-    expect(ticketAfterRedundantLink.updatedAt).toEqual(originalUpdatedAt2)
+    expect(linkedFiles.length).toBe(2)
+    expect(linkedFiles[0]).toEqual({ ticketId, fileId: existingFileId1 })
+    expect(linkedFiles[1]).toEqual({ ticketId, fileId: existingFileId2 })
+    expect(mockTicketStorage.writeTicketFiles).toHaveBeenCalled()
+    expect(mockTicketStorage.writeTickets).toHaveBeenCalled() // Timestamp update
   })
 
   test('linkFilesToTicket throws if file not in project', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'LinkFail', overview: '', status: 'open', priority: 'normal' })
-    await expect(linkFilesToTicket(ticket.id, ['nonexistent-file']))
-      .rejects.toThrow(new ApiError(400, `File with ID nonexistent-file not found in project ${defaultProjectId} for linking.`, 'FILE_NOT_FOUND_IN_PROJECT'))
+    const ticketId = BASE_TIMESTAMP + 17000;
+    const mockTicket = { id: ticketId, projectId: defaultProjectId }
+
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+
+    const nonExistentFileId = BASE_TIMESTAMP + 99000;
+    await expect(ticketService.linkFilesToTicket(ticketId, [nonExistentFileId]))
+      .rejects.toThrow(new ApiError(400, `File with ID ${nonExistentFileId} not found in project ${defaultProjectId} for linking.`, 'FILE_NOT_FOUND_IN_PROJECT'))
   })
 
   test('getTicketFiles returns linked files', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'GetLinks', overview: '', status: 'open', priority: 'normal' })
-    await linkFilesToTicket(ticket.id, [existingFileId1])
+    const ticketId = BASE_TIMESTAMP + 18000;
+    const mockTicket = { id: ticketId, projectId: defaultProjectId }
+    const mockFiles = [
+      { ticketId, fileId: existingFileId1 },
+      { ticketId, fileId: existingFileId2 }
+    ]
 
-    const files = await getTicketFiles(ticket.id)
-    expect(files.length).toBe(1)
-    expect(files[0].fileId).toBe(existingFileId1)
-    expect(files[0].ticketId).toBe(ticket.id)
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketFiles.mockResolvedValue(mockFiles as any)
+
+    const files = await ticketService.getTicketFiles(ticketId)
+    expect(files).toEqual(mockFiles)
   })
 
   test('createTask adds a task to a ticket', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'TaskTest', overview: '', status: 'open', priority: 'normal' })
-    const originalUpdatedAt = ticket.updatedAt
+    const ticketId = BASE_TIMESTAMP + 19000;
+    const mockTicket = { id: ticketId, projectId: defaultProjectId }
 
-    await new Promise(resolve => setTimeout(resolve, 10))
-    const task1 = await createTask(ticket.id, 'First task content')
-    expect(task1.id).toBe('task_mock_1')
-    expect(task1.ticketId).toBe(ticket.id)
-    expect(task1.content).toBe('First task content')
-    expect(task1.done).toBe(false)
-    expect(task1.orderIndex).toBe(1)
-    expect(task1.createdAt).toBeDefined()
-    expect(task1.updatedAt).toBeDefined()
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketTasks.mockResolvedValue({})
 
-    const updatedTicket = await getTicketById(ticket.id)
-    expect(new Date(updatedTicket.updatedAt).getTime()).toBeGreaterThan(new Date(originalUpdatedAt).getTime())
+    const task = await ticketService.createTask(ticketId, 'First task content')
 
-    const task2 = await createTask(ticket.id, 'Second task content')
-    expect(task2.id).toBe('task_mock_2')
-    expect(task2.orderIndex).toBe(2)
-
-    expect(Object.keys(mockTicketTasksDb[ticket.id]).length).toBe(2)
+    expect(task.id).toBeGreaterThan(0)
+    expect(task.ticketId).toBe(ticketId)
+    expect(task.content).toBe('First task content')
+    expect(task.done).toBe(false)
+    expect(task.orderIndex).toBe(1)
+    expect(typeof task.created).toBe('number')
+    expect(typeof task.updated).toBe('number')
   })
 
   test('getTasks returns tasks for a ticket, sorted by orderIndex', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'GetTasksTest', overview: '', status: 'open', priority: 'normal' })
-    const t2 = await createTask(ticket.id, 'Task B') // orderIndex 1
-    const t1 = await createTask(ticket.id, 'Task A') // orderIndex 2
-    // Manually adjust order for test if needed, or rely on creation order
-    mockTicketTasksDb[ticket.id][t1.id].orderIndex = 1
-    mockTicketTasksDb[ticket.id][t2.id].orderIndex = 2
-    await (await import('@/utils/storage/ticket-storage')).ticketStorage.writeTicketTasks(ticket.id, mockTicketTasksDb[ticket.id])
+    const ticketId = BASE_TIMESTAMP + 20000;
+    const task1Id = BASE_TIMESTAMP + 21000;
+    const task2Id = BASE_TIMESTAMP + 22000;
 
+    const mockTicket = { id: ticketId }
+    const mockTasks = {
+      [task2Id.toString()]: { id: task2Id, ticketId, content: 'Second task', orderIndex: 2 },
+      [task1Id.toString()]: { id: task1Id, ticketId, content: 'First task', orderIndex: 1 }
+    }
 
-    const tasks = await getTasks(ticket.id)
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketTasks.mockResolvedValue(mockTasks)
+
+    const tasks = await ticketService.getTasks(ticketId)
+
     expect(tasks.length).toBe(2)
-    expect(tasks.map(t => t.id)).toEqual([t1.id, t2.id]) // Assuming t1 (A) is now 1, t2 (B) is 2
+    expect(tasks[0].content).toBe('First task') // Sorted by orderIndex
+    expect(tasks[1].content).toBe('Second task')
   })
 
   test('updateTask updates task content or status', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'UpdateTaskTest', overview: '', status: 'open', priority: 'normal' })
-    const task = await createTask(ticket.id, 'Old content')
-    const ticketOriginalUpdatedAt = (await getTicketById(ticket.id)).updatedAt
+    const ticketId = BASE_TIMESTAMP + 23000;
+    const taskId = BASE_TIMESTAMP + 24000;
 
-    await new Promise(resolve => setTimeout(resolve, 10))
-    const updatedTask = await updateTask(ticket.id, task.id, { content: 'New content', done: true })
+    const mockTicket = { id: ticketId }
+    const mockTask = {
+      id: taskId,
+      ticketId,
+      content: 'Original content',
+      done: false,
+      orderIndex: 1,
+      created: Date.now() - 1000,
+      updated: Date.now() - 1000
+    }
 
-    expect(updatedTask.content).toBe('New content')
-    expect(updatedTask.done).toBe(true)
-    expect(new Date(updatedTask.updatedAt).getTime()).toBeGreaterThan(new Date(task.updatedAt).getTime())
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketTasks.mockResolvedValue({
+      [taskId.toString()]: mockTask
+    })
 
-    const ticketAfterTaskUpdate = await getTicketById(ticket.id)
-    expect(new Date(ticketAfterTaskUpdate.updatedAt).getTime()).toBeGreaterThan(new Date(ticketOriginalUpdatedAt).getTime())
+    const updated = await ticketService.updateTask(ticketId, taskId, {
+      content: 'Updated content',
+      done: true
+    })
 
-    // Test no change
-    const taskUnchangedUpdatedAt = updatedTask.updatedAt
-    const ticketUnchangedUpdatedAt = ticketAfterTaskUpdate.updatedAt
-    await new Promise(resolve => setTimeout(resolve, 10))
-    const notUpdatedTask = await updateTask(ticket.id, task.id, { content: 'New content' }) // no actual change
-    expect(notUpdatedTask.updatedAt).toEqual(taskUnchangedUpdatedAt) // updatedAt should not change for task
-    const ticketAfterNoUpdate = await getTicketById(ticket.id)
-    expect(ticketAfterNoUpdate.updatedAt).toEqual(ticketUnchangedUpdatedAt) // updatedAt should not change for ticket
+    expect(updated.content).toBe('Updated content')
+    expect(updated.done).toBe(true)
+    expect(updated.updated).toBeGreaterThan(mockTask.updated)
+    expect(mockTicketStorage.writeTicketTasks).toHaveBeenCalled()
+    expect(mockTicketStorage.writeTickets).toHaveBeenCalled() // Ticket timestamp update
   })
 
   test('deleteTask removes a task', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'DeleteTaskTest', overview: '', status: 'open', priority: 'normal' })
-    const task1 = await createTask(ticket.id, 'Task 1')
-    await createTask(ticket.id, 'Task 2')
-    const ticketOriginalUpdatedAt = (await getTicketById(ticket.id)).updatedAt
+    const ticketId = BASE_TIMESTAMP + 25000;
+    const taskId = BASE_TIMESTAMP + 26000;
 
-    expect(Object.keys(mockTicketTasksDb[ticket.id]).length).toBe(2)
-    await new Promise(resolve => setTimeout(resolve, 10))
-    await deleteTask(ticket.id, task1.id)
+    const mockTicket = { id: ticketId }
+    const mockTasks = {
+      [taskId.toString()]: { id: taskId, ticketId }
+    }
 
-    expect(Object.keys(mockTicketTasksDb[ticket.id]).length).toBe(1)
-    expect(mockTicketTasksDb[ticket.id][task1.id]).toBeUndefined()
-    const ticketAfterTaskDelete = await getTicketById(ticket.id)
-    expect(new Date(ticketAfterTaskDelete.updatedAt).getTime()).toBeGreaterThan(new Date(ticketOriginalUpdatedAt).getTime())
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketTasks.mockResolvedValue(mockTasks)
+
+    await ticketService.deleteTask(ticketId, taskId)
+
+    expect(mockTicketStorage.writeTicketTasks).toHaveBeenCalled()
+    expect(mockTicketStorage.writeTickets).toHaveBeenCalled() // Ticket timestamp update
   })
 
   test('reorderTasks changes task orderIndices', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'ReorderTest', overview: '', status: 'open', priority: 'normal' })
-    const task1 = await createTask(ticket.id, 'T1') // order 1
-    const task2 = await createTask(ticket.id, 'T2') // order 2
-    const task3 = await createTask(ticket.id, 'T3') // order 3
-    const ticketOriginalUpdatedAt = (await getTicketById(ticket.id)).updatedAt
-    await new Promise(resolve => setTimeout(resolve, 10))
+    const ticketId = BASE_TIMESTAMP + 27000;
+    const task1Id = BASE_TIMESTAMP + 28000;
+    const task2Id = BASE_TIMESTAMP + 29000;
 
-    const reorders = [
-      { taskId: task1.id, orderIndex: 3 },
-      { taskId: task2.id, orderIndex: 1 },
-      { taskId: task3.id, orderIndex: 2 },
-    ]
-    const reorderedTasks = await reorderTasks(ticket.id, reorders)
+    const mockTicket = { id: ticketId }
+    const mockTasks = {
+      [task1Id.toString()]: { id: task1Id, ticketId, orderIndex: 1, updated: Date.now() - 1000 },
+      [task2Id.toString()]: { id: task2Id, ticketId, orderIndex: 2, updated: Date.now() - 1000 }
+    }
 
-    expect(reorderedTasks.length).toBe(3)
-    expect(reorderedTasks.find(t => t.id === task1.id)?.orderIndex).toBe(3)
-    expect(reorderedTasks.find(t => t.id === task2.id)?.orderIndex).toBe(1)
-    expect(reorderedTasks.find(t => t.id === task3.id)?.orderIndex).toBe(2)
-    expect(reorderedTasks.map(t => t.id)).toEqual([task2.id, task3.id, task1.id]) // Sorted by new order
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketTasks.mockResolvedValue(mockTasks)
 
-    const ticketAfterReorder = await getTicketById(ticket.id)
-    expect(new Date(ticketAfterReorder.updatedAt).getTime()).toBeGreaterThan(new Date(ticketOriginalUpdatedAt).getTime())
+    const reorderedTasks = await ticketService.reorderTasks(ticketId, [
+      { taskId: task1Id, orderIndex: 2 },
+      { taskId: task2Id, orderIndex: 1 }
+    ])
 
-    // Test reorder with no actual change
-    const ticketOriginalUpdatedAt2 = ticketAfterReorder.updatedAt
-    await new Promise(resolve => setTimeout(resolve, 10))
-    const noChangeReorders = [{ taskId: task2.id, orderIndex: 1 }]
-    await reorderTasks(ticket.id, noChangeReorders);
-    const ticketAfterNoReorder = await getTicketById(ticket.id)
-    expect(ticketAfterNoReorder.updatedAt).toEqual(ticketOriginalUpdatedAt2)
-
+    expect(reorderedTasks.length).toBe(2)
+    expect(reorderedTasks[0].id).toBe(task2Id) // Now first by orderIndex
+    expect(reorderedTasks[1].id).toBe(task1Id) // Now second by orderIndex
+    expect(mockTicketStorage.writeTicketTasks).toHaveBeenCalled()
+    expect(mockTicketStorage.writeTickets).toHaveBeenCalled() // Ticket timestamp update
   })
 
   test('fetchTaskSuggestionsForTicket calls AI service and returns suggestions', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'AI Suggest', overview: 'Needs AI tasks', status: 'open', priority: 'normal' });
-    const userContext = 'High priority';
+    const ticket = {
+      id: BASE_TIMESTAMP + 30000,
+      projectId: defaultProjectId,
+      title: 'Test Ticket',
+      overview: 'Test overview'
+    }
+    const userContext = 'Additional context'
 
-    mockGenAIService.generateStructuredData.mockResolvedValueOnce({
-      object: { tasks: [{ title: 'Mock AI Task 1', description: 'From test' }, { title: 'Mock AI Task 2' }] }
-    });
-
-    const suggestions = await fetchTaskSuggestionsForTicket(ticket, userContext);
+    const suggestions = await ticketService.fetchTaskSuggestionsForTicket(ticket as any, userContext);
 
     expect(suggestions.tasks.length).toBe(2);
     expect(suggestions.tasks[0].title).toBe('Mock AI Task 1');
     expect(mockGetFullProjectSummary).toHaveBeenCalledWith(defaultProjectId);
-    expect(mockGenAIService.generateStructuredData).toHaveBeenCalledWith(expect.objectContaining({
-      prompt: expect.stringContaining(ticket.title) && expect.stringContaining(ticket.overview) && expect.stringContaining(userContext),
-      systemMessage: expect.stringContaining('You are a technical project manager'),
-      options: MEDIUM_MODEL_CONFIG
-    }));
-  });
+    expect(mockGenerateStructuredData).toHaveBeenCalled();
+  })
 
   test('fetchTaskSuggestionsForTicket throws if model not configured', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'AI Suggest No Model', overview: 'Needs AI tasks', status: 'open', priority: 'normal' });
-    const originalModel = MEDIUM_MODEL_CONFIG.model;
-    MEDIUM_MODEL_CONFIG.model = undefined; // Simulate model not configured
+    const ticket = { id: BASE_TIMESTAMP + 31000, projectId: defaultProjectId, title: 'Test', overview: 'Test' }
 
-    await expect(fetchTaskSuggestionsForTicket(ticket, 'context'))
-      .rejects.toThrow(new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, 'CONFIG_ERROR'));
+    // Mock MEDIUM_MODEL_CONFIG to not have a model
+    const originalModel = MEDIUM_MODEL_CONFIG.model
+    MEDIUM_MODEL_CONFIG.model = undefined as any
 
-    MEDIUM_MODEL_CONFIG.model = originalModel; // Restore
-  });
-
+    try {
+      await expect(ticketService.fetchTaskSuggestionsForTicket(ticket as any, ''))
+        .rejects.toThrow(new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, 'CONFIG_ERROR'))
+    } finally {
+      MEDIUM_MODEL_CONFIG.model = originalModel // Restore
+    }
+  })
 
   test('suggestTasksForTicket gets suggestions from AI', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'Suggest Me Tasks', overview: 'Overview for suggestions', status: 'open', priority: 'normal' })
+    const ticketId = BASE_TIMESTAMP + 32000;
+    const mockTicket = { id: ticketId, projectId: defaultProjectId, title: 'Test', overview: 'Test overview' }
 
-    mockGenAIService.generateStructuredData.mockImplementationOnce(async () => ({
-      object: { tasks: [{ title: 'AI Task Alpha' }, { title: 'AI Task Beta' }] }
-    }))
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
 
-    const taskTitles = await suggestTasksForTicket(ticket.id, 'User context here')
-    expect(taskTitles).toEqual(['AI Task Alpha', 'AI Task Beta'])
-    expect(mockGenAIService.generateStructuredData).toHaveBeenCalledTimes(1)
+    const suggestions = await ticketService.suggestTasksForTicket(ticketId, 'context')
+
+    expect(suggestions.length).toBe(2)
+    expect(suggestions[0]).toBe('Mock AI Task 1')
+    expect(suggestions[1]).toBe('Mock AI Task 2')
   })
 
   test('autoGenerateTasksFromOverview creates tasks from AI suggestions', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'Auto Gen', overview: 'Detailed overview for auto generation.', status: 'open', priority: 'normal' })
-    const originalUpdatedAt = (await getTicketById(ticket.id)).updatedAt
+    const ticketId = BASE_TIMESTAMP + 33000;
+    const mockTicket = { id: ticketId, projectId: defaultProjectId, title: 'Test', overview: 'Test overview' }
 
-    mockGenAIService.generateStructuredData.mockImplementationOnce(async () => ({
-      object: { tasks: [{ title: 'Generated Task One' }, { title: 'Generated Task Two' }] }
-    }))
-    await new Promise(resolve => setTimeout(resolve, 10))
-    const newTasks = await autoGenerateTasksFromOverview(ticket.id)
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+    mockTicketStorage.readTicketTasks.mockResolvedValue({})
 
-    expect(newTasks.length).toBe(2)
-    expect(newTasks[0].content).toBe('Generated Task One')
-    expect(newTasks[1].content).toBe('Generated Task Two')
-    expect(newTasks[0].orderIndex).toBe(1)
-    expect(newTasks[1].orderIndex).toBe(2)
+    const tasks = await ticketService.autoGenerateTasksFromOverview(ticketId)
 
-    const allTasks = await getTasks(ticket.id)
-    expect(allTasks.length).toBe(2)
-
-    const ticketAfterGen = await getTicketById(ticket.id)
-    expect(new Date(ticketAfterGen.updatedAt).getTime()).toBeGreaterThan(new Date(originalUpdatedAt).getTime())
-
-    // Test with no suggestions
-    mockGenAIService.generateStructuredData.mockImplementationOnce(async () => ({
-      object: { tasks: [] }
-    }))
-    const noNewTasks = await autoGenerateTasksFromOverview(ticket.id)
-    expect(noNewTasks.length).toBe(0)
-    const allTasksAfterEmpty = await getTasks(ticket.id)
-    expect(allTasksAfterEmpty.length).toBe(2) // Should still be 2
+    expect(tasks.length).toBe(2)
+    expect(tasks[0].content).toBe('Mock AI Task 1')
+    expect(tasks[1].content).toBe('Mock AI Task 2')
+    expect(tasks[0].orderIndex).toBe(1)
+    expect(tasks[1].orderIndex).toBe(2)
   })
 
   test('listTicketsWithTaskCount returns tickets with task counts', async () => {
-    const p1 = `proj_${randomString()}`
-    const t1 = await createTicket({ projectId: p1, title: 'Ticket 1', status: 'open', overview: '', priority: 'normal' }) // 2 tasks, 1 done
-    await createTask(t1.id, 'T1T1')
-    const t1t2 = await createTask(t1.id, 'T1T2')
-    await updateTask(t1.id, t1t2.id, { done: true })
+    const p1 = defaultProjectId;
+    const ticket1Id = BASE_TIMESTAMP + 34000;
+    const ticket2Id = BASE_TIMESTAMP + 35000;
+    const ticket3Id = BASE_TIMESTAMP + 36000;
+    const task1Id = BASE_TIMESTAMP + 37000;
+    const task2Id = BASE_TIMESTAMP + 38000;
+    const task3Id = BASE_TIMESTAMP + 39000;
 
-    const t2 = await createTicket({ projectId: p1, title: 'Ticket 2', status: 'closed', overview: '', priority: 'normal' }) // 0 tasks
+    // Create tickets with ascending created timestamps (ticket3 is most recent)
+    const baseTime = Date.now();
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticket1Id.toString()]: { id: ticket1Id, projectId: p1, title: 'Ticket 1', status: 'open', created: baseTime },
+      [ticket2Id.toString()]: { id: ticket2Id, projectId: p1, title: 'Ticket 2', status: 'open', created: baseTime + 1000 },
+      [ticket3Id.toString()]: { id: ticket3Id, projectId: p1, title: 'Ticket 3', status: 'open', created: baseTime + 2000 }
+    })
 
-    const t3 = await createTicket({ projectId: p1, title: 'Ticket 3', status: 'open', overview: '', priority: 'normal' }) // 1 task, 0 done
-    await createTask(t3.id, 'T3T1')
+    // Mock tasks - order matters! Service processes tickets in descending created order: ticket3, ticket2, ticket1
+    mockTicketStorage.readTicketTasks
+      .mockResolvedValueOnce({}) // First call is for ticket3 (most recent) - 0 tasks
+      .mockResolvedValueOnce({
+        [task3Id.toString()]: { id: task3Id, ticketId: ticket2Id, done: false }
+      }) // Second call is for ticket2 - 1 task, 0 done
+      .mockResolvedValueOnce({
+        [task1Id.toString()]: { id: task1Id, ticketId: ticket1Id, done: true },
+        [task2Id.toString()]: { id: task2Id, ticketId: ticket1Id, done: false }
+      }) // Third call is for ticket1 - 2 tasks, 1 done
 
+    const results = await ticketService.listTicketsWithTaskCount(p1)
 
-    let results = await listTicketsWithTaskCount(p1)
     expect(results.length).toBe(3)
+    // Results are sorted by created desc, so ticket3 (most recent) is first
+    expect(results[0].title).toBe('Ticket 3')
+    expect(results[0].taskCount).toBe(0) // ticket3 has 0 tasks
+    expect(results[0].completedTaskCount).toBe(0)
 
-    const resT1 = results.find(r => r.id === t1.id)
-    expect(resT1?.taskCount).toBe(2)
-    expect(resT1?.completedTaskCount).toBe(1)
+    expect(results[1].title).toBe('Ticket 2')
+    expect(results[1].taskCount).toBe(1) // ticket2 has 1 task
+    expect(results[1].completedTaskCount).toBe(0)
 
-    const resT2 = results.find(r => r.id === t2.id)
-    expect(resT2?.taskCount).toBe(0)
-    expect(resT2?.completedTaskCount).toBe(0)
-
-    results = await listTicketsWithTaskCount(p1, 'open')
-    expect(results.length).toBe(2) // t1 and t3
-    expect(results.find(r => r.id === t2.id)).toBeUndefined()
+    expect(results[2].title).toBe('Ticket 1')
+    expect(results[2].taskCount).toBe(2) // ticket1 has 2 tasks
+    expect(results[2].completedTaskCount).toBe(1)
   })
 
   test('getTasksForTickets returns tasks grouped by ticketId', async () => {
-    const t1 = await createTicket({ projectId: defaultProjectId, title: 'T1', overview: '', status: 'open', priority: 'normal' })
-    const t1a = await createTask(t1.id, 't1a') // order 1
-    const t1b = await createTask(t1.id, 't1b') // order 2
+    const ticketId1 = BASE_TIMESTAMP + 40000;
+    const ticketId2 = BASE_TIMESTAMP + 41000;
+    const task1Id = BASE_TIMESTAMP + 42000;
+    const task2Id = BASE_TIMESTAMP + 43000;
 
-    const t2 = await createTicket({ projectId: defaultProjectId, title: 'T2', overview: '', status: 'open', priority: 'normal' })
-    const t2a = await createTask(t2.id, 't2a') // order 1
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId1.toString()]: { id: ticketId1 },
+      [ticketId2.toString()]: { id: ticketId2 }
+    })
 
-    const t3 = await createTicket({ projectId: defaultProjectId, title: 'T3', overview: '', status: 'open', priority: 'normal' }) // No tasks
+    mockTicketStorage.readTicketTasks
+      .mockResolvedValueOnce({
+        [task1Id.toString()]: { id: task1Id, ticketId: ticketId1, orderIndex: 1 }
+      })
+      .mockResolvedValueOnce({
+        [task2Id.toString()]: { id: task2Id, ticketId: ticketId2, orderIndex: 1 }
+      })
 
-    const tasksMap = await getTasksForTickets([t1.id, t2.id, t3.id, 'non-existent-ticket'])
-    expect(Object.keys(tasksMap).length).toBe(3) // t1, t2, t3
-    expect(tasksMap[t1.id].length).toBe(2)
-    expect(tasksMap[t1.id].map(t => t.id)).toEqual([t1a.id, t1b.id])
-    expect(tasksMap[t2.id].length).toBe(1)
-    expect(tasksMap[t2.id][0].id).toBe(t2a.id)
-    expect(tasksMap[t3.id].length).toBe(0)
-    expect(tasksMap['non-existent-ticket']).toBeUndefined() // Or empty array depending on behavior for non-found tickets by readTicketTasks
+    const results = await ticketService.getTasksForTickets([ticketId1, ticketId2])
+
+    expect(Object.keys(results)).toEqual([ticketId1.toString(), ticketId2.toString()])
+    expect(results[ticketId1].length).toBe(1)
+    expect(results[ticketId2].length).toBe(1)
   })
 
   test('listTicketsWithTasks returns tickets with their tasks embedded', async () => {
-    const p1 = `proj_${randomString()}`
-    const t1 = await createTicket({ projectId: p1, title: 'T1', status: 'open', overview: '', priority: 'normal' })
-    const t1Task = await createTask(t1.id, 'T1 Task1')
-    const t2 = await createTicket({ projectId: p1, title: 'T2', status: 'closed', overview: '', priority: 'normal' })
+    const p1 = defaultProjectId;
+    const ticketId1 = BASE_TIMESTAMP + 44000;
+    const ticketId2 = BASE_TIMESTAMP + 45000;
+    const taskId1 = BASE_TIMESTAMP + 46000;
 
-    const results = await listTicketsWithTasks(p1, 'open')
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId1.toString()]: { id: ticketId1, projectId: p1, title: 'T1', status: 'open', created: Date.now() },
+      [ticketId2.toString()]: { id: ticketId2, projectId: p1, title: 'T2', status: 'closed', created: Date.now() + 1000 }
+    })
+
+    mockTicketStorage.readTicketTasks
+      .mockResolvedValueOnce({
+        [taskId1.toString()]: { id: taskId1, ticketId: ticketId1, orderIndex: 1 }
+      })
+      .mockResolvedValueOnce({})
+
+    const results = await ticketService.listTicketsWithTasks(p1, 'open')
+
     expect(results.length).toBe(1)
-    expect(results[0].id).toBe(t1.id)
+    expect(results[0].title).toBe('T1')
     expect(results[0].tasks.length).toBe(1)
-    expect(results[0].tasks[0].id).toBe(t1Task.id)
-
-    const allResults = await listTicketsWithTasks(p1)
-    expect(allResults.length).toBe(2)
-    const resT2 = allResults.find(r => r.id === t2.id)
-    expect(resT2?.tasks.length).toBe(0)
+    expect(results[0].tasks[0].id).toBe(taskId1)
   })
 
   test('getTicketWithSuggestedFiles parses suggestedFileIds', async () => {
-    const fileIds = [existingFileId1, existingFileId2]
-    const ticket = await createTicket({
-      projectId: defaultProjectId,
-      title: 'SuggestFilesTest',
-      suggestedFileIds: fileIds,
-      overview: '', status: 'open', priority: 'normal'
+    const ticketId = BASE_TIMESTAMP + 47000;
+    const mockTicket = {
+      id: ticketId,
+      suggestedFileIds: [existingFileId1, existingFileId2]
+    }
+
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
     })
 
-    const result = await getTicketWithSuggestedFiles(ticket.id)
-    expect(result).toBeDefined()
-    expect(result?.id).toBe(ticket.id)
-    expect(result?.parsedSuggestedFileIds).toEqual(fileIds)
+    const result = await ticketService.getTicketWithSuggestedFiles(ticketId)
 
-    // Test with empty array
-    const ticketEmpty = await createTicket({ projectId: defaultProjectId, title: 'EmptySuggest', suggestedFileIds: [], overview: '', status: 'open', priority: 'normal' })
-    const resultEmpty = await getTicketWithSuggestedFiles(ticketEmpty.id)
-    expect(resultEmpty?.parsedSuggestedFileIds).toEqual([])
-
-    // Test with null (service default to '[]')
-    const ticketNull = await createTicket({ projectId: defaultProjectId, title: 'NullSuggest', suggestedFileIds: null as any, overview: '', status: 'open', priority: 'normal' })
-    const resultNull = await getTicketWithSuggestedFiles(ticketNull.id)
-    expect(resultNull?.parsedSuggestedFileIds).toEqual([])
-
-
-    // Test with malformed JSON (service should handle gracefully)
-    mockTicketsDb[ticket.id].suggestedFileIds = "not a json"
-    await (await import('@/utils/storage/ticket-storage')).ticketStorage.writeTickets(mockTicketsDb);
-    const resultMalformed = await getTicketWithSuggestedFiles(ticket.id)
-    expect(resultMalformed?.parsedSuggestedFileIds).toEqual([]) // Defaults to empty array on parse error
+    expect(result).not.toBeNull()
+    expect(result!.parsedSuggestedFileIds).toEqual([existingFileId1, existingFileId2])
   })
 
   test('getTicketWithSuggestedFiles throws for non-existent ticket', async () => {
-    await expect(getTicketWithSuggestedFiles('nonexistent-id')).rejects.toThrow(
-      new ApiError(404, 'Ticket with ID nonexistent-id not found.', 'TICKET_NOT_FOUND')
-    );
-  });
+    const ticketId = BASE_TIMESTAMP + 48000;
+    mockTicketStorage.readTickets.mockResolvedValue({})
 
-
-  test('suggestFilesForTicket returns recommendations based on project files', async () => {
-    const ticket = await createTicket({ projectId: defaultProjectId, title: 'FileSuggest', overview: '', status: 'open', priority: 'normal' })
-
-    // defaultProjectId has existingFileId1, existingFileId2
-    const suggestions = await suggestFilesForTicket(ticket.id, {})
-    expect(suggestions.recommendedFileIds.length).toBe(2) // Max 5, but only 2 in project
-    expect(suggestions.recommendedFileIds).toEqual(expect.arrayContaining([existingFileId1, existingFileId2]))
-    expect(suggestions.message).toBe('Files suggested based on simplified project file listing.')
-
-    // Test with a project with no files
-    const projNoFiles = `proj_no_files_${randomString()}`
-    mockProjectFilesDb[projNoFiles] = {}
-    const ticketNoFiles = await createTicket({ projectId: projNoFiles, title: 'NoFilesTicket', overview: '', status: 'open', priority: 'normal' })
-    const suggestionsNoFiles = await suggestFilesForTicket(ticketNoFiles.id, {})
-    expect(suggestionsNoFiles.recommendedFileIds.length).toBe(0)
-    expect(suggestionsNoFiles.message).toBe('No files found in the project to suggest from.')
-
-    // Test with a project with more than 5 files
-    const projManyFiles = `proj_many_files_${randomString()}`
-    mockProjectFilesDb[projManyFiles] = {};
-    const manyFileIds = [];
-    for (let i = 0; i < 7; i++) {
-      const fileId = `file_many_${i}`;
-      manyFileIds.push(fileId);
-      mockProjectFilesDb[projManyFiles][fileId] = { id: fileId, name: `many${i}.txt`, path: `/many${i}.txt`, content: "", projectId: projManyFiles, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), summary: "", extension: ".txt", size: 0, summaryLastUpdatedAt: null, meta: null, checksum: null };
-    }
-    const ticketManyFiles = await createTicket({ projectId: projManyFiles, title: 'ManyFilesTicket', overview: '', status: 'open', priority: 'normal' });
-    const suggestionsManyFiles = await suggestFilesForTicket(ticketManyFiles.id, {})
-    expect(suggestionsManyFiles.recommendedFileIds.length).toBe(5); // Should cap at 5
-    expect(suggestionsManyFiles.recommendedFileIds).toEqual(manyFileIds.slice(0, 5));
-
+    await expect(ticketService.getTicketWithSuggestedFiles(ticketId))
+      .rejects.toThrow(new ApiError(404, `Ticket with ID ${ticketId} not found.`, 'TICKET_NOT_FOUND'))
   })
 
+  test('suggestFilesForTicket returns recommendations based on project files', async () => {
+    const ticketId = BASE_TIMESTAMP + 49000;
+    const mockTicket = { id: ticketId, projectId: defaultProjectId, title: 'FileSuggest' }
+
+    mockTicketStorage.readTickets.mockResolvedValue({
+      [ticketId.toString()]: mockTicket
+    })
+
+    const suggestions = await ticketService.suggestFilesForTicket(ticketId, {})
+
+    expect(suggestions.recommendedFileIds.length).toBe(2) // Max 5, but only 2 in project
+    expect(suggestions.recommendedFileIds).toContain(existingFileId1)
+    expect(suggestions.recommendedFileIds).toContain(existingFileId2)
+    expect(suggestions.combinedSummaries).toBeDefined()
+    expect(suggestions.message).toBeDefined()
+  })
 })

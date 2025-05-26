@@ -12,9 +12,9 @@ export const parseTimestamp = (tsValue: unknown): Date | null => {
 
   if (typeof tsValue === 'number') {
     if (isNaN(tsValue)) return null
-    // Crude check: If the number is very large, assume milliseconds, otherwise seconds.
-    // A more robust check might involve looking at the number of digits or a specific date range.
-    const date = new Date(tsValue > 100000000000 ? tsValue : tsValue * 1000)
+    // Using a threshold to distinguish seconds from milliseconds, similar to the Python backend.
+    const NUMERIC_TIMESTAMP_MS_THRESHOLD = 100000000000 // 10^11
+    const date = new Date(tsValue > NUMERIC_TIMESTAMP_MS_THRESHOLD ? tsValue : tsValue * 1000)
     return !isNaN(date.getTime()) ? date : null
   }
 
@@ -23,28 +23,26 @@ export const parseTimestamp = (tsValue: unknown): Date | null => {
     if (!trimmedValue) return null
 
     // Attempt parsing common formats. Date constructor handles ISO 8601 well.
-    // It can also handle formats like 'YYYY-MM-DD HH:MM:SS' but might be locale-dependent.
     const date = new Date(trimmedValue)
 
     // Verify the parsed date is valid
-    if (!isNaN(date.getTime())) {
-      // Additional check for strings that might parse but are invalid (e.g., "not a date")
-      // This relies on the Date object's toString() behavior for invalid dates.
-      if (date.toString() !== 'Invalid Date') {
-        // Double-check for SQL-like format ambiguity if needed,
-        // e.g., by ensuring parts match expected patterns if Date parsing is unreliable.
-        // For now, trust the Date constructor if it yields a valid time.
-        return date
-      }
+    if (!isNaN(date.getTime()) && date.toString() !== 'Invalid Date') {
+      return date
     }
   }
 
   return null
 }
 
-export const normalizeToIsoString = (tsValue: unknown): string | null => {
-  //  first parse the timestamp
+
+
+/**
+ * Safely parses a timestamp value and converts it to a Unix timestamp in milliseconds.
+ * This is the TypeScript equivalent of the Python `convert_timestamp_to_ms_int`.
+ * @param tsValue - The timestamp value to parse (number, string, Date, null, or undefined).
+ * @returns A number representing milliseconds since epoch, otherwise null.
+ */
+export const normalizeToUnixMs = (tsValue: unknown): number => {
   const date = parseTimestamp(tsValue)
-  // then return the ISO string
-  return date ? date.toISOString() : null
+  return date?.getTime() ?? new Date().getTime()
 }

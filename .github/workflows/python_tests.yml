@@ -1,0 +1,70 @@
+name: Python Backend CI
+on:
+  push:
+    branches: [main]
+    # Uncomment to run only when python_backend changes on push
+    # paths:
+    #   - 'packages/python_backend/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/python_backend/**'
+
+jobs:
+  python-backend-ci:
+    runs-on: ubuntu-latest
+    # Add any environment variables needed for tests
+    # env:
+    #   DATABASE_TEST_URL: ${{ secrets.DATABASE_TEST_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13' # Based on requires-python in pyproject.toml
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: 'packages/python_backend/pyproject.toml'
+
+      - name: Install dependencies
+        run: |
+          cd packages/python_backend
+          uv sync
+
+      - name: Run tests
+        run: |
+          echo "🧪 Running Python Backend Tests..."
+          cd packages/python_backend
+          uv run pytest
+
+      # Optional: Add test coverage reporting
+      # - name: Upload coverage reports
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     directory: packages/python_backend
+      #     fail_ci_if_error: true
+
+  # Optional: Add linting/formatting checks
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Setup Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.13'
+  #
+  #     - name: Install uv
+  #       uses: astral-sh/setup-uv@v3
+  #
+  #     - name: Run linting
+  #       run: |
+  #         cd packages/python_backend
+  #         uv run ruff check .
+  #         uv run mypy .

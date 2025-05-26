@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { providerSchema, type APIProviders } from './provider-key.schemas'
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec, idSchemaSpec, idArraySchemaSpec } from './schema-utils'
 
 const defaultModelConfigs = LOW_MODEL_CONFIG
 
@@ -14,54 +15,26 @@ export type EditorType = (typeof EDITOR_OPTIONS)[number]['value']
 
 export const apiProviders = providerSchema.options
 
+
+// the following schemas are used for the state/store, they aren't used in teh API
 // Project tab state - (Keep as is, unless project tabs are also removed)
 export const projectTabStateSchema = z
   .object({
-    selectedProjectId: z
-      .string()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({
-        description: 'ID of the currently selected project within this tab, or null.',
-        example: 'proj_123abc'
-      }),
-    editProjectId: z
-      .string()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({
-        description: 'ID of the project whose settings are being edited within this tab, or null.',
-        example: null
-      }),
+    selectedProjectId: idSchemaSpec.default(-1),
+    editProjectId: idSchemaSpec.default(-1),
     promptDialogOpen: z
       .boolean()
       .optional()
       .default(false)
       .openapi({ description: 'Whether the prompt selection/creation dialog is open in this tab.' }),
-    editPromptId: z
-      .string()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({ description: 'ID of the prompt being edited in this tab, or null.', example: 'prompt_xyz789' }),
+    editPromptId: idSchemaSpec.default(-1),
     fileSearch: z
       .string()
       .optional()
       .default('')
       .openapi({ description: 'Current search query for files within this project tab.', example: 'userService' }),
-    selectedFiles: z
-      .array(z.string())
-      .nullable()
-      .optional()
-      .default([])
-      .openapi({ description: 'Array of file IDs currently selected in this tab.', example: ['file_abc', 'file_def'] }),
-    selectedPrompts: z
-      .array(z.string())
-      .optional()
-      .default([])
-      .openapi({ description: 'Array of prompt IDs currently selected in this tab.', example: ['prompt_ghi'] }),
+    selectedFiles: idArraySchemaSpec.default([]),
+    selectedPrompts: idArraySchemaSpec.default([]),
     userPrompt: z
       .string()
       .optional()
@@ -78,6 +51,7 @@ export const projectTabStateSchema = z
     displayName: z
       .string()
       .optional()
+      .default('Default Tab')
       .openapi({ description: 'User-defined display name for this project tab.', example: 'Backend Services' }),
     contextLimit: z
       .number()
@@ -99,20 +73,20 @@ export const projectTabStateSchema = z
       .default('vscode')
       .openapi({ description: 'The preferred editor to open files with from this tab.', example: 'cursor' }),
     suggestedFileIds: z
-      .array(z.string())
+      .array(z.number())
       .optional()
       .default([])
       .openapi({
         description: 'Array of file IDs suggested by the AI for the current context.',
-        example: ['file_sug1', 'file_sug2']
+        example: [1, 2, 3, 4, 5]
       }),
     bookmarkedFileGroups: z
-      .record(z.string(), z.array(z.string()))
+      .record(z.string(), z.array(z.number()))
       .optional()
       .default({})
       .openapi({
         description: 'A record of user-defined file groups (bookmarks), mapping group names to arrays of file IDs.',
-        example: { 'Auth Files': ['file_auth1', 'file_auth2'] }
+        example: { 'Auth Files': [1, 2] }
       }),
     ticketSearch: z
       .string()
@@ -129,12 +103,7 @@ export const projectTabStateSchema = z
       .optional()
       .default('all')
       .openapi({ description: 'Filter criteria for ticket status.' }),
-    ticketId: z
-      .string()
-      .nullable()
-      .optional()
-      .default(null)
-      .openapi({ description: 'ID of the currently selected ticket, or null.', example: 'ticket_999' }),
+    ticketId: idSchemaSpec.default(-1),
     sortOrder: z
       .number()
       .optional()
@@ -249,12 +218,12 @@ export const appSettingsSchema = z
         example: ['src/**/*.ts']
       }),
     summarizationEnabledProjectIds: z
-      .array(z.string())
+      .array(z.number())
       .optional()
       .default([])
       .openapi({
         description: 'List of project IDs for which automatic summarization is enabled.',
-        example: ['proj_123', 'proj_456']
+        example: [123, 456]
       }),
     useSpacebarToSelectAutocomplete: z
       .boolean()
@@ -350,39 +319,121 @@ export const globalStateSchema = z
     projectTabs: projectTabsStateRecordSchema.openapi({
       description: 'State of all open project tabs, keyed by tab ID.'
     }),
-    projectActiveTabId: z
-      .string()
-      .optional()
-      .default('defaultTab')
-      .openapi({
-        description: 'The ID of the currently active project tab, or null if none is active.',
-        example: 'tab_abc123'
-      }),
-    activeChatId: z
-      .string()
-      .optional()
-      .default('')
-      .openapi({ description: 'The ID of the currently active chat session, or null.', example: 'chat_xyz789' }),
+    projectActiveTabId: idSchemaSpec,
+    activeChatId: idSchemaSpec,
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: 'Link settings specific to each chat session.' })
   })
   .openapi('GlobalState', { description: 'Represents the entire persistent application state.' })
 
 // this is the best place to set the default values for the global state
 // Initial Global State - Simplified (Function doesn't need OpenAPI spec, but uses the schemas)
-export const createInitialGlobalState = (): GlobalState => ({
-  appSettings: appSettingsSchema.parse({}), // Use parse with empty object to get defaults
-  projectTabs: {
-    // Keep default project tab if project tabs are still used
-    defaultTab: projectTabStateSchema.parse({
-      // Use parse to get defaults
-      displayName: 'Default Project Tab' // Override default display name
-      // Set any other non-default initial values if needed
-    })
+export const createInitialGlobalState = (): GlobalState => {
+  try {
+    return {
+      appSettings: appSettingsSchema.parse({}), // Use parse with empty object to get defaults
+      projectTabs: {
+        // Keep default project tab if project tabs are still used
+        defaultTab: projectTabStateSchema.parse({
+          // Use parse to get defaults
+          displayName: 'Default Project Tab' // Override default display name
+          // Set any other non-default initial values if needed
+        })
+      },
+      projectActiveTabId: 1, // Assuming project tabs remain
+      activeChatId: -1,
+      chatLinkSettings: {}
+    }
+  } catch (error) {
+    console.error('Failed to create initial global state, falling back to safe defaults:', error)
+    // Fallback to safe defaults if schema parsing fails
+    return createSafeGlobalState()
+  }
+}
+
+// Safe fallback function that creates state without schema validation
+export const createSafeGlobalState = (): GlobalState => ({
+  appSettings: {
+    language: 'en',
+    theme: 'light' as Theme,
+    codeThemeLight: 'atomOneLight',
+    codeThemeDark: 'atomOneDark',
+    ollamaGlobalUrl: 'http://localhost:11434',
+    lmStudioGlobalUrl: 'http://localhost:1234',
+    summarizationIgnorePatterns: [],
+    summarizationAllowPatterns: [],
+    summarizationEnabledProjectIds: [],
+    useSpacebarToSelectAutocomplete: true,
+    hideInformationalTooltips: false,
+    autoScrollEnabled: true,
+    provider: defaultModelConfigs.provider as APIProviders,
+    model: defaultModelConfigs.model ?? 'gpt-4o',
+    temperature: defaultModelConfigs.temperature ?? 0.7,
+    maxTokens: defaultModelConfigs.maxTokens ?? 4096,
+    topP: defaultModelConfigs.topP ?? 1,
+    frequencyPenalty: defaultModelConfigs.frequencyPenalty ?? 0,
+    presencePenalty: defaultModelConfigs.presencePenalty ?? 0
   },
-  projectActiveTabId: 'defaultTab', // Assuming project tabs remain
-  activeChatId: '',
+  projectTabs: {
+    defaultTab: {
+      selectedProjectId: -1,
+      editProjectId: -1,
+      promptDialogOpen: false,
+      editPromptId: -1,
+      fileSearch: '',
+      selectedFiles: [],
+      selectedPrompts: [],
+      userPrompt: '',
+      searchByContent: false,
+      displayName: 'Default Project Tab',
+      contextLimit: 128000,
+      resolveImports: false,
+      preferredEditor: 'vscode' as const,
+      suggestedFileIds: [],
+      bookmarkedFileGroups: {},
+      ticketSearch: '',
+      ticketSort: 'created_desc' as const,
+      ticketStatusFilter: 'all' as const,
+      ticketId: -1,
+      sortOrder: 0
+    }
+  },
+  projectActiveTabId: 1,
+  activeChatId: -1,
   chatLinkSettings: {}
 })
+
+// Validates and repairs global state, falling back to safe defaults if needed
+export const validateAndRepairGlobalState = (state: unknown): GlobalState => {
+  try {
+    return globalStateSchema.parse(state)
+  } catch (error) {
+    console.warn('Invalid global state detected, attempting repair:', error)
+
+    // Try to repair by merging with safe defaults
+    if (state && typeof state === 'object') {
+      try {
+        const safeState = createSafeGlobalState()
+        const mergedState = {
+          ...safeState,
+          ...(state as Record<string, unknown>),
+          appSettings: {
+            ...safeState.appSettings,
+            ...((state as any)?.appSettings || {})
+          },
+          projectTabs: {
+            ...safeState.projectTabs,
+            ...((state as any)?.projectTabs || {})
+          }
+        }
+        return globalStateSchema.parse(mergedState)
+      } catch (repairError) {
+        console.error('Failed to repair state, using safe defaults:', repairError)
+      }
+    }
+
+    return createSafeGlobalState()
+  }
+}
 
 // Helper function to get default app settings cleanly
 export function getDefaultAppSettings(): AppSettings {

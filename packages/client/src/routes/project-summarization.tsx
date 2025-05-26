@@ -40,7 +40,7 @@ type SortOption =
   | 'sizeAsc'
   | 'sizeDesc'
 
-function ResummarizeButton({ projectId, fileId, disabled }: { projectId: string; fileId: string; disabled: boolean }) {
+function ResummarizeButton({ projectId, fileId, disabled }: { projectId: number; fileId: number; disabled: boolean }) {
   const summarizeMutation = useSummarizeProjectFiles(projectId)
 
   return (
@@ -78,7 +78,7 @@ export function ProjectSummarizationSettingsPage() {
 
   const [isPending, startTransition] = useTransition()
 
-  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
+  const [selectedFileIds, setSelectedFileIds] = useState<number[]>([])
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false)
   const [selectedFileRecord, setSelectedFileRecord] = useState<ProjectFile | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('nameAsc')
@@ -89,43 +89,53 @@ export function ProjectSummarizationSettingsPage() {
     data: summaryData,
     isLoading: summaryLoading,
     isError: summaryError
-  } = useGetProjectSummary(selectedProjectId ?? '')
+  } = useGetProjectSummary(selectedProjectId ?? -1)
 
-  const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? '')
-  const projectFiles = (data?.data || []) as ProjectFile[]
+  const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? -1)
 
-  const summariesMap = new Map<string, ProjectFile>()
+  // Memoize project files to prevent unnecessary recalculations
+  const projectFiles = useMemo(() => (data?.data || []) as ProjectFile[], [data?.data])
 
-  for (const f of data?.data || []) {
-    // Only add files that actually have a summary string to the map
-    // This ensures !summariesMap.get(id)?.summary correctly identifies unsummarized files
-    if (f.summary) {
-      summariesMap.set(f.id, f)
+  // Memoize summaries map creation
+  const summariesMap = useMemo(() => {
+    const map = new Map<number, ProjectFile>()
+    for (const f of projectFiles) {
+      if (f.summary) {
+        map.set(f.id, f)
+      }
     }
-  }
+    return map
+  }, [projectFiles])
 
-  const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? '')
-  const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? '')
+  const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? -1)
+  const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? -1)
 
-  const tokensMap = new Map<string, number>()
-  for (const file of projectFiles) {
-    if (file.content) {
-      tokensMap.set(file.id, estimateTokenCount(file.content))
-    } else {
-      tokensMap.set(file.id, 0)
+  // Memoize tokens map calculation
+  const tokensMap = useMemo(() => {
+    const map = new Map<number, number>()
+    for (const file of projectFiles) {
+      if (file.content) {
+        map.set(file.id, estimateTokenCount(file.content))
+      } else {
+        map.set(file.id, 0)
+      }
     }
-  }
+    return map
+  }, [projectFiles])
 
-  const summaryTokensMap = new Map<string, number>()
-  for (const file of projectFiles) {
-    // Use summariesMap to get the summary for included files
-    const fileSummary = summariesMap.get(file.id)?.summary
-    if (fileSummary) {
-      summaryTokensMap.set(file.id, estimateTokenCount(fileSummary))
-    } else {
-      summaryTokensMap.set(file.id, 0)
+  // Memoize summary tokens map calculation
+  const summaryTokensMap = useMemo(() => {
+    const map = new Map<number, number>()
+    for (const file of projectFiles) {
+      const fileSummary = summariesMap.get(file.id)?.summary
+      if (fileSummary) {
+        map.set(file.id, estimateTokenCount(fileSummary))
+      } else {
+        map.set(file.id, 0)
+      }
     }
-  }
+    return map
+  }, [projectFiles, summariesMap])
 
   const filteredProjectFiles = useMemo(
     () =>
@@ -138,57 +148,119 @@ export function ProjectSummarizationSettingsPage() {
     [projectFiles, tokensMap, minTokensFilter, maxTokensFilter]
   )
 
-  const sortedProjectFiles = [...filteredProjectFiles].sort((a, b) => {
-    const fileAData = summariesMap.get(a.id)
-    const fileBData = summariesMap.get(b.id)
+  // Memoize sorted project files to prevent re-sorting on every render
+  const sortedProjectFiles = useMemo(() => {
+    return [...filteredProjectFiles].sort((a, b) => {
+      const fileAData = summariesMap.get(a.id)
+      const fileBData = summariesMap.get(b.id)
 
-    const nameA = a.path ?? ''
-    const nameB = b.path ?? ''
-    const updatedA = fileAData?.summaryLastUpdatedAt ? new Date(fileAData.summaryLastUpdatedAt).getTime() : 0
-    const updatedB = fileBData?.summaryLastUpdatedAt ? new Date(fileBData.summaryLastUpdatedAt).getTime() : 0
-    const fileTokensA = tokensMap.get(a.id) ?? 0
-    const fileTokensB = tokensMap.get(b.id) ?? 0
-    const summaryTokensA = summaryTokensMap.get(a.id) ?? 0
-    const summaryTokensB = summaryTokensMap.get(b.id) ?? 0
-    const sizeA = a.size ?? 0
-    const sizeB = b.size ?? 0
+      const nameA = a.path ?? ''
+      const nameB = b.path ?? ''
+      const updatedA = fileAData?.summaryLastUpdated ? new Date(fileAData.summaryLastUpdated).getTime() : 0
+      const updatedB = fileBData?.summaryLastUpdated ? new Date(fileBData.summaryLastUpdated).getTime() : 0
+      const fileTokensA = tokensMap.get(a.id) ?? 0
+      const fileTokensB = tokensMap.get(b.id) ?? 0
+      const summaryTokensA = summaryTokensMap.get(a.id) ?? 0
+      const summaryTokensB = summaryTokensMap.get(b.id) ?? 0
+      const sizeA = a.size ?? 0
+      const sizeB = b.size ?? 0
 
-    switch (sortBy) {
-      case 'nameAsc':
-        return nameA.localeCompare(nameB)
-      case 'nameDesc':
-        return nameB.localeCompare(nameA)
+      switch (sortBy) {
+        case 'nameAsc':
+          return nameA.localeCompare(nameB)
+        case 'nameDesc':
+          return nameB.localeCompare(nameA)
 
-      case 'lastSummarizedAsc':
-        if (updatedA === 0 && updatedB !== 0) return -1
-        if (updatedA !== 0 && updatedB === 0) return 1
-        return updatedA - updatedB
-      case 'lastSummarizedDesc':
-        if (updatedA === 0 && updatedB !== 0) return 1
-        if (updatedA !== 0 && updatedB === 0) return -1
-        return updatedB - updatedA
+        case 'lastSummarizedAsc':
+          if (updatedA === 0 && updatedB !== 0) return -1
+          if (updatedA !== 0 && updatedB === 0) return 1
+          return updatedA - updatedB
+        case 'lastSummarizedDesc':
+          if (updatedA === 0 && updatedB !== 0) return 1
+          if (updatedA !== 0 && updatedB === 0) return -1
+          return updatedB - updatedA
 
-      case 'fileTokenAsc':
-        return fileTokensA - fileTokensB
-      case 'fileTokenDesc':
-        return fileTokensB - fileTokensA
+        case 'fileTokenAsc':
+          return fileTokensA - fileTokensB
+        case 'fileTokenDesc':
+          return fileTokensB - fileTokensA
 
-      case 'summaryTokenAsc':
-        return summaryTokensA - summaryTokensB
-      case 'summaryTokenDesc':
-        return summaryTokensB - summaryTokensA
+        case 'summaryTokenAsc':
+          return summaryTokensA - summaryTokensB
+        case 'summaryTokenDesc':
+          return summaryTokensB - summaryTokensA
 
-      case 'sizeAsc':
-        return sizeA - sizeB
-      case 'sizeDesc':
-        return sizeB - sizeA
+        case 'sizeAsc':
+          return sizeA - sizeB
+        case 'sizeDesc':
+          return sizeB - sizeA
 
-      default:
-        return 0
+        default:
+          return 0
+      }
+    })
+  }, [filteredProjectFiles, summariesMap, tokensMap, summaryTokensMap, sortBy])
+
+  // Memoize total calculations to prevent recalculation on every render
+  const totalStats = useMemo(() => {
+    let totalContentLength = 0
+    let totalTokensInContent = 0
+    let totalTokensInSummaries = 0
+
+    for (const file of projectFiles) {
+      if (file.content) {
+        totalContentLength += file.content.length
+        totalTokensInContent += estimateTokenCount(file.content)
+      }
     }
-  })
 
-  function toggleFileSelection(fileId: string) {
+    for (const fileWithSummary of summariesMap.values()) {
+      if (fileWithSummary.summary) {
+        totalTokensInSummaries += estimateTokenCount(fileWithSummary.summary)
+      }
+    }
+
+    return {
+      totalContentLength,
+      totalTokensInContent,
+      totalTokensInSummaries
+    }
+  }, [projectFiles, summariesMap])
+
+  // Memoize combined summary calculations
+  const combinedSummaryData = useMemo(() => {
+    const includedFilesWithSummaries = Array.from(summariesMap.values())
+    const combinedSummary = includedFilesWithSummaries.map((f) => f.summary).join('\n\n')
+    const combinedSummaryTokens = estimateTokenCount(combinedSummary)
+    const formattedCombinedSummary = buildCombinedFileSummariesXml(includedFilesWithSummaries, {
+      includeEmptySummaries: false,
+      emptySummaryText: 'NO_SUMMARY'
+    })
+
+    return {
+      includedFilesWithSummaries,
+      combinedSummary,
+      combinedSummaryTokens,
+      formattedCombinedSummary
+    }
+  }, [summariesMap])
+
+  // Memoize counts to prevent recalculation
+  const fileCounts = useMemo(() => {
+    const includedFilesCount = sortedProjectFiles.length
+    const includedWithSummariesCount = sortedProjectFiles.filter((f) => summariesMap.has(f.id)).length
+    const allSummariesCount = summariesMap.size
+    const selectedWithSummariesCount = selectedFileIds.filter((id) => summariesMap.has(id)).length
+
+    return {
+      includedFilesCount,
+      includedWithSummariesCount,
+      allSummariesCount,
+      selectedWithSummariesCount
+    }
+  }, [sortedProjectFiles, summariesMap, selectedFileIds])
+
+  function toggleFileSelection(fileId: number) {
     setSelectedFileIds((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]))
   }
 
@@ -250,7 +322,7 @@ export function ProjectSummarizationSettingsPage() {
     })
   }
 
-  function handleToggleSummary(fileId: string) {
+  function handleToggleSummary(fileId: number) {
     const f = summariesMap.get(fileId)
     if (f) {
       setSelectedFileRecord(f)
@@ -260,57 +332,18 @@ export function ProjectSummarizationSettingsPage() {
     }
   }
 
-  function handleSelectUnsummarized() {
-    const unsummarizedIds = sortedProjectFiles
-      .filter((file) => !summariesMap.has(file.id)) // Check existence in the map is enough
-      .map((file) => file.id)
-    setSelectedFileIds(unsummarizedIds)
-    if (unsummarizedIds.length > 0) {
-      toast.info(`Selected ${unsummarizedIds.length} unsummarized files.`)
-    } else {
-      toast.info('No unsummarized files found to select.')
+  // Memoize unsummarized file selection to prevent recalculation
+  const handleSelectUnsummarized = useMemo(() => {
+    return () => {
+      const unsummarizedIds = sortedProjectFiles.filter((file) => !summariesMap.has(file.id)).map((file) => file.id)
+      setSelectedFileIds(unsummarizedIds)
+      if (unsummarizedIds.length > 0) {
+        toast.info(`Selected ${unsummarizedIds.length} unsummarized files.`)
+      } else {
+        toast.info('No unsummarized files found to select.')
+      }
     }
-  }
-
-  let totalContentLength = 0
-  for (const file of projectFiles) {
-    if (file.content) {
-      totalContentLength += file.content.length
-    }
-  }
-
-  let totalTokensInSummaries = 0
-  // Iterate over the *values* in summariesMap to count tokens only for actual summaries
-  for (const fileWithSummary of summariesMap.values()) {
-    if (fileWithSummary.summary) {
-      totalTokensInSummaries += estimateTokenCount(fileWithSummary.summary)
-    }
-  }
-
-  // Calculate combined summary based on files that *actually* have summaries
-  const includedFilesWithSummaries = Array.from(summariesMap.values()) // No pattern filtering needed
-
-  const combinedSummary = includedFilesWithSummaries
-    .map((f) => f.summary) // We know summary exists here
-    .join('\n\n')
-
-  const combinedSummaryTokens = estimateTokenCount(combinedSummary)
-
-  let totalTokensInContent = 0
-  for (const file of projectFiles) {
-    if (file.content) {
-      totalTokensInContent += estimateTokenCount(file.content)
-    }
-  }
-
-  // Use the filtered list for formatted summary generation
-  const formattedCombinedSummary = buildCombinedFileSummariesXml(
-    includedFilesWithSummaries, // Pass the pre-filtered list (now all files with summaries)
-    {
-      includeEmptySummaries: false, // Already filtered, but good practice
-      emptySummaryText: 'NO_SUMMARY'
-    }
-  )
+  }, [sortedProjectFiles, summariesMap])
 
   if (isLoading) {
     return <div className='p-4'>Loading files...</div>
@@ -318,11 +351,6 @@ export function ProjectSummarizationSettingsPage() {
   if (isError) {
     return <div className='p-4'>Error fetching files</div>
   }
-
-  // Calculate counts based on the final sorted/filtered list and summariesMap
-  const includedFilesCount = sortedProjectFiles.length // Now just the total filtered files
-  const includedWithSummariesCount = sortedProjectFiles.filter((f) => summariesMap.has(f.id)).length
-  const allSummariesCount = summariesMap.size
 
   return (
     <div className='p-4 space-y-6'>
@@ -335,7 +363,7 @@ export function ProjectSummarizationSettingsPage() {
               size='sm'
               className='gap-2'
               onClick={() => setCombinedSummaryDialogOpen(true)}
-              disabled={!isProjectSummarizationEnabled || includedFilesWithSummaries.length === 0}
+              disabled={!isProjectSummarizationEnabled || combinedSummaryData.includedFilesWithSummaries.length === 0}
             >
               <FileText className='h-4 w-4' />
               View Combined Summary
@@ -346,19 +374,20 @@ export function ProjectSummarizationSettingsPage() {
         <CardContent className='space-y-4'>
           <div>
             <p className='text-sm'>
-              <strong>Total files with summaries:</strong> {allSummariesCount}
+              <strong>Total files with summaries:</strong> {fileCounts.allSummariesCount}
               <span className='text-xs ml-2 text-muted-foreground'>(across the entire project)</span>
             </p>
             <p className='text-sm'>
-              <strong>Included files with summaries:</strong> {includedWithSummariesCount} / {includedFilesCount}
+              <strong>Included files with summaries:</strong> {fileCounts.includedWithSummariesCount} /{' '}
+              {fileCounts.includedFilesCount}
             </p>
             <p className='text-sm flex items-center gap-1'>
               <strong>Total tokens in content (included files):</strong>
-              <FormatTokenCount tokenContent={totalTokensInContent} />
+              <FormatTokenCount tokenContent={totalStats.totalTokensInContent} />
             </p>
             <p className='text-sm flex items-center gap-1'>
               <strong>Total tokens in summaries (included files):</strong>
-              <FormatTokenCount tokenContent={totalTokensInSummaries} />
+              <FormatTokenCount tokenContent={totalStats.totalTokensInSummaries} />
             </p>
           </div>
         </CardContent>
@@ -382,7 +411,7 @@ export function ProjectSummarizationSettingsPage() {
                   updateSettings({
                     summarizationEnabledProjectIds: check
                       ? [...(summarizationEnabledProjectIds ?? []), selectedProjectId]
-                      : (summarizationEnabledProjectIds ?? []).filter((id: string) => id !== selectedProjectId)
+                      : (summarizationEnabledProjectIds ?? []).filter((id: number) => id !== selectedProjectId)
                   })
                 }}
               />
@@ -492,8 +521,8 @@ export function ProjectSummarizationSettingsPage() {
                 {sortedProjectFiles.map((file) => {
                   const fileRecordWithSummary = summariesMap.get(file.id) // Check if summary exists
                   const hasSummary = !!fileRecordWithSummary
-                  const lastSummarized = fileRecordWithSummary?.summaryLastUpdatedAt
-                    ? new Date(fileRecordWithSummary.summaryLastUpdatedAt).toLocaleString()
+                  const lastSummarized = fileRecordWithSummary?.summaryLastUpdated
+                    ? new Date(fileRecordWithSummary.summaryLastUpdated).toLocaleString()
                     : null
                   const tokenCount = tokensMap.get(file.id) ?? 0
                   const summaryTokenCount = summaryTokensMap.get(file.id) ?? 0 // From summaryTokensMap
@@ -557,7 +586,7 @@ export function ProjectSummarizationSettingsPage() {
                             </Button>
                           )}
                           <ResummarizeButton
-                            projectId={selectedProjectId ?? ''}
+                            projectId={selectedProjectId ?? -1}
                             fileId={file.id}
                             disabled={!isProjectSummarizationEnabled || summarizeMutation.isPending}
                           />
@@ -604,13 +633,12 @@ export function ProjectSummarizationSettingsPage() {
                     selectedFileIds.length === 0 ||
                     removeSummariesMutation.isPending ||
                     !isProjectSummarizationEnabled ||
-                    // Also disable if none of the selected files actually have summaries
-                    selectedFileIds.filter((id) => summariesMap.has(id)).length === 0
+                    fileCounts.selectedWithSummariesCount === 0
                   }
                   size='sm'
                 >
                   {removeSummariesMutation.isPending ? 'Removing...' : 'Remove Summaries'} (
-                  {selectedFileIds.filter((id) => summariesMap.has(id)).length})
+                  {fileCounts.selectedWithSummariesCount})
                 </Button>
               </div>
             </div>
@@ -634,8 +662,8 @@ export function ProjectSummarizationSettingsPage() {
       <SummaryDialog
         isOpen={combinedSummaryDialogOpen}
         onClose={() => setCombinedSummaryDialogOpen(false)}
-        summaryContent={formattedCombinedSummary || '*No included file summaries available.*'}
-        tokenCount={combinedSummaryTokens}
+        summaryContent={combinedSummaryData.formattedCombinedSummary || '*No included file summaries available.*'}
+        tokenCount={combinedSummaryData.combinedSummaryTokens}
       />
     </div>
   )

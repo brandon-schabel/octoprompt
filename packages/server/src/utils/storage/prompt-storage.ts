@@ -2,7 +2,6 @@ import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { PromptSchema, PromptProjectSchema, type Prompt, type PromptProject } from 'shared/src/schemas/prompt.schemas'
-import { randomUUID } from 'crypto'
 
 // Define the base directory for storing prompt data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'prompt_storage')
@@ -124,7 +123,7 @@ export const promptStorage = {
   },
 
   /** Generates a unique ID. */
-  generateId: (prefix: string): string => {
-    return `${prefix}_${randomUUID()}`
+  generateId: (): number => {
+    return Date.now()
   }
 }

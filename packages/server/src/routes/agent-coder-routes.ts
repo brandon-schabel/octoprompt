@@ -82,8 +82,8 @@ async function parseJsonl(content: string): Promise<Array<Record<string, unknown
 
 // Schema for agentJobId path parameter
 const AgentJobIdParamsSchema = z.object({
-  agentJobId: z.string().openapi({ description: 'The unique ID of the agent run.' }),
-  projectId: z.string().openapi({ description: 'The unique ID of the project.' })
+  agentJobId: z.number().openapi({ description: 'The unique ID of the agent run.' }),
+  projectId: z.number().openapi({ description: 'The unique ID of the project.' })
 })
 
 // Route for getting orchestrator logs for a specific run
@@ -139,11 +139,11 @@ const getAgentRunDataRoute = createRoute({
 // --- Route for Listing Agent Runs (Job IDs) ---
 const ListAgentRunsResponseSchema = z.object({
   success: z.boolean(),
-  data: z.array(z.string()).openapi({ description: 'List of available agent run job IDs' })
+  data: z.array(z.number()).openapi({ description: 'List of available agent run job IDs' })
 })
 
 const ListAgentRunsParamsSchema = z.object({
-  projectId: z.string().openapi({ description: 'The unique ID of the project.' })
+  projectId: z.number().openapi({ description: 'The unique ID of the project.' })
 })
 
 const listAgentRunsRoute = createRoute({
@@ -244,7 +244,7 @@ export const writeFilesToFileSystem = async ({
   absoluteProjectPath,
   updatedFiles
 }: {
-  agentJobId: string
+  agentJobId: number
   projectFileMap: ProjectFileMap
   absoluteProjectPath: string
   updatedFiles: ProjectFile[]
@@ -325,7 +325,7 @@ export const agentCoderRoutes = new OpenAPIHono()
     const {
       userInput,
       selectedFileIds: routeSelectedFileIds,
-      agentJobId: routeAgentJobId = 'no-job-id',
+      agentJobId: routeAgentJobId = 0,
       selectedPromptIds
     } = c.req.valid('json')
 
@@ -570,7 +570,7 @@ export const agentCoderRoutes = new OpenAPIHono()
     const { agentJobId } = c.req.valid('param')
     await log(`[Agent Delete Route] Request received for job ID: ${agentJobId}`, 'info', { agentJobId })
 
-    const agentRunDirectory = join(AGENT_LOGS_DIR, agentJobId)
+    const agentRunDirectory = join(AGENT_LOGS_DIR, agentJobId.toString())
 
     try {
       await stat(agentRunDirectory)

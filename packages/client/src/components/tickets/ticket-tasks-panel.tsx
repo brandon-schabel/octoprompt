@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { Task } from '@/generated'
 
 interface TicketTasksPanelProps {
-  ticketId: string
+  ticketId: number
   overview: string
 }
 

@@ -25,7 +25,7 @@ import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 export function AppNavbar() {
   const [openDialog, setOpenDialog] = useState(false)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
-  const [editProjectId, setEditProjectId] = useState<string | null>(null)
+  const [editProjectId, setEditProjectId] = useState<number | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -69,7 +69,7 @@ export function AppNavbar() {
     handleOpenNewProject()
   })
 
-  const handleSelectProject = (id: string) => {
+  const handleSelectProject = (id: number) => {
     updateActiveProjectTab((prev) => ({
       ...prev,
       selectedProjectId: id,
@@ -85,7 +85,7 @@ export function AppNavbar() {
     setProjectDialogOpen(true)
   }
 
-  const handleEditProject = (id: string) => {
+  const handleEditProject = (id: number) => {
     setEditProjectId(id)
     setProjectDialogOpen(true)
     setOpenDialog(false)

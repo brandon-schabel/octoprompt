@@ -1,0 +1,296 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- All ids, created, updated timestamps are all in unix timestamps in milliseconds
+- When handling ids with data, -1 means null, otherwise it must be a valid unix timestamp in ms
+- When creating a map, all numbers are converted to string when using object, so prefer the new Map() over pure object for these cases.
+- Each service generally has an associated schema file which contains the base schema and the schemas for the CRUD operrations because for example you don't want to incude id created or updated on create(those are auto generated), storage file - which stores most data as json files, a service file which contains all the functions for manipulating the data related to that service, and the a routes/api file where all the api routes are created.
+- Every API must be type safe, in TypeScript we use zod with hono to do validation on the api params, route params, body data. One thing to note is route params/api params i think always parse as string so. In Python we use Pydantic models for typesafety and validation
+- Every API must have proper Open API specs
+- Route ordering is extremely important, if the route definitions are not in the correct order, the the incorrect route will be reached, pay very very very close attention to route order
+
+Major Features/Services  
+Projects and Files - main idea the code projects and then the projects hold a set of chats  
+Chats and Messages - AI chat function built in  
+Gen AI - Generative AI services generally used to generate structured data, coding agent, file search, file summarization.  
+Provider Key Service - Manages all the API keys for each of the AI providers  
+Prompts - Manage all the users prompts, prompts are used with AI to better guide/inform the AI  
+Tickets and Tasks - Related to projects, the user can create tickets along with manual/generated tasks with project specific context.  
+Global State - Mostly handled on the frontend, but on the frontend the global state is synced to local storage to preserve a majority of the user context even on page refresh
+
+Other Technical Info
+
+- Each API should be functionally test with functional API tests
+- All functions should be written to be unit testable, they should have little to no external reliance/configs, generally it should have predictable input/output, with the exception of Gen AI related things
+- Follow Single Source of Truth and Dont Repeat Yourself principles whereever possible(don't duplicate)
+
+project overall structure - this is the general layout of the project that uses the chat, projects, and prompts services and apis to demonstrate how theses  are used throughout the app
+```
+OctoPrompt  
+	packages  
+		api-tests
+			tests
+				chat-api.ts
+				project-api.ts
+				prompt-api.ts
+	
+		client
+			src
+				constants
+				utils
+				routes
+					chat.tsx
+					projects.tsx
+					prompts.tsx
+				components
+				hooks
+					api // api hooks consuming generated
+				generated // generated open api types and functions
+		python_backend  
+			app  
+			schemas  
+			services
+				chat_service.py
+				prompt_service.py
+				project_service.py
+			utils
+				storage
+					chat_storage.py
+					prompt_storage.py
+					project_storage.py
+	    shared
+			src
+				constants
+					model-default.ts // contains llm model default configs like temp, max tokens, etc, 3 configs, low, med, high
+				schemas
+					project.schema.ts
+					chat.schema.ts
+					prompt.schema.ts
+    	server
+			server.ts // main serverentry
+        	src
+				app.ts // where hono router is defined, all routes are imported and mapped here, middleware, and global server error handling live here
+				routes
+					chat-routes.ts
+					prompt-routes.ts
+					project-routes.ts
+            	services
+					chat-service.ts
+					prompt-service.ts
+					project-service.ts
+				utils
+					storage
+						chat-storage.ts
+						prompt-storage.ts
+						project-storage.ts
+```
+
+
+
+scripts:
+
+package.json 
+```
+    "dev": "bun run scripts/start-dev.ts",
+    "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
+    "dev:server": "bun run scripts/start-server-dev.ts",
+    "stop": "bun run scripts/stop.ts",
+    "build-binaries": "bun run scripts/build-binaries.ts",
+    "format": "prettier --write .",
+    "test:server": "cd packages/server && bun run test",
+    "test:shared": "cd packages/shared && bun run test",
+    "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
+    "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
+    "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts"
+```
+
+
+packages/server
+```
+"test": "bun test src/",
+    "test:watch": "bun test --watch src/",
+    "start": "bun server.ts",
+    "dev": "DEV=true bun server.ts",
+    "dev:watch": "DEV=true bun --watch server.ts",
+    "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh"
+```
+
+packages/client/package.json
+```
+"dev": "vite",
+    "build": "tsc -b tsconfig.app.json && vite build",
+    "build:prod": "tsc -b tsconfig.app.json && ENVIRONMENT=prod vite build",
+    "preview": "vite preview",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+```
+
+packages/shared/package.json
+```
+    "test": "bun test"
+```
+useful utils:
+```
+shared/schemas/schema-utils
+- unixTSSchemaSpec // standard unix timestamp milliseconds schema
+- unixTSOptionalSchemaSpec // optional unix timestamp ms
+- unixTSArraySchemaSpec // required array of unix timestamp ms
+- unixTSArrayOptionalSchemaSpec // optional array of unix timestamp ms
+
+
+shared/utils/merge-deep.ts
+mergeDeep - Recursively merges two or more objects.
+mergeDeep<T>([obj, obj]): T
+
+shared/utils/pattern-match.
+normalizePath(filePath: string): string // normal file path seperators or forward slahses
+
+
+// Filters an array of file paths to only those matching the given patterns.
+filterByPatterns(
+  filePaths: string[],
+  patterns: string[],
+  options?: picomatch.PicomatchOptions
+): string[]
+
+
+shared/utils/project-utils.ts
+buildPromptContent({
+  fileMap, // projectFileMap
+  promptData, 
+  selectedFiles, 
+  selectedPrompts,
+  userPrompt
+}: {
+  promptData: PromptListResponse | null | undefined
+  selectedPrompts: number[]
+  userPrompt: string
+  selectedFiles: number[]
+  fileMap: ProjectFileMap
+}): string
+
+calculateTotalTokens(
+  promptData: PromptListResponse | null | undefined,
+  selectedPrompts: number[],
+  userPrompt: string,
+  selectedFiles: number[],
+  fileMap: ProjectFileMap
+): number {
+
+export const buildFileTree = (files: ProjectFile[]): Record<string, any>
+
+// generates a full summary of the project, useful to provide AI contexts
+packages/server/src/utils/get-full-project-summary.ts
+ getFullProjectSummary = async (projectId: number) 
+
+octoprompt/packages/server/src/utils/json-scribe.ts
+//Resolves a path input (string or array) into a normalized file path
+resolveJsonPath(rawPath: string | string[], basePath: string = process.cwd()): string 
+
+
+interface WriteJsonOptions<TData, S extends ZodTypeAny | undefined> {
+// relative or absolute path to file
+  path: string | string[]
+  // write data
+  data: TData
+  /** Optional Zod schema to validate the data against before writing. */
+  schema?: S
+  /** Optional base directory for resolving relative paths. Defaults to current working directory. */
+  basePath?: string
+}
+
+ * Options for the readJson function, reflect similar to write */
+interface ReadJsonOptions {
+
+  path: string | string[]
+  basePath?: string
+}
+
+ * Writes data to a JSON file, optionally validating it with a Zod schema.
+ * Creates directories if they don't exist. */
+writeJson<TData, S extends ZodTypeAny | undefined = undefined>(
+  options: WriteJsonOptions<TData, S>
+): Promise<S extends ZodTypeAny ? z.infer<S> : TData> 
+
+
+ * Reads and parses a JSON file.
+ * Does *not* perform validation on read.
+readJson<T = unknown>(options: ReadJsonOptions): Promise<T | null>
+
+
+ * Safely parses a timestamp value from common formats into a Date object.
+ * Handles nums (Unix timestamp in seconds or milliseconds),
+ * ISO 8601 strings, and common SQL timestamp formats.
+ * @param tsValue - The timestamp value to parse (number, string, null, or undefined).
+parseTimestamp = (tsValue: unknown): Date | null => {
+
+ * Safely parses a timestamp value and converts it to a Unix timestamp in milliseconds.
+ * This is the TypeScript equivalent of the Python `convert_timestamp_to_ms_int`.
+ * @param tsValue - refer to parseTimestamp
+ * @returns A number representing milliseconds since epoch, otherwise null.
+normalizeToUnixMs = (tsValue: unknown): number => {
+  const date = parseTimestamp(tsValue)
+  return date?.getTime() ?? new Date().getTime()
+}
+
+
+packages/server/src/utils/path-utils.ts
+ * Resolves a path, expanding tilde if present.
+ * Combines expandTilde and node's path.resolve.
+resolvePath(path: string): string
+
+
+* Normalizes a path for database storage.
+ * Ensures consistent path format regardless of OS.
+normalizePathForDb(path: string): string
+
+packages/server/src/utils/prompts-map.ts
+// predefined prompt files,
+// using bun to load
+const contemplativePrompt = Bun.file(promptsDir + '/contemplative-prompt.md').text()
+// also summarizationSteps, octopromptPlanningMetaPrompt 
+
+
+export const promptsMap = {
+  contemplativePrompt,
+  summarizationSteps,
+  octopromptPlanningMetaPrompt
+}
+
+packages/shared/src/constants/model-default-configs.ts
+export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
+  frequencyPenalty: 0,
+  presencePenalty: 0,
+  // max output tokens
+  maxTokens: 10000,
+  temperature: 0.7,
+  topP: 0,
+  topK: 0,
+  provider: 'openrouter',
+  model: 'google/gemini-2.5-flash-preview'
+}
+
+MEDIUM_MODEL_CONFIG
+HIGH_MODEL_CONFIG
+
+These 3 configs represent 3 levels of models used throughout OctoPrompt low for simple tasks like file search, high being coding & planning type work
+```
+
+python:
+packages/python_backend
+
+```
+source ./.venv/bin/activate
+````
+
+run server:
+```
+python main.py
+```
+
+run unit tests:
+```
+uv run tests
+```

@@ -46,8 +46,8 @@ export interface WatchOptions {
 
 // From cleanup-service.ts
 export type CleanupResult =
-  | ({ status: 'success'; removedCount: number } & { projectId: string })
-  | ({ status: 'error'; error: unknown } & { projectId: string })
+  | ({ status: 'success'; removedCount: number } & { projectId: number })
+  | ({ status: 'error'; error: unknown } & { projectId: number })
 
 export interface CleanupOptions {
   intervalMs: number
@@ -56,7 +56,7 @@ export interface CleanupOptions {
 // MinimalProject was defined in cleanup-service.ts but not directly used by its exported functions' signatures.
 // If it's needed elsewhere, it can be kept. For now, it's not strictly necessary for the combined service exports.
 // export type MinimalProject = {
-//     id: string;
+//     id: number;
 //     path: string;
 // };
 
@@ -383,8 +383,8 @@ export async function syncFileSet(
   // console.log(`[FileSync] Starting syncFileSet for project ${project.id} with ${absoluteFilePathsOnDisk.length} disk files.`);
 
   let filesToCreate: FileSyncData[] = []
-  let filesToUpdate: { fileId: string; data: FileSyncData }[] = []
-  let fileIdsToDelete: string[] = []
+  let filesToUpdate: { fileId: number; data: FileSyncData }[] = []
+  let fileIdsToDelete: number[] = []
   let skippedCount = 0
 
   const existingDbFiles = await getProjectFiles(project.id) // From project-service
@@ -657,7 +657,7 @@ export function createFileChangePlugin() {
  * Originally from watchers-manager.ts
  */
 export function createWatchersManager() {
-  const activePlugins = new Map<string, ReturnType<typeof createFileChangePlugin>>()
+  const activePlugins = new Map<number, ReturnType<typeof createFileChangePlugin>>()
 
   async function startWatchingProject(project: Project, ignorePatterns: string[] = []): Promise<void> {
     if (activePlugins.has(project.id)) {
@@ -684,7 +684,7 @@ export function createWatchersManager() {
     }
   }
 
-  function stopWatchingProject(projectId: string): void {
+  function stopWatchingProject(projectId: number): void {
     const plugin = activePlugins.get(projectId)
     if (!plugin) {
       // console.warn(`[WatchersManager] Not currently watching project: ${projectId}. Cannot stop.`);

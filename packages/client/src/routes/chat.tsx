@@ -427,10 +427,10 @@ const ChatMessageItem = React.memo(
     excluded: boolean
     rawView: boolean
     onCopyMessage: (content: string) => void
-    onForkMessage: (messageId: string) => void
-    onDeleteMessage: (messageId: string) => void
-    onToggleExclude: (messageId: string) => void
-    onToggleRawView: (messageId: string) => void
+    onForkMessage: (messageId: number) => void
+    onDeleteMessage: (messageId: number) => void
+    onToggleExclude: (messageId: number) => void
+    onToggleRawView: (messageId: number) => void
   }) => {
     const { msg, excluded, rawView, onCopyMessage, onForkMessage, onDeleteMessage, onToggleExclude, onToggleRawView } =
       props
@@ -449,10 +449,10 @@ const ChatMessageItem = React.memo(
       () => onCopyMessage(mainContent || msg.content),
       [mainContent, msg.content, onCopyMessage]
     )
-    const handleFork = useCallback(() => onForkMessage(msg.id!), [msg.id, onForkMessage])
-    const handleDelete = useCallback(() => onDeleteMessage(msg.id!), [msg.id, onDeleteMessage])
-    const handleToggleExclude = useCallback(() => onToggleExclude(msg.id!), [msg.id, onToggleExclude])
-    const handleToggleRaw = useCallback(() => onToggleRawView(msg.id!), [msg.id, onToggleRawView])
+    const handleFork = useCallback(() => onForkMessage(Number(msg.id)), [msg.id, onForkMessage])
+    const handleDelete = useCallback(() => onDeleteMessage(Number(msg.id)), [msg.id, onDeleteMessage])
+    const handleToggleExclude = useCallback(() => onToggleExclude(Number(msg.id)), [msg.id, onToggleExclude])
+    const handleToggleRaw = useCallback(() => onToggleRawView(Number(msg.id)), [msg.id, onToggleRawView])
     const handleCopyThinkText = useCallback(() => copyToClipboard(thinkContent), [copyToClipboard, thinkContent])
 
     const MessageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -565,11 +565,11 @@ const ChatMessageItem = React.memo(
 ChatMessageItem.displayName = 'ChatMessageItem'
 
 interface ChatMessagesProps {
-  chatId: string | null
+  chatId: number | null
   messages: Message[]
   isLoading: boolean
-  excludedMessageIds?: string[]
-  onToggleExclude: (messageId: string) => void
+  excludedMessageIds?: number[]
+  onToggleExclude: (messageId: number) => void
 }
 
 export function ChatMessages({
@@ -580,10 +580,10 @@ export function ChatMessages({
   onToggleExclude
 }: ChatMessagesProps) {
   const { copyToClipboard } = useCopyClipboard()
-  const excludedSet = useMemo(() => new Set(excludedMessageIds), [excludedMessageIds])
+  const excludedSet = useMemo(() => new Set<number>(excludedMessageIds), [excludedMessageIds])
   const deleteMessageMutation = useDeleteMessage()
   const forkChatMutation = useForkChatFromMessage()
-  const [rawMessageIds, setRawMessageIds] = useState<Set<string>>(new Set())
+  const [rawMessageIds, setRawMessageIds] = useState<Set<number>>(new Set())
   const autoScrollEnabled = useSelectSetting('autoScrollEnabled')
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -611,7 +611,7 @@ export function ChatMessages({
   )
 
   const handleForkFromMessage = useCallback(
-    async (messageId: string) => {
+    async (messageId: number) => {
       if (!chatId) {
         toast.error('Cannot fork: Chat ID not available.')
         return
@@ -632,10 +632,10 @@ export function ChatMessages({
   )
 
   const handleDeleteMessage = useCallback(
-    async (messageId: string) => {
+    async (messageId: number) => {
       if (!window.confirm('Are you sure you want to delete this message?')) return
       try {
-        await deleteMessageMutation.mutateAsync({ chatId: chatId ?? '', messageId })
+        await deleteMessageMutation.mutateAsync({ chatId: chatId ?? -1, messageId })
         toast.success('Message deleted successfully')
       } catch (error) {
         console.error('Error deleting message:', error)
@@ -645,9 +645,9 @@ export function ChatMessages({
     [deleteMessageMutation]
   )
 
-  const handleToggleRawView = useCallback((messageId: string) => {
+  const handleToggleRawView = useCallback((messageId: number) => {
     setRawMessageIds((prev) => {
-      const newSet = new Set(prev)
+      const newSet = new Set<number>(prev)
       if (newSet.has(messageId)) newSet.delete(messageId)
       else newSet.add(messageId)
       return newSet
@@ -655,7 +655,7 @@ export function ChatMessages({
   }, [])
 
   const handleToggleExclude = useCallback(
-    (messageId: string) => {
+    (messageId: number) => {
       onToggleExclude(messageId)
     },
     [onToggleExclude]
@@ -701,8 +701,8 @@ export function ChatMessages({
           <ChatMessageItem
             key={msg.id || `temp-${Math.random()}`}
             msg={msg}
-            excluded={excludedSet.has(msg.id!)}
-            rawView={rawMessageIds.has(msg.id!)}
+            excluded={excludedSet.has(Number(msg.id))}
+            rawView={rawMessageIds.has(Number(msg.id))}
             onCopyMessage={handleCopyMessage}
             onForkMessage={handleForkFromMessage}
             onDeleteMessage={handleDeleteMessage}
@@ -718,7 +718,7 @@ export function ChatMessages({
 
 export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [activeChatId, setActiveChatId] = useActiveChatId()
-  const [editingChatId, setEditingChatId] = useState<string | null>(null)
+  const [editingChatId, setEditingChatId] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [visibleCount, setVisibleCount] = useState(50)
 
@@ -732,7 +732,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   const sortedChats = useMemo(() => {
     const chats: Chat[] = chatsData?.data ?? []
-    return [...chats].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return [...chats].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
   }, [chatsData])
 
   const visibleChats = useMemo(() => sortedChats.slice(0, visibleCount), [sortedChats, visibleCount])
@@ -760,7 +760,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, [createChatMutation, setActiveChatId, onClose])
 
   const handleDeleteChat = useCallback(
-    async (chatId: string, e: React.MouseEvent) => {
+    async (chatId: number, e: React.MouseEvent) => {
       e.stopPropagation()
       if (!window.confirm('Are you sure you want to delete this chat?')) return
       try {
@@ -788,7 +788,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, [])
 
   const handleUpdateChat = useCallback(
-    async (chatId: string) => {
+    async (chatId: number) => {
       if (!editingTitle.trim()) {
         toast.error('Chat title cannot be empty.')
         return
@@ -815,7 +815,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, [])
 
   const handleSelectChat = useCallback(
-    (chatId: string) => {
+    (chatId: number) => {
       if (!editingChatId) {
         setActiveChatId(chatId)
         onClose()
@@ -834,7 +834,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     }
   }, [activeChatId, visibleChats])
 
-  const handleKeyDownEdit = (e: React.KeyboardEvent<HTMLInputElement>, chatId: string) => {
+  const handleKeyDownEdit = (e: React.KeyboardEvent<HTMLInputElement>, chatId: number) => {
     if (e.key === 'Enter') {
       handleUpdateChat(chatId)
     } else if (e.key === 'Escape') {
@@ -992,14 +992,22 @@ function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const [activeChatId] = useActiveChatId()
-  const { settings: modelSettings } = useChatModelParams()
+  const { settings: modelSettings, setModel } = useChatModelParams()
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
   const { data: modelsData } = useGetModels(provider as APIProviders)
   const { copyToClipboard } = useCopyClipboard()
-  const [excludedMessageIds, setExcludedMessageIds] = useState<string[]>([])
+  const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 
   const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null)
+
+  useEffect(() => {
+    if (activeChatId && !model) {
+      const newModelSelection = modelsData?.data[0].id ?? ''
+      console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
+      setModel(newModelSelection)
+    }
+  }, [activeChatId, setModel])
 
   const {
     messages,
@@ -1009,7 +1017,8 @@ function ChatPage() {
     setInput,
     sendMessage
   } = useAIChat({
-    chatId: activeChatId || '',
+    // ai sdk uses strings for chatId
+    chatId: activeChatId ?? -1,
     provider,
     model: model ?? '',
     systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.'
@@ -1019,7 +1028,7 @@ function ChatPage() {
     return modelsData?.data?.find((m) => m.id === model)?.name ?? model ?? '...'
   }, [modelsData, model])
 
-  const handleToggleExclude = useCallback((messageId: string) => {
+  const handleToggleExclude = useCallback((messageId: number) => {
     setExcludedMessageIds((prev) =>
       prev.includes(messageId) ? prev.filter((id) => id !== messageId) : [...prev, messageId]
     )

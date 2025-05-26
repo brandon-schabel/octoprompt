@@ -32,6 +32,9 @@ import type {
   PostApiTicketsData,
   PostApiTicketsResponse,
   PostApiTicketsError,
+  GetApiTicketsBulkTasksData,
+  GetApiTicketsBulkTasksResponse,
+  GetApiTicketsBulkTasksError,
   DeleteApiTicketsByTicketIdData,
   DeleteApiTicketsByTicketIdResponse,
   DeleteApiTicketsByTicketIdError,
@@ -65,21 +68,18 @@ import type {
   PostApiTicketsByTicketIdTasksData,
   PostApiTicketsByTicketIdTasksResponse,
   PostApiTicketsByTicketIdTasksError,
-  DeleteApiTicketsByTicketIdTasksByTaskIdData,
-  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
-  DeleteApiTicketsByTicketIdTasksByTaskIdError,
-  PatchApiTicketsByTicketIdTasksByTaskIdData,
-  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
-  PatchApiTicketsByTicketIdTasksByTaskIdError,
   PatchApiTicketsByTicketIdTasksReorderData,
   PatchApiTicketsByTicketIdTasksReorderResponse,
   PatchApiTicketsByTicketIdTasksReorderError,
   PostApiTicketsByTicketIdAutoGenerateTasksData,
   PostApiTicketsByTicketIdAutoGenerateTasksResponse,
   PostApiTicketsByTicketIdAutoGenerateTasksError,
-  GetApiTicketsBulkTasksData,
-  GetApiTicketsBulkTasksResponse,
-  GetApiTicketsBulkTasksError,
+  DeleteApiTicketsByTicketIdTasksByTaskIdData,
+  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
+  DeleteApiTicketsByTicketIdTasksByTaskIdError,
+  PatchApiTicketsByTicketIdTasksByTaskIdData,
+  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
+  PatchApiTicketsByTicketIdTasksByTaskIdError,
   GetApiProjectsData,
   GetApiProjectsResponse,
   GetApiProjectsError,
@@ -207,13 +207,7 @@ import type {
   PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError,
   DeleteApiAgentCoderRunsByAgentJobIdData,
   DeleteApiAgentCoderRunsByAgentJobIdResponse,
-  DeleteApiAgentCoderRunsByAgentJobIdError,
-  DeleteApiKvData,
-  DeleteApiKvResponse,
-  DeleteApiKvError,
-  GetApiKvData,
-  GetApiKvResponse,
-  GetApiKvError
+  DeleteApiAgentCoderRunsByAgentJobIdError
 } from './types.gen'
 import { client as _heyApiClient } from './client.gen'
 
@@ -398,6 +392,22 @@ export const postApiTickets = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options?.headers
     }
+  })
+}
+
+/**
+ * Get tasks for multiple tickets
+ */
+export const getApiTicketsBulkTasks = <ThrowOnError extends boolean = false>(
+  options: Options<GetApiTicketsBulkTasksData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).get<
+    GetApiTicketsBulkTasksResponse,
+    GetApiTicketsBulkTasksError,
+    ThrowOnError
+  >({
+    url: '/api/tickets/bulk-tasks',
+    ...options
   })
 }
 
@@ -598,42 +608,6 @@ export const postApiTicketsByTicketIdTasks = <ThrowOnError extends boolean = fal
 }
 
 /**
- * Delete a task
- */
-export const deleteApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
-) => {
-  return (options.client ?? _heyApiClient).delete<
-    DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
-    DeleteApiTicketsByTicketIdTasksByTaskIdError,
-    ThrowOnError
-  >({
-    url: '/api/tickets/{ticketId}/tasks/{taskId}',
-    ...options
-  })
-}
-
-/**
- * Update a task
- */
-export const patchApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
-  options: Options<PatchApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
-) => {
-  return (options.client ?? _heyApiClient).patch<
-    PatchApiTicketsByTicketIdTasksByTaskIdResponse,
-    PatchApiTicketsByTicketIdTasksByTaskIdError,
-    ThrowOnError
-  >({
-    url: '/api/tickets/{ticketId}/tasks/{taskId}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers
-    }
-  })
-}
-
-/**
  * Reorder tasks within a ticket
  */
 export const patchApiTicketsByTicketIdTasksReorder = <ThrowOnError extends boolean = false>(
@@ -670,18 +644,38 @@ export const postApiTicketsByTicketIdAutoGenerateTasks = <ThrowOnError extends b
 }
 
 /**
- * Get tasks for multiple tickets
+ * Delete a task
  */
-export const getApiTicketsBulkTasks = <ThrowOnError extends boolean = false>(
-  options: Options<GetApiTicketsBulkTasksData, ThrowOnError>
+export const deleteApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).get<
-    GetApiTicketsBulkTasksResponse,
-    GetApiTicketsBulkTasksError,
+  return (options.client ?? _heyApiClient).delete<
+    DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
+    DeleteApiTicketsByTicketIdTasksByTaskIdError,
     ThrowOnError
   >({
-    url: '/api/tickets/bulk-tasks',
+    url: '/api/tickets/{ticketId}/tasks/{taskId}',
     ...options
+  })
+}
+
+/**
+ * Update a task
+ */
+export const patchApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
+  options: Options<PatchApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).patch<
+    PatchApiTicketsByTicketIdTasksByTaskIdResponse,
+    PatchApiTicketsByTicketIdTasksByTaskIdError,
+    ThrowOnError
+  >({
+    url: '/api/tickets/{ticketId}/tasks/{taskId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers
+    }
   })
 }
 
@@ -1382,26 +1376,6 @@ export const deleteApiAgentCoderRunsByAgentJobId = <ThrowOnError extends boolean
     ThrowOnError
   >({
     url: '/api/agent-coder/runs/{agentJobId}',
-    ...options
-  })
-}
-
-/**
- * Delete a key-value pair from the KV store
- */
-export const deleteApiKv = <ThrowOnError extends boolean = false>(options: Options<DeleteApiKvData, ThrowOnError>) => {
-  return (options.client ?? _heyApiClient).delete<DeleteApiKvResponse, DeleteApiKvError, ThrowOnError>({
-    url: '/api/kv',
-    ...options
-  })
-}
-
-/**
- * Get a value from the KV store by key
- */
-export const getApiKv = <ThrowOnError extends boolean = false>(options: Options<GetApiKvData, ThrowOnError>) => {
-  return (options.client ?? _heyApiClient).get<GetApiKvResponse, GetApiKvError, ThrowOnError>({
-    url: '/api/kv',
     ...options
   })
 }

@@ -146,12 +146,12 @@ const deleteProviderKeyRoute = createRoute({
 export const providerKeyRoutes = new OpenAPIHono()
   .openapi(createProviderKeyRoute, async (c) => {
     const body = c.req.valid('json')
-    const newKey = await providerKeyService.createKey(body)
+    const newKey = await providerKeyService.createKey({ ...body, isDefault: false })
     return c.json({ success: true, data: newKey } satisfies z.infer<typeof ProviderKeyResponseSchema>, 201)
   })
 
   .openapi(listProviderKeysRoute, async (c) => {
-    const keys = await providerKeyService.listKeys()
+    const keys = await providerKeyService.listKeysCensoredKeys()
     return c.json({ success: true, data: keys } satisfies z.infer<typeof ProviderKeyListResponseSchema>, 200)
   })
 

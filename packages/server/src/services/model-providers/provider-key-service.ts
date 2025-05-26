@@ -8,6 +8,7 @@ import {
 } from 'shared/src/schemas/provider-key.schemas'
 import { ApiError } from 'shared'
 import { z } from '@hono/zod-openapi'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 // The mapDbRowToProviderKey function is no longer needed as we store objects directly
 // that should conform to the ProviderKey schema.
@@ -21,17 +22,27 @@ export type CreateProviderKeyInput = z.infer<typeof CreateProviderKeyInputSchema
 export function createProviderKeyService() {
   async function createKey(data: CreateProviderKeyInput): Promise<ProviderKey> {
     const allKeys = await providerKeyStorage.readProviderKeys()
-    const now = new Date().toISOString()
+    const now = normalizeToUnixMs(new Date())
     const id = providerKeyStorage.generateId()
+
+    // If this new key is set to default, unset other defaults for the same provider
+    if (data.isDefault) {
+      for (const keyId in allKeys) {
+        if (allKeys[keyId].provider === data.provider && allKeys[keyId].isDefault) {
+          allKeys[keyId].isDefault = false
+          allKeys[keyId].updated = now
+        }
+      }
+    }
 
     const newKeyData: ProviderKey = {
       id,
+      name: data.name, // Added name
       provider: data.provider,
       key: data.key, // Stored in plaintext initially
-      createdAt: now,
-      updatedAt: now,
-      // Add any other fields from ProviderKeySchema with defaults if necessary
-      // e.g., metadata: data.metadata ?? null, if metadata was part of your schema
+      isDefault: data.isDefault ?? false, // Added isDefault, defaults to false
+      created: now,
+      updated: now,
     }
 
     // Validate the new key data against the schema before saving
@@ -57,23 +68,45 @@ export function createProviderKeyService() {
     return validatedNewKey
   }
 
-  async function listKeys(): Promise<ProviderKey[]> {
+  async function listKeysCensoredKeys(): Promise<ProviderKey[]> {
     const allKeys = await providerKeyStorage.readProviderKeys()
-    const keyList = Object.values(allKeys)
+    const keyList = Object.values(allKeys).map(key => {
+      // Mask the API key
+      const maskedKey = key.key.length > 8
+        ? `${key.key.substring(0, 4)}****${key.key.substring(key.key.length - 4)}`
+        : '********'; // Or handle very short keys differently
+      return { ...key, key: maskedKey };
+    });
 
-    // Sort by provider, then by createdAt descending (as in original SQL)
+    // Sort by provider, then by created descending (as in original SQL)
     keyList.sort((a, b) => {
       if (a.provider < b.provider) return -1
       if (a.provider > b.provider) return 1
-      // Assuming createdAt are valid ISO strings, direct string comparison for descending order
-      if (a.createdAt > b.createdAt) return -1
-      if (a.createdAt < b.createdAt) return 1
+      // Assuming created are valid ISO strings, direct string comparison for descending order
+      if (a.created > b.created) return -1
+      if (a.created < b.created) return 1
       return 0
     })
     return keyList
   }
 
-  async function getKeyById(id: string): Promise<ProviderKey | null> {
+  async function listKeysUncensored(): Promise<ProviderKey[]> {
+    const allKeys = await providerKeyStorage.readProviderKeys()
+    const keyList = Object.values(allKeys)
+
+    // Sort by provider, then by created descending (as in original SQL)
+    keyList.sort((a, b) => {
+      if (a.provider < b.provider) return -1
+      if (a.provider > b.provider) return 1
+      // Assuming created are valid ISO strings, direct string comparison for descending order
+      if (a.created > b.created) return -1
+      if (a.created < b.created) return 1
+      return 0
+    })
+    return keyList
+  }
+
+  async function getKeyById(id: number): Promise<ProviderKey | null> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const foundKeyData = allKeys[id]
 
@@ -102,7 +135,7 @@ export function createProviderKeyService() {
     return foundKeyData
   }
 
-  async function updateKey(id: string, data: UpdateProviderKeyInput): Promise<ProviderKey> {
+  async function updateKey(id: number, data: UpdateProviderKeyInput): Promise<ProviderKey> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const existingKey = allKeys[id]
 
@@ -110,12 +143,25 @@ export function createProviderKeyService() {
       throw new ApiError(404, `Provider key with ID ${id} not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE')
     }
 
+    const now = normalizeToUnixMs(new Date());
+
+    // If this key is being set to default, unset other defaults for the same provider
+    if (data.isDefault === true && existingKey.provider === (data.provider ?? existingKey.provider)) {
+      for (const keyId in allKeys) {
+        if (allKeys[keyId].id !== id && allKeys[keyId].provider === (data.provider ?? existingKey.provider) && allKeys[keyId].isDefault) {
+          allKeys[keyId].isDefault = false;
+          allKeys[keyId].updated = now;
+        }
+      }
+    }
+
     const updatedKeyData: ProviderKey = {
       ...existingKey,
+      name: data.name ?? existingKey.name,
       provider: data.provider ?? existingKey.provider,
       key: data.key ?? existingKey.key, // Stored in plaintext initially
-      updatedAt: new Date().toISOString()
-      // any other updatable fields
+      isDefault: data.isDefault !== undefined ? data.isDefault : existingKey.isDefault,
+      updated: now
     }
 
     const parseResult = ProviderKeySchema.safeParse(updatedKeyData)
@@ -135,7 +181,7 @@ export function createProviderKeyService() {
     return validatedUpdatedKey
   }
 
-  async function deleteKey(id: string): Promise<boolean> {
+  async function deleteKey(id: number): Promise<boolean> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     if (!allKeys[id]) {
       return false // Key not found, nothing to delete
@@ -148,7 +194,8 @@ export function createProviderKeyService() {
 
   return {
     createKey,
-    listKeys,
+    listKeysCensoredKeys,
+    listKeysUncensored,
     getKeyById,
     updateKey,
     deleteKey

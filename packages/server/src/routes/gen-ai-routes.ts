@@ -294,7 +294,7 @@ export const genAiRoutes = new OpenAPIHono()
   .openapi(getModelsRoute, async (c) => {
     const { provider } = c.req.valid('query')
 
-    const keys: ProviderKey[] = await providerKeyService.listKeys()
+    const keys: ProviderKey[] = await providerKeyService.listKeysUncensored()
     const providerKeysConfig: ProviderKeysConfig = keys.reduce((acc, key) => {
       acc[`${key.provider}Key`] = key.key
       return acc

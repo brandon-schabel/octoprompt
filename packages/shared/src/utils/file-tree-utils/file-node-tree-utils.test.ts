@@ -152,7 +152,7 @@ describe('toggleFile', () => {
   const mockBuildTsconfigAliasMap = () => ({})
 
   test('should toggle file selection', () => {
-    const selectedFiles: string[] = []
+    const selectedFiles: number[] = []
     const result = toggleFile(
       '1',
       selectedFiles,
@@ -165,7 +165,7 @@ describe('toggleFile', () => {
   })
 
   test('should handle import resolution', () => {
-    const selectedFiles: string[] = []
+    const selectedFiles: number[] = []
     const result = toggleFile('1', selectedFiles, true, mockFileMap, mockGetRecursiveImports, mockBuildTsconfigAliasMap)
     expect(result).toEqual(['1', '2'])
   })

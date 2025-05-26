@@ -1,8 +1,4 @@
-# app/schemas/common_schemas.py
-# - Converted ApiErrorResponseSchema, OperationSuccessResponseSchema
-# - Converted MessageRoleEnum
-# - Used Pydantic BaseModel, Field, and Python's Enum
-# - Matched OpenAPI examples and descriptions
+
 
 from typing import Optional, Dict, Any, Literal as TypingLiteral
 from pydantic import BaseModel, Field
@@ -27,9 +23,7 @@ class OperationSuccessResponse(BaseModel):
     class Config:
         openapi_extra = {"title": "OperationSuccessResponse"}
 
-class MessageRoleEnum(str, Enum): # Inheriting from str makes it JSON serializable as a string directly
+class MessageRoleEnum(str, Enum):
     ASSISTANT = 'assistant'
     USER = 'user'
     SYSTEM = 'system'
-    # TOOL = 'tool'
-    # FUNCTION = 'function'

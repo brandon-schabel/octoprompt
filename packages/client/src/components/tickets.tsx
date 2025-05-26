@@ -18,7 +18,7 @@ export function TicketsPage() {
   // const projectActiveTabId = projectTabState?.id ?? null;
   const projectId = projectTabState?.selectedProjectId ?? null
 
-  const { data: projectData, isPending: isProjectLoading, error: projectError } = useGetProject(projectId ?? '')
+  const { data: projectData, isPending: isProjectLoading, error: projectError } = useGetProject(projectId ?? -1)
 
   // Because TicketListPanel calls onSelectTicket with a TicketWithTasks,
   // this callback must accept a TicketWithTasks too.
@@ -59,7 +59,7 @@ export function TicketsPage() {
       </div>
 
       <div className='flex-1'>
-        <TicketListPanel projectTabId={projectActiveTabId || 'defaultTab'} onSelectTicket={handleSelectTicket} />
+        <TicketListPanel projectTabId={projectActiveTabId || -1} onSelectTicket={handleSelectTicket} />
       </div>
 
       <TicketDialog

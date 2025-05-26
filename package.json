@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
@@ -10,7 +10,8 @@
     "stop": "bun run scripts/stop.ts",
     "build-binaries": "bun run scripts/build-binaries.ts",
     "format": "prettier --write .",
-    "test": "bun test",
+    "test:server": "cd packages/server && bun run test",
+    "test:shared": "cd packages/shared && bun run test",
     "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
     "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
     "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts"

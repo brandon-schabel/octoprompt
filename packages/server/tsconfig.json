@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
@@ -15,11 +17,17 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-    "types": ["bun-types"],
+    "types": [
+      "bun-types"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@db": ["./src/utils/database.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@db": [
+        "./src/utils/database.ts"
+      ]
     }
   },
   "include": [
@@ -27,5 +35,8 @@
     "src/middleware.ts",
     "server.ts",
     "build.ts",
+    "../api-tests/src/tests",
+    "src/utils/parse-timestamp.test.ts",
+    "src/utils/parse-timestamp.ts",
   ]
 }

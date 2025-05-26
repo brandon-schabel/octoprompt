@@ -1,10 +1,6 @@
 OLLAMA_BASE_URL = "http://localhost:11434"
 LMSTUDIO_BASE_URL = "http://localhost:1234"
 
-# Recent changes:
-# - Initial migration of model default configurations from TypeScript.
-# - Represented configurations as Python dictionaries.
-# - Kept provider names as strings.
 
 from typing import TypedDict, Literal
 
@@ -28,7 +24,7 @@ LOW_MODEL_CONFIG: ModelOptions = {
     "topP": 0,
     "topK": 0,
     "provider": "openrouter",
-    "model": "google/gemini-flash-1.5" # Updated model
+    "model": "google/gemini-2.5-flash-preview"
 }
 
 MEDIUM_MODEL_CONFIG: ModelOptions = {
@@ -39,7 +35,7 @@ MEDIUM_MODEL_CONFIG: ModelOptions = {
     "topP": 0,
     "topK": 0,
     "provider": "openrouter",
-    "model": "google/gemini-flash-1.5" # Updated model
+    "model": "google/gemini-2.5-flash-preview"
 }
 
 HIGH_MODEL_CONFIG: ModelOptions = {
@@ -50,11 +46,10 @@ HIGH_MODEL_CONFIG: ModelOptions = {
     "topP": 0,
     "topK": 0,
     "provider": "openrouter",
-    "model": "google/gemini-pro-1.5" # Updated model
+    "model": "google/gemini-2.5-pro-preview"
 }
 
-# PLANNING_MODEL_CONFIG uses a more capable model, diverging from HIGH_MODEL_CONFIG's model
 PLANNING_MODEL_CONFIG: ModelOptions = {
-    **HIGH_MODEL_CONFIG, # Spread operator equivalent
-    "model": "google/gemini-pro-1.5" # Explicitly set for planning, even if same as HIGH for now
+    **HIGH_MODEL_CONFIG,
+    "model": "google/gemini-2.5-pro-preview"
 }

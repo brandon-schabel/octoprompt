@@ -2,7 +2,6 @@ import { serve } from 'bun'
 import { join } from 'node:path'
 import { statSync } from 'node:fs'
 import { app } from './src/app'
-import { initKvStore } from '@/services/kv-service'
 
 import { listProjects } from '@/services/project-service'
 import { isDevEnv, SERVER_PORT } from '@/constants/server-config'
@@ -25,9 +24,6 @@ type ServerConfig = {
 type Server = ReturnType<typeof serve>
 
 export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {}): Promise<Server> {
-  // initialized the kv store by reading the data/kv-store.json file
-  await initKvStore()
-
   const server = serve({
     idleTimeout: 255,
     port,
@@ -44,12 +40,9 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
         return upgraded ? undefined : new Response('WebSocket upgrade failed', { status: 400 })
       }
 
+      // FIXED: Always return API responses for API routes, regardless of status code
       if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')) {
-        // Handle the request using Hono
-        const honoResponse = await app.fetch(req)
-        if (honoResponse && honoResponse.status !== 404) {
-          return honoResponse
-        }
+        return await app.fetch(req)
       }
 
       const isStaticFile = /\.(js|css|html|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(url.pathname)
@@ -57,14 +50,14 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
         return serveStatic(url.pathname)
       }
 
-      // Handle all other routes with Hono
+      // For non-API routes, try Hono first, then fallback to frontend
       const honoResponse = await app.fetch(req)
       if (honoResponse && honoResponse.status !== 404) {
         return honoResponse
       }
 
       const frontendEnpoints = ['/projects', '/chat']
-      if (honoResponse?.status === 404 && frontendEnpoints.includes(url.pathname)) {
+      if (frontendEnpoints.includes(url.pathname)) {
         return serveStatic('index.html')
       }
 

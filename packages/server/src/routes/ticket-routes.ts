@@ -19,161 +19,41 @@ import {
   listTicketsWithTasks,
   suggestFilesForTicket
 } from '../services/ticket-service'
-import { ticketsApiValidation } from 'shared/src/schemas/ticket.schemas'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import {
+  BulkTasksResponseSchema,
+  createTaskSchema,
+  CreateTicketBodySchema,
+  createTicketSchema,
+  LinkedFilesResponseSchema,
+  linkFilesSchema,
+  ProjectIdParamsSchema,
+  reorderTasksSchema,
+  StatusQuerySchema,
+  SuggestedFilesResponseSchema,
+  SuggestedTasksResponseSchema,
+  suggestTasksSchema,
+  TaskListResponseSchema,
+  TaskResponseSchema,
+  TaskSchema,
+  TicketIdParamsSchema,
+  TaskIdParamsSchema,
+  TicketTaskIdParamsSchema,
+  TicketListResponseSchema,
+  TicketResponseSchema,
+  TicketSchema,
+  TicketWithTaskCountListResponseSchema,
+  TicketWithTaskCountSchema,
+  TicketWithTasksListResponseSchema,
+  TicketWithTasksSchema,
+  updateTaskSchema,
+  UpdateTicketBodySchema,
+  updateTicketSchema
+} from 'shared/src/schemas/ticket.schemas'
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
-const TicketSchema = z
-  .object({
-    id: z.string().openapi({ description: 'Unique ticket identifier' }),
-    projectId: z.string().openapi({ description: 'Project this ticket belongs to' }),
-    title: z.string().openapi({ description: 'Ticket title' }),
-    overview: z.string().openapi({ description: 'Ticket description' }),
-    status: z.enum(['open', 'in_progress', 'closed']).openapi({ description: 'Current ticket status' }),
-    priority: z.enum(['low', 'normal', 'high']).openapi({ description: 'Ticket priority' }),
-    suggestedFileIds: z.string().openapi({ description: 'JSON string of suggested file IDs' }),
-    createdAt: z.string().datetime().openapi({ description: 'Creation timestamp' }),
-    updatedAt: z.string().datetime().openapi({ description: 'Last update timestamp' })
-  })
-  .openapi('Ticket')
-
-const TaskSchema = z
-  .object({
-    id: z.string().openapi({ description: 'Unique task identifier' }),
-    ticketId: z.string().openapi({ description: 'Ticket this task belongs to' }),
-    content: z.string().openapi({ description: 'Task content/description' }),
-    done: z.boolean().openapi({ description: 'Whether the task is completed' }),
-    orderIndex: z.number().openapi({ description: 'Task order within the ticket' }),
-    createdAt: z.string().datetime().openapi({ description: 'Creation timestamp' }),
-    updatedAt: z.string().datetime().openapi({ description: 'Last update timestamp' })
-  })
-  .openapi('Task')
-
-const TicketResponseSchema = z
-  .object({
-    success: z.literal(true),
-    ticket: TicketSchema
-  })
-  .openapi('TicketResponse')
-
-const TicketListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    tickets: z.array(TicketSchema)
-  })
-  .openapi('TicketListResponse')
-
-const TaskResponseSchema = z
-  .object({
-    success: z.literal(true),
-    task: TaskSchema
-  })
-  .openapi('TaskResponse')
-
-const TaskListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    tasks: z.array(TaskSchema)
-  })
-  .openapi('TaskListResponse')
-
-const LinkedFilesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    linkedFiles: z.array(
-      z.object({
-        ticketId: z.string(),
-        fileId: z.string()
-      })
-    )
-  })
-  .openapi('LinkedFilesResponse')
-
-const SuggestedTasksResponseSchema = z
-  .object({
-    success: z.literal(true),
-    suggestedTasks: z.array(z.string())
-  })
-  .openapi('SuggestedTasksResponse')
-
-const SuggestedFilesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    recommendedFileIds: z.array(z.string()),
-    combinedSummaries: z.string().optional(),
-    message: z.string().optional()
-  })
-  .openapi('SuggestedFilesResponse')
-
-const TicketWithTaskCountSchema = z
-  .object({
-    ticket: TicketSchema,
-    taskCount: z.number(),
-    completedTaskCount: z.number()
-  })
-  .openapi('TicketWithTaskCount')
-
-const TicketWithTaskCountListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    ticketsWithCount: z.array(TicketWithTaskCountSchema)
-  })
-  .openapi('TicketWithTaskCountListResponse')
-
-const TicketWithTasksSchema = z
-  .object({
-    ticket: TicketSchema,
-    tasks: z.array(TaskSchema)
-  })
-  .openapi('TicketWithTasks')
-
-const TicketWithTasksListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    ticketsWithTasks: z.array(TicketWithTasksSchema)
-  })
-  .openapi('TicketWithTasksListResponse')
-
-const BulkTasksResponseSchema = z
-  .object({
-    success: z.literal(true),
-    tasks: z.record(z.string(), z.array(TaskSchema))
-  })
-  .openapi('BulkTasksResponse')
-
-const CreateTicketBodySchema = ticketsApiValidation.create.body.openapi('CreateTicketBody')
-const UpdateTicketBodySchema = ticketsApiValidation.update.body.openapi('UpdateTicketBody')
-const TicketIdParamsSchema = z
-  .object({
-    ticketId: z.string().openapi({
-      param: { name: 'ticketId', in: 'path' },
-      description: 'Ticket identifier'
-    })
-  })
-  .openapi('TicketIdParams')
-
-const ProjectIdParamsSchema = z
-  .object({
-    projectId: z.string().openapi({
-      param: { name: 'projectId', in: 'path' },
-      description: 'Project identifier'
-    })
-  })
-  .openapi('ProjectIdParams')
-
-const StatusQuerySchema = z
-  .object({
-    status: z
-      .string()
-      .optional()
-      .openapi({
-        param: { name: 'status', in: 'query' },
-        description: 'Filter tickets by status'
-      })
-  })
-  .openapi('StatusQuery')
-
-const LinkFilesBodySchema = ticketsApiValidation.linkFiles.body.openapi('LinkFilesBody')
-const SuggestTasksBodySchema = ticketsApiValidation.suggestTasks.body.openapi('SuggestTasksBody')
+const LinkFilesBodySchema = linkFilesSchema
+const SuggestTasksBodySchema = suggestTasksSchema
 const SuggestFilesBodySchema = z
   .object({
     extraUserInput: z.string().optional().openapi({
@@ -182,25 +62,11 @@ const SuggestFilesBodySchema = z
   })
   .openapi('SuggestFilesBody')
 
-const CreateTaskBodySchema = ticketsApiValidation.createTask.body.openapi('CreateTaskBody')
-const UpdateTaskBodySchema = ticketsApiValidation.updateTask.body.openapi('UpdateTaskBody')
-const TaskIdParamsSchema = z
-  .object({
-    taskId: z.string().openapi({
-      param: { name: 'taskId', in: 'path' },
-      description: 'Task identifier'
-    })
-  })
-  .openapi('TaskIdParams')
+const CreateTaskBodySchema = createTaskSchema
+const UpdateTaskBodySchema = updateTaskSchema
 
-const TicketTaskIdParamsSchema = z
-  .object({
-    ticketId: TicketIdParamsSchema.shape.ticketId,
-    taskId: TaskIdParamsSchema.shape.taskId
-  })
-  .openapi('TicketTaskIdParams')
-
-const ReorderTasksBodySchema = ticketsApiValidation.reorderTasks.body.openapi('ReorderTasksBody')
+// FIXED: Use shared parameter schemas instead of local definitions
+const ReorderTasksBodySchema = reorderTasksSchema
 const BulkTasksQuerySchema = z
   .object({
     ids: z
@@ -227,6 +93,24 @@ const createTicketRoute = createRoute({
       description: 'Ticket created successfully'
     },
     400: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+// IMPORTANT: Put specific routes BEFORE parameterized routes to avoid conflicts
+const getTasksForTicketsRoute = createRoute({
+  method: 'get',
+  path: '/api/tickets/bulk-tasks',
+  tags: ['Tickets', 'Tasks'],
+  summary: 'Get tasks for multiple tickets',
+  request: {
+    query: BulkTasksQuerySchema
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: BulkTasksResponseSchema } },
+      description: 'Tasks retrieved successfully'
+    },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
 })
@@ -431,40 +315,7 @@ const getTasksRoute = createRoute({
   }
 })
 
-const updateTaskRoute = createRoute({
-  method: 'patch',
-  path: '/api/tickets/{ticketId}/tasks/{taskId}',
-  tags: ['Tickets', 'Tasks'],
-  summary: 'Update a task',
-  request: {
-    params: TicketTaskIdParamsSchema,
-    body: { content: { 'application/json': { schema: UpdateTaskBodySchema } } }
-  },
-  responses: {
-    200: { content: { 'application/json': { schema: TaskResponseSchema } }, description: 'Task updated successfully' },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Task not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
-})
-
-const deleteTaskRoute = createRoute({
-  method: 'delete',
-  path: '/api/tickets/{ticketId}/tasks/{taskId}',
-  tags: ['Tickets', 'Tasks'],
-  summary: 'Delete a task',
-  request: {
-    params: TicketTaskIdParamsSchema
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-      description: 'Task deleted successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Task not found' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
-})
-
+// CRITICAL: Reorder route must come BEFORE parameterized {taskId} routes
 const reorderTasksRoute = createRoute({
   method: 'patch',
   path: '/api/tickets/{ticketId}/tasks/reorder',
@@ -502,19 +353,38 @@ const autoGenerateTasksRoute = createRoute({
   }
 })
 
-const getTasksForTicketsRoute = createRoute({
-  method: 'get',
-  path: '/api/tickets/bulk-tasks',
+// FIXED: Use proper parameter schema with both ticketId and taskId
+const updateTaskRoute = createRoute({
+  method: 'patch',
+  path: '/api/tickets/{ticketId}/tasks/{taskId}',
   tags: ['Tickets', 'Tasks'],
-  summary: 'Get tasks for multiple tickets',
+  summary: 'Update a task',
   request: {
-    query: BulkTasksQuerySchema
+    params: TicketTaskIdParamsSchema, // FIXED: Use the combined schema
+    body: { content: { 'application/json': { schema: UpdateTaskBodySchema } } }
+  },
+  responses: {
+    200: { content: { 'application/json': { schema: TaskResponseSchema } }, description: 'Task updated successfully' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Task not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+// FIXED: Use proper parameter schema with both ticketId and taskId
+const deleteTaskRoute = createRoute({
+  method: 'delete',
+  path: '/api/tickets/{ticketId}/tasks/{taskId}',
+  tags: ['Tickets', 'Tasks'],
+  summary: 'Delete a task',
+  request: {
+    params: TicketTaskIdParamsSchema // FIXED: Use the combined schema
   },
   responses: {
     200: {
-      content: { 'application/json': { schema: BulkTasksResponseSchema } },
-      description: 'Tasks retrieved successfully'
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Task deleted successfully'
     },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Task not found' },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
 })
@@ -522,19 +392,9 @@ const getTasksForTicketsRoute = createRoute({
 const formatTicketData = (ticket: any): z.infer<typeof TicketSchema> => {
   const dataToValidate = {
     ...ticket,
-
-    createdAt: ticket.createdAt instanceof Date ? ticket.createdAt.toISOString() : ticket.createdAt,
-    updatedAt: ticket.updatedAt instanceof Date ? ticket.updatedAt.toISOString() : ticket.updatedAt,
-
-    suggestedFileIds:
-      typeof ticket.suggestedFileIds === 'string'
-        ? ticket.suggestedFileIds
-        : JSON.stringify(ticket.suggestedFileIds || []),
-
-    status: ticket.status,
-    priority: ticket.priority
+    created: normalizeToUnixMs(ticket.created),
+    updated: normalizeToUnixMs(ticket.updated),
   }
-
   return TicketSchema.parse(dataToValidate)
 }
 
@@ -542,22 +402,36 @@ const formatTaskData = (task: any): z.infer<typeof TaskSchema> => {
   const dataToValidate = {
     ...task,
     done: Boolean(task.done),
-
-    createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
-    updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
+    created: normalizeToUnixMs(task.created),
+    updated: normalizeToUnixMs(task.updated),
     orderIndex: Number(task.orderIndex)
   }
   return TaskSchema.parse(dataToValidate)
 }
 
 export const ticketRoutes = new OpenAPIHono()
-
+  // Add the missing createTicketRoute first
   .openapi(createTicketRoute, async (c) => {
     const body = c.req.valid('json')
-    const ticket = await createTicket(body)
-    const formattedTicket = formatTicketData(ticket)
+    const newTicket = await createTicket(body)
+    const formattedTicket = formatTicketData(newTicket)
     const payload: z.infer<typeof TicketResponseSchema> = { success: true, ticket: formattedTicket }
     return c.json(payload, 201)
+  })
+
+  // CRITICAL: Handle bulk-tasks BEFORE the generic {ticketId} route to avoid route conflicts
+  .openapi(getTasksForTicketsRoute, async (c) => {
+    const { ids } = c.req.valid('query')
+    const numericIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+    const tasksByTicketId = await getTasksForTickets(numericIds)
+
+    const formattedTasks: Record<string, z.infer<typeof TaskSchema>[]> = {}
+    for (const [ticketId, tasks] of Object.entries(tasksByTicketId)) {
+      formattedTasks[ticketId] = tasks.map(formatTaskData)
+    }
+
+    const payload: z.infer<typeof BulkTasksResponseSchema> = { success: true, tasks: formattedTasks }
+    return c.json(payload, 200)
   })
   .openapi(getTicketRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
@@ -680,23 +554,8 @@ export const ticketRoutes = new OpenAPIHono()
     const payload: z.infer<typeof TaskListResponseSchema> = { success: true, tasks: formattedTasks }
     return c.json(payload, 200)
   })
-  .openapi(updateTaskRoute, async (c) => {
-    const { ticketId, taskId } = c.req.valid('param')
-    const body = c.req.valid('json')
-    const updatedTask = await updateTask(ticketId, taskId, body)
-    const formattedTask = formatTaskData(updatedTask)
-    const payload: z.infer<typeof TaskResponseSchema> = { success: true, task: formattedTask }
-    return c.json(payload, 200)
-  })
-  .openapi(deleteTaskRoute, async (c) => {
-    const { ticketId, taskId } = c.req.valid('param')
-    await deleteTask(ticketId, taskId)
-    const payload: z.infer<typeof OperationSuccessResponseSchema> = {
-      success: true,
-      message: 'Task deleted successfully'
-    }
-    return c.json(payload, 200)
-  })
+
+  // CRITICAL: Put reorder route BEFORE parameterized {taskId} routes to avoid route conflicts
   .openapi(reorderTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { tasks } = c.req.valid('json')
@@ -712,16 +571,22 @@ export const ticketRoutes = new OpenAPIHono()
     const payload: z.infer<typeof TaskListResponseSchema> = { success: true, tasks: formattedTasks }
     return c.json(payload, 200)
   })
-  .openapi(getTasksForTicketsRoute, async (c) => {
-    const { ids } = c.req.valid('query')
-    const tasksByTicketId = await getTasksForTickets(ids)
 
-    const formattedTasks: Record<string, z.infer<typeof TaskSchema>[]> = {}
-    for (const [ticketId, tasks] of Object.entries(tasksByTicketId)) {
-      formattedTasks[ticketId] = tasks.map(formatTaskData)
+  .openapi(updateTaskRoute, async (c) => {
+    const { ticketId, taskId } = c.req.valid('param') // FIXED: Now properly extracts both parameters
+    const body = c.req.valid('json')
+    const updatedTask = await updateTask(ticketId, taskId, body)
+    const formattedTask = formatTaskData(updatedTask)
+    const payload: z.infer<typeof TaskResponseSchema> = { success: true, task: formattedTask }
+    return c.json(payload, 200)
+  })
+  .openapi(deleteTaskRoute, async (c) => {
+    const { ticketId, taskId } = c.req.valid('param') // FIXED: Now properly extracts both parameters
+    await deleteTask(ticketId, taskId)
+    const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+      success: true,
+      message: 'Task deleted successfully'
     }
-
-    const payload: z.infer<typeof BulkTasksResponseSchema> = { success: true, tasks: formattedTasks }
     return c.json(payload, 200)
   })
 

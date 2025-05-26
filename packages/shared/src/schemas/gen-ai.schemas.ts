@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas' // Assume this exists
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs' // Assume this exists
 import { ProjectFileSchema } from './project.schemas'
-import { AgentTaskPlanSchema } from './agent-coder.schemas'
+import { unixTSArraySchemaSpec } from './schema-utils'
 
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z
@@ -218,11 +218,11 @@ export const AiGenerateStructuredResponseSchema = z
 export const FilenameSuggestionSchema = z
   .object({
     suggestions: z
-      .array(z.string())
+      .array(z.number())
       .length(5)
       .openapi({
-        description: 'An array of exactly 5 suggested filenames.',
-        example: ['stringUtils.ts', 'textHelpers.ts', 'stringManipulators.ts', 'strUtils.ts', 'stringLib.ts']
+        description: 'An array of exactly 5 suggested file ids (unix timestamp in milliseconds)',
+        example: [1, 2, 3, 4, 5]
       }),
     reasoning: z.string().optional().openapi({
       description: 'Brief reasoning for the suggestions.',
@@ -298,7 +298,7 @@ export const RemoveSummariesResponseSchema = z
 export const SuggestFilesResponseSchema = z
   .object({
     success: z.literal(true),
-    recommendedFileIds: z.array(z.string().min(1)).openapi({ example: ['file_1a2b3c4d', 'file_i9j0k1l2'] })
+    recommendedFileIds: unixTSArraySchemaSpec
   })
   .openapi('SuggestFilesResponse')
 
