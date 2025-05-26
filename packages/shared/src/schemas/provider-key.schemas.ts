@@ -20,14 +20,18 @@ export type APIProviders = z.infer<typeof providerSchema>
 export const ProviderKeySchema = z
   .object({
     id: unixTSSchemaSpec,
+    name: z.string().openapi({ example: 'My OpenAI Key', description: 'User-defined name for the key' }),
     provider: z
       .string()
       .openapi({ example: 'openai', description: 'AI Provider identifier (e.g., openai, anthropic)' }),
     // NOTE: We intentionally DO NOT include the 'key' field in the response schema for security.
     // The full key might be returned on creation/update but shouldn't be listed.
+    // This comment is misleading if ProviderKeySchema is used for full details.
+    // For list views, the key will be masked by the service.
     key: z
       .string()
       .openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' }),
+    isDefault: z.boolean().default(false).openapi({ example: false, description: 'Whether this key is the default for its provider' }),
     created: z.number().openapi({ example: 1716537600000, description: 'Creation timestamp (ISO 8601)' }),
     updated: z.number().openapi({ example: 1716537600000, description: 'Last update timestamp (ISO 8601)' })
   })
@@ -47,18 +51,22 @@ export const ProviderKeyWithSecretSchema = ProviderKeySchema.extend({
 
 export const CreateProviderKeyBodySchema = z
   .object({
+    name: z.string().min(1).openapi({ example: 'My OpenAI Key' }),
     provider: z.string().min(1).openapi({ example: 'anthropic' }),
-    key: z.string().min(1).openapi({ example: 'sk-ant-xxxxxxxx' })
+    key: z.string().min(1).openapi({ example: 'sk-ant-xxxxxxxx' }),
+    isDefault: z.boolean().optional().openapi({ example: true })
   })
   .openapi('CreateProviderKeyRequestBody')
 
 export const UpdateProviderKeyBodySchema = z
   .object({
+    name: z.string().min(1).optional().openapi({ example: 'My Updated Key Name' }),
     provider: z.string().min(1).optional().openapi({ example: 'google' }),
-    key: z.string().min(1).optional().openapi({ example: 'aizaxxxxxxxxxxxxx' })
+    key: z.string().min(1).optional().openapi({ example: 'aizaxxxxxxxxxxxxx' }),
+    isDefault: z.boolean().optional().openapi({ example: false })
   })
-  .refine((data) => data.provider || data.key, {
-    message: 'At least one of provider or key must be provided for update'
+  .refine((data) => data.name || data.provider || data.key || typeof data.isDefault === 'boolean', {
+    message: 'At least one field (name, provider, key, isDefault) must be provided for update'
   })
   .openapi('UpdateProviderKeyRequestBody')
 

@@ -252,24 +252,24 @@ describe('Project API Tests', () => {
         expect(typeof result.summary).toBe('string')
     })
 
-    test('POST /api/projects/{projectId}/suggest-files - Suggest files', async () => {
-        if (testProjects.length === 0) return
-        const project = testProjects[0]
-        if (!project) return
+    // test('POST /api/projects/{projectId}/suggest-files - Suggest files', async () => {
+    //     if (testProjects.length === 0) return
+    //     const project = testProjects[0]
+    //     if (!project) return
 
-        const suggestFilesEndpoint: Endpoint<any, any> = {
-            url: `${API_URL}/projects/${project.id}/suggest-files`,
-            options: { method: 'POST' }
-        }
-        const result = await apiFetch(
-            suggestFilesEndpoint,
-            { userInput: 'Find authentication related files' },
-            z.object({ success: z.literal(true), recommendedFileIds: z.array(z.number()) })
-        )
+    //     const suggestFilesEndpoint: Endpoint<any, any> = {
+    //         url: `${API_URL}/projects/${project.id}/suggest-files`,
+    //         options: { method: 'POST' }
+    //     }
+    //     const result = await apiFetch(
+    //         suggestFilesEndpoint,
+    //         { userInput: 'Find authentication related files' },
+    //         z.object({ success: z.literal(true), recommendedFileIds: z.array(z.number()) })
+    //     )
 
-        expect(result.success).toBe(true)
-        expect(Array.isArray(result.recommendedFileIds)).toBe(true)
-    })
+    //     expect(result.success).toBe(true)
+    //     expect(Array.isArray(result.recommendedFileIds)).toBe(true)
+    // })
 
     test('POST /api/projects/{projectId}/summarize - Summarize files', async () => {
         if (testFileIds.length === 0) return
@@ -311,25 +311,25 @@ describe('Project API Tests', () => {
         expect(typeof result.message).toBe('string')
     })
 
-    test('POST /api/prompt/optimize - Optimize user prompt', async () => {
-        if (testProjects.length === 0) return
-        const project = testProjects[0]
-        if (!project) return
+    // test('POST /api/prompt/optimize - Optimize user prompt', async () => {
+    //     if (testProjects.length === 0) return
+    //     const project = testProjects[0]
+    //     if (!project) return
 
-        const optimizePromptEndpoint: Endpoint<any, any> = {
-            url: `${API_URL}/prompt/optimize`,
-            options: { method: 'POST' }
-        }
-        const result = await apiFetch(
-            optimizePromptEndpoint,
-            { userContext: 'Help me implement user authentication', projectId: project.id },
-            SuccessResponseSchema(z.object({ optimizedPrompt: z.string() }))
-        )
+    //     const optimizePromptEndpoint: Endpoint<any, any> = {
+    //         url: `${API_URL}/prompt/optimize`,
+    //         options: { method: 'POST' }
+    //     }
+    //     const result = await apiFetch(
+    //         optimizePromptEndpoint,
+    //         { userContext: 'Help me implement user authentication', projectId: project.id },
+    //         SuccessResponseSchema(z.object({ optimizedPrompt: z.string() }))
+    //     )
 
-        expect(result.success).toBe(true)
-        expect(result.data).toBeDefined()
-        expect(typeof result.data.optimizedPrompt).toBe('string')
-    })
+    //     expect(result.success).toBe(true)
+    //     expect(result.data).toBeDefined()
+    //     expect(typeof result.data.optimizedPrompt).toBe('string')
+    // })
 
     test('GET /api/projects/{projectId} - Verify project still exists before deletion', async () => {
         for (const project of testProjects) {

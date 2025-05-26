@@ -15,7 +15,22 @@ export async function apiFetch<Req, Res>(
         body: body ? JSON.stringify(body) : undefined,
     });
 
-    const data = await response.json();
+    let data;
+    try {
+        data = await response.json();
+    } catch (error) {
+        const responseText = await response.text();
+        console.error('Failed to parse JSON response. Raw response text:', responseText);
+        const errorInfo = {
+            url: endpoint.url,
+            method: endpoint.options?.method || 'GET',
+            status: response.status,
+            responseText: responseText,
+            body: body
+        };
+        console.error('API request failed (JSON parsing error):', errorInfo);
+        throw new Error(`API request failed: ${response.status} - Failed to parse JSON. Response text: ${responseText}`);
+    }
 
     // Check for API error responses
     // @ts-ignore

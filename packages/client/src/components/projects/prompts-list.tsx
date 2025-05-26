@@ -22,6 +22,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { PromptSchema } from 'shared/src/schemas/prompt.schemas'
 
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import {
@@ -41,7 +42,6 @@ import { Badge } from '@ui'
 import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
 import { ProjectFile, Prompt } from '@/generated'
-import { promptSchema } from 'shared/src/utils/projects-utils'
 import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -111,8 +111,8 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   const [allPromptsDialogOpen, setAllPromptsDialogOpen] = useState(false)
 
   // Our form for creating/updating
-  const promptForm = useForm<z.infer<typeof promptSchema>>({
-    resolver: zodResolver(promptSchema),
+  const promptForm = useForm<z.infer<typeof PromptSchema>>({
+    resolver: zodResolver(PromptSchema),
     defaultValues: {
       name: '',
       content: ''
@@ -122,7 +122,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   // ---------------
   // Create prompt
   // ---------------
-  const handleCreatePrompt = async (values: z.infer<typeof promptSchema>) => {
+  const handleCreatePrompt = async (values: z.infer<typeof PromptSchema>) => {
     if (!selectedProjectId) return
     const result = await createPromptMutation.mutateAsync({
       // projectId: selectedProjectId,

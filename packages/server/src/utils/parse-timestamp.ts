@@ -34,10 +34,7 @@ export const parseTimestamp = (tsValue: unknown): Date | null => {
   return null
 }
 
-export const normalizeToIsoString = (tsValue: unknown): string | null => {
-  const date = parseTimestamp(tsValue)
-  return date ? date.toISOString() : null
-}
+
 
 /**
  * Safely parses a timestamp value and converts it to a Unix timestamp in milliseconds.

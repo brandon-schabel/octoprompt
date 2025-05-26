@@ -45,19 +45,19 @@ describe('Provider Key API Tests', () => {
             {
                 name: 'Test OpenAI Key',
                 provider: 'openai' as const,
-                apiKey: 'sk-test-1234567890abcdef',
+                key: 'sk-test-1234567890abcdef',
                 isDefault: true
             },
             {
                 name: 'Test Anthropic Key',
                 provider: 'anthropic' as const,
-                apiKey: 'sk-ant-test-1234567890',
+                key: 'sk-ant-test-1234567890',
                 isDefault: false
             },
             {
                 name: 'Test Groq Key',
                 provider: 'groq' as const,
-                apiKey: 'gsk_test_1234567890',
+                key: 'gsk_test_1234567890',
                 isDefault: false
             }
         ]
@@ -74,7 +74,7 @@ describe('Provider Key API Tests', () => {
             expect(result.data).toBeDefined()
             expect(result.data.name).toBe(data.name)
             expect(result.data.provider).toBe(data.provider)
-            expect(result.data.apiKey).toBe(data.apiKey) // Full key returned on create
+            expect(result.data.key).toBe(data.key)
             expect(result.data.isDefault).toBe(data.isDefault)
             expect(result.data.id).toBeTypeOf('number')
             expect(result.data.created).toBeNumber()
@@ -94,11 +94,12 @@ describe('Provider Key API Tests', () => {
         for (const testKey of testKeys) {
             const found = result.data.find((k: ProviderKey) => k.id === testKey.id)
             expect(found).toBeDefined()
-            expect(found.name).toBe(testKey.name)
-            expect(found.provider).toBe(testKey.provider)
-            // Verify that API keys are masked in list view
-            expect(found.apiKey).toMatch(/^.{4}\*+.{4}$/) // Format: first4****last4
-            expect(found.isDefault).toBe(testKey.isDefault)
+            if (found) {
+                expect(found.name).toBe(testKey.name)
+                expect(found.provider).toBe(testKey.provider)
+                expect(found.key).toMatch(/^.{4}\*+.{4}$/)
+                expect(found.isDefault).toBe(testKey.isDefault)
+            }
         }
     })
 
@@ -111,7 +112,7 @@ describe('Provider Key API Tests', () => {
             expect(result.data.id).toBe(key.id)
             expect(result.data.name).toBe(key.name)
             expect(result.data.provider).toBe(key.provider)
-            expect(result.data.apiKey).toBe(key.apiKey) // Full key when fetching individual
+            expect(result.data.key).toBe(key.key)
             expect(result.data.isDefault).toBe(key.isDefault)
         }
     })
@@ -119,7 +120,7 @@ describe('Provider Key API Tests', () => {
     test('PATCH /api/keys/{keyId} - Update provider keys', async () => {
         const updates = [
             { name: 'Updated OpenAI Key', isDefault: false },
-            { apiKey: 'sk-ant-updated-test-key' },
+            { key: 'sk-ant-updated-test-key' },
             { name: 'Updated Groq Key Name', isDefault: true }
         ]
 
@@ -138,7 +139,7 @@ describe('Provider Key API Tests', () => {
 
             expect(result.success).toBe(true)
             if (update.name) expect(result.data.name).toBe(update.name)
-            if (update.apiKey) expect(result.data.apiKey).toBe(update.apiKey)
+            if ('key' in update && update.key) expect(result.data.key).toBe(update.key)
             if (update.isDefault !== undefined) expect(result.data.isDefault).toBe(update.isDefault)
             expect(result.data.updated).toBeGreaterThan(key.updated)
 
@@ -154,9 +155,11 @@ describe('Provider Key API Tests', () => {
         for (const key of testKeys) {
             const found = result.data.find((k: ProviderKey) => k.id === key.id)
             expect(found).toBeDefined()
-            expect(found.name).toBe(key.name)
-            expect(found.provider).toBe(key.provider)
-            expect(found.isDefault).toBe(key.isDefault)
+            if (found) {
+                expect(found.name).toBe(key.name)
+                expect(found.provider).toBe(key.provider)
+                expect(found.isDefault).toBe(key.isDefault)
+            }
         }
     })
 
@@ -168,12 +171,13 @@ describe('Provider Key API Tests', () => {
         // Group by provider and check that only one is default per provider
         const keysByProvider = result.data.reduce((acc: Record<string, ProviderKey[]>, key: ProviderKey) => {
             if (!acc[key.provider]) acc[key.provider] = []
-            acc[key.provider].push(key)
+            const currentProviderKeys = acc[key.provider]
+            if (currentProviderKeys) currentProviderKeys.push(key)
             return acc
-        }, {})
+        }, {} as Record<string, ProviderKey[]>)
 
-        for (const [provider, keys] of Object.entries(keysByProvider)) {
-            const defaultKeys = keys.filter(k => k.isDefault)
+        for (const [_provider, keys] of Object.entries(keysByProvider) as [string, ProviderKey[]][]) {
+            const defaultKeys = keys.filter((k: ProviderKey) => k.isDefault)
             expect(defaultKeys.length).toBeLessThanOrEqual(1)
         }
     })

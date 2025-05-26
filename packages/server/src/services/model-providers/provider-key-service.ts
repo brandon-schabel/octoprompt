@@ -25,14 +25,24 @@ export function createProviderKeyService() {
     const now = normalizeToUnixMs(new Date())
     const id = providerKeyStorage.generateId()
 
+    // If this new key is set to default, unset other defaults for the same provider
+    if (data.isDefault) {
+      for (const keyId in allKeys) {
+        if (allKeys[keyId].provider === data.provider && allKeys[keyId].isDefault) {
+          allKeys[keyId].isDefault = false
+          allKeys[keyId].updated = now
+        }
+      }
+    }
+
     const newKeyData: ProviderKey = {
       id,
+      name: data.name, // Added name
       provider: data.provider,
       key: data.key, // Stored in plaintext initially
+      isDefault: data.isDefault ?? false, // Added isDefault, defaults to false
       created: now,
       updated: now,
-      // Add any other fields from ProviderKeySchema with defaults if necessary
-      // e.g., metadata: data.metadata ?? null, if metadata was part of your schema
     }
 
     // Validate the new key data against the schema before saving
@@ -60,7 +70,13 @@ export function createProviderKeyService() {
 
   async function listKeys(): Promise<ProviderKey[]> {
     const allKeys = await providerKeyStorage.readProviderKeys()
-    const keyList = Object.values(allKeys)
+    const keyList = Object.values(allKeys).map(key => {
+      // Mask the API key
+      const maskedKey = key.key.length > 8
+        ? `${key.key.substring(0, 4)}****${key.key.substring(key.key.length - 4)}`
+        : '********'; // Or handle very short keys differently
+      return { ...key, key: maskedKey };
+    });
 
     // Sort by provider, then by created descending (as in original SQL)
     keyList.sort((a, b) => {
@@ -111,12 +127,25 @@ export function createProviderKeyService() {
       throw new ApiError(404, `Provider key with ID ${id} not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE')
     }
 
+    const now = normalizeToUnixMs(new Date());
+
+    // If this key is being set to default, unset other defaults for the same provider
+    if (data.isDefault === true && existingKey.provider === (data.provider ?? existingKey.provider)) {
+      for (const keyId in allKeys) {
+        if (allKeys[keyId].id !== id && allKeys[keyId].provider === (data.provider ?? existingKey.provider) && allKeys[keyId].isDefault) {
+          allKeys[keyId].isDefault = false;
+          allKeys[keyId].updated = now;
+        }
+      }
+    }
+
     const updatedKeyData: ProviderKey = {
       ...existingKey,
+      name: data.name ?? existingKey.name,
       provider: data.provider ?? existingKey.provider,
       key: data.key ?? existingKey.key, // Stored in plaintext initially
-      updated: normalizeToUnixMs(new Date())
-      // any other updatable fields
+      isDefault: data.isDefault !== undefined ? data.isDefault : existingKey.isDefault,
+      updated: now
     }
 
     const parseResult = ProviderKeySchema.safeParse(updatedKeyData)

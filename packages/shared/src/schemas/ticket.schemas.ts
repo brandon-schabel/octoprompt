@@ -1,14 +1,31 @@
 import { z } from 'zod'
 import { unixTSArrayOptionalSchemaSpec, unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
-// Zod schemas for the 'tickets' table
+// Fix the core issue: ensure suggestedFileIds is handled consistently across all schemas
+
+export const suggestedFileIdsSchema = z.preprocess((val) => {
+  if (val === undefined || val === null) return []
+  if (Array.isArray(val)) return val
+  if (typeof val === 'string') {
+    if (val === '' || val.trim() === '') return []
+    try {
+      const parsed = JSON.parse(val)
+      return Array.isArray(parsed) ? parsed : []
+    } catch (e) {
+      return []
+    }
+  }
+  return []
+}, z.array(z.number())).default([])
+
+// Base schemas for storage/service layer
 export const TicketCreateSchema = z.object({
   projectId: unixTSSchemaSpec,
   title: z.string(),
   overview: z.string().optional(),
   status: z.string().optional(),
   priority: z.string().optional(),
-  suggestedFileIds: z.array(z.number()).optional()
+  suggestedFileIds: suggestedFileIdsSchema
 })
 
 export const TicketReadSchema = z.object({
@@ -16,9 +33,9 @@ export const TicketReadSchema = z.object({
   id: unixTSSchemaSpec,
   title: z.string(),
   overview: z.string(),
-  status: z.string(),
-  priority: z.string(),
-  suggestedFileIds: z.array(z.number()).optional(),
+  status: z.enum(['open', 'in_progress', 'done', 'closed']),
+  priority: z.enum(['low', 'normal', 'high']),
+  suggestedFileIds: suggestedFileIdsSchema,
   created: unixTSSchemaSpec,
   updated: unixTSSchemaSpec,
 })
@@ -28,15 +45,10 @@ export const TicketUpdateSchema = z.object({
   overview: z.string().optional(),
   status: z.string().optional(),
   priority: z.string().optional(),
-  suggestedFileIds: unixTSArrayOptionalSchemaSpec
+  suggestedFileIds: suggestedFileIdsSchema
 })
 
-export const TicketFileReadSchema = z.object({
-  ticketId: unixTSSchemaSpec,
-  fileId: unixTSSchemaSpec,
-})
-
-// Zod schemas for the 'ticket_tasks' table
+// Task schemas
 export const TicketTaskCreateSchema = z.object({
   ticketId: unixTSSchemaSpec,
   content: z.string(),
@@ -58,12 +70,17 @@ export const TicketTaskReadSchema = z.object({
   updated: unixTSSchemaSpec,
 })
 
+// File association schema
+export const TicketFileReadSchema = z.object({
+  ticketId: unixTSSchemaSpec,
+  fileId: unixTSSchemaSpec,
+})
+
+// Task suggestions schema
 export const TaskSuggestionsZodSchema = z.object({
   tasks: z.array(
     z.object({
       title: z.string(),
-
-      // Additioanl fields that aren't being used yet
       description: z.string().optional(),
       files: z
         .array(
@@ -84,27 +101,26 @@ export const createTicketSchema = z.object({
   overview: z.string().default(''),
   status: z.enum(['open', 'in_progress', 'closed']).default('open'),
   priority: z.enum(['low', 'normal', 'high']).default('normal'),
-  suggestedFileIds: z.array(z.number()).optional()
+  suggestedFileIds: suggestedFileIdsSchema
 })
 
 export const updateTicketSchema = z.object({
   title: z.string().min(1).optional(),
   overview: z.string().optional(),
-  status: z.enum(['open', 'in_progress', 'closed']).optional(),
+  status: z.enum(['open', 'in_progress', 'done', 'closed']).optional(),
   priority: z.enum(['low', 'normal', 'high']).optional(),
-  suggestedFileIds: unixTSArrayOptionalSchemaSpec
+  suggestedFileIds: suggestedFileIdsSchema
 })
 
+// Other request schemas
 export const linkFilesSchema = z.object({
   fileIds: unixTSArraySchemaSpec
 })
 
 export const suggestTasksSchema = z.object({
-  // e.g. user might pass some instructions or acceptance criteria
   userContext: z.string().optional()
 })
 
-/** TASK-related validations below **/
 export const createTaskSchema = z.object({
   content: z.string().min(1)
 })
@@ -117,19 +133,17 @@ export const updateTaskSchema = z.object({
 export const reorderTasksSchema = z.object({
   tasks: z.array(
     z.object({
-      taskId: z.number(),
+      taskId: unixTSSchemaSpec, // FIXED: Use unixTSSchemaSpec instead of z.number()
       orderIndex: z.number().min(0)
     })
   )
 })
 
 export const updateSuggestedFilesSchema = z.object({
-  suggestedFileIds: unixTSArraySchemaSpec
+  suggestedFileIds: suggestedFileIdsSchema
 })
 
-
-
-
+// Parameter schemas - FIXED: All ID parameters now use unixTSSchemaSpec
 export const updateTicketParamsSchema = z.object({
   ticketId: unixTSSchemaSpec,
 })
@@ -156,26 +170,28 @@ export const createTaskParamsSchema = z.object({
 
 export const updateTaskParamsSchema = z.object({
   ticketId: unixTSSchemaSpec,
+  taskId: unixTSSchemaSpec, // ADDED: Missing taskId parameter
 })
 
 export const deleteTaskParamsSchema = z.object({
   ticketId: unixTSSchemaSpec,
+  taskId: unixTSSchemaSpec, // ADDED: Missing taskId parameter  
 })
 
 export const reorderTasksParamsSchema = z.object({
   ticketId: unixTSSchemaSpec,
 })
 
-
+// API response schemas - FIXED preprocessing to handle storage format properly
 export const TicketSchema = z
   .object({
     id: unixTSSchemaSpec,
     projectId: unixTSSchemaSpec,
     title: z.string().openapi({ description: 'Ticket title' }),
     overview: z.string().openapi({ description: 'Ticket description' }),
-    status: z.enum(['open', 'in_progress', 'closed']).openapi({ description: 'Current ticket status' }),
-    priority: z.enum(['low', 'normal', 'high']).openapi({ description: 'Ticket priority' }),
-    suggestedFileIds: z.array(z.number()).openapi({ description: 'JSON string of suggested file IDs' }),
+    status: z.enum(['open', 'in_progress', 'done', 'closed']).openapi({ description: 'Current ticket status' }),
+    priority: z.enum(['low', 'normal', 'high']),
+    suggestedFileIds: suggestedFileIdsSchema,
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec,
   })
@@ -193,6 +209,7 @@ export const TaskSchema = z
   })
   .openapi('Task')
 
+// Response wrapper schemas
 export const TicketResponseSchema = z
   .object({
     success: z.literal(true),
@@ -285,17 +302,48 @@ export const BulkTasksResponseSchema = z
   })
   .openapi('BulkTasksResponse')
 
+// OpenAPI body schemas
 export const CreateTicketBodySchema = createTicketSchema.openapi('CreateTicketBody')
 export const UpdateTicketBodySchema = updateTicketSchema.openapi('UpdateTicketBody')
+
+// Parameter schemas for OpenAPI - FIXED: Use proper unixTSSchemaSpec for all IDs
 export const TicketIdParamsSchema = z
   .object({
-    ticketId: unixTSSchemaSpec,
+    ticketId: unixTSSchemaSpec.openapi({
+      param: { name: 'ticketId', in: 'path' },
+      description: 'Ticket identifier'
+    }),
   })
   .openapi('TicketIdParams')
 
+export const TaskIdParamsSchema = z
+  .object({
+    taskId: unixTSSchemaSpec.openapi({
+      param: { name: 'taskId', in: 'path' },
+      description: 'Task identifier'
+    }),
+  })
+  .openapi('TaskIdParams')
+
+export const TicketTaskIdParamsSchema = z
+  .object({
+    ticketId: unixTSSchemaSpec.openapi({
+      param: { name: 'ticketId', in: 'path' },
+      description: 'Ticket identifier'
+    }),
+    taskId: unixTSSchemaSpec.openapi({
+      param: { name: 'taskId', in: 'path' },
+      description: 'Task identifier'
+    }),
+  })
+  .openapi('TicketTaskIdParams')
+
 export const ProjectIdParamsSchema = z
   .object({
-    projectId: unixTSSchemaSpec,
+    projectId: unixTSSchemaSpec.openapi({
+      param: { name: 'projectId', in: 'path' },
+      description: 'Project identifier'
+    }),
   })
   .openapi('ProjectIdParams')
 
@@ -311,8 +359,7 @@ export const StatusQuerySchema = z
   })
   .openapi('StatusQuery')
 
-
-
+// Type exports
 export type CreateTicketBody = z.infer<typeof createTicketSchema>
 export type UpdateTicketBody = z.infer<typeof updateTicketSchema>
 export type CreateTaskBody = z.infer<typeof createTaskSchema>
@@ -323,5 +370,3 @@ export type ReorderTasksBody = z.infer<typeof reorderTasksSchema>
 export type Ticket = z.infer<typeof TicketReadSchema>
 export type TicketTask = z.infer<typeof TicketTaskReadSchema>
 export type TicketFile = z.infer<typeof TicketFileReadSchema>
-
-

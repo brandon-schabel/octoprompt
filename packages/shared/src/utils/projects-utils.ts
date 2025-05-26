@@ -5,17 +5,6 @@ import type { ProjectFile } from '../schemas/project.schemas'
 import type { ProjectFileMap } from '../schemas/project.schemas'
 import type { PromptListResponse } from '../schemas/prompt.schemas'
 
-export const projectSchema = z.object({
-  name: z.string().min(1, 'Project name is required'),
-  description: z.string().optional(),
-  path: z.string().min(1, 'Project path is required')
-})
-
-export const promptSchema = z.object({
-  name: z.string().min(1, 'Prompt name is required'),
-  content: z.string().min(1, 'Prompt content is required')
-})
-
 export function buildPromptContent({
   fileMap,
   promptData,
@@ -87,7 +76,7 @@ export function calculateTotalTokens(
   return total
 }
 
-export const buildFileTree = (files: ProjectFile[]) => {
+export const buildFileTree = (files: ProjectFile[]): Record<string, any> => {
   const root: Record<string, any> = {}
   for (const f of files) {
     const parts = f.path.split('/')

@@ -15,12 +15,12 @@ const TICKET_DATA_SUBDIR = 'ticket_data'
 
 // --- Schemas for Storage (matching on-disk structure) ---
 
-// All ticket metadata
+// All ticket metadata - keys are stored as strings in JSON
 export const TicketsStorageSchema = z.record(z.string(), TicketReadSchema)
 export type TicketsStorage = z.infer<typeof TicketsStorageSchema>
 
-// Tasks for a single ticket, keyed by taskId
-export const TicketTasksStorageSchema = z.record(z.number(), TicketTaskReadSchema)
+// Tasks for a single ticket - keys are stored as strings in JSON but represent numeric IDs
+export const TicketTasksStorageSchema = z.record(z.string(), TicketTaskReadSchema)
 export type TicketTasksStorage = z.infer<typeof TicketTasksStorageSchema>
 
 // File links for a single ticket (array of objects)
@@ -75,7 +75,7 @@ async function readValidatedJson<T extends ZodTypeAny>(
         await ensureDirExists(path.dirname(filePath))
         const fileContent = await fs.readFile(filePath, 'utf-8')
         const jsonData = JSON.parse(fileContent)
-        // Assuming schema handles date parsing from ISO strings if target type is Date
+
         const validationResult = await schema.safeParseAsync(jsonData)
 
         if (!validationResult.success) {
