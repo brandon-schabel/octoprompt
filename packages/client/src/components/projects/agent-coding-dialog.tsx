@@ -768,9 +768,11 @@ export function AgentCoderControlDialog({
                     <div className='flex flex-col flex-1 min-h-0'>
                       <div className='flex-1 overflow-y-auto p-2'>
                         <h3 className='text-sm font-medium mb-2'>Proposed Changes</h3>
-                        {(agentRunData.updatedFiles as UpdatedFileData[]).map((file) => (
-                          <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} />
-                        ))}
+                        {agentRunData.updatedFiles.map((fileId) => {
+                          const file = projectFileMap.get(fileId as number)
+                          if (!file) return null
+                          return <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} />
+                        })}
                       </div>
                       <div className='shrink-0 mt-auto pt-2 border-t p-2'>
                         <Button

@@ -198,9 +198,9 @@ export const useCreateProjectTab = () => {
       // ...currentProjectTabData,
       ...payload,
       selectedProjectId: currentSelectedProjectId ?? null,
-      editProjectId: null,
+      editProjectId: -1,
       promptDialogOpen: false,
-      editPromptId: null,
+      editPromptId: -1,
       fileSearch: '',
       selectedFiles: [],
       selectedPrompts: [],
@@ -208,7 +208,7 @@ export const useCreateProjectTab = () => {
       sortOrder: 0,
       displayName: `Tab ${Date.now()}`,
       searchByContent: false,
-      ticketId: null,
+      ticketId: -1,
       contextLimit: 64000,
     };
 

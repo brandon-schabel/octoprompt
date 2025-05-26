@@ -72,7 +72,7 @@ export function useUpdateKey() {
   return useMutation<ProviderKey, PatchApiKeysByKeyIdError, { keyId: number; data: UpdateKeyInput }>({
     mutationFn: async (vars: { keyId: number; data: UpdateKeyInput }) => {
       const opts: Options<PatchApiKeysByKeyIdData> = {
-        path: { keyId: vars.keyId.toString() },
+        path: { keyId: vars.keyId },
         body: vars.data
       }
       const response: ProviderKeyResponse = await mutationOptions.mutationFn!(opts)
@@ -96,7 +96,7 @@ export function useDeleteKey() {
 
   return useMutation<DeleteApiKeysByKeyIdResponse, DeleteApiKeysByKeyIdError, number>({
     mutationFn: (keyId: number) => {
-      const opts: Options<DeleteApiKeysByKeyIdData> = { path: { keyId: keyId.toString() } }
+      const opts: Options<DeleteApiKeysByKeyIdData> = { path: { keyId } }
       return mutationOptions.mutationFn!(opts)
     },
     onSuccess: (data, variables, context) => {

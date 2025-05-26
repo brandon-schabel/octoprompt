@@ -11,7 +11,7 @@ import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-list'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useCreatePrompt, useUpdatePrompt, useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
-import { buildPromptContent, calculateTotalTokens, promptSchema } from 'shared/src/utils/projects-utils'
+import { buildPromptContent, calculateTotalTokens } from 'shared/src/utils/projects-utils'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { OctoTooltip } from '@/components/octo/octo-tooltip'
@@ -35,6 +35,7 @@ import { AgentCoderControlDialog } from './agent-coding-dialog'
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { PromptSchema } from 'shared/src/schemas/prompt.schemas'
 
 export type PromptOverviewPanelRef = {
   focusPrompt: () => void
@@ -78,8 +79,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // React Hook Form for creating/editing prompts
-    const promptForm = useForm<z.infer<typeof promptSchema>>({
-      resolver: zodResolver(promptSchema),
+    const promptForm = useForm<z.infer<typeof PromptSchema>>({
+      resolver: zodResolver(PromptSchema),
       defaultValues: { name: '', content: '' }
     })
 
@@ -170,7 +171,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       }
     }, [editPromptId, promptData?.data])
 
-    async function handleCreatePrompt(values: z.infer<typeof promptSchema>) {
+    async function handleCreatePrompt(values: z.infer<typeof PromptSchema>) {
       if (!activeProjectTabState?.selectedProjectId) return
       const result = await createPromptMutation.mutateAsync({
         body: {

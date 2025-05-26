@@ -32,6 +32,9 @@ import type {
   PostApiTicketsData,
   PostApiTicketsResponse,
   PostApiTicketsError,
+  GetApiTicketsBulkTasksData,
+  GetApiTicketsBulkTasksResponse,
+  GetApiTicketsBulkTasksError,
   DeleteApiTicketsByTicketIdData,
   DeleteApiTicketsByTicketIdResponse,
   DeleteApiTicketsByTicketIdError,
@@ -65,21 +68,18 @@ import type {
   PostApiTicketsByTicketIdTasksData,
   PostApiTicketsByTicketIdTasksResponse,
   PostApiTicketsByTicketIdTasksError,
-  DeleteApiTicketsByTicketIdTasksByTaskIdData,
-  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
-  DeleteApiTicketsByTicketIdTasksByTaskIdError,
-  PatchApiTicketsByTicketIdTasksByTaskIdData,
-  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
-  PatchApiTicketsByTicketIdTasksByTaskIdError,
   PatchApiTicketsByTicketIdTasksReorderData,
   PatchApiTicketsByTicketIdTasksReorderResponse,
   PatchApiTicketsByTicketIdTasksReorderError,
   PostApiTicketsByTicketIdAutoGenerateTasksData,
   PostApiTicketsByTicketIdAutoGenerateTasksResponse,
   PostApiTicketsByTicketIdAutoGenerateTasksError,
-  GetApiTicketsBulkTasksData,
-  GetApiTicketsBulkTasksResponse,
-  GetApiTicketsBulkTasksError,
+  DeleteApiTicketsByTicketIdTasksByTaskIdData,
+  DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
+  DeleteApiTicketsByTicketIdTasksByTaskIdError,
+  PatchApiTicketsByTicketIdTasksByTaskIdData,
+  PatchApiTicketsByTicketIdTasksByTaskIdResponse,
+  PatchApiTicketsByTicketIdTasksByTaskIdError,
   GetApiProjectsData,
   GetApiProjectsResponse,
   GetApiProjectsError,
@@ -396,6 +396,22 @@ export const postApiTickets = <ThrowOnError extends boolean = false>(
 }
 
 /**
+ * Get tasks for multiple tickets
+ */
+export const getApiTicketsBulkTasks = <ThrowOnError extends boolean = false>(
+  options: Options<GetApiTicketsBulkTasksData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).get<
+    GetApiTicketsBulkTasksResponse,
+    GetApiTicketsBulkTasksError,
+    ThrowOnError
+  >({
+    url: '/api/tickets/bulk-tasks',
+    ...options
+  })
+}
+
+/**
  * Delete a ticket
  */
 export const deleteApiTicketsByTicketId = <ThrowOnError extends boolean = false>(
@@ -592,42 +608,6 @@ export const postApiTicketsByTicketIdTasks = <ThrowOnError extends boolean = fal
 }
 
 /**
- * Delete a task
- */
-export const deleteApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
-) => {
-  return (options.client ?? _heyApiClient).delete<
-    DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
-    DeleteApiTicketsByTicketIdTasksByTaskIdError,
-    ThrowOnError
-  >({
-    url: '/api/tickets/{ticketId}/tasks/{taskId}',
-    ...options
-  })
-}
-
-/**
- * Update a task
- */
-export const patchApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
-  options: Options<PatchApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
-) => {
-  return (options.client ?? _heyApiClient).patch<
-    PatchApiTicketsByTicketIdTasksByTaskIdResponse,
-    PatchApiTicketsByTicketIdTasksByTaskIdError,
-    ThrowOnError
-  >({
-    url: '/api/tickets/{ticketId}/tasks/{taskId}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers
-    }
-  })
-}
-
-/**
  * Reorder tasks within a ticket
  */
 export const patchApiTicketsByTicketIdTasksReorder = <ThrowOnError extends boolean = false>(
@@ -664,18 +644,38 @@ export const postApiTicketsByTicketIdAutoGenerateTasks = <ThrowOnError extends b
 }
 
 /**
- * Get tasks for multiple tickets
+ * Delete a task
  */
-export const getApiTicketsBulkTasks = <ThrowOnError extends boolean = false>(
-  options: Options<GetApiTicketsBulkTasksData, ThrowOnError>
+export const deleteApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
 ) => {
-  return (options.client ?? _heyApiClient).get<
-    GetApiTicketsBulkTasksResponse,
-    GetApiTicketsBulkTasksError,
+  return (options.client ?? _heyApiClient).delete<
+    DeleteApiTicketsByTicketIdTasksByTaskIdResponse,
+    DeleteApiTicketsByTicketIdTasksByTaskIdError,
     ThrowOnError
   >({
-    url: '/api/tickets/bulk-tasks',
+    url: '/api/tickets/{ticketId}/tasks/{taskId}',
     ...options
+  })
+}
+
+/**
+ * Update a task
+ */
+export const patchApiTicketsByTicketIdTasksByTaskId = <ThrowOnError extends boolean = false>(
+  options: Options<PatchApiTicketsByTicketIdTasksByTaskIdData, ThrowOnError>
+) => {
+  return (options.client ?? _heyApiClient).patch<
+    PatchApiTicketsByTicketIdTasksByTaskIdResponse,
+    PatchApiTicketsByTicketIdTasksByTaskIdError,
+    ThrowOnError
+  >({
+    url: '/api/tickets/{ticketId}/tasks/{taskId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers
+    }
   })
 }
 

@@ -26,7 +26,11 @@ function KeysPage() {
   const selectedProviderDetails = PROVIDERS.find((p) => p.id === selectedProvider)
 
   const handleCreate = async () => {
-    await createKeyMutation.mutateAsync({ provider: selectedProvider, key: newKeyVal })
+    await createKeyMutation.mutateAsync({
+      provider: selectedProvider,
+      key: newKeyVal,
+      name: selectedProviderDetails?.name ?? 'unknown-provider'
+    })
     setSelectedProvider('')
     setNewKeyVal('')
   }
