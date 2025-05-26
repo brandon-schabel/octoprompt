@@ -16,7 +16,7 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { ScrollArea } from '@ui'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
-import { useGetProjectPrompts, useCreatePrompt, useUpdatePrompt, useDeletePrompt } from '@/hooks/api/use-prompts-api'
+import { useGetProjectPrompts, useDeletePrompt } from '@/hooks/api/use-prompts-api'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -62,14 +62,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   const { copyToClipboard } = useCopyClipboard()
 
   const { data: promptData } = useGetProjectPrompts(selectedProjectId)
-  let prompts: Prompt[] = promptData?.data || []
-  prompts = prompts.map((prompt) => ({
-    ...prompt,
-    id: Number(prompt.id)
-  }))
 
-  const createPromptMutation = useCreatePrompt(selectedProjectId)
-  const updatePromptMutation = useUpdatePrompt(selectedProjectId)
   const deletePromptMutation = useDeletePrompt(selectedProjectId)
 
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
@@ -81,6 +74,15 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
 
   const [sortOrder, setSortOrder] = useState<'alphabetical' | 'default' | 'size_asc' | 'size_desc'>('alphabetical')
 
+  const prompts = useMemo(() => {
+    return (
+      promptData?.data.map((prompt) => ({
+        ...prompt,
+        id: Number(prompt.id)
+      })) || []
+    )
+  }, [promptData?.data])
+
   const sortedPrompts = useMemo(() => {
     let sortedPrompts = [...prompts]
     if (sortOrder === 'alphabetical') {
@@ -91,7 +93,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       sortedPrompts.sort((a, b) => (a.content?.length || 0) - (b.content?.length || 0))
     }
     return sortedPrompts
-  }, [sortOrder])
+  }, [sortOrder, prompts])
 
   const copySelectedPrompts = () => {
     if (!selectedPrompts.length) return
@@ -118,38 +120,6 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       content: ''
     }
   })
-
-  // ---------------
-  // Create prompt
-  // ---------------
-  const handleCreatePrompt = async (values: z.infer<typeof PromptSchema>) => {
-    if (!selectedProjectId) return
-    const result = await createPromptMutation.mutateAsync({
-      // projectId: selectedProjectId,
-      body: {
-        projectId: selectedProjectId,
-        name: values.name,
-        content: values.content
-      }
-    })
-
-    // @ts-ignore
-    if (result.success && result.data) {
-      toast.success('Prompt created successfully')
-      promptForm.reset()
-      setPromptDialogOpen(false)
-    }
-  }
-
-  const handleUpdatePrompt = async (updates: { name: string; content: string }) => {
-    if (!editPromptId) return
-    await updatePromptMutation.mutateAsync({
-      promptId: editPromptId,
-      data: updates
-    })
-    toast.success('Prompt updated successfully')
-    setPromptDialogOpen(false)
-  }
 
   const handleDeletePrompt = async (promptId: number) => {
     if (!selectedProjectId) return
@@ -502,11 +472,18 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         open={promptDialogOpen}
         editPromptId={editPromptId}
         promptForm={promptForm}
-        handleCreatePrompt={handleCreatePrompt}
-        handleUpdatePrompt={handleUpdatePrompt}
-        createPromptPending={createPromptMutation.isPending}
-        updatePromptPending={updatePromptMutation.isPending}
-        onClose={() => setPromptDialogOpen(false)}
+        projectId={selectedProjectId}
+        onClose={() => {
+          setPromptDialogOpen(false)
+          setEditPromptId(null)
+          promptForm.reset()
+        }}
+        onSuccess={() => {
+          // THIS IS THE KEY FIX - Close the dialog on success
+          setPromptDialogOpen(false)
+          setEditPromptId(null)
+          promptForm.reset()
+        }}
       />
     </>
   )

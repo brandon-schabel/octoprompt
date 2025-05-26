@@ -6,31 +6,98 @@ import { Loader2 } from 'lucide-react'
 import { UseFormReturn } from 'react-hook-form'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import {
+  useCreatePrompt,
+  useUpdatePrompt,
+  useGetProjectPrompts,
+  useAddPromptToProject
+} from '@/hooks/api/use-prompts-api'
+import { toast } from 'sonner'
+import { useEffect } from 'react'
 
 interface PromptDialogProps {
   open: boolean
   editPromptId: number | null
   promptForm: UseFormReturn<any, any>
-  handleCreatePrompt: (values: any) => Promise<void>
-  handleUpdatePrompt: (values: any) => Promise<void>
-  createPromptPending: boolean
-  updatePromptPending: boolean
+  projectId: number
   onClose: () => void
+  onSuccess?: () => void
 }
 
-export function PromptDialog({
-  open,
-  editPromptId,
-  promptForm,
-  handleCreatePrompt,
-  handleUpdatePrompt,
-  createPromptPending,
-  updatePromptPending,
-  onClose
-}: PromptDialogProps) {
+export function PromptDialog({ open, editPromptId, promptForm, projectId, onClose, onSuccess }: PromptDialogProps) {
+  const createPromptMutation = useCreatePrompt(projectId)
+  const updatePromptMutation = useUpdatePrompt(projectId)
+  const addPromptToProjectMutation = useAddPromptToProject()
+  const { data: promptData } = useGetProjectPrompts(projectId)
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editPromptId && promptData?.data) {
+      const prompt = promptData.data.find((p) => p.id === editPromptId)
+      if (prompt) {
+        promptForm.setValue('name', prompt.name)
+        promptForm.setValue('content', prompt.content)
+      }
+    } else {
+      promptForm.reset()
+    }
+  }, [editPromptId, promptData?.data, promptForm])
+
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.target instanceof HTMLTextAreaElement) {
       e.stopPropagation()
+    }
+  }
+
+  const handleCreatePrompt = async (values: { name: string; content: string }) => {
+    try {
+      const result = await createPromptMutation.mutateAsync({
+        body: {
+          projectId,
+          name: values.name,
+          content: values.content
+        }
+      })
+
+      if (!result.success) {
+        toast.error('Failed to create prompt')
+        return
+      }
+
+      try {
+        await addPromptToProjectMutation.mutateAsync({
+          projectId,
+          promptId: result.data.id
+        })
+      } catch (e) {
+        toast.error('Failed to add prompt to project')
+      }
+
+      toast.success('Prompt created successfully')
+      onSuccess?.()
+    } catch (error) {
+      console.error('Error creating prompt:', error)
+      toast.error('Failed to create prompt')
+    }
+  }
+
+  const handleUpdatePrompt = async (values: { name: string; content: string }) => {
+    if (!editPromptId) return
+
+    try {
+      await updatePromptMutation.mutateAsync({
+        promptId: editPromptId,
+        data: {
+          name: values.name,
+          content: values.content
+        }
+      })
+
+      toast.success('Prompt updated successfully')
+      onSuccess?.()
+    } catch (error) {
+      console.error('Error updating prompt:', error)
+      toast.error('Failed to update prompt')
     }
   }
 
@@ -96,8 +163,21 @@ export function PromptDialog({
                 <DialogClose asChild>
                   <Button variant='outline'>Cancel</Button>
                 </DialogClose>
-                <Button type='submit' disabled={createPromptPending || updatePromptPending}>
-                  {(createPromptPending || updatePromptPending) && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+                <Button
+                  disabled={createPromptMutation.isPending || updatePromptMutation.isPending}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    // handle form submit/prompt creation becuase form submit is not working
+                    if (editPromptId) {
+                      handleUpdatePrompt(promptForm.getValues())
+                    } else {
+                      handleCreatePrompt(promptForm.getValues())
+                    }
+                  }}
+                >
+                  {(createPromptMutation.isPending || updatePromptMutation.isPending) && (
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  )}
                   {editPromptId ? 'Update Prompt' : 'Create Prompt'}
                 </Button>
               </DialogFooter>

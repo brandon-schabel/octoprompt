@@ -1,6 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from './common.schemas'
-import { appSettingsSchema, createInitialGlobalState, projectTabsStateRecordSchema } from './global-state-schema'
+import { appSettingsSchema, createInitialGlobalState, createSafeGlobalState, projectTabsStateRecordSchema } from './global-state-schema'
+import { idSchemaSpec } from './schema-utils'
 
 export const KVKeyEnum = {
   appSettings: 'appSettings',
@@ -16,11 +17,20 @@ export const kvKeyEnumSchema = z.enum(Object.values(KVKeyEnum) as [KVKey, ...KVK
 export const KvSchemas = {
   [KVKeyEnum.appSettings]: appSettingsSchema,
   [KVKeyEnum.projectTabs]: projectTabsStateRecordSchema,
-  [KVKeyEnum.activeProjectTabId]: z.number().default(1),
-  [KVKeyEnum.activeChatId]: z.number().default(1)
+  [KVKeyEnum.activeProjectTabId]: idSchemaSpec.default(1),
+  [KVKeyEnum.activeChatId]: idSchemaSpec.default(-1)
 } as const
 
-const initialGlobalState = createInitialGlobalState()
+const getInitialGlobalState = () => {
+  try {
+    return createInitialGlobalState()
+  } catch (error) {
+    console.error('Failed to create initial global state for KV defaults, using safe fallback:', error)
+    return createSafeGlobalState()
+  }
+}
+
+const initialGlobalState = getInitialGlobalState()
 
 export const KVDefaultValues: { [K in KVKey]: KVValue<K> } = {
   activeChatId: initialGlobalState.activeChatId ?? 1,

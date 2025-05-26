@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { providerSchema, type APIProviders } from './provider-key.schemas'
 import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'
-import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
+import { unixTSArraySchemaSpec, unixTSSchemaSpec, idSchemaSpec, idArraySchemaSpec } from './schema-utils'
 
 const defaultModelConfigs = LOW_MODEL_CONFIG
 
@@ -20,21 +20,21 @@ export const apiProviders = providerSchema.options
 // Project tab state - (Keep as is, unless project tabs are also removed)
 export const projectTabStateSchema = z
   .object({
-    selectedProjectId: unixTSSchemaSpec,
-    editProjectId: unixTSSchemaSpec,
+    selectedProjectId: idSchemaSpec.default(-1),
+    editProjectId: idSchemaSpec.default(-1),
     promptDialogOpen: z
       .boolean()
       .optional()
       .default(false)
       .openapi({ description: 'Whether the prompt selection/creation dialog is open in this tab.' }),
-    editPromptId: unixTSSchemaSpec,
+    editPromptId: idSchemaSpec.default(-1),
     fileSearch: z
       .string()
       .optional()
       .default('')
       .openapi({ description: 'Current search query for files within this project tab.', example: 'userService' }),
-    selectedFiles: unixTSArraySchemaSpec,
-    selectedPrompts: unixTSArraySchemaSpec,
+    selectedFiles: idArraySchemaSpec.default([]),
+    selectedPrompts: idArraySchemaSpec.default([]),
     userPrompt: z
       .string()
       .optional()
@@ -51,6 +51,7 @@ export const projectTabStateSchema = z
     displayName: z
       .string()
       .optional()
+      .default('Default Tab')
       .openapi({ description: 'User-defined display name for this project tab.', example: 'Backend Services' }),
     contextLimit: z
       .number()
@@ -102,7 +103,7 @@ export const projectTabStateSchema = z
       .optional()
       .default('all')
       .openapi({ description: 'Filter criteria for ticket status.' }),
-    ticketId: unixTSSchemaSpec,
+    ticketId: idSchemaSpec.default(-1),
     sortOrder: z
       .number()
       .optional()
@@ -318,28 +319,121 @@ export const globalStateSchema = z
     projectTabs: projectTabsStateRecordSchema.openapi({
       description: 'State of all open project tabs, keyed by tab ID.'
     }),
-    projectActiveTabId: unixTSSchemaSpec,
-    activeChatId: unixTSSchemaSpec,
+    projectActiveTabId: idSchemaSpec,
+    activeChatId: idSchemaSpec,
     chatLinkSettings: chatLinkSettingsSchema.openapi({ description: 'Link settings specific to each chat session.' })
   })
   .openapi('GlobalState', { description: 'Represents the entire persistent application state.' })
 
 // this is the best place to set the default values for the global state
 // Initial Global State - Simplified (Function doesn't need OpenAPI spec, but uses the schemas)
-export const createInitialGlobalState = (): GlobalState => ({
-  appSettings: appSettingsSchema.parse({}), // Use parse with empty object to get defaults
-  projectTabs: {
-    // Keep default project tab if project tabs are still used
-    defaultTab: projectTabStateSchema.parse({
-      // Use parse to get defaults
-      displayName: 'Default Project Tab' // Override default display name
-      // Set any other non-default initial values if needed
-    })
+export const createInitialGlobalState = (): GlobalState => {
+  try {
+    return {
+      appSettings: appSettingsSchema.parse({}), // Use parse with empty object to get defaults
+      projectTabs: {
+        // Keep default project tab if project tabs are still used
+        defaultTab: projectTabStateSchema.parse({
+          // Use parse to get defaults
+          displayName: 'Default Project Tab' // Override default display name
+          // Set any other non-default initial values if needed
+        })
+      },
+      projectActiveTabId: 1, // Assuming project tabs remain
+      activeChatId: -1,
+      chatLinkSettings: {}
+    }
+  } catch (error) {
+    console.error('Failed to create initial global state, falling back to safe defaults:', error)
+    // Fallback to safe defaults if schema parsing fails
+    return createSafeGlobalState()
+  }
+}
+
+// Safe fallback function that creates state without schema validation
+export const createSafeGlobalState = (): GlobalState => ({
+  appSettings: {
+    language: 'en',
+    theme: 'light' as Theme,
+    codeThemeLight: 'atomOneLight',
+    codeThemeDark: 'atomOneDark',
+    ollamaGlobalUrl: 'http://localhost:11434',
+    lmStudioGlobalUrl: 'http://localhost:1234',
+    summarizationIgnorePatterns: [],
+    summarizationAllowPatterns: [],
+    summarizationEnabledProjectIds: [],
+    useSpacebarToSelectAutocomplete: true,
+    hideInformationalTooltips: false,
+    autoScrollEnabled: true,
+    provider: defaultModelConfigs.provider as APIProviders,
+    model: defaultModelConfigs.model ?? 'gpt-4o',
+    temperature: defaultModelConfigs.temperature ?? 0.7,
+    maxTokens: defaultModelConfigs.maxTokens ?? 4096,
+    topP: defaultModelConfigs.topP ?? 1,
+    frequencyPenalty: defaultModelConfigs.frequencyPenalty ?? 0,
+    presencePenalty: defaultModelConfigs.presencePenalty ?? 0
   },
-  projectActiveTabId: 1, // Assuming project tabs remain
+  projectTabs: {
+    defaultTab: {
+      selectedProjectId: -1,
+      editProjectId: -1,
+      promptDialogOpen: false,
+      editPromptId: -1,
+      fileSearch: '',
+      selectedFiles: [],
+      selectedPrompts: [],
+      userPrompt: '',
+      searchByContent: false,
+      displayName: 'Default Project Tab',
+      contextLimit: 128000,
+      resolveImports: false,
+      preferredEditor: 'vscode' as const,
+      suggestedFileIds: [],
+      bookmarkedFileGroups: {},
+      ticketSearch: '',
+      ticketSort: 'created_desc' as const,
+      ticketStatusFilter: 'all' as const,
+      ticketId: -1,
+      sortOrder: 0
+    }
+  },
+  projectActiveTabId: 1,
   activeChatId: -1,
   chatLinkSettings: {}
 })
+
+// Validates and repairs global state, falling back to safe defaults if needed
+export const validateAndRepairGlobalState = (state: unknown): GlobalState => {
+  try {
+    return globalStateSchema.parse(state)
+  } catch (error) {
+    console.warn('Invalid global state detected, attempting repair:', error)
+
+    // Try to repair by merging with safe defaults
+    if (state && typeof state === 'object') {
+      try {
+        const safeState = createSafeGlobalState()
+        const mergedState = {
+          ...safeState,
+          ...(state as Record<string, unknown>),
+          appSettings: {
+            ...safeState.appSettings,
+            ...((state as any)?.appSettings || {})
+          },
+          projectTabs: {
+            ...safeState.projectTabs,
+            ...((state as any)?.projectTabs || {})
+          }
+        }
+        return globalStateSchema.parse(mergedState)
+      } catch (repairError) {
+        console.error('Failed to repair state, using safe defaults:', repairError)
+      }
+    }
+
+    return createSafeGlobalState()
+  }
+}
 
 // Helper function to get default app settings cleanly
 export function getDefaultAppSettings(): AppSettings {

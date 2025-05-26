@@ -4,10 +4,12 @@ globs:
 alwaysApply: true
 ---
 - All ids, created, updated timestamps are all in unix timestamps in milliseconds
+- When handling ids with data, -1 means null, otherwise it must be a valid unix timestamp in ms
 - When creating a map, all numbers are converted to string when using object, so prefer the new Map() over pure object for these cases.
 - Each service generally has an associated schema file which contains the base schema and the schemas for the CRUD operrations because for example you don't want to incude id created or updated on create(those are auto generated), storage file - which stores most data as json files, a service file which contains all the functions for manipulating the data related to that service, and the a routes/api file where all the api routes are created.
 - Every API must be type safe, in TypeScript we use zod with hono to do validation on the api params, route params, body data. One thing to note is route params/api params i think always parse as string so. In Python we use Pydantic models for typesafety and validation
 - Every API must have proper Open API specs
+- Route ordering is extremely important, if the route definitions are not in the correct order, the the incorrect route will be reached, pay very very very close attention to route order
 
 Major Features/Services  
 Projects and Files - main idea the code projects and then the projects hold a set of chats  

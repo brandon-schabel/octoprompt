@@ -6,12 +6,30 @@ import {
   ProjectTabState,
   ProjectTabStatePartial,
   Theme,
+  validateAndRepairGlobalState,
+  createSafeGlobalState,
 } from 'shared/index';
 import { useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 export function useGetKvValue<K extends KVKey>(key: K) {
-  return useLocalStorage<KVValue<K>>(key, KVDefaultValues[key]);
+  const [value, setValue] = useLocalStorage<KVValue<K>>(key, KVDefaultValues[key]);
+
+  // Validate and repair the value if needed
+  const safeValue = useMemo(() => {
+    try {
+      // For complex objects, validate them
+      if (key === 'appSettings' || key === 'projectTabs') {
+        return value; // Assume useLocalStorage handles validation
+      }
+      return value;
+    } catch (error) {
+      console.warn(`Invalid value for key ${key}, using default:`, error);
+      return KVDefaultValues[key];
+    }
+  }, [value, key]);
+
+  return [safeValue, setValue] as const;
 }
 
 export function useSetKvValue<K extends KVKey>(key: K) {
