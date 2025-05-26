@@ -1,34 +1,53 @@
-import { describe, test, expect, beforeEach } from 'bun:test'
+import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { createChatService } from '@/services/chat-service'
 import { randomString } from '../utils/test-utils'
-import fs from 'node:fs/promises';
-import nodePath from 'node:path';
-import { normalizeToUnixMs } from '@/utils/parse-timestamp';
+import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import type { ChatsStorage, ChatMessagesStorage } from '@/utils/storage/chat-storage'
 
-// Helper function to reset JSON chat storage
-const TEST_CHAT_STORAGE_DIR = nodePath.resolve(process.cwd(), 'data', 'chat_storage');
-const TEST_CHATS_INDEX_PATH = nodePath.join(TEST_CHAT_STORAGE_DIR, 'chats.json');
-const TEST_CHAT_DATA_SUBDIR_PATH = nodePath.join(TEST_CHAT_STORAGE_DIR, 'chat_data');
+// Use realistic unix timestamps for test IDs
+const BASE_TIMESTAMP = 1700000000000; // Nov 2023 as base
+let mockIdCounter = BASE_TIMESTAMP + 100000; // Start with a high offset for chat/message IDs
 
-async function resetJsonChatStorage() {
-  try {
-    await fs.unlink(TEST_CHATS_INDEX_PATH).catch(err => { if (err.code !== 'ENOENT') throw err; });
-    await fs.rm(TEST_CHAT_DATA_SUBDIR_PATH, { recursive: true, force: true }).catch(err => { if (err.code !== 'ENOENT') throw err; });
-    // Ensure base directory exists for subsequent tests, as chatStorage might expect it
-    await fs.mkdir(TEST_CHAT_STORAGE_DIR, { recursive: true }).catch(err => { if (err.code !== 'EEXIST') throw err; });
-    await fs.mkdir(TEST_CHAT_DATA_SUBDIR_PATH, { recursive: true }).catch(err => { if (err.code !== 'EEXIST') throw err; });
-  } catch (error: any) {
-    // Catch any unexpected errors during cleanup
-    console.error("Error during resetJsonChatStorage:", error);
-  }
+const generateTestId = () => {
+  mockIdCounter += 1000; // Increment by 1000 for next ID
+  return mockIdCounter;
+};
+
+// In-memory stores for our mocks
+let mockChatsDb: ChatsStorage = {}
+let mockChatMessagesDb: Record<number, ChatMessagesStorage> = {} // ChatId -> Messages
+
+// Mock the chatStorage utility
+const mockChatStorage = {
+  readChats: async () => JSON.parse(JSON.stringify(mockChatsDb)),
+  writeChats: async (data: ChatsStorage) => {
+    mockChatsDb = JSON.parse(JSON.stringify(data))
+    return mockChatsDb
+  },
+  readChatMessages: async (chatId: number) => {
+    return JSON.parse(JSON.stringify(mockChatMessagesDb[chatId] || {}))
+  },
+  writeChatMessages: async (chatId: number, data: ChatMessagesStorage) => {
+    mockChatMessagesDb[chatId] = JSON.parse(JSON.stringify(data))
+    return mockChatMessagesDb[chatId]
+  },
+  deleteChatData: async (chatId: number) => {
+    delete mockChatMessagesDb[chatId]
+  },
+  generateId: () => generateTestId()
 }
 
+mock.module('@/utils/storage/chat-storage', () => ({
+  chatStorage: mockChatStorage
+}))
 
 let chatService: ReturnType<typeof createChatService>
 
-describe('Chat Service (JSON Storage)', () => {
+describe('Chat Service (Mocked Storage)', () => {
   beforeEach(async () => {
-    await resetJsonChatStorage();
+    mockChatsDb = {}
+    mockChatMessagesDb = {}
+    mockIdCounter = BASE_TIMESTAMP + 100000; // Reset base ID for each test
     chatService = createChatService();
   });
 
@@ -36,23 +55,28 @@ describe('Chat Service (JSON Storage)', () => {
     const title = `Chat_${randomString()}`;
     const chat = await chatService.createChat(title);
     expect(chat.id).toBeDefined();
+    expect(typeof chat.id).toBe('number');
     expect(chat.title).toBe(title);
     expect(chat.created).toBeDefined();
+    expect(typeof chat.created).toBe('number');
     expect(chat.updated).toBeDefined();
+    expect(typeof chat.updated).toBe('number');
 
-    // Verify by trying to get it via the service, or by reading the chats.json directly
+    // Verify by trying to get it via the service
     const allChats = await chatService.getAllChats();
     const foundChat = allChats.find(c => c.id === chat.id);
     expect(foundChat).toBeDefined();
     expect(foundChat?.title).toBe(title);
+    expect(mockChatsDb[chat.id]).toEqual(chat);
+    expect(mockChatMessagesDb[chat.id]).toEqual({});
   });
 
   test('createChat with copyExisting copies messages from another chat', async () => {
     const source = await chatService.createChat('SourceChat');
     const now = Date.now();
     // Insert two messages
-    await chatService.saveMessage({ chatId: source.id, role: 'system', content: 'Hello', id: -1, created: normalizeToUnixMs(now - 1000) });
-    await chatService.saveMessage({ chatId: source.id, role: 'user', content: 'World', id: -2, created: normalizeToUnixMs(now - 500) });
+    await chatService.saveMessage({ chatId: source.id, role: 'system', content: 'Hello', id: generateTestId(), created: normalizeToUnixMs(now - 1000) });
+    await chatService.saveMessage({ chatId: source.id, role: 'user', content: 'World', id: generateTestId(), created: normalizeToUnixMs(now - 500) });
 
     const newChat = await chatService.createChat('CopyTarget', {
       copyExisting: true,
@@ -83,21 +107,27 @@ describe('Chat Service (JSON Storage)', () => {
       chatId: chat.id,
       role: 'user' as const,
       content: 'Sample content',
-      id: -1, // Dummy ID for test
-      created: normalizeToUnixMs(Date.now()) // Dummy timestamp for test
+      id: generateTestId(), // Use generated ID
+      created: normalizeToUnixMs(Date.now()) // Ensure Unix ms timestamp
     };
     const msg = await chatService.saveMessage(msgData);
     expect(msg.id).toBeDefined();
+    expect(typeof msg.id).toBe('number');
     expect(msg.chatId).toBe(chat.id);
     expect(msg.role).toBe(msgData.role);
     expect(msg.content).toBe(msgData.content);
     expect(msg.created).toBeDefined();
+    expect(typeof msg.created).toBe('number');
 
     // Verify by getting messages for the chat
     const messages = await chatService.getChatMessages(chat.id);
     expect(messages.length).toBe(1);
     expect(messages[0].id).toBe(msg.id);
     expect(messages[0].content).toBe('Sample content');
+    expect(mockChatMessagesDb[chat.id][msg.id]).toEqual(expect.objectContaining({
+      id: msg.id,
+      content: 'Sample content'
+    }));
   });
 
   test('updateMessageContent changes content of a message', async () => {
@@ -106,17 +136,17 @@ describe('Chat Service (JSON Storage)', () => {
       chatId: chat.id,
       role: 'user' as const,
       content: 'Old content',
-      id: -1, // Dummy ID
-      created: normalizeToUnixMs(Date.now()) // Dummy timestamp
+      id: generateTestId(), // Use generated ID
+      created: normalizeToUnixMs(Date.now()) // Ensure Unix ms timestamp
     });
 
-    // CORRECTED: Pass chatId as the first argument
     await chatService.updateMessageContent(chat.id, msg.id, 'New content');
 
     const messages = await chatService.getChatMessages(chat.id);
     expect(messages.length).toBe(1);
     expect(messages[0].id).toBe(msg.id);
     expect(messages[0].content).toBe('New content');
+    expect(mockChatMessagesDb[chat.id][msg.id].content).toBe('New content');
   });
 
   test('getAllChats returns all chats sorted by updated', async () => {
@@ -130,30 +160,12 @@ describe('Chat Service (JSON Storage)', () => {
     await new Promise(resolve => setTimeout(resolve, 10));
     await chatService.updateChat(chatA.id, "ChatA Updated");
 
-
     const chats = await chatService.getAllChats();
     expect(chats.length).toBe(3);
-    // Sorted by updated DESC. C should be first, then A (updated), then B.
-    // This depends on precise timing of updates; a more robust check might involve verifying specific order
-    // For now, just checking length after resetJsonChatStorage is key.
-    const initialChats = await chatService.getAllChats();
-    expect(initialChats.length).toBe(3); // This should now pass due to reset
-
-    // More robust sorting check:
-    const titles = initialChats.map(c => c.title);
-    // The default sorting is updated DESC.
-    // If we created C last, it should be first.
-    // If we updated A after B was created, A is before B.
-    // So, order could be C, A (updated), B if timestamps differ enough.
-    // Or C, B, A if update on A was not significant enough to change order with B.
-    // Let's simplify for now: The reset ensures we start with 0 chats.
-    // The important part is that it doesn't accumulate.
-    const chatD = await chatService.createChat('ChatD'); // Create one more
-    const finalChats = await chatService.getAllChats();
-    expect(finalChats.length).toBe(4); // We created A, B, C, D in this test scope.
-
+    // Sorted by updated DESC. The updated chatA should be first, then C, then B.
+    expect(chats[0].title).toBe("ChatA Updated");
+    expect(Object.keys(mockChatsDb).length).toBe(3);
   });
-
 
   test('updateChat changes the chat title and updates timestamp', async () => {
     const chat = await chatService.createChat('InitialTitle');
@@ -168,24 +180,26 @@ describe('Chat Service (JSON Storage)', () => {
     const allChats = await chatService.getAllChats();
     const foundChat = allChats.find(c => c.id === chat.id);
     expect(foundChat?.title).toBe('NewTitle');
+    expect(mockChatsDb[chat.id].title).toBe('NewTitle');
   });
 
   test('deleteChat removes chat and its messages', async () => {
     const chat = await chatService.createChat('DeleteMe');
     const now = Date.now();
-    await chatService.saveMessage({ chatId: chat.id, role: 'user' as const, content: 'Hello', id: -1, created: normalizeToUnixMs(now - 100) });
-    await chatService.saveMessage({ chatId: chat.id, role: 'assistant' as const, content: 'World', id: -2, created: normalizeToUnixMs(now) });
+    await chatService.saveMessage({ chatId: chat.id, role: 'user' as const, content: 'Hello', id: generateTestId(), created: normalizeToUnixMs(now - 100) });
+    await chatService.saveMessage({ chatId: chat.id, role: 'assistant' as const, content: 'World', id: generateTestId(), created: normalizeToUnixMs(now) });
 
     await chatService.deleteChat(chat.id);
 
-    // Ensure chat is gone by trying to get it
+    // Ensure chat is gone
     const allChats = await chatService.getAllChats();
     expect(allChats.find(c => c.id === chat.id)).toBeUndefined();
+    expect(mockChatsDb[chat.id]).toBeUndefined();
 
-    // Ensure messages are gone by trying to get them (should throw or return empty)
+    // Ensure messages are gone
     await expect(chatService.getChatMessages(chat.id))
-      .rejects.toThrow(new Error(`Chat with ID ${chat.id} not found.`)); // Or check if it returns empty list if chat dir is deleted.
-    // Current chatService throws CHAT_NOT_FOUND if chat metadata is gone.
+      .rejects.toThrow(new Error(`Chat with ID ${chat.id} not found.`));
+    expect(mockChatMessagesDb[chat.id]).toBeUndefined();
   });
 
   test('deleteMessage removes only that message', async () => {
@@ -195,29 +209,30 @@ describe('Chat Service (JSON Storage)', () => {
       chatId: chat.id,
       role: 'user' as const,
       content: 'First',
-      id: -1, created: normalizeToUnixMs(now - 100)
+      id: generateTestId(), created: normalizeToUnixMs(now - 100)
     });
     const m2 = await chatService.saveMessage({
       chatId: chat.id,
       role: 'assistant' as const,
       content: 'Second',
-      id: -2, created: normalizeToUnixMs(now)
+      id: generateTestId(), created: normalizeToUnixMs(now)
     });
 
-    // CORRECTED: Pass chatId as the first argument
     await chatService.deleteMessage(chat.id, m1.id);
 
     const all = await chatService.getChatMessages(chat.id);
     expect(all.length).toBe(1);
     expect(all[0].id).toBe(m2.id);
+    expect(mockChatMessagesDb[chat.id][m1.id]).toBeUndefined();
+    expect(mockChatMessagesDb[chat.id][m2.id]).toBeDefined();
   });
 
   test('forkChat duplicates chat and messages except excluded IDs', async () => {
     const source = await chatService.createChat('SourceFork');
     const now = Date.now();
-    const msgA = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'A', id: -1, created: normalizeToUnixMs(now - 200) });
-    const msgB = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'B', id: -2, created: normalizeToUnixMs(now - 100) });
-    const msgC = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'C', id: -3, created: normalizeToUnixMs(now) });
+    const msgA = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'A', id: generateTestId(), created: normalizeToUnixMs(now - 200) });
+    const msgB = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'B', id: generateTestId(), created: normalizeToUnixMs(now - 100) });
+    const msgC = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'C', id: generateTestId(), created: normalizeToUnixMs(now) });
 
     const newChat = await chatService.forkChat(source.id, [msgB.id]); // Exclude original msgB.id
     const newMessages = await chatService.getChatMessages(newChat.id);
@@ -232,16 +247,18 @@ describe('Chat Service (JSON Storage)', () => {
       expect(originalMessageIds).not.toContain(nm.id); // New IDs
       expect(nm.chatId).toBe(newChat.id);
     });
+    expect(mockChatsDb[newChat.id]).toBeDefined();
+    expect(Object.keys(mockChatMessagesDb[newChat.id]).length).toBe(2);
   });
 
   test('forkChatFromMessage only copies messages up to a given message, excluding any if needed', async () => {
     const source = await chatService.createChat('ForkFromMsg');
     const now = Date.now();
-    const msg1 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg1', id: -1, created: normalizeToUnixMs(now - 200) });
+    const msg1 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg1', id: generateTestId(), created: normalizeToUnixMs(now - 200) });
     await new Promise(resolve => setTimeout(resolve, 1)); // ensure order
-    const msg2 = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'Msg2', id: -2, created: normalizeToUnixMs(now - 100) });
+    const msg2 = await chatService.saveMessage({ chatId: source.id, role: 'assistant' as const, content: 'Msg2', id: generateTestId(), created: normalizeToUnixMs(now - 100) });
     await new Promise(resolve => setTimeout(resolve, 1));
-    const msg3 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg3', id: -3, created: normalizeToUnixMs(now) });
+    const msg3 = await chatService.saveMessage({ chatId: source.id, role: 'user' as const, content: 'Msg3', id: generateTestId(), created: normalizeToUnixMs(now) });
 
     // Fork from original msg2, exclude original msg1
     const newChat = await chatService.forkChatFromMessage(source.id, msg2.id, [msg1.id]);
@@ -252,5 +269,7 @@ describe('Chat Service (JSON Storage)', () => {
     expect(newMsgs[0].content).toBe('Msg2'); // Content of msg2
     expect(newMsgs[0].id).not.toBe(msg2.id); // New ID
     expect(newMsgs[0].chatId).toBe(newChat.id);
+    expect(mockChatsDb[newChat.id]).toBeDefined();
+    expect(Object.keys(mockChatMessagesDb[newChat.id]).length).toBe(1);
   });
 });

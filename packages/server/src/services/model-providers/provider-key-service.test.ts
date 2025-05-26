@@ -33,7 +33,7 @@ describe('provider-key-service (File Storage)', () => {
   })
 
   test('createKey inserts new provider key', async () => {
-    const input = { provider: 'openai', key: 'test-api-key' };
+    const input = { provider: 'openai', key: 'test-api-key', name: 'openai', isDefault: false };
     const pk = await svc.createKey(input)
 
     expect(pk.id).toBeDefined()
@@ -49,13 +49,13 @@ describe('provider-key-service (File Storage)', () => {
 
   test('listKeys returns all provider keys, sorted by provider then by createdAt DESC', async () => {
     // Need to ensure createdAt timestamps are distinct for robust sorting test
-    const pkC = await svc.createKey({ provider: 'zeta_provider', key: 'k_zeta_1' }) // Will be last by provider name
+    const pkC = await svc.createKey({ provider: 'zeta_provider', key: 'k_zeta_1', name: 'zeta_provider', isDefault: false }) // Will be last by provider name
     await new Promise(resolve => setTimeout(resolve, 2)); // Small delay
-    const pkA1 = await svc.createKey({ provider: 'alpha_provider', key: 'k_alpha_1' })
+    const pkA1 = await svc.createKey({ provider: 'alpha_provider', key: 'k_alpha_1', name: 'alpha_provider', isDefault: false })
     await new Promise(resolve => setTimeout(resolve, 2));
-    const pkB = await svc.createKey({ provider: 'beta_provider', key: 'k_beta_1' })
+    const pkB = await svc.createKey({ provider: 'beta_provider', key: 'k_beta_1', name: 'beta_provider', isDefault: false })
     await new Promise(resolve => setTimeout(resolve, 2));
-    const pkA2 = await svc.createKey({ provider: 'alpha_provider', key: 'k_alpha_2' }) // pkA2 is newer than pkA1
+    const pkA2 = await svc.createKey({ provider: 'alpha_provider', key: 'k_alpha_2', name: 'alpha_provider', isDefault: false }) // pkA2 is newer than pkA1
 
     const list = await svc.listKeys()
     expect(list.length).toBe(4)
@@ -72,18 +72,18 @@ describe('provider-key-service (File Storage)', () => {
   })
 
   test('getKeyById returns key or null if not found', async () => {
-    const created = await svc.createKey({ provider: 'get_by_id_test', key: 'key123' })
+    const created = await svc.createKey({ provider: 'get_by_id_test', key: 'key123', name: 'get_by_id_test', isDefault: false })
     const found = await svc.getKeyById(created.id)
     expect(found).toBeDefined()
     expect(found?.id).toBe(created.id)
     expect(found?.key).toBe('key123')
 
-    const missing = await svc.getKeyById('nonexistent-id-does-not-exist-at-all')
+    const missing = await svc.getKeyById(9999)
     expect(missing).toBeNull()
   })
 
   test('updateKey modifies existing row and updates timestamp', async () => {
-    const created = await svc.createKey({ provider: 'initial_provider', key: 'initial_key' })
+    const created = await svc.createKey({ provider: 'initial_provider', key: 'initial_key', name: 'initial_provider', isDefault: false })
     const originalUpdated = created.updated
 
     // Ensure a small delay for distinct timestamps
@@ -118,7 +118,7 @@ describe('provider-key-service (File Storage)', () => {
   });
 
   test('deleteKey removes row, returns boolean indicating success', async () => {
-    const created = await svc.createKey({ provider: 'to_delete_provider', key: 'to_delete_key' })
+    const created = await svc.createKey({ provider: 'to_delete_provider', key: 'to_delete_key', name: 'to_delete_provider', isDefault: false })
     expect(mockProviderKeysDb[created.id]).toBeDefined() // Ensure it's there before delete
 
     const result1 = await svc.deleteKey(created.id)
