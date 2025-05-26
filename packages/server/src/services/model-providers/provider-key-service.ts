@@ -68,7 +68,7 @@ export function createProviderKeyService() {
     return validatedNewKey
   }
 
-  async function listKeys(): Promise<ProviderKey[]> {
+  async function listKeysCensoredKeys(): Promise<ProviderKey[]> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const keyList = Object.values(allKeys).map(key => {
       // Mask the API key
@@ -77,6 +77,22 @@ export function createProviderKeyService() {
         : '********'; // Or handle very short keys differently
       return { ...key, key: maskedKey };
     });
+
+    // Sort by provider, then by created descending (as in original SQL)
+    keyList.sort((a, b) => {
+      if (a.provider < b.provider) return -1
+      if (a.provider > b.provider) return 1
+      // Assuming created are valid ISO strings, direct string comparison for descending order
+      if (a.created > b.created) return -1
+      if (a.created < b.created) return 1
+      return 0
+    })
+    return keyList
+  }
+
+  async function listKeysUncensored(): Promise<ProviderKey[]> {
+    const allKeys = await providerKeyStorage.readProviderKeys()
+    const keyList = Object.values(allKeys)
 
     // Sort by provider, then by created descending (as in original SQL)
     keyList.sort((a, b) => {
@@ -178,7 +194,8 @@ export function createProviderKeyService() {
 
   return {
     createKey,
-    listKeys,
+    listKeysCensoredKeys,
+    listKeysUncensored,
     getKeyById,
     updateKey,
     deleteKey

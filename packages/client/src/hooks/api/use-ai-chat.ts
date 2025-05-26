@@ -29,7 +29,7 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
     stop,
     setInput
   } = useChat({
-    api: `${SERVER_HTTP_ENDPOINT}/ai/chat`,
+    api: `${SERVER_HTTP_ENDPOINT}/api/ai/chat`,
     id: chatId.toString(), // Primarily for SDK internal state management
     initialMessages: [], // Load messages via useEffect
     onError: (err) => {

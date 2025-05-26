@@ -20,7 +20,7 @@ All data shapes are declared **once** as Zod schemas in `packages/shared`. Servi
 | Services | `packages/server/src/services` |
 | Schemas  | `packages/shared/src/schemas` |
 | Utilities| `packages/server/src/services/*-service.ts` |
-| Database | `packages/server/src/utils/database.ts` |
+| Database(JSON based storage) | `packages/server/src/utils/storage/*-storage.ts` | ?
 
 ## 3  Naming & Conventions
 | Kind    | File suffix        | Key rules |

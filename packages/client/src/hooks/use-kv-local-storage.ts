@@ -209,7 +209,8 @@ export const useCreateProjectTab = () => {
   const currentSelectedProjectId = useProjectTabById(activeProjectTabId ?? -1)?.selectedProjectId;
 
   const createProjectTab = (payload: ProjectTabStatePartial) => {
-    const newTabId = uuidv4();
+    // use unix timestamp in millisecondsc
+    const newTabId = Date.now()
     // @ts-ignore
     const projectTab: ProjectTabState = {
       // id: newTabId,

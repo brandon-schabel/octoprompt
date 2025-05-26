@@ -165,7 +165,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
-                <span className='truncate px-3'>v0.5.2</span>
+                <span className='px-3'>v0.5.3</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

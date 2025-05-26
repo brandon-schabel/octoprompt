@@ -250,14 +250,7 @@ describe('Project Service (File Storage)', () => {
         test('createProjectFileRecord creates a file record', async () => {
             const filePath = 'src/app.js';
             const content = 'console.log("hello");';
-            console.log("about to create file record")
             const fileRecord = await createProjectFileRecord(projectId, filePath, content);
-            console.log({
-                fileRecord,
-                projectId,
-                filePath,
-                content
-            })
 
             expect(fileRecord.id).toBeDefined();
             expect(fileRecord.projectId).toBe(projectId);

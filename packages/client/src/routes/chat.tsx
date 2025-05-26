@@ -992,7 +992,7 @@ function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const [activeChatId] = useActiveChatId()
-  const { settings: modelSettings } = useChatModelParams()
+  const { settings: modelSettings, setModel } = useChatModelParams()
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
   const { data: modelsData } = useGetModels(provider as APIProviders)
@@ -1000,6 +1000,14 @@ function ChatPage() {
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 
   const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null)
+
+  useEffect(() => {
+    if (activeChatId && !model) {
+      const newModelSelection = modelsData?.data[0].id ?? ''
+      console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
+      setModel(newModelSelection)
+    }
+  }, [activeChatId, setModel])
 
   const {
     messages,

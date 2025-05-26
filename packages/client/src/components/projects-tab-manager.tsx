@@ -52,11 +52,13 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
 
   const calculateInitialOrder = (): number[] => {
     if (!tabs) return []
-    return Object.keys(tabs).map(Number).sort((a, b) => {
-      const orderA = tabs[a]?.sortOrder ?? Infinity
-      const orderB = tabs[b]?.sortOrder ?? Infinity
-      return orderA - orderB
-    })
+    return Object.keys(tabs)
+      .map(Number)
+      .sort((a, b) => {
+        const orderA = tabs[a]?.sortOrder ?? Infinity
+        const orderB = tabs[b]?.sortOrder ?? Infinity
+        return orderA - orderB
+      })
   }
 
   const initialTabOrderFromState = calculateInitialOrder()
