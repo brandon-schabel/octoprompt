@@ -13,10 +13,10 @@ console.log('─'.repeat(50))
 
 const testFiles = [
     'projects-api.test.ts',
-    // 'chat-api.test.ts',
-    // 'prompt-api.test.ts',
-    // 'provider-key-api.test.ts',
-    // 'ticket-api.test.ts'
+    'chat-api.test.ts',
+    'prompt-api.test.ts',
+    'provider-key-api.test.ts',
+    'ticket-api.test.ts'
 ]
 
 try {
