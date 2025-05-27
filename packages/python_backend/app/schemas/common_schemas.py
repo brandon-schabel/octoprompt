@@ -1,29 +1,24 @@
-
-
-from typing import Optional, Dict, Any, Literal as TypingLiteral
-from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, Literal
+from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 
 class ErrorDetail(BaseModel):
-    message: str
-    code: Optional[str] = None
-    details: Optional[Dict[str, Any]] = None
+    message: str = Field(..., example="An error occurred")
+    code: Optional[str] = Field(None, example="ERROR_CODE")
+    details: Optional[Dict[str, Any]] = Field(None, default_factory=dict)
 
 class ApiErrorResponse(BaseModel):
-    success: bool = Field(default=False)
+    success: Literal[False] = False
     error: ErrorDetail
-
-    class Config:
-        openapi_extra = {"title": "ApiErrorResponse"}
+    model_config = ConfigDict(title="ApiErrorResponse")
 
 class OperationSuccessResponse(BaseModel):
-    success: TypingLiteral[True] = True
+    success: Literal[True] = True
     message: str = Field(..., example='Operation completed successfully')
-
-    class Config:
-        openapi_extra = {"title": "OperationSuccessResponse"}
+    model_config = ConfigDict(title="OperationSuccessResponse")
 
 class MessageRoleEnum(str, Enum):
     ASSISTANT = 'assistant'
     USER = 'user'
     SYSTEM = 'system'
+    # Note: TypeScript version doesn't include 'tool' and 'function'

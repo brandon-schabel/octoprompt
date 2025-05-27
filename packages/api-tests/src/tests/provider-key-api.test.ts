@@ -18,8 +18,9 @@ import {
     ProviderKeyListResponseSchema
 } from 'shared/src/schemas/provider-key.schemas'
 import { OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
+import { TEST_API_URL } from './test-config'
 
-const BASE_URL = process.env.API_URL || 'http://localhost:3147'
+const BASE_URL = TEST_API_URL
 const API_URL = `${BASE_URL}/api`
 
 describe('Provider Key API Tests', () => {
@@ -46,7 +47,7 @@ describe('Provider Key API Tests', () => {
                 name: 'Test OpenAI Key',
                 provider: 'openai' as const,
                 key: 'sk-test-1234567890abcdef',
-                isDefault: true
+                isDefault: false
             },
             {
                 name: 'Test Anthropic Key',
@@ -70,12 +71,14 @@ describe('Provider Key API Tests', () => {
         for (const data of testData) {
             const result = await apiFetch(createKeyEndpoint, data, ProviderKeyResponseSchema)
 
+
             expect(result.success).toBe(true)
             expect(result.data).toBeDefined()
             expect(result.data.name).toBe(data.name)
             expect(result.data.provider).toBe(data.provider)
             expect(result.data.key).toBe(data.key)
             expect(result.data.isDefault).toBe(data.isDefault)
+
             expect(result.data.id).toBeTypeOf('number')
             expect(result.data.created).toBeNumber()
             expect(result.data.updated).toBeNumber()

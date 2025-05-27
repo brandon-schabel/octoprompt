@@ -6,12 +6,10 @@ from app.utils.storage_timestamp_utils import convert_timestamp_to_ms_int
 class Project(BaseModel):
     id: int
     name: str
+    description: str
     path: str
-    currentBranch: Optional[str] = None
-    description: Optional[str] = None
     created: int
     updated: int
-    files: Optional[List['ProjectFile']] = []
 
     _validate_timestamps = field_validator('created', 'updated', mode='before')(convert_timestamp_to_ms_int)
 
@@ -30,25 +28,24 @@ class CreateProjectBody(BaseModel):
 
 class ProjectFile(BaseModel):
     id: int
-    project_id: int
+    project_id: int = Field(..., alias="projectId")
     name: str
     path: str
-    extension: Optional[str] = None
+    extension: str
     size: int
     content: Optional[str] = None
-    extractedSymbols: Optional[Dict[str, Any]] = None
-    codeStory: Optional[str] = None
     summary: Optional[str] = None
-    summary_last_updated_at: Optional[int] = None
+    summary_last_updated: Optional[int] = Field(None, alias="summaryLastUpdated")
     meta: Optional[str] = None
     checksum: Optional[str] = None
     created: int
     updated: int
 
-    _validate_timestamps = field_validator('created', 'updated', 'summary_last_updated_at', mode='before')(convert_timestamp_to_ms_int)
+    _validate_timestamps = field_validator('created', 'updated', 'summary_last_updated', mode='before')(convert_timestamp_to_ms_int)
 
     model_config = {
-        "openapi_extra": {"title": "ProjectFile"}
+        "openapi_extra": {"title": "ProjectFile"},
+        "populate_by_name": True
     }
 
 class ProjectIdParams(BaseModel):

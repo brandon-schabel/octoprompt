@@ -6,6 +6,7 @@ from app.utils.storage_timestamp_utils import convert_timestamp_to_ms_int
 class TicketStatusEnum(str, Enum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
+    DONE = "done"
     CLOSED = "closed"
 
 class TicketPriorityEnum(str, Enum):
@@ -18,15 +19,15 @@ class TicketCreate(BaseModel):
     project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId")
     title: str
     overview: Optional[str] = None
-    status: Optional[str] = None # Or TicketStatusEnum if these should be strictly validated from the start
-    priority: Optional[str] = None # Or TicketPriorityEnum
+    status: Optional[str] = None
+    priority: Optional[str] = None
     suggested_file_ids: Optional[List[int]] = Field(None, validation_alias="suggestedFileIds", serialization_alias="suggestedFileIds")
     model_config = ConfigDict(populate_by_name=True)
 
     @field_validator('suggested_file_ids', mode='before')
     def validate_suggested_file_ids(cls, v):
         if v is None: return None
-        if isinstance(v, str): # Handle JSON string input
+        if isinstance(v, str):
             try:
                 parsed_v = json.loads(v)
             except json.JSONDecodeError:
@@ -46,9 +47,9 @@ class TicketRead(BaseModel):
     project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId")
     title: str
     overview: str
-    status: str 
-    priority: str 
-    suggested_file_ids: str = Field(..., validation_alias="suggestedFileIds", serialization_alias="suggestedFileIds") # Stored as JSON string
+    status: Literal['open', 'in_progress', 'done', 'closed']
+    priority: Literal['low', 'normal', 'high']
+    suggested_file_ids: List[int] = Field(default=[], validation_alias="suggestedFileIds", serialization_alias="suggestedFileIds")
     created: int = Field(..., validation_alias="created", serialization_alias="created", example=1678442400000)
     updated: int = Field(..., validation_alias="updated", serialization_alias="updated", example=1678442700000)
     model_config = ConfigDict(populate_by_name=True)
@@ -56,13 +57,13 @@ class TicketRead(BaseModel):
 class TicketUpdate(BaseModel):
     title: Optional[str] = None
     overview: Optional[str] = None
-    status: Optional[str] = None 
-    priority: Optional[str] = None 
+    status: Optional[Literal['open', 'in_progress', 'done', 'closed']] = None
+    priority: Optional[Literal['low', 'normal', 'high']] = None
     suggested_file_ids: Optional[List[int]] = Field(None, validation_alias="suggestedFileIds", serialization_alias="suggestedFileIds")
     model_config = ConfigDict(populate_by_name=True)
 
     @field_validator('suggested_file_ids', mode='before')
-    def validate_suggested_file_ids_update(cls, v): # Same validator as in TicketCreate
+    def validate_suggested_file_ids_update(cls, v):
         if v is None: return None
         if isinstance(v, str): 
             try: parsed_v = json.loads(v)
@@ -75,10 +76,10 @@ class TicketUpdate(BaseModel):
 
 
 class TicketFileRead(BaseModel):
-    id: int # Assuming TicketFile has its own ID
+    id: int
     ticket_id: int = Field(..., validation_alias="ticketId", serialization_alias="ticketId")
     file_id: int = Field(..., validation_alias="fileId", serialization_alias="fileId")
-    uploaded_at: int = Field(..., validation_alias="uploadedAt", serialization_alias="uploadedAt", example=1678442400000) # Assuming it has this
+    uploaded_at: int = Field(..., validation_alias="uploadedAt", serialization_alias="uploadedAt", example=1678442400000)
     model_config = ConfigDict(populate_by_name=True)
 
 
@@ -99,7 +100,7 @@ class TicketTaskRead(BaseModel):
     updated: int = Field(..., validation_alias="updated", serialization_alias="updated", example=1678442700000)
     model_config = ConfigDict(populate_by_name=True)
 
-    @validator('done', pre=True)
+    @field_validator('done', mode='before')
     def preprocess_done(cls, v):
         if isinstance(v, int):
             return v == 1
@@ -118,19 +119,19 @@ class TaskSuggestionItem(BaseModel):
 class TaskSuggestions(BaseModel):
     tasks: List[TaskSuggestionItem]
 
-TaskSuggestionsModel = TaskSuggestions # Alias for TaskSuggestions
+TaskSuggestionsModel = TaskSuggestions
 
 # Schemas based on the refined Zod definitions (createTicketSchema, etc.)
 class CreateTicketBody(BaseModel):
-    project_id: int = Field(..., min_length=1, validation_alias="projectId", serialization_alias="projectId")
+    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId")
     title: str = Field(..., min_length=1)
     overview: str = ""
-    status: TicketStatusEnum = TicketStatusEnum.OPEN
-    priority: TicketPriorityEnum = TicketPriorityEnum.NORMAL
+    status: Literal['open', 'in_progress', 'closed'] = 'open'
+    priority: Literal['low', 'normal', 'high'] = 'normal'
     suggested_file_ids: Optional[List[int]] = Field(None, validation_alias="suggestedFileIds", serialization_alias="suggestedFileIds")
     model_config = ConfigDict(populate_by_name=True)
 
-    @field_validator('suggested_file_ids', mode='before') # Reusing validator logic
+    @field_validator('suggested_file_ids', mode='before')
     def validate_suggested_file_ids_body(cls, v):
         if v is None: return None
         if not isinstance(v, list): raise TypeError("suggested_file_ids must be a list.")
@@ -140,12 +141,12 @@ class CreateTicketBody(BaseModel):
 class UpdateTicketBody(BaseModel):
     title: Optional[str] = Field(None, min_length=1)
     overview: Optional[str] = None
-    status: Optional[TicketStatusEnum] = None
-    priority: Optional[TicketPriorityEnum] = None
+    status: Optional[Literal['open', 'in_progress', 'done', 'closed']] = None
+    priority: Optional[Literal['low', 'normal', 'high']] = None
     suggested_file_ids: Optional[List[int]] = Field(None, validation_alias="suggestedFileIds", serialization_alias="suggestedFileIds")
     model_config = ConfigDict(populate_by_name=True)
 
-    @field_validator('suggested_file_ids', mode='before') # Reusing validator logic
+    @field_validator('suggested_file_ids', mode='before')
     def validate_suggested_file_ids_update_body(cls, v):
         if v is None: return None
         if not isinstance(v, list): raise TypeError("suggested_file_ids must be a list.")
@@ -200,10 +201,9 @@ class TicketAndTaskIdParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 # Type Aliases based on Zod .infer types (if needed for external use)
-# Pydantic models themselves serve as the types.
-TicketBase = TicketRead         # Read model includes all necessary fields
-TicketTaskBase = TicketTaskRead # Read model includes all necessary fields
-TicketFileBase = TicketFileRead # Read model includes all necessary fields
+TicketBase = TicketRead
+TicketTaskBase = TicketTaskRead
+TicketFileBase = TicketFileRead
 
 # Need to import json for the suggested_file_ids validator
 import json

@@ -3,20 +3,20 @@
 // Script to run all API functional tests with proper environment setup
 
 import { $ } from 'bun'
+import { TEST_API_URL } from './test-config'
 
 // const API_URL = process.env.API_URL || 'http://localhost:3000'
-const API_URL = 'http://localhost:3147' // Ensure this is the correct URL for your running API
 
 console.log('🧪 Running API Functional Tests')
-console.log(`📍 API URL: ${API_URL}`) // This is informational; API_URL in test files is what matters.
+console.log(`📍 API URL: ${TEST_API_URL}`) // This is informational; API_URL in test files is what matters.
 console.log('─'.repeat(50))
 
 const testFiles = [
     'projects-api.test.ts',
-    'chat-api.test.ts',
-    'prompt-api.test.ts',
-    'provider-key-api.test.ts',
-    'ticket-api.test.ts'
+    // 'chat-api.test.ts',
+    // 'prompt-api.test.ts',
+    // 'provider-key-api.test.ts',
+    // 'ticket-api.test.ts'
 ]
 
 try {

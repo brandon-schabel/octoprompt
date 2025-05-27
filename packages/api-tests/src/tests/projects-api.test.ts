@@ -24,9 +24,10 @@ import {
     FileListResponseSchema,
     ProjectSummaryResponseSchema
 } from '../../../shared/src/schemas/project.schemas'
+import { TEST_API_URL } from './test-config'
 
 
-const BASE_URL = process.env.API_URL || 'http://localhost:3147'
+const BASE_URL = TEST_API_URL
 const API_URL = `${BASE_URL}/api`
 
 // Local Zod Schemas - keep generic ones or those not in shared
