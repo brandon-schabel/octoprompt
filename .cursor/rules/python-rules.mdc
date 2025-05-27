@@ -10,3 +10,5 @@ OctoPrompt Python Code Rules
 - uv is used with .venv
 - uv pytest for testing
 - when running python files in terminal use uv
+- run test with `uv run pytest`
+- activate env with `source .venv/bin/activate

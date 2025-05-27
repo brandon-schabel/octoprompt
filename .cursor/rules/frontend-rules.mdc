@@ -1,6 +1,6 @@
 ---
 description: It's helpful for building features on the client.
-globs: packages/client/src/**/*.tsx
+globs: packages/client/**
 alwaysApply: false
 ---
 # Frontend Cursor Rules: Extended Guidelines
