@@ -124,8 +124,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const { copyToClipboard } = useCopyClipboard()
   const projectId = projectTabState?.selectedProjectId ?? -1
 
-  const { mutate: refreshProject } = useRefreshProject(projectId ?? -1)
-  const summarizeMutation = useSummarizeProjectFiles(projectId ?? -1)
+  const { mutate: refreshProject } = useRefreshProject()
+  const summarizeMutation = useSummarizeProjectFiles()
 
   const isFolder = item.node._folder === true
 
@@ -304,7 +304,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                       e.stopPropagation()
 
                       summarizeMutation.mutate(
-                        { fileIds: [item.node.file!.id], force: false }, // force: false initially
+                        { fileIds: [item.node.file!.id], force: false, projectId }, // force: false initially
                         {
                           onSuccess: (resp) => {
                             toast.success(resp.message || 'File summary started.')
@@ -489,11 +489,11 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
         {isFolder && (
           <>
             <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => refreshProject({ folder: item.path })}>
+            <ContextMenuItem onClick={() => refreshProject({ folder: item.path, projectId })}>
               <RefreshCw className='h-4 w-4 mr-2' />
               Refresh This Folder
             </ContextMenuItem>
-            <ContextMenuItem onClick={() => refreshProject({})}>
+            <ContextMenuItem onClick={() => refreshProject({ projectId })}>
               <RefreshCw className='h-4 w-4 mr-2' />
               Refresh Entire Project
             </ContextMenuItem>

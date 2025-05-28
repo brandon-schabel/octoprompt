@@ -620,7 +620,7 @@ export function ChatMessages({
         await forkChatMutation.mutateAsync({
           chatId,
           messageId,
-          body: { excludedMessageIds: Array.from(excludedSet) }
+          excludedMessageIds: Array.from(excludedSet)
         })
         toast.success('Chat forked successfully')
       } catch (error) {

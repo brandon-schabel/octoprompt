@@ -1,11 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import {
-  getApiAdminEnvInfoOptions,
-  getApiAdminSystemStatusOptions,
-  getApiAdminEnvInfoQueryKey,
-  getApiAdminSystemStatusQueryKey
-} from '../../generated/@tanstack/react-query.gen'
-import type { GetApiAdminEnvInfoResponse, GetApiAdminSystemStatusResponse } from '../../generated/types.gen'
+import { octoClient } from '../api'
 
 export interface TableCount {
   count: number
@@ -46,31 +40,25 @@ export interface SystemStatus {
   }
 }
 
+const ADMIN_KEYS = {
+  all: ['admin'] as const,
+  envInfo: () => [...ADMIN_KEYS.all, 'envInfo'] as const,
+  systemStatus: () => [...ADMIN_KEYS.all, 'systemStatus'] as const,
+}
+
 export const useGetEnvironmentInfo = () => {
-  const queryOptions = getApiAdminEnvInfoOptions()
-  return useQuery<
-    GetApiAdminEnvInfoResponse,
-    Error,
-    GetApiAdminEnvInfoResponse,
-    ReturnType<typeof getApiAdminEnvInfoQueryKey>
-  >({
-    queryKey: queryOptions.queryKey,
-    queryFn: queryOptions.queryFn,
+  return useQuery({
+    queryKey: ADMIN_KEYS.envInfo(),
+    queryFn: () => octoClient.admin.getEnvironmentInfo(),
     refetchOnWindowFocus: false,
     retry: 1
   })
 }
 
 export const useGetSystemStatus = () => {
-  const queryOptions = getApiAdminSystemStatusOptions()
-  return useQuery<
-    GetApiAdminSystemStatusResponse,
-    Error,
-    GetApiAdminSystemStatusResponse,
-    ReturnType<typeof getApiAdminSystemStatusQueryKey>
-  >({
-    queryKey: queryOptions.queryKey,
-    queryFn: queryOptions.queryFn,
+  return useQuery({
+    queryKey: ADMIN_KEYS.systemStatus(),
+    queryFn: () => octoClient.admin.getSystemStatus(),
     refetchOnWindowFocus: false,
     retry: 1,
     refetchInterval: 30000

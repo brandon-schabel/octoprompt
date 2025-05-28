@@ -294,3 +294,203 @@ run unit tests:
 ```
 uv run tests
 ```
+
+## Frontend
+Major Packages
+- React
+- TanStack Router
+- DND Kit For Drag and Drop Features
+- ShadCN for component library(uses Radix)
+- React 19
+- React Hook Form
+- Tailwind
+- TanStack Query for Data Fetching
+- AI SDK Frontend Package For Streaming AI
+
+
+Generally Organized by major feature
+- Projects
+- Chat & Messages
+- Prompts
+- Tickets & Tasks
+
+### Routes
+`packages/client/src/routes`
+```
+projects.tsx
+keys.tsx
+index.tsx
+__root.tsx # root is the base layout
+health.tsx
+prompts.tsx
+project-summarization.tsx
+chat.tsx
+admin.tsx
+```
+
+
+### Components
+`packages/client/src/components`
+- components/ui - Contains the ShadCN components
+```
+app-shortcut-display.tsx
+file-changes
+  diff-viewer.tsx
+  compute-line-diff.test.tsx
+  ai-file-change-dialog.tsx
+  compute-line-diff.tsx
+ui
+  alert-dialog.tsx
+  tabs.tsx
+  card.tsx
+  slider.tsx
+  popover.tsx
+  progress.tsx
+  chart.tsx
+  sheet.tsx
+  vertical-resizable-panel.tsx
+  resizable-panel.tsx
+  scroll-area.tsx
+  label.tsx
+  sonner.tsx
+  drawer.tsx
+  tooltip.tsx
+  alert.tsx
+  switch.tsx
+  breadcrumb.tsx
+  command.tsx
+  avatar.tsx
+  menubar.tsx
+  icons.tsx
+  dialog.tsx
+  badge.tsx
+  sidebar.tsx
+  table.tsx
+  index.ts
+  separator.tsx
+  button.tsx
+  checkbox.tsx
+  collapsible.tsx
+  dropdown-menu.tsx
+  select.tsx
+  textarea.tsx
+  input.tsx
+  skeleton.tsx
+  context-menu.tsx
+  form.tsx
+settings
+  settings-dialog.tsx
+promptimizer-dialog.tsx
+tickets
+  ticket-list-panel.tsx
+  ticket-tasks-panel.tsx
+  utils
+    ticket-utils.ts
+  ticket-dialog.tsx
+  ticket-attachment-panel.tsx
+  ticket-list.tsx
+  ticket-empty-state.tsx
+suggest-files-dialog.tsx
+shortcuts-palette.tsx
+octo
+  octo-tooltip.tsx
+  octo-combobox.tsx
+markdown-renderer.tsx
+projects-tab-manager.tsx
+projects
+  prompt-dialog.tsx
+  project-list.tsx
+  summary-dialog.tsx
+  selected-files-drawer.tsx
+  selected-files-list.tsx
+  project-dialog.tsx
+  project-settings-dialog.tsx
+  agent-coding-dialog.tsx
+  prompts-list.tsx
+  prompt-overview-panel.tsx
+  file-panel
+    file-panel.tsx
+    project-header.tsx
+    file-tree
+      file-tree.tsx
+    file-explorer
+      selected-files-list-display.tsx
+      no-results-screen.tsx
+      empty-project-screen.tsx
+      file-explorer.tsx
+  project-stats-display.tsx
+expandable-textarea.tsx
+error-boundary
+  error-boundary.tsx
+  component-error-boundary.tsx
+navigation
+  help-dialog.tsx
+  app-navbar.tsx
+  app-sidebar.tsx
+  file-viewer-dialog.tsx
+  navigation-commands.tsx
+tickets.tsx
+format-token-count.tsx
+sliding-sidebar.tsx
+prompts
+  all-prompts-dialog.tsx
+```
+
+
+### Data Fetching
+The backend creates an OpenAPI spec, which then we use the OpenAPI-ts Generator to generate the fetchers and types based on the backend routes and zod schemas.
+
+the hooks are located at 
+`packages/client/src/hooks/api`
+```
+use-agent-coder-api.ts
+use-projects-api.ts
+use-prompts-api.ts
+use-ai-chat.ts
+use-ai-file-changes-api.ts
+use-admin-api.ts
+use-keys-api.ts
+common-mutation-error-handler.ts
+use-tickets-api.ts
+use-gen-ai-api.ts
+use-chat-api.ts
+```
+
+
+the generated typescript types and tanstack react query configs are located at
+`packages/client/src/generated`
+```
+@tanstack
+  react-query.gen.ts # these are used by the api hooks
+client.gen.ts
+types.gen.ts
+sdk.gen.ts
+index.ts
+```
+
+
+```
+import {
+getApiPromptsByPromptIdOptions
+} from '../../generated/@tanstack/react-query.gen'
+
+import type {
+  GetApiPromptsByPromptIdData }
+from '../../generated/types.gen'
+import { Options } from '../../generated/sdk.gen'
+
+/**
+ * Fetches a single prompt by its ID.
+ */
+export function useGetPrompt(id: number) {
+  const queryOptions = getApiPromptsByPromptIdOptions({
+    path: { promptId: id }
+  } as Options<GetApiPromptsByPromptIdData>)
+  return useQuery({
+    ...queryOptions,
+    enabled: !!id
+  })
+}
+
+```
+## Backend

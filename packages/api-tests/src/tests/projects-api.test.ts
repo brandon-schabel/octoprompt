@@ -4,6 +4,7 @@
 // 3. Uses Bun's HTTP client for requests
 // 4. Follows create-verify-update-verify-fetch-cleanup pattern
 // 5. Ensures no test data persists after completion
+// 6. Added file operation tests (update, bulk create, bulk update)
 
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
 import { join } from 'path'
@@ -44,6 +45,17 @@ const SuccessMessageResponseSchema = z.object({
     message: z.string()
 })
 
+// File operation response schemas
+const FileResponseSchema = z.object({
+    success: z.literal(true),
+    data: ProjectFileSchema
+})
+
+const BulkFilesResponseSchema = z.object({
+    success: z.literal(true),
+    data: z.array(ProjectFileSchema)
+})
+
 // This is more generic than ProjectListResponseSchema or FileListResponseSchema if pagination is expected
 const PaginatedSuccessResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
     z.object({
@@ -62,6 +74,7 @@ describe('Project API Tests', () => {
     let testProjects: Project[] = [] // Use imported Project type
     let testProjectPaths: string[] = []
     let testFileIds: number[] = [] // Changed to number[] to align with shared ProjectFileSchema
+    let createdFileIds: number[] = [] // Track files created during tests
 
     beforeAll(() => {
         console.log('Starting Project API Tests...')
@@ -225,6 +238,143 @@ describe('Project API Tests', () => {
                     expect(file.id).toBeTypeOf('number')
                 })
             }
+        }
+    })
+
+    test('POST /api/projects/{projectId}/files/bulk - Bulk create files', async () => {
+        const project = testProjects[0]
+        if (!project) return
+
+        const testFiles = [
+            {
+                path: 'test-file-1.js',
+                name: 'test-file-1.js',
+                extension: '.js',
+                content: 'console.log("test file 1");',
+                size: Buffer.byteLength('console.log("test file 1");', 'utf8'),
+                checksum: 'test-checksum-1'
+            },
+            {
+                path: 'test-file-2.ts',
+                name: 'test-file-2.ts',
+                extension: '.ts',
+                content: 'const message: string = "test file 2";',
+                size: Buffer.byteLength('const message: string = "test file 2";', 'utf8'),
+                checksum: 'test-checksum-2'
+            }
+        ]
+
+        const bulkCreateEndpoint: Endpoint<any, any> = {
+            url: `${API_URL}/projects/${project.id}/files/bulk`,
+            options: { method: 'POST' }
+        }
+
+        const result = await apiFetch(
+            bulkCreateEndpoint,
+            { files: testFiles },
+            BulkFilesResponseSchema
+        )
+
+        expect(result.success).toBe(true)
+        expect(Array.isArray(result.data)).toBe(true)
+        expect(result.data.length).toBe(testFiles.length)
+
+        // Clear any existing created file IDs and use the actual returned IDs
+        createdFileIds.length = 0
+        result.data.forEach((file: ProjectFile, index: number) => {
+            createdFileIds.push(file.id)
+            expect(file.projectId).toBe(project.id)
+            const testFile = testFiles[index]
+            expect(testFile).toBeDefined()
+            expect(file.name).toBe(testFile!.name)
+            expect(file.content).toBe(testFile!.content)
+            expect(file.extension).toBe(testFile!.extension)
+            expect(file.size).toBe(testFile!.size)
+        })
+    })
+
+    test('PUT /api/projects/{projectId}/files/{fileId} - Update single file content', async () => {
+        if (createdFileIds.length === 0) {
+            console.warn('Skipping single file update test: no created files')
+            return
+        }
+        const project = testProjects[0]
+        if (!project) return
+
+        const fileId = createdFileIds[0]!
+        const newContent = 'console.log("updated content");'
+
+        console.log('Single file update test - using file ID:', fileId)
+
+        const updateFileEndpoint: Endpoint<any, any> = {
+            url: `${API_URL}/projects/${project.id}/files/${fileId}`,
+            options: { method: 'PUT' }
+        }
+
+        const result = await apiFetch(
+            updateFileEndpoint,
+            { content: newContent },
+            FileResponseSchema
+        )
+
+        expect(result.success).toBe(true)
+        expect(result.data.id).toBe(fileId)
+        expect(result.data.content).toBe(newContent)
+        expect(result.data.size).toBe(Buffer.byteLength(newContent, 'utf8'))
+        expect(result.data.updated).toBeTypeOf('number')
+    })
+
+    test('PUT /api/projects/{projectId}/files/bulk - Bulk update files content', async () => {
+        if (createdFileIds.length < 2) {
+            console.warn('Skipping bulk update test: insufficient created files')
+            return
+        }
+        const project = testProjects[0]
+        if (!project) return
+
+        const updates = [
+            {
+                fileId: createdFileIds[0]!,
+                content: 'console.log("bulk updated file 1");'
+            },
+            {
+                fileId: createdFileIds[1]!,
+                content: 'const message: string = "bulk updated file 2";'
+            }
+        ]
+
+        const bulkUpdateEndpoint: Endpoint<any, any> = {
+            url: `${API_URL}/projects/${project.id}/files/bulk`,
+            options: { method: 'PUT' }
+        }
+
+        console.log('Bulk update test - using file IDs:', createdFileIds)
+        console.log('Bulk update test - updates:', JSON.stringify(updates, null, 2))
+
+        try {
+            const result = await apiFetch(
+                bulkUpdateEndpoint,
+                { updates },
+                BulkFilesResponseSchema
+            )
+
+            expect(result.success).toBe(true)
+            expect(Array.isArray(result.data)).toBe(true)
+            expect(result.data.length).toBe(updates.length)
+
+            result.data.forEach((file: ProjectFile, index: number) => {
+                const update = updates[index]
+                expect(update).toBeDefined()
+                expect(file.id).toBe(update!.fileId)
+                expect(file.content).toBe(update!.content)
+                expect(file.size).toBe(Buffer.byteLength(update!.content, 'utf8'))
+                expect(file.updated).toBeTypeOf('number')
+            })
+        } catch (error) {
+            console.error('Bulk update test failed with error:', error)
+            console.error('Updates data:', JSON.stringify(updates, null, 2))
+            console.error('Created file IDs:', createdFileIds)
+            throw error
         }
     })
 

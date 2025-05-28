@@ -26,10 +26,7 @@
   "include": [
     "*.ts",
     "src/**/*.ts",
-    "schema.ts",
-    "../server/src/utils/response-utils.ts",
-    "../server/src/utils/parse-timestamp.test.ts",
-    "../server/src/utils/parse-timestamp.ts"
+    "schema.ts"
   ],
   "exclude": [
     "node_modules",

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { unixTSArrayOptionalSchemaSpec, unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
+import { idSchemaSpec, unixTSArrayOptionalSchemaSpec, unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
 // Fix the core issue: ensure suggestedFileIds is handled consistently across all schemas
 
@@ -96,7 +96,7 @@ export const TaskSuggestionsZodSchema = z.object({
 export type TaskSuggestions = z.infer<typeof TaskSuggestionsZodSchema>
 
 export const createTicketSchema = z.object({
-  projectId: unixTSSchemaSpec,
+  projectId: idSchemaSpec.default(-1),
   title: z.string().min(1),
   overview: z.string().default(''),
   status: z.enum(['open', 'in_progress', 'closed']).default('open'),
@@ -370,3 +370,6 @@ export type ReorderTasksBody = z.infer<typeof reorderTasksSchema>
 export type Ticket = z.infer<typeof TicketReadSchema>
 export type TicketTask = z.infer<typeof TicketTaskReadSchema>
 export type TicketFile = z.infer<typeof TicketFileReadSchema>
+
+export type TicketWithTaskCount = z.infer<typeof TicketWithTaskCountSchema>
+export type TicketWithTasks = z.infer<typeof TicketWithTasksSchema>

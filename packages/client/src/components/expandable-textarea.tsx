@@ -10,7 +10,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'
 import exp from 'constants'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { useOptimzeUserInput } from '@/hooks/api/use-projects-api'
+import { useOptimizeUserInput } from '@/hooks/api/use-projects-api'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ExpandableTextareaProps = {
@@ -35,7 +35,7 @@ export const ExpandableTextarea = forwardRef<HTMLTextAreaElement, ExpandableText
 
     const [promptimizeDialogOpen, setPromptimizeDialogOpen] = useState(false)
     const [optimizedPrompt, setOptimizedPrompt] = useState('')
-    const optimizeUserInput = useOptimzeUserInput()
+    const optimizeUserInput = useOptimizeUserInput()
 
     const handleOptimizeUserInput = () => {
       if (!expandedValue.trim()) {

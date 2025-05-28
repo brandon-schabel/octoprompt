@@ -13,7 +13,6 @@ export function useChatModelParams() {
 
   const isTempDisabled = useMemo(() => {
     if (!model) return false
-    console.log({ model })
     return modelsTempNotAllowed.some((m) => model.includes(m))
   }, [model])
 

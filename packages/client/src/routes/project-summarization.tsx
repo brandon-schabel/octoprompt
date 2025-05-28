@@ -41,20 +41,20 @@ type SortOption =
   | 'sizeDesc'
 
 function ResummarizeButton({ projectId, fileId, disabled }: { projectId: number; fileId: number; disabled: boolean }) {
-  const summarizeMutation = useSummarizeProjectFiles(projectId)
+  const summarizeMutation = useSummarizeProjectFiles()
 
   return (
     <button
       className='text-blue-600 hover:underline'
       onClick={() => {
         summarizeMutation.mutate(
-          { fileIds: [fileId], force: true },
+          { projectId, fileIds: [fileId], force: true },
           {
             onSuccess: (resp) => {
               toast.success(resp.message || 'File has been successfully re-summarized')
             },
             onError: (error) => {
-              toast.error(error?.error?.message || 'Failed to re-summarize file')
+              toast.error(error?.message || 'Failed to re-summarize file')
             }
           }
         )
@@ -107,8 +107,8 @@ export function ProjectSummarizationSettingsPage() {
     return map
   }, [projectFiles])
 
-  const summarizeMutation = useSummarizeProjectFiles(selectedProjectId ?? -1)
-  const removeSummariesMutation = useRemoveSummariesFromFiles(selectedProjectId ?? -1)
+  const summarizeMutation = useSummarizeProjectFiles()
+  const removeSummariesMutation = useRemoveSummariesFromFiles()
 
   // Memoize tokens map calculation
   const tokensMap = useMemo(() => {
@@ -274,7 +274,7 @@ export function ProjectSummarizationSettingsPage() {
 
     startTransition(() => {
       summarizeMutation.mutate(
-        { fileIds: selectedFileIds },
+        { fileIds: selectedFileIds, projectId: selectedProjectId ?? -1 },
         {
           onSuccess: (resp) => {
             toast.success(resp.message || 'Selected files have been summarized')
@@ -293,7 +293,7 @@ export function ProjectSummarizationSettingsPage() {
       return
     }
     summarizeMutation.mutate(
-      { fileIds: selectedFileIds, force: true },
+      { fileIds: selectedFileIds, force: true, projectId: selectedProjectId ?? -1 },
       {
         onSuccess: (resp) => {
           toast.success(resp.message || 'Selected files have been force re-summarized', {
@@ -311,15 +311,18 @@ export function ProjectSummarizationSettingsPage() {
       })
       return
     }
-    removeSummariesMutation.mutate(selectedFileIds, {
-      onSuccess: (resp) => {
-        toast.success(resp.message || `Removed ${resp.removedCount} summaries`, {
-          description: 'Summaries have been removed'
-        })
-        // Deselect files whose summaries were removed if desired
-        setSelectedFileIds((prev) => prev.filter((id) => !selectedFileIds.includes(id)))
+    removeSummariesMutation.mutate(
+      { fileIds: selectedFileIds, projectId: selectedProjectId ?? -1 },
+      {
+        onSuccess: (resp) => {
+          toast.success(resp.message || `Removed ${resp.removedCount} summaries`, {
+            description: 'Summaries have been removed'
+          })
+          // Deselect files whose summaries were removed if desired
+          setSelectedFileIds((prev) => prev.filter((id) => !selectedFileIds.includes(id)))
+        }
       }
-    })
+    )
   }
 
   function handleToggleSummary(fileId: number) {

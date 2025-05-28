@@ -66,7 +66,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
     updateTaskMut.mutate({
       ticketId,
       taskId: task.id,
-      updates: { done: !task.done }
+      data: {
+        done: !task.done
+      }
     })
   }
 
@@ -86,7 +88,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
     newOrder[idx - 1] = temp
     reorderMut.mutate({
       ticketId,
-      tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      data: {
+        tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      }
     })
   }
 
@@ -100,7 +104,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
     newOrder[idx + 1] = temp
     reorderMut.mutate({
       ticketId,
-      tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      data: {
+        tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      }
     })
   }
 

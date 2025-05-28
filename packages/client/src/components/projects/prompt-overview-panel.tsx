@@ -62,11 +62,12 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     const { copyToClipboard } = useCopyClipboard()
     const promptInputRef = useRef<HTMLTextAreaElement>(null)
-    const findSuggestedFilesMutation = useSuggestFiles(activeProjectTabState?.selectedProjectId ?? -1)
+    const findSuggestedFilesMutation = useSuggestFiles()
     const [showSuggestions, setShowSuggestions] = useState(false)
 
     // Load the project's prompts
-    const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
+    const { data: promptDataRes } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
+    const promptData = promptDataRes?.data ?? []
     const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // Read selected files
@@ -121,11 +122,14 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         return
       }
       findSuggestedFilesMutation.mutate(
-        { userInput: `Please find the relevant files for the following prompt: ${localUserPrompt}` },
+        {
+          userInput: `Please find the relevant files for the following prompt: ${localUserPrompt}`,
+          projectId: activeProjectTabState?.selectedProjectId ?? -1
+        },
         {
           onSuccess: (resp) => {
-            if (resp?.data?.success && resp.data?.recommendedFileIds) {
-              const files = resp.data.recommendedFileIds
+            if (resp?.success && resp?.recommendedFileIds) {
+              const files = resp.recommendedFileIds
                 .map((id) => {
                   const file = projectFileMap.get(id)
                   if (file) {
@@ -373,7 +377,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               selectedFiles={selectedFiles}
               projectId={activeProjectTabState?.selectedProjectId || -1}
               selectedPrompts={selectedPrompts}
-              promptData={promptData?.data}
+              promptData={promptData}
               totalTokens={totalTokens}
               projectFileMap={projectFileMap}
             />

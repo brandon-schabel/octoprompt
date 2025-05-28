@@ -1,139 +1,81 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
-import { v4 as uuidv4 } from 'uuid'
-import {
-  postApiProjectsByProjectIdAgentCoderMutation,
-  getApiProjectsByProjectIdFilesQueryKey,
-  getApiAgentCoderProjectByProjectIdRunsOptions,
-  getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions,
-  getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataQueryKey,
-  getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions,
-  getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsQueryKey,
-  deleteApiAgentCoderRunsByAgentJobIdMutation,
-  postApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmMutation
-} from '../../generated/@tanstack/react-query.gen'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  type PostApiProjectsByProjectIdAgentCoderError,
-  type PostApiProjectsByProjectIdAgentCoderData,
-  type AgentCoderRunRequest as AgentCoderRunRequestBody,
-  type ProjectFile,
-  type GetApiProjectsByProjectIdFilesData,
-  type ApiErrorResponse,
-  type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataData,
-  type GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsData,
-  type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmData,
-  type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError,
-  type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse,
-  type PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmErrors,
-  DeleteApiAgentCoderRunsByAgentJobIdResponse,
-  DeleteApiAgentCoderRunsByAgentJobIdError,
-  DeleteApiAgentCoderRunsByAgentJobIdData
-} from '../../generated/types.gen'
-import { type Options } from '../../generated/sdk.gen'
-import { commonErrorHandler } from './common-mutation-error-handler'
-import {
-  type TaskPlan,
-  AgentCoderRunSuccessDataSchema,
-  type AgentCoderRunSuccessData
+import { octoClient } from '../api'
+import type {
+  AgentCoderRunRequest,
+  AgentCoderRunResponse,
+  AgentDataLog
 } from 'shared/src/schemas/agent-coder.schemas'
 
-// Use the specific Zod-derived type for the data endpoint
-export type AgentRunData = AgentCoderRunSuccessData
-
-// Define the query key type explicitly for clarity
-type AgentRunDataQueryKey = ReturnType<typeof getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions>['queryKey']
-
-// Corresponds to AgentCoderRunResponseSchema in agent-coder-routes.ts
-type AgentCoderRunResponse = {
-  success: boolean
-  data?: AgentRunData & { agentJobId: number; taskPlan?: TaskPlan | null } // Combine types for the run response
-  error?: ApiErrorResponse['error']
+const AGENT_CODER_KEYS = {
+  all: ['agentCoder'] as const,
+  projectRuns: (projectId: number) => [...AGENT_CODER_KEYS.all, 'projectRuns', projectId] as const,
+  runData: (projectId: number, agentJobId: number) => [...AGENT_CODER_KEYS.all, 'runData', projectId, agentJobId] as const,
+  runLogs: (projectId: number, agentJobId: number) => [...AGENT_CODER_KEYS.all, 'runLogs', projectId, agentJobId] as const,
 }
 
 export const useRunAgentCoder = (projectId: number) => {
   const queryClient = useQueryClient()
-  const mutationOptionsFn = postApiProjectsByProjectIdAgentCoderMutation()
 
-  return useMutation<AgentCoderRunResponse, PostApiProjectsByProjectIdAgentCoderError, AgentCoderRunRequestBody>({
-    mutationFn: async (variables: AgentCoderRunRequestBody) => {
-      const options: Options<PostApiProjectsByProjectIdAgentCoderData> = {
-        path: { projectId },
-        body: variables
-      }
-      const mutationFn = mutationOptionsFn.mutationFn
-      if (!mutationFn) {
-        throw new Error('Generated mutation function is not available.')
-      }
-      // Cast the result to the more specific frontend type
-      const result = (await mutationFn(options)) as AgentCoderRunResponse
-      return result
-    },
-    onSuccess: (data: AgentCoderRunResponse, variables) => {
-      // Check against the more specific AgentCoderRunResponse type
+  return useMutation({
+    mutationFn: (data: AgentCoderRunRequest) => octoClient.agentCoder.runAgentCoder(projectId, data),
+    onSuccess: (data: AgentCoderRunResponse) => {
       if (data.success && data.data?.agentJobId) {
         toast.success(`Agent Coder job ${data.data.agentJobId} finished successfully!`)
       } else if (data.success) {
         toast.success('Agent Coder finished successfully!')
       } else {
-        const errorMessage = data.error?.message || 'Agent Coder reported failure.'
-        toast.error(`Agent Coder Failed: ${errorMessage}`)
+        toast.error('Agent Coder reported failure.')
       }
 
-      const queryKey = getApiProjectsByProjectIdFilesQueryKey({
-        path: { projectId }
-      } as Options<GetApiProjectsByProjectIdFilesData>)
-      queryClient.invalidateQueries({ queryKey })
-      const runsListQueryKey = getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }).queryKey
-      queryClient.invalidateQueries({ queryKey: runsListQueryKey })
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['projects', 'files', projectId] })
+      queryClient.invalidateQueries({ queryKey: AGENT_CODER_KEYS.projectRuns(projectId) })
 
-      // Invalidate specific run data/logs if the job ID is available
+      // Invalidate specific run data/logs if available
       if (data.success && data.data?.agentJobId) {
         const agentJobId = data.data.agentJobId
-        const dataQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({
-          path: { projectId, agentJobId }
-        }).queryKey
-        const logsQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions({
-          path: { projectId, agentJobId }
-        }).queryKey
-        queryClient.invalidateQueries({ queryKey: dataQueryKey })
-        queryClient.invalidateQueries({ queryKey: logsQueryKey })
+        queryClient.invalidateQueries({ queryKey: AGENT_CODER_KEYS.runData(projectId, agentJobId) })
+        queryClient.invalidateQueries({ queryKey: AGENT_CODER_KEYS.runLogs(projectId, agentJobId) })
       }
     },
-    onError: (error) => commonErrorHandler(error as unknown as Error)
+    onError: (error) => {
+      toast.error(error.message || 'Agent Coder failed')
+    }
   })
 }
 
 export const useListAgentCoderRuns = (projectId: number) => {
-  return useQuery(getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }))
+  return useQuery({
+    queryKey: AGENT_CODER_KEYS.projectRuns(projectId),
+    queryFn: () => octoClient.agentCoder.listAgentRuns(projectId),
+    enabled: !!projectId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  })
 }
 
 export const useGetAgentCoderRunLogs = (
-  options: { enabled?: boolean; isAgentRunning: boolean; projectId: number; agentJobId: number } = {
-    enabled: false,
-    isAgentRunning: false,
-    projectId: 0,
-    agentJobId: 0
-  }
+  projectId: number,
+  agentJobId: number,
+  options: { enabled?: boolean; isAgentRunning?: boolean } = {}
 ) => {
-  const pathParams: Options<GetApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsData>['path'] = {
-    agentJobId: options.agentJobId ?? -1,
-    projectId: options.projectId ?? -1
-  }
-
   return useQuery({
-    ...getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions({
-      path: pathParams
-    }),
-    // Ensure enabled respects both agentJobId presence and the passed option
-    enabled: !!options.agentJobId && (options.enabled ?? true),
+    queryKey: AGENT_CODER_KEYS.runLogs(projectId, agentJobId),
+    queryFn: () => octoClient.agentCoder.getAgentRunLogs(projectId, agentJobId),
+    enabled: !!projectId && !!agentJobId && (options.enabled ?? true),
     refetchOnWindowFocus: false,
-    refetchOnMount: true, // Refetch when component mounts or enabled state changes
+    refetchOnMount: true,
     refetchInterval: options.isAgentRunning ? 250 : false
   })
 }
 
 export const useGetAgentCoderRuns = (projectId: number) => {
-  return useQuery(getApiAgentCoderProjectByProjectIdRunsOptions({ path: { projectId } }))
+  return useQuery({
+    queryKey: AGENT_CODER_KEYS.projectRuns(projectId),
+    queryFn: () => octoClient.agentCoder.listAgentRuns(projectId),
+    enabled: !!projectId,
+    staleTime: 2 * 60 * 1000,
+  })
 }
 
 export const useGetAgentCoderRunData = ({
@@ -147,126 +89,75 @@ export const useGetAgentCoderRunData = ({
   isAgentRunning?: boolean
   projectId: number
 }) => {
-  // Use the specific query key type here
-  const queryOptions = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({
-    path: { projectId, agentJobId }
-  }) as UseQueryOptions<AgentRunData, Error, AgentRunData, AgentRunDataQueryKey>
-
-  return useQuery<AgentRunData, Error, AgentRunData, AgentRunDataQueryKey>({
-    // Specify the type parameters including the query key
-    ...queryOptions,
+  return useQuery({
+    queryKey: AGENT_CODER_KEYS.runData(projectId, agentJobId),
+    queryFn: () => octoClient.agentCoder.getAgentRunData(projectId, agentJobId),
     refetchInterval: isAgentRunning ? 250 : false,
-    enabled: !!agentJobId && enabled // Ensure job ID exists and enabled is true
+    enabled: !!agentJobId && !!projectId && enabled,
+    staleTime: 30 * 1000, // 30 seconds
   })
 }
 
-// --- NEW Hook: Confirm Agent Run Changes ---
 export const useConfirmAgentRunChanges = () => {
   const queryClient = useQueryClient()
-  const mutationOptionsFn = postApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmMutation()
 
-  return useMutation<
-    PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse,
-    PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmError,
-    { agentJobId: number; projectId: number }
-  >({
-    mutationFn: async ({ agentJobId, projectId }) => {
-      const options: Options<PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmData> = {
-        path: { projectId, agentJobId }
-      }
-      const mutationFn = mutationOptionsFn.mutationFn
-      if (!mutationFn) {
-        throw new Error('Generated confirmation mutation function is not available.')
-      }
-      const result = await mutationFn(options)
-      // The generated type PostApiAgentCoderRunsByAgentJobIdConfirmResponse should be correct
-      return result as PostApiAgentCoderProjectByProjectIdRunsByAgentJobIdConfirmResponse
-    },
+  return useMutation({
+    mutationFn: ({ agentJobId, projectId }: { agentJobId: number; projectId: number }) =>
+      octoClient.agentCoder.confirmAgentRun(projectId, agentJobId),
     onSuccess: (data, variables) => {
       if (data.success) {
         toast.success(data.message || `Agent run ${variables.agentJobId} changes confirmed and applied!`)
 
         // Invalidate project files to reflect changes
-        queryClient.invalidateQueries({ queryKey: ['getApiProjectsByProjectIdFiles'] }) // Invalidate based on query key prefix
+        queryClient.invalidateQueries({ queryKey: ['projects', 'files', variables.projectId] })
 
-        // Optionally, refetch the specific run data to show it no longer needs confirmation (if applicable)
-        const dataQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({
-          path: { projectId: variables.projectId, agentJobId: variables.agentJobId }
-        }).queryKey
-        queryClient.invalidateQueries({ queryKey: dataQueryKey })
+        // Invalidate run data
+        queryClient.invalidateQueries({
+          queryKey: AGENT_CODER_KEYS.runData(variables.projectId, variables.agentJobId)
+        })
 
-        // Invalidate runs list in case status changes (though less likely needed here)
-        const runsListQueryKey = getApiAgentCoderProjectByProjectIdRunsOptions({
-          path: { projectId: variables.projectId }
-        }).queryKey
-        queryClient.invalidateQueries({ queryKey: runsListQueryKey })
+        // Invalidate runs list
+        queryClient.invalidateQueries({
+          queryKey: AGENT_CODER_KEYS.projectRuns(variables.projectId)
+        })
       } else {
-        const errorMessage = (data as any)?.error?.message || 'Failed to confirm agent run changes.'
-        toast.error(`Confirmation Failed: ${errorMessage}`)
-        console.error('Confirm Agent Run Failure:', data)
-      }
-    },
-    onError: (error) => commonErrorHandler(error as unknown as Error)
-  })
-}
-
-// --- NEW Hook: Delete Agent Run ---
-export const useDeleteAgentCoderRun = () => {
-  const queryClient = useQueryClient()
-  // Get the options generator function from the generated code
-  const mutationOptionsFn = deleteApiAgentCoderRunsByAgentJobIdMutation()
-
-  return useMutation<
-    DeleteApiAgentCoderRunsByAgentJobIdResponse, // Success response type
-    DeleteApiAgentCoderRunsByAgentJobIdError, // Error type
-    { agentJobId: number; projectId: number } // Variables type ({ agentJobId })
-  >({
-    mutationFn: async ({ agentJobId, projectId }) => {
-      const options: Options<DeleteApiAgentCoderRunsByAgentJobIdData> = {
-        // Use the correct Options type
-        path: { projectId, agentJobId }
-      }
-      const mutationFn = mutationOptionsFn.mutationFn
-      if (!mutationFn) {
-        throw new Error('Generated delete mutation function is not available.')
-      }
-      // The result type should align with DeleteApiAgentCoderRunsByAgentJobIdResponse
-      const result = await mutationFn(options)
-      return result as DeleteApiAgentCoderRunsByAgentJobIdResponse // Cast for certainty
-    },
-    onSuccess: (data, variables) => {
-      // Check the structure of 'data' based on your actual response schema (DeleteAgentRunResponseSchema)
-      if (data.success) {
-        toast.success(data.message || `Agent run ${variables.agentJobId} deleted successfully!`)
-
-        // --- IMPORTANT: Invalidate the list of agent runs ---
-        const runsListQueryKey = getApiAgentCoderProjectByProjectIdRunsOptions({
-          path: { projectId: variables.projectId }
-        }).queryKey
-        queryClient.invalidateQueries({ queryKey: runsListQueryKey })
-
-        // Optionally invalidate specific run data/logs if they were cached, though they shouldn't exist anymore
-        const dataQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdDataOptions({
-          path: { projectId: variables.projectId, agentJobId: variables.agentJobId }
-        }).queryKey
-        const logsQueryKey = getApiAgentCoderProjectByProjectIdRunsByAgentJobIdLogsOptions({
-          path: { projectId: variables.projectId, agentJobId: variables.agentJobId }
-        }).queryKey
-        queryClient.removeQueries({ queryKey: dataQueryKey }) // Remove cached data/logs for the deleted run
-        queryClient.removeQueries({ queryKey: logsQueryKey })
-      } else {
-        // Handle cases where the backend might return success: false in a 200 (should ideally be a 4xx/5xx)
-        const errorMessage = (data as any)?.error?.message || 'Failed to delete agent run.'
-        toast.error(`Deletion Failed: ${errorMessage}`)
-        console.error('Delete Agent Run Failure Response:', data)
+        toast.error('Failed to confirm agent run changes.')
       }
     },
     onError: (error) => {
-      // Use the specific error type if available for better handling
-      const apiError = error as DeleteApiAgentCoderRunsByAgentJobIdError
-      const message = apiError?.error?.message || 'An unknown error occurred during deletion.'
-      toast.error(`Deletion Failed: ${message}`)
-      commonErrorHandler(error as unknown as Error) // Use common handler for logging etc.
+      toast.error(error.message || 'Failed to confirm agent run changes')
+    }
+  })
+}
+
+export const useDeleteAgentCoderRun = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ agentJobId, projectId }: { agentJobId: number; projectId: number }) =>
+      octoClient.agentCoder.deleteAgentRun(agentJobId),
+    onSuccess: (data, variables) => {
+      if (data.success) {
+        toast.success(data.message || `Agent run ${variables.agentJobId} deleted successfully!`)
+
+        // Invalidate the list of agent runs
+        queryClient.invalidateQueries({
+          queryKey: AGENT_CODER_KEYS.projectRuns(variables.projectId)
+        })
+
+        // Remove specific run data/logs from cache
+        queryClient.removeQueries({
+          queryKey: AGENT_CODER_KEYS.runData(variables.projectId, variables.agentJobId)
+        })
+        queryClient.removeQueries({
+          queryKey: AGENT_CODER_KEYS.runLogs(variables.projectId, variables.agentJobId)
+        })
+      } else {
+        toast.error('Failed to delete agent run.')
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete agent run')
     }
   })
 }

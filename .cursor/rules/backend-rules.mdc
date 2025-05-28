@@ -918,3 +918,113 @@ describe('Todo API Tests', () => {
 - **Error scenario testing** for 404s, validation errors, etc.
 
 Examples: `chat-api.test.ts`, `projects-api.test.ts` demonstrate comprehensive API testing covering CRUD operations, error handling, and complex workflows like chat forking and file synchronization.
+
+
+# Hono Route Matching
+
+
+## Hono Route Handling Cheat Sheet (First-Match-Wins)
+
+> **Rule:** Routes are evaluated **in the order they’re registered**; earliest match handles the request.
+
+---
+
+### 1 · Matching Basics
+
+```ts
+app
+  .get('/users/{id}', h1)      // first
+  .get('/users/profile', h2)   // unreachable: "profile" captured as {id}
+```
+
+Different HTTP verbs on the *same* path **do not** conflict:
+
+```ts
+app
+  .get('/api/projects/{pId}/files/{fId}', getFile)
+  .put('/api/projects/{pId}/files/{fId}', putFile)   // ok
+  .put('/api/projects/{pId}/files/bulk', bulkPut)    // ⚠ matches above unless ordered first
+```
+
+---
+
+### 2 · Ordering Strategy (High → Low Specificity)
+
+```ts
+new OpenAPIHono()
+  // 1 Exact literals
+  .get('/api/health', health)
+  .get('/api/version', ver)
+
+  // 2 Literal segments + param
+  .get('/api/users/me', me)
+  .get('/api/users/settings', settings)
+
+  // 3 Literal “bulk / search” before params
+  .put('/api/projects/{pId}/files/bulk', bulkPut)
+  .get('/api/projects/{pId}/files/search', search)
+
+  // 4 Single-param
+  .get('/api/users/{uId}', getUser)
+
+  // 5 Multi-param
+  .get('/api/projects/{pId}/files/{fId}', getFile)
+
+  // 6 Catch-alls
+  .get('/api/{resource}', generic)
+  .all('*', notFound)
+```
+
+---
+
+### 3 · Typical Conflict Patterns & Fixes
+
+| Pattern          | Wrong                                     | Right                                           |
+| ---------------- | ----------------------------------------- | ----------------------------------------------- |
+| Literal vs Param | `{userId}` before `/me`                   | `/me` first                                     |
+| Nested bulk      | `/{fileId}` before `/bulk`                | `/bulk` first                                   |
+| Param type       | `z.coerce.number()` captures “bulk” → NaN | reorder routes or validate as string, then cast |
+
+---
+
+### 4 · Debugging Tools
+
+```ts
+// Track registration
+const log: string[] = []
+api.openapi(routeDef, c => { log.push(routeDef.path); return handler(c) })
+
+// Log matches
+app.use('*', async (c,n)=>{ console.log(c.req.method, c.req.path, c.req.param()); await n() })
+```
+
+---
+
+## 5 · Testing Precedence
+
+```ts
+it('bulk vs param', async () => {
+  expect((await app.request('/api/projects/1/files/bulk', { method:'PUT' })).status).toBe(200)
+  expect((await app.request('/api/projects/1/files/2',   { method:'PUT' })).status).toBe(200)
+})
+```
+
+---
+
+### 6 · Parameter Schemas
+
+```ts
+const FileParams = z.object({
+  projectId: z.coerce.number().int().positive(),
+  fileId: z.coerce.number().int().positive()
+})
+```
+
+---
+
+### 7 · Gotchas & Mitigations
+
+* **Case-sensitive** paths
+* `/path` ≠ `/path/` – use middleware to normalize
+* Validate IDs as strings + regex then cast, not `coerce.number()`
+* Too many versioned routes? Mount sub-routers: `app.route('/v1', v1Router)`

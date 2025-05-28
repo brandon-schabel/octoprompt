@@ -30,7 +30,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
 
   // We'll use this state to know when we have a newly created project to sync
   const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<number | null>(null)
-  const { mutate: syncProject } = useSyncProject(newlyCreatedProjectId ?? -1)
+  const { mutate: syncProject } = useSyncProject()
 
   useEffect(() => {
     if (projectData?.data?.id && projectId) {
@@ -51,7 +51,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
   // When newlyCreatedProjectId is set, we sync and then navigate
   useEffect(() => {
     if (newlyCreatedProjectId) {
-      syncProject(undefined, {
+      syncProject(newlyCreatedProjectId, {
         onSuccess: () => {
           navigate({ to: '/projects' })
           onOpenChange(false)

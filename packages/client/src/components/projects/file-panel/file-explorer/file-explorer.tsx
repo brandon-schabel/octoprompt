@@ -47,6 +47,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const { data: fileDataResponse, isLoading: filesLoading } = useGetProjectFiles(
     activeProjectTabState?.selectedProjectId || -1
   )
+  const fileDataArray = useMemo(() => fileDataResponse?.data || [], [fileDataResponse])
 
   const { data: projectDataResponse } = useGetProject(activeProjectTabState?.selectedProjectId || -1)
 
@@ -111,12 +112,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     return buildFileTree(filteredFiles)
   }, [filteredFiles])
 
-  const filteredFilesMap = useMemo(() => {
-    const m = new Map<number, ProjectFile>()
-    filteredFiles.forEach((f) => m.set(f.id, f))
-    return m
-  }, [filteredFiles])
-
   const suggestions = useMemo(() => filteredFiles.slice(0, 10), [filteredFiles])
 
   const toggleFileInSelection = useCallback(
@@ -159,9 +154,9 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
   const handleRequestAIFileChange = (filePath: string) => {
     // Use the derived `projectFiles` array
-    const file = projectFiles?.find((f) => f.path === filePath)
+    const file = fileDataArray?.find((f) => f.path === filePath)
     if (file) {
-      setSelectedFile(file)
+      setSelectedFile(file as ProjectFile)
       setAiDialogOpen(true)
     }
   }
@@ -200,14 +195,14 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                 } else if (e.key === 'ArrowRight') {
                   e.preventDefault()
                   if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                    setViewedFile?.(suggestions[autocompleteIndex])
+                    setViewedFile?.(suggestions[autocompleteIndex] as ProjectFile)
                   }
                 } else if (e.key === 'Enter' || (allowSpacebarToSelect && e.key === ' ')) {
                   if (autocompleteIndex >= 0) {
                     e.preventDefault()
                   }
                   if (autocompleteIndex >= 0 && autocompleteIndex < suggestions.length) {
-                    toggleFileInSelection(suggestions[autocompleteIndex])
+                    toggleFileInSelection(suggestions[autocompleteIndex] as ProjectFile)
                     if (autocompleteIndex < suggestions.length - 1) {
                       setAutocompleteIndex((prev) => prev + 1)
                     }
@@ -284,7 +279,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                   onMouseDown={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    toggleFileInSelection(file)
+                    toggleFileInSelection(file as ProjectFile)
                   }}
                   onMouseEnter={() => setAutocompleteIndex(index)}
                 >

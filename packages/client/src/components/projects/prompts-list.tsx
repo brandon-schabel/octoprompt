@@ -63,7 +63,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
 
   const { data: promptData } = useGetProjectPrompts(selectedProjectId)
 
-  const deletePromptMutation = useDeletePrompt(selectedProjectId)
+  const deletePromptMutation = useDeletePrompt()
 
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const promptRefs = useRef<(HTMLDivElement | null)[]>([])

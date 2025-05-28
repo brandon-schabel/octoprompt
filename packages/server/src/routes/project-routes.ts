@@ -12,8 +12,11 @@ import {
   ProjectSummaryResponseSchema,
   RemoveSummariesBodySchema,
   SuggestFilesBodySchema,
-  SummarizeFilesBodySchema
+  SummarizeFilesBodySchema,
+  ProjectFileSchema,
+  ProjectFile
 } from 'shared/src/schemas/project.schemas'
+import { unixTSSchemaSpec } from 'shared/src/schemas/schema-utils'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
 
@@ -35,6 +38,44 @@ import {
 } from 'shared/src/schemas/gen-ai.schemas'
 import { optimizeUserInput, summarizeFiles } from '@/services/project-service'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from 'shared/src/schemas/prompt.schemas'
+
+// File operation schemas
+const FileIdParamsSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  fileId: z.coerce.number().int().positive()
+})
+
+const UpdateFileContentBodySchema = z.object({
+  content: z.string()
+})
+
+const BulkCreateFilesBodySchema = z.object({
+  files: z.array(z.object({
+    path: z.string(),
+    name: z.string(),
+    extension: z.string(),
+    content: z.string(),
+    size: z.coerce.number().int().nonnegative(),
+    checksum: z.string().optional()
+  }))
+})
+
+const BulkUpdateFilesBodySchema = z.object({
+  updates: z.array(z.object({
+    fileId: z.number().int().positive(),
+    content: z.string()
+  }))
+})
+
+const FileResponseSchema = z.object({
+  success: z.literal(true),
+  data: ProjectFileSchema
+})
+
+const BulkFilesResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.array(ProjectFileSchema)
+})
 
 const createProjectRoute = createRoute({
   method: 'post',
@@ -160,6 +201,66 @@ const getProjectFilesRoute = createRoute({
     200: {
       content: { 'application/json': { schema: FileListResponseSchema } },
       description: 'Successfully retrieved project files'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const updateFileContentRoute = createRoute({
+  method: 'put',
+  path: '/api/projects/{projectId}/files/{fileId}',
+  tags: ['Projects', 'Files'],
+  summary: 'Update the content of a specific file',
+  request: {
+    params: FileIdParamsSchema,
+    body: { content: { 'application/json': { schema: UpdateFileContentBodySchema } } }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: FileResponseSchema } },
+      description: 'File content updated successfully'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or file not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const bulkCreateFilesRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/files/bulk',
+  tags: ['Projects', 'Files'],
+  summary: 'Create multiple files in a project',
+  request: {
+    params: ProjectIdParamsSchema,
+    body: { content: { 'application/json': { schema: BulkCreateFilesBodySchema } } }
+  },
+  responses: {
+    201: {
+      content: { 'application/json': { schema: BulkFilesResponseSchema } },
+      description: 'Files created successfully'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const bulkUpdateFilesRoute = createRoute({
+  method: 'put',
+  path: '/api/projects/{projectId}/files/bulk',
+  tags: ['Projects', 'Files'],
+  summary: 'Update content of multiple files in a project',
+  request: {
+    params: ProjectIdParamsSchema,
+    body: { content: { 'application/json': { schema: BulkUpdateFilesBodySchema } } }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: BulkFilesResponseSchema } },
+      description: 'Files updated successfully'
     },
     404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
     422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
@@ -450,6 +551,72 @@ export const projectRoutes = new OpenAPIHono()
       success: true,
       data: files ?? []
     } satisfies z.infer<typeof FileListResponseSchema>
+    return c.json(payload, 200)
+  })
+
+  .openapi(bulkCreateFilesRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { files } = c.req.valid('json')
+
+    // Convert API format to FileSyncData format
+    const fileSyncData = files.map(file => ({
+      path: file.path,
+      name: file.name,
+      extension: file.extension,
+      content: file.content,
+      size: file.size,
+      checksum: file.checksum || ''
+    }))
+
+    const createdFiles = await projectService.bulkCreateProjectFiles(projectId, fileSyncData)
+
+    const payload = {
+      success: true,
+      data: createdFiles
+    } satisfies z.infer<typeof BulkFilesResponseSchema>
+    return c.json(payload, 201)
+  })
+
+  .openapi(bulkUpdateFilesRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { updates } = c.req.valid('json')
+
+    // Update each file individually using the simpler updateFileContent function
+    const updatedFiles: ProjectFile[] = []
+
+    console.log({ projectId, updates, updatedFiles })
+
+    for (const update of updates) {
+      try {
+        const updatedFile = await projectService.updateFileContent(
+          projectId,
+          update.fileId,
+          update.content
+        )
+        updatedFiles.push(updatedFile)
+      } catch (error) {
+        console.error(`Failed to update file ${update.fileId}:`, error)
+        // Continue with other files, but could also throw here if strict mode is desired
+      }
+    }
+
+    const payload = {
+      success: true,
+      data: updatedFiles
+    } satisfies z.infer<typeof BulkFilesResponseSchema>
+    return c.json(payload, 200)
+  })
+
+  .openapi(updateFileContentRoute, async (c) => {
+    const { projectId, fileId } = c.req.valid('param')
+    const { content } = c.req.valid('json')
+
+    const updatedFile = await projectService.updateFileContent(projectId, fileId, content)
+
+    const payload = {
+      success: true,
+      data: updatedFile
+    } satisfies z.infer<typeof FileResponseSchema>
     return c.json(payload, 200)
   })
 

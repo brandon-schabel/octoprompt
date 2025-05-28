@@ -29,7 +29,8 @@ export function PromptsPage() {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null)
   const [sortOrder, setSortOrder] = useState<'alphabetical' | 'default' | 'size_asc' | 'size_desc'>('alphabetical')
 
-  const { data: prompts, isLoading, error } = useGetAllPrompts()
+  const { data: promptsRes, isLoading, error } = useGetAllPrompts()
+  const prompts = promptsRes?.data as Prompt[]
   const deletePromptMutation = useDeletePrompt()
   const createPromptMutation = useCreatePrompt()
   const updatePromptMutation = useUpdatePrompt()
@@ -38,7 +39,7 @@ export function PromptsPage() {
   const filteredAndSortedPrompts = useMemo(() => {
     // First filter by search query
     const filtered =
-      prompts?.data?.filter(
+      prompts?.filter(
         (prompt) =>
           prompt.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
           prompt.content.toLowerCase().includes(debouncedSearch.toLowerCase())
@@ -148,7 +149,7 @@ export function PromptsPage() {
           if (selectedPrompt) {
             await updatePromptMutation.mutateAsync({ promptId: selectedPrompt.id, data })
           } else {
-            await createPromptMutation.mutateAsync({ body: data })
+            await createPromptMutation.mutateAsync(data)
           }
           setIsCreateDialogOpen(false)
           setSelectedPrompt(null)

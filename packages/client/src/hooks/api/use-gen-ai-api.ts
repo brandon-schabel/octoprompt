@@ -1,116 +1,47 @@
-import { useMutation, type UseMutationOptions } from '@tanstack/react-query'
-import { postApiGenAiStructured } from '@/generated/sdk.gen'
-import type { PostApiGenAiStructuredError } from '@/generated/types.gen'
-import { structuredDataSchemas } from 'shared/src/schemas/gen-ai.schemas'
-import { z } from 'zod'
+import { useMutation } from '@tanstack/react-query'
+import { octoClient } from '../api'
+import type {
+  AiGenerateTextRequest,
+  AiGenerateStructuredRequest
+} from 'shared/src/schemas/gen-ai.schemas'
+import { toast } from 'sonner'
 
-export type StructuredSchemaGenericResponse<
-  Key extends keyof typeof structuredDataSchemas,
-  // Default Schema to the actual schema type looked up by Key
-  Schema extends z.ZodTypeAny = (typeof structuredDataSchemas)[Key]['schema']
-> = {
-  success: true
-  data: {
-    output: z.infer<Schema> // Infer output from the Schema generic
-  }
-}
-
-type StructuredSchemaInput = {
-  prompt: string
-}
-
-type MutationSuccessResponse<Key extends keyof typeof structuredDataSchemas> = {
-  success: true
-  data: { output: z.infer<(typeof structuredDataSchemas)[Key]['schema']> }
-}
-
-// returns sturctured JSON, does not stream
-export const useGenerateStructuredData = <Key extends keyof typeof structuredDataSchemas>(
-  key: Key,
-  options?: Omit<
-    UseMutationOptions<MutationSuccessResponse<Key>, PostApiGenAiStructuredError, StructuredSchemaInput>,
-    'mutationFn'
-  >
-) => {
-  // Get the specific Zod schema instance for the given key (runtime value)
-  const specificSchema = structuredDataSchemas[key].schema
-
-  return useMutation<MutationSuccessResponse<Key>, PostApiGenAiStructuredError, StructuredSchemaInput>({
-    ...options,
-    mutationFn: async (requestBody: StructuredSchemaInput): Promise<MutationSuccessResponse<Key>> => {
-      const sdkResponse: unknown = await postApiGenAiStructured({
-        body: {
-          userInput: requestBody.prompt,
-          schemaKey: key
-        }
-      })
-
-      // --- Safely Extract Data to Parse ---
-      let dataToParse: unknown
-
-      // Check for the specific structure observed in the log: { data: { data: { output: ... } } }
-      if (
-        sdkResponse &&
-        typeof sdkResponse === 'object' &&
-        'data' in sdkResponse &&
-        sdkResponse.data &&
-        typeof sdkResponse.data === 'object' &&
-        'data' in sdkResponse.data && // Check for the *inner* 'data'
-        sdkResponse.data.data &&
-        typeof sdkResponse.data.data === 'object' &&
-        'output' in sdkResponse.data.data // Check for 'output' within the inner 'data'
-      ) {
-        // Access the output from the correct path
-        dataToParse = (sdkResponse.data.data as { output: unknown }).output // <<< CORRECT PATH
-      }
-      // Fallback Check 1: { data: { output: ... } }
-      else if (
-        sdkResponse &&
-        typeof sdkResponse === 'object' &&
-        'data' in sdkResponse &&
-        sdkResponse.data &&
-        typeof sdkResponse.data === 'object' &&
-        'output' in sdkResponse.data
-      ) {
-        console.warn('API response structure has changed? Found output at sdkResponse.data.output') // Optional warning
-        dataToParse = (sdkResponse.data as { output: unknown }).output
-      }
-      // Fallback Check 2: { output: ... }
-      else if (sdkResponse && typeof sdkResponse === 'object' && 'output' in sdkResponse) {
-        console.warn('API response structure has changed? Found output directly at sdkResponse.output') // Optional warning
-        dataToParse = (sdkResponse as { output: unknown }).output
-      }
-      // If none of the structures match
-      else {
-        console.error('Unexpected API response structure received:', JSON.stringify(sdkResponse))
-        // Ensure the error message clearly indicates the path tried vs. what was received.
-        throw new Error(
-          `API response structure not recognized for schema key "${key}". Expected output at 'response.data.data.output' or similar, but failed.`
-        )
-      }
-
-      // --- Parse the Extracted Data ---
-      try {
-        const parsedOutput = specificSchema.safeParse(dataToParse)
-
-        if (!parsedOutput.success) {
-          console.error('Zod validation failed:', parsedOutput.error.errors)
-          console.error('Data that failed validation:', JSON.stringify(dataToParse))
-          throw new Error(`API response validation failed for schema key "${key}": ${parsedOutput.error.message}`)
-        }
-
-        return {
-          success: true,
-          data: {
-            output: parsedOutput.data
-          }
-        }
-      } catch (error) {
-        console.error(`Error processing structured data for key "${key}":`, error)
-        throw error
-      }
+// Simplified hook for generating text
+export const useGenerateText = () => {
+  return useMutation({
+    mutationFn: (data: AiGenerateTextRequest) => octoClient.genAi.generateText(data),
+    onError: (error) => {
+      toast.error(error.message || 'Failed to generate text')
     }
   })
-  // The hook now returns UseMutationResult<MutationSuccessResponse, ...>
-  // where MutationSuccessResponse is specific to the 'key' provided.
+}
+
+// Hook for generating structured data
+export const useGenerateStructuredData = () => {
+  return useMutation({
+    mutationFn: (data: AiGenerateStructuredRequest) => octoClient.genAi.generateStructured(data),
+    onError: (error) => {
+      toast.error(error.message || 'Failed to generate structured data')
+    }
+  })
+}
+
+// Hook for streaming text generation
+export const useStreamText = () => {
+  return useMutation({
+    mutationFn: (data: AiGenerateTextRequest) => octoClient.genAi.streamText(data),
+    onError: (error) => {
+      toast.error(error.message || 'Failed to start text stream')
+    }
+  })
+}
+
+// Hook for getting available models
+export const useGetModels = () => {
+  return useMutation({
+    mutationFn: (provider: string) => octoClient.genAi.getModels(provider),
+    onError: (error) => {
+      toast.error(error.message || 'Failed to fetch models')
+    }
+  })
 }

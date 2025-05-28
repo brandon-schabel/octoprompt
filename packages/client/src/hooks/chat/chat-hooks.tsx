@@ -1,6 +1,5 @@
 import { useCallback } from 'react'
 import { useGetMessages, useCreateChat, useForkChat } from '@/hooks/api/use-chat-api'
-import type { CreateChatInput } from '@/hooks/api/use-chat-api'
 import { ForkChatRequestBody } from '@/generated/types.gen'
 
 export function useCreateChatHandler() {
@@ -9,12 +8,11 @@ export function useCreateChatHandler() {
   const handleCreateChat = useCallback(
     async (chatTitle: string, currentChatId?: number) => {
       try {
-        const input: CreateChatInput = {
+        return await createChatMutation.mutateAsync({
           title: chatTitle,
           copyExisting: false,
           ...(currentChatId && { currentChatId: currentChatId })
-        }
-        return await createChatMutation.mutateAsync(input)
+        })
       } catch (error) {
         console.error('[handleCreateChat] Error:', error)
         return null
@@ -48,7 +46,7 @@ export function useForkChatHandler({ chatId }: { chatId: number }) {
       }
       await forkChatMutation.mutateAsync({
         chatId,
-        body: inputBody
+        excludeMessageIds: inputBody.excludedMessageIds
       })
     } catch (error) {
       console.error('[handleForkChat] Error:', error)

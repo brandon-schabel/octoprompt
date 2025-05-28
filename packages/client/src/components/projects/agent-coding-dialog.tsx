@@ -216,9 +216,7 @@ export function AgentCoderControlDialog({
     isError: isLogError,
     error: logError,
     refetch: refetchLogs
-  } = useGetAgentCoderRunLogs({
-    projectId,
-    agentJobId: selectedJobId,
+  } = useGetAgentCoderRunLogs(projectId, selectedJobId, {
     enabled: open && !!selectedJobId && selectedJobId !== -1,
     isAgentRunning
   })

@@ -21,7 +21,8 @@ from app.schemas.chat_schemas import (
 from app.schemas.project_schemas import (
     Project, ProjectFile, CreateProjectBody, UpdateProjectBody,
     ProjectResponse, ProjectListResponse, FileListResponse,
-    SummarizeFilesBody, RemoveSummariesBody, SuggestFilesBody, RefreshQuery
+    SummarizeFilesBody, RemoveSummariesBody, SuggestFilesBody, RefreshQuery,
+    FileSyncData
 )
 from app.schemas.prompt_schemas import (
     Prompt, CreatePromptBody, UpdatePromptBody, OptimizeUserInputRequest,
@@ -217,6 +218,58 @@ class ProjectService(BaseApiClient):
         body = RemoveSummariesBody(fileIds=file_ids)
         result = await self._request("POST", f"/projects/{project_id}/remove-summaries", body.model_dump())
         return result
+    
+    async def bulk_create_project_files(self, project_id: int, file_sync_data_list: List[FileSyncData]) -> List[ProjectFile]:
+        """
+        Bulk create project files from FileSyncData
+        """
+        # Convert FileSyncData to API format
+        api_files = []
+        for file_data in file_sync_data_list:
+            api_files.append({
+                "path": file_data.path,
+                "name": file_data.name,
+                "extension": file_data.extension,
+                "content": file_data.content,
+                "size": file_data.size,
+                "checksum": file_data.checksum
+            })
+        
+        body = {"files": api_files}
+        result = await self._request("POST", f"/projects/{project_id}/files/bulk", body)
+        
+        # Convert response data to ProjectFile objects
+        created_files = []
+        for file_data in result["data"]:
+            created_files.append(ProjectFile.model_validate(file_data))
+        
+        return created_files
+        
+    async def update_file(self, project_id: int, file_id: int, content: str) -> ProjectFile:
+        """
+        Update a project file's content
+        """
+        body = {"content": content}
+        result = await self._request("PUT", f"/projects/{project_id}/files/{file_id}", body)
+        return ProjectFile.model_validate(result["data"])
+
+    async def bulk_update_project_files(self, project_id: int, updates: List[Dict[str, Any]]) -> List[ProjectFile]:
+        """
+        Bulk update project files content
+        
+        Args:
+            project_id: The project ID
+            updates: List of dicts with 'fileId' and 'content' keys
+        """
+        body = {"updates": updates}
+        result = await self._request("PUT", f"/projects/{project_id}/files/bulk", body)
+        
+        # Convert response data to ProjectFile objects
+        updated_files = []
+        for file_data in result["data"]:
+            updated_files.append(ProjectFile.model_validate(file_data))
+        
+        return updated_files
 
 class PromptService(BaseApiClient):
     """Prompt API operations"""
