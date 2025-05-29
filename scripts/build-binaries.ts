@@ -19,8 +19,6 @@ async function buildProject() {
 
   // Build client first
   console.log('Building client...')
-  console.log('Generating production OpenAPI client...')
-  await $`bun run openapi-ts:prod`
   await $`cd ${clientDir} && bun run build:prod`
 
   // Build server as normal JS bundle first

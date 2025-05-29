@@ -23,7 +23,9 @@ export function createProviderKeyService() {
   async function createKey(data: CreateProviderKeyInput): Promise<ProviderKey> {
     const allKeys = await providerKeyStorage.readProviderKeys()
     const now = normalizeToUnixMs(new Date())
-    const id = providerKeyStorage.generateId()
+    let id = providerKeyStorage.generateId()
+    const initialId = id
+    let incrementCount = 0
 
     // If this new key is set to default, unset other defaults for the same provider
     if (data.isDefault) {
@@ -33,6 +35,16 @@ export function createProviderKeyService() {
           allKeys[keyId].updated = now
         }
       }
+    }
+
+    // Handle ID conflicts by incrementing
+    while (allKeys[id]) {
+      id++
+      incrementCount++
+    }
+
+    if (incrementCount > 0) {
+      console.log(`Provider key ID ${initialId} was taken. Found available ID ${id} after ${incrementCount} increment(s).`)
     }
 
     const newKeyData: ProviderKey = {
@@ -57,11 +69,6 @@ export function createProviderKeyService() {
     }
 
     const validatedNewKey = parseResult.data;
-
-    if (allKeys[validatedNewKey.id]) {
-      // Extremely unlikely with UUIDs but a good safeguard
-      throw new ApiError(500, `Provider key ID conflict for ${validatedNewKey.id}`, 'PROVIDER_KEY_ID_CONFLICT')
-    }
 
     allKeys[validatedNewKey.id] = validatedNewKey
     await providerKeyStorage.writeProviderKeys(allKeys)

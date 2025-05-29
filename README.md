@@ -1,6 +1,6 @@
 # OctoPrompt
 
-Software Toolkit For Rapidly Building Codebases Using AI
+Your AI toolkit for streamlined codebase management.
 
 ## Introduction
 
@@ -319,7 +319,6 @@ bun run dev:server
 ```
 
 - **Client Only** from the root (runs on port 5173):
-  Note: this will generate the `openapi-ts` client, the server must be running first.
 
 ```bash
 bun run dev:client

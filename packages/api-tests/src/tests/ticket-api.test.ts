@@ -27,8 +27,9 @@ import {
     type CreateTicketBody
 } from '../../../shared/src/schemas/ticket.schemas'
 import { OperationSuccessResponseSchema } from '../../../shared/src/schemas/common.schemas'
+import { TEST_API_URL } from './test-config'
 
-const BASE_URL = process.env.API_URL || 'http://localhost:3147'
+const BASE_URL = TEST_API_URL
 const API_URL = `${BASE_URL}/api`
 
 // Fixed project creation schema to match actual API response
@@ -156,7 +157,7 @@ describe('Ticket API Tests', () => {
                 title: 'Test Ticket 2',
                 overview: 'Second test ticket with medium priority',
                 status: 'open' as const,
-                    priority: 'normal' as const,
+                priority: 'normal' as const,
                 suggestedFileIds: []
             },
             {

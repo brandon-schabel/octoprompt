@@ -15,24 +15,12 @@ export const Route = createFileRoute('/admin')({
 })
 
 function AdminPage() {
-  const { data: envInfo, isLoading: isLoadingEnv, error: envError, refetch: refetchEnvInfo } = useGetEnvironmentInfo()
-
   const {
     data: systemStatus,
     isLoading: isLoadingSystem,
     error: systemError,
     refetch: refetchSystemStatus
   } = useGetSystemStatus()
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
 
   // Format uptime to a human-readable string
   const formatUptime = (seconds: number): string => {
@@ -42,17 +30,6 @@ function AdminPage() {
     const remainingSeconds = Math.floor(seconds % 60)
 
     return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`
-  }
-
-  const handleRefreshEnvInfo = async () => {
-    try {
-      await refetchEnvInfo()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-      toast.error('Failed to refresh environment info', {
-        description: errorMessage
-      })
-    }
   }
 
   // Handle refresh for system status
@@ -67,145 +44,14 @@ function AdminPage() {
     }
   }
 
-  console.log('envInfo', envInfo)
-
   return (
     <div className='container p-2'>
-      <Tabs defaultValue='env-info'>
+      <Tabs defaultValue='system-status'>
         <TabsList className='mb-4'>
-          <TabsTrigger value='env-info'>Environment Info</TabsTrigger>
           <TabsTrigger value='system-status'>System Status</TabsTrigger>
           <TabsTrigger value='database-stats'>Database Stats</TabsTrigger>
           <TabsTrigger value='swagger-ui'>Swagger UI</TabsTrigger>
         </TabsList>
-
-        {/* Environment Info Panel */}
-        <TabsContent value='env-info'>
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between'>
-              <h2 className='text-xl font-semibold'>Environment Information</h2>
-              <Button variant='outline' size='sm' onClick={handleRefreshEnvInfo} disabled={isLoadingEnv}>
-                {isLoadingEnv ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className='mr-2 h-4 w-4' />
-                    Refresh
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {envError && (
-              <Alert variant='destructive'>
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  {envError instanceof Error ? envError.message : 'Failed to fetch environment info'}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {isLoadingEnv && !envInfo ? (
-              <div className='flex flex-col items-center justify-center py-10'>
-                <Loader2 className='h-8 w-8 animate-spin text-primary' />
-                <p className='mt-4 text-muted-foreground'>Loading environment information...</p>
-              </div>
-            ) : envInfo ? (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Environment Variables</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Key</TableHead>
-                          <TableHead>Value</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(envInfo.environment).map(([key, value]) => (
-                          <TableRow key={key}>
-                            <TableCell className='font-medium'>{key}</TableCell>
-                            <TableCell>
-                              {value || <span className='text-muted-foreground italic'>undefined</span>}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Server Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Key</TableHead>
-                          <TableHead>Value</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className='font-medium'>Node Version</TableCell>
-                          <TableCell>{envInfo?.serverInfo?.version}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Bun Version</TableCell>
-                          <TableCell>{envInfo?.serverInfo?.bunVersion}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Platform</TableCell>
-                          <TableCell>{envInfo?.serverInfo?.platform}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Architecture</TableCell>
-                          <TableCell>{envInfo?.serverInfo?.arch}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Uptime</TableCell>
-                          <TableCell>{formatUptime(envInfo?.serverInfo?.uptime)}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-
-                {/* <Card>
-                  <CardHeader>
-                    <CardTitle>Memory Usage</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Metric</TableHead>
-                          <TableHead>Value</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(envInfo?.serverInfo?.memoryUsage).map(([key, value]) => (
-                          <TableRow key={key}>
-                            <TableCell className='font-medium'>{key}</TableCell>
-                            <TableCell>{formatBytes(value)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card> */}
-              </>
-            ) : null}
-          </div>
-        </TabsContent>
 
         {/* System Status Panel */}
         <TabsContent value='system-status'>
@@ -283,29 +129,7 @@ function AdminPage() {
           <div className='space-y-4'>
             <div className='flex items-center justify-between'>
               <h2 className='text-xl font-semibold'>Database Statistics</h2>
-              <Button variant='outline' size='sm' onClick={handleRefreshEnvInfo} disabled={isLoadingEnv}>
-                {isLoadingEnv ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className='mr-2 h-4 w-4' />
-                    Refresh
-                  </>
-                )}
-              </Button>
             </div>
-
-            {envError && (
-              <Alert variant='destructive'>
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  {envError instanceof Error ? envError.message : 'Failed to fetch database statistics'}
-                </AlertDescription>
-              </Alert>
-            )}
 
             {/* {!envInfo?.databaseStats && isLoadingEnv && !envInfo ? (
               <div className='flex flex-col items-center justify-center py-10'>

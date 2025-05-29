@@ -189,7 +189,6 @@ async function getProviderLanguageModelInterface(
     }
     case 'openrouter': {
       const apiKey = await getKey('openrouter', debug)
-      console.log({ apiKey })
       if (!apiKey && !process.env.OPENROUTER_API_KEY)
         throw new ApiError(400, 'OpenRouter API Key not found in DB or environment.', 'OPENROUTER_KEY_MISSING')
       return createOpenRouter({ apiKey })(modelId)
@@ -364,6 +363,13 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
 
     return result
   } catch (error: any) {
+    console.error('[UnifiedProviderService - generateStructuredData] failing with the following data:', {
+      prompt,
+      schema,
+      systemMessage,
+      finalOptions,
+      provider
+    })
     if (error instanceof ApiError) throw error
     console.error(`[UnifiedProviderService - generateStructuredData] Error for ${provider}:`, error)
     throw new ApiError(

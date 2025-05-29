@@ -5,8 +5,8 @@ from datetime import datetime
 
 class ProjectFile(BaseModel):
     id: int
-    project_id: Optional[str] = None
-    model_config = ConfigDict(title="ProjectFile", extra="allow")
+    project_id: Optional[int] = Field(None, alias="projectId")
+    model_config = ConfigDict(title="ProjectFile", extra="allow", populate_by_name=True)
 
 class Project(BaseModel):
     id: int
@@ -26,15 +26,15 @@ class AgentTaskStatusEnum(str, Enum):
     SKIPPED = "SKIPPED"
 
 class AgentTask(BaseModel):
-    id: int = Field(..., min_length=1, description="A unique ID automatically generated for tracking this specific task.", example="task-123-abc")
+    id: int = Field(..., description="A unique ID automatically generated for tracking this specific task.", example=1677657600000)
     title: str = Field(..., min_length=5, description="A brief, human-readable title summarizing the task's objective.", example="Refactor User Authentication Logic")
     description: str = Field(..., min_length=20, description="A detailed description of the changes required for the target file. This will be used as the primary instruction for the LLM rewrite.", example="Update the login function in `src/auth.ts` to use asynchronous hashing for passwords and return a JWT token upon successful authentication.")
-    target_file_id: Optional[str] = Field(None, validation_alias="targetFileId", serialization_alias="targetFileId", description="The unique ID (from ProjectFileSchema) of the primary source file to be modified or created by this task. Will be populated by orchestrator for new files.", example="file-id-xyz-789")
+    target_file_id: Optional[int] = Field(None, validation_alias="targetFileId", serialization_alias="targetFileId", description="The unique ID (from ProjectFileSchema) of the primary source file to be modified or created by this task. Will be populated by orchestrator for new files.", example=1677657600001)
     target_file_path: str = Field(..., min_length=1, validation_alias="targetFilePath", serialization_alias="targetFilePath", description="The relative path of the primary source file (e.g., 'src/utils/auth.ts'). Required for all tasks. Used for creation path.", example="src/utils/auth.ts")
     status: AgentTaskStatusEnum = Field(default=AgentTaskStatusEnum.PENDING, description="Tracks the progress of the task through the workflow.", example="PENDING")
-    related_test_file_id: Optional[str] = Field(None, validation_alias="relatedTestFileId", serialization_alias="relatedTestFileId", description="Optional: The unique ID (from ProjectFileSchema) of the corresponding unit test file (e.g., 'src/utils/auth.test.ts'), if applicable.", example="file-id-test-abc-123")
+    related_test_file_id: Optional[int] = Field(None, validation_alias="relatedTestFileId", serialization_alias="relatedTestFileId", description="Optional: The unique ID (from ProjectFileSchema) of the corresponding unit test file (e.g., 'src/utils/auth.test.ts'), if applicable.", example=1677657600002)
     estimated_complexity: Optional[Literal["LOW", "MEDIUM", "HIGH"]] = Field(None, validation_alias="estimatedComplexity", serialization_alias="estimatedComplexity", description="Optional: AI's estimation of the task's complexity.", example="MEDIUM")
-    dependencies: Optional[List[str]] = Field(None, description="Optional: A list of other Task IDs that must be completed before this task can start.", example=["task-001-xyz", "task-002-abc"])
+    dependencies: Optional[List[int]] = Field(None, description="Optional: A list of other Task IDs that must be completed before this task can start.", example=[1677657600003, 1677657600004])
     model_config = ConfigDict(title="AgentTask", populate_by_name=True, extra="allow")
 
 class AgentFileRewriteResponse(BaseModel):
@@ -48,22 +48,22 @@ class AgentContext(BaseModel):
     project_file_map: ProjectFileMap = Field(..., validation_alias="projectFileMap", serialization_alias="projectFileMap", description="Map representation of project files for quick lookup.")
     project_summary_context: str = Field(..., validation_alias="projectSummaryContext", serialization_alias="projectSummaryContext", description="A summary of the project's purpose and structure.", example="A Node.js backend service for managing user accounts.")
     project: Project
-    agent_job_id: int = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The ID of the agent job that is running this task plan.", example="job-xyz-789")
+    agent_job_id: int = Field(..., validation_alias="agentJobId", serialization_alias="agentJobId", description="The ID of the agent job that is running this task plan.", example=1677657600000)
     prompts: List[Prompt] = Field(..., description="The prompts to use for the agent.")
-    selected_file_ids: List[str] = Field(..., min_items=1, validation_alias="selectedFileIds", serialization_alias="selectedFileIds", description="Array of ProjectFile IDs to provide as initial context.", example=["file-id-1", "file-id-2"])
+    selected_file_ids: List[int] = Field(..., min_items=1, validation_alias="selectedFileIds", serialization_alias="selectedFileIds", description="Array of ProjectFile IDs to provide as initial context.", example=[1677657600001, 1677657600002])
     model_config = ConfigDict(title="AgentContext", populate_by_name=True)
 
 class AgentTaskPlan(BaseModel):
-    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId", description="The ID of the project context in which these tasks operate.", example="proj-abc-123")
+    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId", description="The ID of the project context in which these tasks operate.", example=1677657600000)
     overall_goal: str = Field(..., validation_alias="overallGoal", serialization_alias="overallGoal", description="A concise summary of the original user request being addressed by this plan.", example="Implement JWT-based authentication flow.")
     tasks: List[AgentTask] = Field(..., min_items=1, description="An ordered list of tasks designed to collectively achieve the overall goal. Order implies execution sequence unless overridden by dependencies.")
     model_config = ConfigDict(title="AgentTaskPlan", populate_by_name=True, extra="allow")
 
 class AgentCoderRunRequest(BaseModel):
     user_input: str = Field(..., min_length=1, validation_alias="userInput", serialization_alias="userInput", description="The main instruction or goal for the agent.", example="Refactor the authentication logic in auth.ts to use JWT.")
-    selected_file_ids: List[str] = Field(..., min_items=1, validation_alias="selectedFileIds", serialization_alias="selectedFileIds", description="Array of ProjectFile IDs to provide as initial context.", example=["file-id-1", "file-id-2"])
-    agent_job_id: Optional[str] = Field(None, validation_alias="agentJobId", serialization_alias="agentJobId", description="The unique ID for retrieving the execution logs and data for this run.")
-    selected_prompt_ids: Optional[List[str]] = Field(None, validation_alias="selectedPromptIds", serialization_alias="selectedPromptIds", description="Array of Prompt IDs to provide as initial context.", example=["prompt-id-1", "prompt-id-2"])
+    selected_file_ids: List[int] = Field(..., min_items=1, validation_alias="selectedFileIds", serialization_alias="selectedFileIds", description="Array of ProjectFile IDs to provide as initial context.", example=[1677657600001, 1677657600002])
+    agent_job_id: Optional[int] = Field(None, validation_alias="agentJobId", serialization_alias="agentJobId", description="The unique ID for retrieving the execution logs and data for this run.")
+    selected_prompt_ids: Optional[List[int]] = Field(None, validation_alias="selectedPromptIds", serialization_alias="selectedPromptIds", description="Array of Prompt IDs to provide as initial context.", example=[1677657600003, 1677657600004])
     model_config = ConfigDict(title="AgentCoderRunRequest", populate_by_name=True)
 
 class AgentCoderRunSuccessData(BaseModel):

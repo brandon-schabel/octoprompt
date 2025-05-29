@@ -20,31 +20,25 @@ class AIFileChangeRecord(BaseModel):
     diff: Optional[str] = Field(None, description="The diff between original and suggested content, or an explanation.")
     prompt: Optional[str] = Field(None, description="The user prompt that initiated this change.")
     status: AIFileChangeStatusEnum = Field(..., description="Status of the file change.")
-    created: int = Field(..., alias="created", description="Timestamp of when the change was created (Unix ms)", example=1678886400000)
-    updated: int = Field(..., alias="updated", description="Timestamp of when the change was last updated (Unix ms)", example=1678886500000)
+    created: int = Field(..., description="Timestamp of when the change was created (Unix ms)", example=1678886400000)
+    updated: int = Field(..., description="Timestamp of when the change was last updated (Unix ms)", example=1678886500000)
     explanation: Optional[str] = Field(None, description="Explanation from the AI about the change.")
     
     model_config = ConfigDict(
-        title="AIFileChangeRecord", # Matches .openapi('AIFileChangeRecord')
-        populate_by_name=True, # Handles camelCase input for snake_case fields if aliases are set
-        alias_generator=lambda field_name: field_name.replace("project_id", "projectId") # Example specific alias if needed
-                                      .replace("file_path", "filePath")
-                                      .replace("original_content", "originalContent")
-                                      .replace("suggested_content", "suggestedContent")
-                                      .replace("created", "created")
-                                      .replace("updated", "updated"),
-        allow_population_by_field_name=True # Allows population by snake_case field name too
+        title="AIFileChangeRecord",
+        populate_by_name=True
     )
 
 # Corresponds to AIFileChangeRecordSchema.openapi('AIFileChangeRecordResponse')
 # This is used as the type for 'result' or 'fileChange' in successful responses.
 class AIFileChangeRecordResponse(AIFileChangeRecord):
     model_config = ConfigDict(
-        title="AIFileChangeRecordResponse", # Explicit OpenAPI name
+        title="AIFileChangeRecordResponse",
         populate_by_name=True
     )
 
-AIFileChangesStorage = Dict[int, AIFileChangeRecord] # Corresponds to AIFileChangesStorageSchema, key is now int
+# Fixed to use string keys to match TypeScript z.record(z.string(), AIFileChangeRecordSchema)
+AIFileChangesStorage = Dict[str, AIFileChangeRecord]
 
 # Corresponds to GenerateChangeBodySchema in ai-file-change.schemas.ts (the one with projectId)
 class FullGenerateChangeBody(BaseModel):
@@ -53,63 +47,48 @@ class FullGenerateChangeBody(BaseModel):
     prompt: str = Field(..., min_length=1, example="Add hover effects to the button", description="Instruction for the AI to follow")
     
     model_config = ConfigDict(
-        title="GenerateAIChangeBody", # from .openapi('GenerateAIChangeBody') in TS
+        title="GenerateAIChangeBody",
         populate_by_name=True
     )
 
 # This is the actual request body for the generate route: AIChangeGenerateBodySchema.omit({ projectId: true })
 class GenerateAIFileChangeBody(BaseModel):
-    file_path: str = Field(..., min_length=1, alias="filePath", serialization_alias="filePath", example="src/components/Button.tsx", description="Path to the file to modify")
+    file_path: str = Field(..., min_length=1, alias="filePath", example="src/components/Button.tsx", description="Path to the file to modify")
     prompt: str = Field(..., min_length=1, example="Add hover effects to the button", description="Instruction for the AI to follow")
 
     model_config = ConfigDict(
-        populate_by_name=True,
-        # No specific title for the omitted version in TS, but can be added for clarity in Python spec
-        title="GenerateAIFileChangeRequestBody" 
+        title="GenerateAIFileChangeRequestBody",
+        populate_by_name=True
     )
 
 # Corresponds to FileChangeIdParamsSchema in ai-file-change.schemas.ts
 # Used for path parameters in routes needing projectId and aiFileChangeId
 class FileChangeIdParams(BaseModel):
-    project_id: int = Field(
-        ..., 
-        alias="projectId", 
-        description="ID of the project (Unix ms)",
-        json_schema_extra={"param": {"name": "projectId", "in": "path"}, "example": 1678886400001} # For OpenAPI path param
-    )
-    ai_file_change_id: int = Field(
-        ..., 
-        alias="aiFileChangeId",
-        description="ID of the AI file change record (Unix ms)",
-        json_schema_extra={
-            "param": {"name": "aiFileChangeId", "in": "path"}, # from .openapi()
-            "example": 1678886400002
-        }
-    )
+    project_id: int = Field(..., alias="projectId", description="ID of the project (Unix ms)", json_schema_extra={"param": {"name": "projectId", "in": "path"}, "example": 1678886400001})
+    ai_file_change_id: int = Field(..., alias="aiFileChangeId", description="ID of the AI file change record (Unix ms)", json_schema_extra={"param": {"name": "aiFileChangeId", "in": "path"}, "example": 1678886400002})
 
     model_config = ConfigDict(
-        title="AIFileChangeIdParams", # from .openapi('AIFileChangeIdParams')
-        populate_by_name=True, # Allows FastAPI to map path params to these fields via aliases
-        extra='ignore' # Important for Depends with path params
+        title="AIFileChangeIdParams",
+        populate_by_name=True
     )
 
 # --- Response Schemas from ai-file-change-routes.ts ---
 
 class GenerateAIFileChangeResponse(BaseModel):
     success: Literal[True] = True
-    result: AIFileChangeRecordResponse # TS: AIFileChangeRecordResponseSchema
+    result: AIFileChangeRecordResponse
     
     model_config = ConfigDict(
-        title="GenerateAIFileChangeResponse", # from .openapi(...)
+        title="GenerateAIFileChangeResponse",
         populate_by_name=True
     )
 
 class GetAIFileChangeDetailsResponse(BaseModel):
     success: Literal[True] = True
-    file_change: AIFileChangeRecordResponse = Field(..., alias="fileChange") # TS: fileChange: AIFileChangeRecordResponseSchema
+    file_change: AIFileChangeRecordResponse = Field(..., alias="fileChange")
     
     model_config = ConfigDict(
-        title="GetAIFileChangeDetailsResponse", # from .openapi(...)
+        title="GetAIFileChangeDetailsResponse",
         populate_by_name=True
     )
 
@@ -122,7 +101,7 @@ class ConfirmAIFileChangeResponse(BaseModel):
     result: ConfirmRejectResult
     
     model_config = ConfigDict(
-        title="ConfirmAIFileChangeResponse", # from .openapi(...)
+        title="ConfirmAIFileChangeResponse",
         populate_by_name=True
     )
 
@@ -135,6 +114,4 @@ class ErrorDetail(BaseModel):
 class ApiErrorResponse(BaseModel):
     success: Literal[False] = False
     error: ErrorDetail
-    model_config = ConfigDict(
-        title="ApiErrorResponse" # Matches ApiErrorResponseSchema.openapi('ApiErrorResponse')
-    )
+    model_config = ConfigDict(title="ApiErrorResponse")

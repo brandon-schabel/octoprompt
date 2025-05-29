@@ -22,7 +22,7 @@ import {
 } from '@ui'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { TicketWithTasks } from '@/generated'
+import { TicketWithTasks } from 'shared/src/schemas/ticket.schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 
@@ -159,7 +159,7 @@ export function TicketListPanel({ projectTabId, onSelectTicket }: TicketListPane
   }, [])
 
   const [ticketToDelete, setTicketToDelete] = useState<TicketWithTasks | null>(null)
-  const deleteTicket = useDeleteTicket(projectId)
+  const deleteTicket = useDeleteTicket()
 
   const handleDeleteTicket = useCallback(async (e: React.MouseEvent, ticket: TicketWithTasks) => {
     e.stopPropagation()

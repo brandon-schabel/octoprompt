@@ -94,10 +94,7 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
                   <LoaderPinwheel />
                 </div>
               ) : changeResponse ? (
-                <DiffViewer
-                  oldValue={changeResponse.fileChange.originalContent}
-                  newValue={changeResponse.fileChange.suggestedContent}
-                />
+                <DiffViewer oldValue={changeResponse.originalContent} newValue={changeResponse.suggestedContent} />
               ) : (
                 <Alert variant='destructive'>
                   <AlertDescription>Failed to load the suggested changes.</AlertDescription>

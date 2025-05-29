@@ -25,14 +25,14 @@ export function ProjectSettingsDialog() {
   const projectData = projectResponse?.data
   const { copyToClipboard } = useCopyClipboard()
 
-  const { isPending: isSyncing, mutate: syncProject } = useSyncProject(projectId ?? -1)
+  const { isPending: isSyncing, mutate: syncProject } = useSyncProject()
 
   // call sync project on interval
   useEffect(() => {
     if (projectId) {
       // start interval
       const interval = setInterval(() => {
-        syncProject()
+        syncProject(projectId)
       }, 5000)
       return () => clearInterval(interval)
     }

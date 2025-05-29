@@ -13,7 +13,7 @@ import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Cir
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
-import { Task } from '@/generated'
+import { TicketTask as Task } from 'shared/src/schemas/ticket.schemas'
 
 interface TicketTasksPanelProps {
   ticketId: number
@@ -66,7 +66,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
     updateTaskMut.mutate({
       ticketId,
       taskId: task.id,
-      updates: { done: !task.done }
+      data: {
+        done: !task.done
+      }
     })
   }
 
@@ -86,7 +88,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
     newOrder[idx - 1] = temp
     reorderMut.mutate({
       ticketId,
-      tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      data: {
+        tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      }
     })
   }
 
@@ -100,7 +104,9 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
     newOrder[idx + 1] = temp
     reorderMut.mutate({
       ticketId,
-      tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      data: {
+        tasks: newOrder.map((t, i) => ({ taskId: t.id, orderIndex: i }))
+      }
     })
   }
 
@@ -117,7 +123,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
   const handleAutoGenerateTasks = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    await autoGenMut.mutateAsync({ ticketId })
+    await autoGenMut.mutateAsync(ticketId)
     toast.success('Tasks generated from overview!')
   }
 

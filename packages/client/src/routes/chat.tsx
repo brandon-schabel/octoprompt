@@ -26,11 +26,10 @@ import {
   useDeleteChat,
   useUpdateChat,
   useCreateChat,
-  useGetModels,
   useDeleteMessage,
   useForkChatFromMessage
 } from '@/hooks/api/use-chat-api'
-import { Chat } from '@/generated'
+import { Chat } from 'shared/src/schemas/chat.schemas'
 import { cn } from '@/lib/utils'
 import {
   ScrollArea,
@@ -59,6 +58,7 @@ import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { useActiveChatId, useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { OctoCombobox } from '@/components/octo/octo-combobox'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { useGetModels } from '@/hooks/api/use-gen-ai-api'
 
 export function ModelSettingsPopover() {
   const [open, setOpen] = useState(false)
@@ -215,7 +215,7 @@ export function ProviderModelSector({
   onModelChange,
   className
 }: ModelSelectorProps) {
-  const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider)
+  const { data: modelsData, isPending: isLoadingModels } = useGetModels()
 
   const comboboxOptions = useMemo(
     () =>
@@ -620,7 +620,7 @@ export function ChatMessages({
         await forkChatMutation.mutateAsync({
           chatId,
           messageId,
-          body: { excludedMessageIds: Array.from(excludedSet) }
+          excludedMessageIds: Array.from(excludedSet)
         })
         toast.success('Chat forked successfully')
       } catch (error) {
@@ -995,7 +995,7 @@ function ChatPage() {
   const { settings: modelSettings, setModel } = useChatModelParams()
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
-  const { data: modelsData } = useGetModels(provider as APIProviders)
+  const { data: modelsData } = useGetModels()
   const { copyToClipboard } = useCopyClipboard()
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 

@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { FileNode } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
 import type { ProjectFile } from '../schemas/project.schemas'
 import type { ProjectFileMap } from '../schemas/project.schemas'
-import type { PromptListResponse } from '../schemas/prompt.schemas'
+import type { Prompt, PromptListResponse } from '../schemas/prompt.schemas'
 
 export function buildPromptContent({
   fileMap,
@@ -12,7 +12,7 @@ export function buildPromptContent({
   selectedPrompts,
   userPrompt
 }: {
-  promptData: PromptListResponse | null | undefined
+  promptData: Prompt[] | null | undefined
   selectedPrompts: number[]
   userPrompt: string
   selectedFiles: number[]
@@ -20,7 +20,7 @@ export function buildPromptContent({
 }): string {
   let contentToCopy = ''
   let promptCount = 1
-  for (const prompt of promptData?.data ?? []) {
+  for (const prompt of promptData ?? []) {
     if (selectedPrompts.includes(prompt.id)) {
       // Using a more descriptive tag for clarity
       contentToCopy += `<system_prompt index="${promptCount}" name="${prompt.name}">\n<![CDATA[\n${prompt.content}\n]]>\n</system_prompt>\n\n`
@@ -49,14 +49,14 @@ export function buildPromptContent({
 }
 
 export function calculateTotalTokens(
-  promptData: PromptListResponse | null | undefined,
+  promptData: Prompt[] | null | undefined,
   selectedPrompts: number[],
   userPrompt: string,
   selectedFiles: number[],
   fileMap: ProjectFileMap
 ): number {
   let total = 0
-  for (const prompt of promptData?.data ?? []) {
+  for (const prompt of promptData ?? []) {
     if (selectedPrompts.includes(prompt.id)) {
       total += estimateTokenCount(prompt.content)
     }

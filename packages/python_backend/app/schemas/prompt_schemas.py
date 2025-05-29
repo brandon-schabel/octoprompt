@@ -4,20 +4,20 @@ from enum import Enum
 from app.utils.storage_timestamp_utils import convert_timestamp_to_ms_int
 
 class ProjectIdParams(BaseModel):
-    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId", json_schema_extra={"param": {"name": "projectId", "in": "path"}}, example=1677657600000, description="The ID of the project (Unix ms)")
+    project_id: int = Field(..., alias="projectId", json_schema_extra={"param": {"name": "projectId", "in": "path"}}, example=1677657600000, description="The ID of the project (Unix ms)")
     model_config = ConfigDict(populate_by_name=True)
 
 class Prompt(BaseModel):
     id: int = Field(..., example=1675248000000, description="Prompt ID (Unix ms)")
     name: str = Field(..., example="Code Refactoring Prompt", description="Prompt name")
     content: str = Field(..., example="Refactor the following code to be more efficient: {code}", description="Prompt content template")
-    project_id: Optional[int] = Field(None, validation_alias="projectId", serialization_alias="projectId", example=1677657600000, description="Optional Project ID this prompt is linked to (Unix ms)")
-    created: int = Field(..., validation_alias="created", serialization_alias="created", example=1675248000000, description="Creation timestamp (Unix ms)")
-    updated: int = Field(..., validation_alias="updated", serialization_alias="updated", example=1675248300000, description="Last update timestamp (Unix ms)")
+    project_id: Optional[int] = Field(None, alias="projectId", example=1677657600000, description="Optional Project ID this prompt is linked to (Unix ms)")
+    created: int = Field(..., example=1675248000000, description="Creation timestamp (Unix ms)")
+    updated: int = Field(..., example=1675248300000, description="Last update timestamp (Unix ms)")
     model_config = ConfigDict(title="Prompt", populate_by_name=True)
 
 class CreatePromptBody(BaseModel):
-    project_id: Optional[int] = Field(None, validation_alias="projectId", serialization_alias="projectId", example=1677657600000, description="Optional Project ID to link the prompt to upon creation (Unix ms)")
+    project_id: Optional[int] = Field(None, alias="projectId", example=1677657600000, description="Optional Project ID to link the prompt to upon creation (Unix ms)")
     name: str = Field(..., min_length=1, example="My New Prompt")
     content: str = Field(..., min_length=1, example="Translate this text: {text}")
     model_config = ConfigDict(title="CreatePromptRequestBody", populate_by_name=True)
@@ -34,12 +34,12 @@ class UpdatePromptBody(BaseModel):
     model_config = ConfigDict(title="UpdatePromptRequestBody")
 
 class PromptIdParams(BaseModel):
-    prompt_id: int = Field(..., validation_alias="promptId", serialization_alias="promptId", json_schema_extra={"param": {"name": "promptId", "in": "path"}}, example=1675248000000, description="The ID of the prompt (Unix ms)")
+    prompt_id: int = Field(..., alias="promptId", json_schema_extra={"param": {"name": "promptId", "in": "path"}}, example=1675248000000, description="The ID of the prompt (Unix ms)")
     model_config = ConfigDict(title="PromptIdParams", populate_by_name=True)
 
 class ProjectAndPromptIdParams(BaseModel):
-    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId", json_schema_extra={"param": {"name": "projectId", "in": "path"}}, example=1677657600000, description="The ID of the project (Unix ms)")
-    prompt_id: int = Field(..., validation_alias="promptId", serialization_alias="promptId", json_schema_extra={"param": {"name": "promptId", "in": "path"}}, example=1675248000000, description="The ID of the prompt (Unix ms)")
+    project_id: int = Field(..., alias="projectId", json_schema_extra={"param": {"name": "projectId", "in": "path"}}, example=1677657600000, description="The ID of the project (Unix ms)")
+    prompt_id: int = Field(..., alias="promptId", json_schema_extra={"param": {"name": "promptId", "in": "path"}}, example=1675248000000, description="The ID of the prompt (Unix ms)")
     model_config = ConfigDict(title="ProjectAndPromptIdParams", populate_by_name=True)
 
 class PromptResponse(BaseModel):
@@ -53,12 +53,12 @@ class PromptListResponse(BaseModel):
     model_config = ConfigDict(title="PromptListResponse")
 
 class OptimizeUserInputRequest(BaseModel):
-    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId", example=1677657600000, description="The ID of the project (Unix ms)")
-    user_context: str = Field(..., min_length=1, validation_alias="userContext", serialization_alias="userContext", example="Make my login form better.", description="The user's initial prompt or context to be optimized.")
+    project_id: int = Field(..., alias="projectId", example=1677657600000, description="The ID of the project (Unix ms)")
+    user_context: str = Field(..., min_length=1, alias="userContext", example="Make my login form better.", description="The user's initial prompt or context to be optimized.")
     model_config = ConfigDict(title="OptimizePromptRequest", populate_by_name=True)
 
 class OptimizedPromptData(BaseModel):
-    optimized_prompt: str = Field(..., validation_alias="optimizedPrompt", serialization_alias="optimizedPrompt", example="Optimize the user experience for the login form, focusing on clarity, security, and accessibility. Suggest improvements for field labels, error handling, password requirements display, and button text.", description="The optimized prompt generated by the service.")
+    optimized_prompt: str = Field(..., alias="optimizedPrompt", example="Optimize the user experience for the login form, focusing on clarity, security, and accessibility. Suggest improvements for field labels, error handling, password requirements display, and button text.", description="The optimized prompt generated by the service.")
     model_config = ConfigDict(populate_by_name=True)
 
 class OptimizePromptResponse(BaseModel):
@@ -68,7 +68,6 @@ class OptimizePromptResponse(BaseModel):
 
 class PromptProject(BaseModel):
     id: int
-    prompt_id: int = Field(..., validation_alias="promptId", serialization_alias="promptId")
-    project_id: int = Field(..., validation_alias="projectId", serialization_alias="projectId")
-    created: Optional[int] = Field(None, validation_alias="created", serialization_alias="created")
+    prompt_id: int = Field(..., alias="promptId")
+    project_id: int = Field(..., alias="projectId")
     model_config = ConfigDict(populate_by_name=True)

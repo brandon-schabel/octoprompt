@@ -15,11 +15,13 @@ export async function apiFetch<Req, Res>(
         body: body ? JSON.stringify(body) : undefined,
     });
 
+    // Read response text first to avoid body consumption issues
+    const responseText = await response.text();
+
     let data;
     try {
-        data = await response.json();
+        data = JSON.parse(responseText);
     } catch (error) {
-        const responseText = await response.text();
         console.error('Failed to parse JSON response. Raw response text:', responseText);
         const errorInfo = {
             url: endpoint.url,
@@ -33,7 +35,6 @@ export async function apiFetch<Req, Res>(
     }
 
     // Check for API error responses
-    // @ts-ignore
     if (!response.ok || (data && data.success === false)) {
         const errorInfo = {
             url: endpoint.url,
@@ -44,13 +45,8 @@ export async function apiFetch<Req, Res>(
         };
         console.error('API request failed:', errorInfo);
 
-        // If we have a schema, let Zod validation handle it
-        // This will provide detailed validation errors
-        if (schema) {
-            return schema.parse(data);
-        }
-
-        // Otherwise throw a descriptive error
+        // For error responses, don't try to validate against success schema
+        // Just throw an error with the response data
         throw new Error(`API request failed: ${response.status} - ${JSON.stringify(data)}`);
     }
 

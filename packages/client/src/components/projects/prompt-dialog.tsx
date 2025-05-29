@@ -25,8 +25,8 @@ interface PromptDialogProps {
 }
 
 export function PromptDialog({ open, editPromptId, promptForm, projectId, onClose, onSuccess }: PromptDialogProps) {
-  const createPromptMutation = useCreatePrompt(projectId)
-  const updatePromptMutation = useUpdatePrompt(projectId)
+  const createPromptMutation = useCreatePrompt()
+  const updatePromptMutation = useUpdatePrompt()
   const addPromptToProjectMutation = useAddPromptToProject()
   const { data: promptData } = useGetProjectPrompts(projectId)
 
@@ -52,11 +52,9 @@ export function PromptDialog({ open, editPromptId, promptForm, projectId, onClos
   const handleCreatePrompt = async (values: { name: string; content: string }) => {
     try {
       const result = await createPromptMutation.mutateAsync({
-        body: {
-          projectId,
-          name: values.name,
-          content: values.content
-        }
+        projectId,
+        name: values.name,
+        content: values.content
       })
 
       if (!result.success) {

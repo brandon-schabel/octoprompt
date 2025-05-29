@@ -1,4 +1,4 @@
-import { Ticket, Task, TicketWithTasks } from '@/generated/types.gen'
+import { Ticket, TicketTask as Task, TicketWithTasks } from 'shared/src/schemas/ticket.schemas'
 
 export function buildTicketContent(ticket: Ticket, tasks?: Task[]): string {
   let content = ''

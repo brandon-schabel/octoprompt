@@ -10,7 +10,7 @@ import { Pencil, Trash2, Icon } from 'lucide-react'
 import { tab } from '@lucide/lab'
 import { useListTicketsWithTasks } from '@/hooks/api/use-tickets-api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
-import { ProjectResponse } from '@/generated'
+import { ProjectResponse } from 'shared/src/schemas/project.schemas'
 import {
   useActiveProjectTab,
   useDeleteProjectTabById,

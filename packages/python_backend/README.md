@@ -1,8 +1,11 @@
 
+UV Setup:
+`uv sync`
+Activate Python Env
+`source .venv/bin/activate`
 
-```md
-uv sync
-source .venv/bin/activate
-flask run -p 3000
-python example.py
-```
+start server
+`python main.py`
+
+to run tests:
+`uv run pytest`

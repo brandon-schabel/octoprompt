@@ -148,3 +148,9 @@ export const ProjectFileMapSchema = z
 
 // a key/value map by id of all project object (content, file name, path, extension, etc)
 export type ProjectFileMap = z.infer<typeof ProjectFileMapSchema>
+export type CreateProjectRequestBody = z.infer<typeof CreateProjectBodySchema>
+export type UpdateProjectRequestBody = z.infer<typeof UpdateProjectBodySchema>
+export type ProjectResponse = z.infer<typeof ProjectResponseSchema>
+export type ProjectListResponse = z.infer<typeof ProjectListResponseSchema>
+export type FileListResponse = z.infer<typeof FileListResponseSchema>
+export type ProjectSummaryResponse = z.infer<typeof ProjectSummaryResponseSchema>

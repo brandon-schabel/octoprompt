@@ -26,7 +26,6 @@
         "zod-validation-error": "^3.4.1",
       },
       "devDependencies": {
-        "@hey-api/openapi-ts": "^0.66.7",
         "@types/archiver": "^6.0.3",
         "@types/bun": "latest",
         "@types/picomatch": "^3.0.2",
@@ -3871,10 +3870,10 @@
       "sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg=="
     ],
     "commander": [
-      "commander@13.0.0",
+      "commander@10.0.1",
       "",
       {},
-      "sha512-oPYleIY8wmTVzkvQq10AEok6YcTC4sRUBl8F9gVuwchGVUCTbl/vhLTaQqutuuySYOsu8YTgV+OxKc/8Yvx+mQ=="
+      "sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug=="
     ],
     "compress-commons": [
       "compress-commons@6.0.2",
@@ -7862,10 +7861,10 @@
       "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="
     ],
     "yallist": [
-      "yallist@4.0.0",
+      "yallist@3.1.1",
       "",
       {},
-      "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
+      "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="
     ],
     "yaml": [
       "yaml@2.8.0",
@@ -7954,6 +7953,12 @@
       "",
       {},
       "sha512-WOBp/EEGUiIsJSp7wcv/y6MO+lV9UoncWqxuFfm8eBwzWNgyfBd6Gz+IeKQ9jCmyhoH99g15M3T+QaVHFjizVA=="
+    ],
+    "@hey-api/openapi-ts/commander": [
+      "commander@13.0.0",
+      "",
+      {},
+      "sha512-oPYleIY8wmTVzkvQq10AEok6YcTC4sRUBl8F9gVuwchGVUCTbl/vhLTaQqutuuySYOsu8YTgV+OxKc/8Yvx+mQ=="
     ],
     "@hono/zod-openapi/@hono/zod-validator": [
       "@hono/zod-validator@0.5.0",
@@ -8231,12 +8236,6 @@
       {},
       "sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A=="
     ],
-    "lru-cache/yallist": [
-      "yallist@3.1.1",
-      "",
-      {},
-      "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="
-    ],
     "mdast-util-mdx-jsx/parse-entities": [
       "parse-entities@4.0.2",
       "",
@@ -8268,6 +8267,12 @@
         }
       },
       "sha512-DxiNidxSEK+tHG6zOIklvNOwm3hvCrbUrdtzY74U6HKTJxvIDfOUL5W5P2Ghd3DTkhhKPYGqeNUIh5qcM4YBfw=="
+    ],
+    "minizlib/yallist": [
+      "yallist@4.0.0",
+      "",
+      {},
+      "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
     ],
     "mlly/pathe": [
       "pathe@2.0.3",
@@ -8372,12 +8377,6 @@
       },
       "sha512-kbpaSSGJTWdAY5KPVeMOKXSrPtr8C8C7wodJbcsd51jRnmD+GZu8Y0VoU6Dm5Z4vWr0Ig/1NKuWRKf7j5aaYSg=="
     ],
-    "shadcn/commander": [
-      "commander@10.0.1",
-      "",
-      {},
-      "sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug=="
-    ],
     "shadcn/node-fetch": [
       "node-fetch@3.3.2",
       "",
@@ -8455,6 +8454,12 @@
       },
       "sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw=="
     ],
+    "tar/yallist": [
+      "yallist@4.0.0",
+      "",
+      {},
+      "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
+    ],
     "tough-cookie/universalify": [
       "universalify@0.2.0",
       "",
@@ -8504,6 +8509,12 @@
       "",
       {},
       "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="
+    ],
+    "fs-minipass/minipass/yallist": [
+      "yallist@4.0.0",
+      "",
+      {},
+      "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A=="
     ],
     "hastscript/@types/hast/@types/unist": [
       "@types/unist@2.0.11",

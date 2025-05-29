@@ -1,4 +1,4 @@
-import { Ticket } from '@/generated'
+import { Ticket } from 'shared/src/schemas/ticket.schemas'
 import { Badge } from '@ui'
 
 interface TicketListProps {

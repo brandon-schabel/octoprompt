@@ -7,7 +7,7 @@ import { Textarea } from '@ui'
 import { useCreateTicket, useUpdateTicket } from '../../hooks/api/use-tickets-api'
 import { OctoTooltip } from '../octo/octo-tooltip'
 import { TicketTasksPanel } from './ticket-tasks-panel'
-import type { TicketWithTasks } from '@/generated'
+import type { TicketWithTasks } from 'shared/src/schemas/ticket.schemas'
 
 interface TicketDialogProps {
   isOpen: boolean
@@ -17,8 +17,8 @@ interface TicketDialogProps {
 }
 
 export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks, projectId }: TicketDialogProps) {
-  const createTicket = useCreateTicket(projectId)
-  const updateTicket = useUpdateTicket(projectId)
+  const createTicket = useCreateTicket()
+  const updateTicket = useUpdateTicket()
 
   const [title, setTitle] = useState('')
   const [overview, setOverview] = useState('')
@@ -57,11 +57,12 @@ export function TicketDialog({ isOpen, onClose, ticketWithTasks: ticketWithTasks
         // Editing existing ticket
         await updateTicket.mutateAsync({
           ticketId: ticketWithTasks.ticket.id,
-          updates: {
-            title,
+          data: {
+            suggestedFileIds: selectedFileIds,
             overview,
             priority,
-            status
+            status,
+            title
           }
         })
       } else {

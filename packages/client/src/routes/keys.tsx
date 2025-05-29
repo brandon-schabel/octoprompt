@@ -8,17 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ExternalLinkIcon, Copy } from 'lucide-react'
 import { PROVIDERS } from '@/constants/providers-constants'
 import { OctoTooltip } from '@/components/octo/octo-tooltip'
-import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
 export const Route = createFileRoute('/keys')({
   component: KeysPage
 })
 
 function KeysPage() {
-  const { data: keys, isLoading } = useGetKeys()
+  const { data: keysRes, isLoading } = useGetKeys()
   const createKeyMutation = useCreateKey()
   const deleteKeyMutation = useDeleteKey()
-  const { copyToClipboard } = useCopyClipboard()
+  const keys = keysRes?.data
 
   const [selectedProvider, setSelectedProvider] = useState<string>('')
   const [newKeyVal, setNewKeyVal] = useState('')

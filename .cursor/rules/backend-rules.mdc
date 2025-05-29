@@ -1,70 +1,1030 @@
 ---
-description: 
-globs: packages/server/**.*
+description: It's helpful for building features on the client.
+globs: packages/server/**
 alwaysApply: false
 ---
-Below is a lean “cheat-sheet” version of your guide—same core rules, minimal repetition, sized for fast LLM ingestion. Let me know if you’d like any section expanded or trimmed further!
+# OctoPrompt Backend Architecture
+
+TypeScript/Bun backend with AI-powered project management, layered architecture, file-based JSON storage, service-oriented business logic, OpenAPI-compliant REST APIs.
+
+## Architecture Layers
+
+### Storage Layer (`src/utils/storage/`)
+
+JSON file storage with CRUD operations and Zod validation:
+
+```typescript
+export const projectStorage = {
+  async readProjects(): Promise<ProjectsStorage>,
+  async writeProjects(projects: ProjectsStorage): Promise<ProjectsStorage>,
+  async readProjectFiles(projectId: number): Promise<ProjectFilesStorage>,
+  generateId: (): number => normalizeToUnixMs(new Date())
+}
+```
+
+**Storage Files:**
+
+- `project-storage.ts` - Projects and files
+- `chat-storage.ts` - Chat sessions and messages  
+- `prompt-storage.ts` - Prompts and project associations
+- `ticket-storage.ts` - Tickets, tasks, file links
+- `provider-key-storage.ts` - AI provider API keys
+
+**Patterns:**
+
+- IDs: Unix timestamps (ms)
+- Data: `Record<string, Entity>` keyed by ID
+- Zod validation on all read/write
+- Atomic file operations
+
+### Services Layer (`src/services/`)
+
+Business logic orchestrating storage operations:
+
+```typescript
+export async function createProject(data: CreateProjectBody): Promise<Project> {
+  const projectId = projectStorage.generateId()
+  const newProject = { id: projectId, ...data, created: Date.now(), updated: Date.now() }
+  
+  const validatedProject = ProjectSchema.parse(newProject)
+  const projects = await projectStorage.readProjects()
+  projects[projectId] = validatedProject
+  
+  await projectStorage.writeProjects(projects)
+  await projectStorage.writeProjectFiles(projectId, {})
+  
+  return validatedProject
+}
+```
+
+**Services:**
+
+- `project-service.ts` - Project CRUD, file management, summarization
+- `chat-service.ts` - Chat sessions, message handling, forking
+- `gen-ai-services.ts` - AI provider integration
+- `file-services/` - File sync, watching, AI changes
+
+### API Layer (`src/routes/`)
+
+Hono-based routes with OpenAPI specs:
+
+```typescript
+const createProjectRoute = createRoute({
+  method: 'post',
+  path: '/api/projects',
+  tags: ['Projects'],
+  request: { body: { content: { 'application/json': { schema: CreateProjectBodySchema } } } },
+  responses: {
+    201: { content: { 'application/json': { schema: ProjectResponseSchema } } }
+  }
+})
+
+export const projectRoutes = new OpenAPIHono()
+  .openapi(createProjectRoute, async (c) => {
+    const body = c.req.valid('json')
+    const project = await projectService.createProject(body)
+    return c.json({ success: true, data: project }, 201)
+  })
+```
+
+## Core Systems
+
+### File Synchronization
+
+```typescript
+export async function syncProject(project: Project): Promise<SyncResults> {
+  const absolutePath = resolvePath(project.path)
+  const ignoreFilter = await loadIgnoreRules(absolutePath)
+  const diskFiles = getTextFiles(absolutePath, absolutePath, ignoreFilter)
+  return await syncFileSet(project, absolutePath, diskFiles, ignoreFilter)
+}
+
+const watcher = createFileChangeWatcher()
+watcher.registerListener({
+  async onFileChanged(event: FileChangeEvent, filePath: string) {
+    await syncProject(currentProject)
+    if (event !== 'deleted') {
+      const updatedFile = findFileByPath(filePath)
+      if (updatedFile) await summarizeSingleFile(updatedFile)
+    }
+  }
+})
+```
+
+### AI Integration
+
+Multi-provider AI using Vercel AI SDK:
+
+```typescript
+async function getProviderLanguageModelInterface(
+  provider: APIProviders,
+  options: AiSdkOptions
+): Promise<LanguageModel> {
+  const keys = await loadUncensoredKeys()
+  const apiKey = keys.find(k => k.provider === provider)?.key
+
+  switch (provider) {
+    case 'openai': return createOpenAI({ apiKey })(options.model)
+    case 'anthropic': return createAnthropic({ apiKey })(options.model)
+    case 'openrouter': return createOpenRouter({ apiKey })(options.model)
+  }
+}
+
+export async function generateStructuredData<T extends z.ZodType>({
+  prompt, schema, options, systemMessage
+}: {
+  prompt: string
+  schema: T
+  options?: AiSdkOptions
+  systemMessage?: string
+}): Promise<{ object: z.infer<T> }> {
+  const model = await getProviderLanguageModelInterface(options.provider, options)
+  return await generateObject({ model, schema, prompt, system: systemMessage })
+}
+```
+
+## Complete Feature Example: Todo System
+
+### 1. Schemas (`shared/src/schemas/todo.schemas.ts`)
+
+```typescript
+import { z } from '@hono/zod-openapi'
+import { unixTSSchemaSpec, unixTSArraySchemaSpec } from './schema-utils'
+
+export const TodoSchema = z.object({
+  id: unixTSSchemaSpec,
+  projectId: unixTSSchemaSpec,
+  title: z.string().min(1),
+  description: z.string().optional(),
+  status: z.enum(['pending', 'in_progress', 'completed']),
+  priority: z.enum(['low', 'medium', 'high']),
+  assignedTo: z.string().optional(),
+  dueDate: unixTSSchemaSpec.optional(),
+  tags: z.array(z.string()).default([]),
+  created: unixTSSchemaSpec,
+  updated: unixTSSchemaSpec
+}).openapi('Todo')
+
+export const TodoCategorySchema = z.object({
+  name: z.string(),
+  todoIds: unixTSArraySchemaSpec,
+  color: z.string().optional()
+}).openapi('TodoCategory')
+
+export const CreateTodoBodySchema = z.object({
+  projectId: unixTSSchemaSpec,
+  title: z.string().min(1).openapi({ example: 'Implement user authentication' }),
+  description: z.string().optional().openapi({ example: 'Add JWT-based auth system' }),
+  priority: z.enum(['low', 'medium', 'high']).openapi({ example: 'high' }),
+  assignedTo: z.string().optional().openapi({ example: 'john.doe@example.com' }),
+  dueDate: unixTSSchemaSpec.optional(),
+  tags: z.array(z.string()).default([]).openapi({ example: ['feature', 'security'] })
+}).openapi('CreateTodoRequestBody')
+
+export const TodoResponseSchema = z.object({
+  success: z.literal(true),
+  data: TodoSchema
+}).openapi('TodoResponse')
+
+export const TodoListResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.array(TodoSchema)
+}).openapi('TodoListResponse')
+
+// Type exports
+export type Todo = z.infer<typeof TodoSchema>
+export type TodoCategory = z.infer<typeof TodoCategorySchema>
+export type CreateTodoBody = z.infer<typeof CreateTodoBodySchema>
+```
+
+### 2. Storage (`src/utils/storage/todo-storage.ts`)
+
+```typescript
+import { z } from 'zod'
+import { TodoSchema, TodoCategorySchema } from '../../../shared/src/schemas/todo.schemas'
+import { readJson, writeJson, resolveJsonPath } from '../json-scribe'
+import { normalizeToUnixMs } from '../../../shared/src/utils/unix-ts-utils'
+
+export const TodoStorageSchema = z.record(z.string(), TodoSchema)
+export const TodoCategoryStorageSchema = z.record(z.string(), TodoCategorySchema)
+
+export type TodoStorage = z.infer<typeof TodoStorageSchema>
+export type TodoCategoryStorage = z.infer<typeof TodoCategoryStorageSchema>
+
+const getTodosPath = (projectId: number): string[] => ['data', 'projects', projectId.toString(), 'todos.json']
+const getCategoriesPath = (projectId: number): string[] => ['data', 'projects', projectId.toString(), 'todo-categories.json']
+
+export const todoStorage = {
+  async readTodos(projectId: number): Promise<TodoStorage> {
+    const data = await readJson<TodoStorage>({ path: getTodosPath(projectId) })
+    return TodoStorageSchema.parse(data ?? {})
+  },
+
+  async writeTodos(projectId: number, todos: TodoStorage): Promise<TodoStorage> {
+    const validatedTodos = TodoStorageSchema.parse(todos)
+    await writeJson({ path: getTodosPath(projectId), data: validatedTodos, schema: TodoStorageSchema })
+    return validatedTodos
+  },
+
+  async readTodoCategories(projectId: number): Promise<TodoCategoryStorage> {
+    const data = await readJson<TodoCategoryStorage>({ path: getCategoriesPath(projectId) })
+    return TodoCategoryStorageSchema.parse(data ?? {})
+  },
+
+  async writeTodoCategories(projectId: number, categories: TodoCategoryStorage): Promise<TodoCategoryStorage> {
+    const validatedCategories = TodoCategoryStorageSchema.parse(categories)
+    await writeJson({ path: getCategoriesPath(projectId), data: validatedCategories, schema: TodoCategoryStorageSchema })
+    return validatedCategories
+  },
+
+  generateId: (): number => normalizeToUnixMs(new Date())
+}
+```
+
+### 3. Service (`src/services/todo-service.ts`)
+
+```typescript
+import { Todo, CreateTodoBody, TodoSchema } from 'shared/src/schemas/todo.schemas'
+import { todoStorage } from '@/utils/storage/todo-storage'
+import { ApiError } from 'shared'
+import { generateStructuredData } from './gen-ai-services'
+import { getProjectById } from './project-service'
+import { MEDIUM_MODEL_CONFIG } from 'shared/src/constants/model-default-configs'
+import { z, ZodError } from 'zod'
+
+export async function createTodo(data: CreateTodoBody): Promise<Todo> {
+  let todoId = todoStorage.generateId()
+  const initialTodoId = todoId
+  let incrementCount = 0
+  const now = Date.now()
+
+  const newTodoData: Todo = {
+    id: todoId,
+    ...data,
+    status: 'pending',
+    created: now,
+    updated: now
+  }
+
+  try {
+    const existingTodos = await todoStorage.readTodos(data.projectId)
+    
+    // Handle ID conflicts like project-service
+    while (existingTodos[todoId]) {
+      todoId++
+      incrementCount++
+    }
+
+    if (incrementCount > 0) {
+      newTodoData.id = todoId
+      console.log(`Todo ID ${initialTodoId} was taken. Found available ID ${todoId} after ${incrementCount} increment(s).`)
+    }
+
+    const validatedTodo = TodoSchema.parse(newTodoData)
+    existingTodos[todoId] = validatedTodo
+    
+    await todoStorage.writeTodos(data.projectId, existingTodos)
+    
+    return validatedTodo
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    if (error instanceof ZodError) {
+      throw new ApiError(
+        500,
+        `Internal validation failed creating todo: ${error.message}`,
+        'TODO_VALIDATION_ERROR_INTERNAL',
+        error.flatten().fieldErrors
+      )
+    }
+    throw new ApiError(
+      500,
+      `Failed to create todo. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'TODO_CREATION_FAILED'
+    )
+  }
+}
+
+export async function updateTodoStatus(
+  projectId: number, 
+  todoId: number, 
+  status: 'pending' | 'in_progress' | 'completed'
+): Promise<Todo> {
+  try {
+    await getProjectById(projectId) // Verify project exists
+    const todos = await todoStorage.readTodos(projectId)
+    const todo = todos[todoId]
+    
+    if (!todo) {
+      throw new ApiError(404, `Todo not found with ID ${todoId} in project ${projectId}.`, 'TODO_NOT_FOUND')
+    }
+
+    const updatedTodoData: Todo = {
+      ...todo,
+      status,
+      updated: Date.now()
+    }
+    
+    const validatedTodo = TodoSchema.parse(updatedTodoData)
+    todos[todoId] = validatedTodo
+    await todoStorage.writeTodos(projectId, todos)
+    
+    return validatedTodo
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    if (error instanceof ZodError) {
+      throw new ApiError(
+        500,
+        `Internal validation failed updating todo ${todoId}: ${error.message}`,
+        'TODO_VALIDATION_ERROR_INTERNAL',
+        error.flatten().fieldErrors
+      )
+    }
+    throw new ApiError(
+      500,
+      `Failed to update todo status for ${todoId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'TODO_UPDATE_FAILED'
+    )
+  }
+}
+
+export async function getTodosByProject(projectId: number): Promise<Todo[]> {
+  try {
+    await getProjectById(projectId) // Verify project exists
+    const todos = await todoStorage.readTodos(projectId)
+    const todoList = Object.values(todos)
+    todoList.sort((a, b) => b.updated - a.updated) // Sort by most recently updated
+    return todoList
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get todos for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'TODO_GET_FAILED'
+    )
+  }
+}
+
+export async function deleteTodo(projectId: number, todoId: number): Promise<boolean> {
+  try {
+    await getProjectById(projectId) // Verify project exists
+    const todos = await todoStorage.readTodos(projectId)
+    
+    if (!todos[todoId]) {
+      throw new ApiError(404, `Todo not found with ID ${todoId} in project ${projectId} for deletion.`, 'TODO_NOT_FOUND')
+    }
+
+    delete todos[todoId]
+    await todoStorage.writeTodos(projectId, todos)
+    
+    return true
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to delete todo ${todoId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'TODO_DELETE_FAILED'
+    )
+  }
+}
+
+export async function generateTodoSuggestions(projectId: number): Promise<Todo[]> {
+  try {
+    const project = await getProjectById(projectId)
+
+    const TodoSuggestionSchema = z.object({
+      todos: z.array(z.object({
+        title: z.string(),
+        description: z.string(),
+        priority: z.enum(['low', 'medium', 'high']),
+        tags: z.array(z.string())
+      }))
+    })
+
+    const result = await generateStructuredData({
+      prompt: `Project: ${project.name}\nDescription: ${project.description}\n\nSuggest 5-8 actionable todos for this project based on common development tasks.`,
+      schema: TodoSuggestionSchema,
+      systemMessage: `Analyze the project and suggest specific, actionable todos like bug fixes, features, refactoring, documentation, testing. Focus on practical development tasks.`,
+      options: MEDIUM_MODEL_CONFIG
+    })
+
+    return result.object.todos.map(suggestion => ({
+      ...suggestion,
+      id: todoStorage.generateId(),
+      projectId,
+      status: 'pending' as const,
+      created: Date.now(),
+      updated: Date.now()
+    }))
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to generate todo suggestions for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'TODO_SUGGESTIONS_FAILED'
+    )
+  }
+}
+```
+
+### 4. Routes (`src/routes/todo-routes.ts`)
+
+```typescript
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import { ApiError } from 'shared'
+import { 
+  CreateTodoBodySchema, 
+  TodoResponseSchema, 
+  TodoListResponseSchema 
+} from 'shared/src/schemas/todo.schemas'
+import { ProjectIdParamsSchema } from 'shared/src/schemas/project.schemas'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
+import { unixTSSchemaSpec } from 'shared/src/schemas/schema-utils'
+import { createTodo, updateTodoStatus, getTodosByProject, generateTodoSuggestions, deleteTodo } from '@/services/todo-service'
+
+const TodoParamsSchema = z.object({
+  projectId: unixTSSchemaSpec.openapi({ param: { name: 'projectId', in: 'path' } }),
+  todoId: unixTSSchemaSpec.openapi({ param: { name: 'todoId', in: 'path' } })
+}).openapi('TodoParams')
+
+const UpdateStatusBodySchema = z.object({
+  status: z.enum(['pending', 'in_progress', 'completed']).openapi({ example: 'completed' })
+}).openapi('UpdateTodoStatusBody')
+
+const createTodoRoute = createRoute({
+  method: 'post',
+  path: '/api/todos',
+  tags: ['Todos'],
+  summary: 'Create a new todo item',
+  request: { 
+    body: { 
+      content: { 'application/json': { schema: CreateTodoBodySchema } },
+      required: true,
+      description: 'Todo data to create'
+    }
+  },
+  responses: { 
+    201: { 
+      content: { 'application/json': { schema: TodoResponseSchema } },
+      description: 'Todo created successfully'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const getTodosRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/todos',
+  tags: ['Todos'],
+  summary: 'Get all todos for a project',
+  request: { params: ProjectIdParamsSchema },
+  responses: { 
+    200: { 
+      content: { 'application/json': { schema: TodoListResponseSchema } },
+      description: 'Successfully retrieved todos'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const updateTodoStatusRoute = createRoute({
+  method: 'patch',
+  path: '/api/projects/{projectId}/todos/{todoId}/status',
+  tags: ['Todos'],
+  summary: 'Update todo status',
+  request: { 
+    params: TodoParamsSchema,
+    body: { 
+      content: { 'application/json': { schema: UpdateStatusBodySchema } },
+      required: true,
+      description: 'New status for the todo'
+    }
+  },
+  responses: { 
+    200: { 
+      content: { 'application/json': { schema: TodoResponseSchema } },
+      description: 'Todo status updated successfully'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Todo or project not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const deleteTodoRoute = createRoute({
+  method: 'delete',
+  path: '/api/projects/{projectId}/todos/{todoId}',
+  tags: ['Todos'],
+  summary: 'Delete a todo item',
+  request: { params: TodoParamsSchema },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Todo deleted successfully'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Todo or project not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const generateSuggestionsRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/todos/suggestions',
+  tags: ['Todos'],
+  summary: 'Generate AI-powered todo suggestions for a project',
+  request: { params: ProjectIdParamsSchema },
+  responses: { 
+    200: { 
+      content: { 'application/json': { schema: TodoListResponseSchema } },
+      description: 'Successfully generated todo suggestions'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error or AI processing error' }
+  }
+})
+
+export const todoRoutes = new OpenAPIHono()
+  .openapi(createTodoRoute, async (c) => {
+    const body = c.req.valid('json')
+    const todo = await createTodo(body)
+    const payload = {
+      success: true,
+      data: todo
+    } satisfies z.infer<typeof TodoResponseSchema>
+    return c.json(payload, 201)
+  })
+  .openapi(getTodosRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const todos = await getTodosByProject(projectId)
+    const payload = {
+      success: true,
+      data: todos
+    } satisfies z.infer<typeof TodoListResponseSchema>
+    return c.json(payload, 200)
+  })
+  .openapi(updateTodoStatusRoute, async (c) => {
+    const { projectId, todoId } = c.req.valid('param')
+    const { status } = c.req.valid('json')
+    const todo = await updateTodoStatus(projectId, todoId, status)
+    const payload = {
+      success: true,
+      data: todo
+    } satisfies z.infer<typeof TodoResponseSchema>
+    return c.json(payload, 200)
+  })
+  .openapi(deleteTodoRoute, async (c) => {
+    const { projectId, todoId } = c.req.valid('param')
+    const deleted = await deleteTodo(projectId, todoId)
+    if (!deleted) {
+      throw new ApiError(404, `Todo not found: ${todoId}`, 'TODO_NOT_FOUND')
+    }
+    const payload: z.infer<typeof OperationSuccessResponseSchema> = {
+      success: true,
+      message: 'Todo deleted successfully.'
+    }
+    return c.json(payload, 200)
+  })
+  .openapi(generateSuggestionsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const suggestions = await generateTodoSuggestions(projectId)
+    const payload = {
+      success: true,
+      data: suggestions
+    } satisfies z.infer<typeof TodoListResponseSchema>
+    return c.json(payload, 200)
+  })
+
+export type TodoRouteTypes = typeof todoRoutes
+```
+
+### 5. Register Routes (`src/app.ts`)
+
+```typescript
+import { todoRoutes } from './routes/todo-routes'
+
+export const app = new OpenAPIHono()
+  .route('/', todoRoutes)
+```
+
+### 6. Tests (`src/services/todo-service.test.ts`)
+
+```typescript
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { createTodo, updateTodoStatus, getTodosByProject, deleteTodo } from './todo-service'
+import { CreateTodoBody, Todo } from 'shared/src/schemas/todo.schemas'
+import { randomString } from '../utils/test-utils'
+
+// Use realistic unix timestamps for test IDs
+const BASE_TIMESTAMP = 1700000000000
+let mockIdCounter = BASE_TIMESTAMP + 100000
+
+const generateTestId = () => {
+  mockIdCounter += 1000
+  return mockIdCounter
+}
+
+// In-memory stores for our mocks
+let mockTodosDb: Record<number, Record<number, Todo>> = {} // ProjectId -> TodoId -> Todo
+
+// Mock the todoStorage utility
+const mockTodoStorage = {
+  readTodos: async (projectId: number) => JSON.parse(JSON.stringify(mockTodosDb[projectId] || {})),
+  writeTodos: async (projectId: number, data: Record<number, Todo>) => {
+    mockTodosDb[projectId] = JSON.parse(JSON.stringify(data))
+    return mockTodosDb[projectId]
+  },
+  generateId: () => generateTestId()
+}
+
+// Mock project service
+const mockProjectService = {
+  getProjectById: async (projectId: number) => ({
+    id: projectId,
+    name: `Test Project ${projectId}`,
+    description: 'Test project description',
+    path: '/test/path',
+    created: Date.now(),
+    updated: Date.now()
+  })
+}
+
+mock.module('@/utils/storage/todo-storage', () => ({
+  todoStorage: mockTodoStorage
+}))
+
+mock.module('./project-service', () => ({
+  getProjectById: mockProjectService.getProjectById
+}))
+
+describe('TodoService (Mocked Storage)', () => {
+  const testProjectId = generateTestId()
+  
+  beforeEach(async () => {
+    mockTodosDb = {}
+    mockIdCounter = BASE_TIMESTAMP + 100000
+  })
+
+  afterEach(async () => {
+    mockTodosDb = {}
+  })
+
+  test('createTodo should insert a new todo record', async () => {
+    const todoData: CreateTodoBody = {
+      projectId: testProjectId,
+      title: `Todo_${randomString()}`,
+      description: 'Add JWT-based auth system',
+      priority: 'high',
+      tags: ['feature', 'security']
+    }
+
+    const todo = await createTodo(todoData)
+    
+    expect(todo.id).toBeDefined()
+    expect(typeof todo.id).toBe('number')
+    expect(todo.title).toBe(todoData.title)
+    expect(todo.status).toBe('pending')
+    expect(todo.priority).toBe('high')
+    expect(todo.tags).toEqual(['feature', 'security'])
+    expect(todo.created).toBeGreaterThan(0)
+    expect(todo.updated).toBeGreaterThan(0)
+    expect(todo.projectId).toBe(testProjectId)
+
+    // Verify by trying to get it via the service
+    const todos = await getTodosByProject(testProjectId)
+    const foundTodo = todos.find(t => t.id === todo.id)
+    expect(foundTodo).toBeDefined()
+    expect(foundTodo?.title).toBe(todoData.title)
+    expect(mockTodosDb[testProjectId][todo.id]).toEqual(todo)
+  })
+
+  test('updateTodoStatus should change status and update timestamp', async () => {
+    const todoData: CreateTodoBody = {
+      projectId: testProjectId,
+      title: 'Test todo for status update',
+      priority: 'medium',
+      tags: []
+    }
+    
+    const todo = await createTodo(todoData)
+    const originalUpdated = todo.updated
+    
+    // Small delay to ensure timestamp difference
+    await new Promise(resolve => setTimeout(resolve, 10))
+    
+    const updatedTodo = await updateTodoStatus(testProjectId, todo.id, 'completed')
+    
+    expect(updatedTodo.status).toBe('completed')
+    expect(updatedTodo.updated).toBeGreaterThan(originalUpdated)
+    expect(updatedTodo.id).toBe(todo.id)
+    expect(updatedTodo.title).toBe(todo.title)
+    expect(mockTodosDb[testProjectId][todo.id].status).toBe('completed')
+  })
+
+  test('getTodosByProject should return all todos for a project sorted by updated', async () => {
+    const todoA = await createTodo({
+      projectId: testProjectId,
+      title: 'Todo A',
+      priority: 'low',
+      tags: []
+    })
+    
+    await new Promise(resolve => setTimeout(resolve, 10))
+    
+    const todoB = await createTodo({
+      projectId: testProjectId,
+      title: 'Todo B', 
+      priority: 'high',
+      tags: []
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 10))
+    
+    // Update todoA to make it more recent
+    await updateTodoStatus(testProjectId, todoA.id, 'in_progress')
+    
+    const todos = await getTodosByProject(testProjectId)
+    
+    expect(todos.length).toBe(2)
+    // Should be sorted by updated DESC (most recent first)
+    expect(todos[0].title).toBe('Todo A') // Updated more recently
+    expect(todos[1].title).toBe('Todo B')
+    expect(Object.keys(mockTodosDb[testProjectId]).length).toBe(2)
+  })
+
+  test('deleteTodo should remove todo from project', async () => {
+    const todo = await createTodo({
+      projectId: testProjectId,
+      title: 'Todo to delete',
+      priority: 'medium',
+      tags: ['test']
+    })
+
+    const deleted = await deleteTodo(testProjectId, todo.id)
+    
+    expect(deleted).toBe(true)
+    expect(mockTodosDb[testProjectId][todo.id]).toBeUndefined()
+    
+    const todos = await getTodosByProject(testProjectId)
+    expect(todos.length).toBe(0)
+  })
+
+  test('should handle ID conflicts by incrementing', async () => {
+    // Create a todo to establish an ID
+    const todo1 = await createTodo({
+      projectId: testProjectId,
+      title: 'First todo',
+      priority: 'low',
+      tags: []
+    })
+
+    // Manually add a conflicting ID to test conflict resolution
+    const conflictId = mockTodoStorage.generateId()
+    mockTodosDb[testProjectId] = mockTodosDb[testProjectId] || {}
+    mockTodosDb[testProjectId][conflictId] = {
+      id: conflictId,
+      projectId: testProjectId,
+      title: 'Conflict todo',
+      priority: 'medium',
+      status: 'pending',
+      tags: [],
+      created: Date.now(),
+      updated: Date.now()
+    }
+
+    // Mock generateId to return the conflicting ID first
+    const originalGenerateId = mockTodoStorage.generateId
+    let callCount = 0
+    mockTodoStorage.generateId = () => {
+      callCount++
+      if (callCount === 1) return conflictId // First call returns conflict
+      return originalGenerateId() // Subsequent calls use original logic
+    }
+
+    const todo2 = await createTodo({
+      projectId: testProjectId,
+      title: 'Second todo',
+      priority: 'high',
+      tags: []
+    })
+
+    expect(todo2.id).not.toBe(conflictId)
+    expect(todo2.id).toBeGreaterThan(conflictId)
+    
+    // Restore original generateId
+    mockTodoStorage.generateId = originalGenerateId
+  })
+})
+```
+
+## Key Patterns
+
+### Error Handling
+
+```typescript
+if (!project) {
+  throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND')
+}
+
+app.onError((err, c) => {
+  if (err instanceof ApiError) {
+    return c.json({
+      success: false,
+      error: { message: err.message, code: err.code }
+    }, err.status)
+  }
+})
+```
+
+### Validation
+
+```typescript
+const validatedData = EntitySchema.parse(rawData)
+await storage.writeEntity(validatedData)
+
+const body = c.req.valid('json') // Auto-validated
+```
+
+### ID Generation
+
+```typescript
+const id = storage.generateId() // Returns Date.now()
+
+while (existingEntities[id]) {
+  id++
+  incrementCount++
+}
+```
+
+Architecture provides type safety, consistent patterns, clear separation of concerns with file-based storage and comprehensive AI integration.
+
+## Functional API Testing
+
+In addition to unit tests, OctoPrompt includes comprehensive functional API tests that verify end-to-end behavior:
+
+### API Test Structure (`packages/api-tests/`)
+
+```typescript
+// Example: todo-api.test.ts
+describe('Todo API Tests', () => {
+  let testTodos: Todo[] = []
+  let testProjects: Project[] = []
+
+  beforeAll(() => {
+    console.log('Starting Todo API Tests...')
+  })
+
+  afterAll(async () => {
+    // Cleanup all test data
+    for (const todo of testTodos) {
+      await apiFetch(deleteTodoEndpoint(todo.projectId, todo.id), undefined, OperationSuccessResponseSchema)
+    }
+  })
+
+  test('POST /api/todos - Create todos', async () => {
+    const todoData = {
+      projectId: testProject.id,
+      title: 'Test Todo',
+      priority: 'high',
+      tags: ['test']
+    }
+
+    const result = await apiFetch(createTodoEndpoint, todoData, TodoResponseSchema)
+    
+    expect(result.success).toBe(true)
+    expect(result.data.title).toBe(todoData.title)
+    testTodos.push(result.data)
+  })
+
+  test('GET /api/projects/{projectId}/todos - List todos', async () => {
+    const result = await apiFetch(getTodosEndpoint(testProject.id), undefined, TodoListResponseSchema)
+    
+    expect(result.success).toBe(true)
+    expect(result.data.length).toBeGreaterThan(0)
+  })
+})
+```
+
+**Key Testing Patterns:**
+
+- **End-to-end validation** of complete request/response cycles
+- **Schema validation** using the same Zod schemas as the API
+- **Proper cleanup** to prevent test data pollution
+- **Real HTTP requests** against running server instance
+- **Error scenario testing** for 404s, validation errors, etc.
+
+Examples: `chat-api.test.ts`, `projects-api.test.ts` demonstrate comprehensive API testing covering CRUD operations, error handling, and complex workflows like chat forking and file synchronization.
+
+
+# Hono Route Matching
+
+
+## Hono Route Handling Cheat Sheet (First-Match-Wins)
+
+> **Rule:** Routes are evaluated **in the order they’re registered**; earliest match handles the request.
 
 ---
 
-# Backend Architecture Cheat-Sheet
+### 1 · Matching Basics
 
-## 1  Layer Overview
-Route (Hono + @hono/zod-openapi) → Service (business logic + DB) → Utilities → SQLite DB  
-All data shapes are declared **once** as Zod schemas in `packages/shared`. Services parse rows immediately; everything downstream works with typed objects.
-
-## 2  Directory Map
-| Layer | Folder |
-|-------|--------|
-| Routes   | `packages/server/src/routes` |
-| Services | `packages/server/src/services` |
-| Schemas  | `packages/shared/src/schemas` |
-| Utilities| `packages/server/src/services/*-service.ts` |
-| Database(JSON based storage) | `packages/server/src/utils/storage/*-storage.ts` | ?
-
-## 3  Naming & Conventions
-| Kind    | File suffix        | Key rules |
-|---------|--------------------|-----------|
-| **Schema**  | `*.schemas.ts`   | `.openapi('Name')`, include `example`/`description`, export `z.infer` alias |
-| **Service** | `*-service.ts`   | Validate rows immediately, return typed promises, throw `ApiError` |
-| **Route**   | `*-routes.ts`    | `createRoute()` + `.openapi()`, responses `satisfies z.infer<>` |
-| **Tests**   | `*.test.ts`      | Run with `bun test` |
-
-> **Golden Rule:** raw data is validated **once** (in a Service) and never leaks further.
-
-## 4  Quick Templates
 ```ts
-// Schema
-export const FooSchema = z.object({ id: z.string() }).openapi('Foo');
-export type Foo = z.infer<typeof FooSchema>;
-
-// Service
-export async function getFoo(id: number): Promise<Foo | null> {
-  const row = db.prepare('SELECT * FROM foo WHERE id=?').get(id);
-  return row ? FooSchema.parse(row) : null;
-}
-
-// Route
-const getFoo = createRoute({
-  method: 'get', path: '/foo/{id}',
-  responses: { 200: { content: { 'application/json': { schema: FooSchema } } } },
-});
-api.openapi(getFoo, async c => {
-  const { id } = c.req.valid('param');
-  const foo = await getFoo(id);
-  if (!foo) throw new ApiError(404, 'Foo not found', 'FOO_NOT_FOUND');
-  return c.json(foo, 200);
-});
+app
+  .get('/users/{id}', h1)      // first
+  .get('/users/profile', h2)   // unreachable: "profile" captured as {id}
 ```
 
-## 5  Gen-AI Endpoints
-| Path | Purpose | Helper | Extra headers |
-|------|---------|--------|---------------|
-| `POST /ai/chat` | Streaming chat | `handleChatMessage()` | `Content-Type: text/event-stream; Cache-Control: no-cache` |
-| `POST /ai/generate/text` | One-shot text | `generateSingleText()` | — |
-| `POST /api/gen-ai/structured` | Prompt → JSON | `generateStructuredData()` | — |
+Different HTTP verbs on the *same* path **do not** conflict:
 
-## 6  Unified Provider Service
-Always call LLMs through `unified-provider-service.ts`.  
-Helpers: `handleChatMessage`, `generateSingleText`, `generateStructuredData`.  
-Keys come from `provider-key-service`; Ollama/LM Studio treated as OpenAI-compatible.
+```ts
+app
+  .get('/api/projects/{pId}/files/{fId}', getFile)
+  .put('/api/projects/{pId}/files/{fId}', putFile)   // ok
+  .put('/api/projects/{pId}/files/bulk', bulkPut)    // ⚠ matches above unless ordered first
+```
+
+---
+
+### 2 · Ordering Strategy (High → Low Specificity)
+
+```ts
+new OpenAPIHono()
+  // 1 Exact literals
+  .get('/api/health', health)
+  .get('/api/version', ver)
+
+  // 2 Literal segments + param
+  .get('/api/users/me', me)
+  .get('/api/users/settings', settings)
+
+  // 3 Literal “bulk / search” before params
+  .put('/api/projects/{pId}/files/bulk', bulkPut)
+  .get('/api/projects/{pId}/files/search', search)
+
+  // 4 Single-param
+  .get('/api/users/{uId}', getUser)
+
+  // 5 Multi-param
+  .get('/api/projects/{pId}/files/{fId}', getFile)
+
+  // 6 Catch-alls
+  .get('/api/{resource}', generic)
+  .all('*', notFound)
+```
+
+---
+
+### 3 · Typical Conflict Patterns & Fixes
+
+| Pattern          | Wrong                                     | Right                                           |
+| ---------------- | ----------------------------------------- | ----------------------------------------------- |
+| Literal vs Param | `{userId}` before `/me`                   | `/me` first                                     |
+| Nested bulk      | `/{fileId}` before `/bulk`                | `/bulk` first                                   |
+| Param type       | `z.coerce.number()` captures “bulk” → NaN | reorder routes or validate as string, then cast |
+
+---
+
+### 4 · Debugging Tools
+
+```ts
+// Track registration
+const log: string[] = []
+api.openapi(routeDef, c => { log.push(routeDef.path); return handler(c) })
+
+// Log matches
+app.use('*', async (c,n)=>{ console.log(c.req.method, c.req.path, c.req.param()); await n() })
+```
+
+---
+
+## 5 · Testing Precedence
+
+```ts
+it('bulk vs param', async () => {
+  expect((await app.request('/api/projects/1/files/bulk', { method:'PUT' })).status).toBe(200)
+  expect((await app.request('/api/projects/1/files/2',   { method:'PUT' })).status).toBe(200)
+})
+```
+
+---
+
+### 6 · Parameter Schemas
+
+```ts
+const FileParams = z.object({
+  projectId: z.coerce.number().int().positive(),
+  fileId: z.coerce.number().int().positive()
+})
+```
+
+---
+
+### 7 · Gotchas & Mitigations
+
+* **Case-sensitive** paths
+* `/path` ≠ `/path/` – use middleware to normalize
+* Validate IDs as strings + regex then cast, not `coerce.number()`
+* Too many versioned routes? Mount sub-routers: `app.route('/v1', v1Router)`

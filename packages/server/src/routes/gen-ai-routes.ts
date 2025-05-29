@@ -185,7 +185,7 @@ const generateStructuredRoute = createRoute({
 
 const postAiGenerateTextRoute = createRoute({
   method: 'post',
-  path: '/api//ai/generate/text',
+  path: '/api/ai/generate/text',
   tags: ['AI'],
   summary: 'Generate text (one-off, non-streaming)',
   description:
