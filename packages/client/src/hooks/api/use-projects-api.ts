@@ -1,4 +1,3 @@
-// Re-export all project-related hooks from the new client-based API
 export {
   useGetProjects,
   useGetProject,

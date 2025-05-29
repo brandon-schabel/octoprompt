@@ -913,6 +913,21 @@ export function useReorderTasks() {
     })
 }
 
+export function useAutoGenerateTasks() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (ticketId: number) => octoClient.tickets.autoGenerateTasks(ticketId),
+        onSuccess: (generatedTasks, ticketId) => {
+            queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+            toast.success('Tasks generated successfully')
+        },
+        onError: (error) => {
+            toast.error(error.message || 'Failed to generate tasks')
+        },
+    })
+}
+
 export function useLinkFilesToTicket() {
     const queryClient = useQueryClient()
 

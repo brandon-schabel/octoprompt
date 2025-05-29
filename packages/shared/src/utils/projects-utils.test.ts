@@ -1,76 +1,75 @@
 import { describe, it, expect } from 'bun:test'
 import type { ProjectFile } from '../schemas/project.schemas'
 import { buildPromptContent, calculateTotalTokens, buildFileTree } from './projects-utils'
-// Mock data
-const mockPrompts = {
-  success: true as const,
-  data: [
-    {
-      id: 'p1',
-      name: 'Prompt One',
-      content: 'This is prompt one content.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'p2',
-      name: 'Prompt Two',
-      content: 'Prompt two: Some instructions here.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ]
-}
+import type { Prompt } from '../schemas/prompt.schemas'
 
-const mockProjectFiles = [
+// Mock data
+const mockPrompts: Prompt[] = [
   {
-    id: 'f1',
+    id: 1,
+    name: 'Prompt One',
+    content: 'This is prompt one content.',
+    created: Date.now(),
+    updated: Date.now()
+  },
+  {
+    id: 2,
+    name: 'Prompt Two',
+    content: 'Prompt two: Some instructions here.',
+    created: Date.now(),
+    updated: Date.now()
+  }
+]
+
+const mockProjectFiles: ProjectFile[] = [
+  {
+    id: 1,
     name: 'App.tsx',
     path: 'src/components/App.tsx',
-    projectId: 'project1',
+    projectId: 1,
     extension: 'tsx',
     size: 100,
     content: 'console.log("App");',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created: Date.now(),
+    updated: Date.now(),
     checksum: 'checksum1',
     summary: 'Summary of App.tsx',
-    summaryLastUpdated: new Date().toISOString(),
+    summaryLastUpdated: Date.now(),
     meta: ''
   },
   {
-    id: 'f2',
+    id: 2,
     name: 'helper.ts',
     path: 'src/utils/helper.ts',
-    projectId: 'project1',
+    projectId: 1,
     extension: 'ts',
     size: 200,
     content: 'export function helper() { return "helped"; }',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created: Date.now(),
+    updated: Date.now(),
     checksum: 'checksum2',
     summary: 'Summary of helper.ts',
-    summaryLastUpdated: new Date().toISOString(),
+    summaryLastUpdated: Date.now(),
     meta: ''
   },
   {
-    id: 'f3',
+    id: 3,
     name: 'index.ts',
     path: 'src/index.ts',
-    projectId: 'project1',
+    projectId: 1,
     extension: 'ts',
     size: 50,
     content: 'import "./components/App";',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created: Date.now(),
+    updated: Date.now(),
     checksum: 'checksum3',
     summary: 'Summary of index.ts',
-    summaryLastUpdated: new Date().toISOString(),
+    summaryLastUpdated: Date.now(),
     meta: ''
   }
-] satisfies ProjectFile[]
+]
 
-const fileMap = new Map<string, ProjectFile>(mockProjectFiles.map((f) => [f.id, f]))
+const fileMap = new Map<number, ProjectFile>(mockProjectFiles.map((f) => [f.id, f]))
 
 describe('buildPromptContent', () => {
   it('should return empty string if no content is provided', () => {
@@ -92,14 +91,14 @@ describe('buildPromptContent', () => {
       selectedFiles: [],
       fileMap
     })
-    expect(result).not.toContain('<file_contents>')
+    expect(result).not.toContain('<file_context>')
     expect(result).toContain('<user_instructions>')
   })
 
   it('should not include user_instructions when user prompt is empty or whitespace', () => {
     const result = buildPromptContent({
       promptData: mockPrompts,
-      selectedPrompts: ['p1'],
+      selectedPrompts: [1],
       userPrompt: '   ',
       selectedFiles: [],
       fileMap
@@ -111,7 +110,7 @@ describe('buildPromptContent', () => {
   it('should include selected prompts', () => {
     const result = buildPromptContent({
       promptData: mockPrompts,
-      selectedPrompts: ['p1'],
+      selectedPrompts: [1],
       userPrompt: '',
       selectedFiles: [],
       fileMap
@@ -123,7 +122,7 @@ describe('buildPromptContent', () => {
   it('should include multiple selected prompts in order', () => {
     const result = buildPromptContent({
       promptData: mockPrompts,
-      selectedPrompts: ['p1', 'p2'],
+      selectedPrompts: [1, 2],
       userPrompt: '',
       selectedFiles: [],
       fileMap
@@ -149,7 +148,7 @@ describe('buildPromptContent', () => {
       promptData: mockPrompts,
       selectedPrompts: [],
       userPrompt: '',
-      selectedFiles: ['f1', 'f2'],
+      selectedFiles: [1, 2],
       fileMap
     })
     expect(result).toContain('<file_context>')
@@ -162,9 +161,9 @@ describe('buildPromptContent', () => {
   it('should combine prompts, user instructions, and files correctly', () => {
     const result = buildPromptContent({
       promptData: mockPrompts,
-      selectedPrompts: ['p1'],
+      selectedPrompts: [1],
       userPrompt: 'Do something special',
-      selectedFiles: ['f2'],
+      selectedFiles: [2],
       fileMap
     })
     expect(result).toContain('<system_prompt index="1" name="Prompt One">')
@@ -177,7 +176,7 @@ describe('buildPromptContent', () => {
 
 describe('calculateTotalTokens', () => {
   it('should count tokens from selected prompts', () => {
-    const result = calculateTotalTokens(mockPrompts, ['p1'], '', [], fileMap)
+    const result = calculateTotalTokens(mockPrompts, [1], '', [], fileMap)
     // 'This is prompt one content.' is ~30 chars, 30/4=7.5 -> 8 tokens
     expect(result).toBeGreaterThan(0)
   })
@@ -189,7 +188,7 @@ describe('calculateTotalTokens', () => {
   })
 
   it('should count tokens from selected files', () => {
-    const result = calculateTotalTokens(null, [], '', ['f1', 'f2'], fileMap)
+    const result = calculateTotalTokens(null, [], '', [1, 2], fileMap)
     // f1: 'console.log("App");' ~20 chars/4=5 tokens
     // f2: 'export function helper() { return "helped"; }' ~46 chars/4=11.5 -> 12 tokens
     // total ~17 tokens
@@ -197,7 +196,7 @@ describe('calculateTotalTokens', () => {
   })
 
   it('should combine tokens from prompts, user prompt, and files', () => {
-    const result = calculateTotalTokens(mockPrompts, ['p1', 'p2'], 'Some user instructions', ['f1'], fileMap)
+    const result = calculateTotalTokens(mockPrompts, [1, 2], 'Some user instructions', [1], fileMap)
     // Rough estimation:
     // p1 ~30 chars/4=8 tokens
     // p2 ~36 chars/4=9 tokens
@@ -239,10 +238,10 @@ describe('buildFileTree', () => {
     // }
     expect(result.src._folder).toBe(true)
     expect(result.src.children.components._folder).toBe(true)
-    expect(result.src.children.components.children['App.tsx'].file?.id).toBe('f1')
+    expect(result.src.children.components.children['App.tsx'].file?.id).toBe(1)
     expect(result.src.children.utils._folder).toBe(true)
-    expect(result.src.children.utils.children['helper.ts'].file?.id).toBe('f2')
-    expect(result.src.children['index.ts'].file?.id).toBe('f3')
+    expect(result.src.children.utils.children['helper.ts'].file?.id).toBe(2)
+    expect(result.src.children['index.ts'].file?.id).toBe(3)
   })
 
   it('should handle empty file list', () => {
@@ -253,22 +252,22 @@ describe('buildFileTree', () => {
   it('should handle files without nested directories', () => {
     const singleFile: ProjectFile[] = [
       {
-        id: 'single',
+        id: 4,
         name: 'file.ts',
         path: 'file.ts',
-        projectId: 'project1',
+        projectId: 1,
         extension: 'ts',
         size: 100,
         content: 'test',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        created: Date.now(),
+        updated: Date.now(),
         checksum: 'checksum4',
         summary: 'Summary of file.ts',
-        summaryLastUpdated: new Date().toISOString(),
+        summaryLastUpdated: Date.now(),
         meta: ''
       }
     ]
     const result = buildFileTree(singleFile)
-    expect(result['file.ts'].file?.id).toBe('single')
+    expect(result['file.ts'].file?.id).toBe(4)
   })
 })

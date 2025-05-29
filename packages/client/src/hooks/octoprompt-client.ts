@@ -871,6 +871,16 @@ export class TicketService extends BaseApiClient {
         }
     }
 
+    async autoGenerateTasks(ticketId: number) {
+        const result = await this.request("POST", `/tickets/${ticketId}/auto-generate-tasks`, {
+            responseSchema: TaskListResponseSchemaZ
+        })
+        return result as {
+            tasks: TicketTask[],
+            success: boolean
+        }
+    }
+
     async getTasksForTickets(ticketIds: number[]) {
         const result = await this.request("GET", "/tickets/bulk-tasks", {
             params: { ids: ticketIds.join(',') },

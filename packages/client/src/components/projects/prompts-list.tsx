@@ -41,7 +41,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '@ui'
 import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { ProjectFile, Prompt } from 'shared/src/schemas/project.schemas'
+import { ProjectFile } from 'shared/src/schemas/project.schemas'
 import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 

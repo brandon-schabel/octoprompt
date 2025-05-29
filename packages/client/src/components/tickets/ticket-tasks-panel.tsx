@@ -123,7 +123,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
   const handleAutoGenerateTasks = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    await autoGenMut.mutateAsync({ ticketId })
+    await autoGenMut.mutateAsync(ticketId)
     toast.success('Tasks generated from overview!')
   }
 

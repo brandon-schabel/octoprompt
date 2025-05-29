@@ -1,18 +1,5 @@
-
-// Last 5 changes:
-// 1. Migrated to new consolidated client approach
-// 2. Export most hooks from main api.ts file
-// 3. Keep specialized hooks like useAutoGenerateTasks that aren't in main api
-// 4. Maintain backward compatibility with existing imports
-// 5. Add alias exports for naming consistency
-
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { commonErrorHandler } from './common-mutation-error-handler'
-import { postApiTicketsByTicketIdAutoGenerateTasksMutation } from '../../generated/@tanstack/react-query.gen'
-import type {
-  PostApiTicketsByTicketIdAutoGenerateTasksData,
-  PostApiTicketsByTicketIdAutoGenerateTasksError
-} from '../../generated/types.gen'
 // import { Options } from '../../generated/sdk.gen'
 
 // Re-export all main ticket hooks from the main api file
@@ -27,6 +14,7 @@ export {
   useUpdateTask,
   useDeleteTask,
   useReorderTasks,
+  useAutoGenerateTasks,
   useLinkFilesToTicket,
   useSuggestTasksForTicket,
   useSuggestFilesForTicket,
@@ -55,19 +43,5 @@ const TICKET_KEYS = {
   tasks: (ticketId: number) => [...TICKET_KEYS.all, 'tasks', ticketId] as const
 }
 
-export function useAutoGenerateTasks() {
-  const queryClient = useQueryClient()
-  const mutationOptions = postApiTicketsByTicketIdAutoGenerateTasksMutation()
-
-  return useMutation<unknown, PostApiTicketsByTicketIdAutoGenerateTasksError, { ticketId: number }>({
-    mutationFn: ({ ticketId }) => {
-      return mutationOptions.mutationFn!({ path: { ticketId } })
-    },
-    onSuccess: (data, { ticketId }) => {
-      queryClient.invalidateQueries({
-        queryKey: TICKET_KEYS.tasks(ticketId)
-      })
-    },
-    onError: (error) => commonErrorHandler(error as unknown as Error)
-  })
-}
+// The useAutoGenerateTasks hook is now available from the main api.ts file
+// No need for a separate implementation here since it's exported above
