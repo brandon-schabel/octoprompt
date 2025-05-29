@@ -25,7 +25,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { FileViewerDialog } from '../navigation/file-viewer-dialog'
-import { ProjectFile } from '@/generated'
+import { ProjectFile } from 'shared/src/schemas/project.schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 

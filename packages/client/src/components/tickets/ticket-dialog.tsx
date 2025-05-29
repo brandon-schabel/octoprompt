@@ -7,7 +7,7 @@ import { Textarea } from '@ui'
 import { useCreateTicket, useUpdateTicket } from '../../hooks/api/use-tickets-api'
 import { OctoTooltip } from '../octo/octo-tooltip'
 import { TicketTasksPanel } from './ticket-tasks-panel'
-import type { TicketWithTasks } from '@/generated'
+import type { TicketWithTasks } from 'shared/src/schemas/ticket.schemas'
 
 interface TicketDialogProps {
   isOpen: boolean

@@ -363,6 +363,13 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
 
     return result
   } catch (error: any) {
+    console.error('[UnifiedProviderService - generateStructuredData] failing with the following data:', {
+      prompt,
+      schema,
+      systemMessage,
+      finalOptions,
+      provider
+    })
     if (error instanceof ApiError) throw error
     console.error(`[UnifiedProviderService - generateStructuredData] Error for ${provider}:`, error)
     throw new ApiError(

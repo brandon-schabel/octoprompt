@@ -4,15 +4,9 @@ import { routeTree } from './routeTree.gen'
 import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from '@ui'
-import { client } from './generated/client.gen'
-import { SERVER_HTTP_ENDPOINT } from './constants/server-constants'
 
 // Initialize core services
 const queryClient = new QueryClient()
-
-client.setConfig({
-  baseUrl: SERVER_HTTP_ENDPOINT
-})
 
 // Create router instance with context
 const router = createRouter<typeof routeTree, 'never', true>({

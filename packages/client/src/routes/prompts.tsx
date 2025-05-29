@@ -19,7 +19,7 @@ import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
 import { Badge } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
-import { Prompt } from '@/generated'
+import { Prompt } from 'shared/src/schemas/prompt.schemas'
 import { estimateTokenCount, formatTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
 
 export function PromptsPage() {

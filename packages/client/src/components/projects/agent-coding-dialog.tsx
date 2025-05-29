@@ -1,4 +1,5 @@
-import { Prompt, ProjectFile } from '@/generated'
+import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { Prompt } from 'shared/src/schemas/prompt.schemas'
 import {
   useGetAgentCoderRunData,
   useRunAgentCoder,

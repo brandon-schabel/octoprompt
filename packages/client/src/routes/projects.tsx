@@ -8,7 +8,7 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { ResizablePanel } from '@ui'
-import { ProjectResponse } from '@/generated'
+import { ProjectResponse } from 'shared/src/schemas/project.schemas'
 import {
   useActiveProjectTab,
   useGetProjectTabs,
@@ -176,12 +176,15 @@ export function ProjectsPage() {
                 {projectData.name}
               </h2>
             )}
-            <TabsList>
-              <TabsTrigger value='context'>Context</TabsTrigger>
-              <TabsTrigger value='stats'>Statistics</TabsTrigger>
-              <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-              <TabsTrigger value='tickets'>Tickets</TabsTrigger>
-            </TabsList>
+
+            <div className='flex w-full justify-center items-center'>
+              <TabsList>
+                <TabsTrigger value='context'>Context</TabsTrigger>
+                <TabsTrigger value='stats'>Statistics</TabsTrigger>
+                <TabsTrigger value='summarization'>Summarization</TabsTrigger>
+                <TabsTrigger value='tickets'>Tickets</TabsTrigger>
+              </TabsList>
+            </div>
             <div className='ml-auto'>
               <ProjectSettingsDialog />
             </div>

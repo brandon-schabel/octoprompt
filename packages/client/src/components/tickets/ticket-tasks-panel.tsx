@@ -13,7 +13,7 @@ import { ArrowDown, ArrowUp, Copy, Plus, RefreshCcw, Trash2, CircleCheckBig, Cir
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
-import { Task } from '@/generated'
+import { TicketTask as Task } from 'shared/src/schemas/ticket.schemas'
 
 interface TicketTasksPanelProps {
   ticketId: number

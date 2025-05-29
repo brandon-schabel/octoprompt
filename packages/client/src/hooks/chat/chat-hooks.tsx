@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useGetMessages, useCreateChat, useForkChat } from '@/hooks/api/use-chat-api'
-import { ForkChatRequestBody } from '@/generated/types.gen'
+import { ForkChatRequestBody } from 'shared/src/schemas/chat.schemas'
 
 export function useCreateChatHandler() {
   const createChatMutation = useCreateChat()

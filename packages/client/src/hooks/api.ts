@@ -483,7 +483,6 @@ export function useSyncProject() {
         onSuccess: (_, projectId) => {
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
             queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(projectId) })
-            toast.success('Project synced successfully')
         },
         onError: (error) => {
             toast.error(error.message || 'Failed to sync project')

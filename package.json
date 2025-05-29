@@ -5,22 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
-    "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
+    "dev:client": "bun run scripts/start-client-dev.ts",
     "dev:server": "bun run scripts/start-server-dev.ts",
     "stop": "bun run scripts/stop.ts",
     "build-binaries": "bun run scripts/build-binaries.ts",
     "format": "prettier --write .",
     "test:server": "cd packages/server && bun run test",
-    "test:shared": "cd packages/shared && bun run test",
-    "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
-    "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
-    "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts"
+    "test:shared": "cd packages/shared && bun run test"
   },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.66.7",
     "@types/archiver": "^6.0.3",
     "@types/bun": "latest",
     "@types/picomatch": "^3.0.2",

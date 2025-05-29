@@ -24,7 +24,7 @@ import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '@ui'
-import { ProjectFile } from '@/generated'
+import { ProjectFile } from 'shared/src/schemas/project.schemas'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Binoculars, Bot, Copy, FileText, MessageCircleCode, Search } from 'lucide-react'

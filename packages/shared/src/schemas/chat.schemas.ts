@@ -258,3 +258,4 @@ export type ExtendedChatMessage = ChatMessage & {
   tempId?: number
 }
 export type AiChatStreamRequest = z.infer<typeof AiChatStreamRequestSchema>
+export type ForkChatRequestBody = z.infer<typeof ForkChatBodySchema>

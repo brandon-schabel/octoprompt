@@ -1,4 +1,4 @@
-import type { ProjectFile } from '../../../../client/src/generated'
+import type { ProjectFile } from 'shared/src/schemas/project.schemas'
 import {
   gatherAliasesFromTsconfigs,
   getRecursiveImports,
@@ -14,7 +14,7 @@ describe('Import Resolver', () => {
   const tsconfig: ProjectFile = {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    projectId: '1',
+    projectId: 1,
     name: 'tsconfig.json',
     id: 'tsconfig',
     path: `${projectRoot}/tsconfig.json`,

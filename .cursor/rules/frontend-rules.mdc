@@ -128,8 +128,7 @@ vertical-resizable-panel
    - Use route definitions in `routeTree.gen` or manually in `createFileRoute()`.  
 
 2. **React Query**  
-   - Uses `@hey-api/client-fetch` to generate the types and API client fetcher functions to be used with react query.
-   - In `packages/client/hooks/generated` there is `client.gen.ts`, `index.ts`, `sdk.gen.ts`, `types.gen`, and `@tanstack/react-query.gen.ts`
+   
    - For any server data fetch or mutation, define a custom React Query hook (e.g., `useGetProjects`) that calls your server’s API (`fetch` or Axios) and returns the typed response.  
    - Let React Query handle caching, invalidation, refetch intervals, and concurrency safety.  
 ---
@@ -161,10 +160,9 @@ When adding or refactoring features:
 
 1. **Define** if required define db table in `packages/server/src/utils/database.ts` and schema in the shared schema `packages/shared/src/schemas` (Zod + OpenAPI + TS), the schemas serve at the source of truth for all data. When the server is running you can view the entire server API and Schemas with [Swagger UI](mdc:http:/localhost:3147/swagger)  or retrieve the OpenAPI spec from `http://localhost:3147/doc`
 2. **Create** or update your Bun Hono Server route in `packages/server/src/routes`
-3. **Generate Client** Generate the API client run `bun run openapi-ts` in the root of the repo to generate the client types based on the schema/route Open API Specs
-4. **Write** a React Query hook based on the generated types and query client from `packages/client/src/hooks/generated/types.gen` and `packages/client/src/hooks/generated/@tanstack/react-query.gen`
-5. **UI Implementation** Using the project components, create a UI page or component using the apps component library and the created API
-6. **Testing** Perform unit tests on everything that can be isolate and are pure, create react component test using React Testing Library
+3. **Write** a React Query hook based on the shared schema zod types 
+4. **UI Implementation** Using the project components, create a UI page or component using the apps component library and the created API
+5. **Testing** Perform unit tests on everything that can be isolate and are pure, create react component test using React Testing Library
 
 ---
 

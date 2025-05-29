@@ -46,8 +46,7 @@ OctoPrompt
 					prompts.tsx
 				components
 				hooks
-					api // api hooks consuming generated
-				generated // generated open api types and functions
+					api // api hooks directly importing shared schema types
 		python_backend  
 			app  
 			schemas  
@@ -68,6 +67,7 @@ OctoPrompt
 					project.schema.ts
 					chat.schema.ts
 					prompt.schema.ts
+					// All TypeScript types are inferred from these Zod schemas using z.infer<>
     	server
 			server.ts // main serverentry
         	src
@@ -87,14 +87,12 @@ OctoPrompt
 						project-storage.ts
 ```
 
-
-
 scripts:
 
 package.json 
 ```
     "dev": "bun run scripts/start-dev.ts",
-    "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
+    "dev:client": "bun run scripts/start-client-dev.ts",
     "dev:server": "bun run scripts/start-server-dev.ts",
     "stop": "bun run scripts/stop.ts",
     "build-binaries": "bun run scripts/build-binaries.ts",
@@ -102,10 +100,7 @@ package.json
     "test:server": "cd packages/server && bun run test",
     "test:shared": "cd packages/shared && bun run test",
     "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
-    "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
-    "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts"
 ```
-
 
 packages/server
 ```
@@ -438,9 +433,9 @@ prompts
 
 
 ### Data Fetching
-The backend creates an OpenAPI spec, which then we use the OpenAPI-ts Generator to generate the fetchers and types based on the backend routes and zod schemas.
+OctoPrompt uses a **direct schema import approach** for type safety. All TypeScript types are imported directly from shared Zod schemas, ensuring consistency between client and server without code generation.
 
-the hooks are located at 
+**API Hooks Structure:**
 `packages/client/src/hooks/api`
 ```
 use-agent-coder-api.ts
@@ -456,41 +451,86 @@ use-gen-ai-api.ts
 use-chat-api.ts
 ```
 
+**Modern API Hook Pattern:**
+```typescript
+import type {
+  CreateChatBody,
+  UpdateChatBody,
+  Chat,
+  ChatMessage,
+  AiChatStreamRequest
+} from 'shared/src/schemas/chat.schemas'
 
-the generated typescript types and tanstack react query configs are located at
+export function useCreateChat() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
+    onSuccess: (newChat) => {
+      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.list() })
+      toast.success('Chat created successfully')
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create chat')
+    },
+  })
+}
+```
+
+**Legacy Generated Files (Being Phased Out):**
 `packages/client/src/generated`
 ```
 @tanstack
-  react-query.gen.ts # these are used by the api hooks
+  react-query.gen.ts # legacy generated query configs
 client.gen.ts
 types.gen.ts
 sdk.gen.ts
 index.ts
 ```
 
-
-```
+**Migration from Generated to Schema-First:**
+```typescript
+// OLD WAY (Generated Types):
 import {
-getApiPromptsByPromptIdOptions
+  getApiPromptsByPromptIdOptions
 } from '../../generated/@tanstack/react-query.gen'
-
 import type {
-  GetApiPromptsByPromptIdData }
-from '../../generated/types.gen'
-import { Options } from '../../generated/sdk.gen'
+  GetApiPromptsByPromptIdData 
+} from '../../generated/types.gen'
 
-/**
- * Fetches a single prompt by its ID.
- */
-export function useGetPrompt(id: number) {
-  const queryOptions = getApiPromptsByPromptIdOptions({
-    path: { promptId: id }
-  } as Options<GetApiPromptsByPromptIdData>)
+// NEW WAY (Direct Schema Import):
+import type {
+  Prompt,
+  CreatePromptBody,
+  UpdatePromptBody
+} from 'shared/src/schemas/prompt.schemas'
+
+export function useGetPrompt(promptId: number) {
   return useQuery({
-    ...queryOptions,
-    enabled: !!id
+    queryKey: PROMPT_KEYS.detail(promptId),
+    queryFn: () => octoClient.prompts.getPrompt(promptId),
+    enabled: !!promptId,
+    staleTime: 5 * 60 * 1000,
   })
 }
+```
 
+**OctoPrompt Client Instance:**
+All API hooks use a singleton client instance (`octoClient`) that provides type-safe methods for each service:
+
+```typescript
+// packages/client/src/hooks/api.ts
+import { createOctoPromptClient } from './octoprompt-client'
+
+export const octoClient = createOctoPromptClient({
+  baseUrl: SERVER_HTTP_ENDPOINT,
+  timeout: 30000
+})
+
+// Usage in hooks:
+// octoClient.chats.createChat(data)
+// octoClient.projects.getProject(id)
+// octoClient.prompts.listPrompts()
+// octoClient.tickets.createTicket(data)
 ```
 ## Backend

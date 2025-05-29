@@ -26,8 +26,3 @@ export {
   useAIChatV2
 } from '../api'
 
-// Specialized hook that's not in main api.ts
-export function useGetModels(provider: APIProviders) {
-  const queryOptions = getApiModelsOptions({ query: { provider } })
-  return useQuery(queryOptions)
-}

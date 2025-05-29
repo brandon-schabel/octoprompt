@@ -13,7 +13,7 @@ import type {
   PostApiTicketsByTicketIdAutoGenerateTasksData,
   PostApiTicketsByTicketIdAutoGenerateTasksError
 } from '../../generated/types.gen'
-import { Options } from '../../generated/sdk.gen'
+// import { Options } from '../../generated/sdk.gen'
 
 // Re-export all main ticket hooks from the main api file
 export {
@@ -61,10 +61,7 @@ export function useAutoGenerateTasks() {
 
   return useMutation<unknown, PostApiTicketsByTicketIdAutoGenerateTasksError, { ticketId: number }>({
     mutationFn: ({ ticketId }) => {
-      const opts: Options<PostApiTicketsByTicketIdAutoGenerateTasksData> = {
-        path: { ticketId }
-      }
-      return mutationOptions.mutationFn!(opts)
+      return mutationOptions.mutationFn!({ path: { ticketId } })
     },
     onSuccess: (data, { ticketId }) => {
       queryClient.invalidateQueries({

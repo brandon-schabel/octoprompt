@@ -8,7 +8,7 @@ import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
-import { ProjectFile } from '@/generated'
+import { ProjectFile } from 'shared/src/schemas/project.schemas'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
 type FileViewerDialogProps = {
