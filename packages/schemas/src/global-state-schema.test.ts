@@ -34,16 +34,18 @@ describe('Global State Schema', () => {
             const defaultTab = state.projectTabs.defaultTab
 
             expect(defaultTab).toBeDefined()
-            expect(defaultTab.selectedProjectId).toBe(-1)
-            expect(defaultTab.editProjectId).toBe(-1)
-            expect(defaultTab.editPromptId).toBe(-1)
-            expect(defaultTab.selectedFiles).toEqual([])
-            expect(defaultTab.selectedPrompts).toEqual([])
-            expect(defaultTab.ticketId).toBe(-1)
-            expect(defaultTab.displayName).toBe('Default Project Tab')
+            if (defaultTab) {
+                expect(defaultTab.selectedProjectId).toBe(-1)
+                expect(defaultTab.editProjectId).toBe(-1)
+                expect(defaultTab.editPromptId).toBe(-1)
+                expect(defaultTab.selectedFiles).toEqual([])
+                expect(defaultTab.selectedPrompts).toEqual([])
+                expect(defaultTab.ticketId).toBe(-1)
+                expect(defaultTab.displayName).toBe('Default Project Tab')
 
-            // Validate against schema
-            expect(() => projectTabStateSchema.parse(defaultTab)).not.toThrow()
+                // Validate against schema
+                expect(() => projectTabStateSchema.parse(defaultTab)).not.toThrow()
+            }
         })
 
         it('should create state with valid app settings', () => {
@@ -80,10 +82,13 @@ describe('Global State Schema', () => {
 
             // Check project tab
             const defaultTab = state.projectTabs.defaultTab
-            expect(defaultTab.selectedProjectId).toBe(-1)
-            expect(defaultTab.selectedFiles).toEqual([])
-            expect(defaultTab.selectedPrompts).toEqual([])
-            expect(defaultTab.displayName).toBe('Default Project Tab')
+            expect(defaultTab).toBeDefined()
+            if (defaultTab) {
+                expect(defaultTab.selectedProjectId).toBe(-1)
+                expect(defaultTab.selectedFiles).toEqual([])
+                expect(defaultTab.selectedPrompts).toEqual([])
+                expect(defaultTab.displayName).toBe('Default Project Tab')
+            }
         })
     })
 

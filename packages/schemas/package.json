@@ -1,7 +1,21 @@
 {
   "name": "@octoprompt/schemas",
+  "version": "0.5.3",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "test": "bun test src/",
+    "test:watch": "bun test --watch src/",
+    "build": "tsc",
+    "prepublishOnly": "bun run build && bun run test",
+    "publish:dry": "npm publish --dry-run"
+  },
+  "files": [
+    "dist",
+    "src",
+    "index.ts",
+    "README.md"
+  ],
   "devDependencies": {
     "@types/bun": "latest"
   },

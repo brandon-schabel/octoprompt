@@ -1,0 +1,53 @@
+# .github/workflows/publish-api-client.yml
+
+name: Publish API Client
+
+on:
+  push:
+    tags:
+      - 'api-client-v*.*.*' # Trigger on tags like api-client-v0.1.0
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  publish:
+    name: Build, Test, and Publish API Client
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Needed to checkout the repository
+      id-token: write # Needed for trusted publishing to npm (provenance)
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (root)
+        run: bun install --frozen-lockfile
+        # If @octoprompt/schemas is a workspace dependency and needed for build,
+        # this root install should handle it.
+        # If it's consumed from npm, it will be fetched.
+
+      # It's good practice to install specifically in the package directory too,
+      # especially if it has its own lockfile or specific dependencies not hoisted.
+      - name: Install api-client dependencies
+        run: cd packages/api-client && bun install --frozen-lockfile
+
+      # Add a test step if you have tests
+      # - name: Run api-client tests
+      #   run: cd packages/api-client && bun run test
+
+      - name: Build api-client package
+        run: cd packages/api-client && bun run build
+
+      - name: Publish to npm
+        uses: JS-DevTools/npm-publish@v3 # Uses npm CLI, ensure Bun compatibility or use bun publish
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: ./packages/api-client/package.json # Path to package.json
+          provenance: true # Enables npm package provenance
+          access: public # Or 'restricted' based on your package.json publishConfig or needs
+          # check-version: true # Fails if version already exists on npm
