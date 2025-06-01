@@ -6,7 +6,7 @@ import { Textarea } from '@ui'
 import { Alert, AlertDescription } from '@ui'
 import { LoaderPinwheel } from 'lucide-react'
 import { DiffViewer } from './diff-viewer'
-import { MonacoDiffViewer } from '@/components/monaco-diff-viewer'
+import { LazyMonacoDiffViewer } from '@/components/lazy-monaco-diff-viewer'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 interface AIFileChangeDialogProps {
@@ -133,7 +133,7 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
                   <LoaderPinwheel />
                 </div>
               ) : changeResponse ? (
-                <MonacoDiffViewer
+                <LazyMonacoDiffViewer
                   original={changeResponse.originalContent}
                   modified={changeResponse.suggestedContent}
                   language={getLanguageByFilePath(filePath)}

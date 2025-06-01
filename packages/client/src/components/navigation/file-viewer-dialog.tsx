@@ -5,7 +5,7 @@ import { Edit, Save, XCircle, Copy, FileText, FileCode } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
-import { MonacoEditorWrapper } from '@/components/monaco-editor-wrapper'
+import { LazyMonacoEditor } from '@/components/lazy-monaco-editor'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
@@ -211,7 +211,7 @@ export function FileViewerDialog({
             )
           ) : (
             <div className="flex-1 min-h-0 relative">
-              <MonacoEditorWrapper
+              <LazyMonacoEditor
                 value={editedContent}
                 onChange={(value) => setEditedContent(value || '')}
                 language={getLanguageByExtension(viewedFile?.extension)}
