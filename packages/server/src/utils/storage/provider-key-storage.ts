@@ -2,7 +2,7 @@
 import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises'
-import { ProviderKeySchema, type ProviderKey } from 'shared/src/schemas/provider-key.schemas'
+import { ProviderKeySchema, type ProviderKey } from '@octoprompt/schemas'
 import { randomUUID } from 'crypto'
 import { normalizeToUnixMs } from '../parse-timestamp'
 

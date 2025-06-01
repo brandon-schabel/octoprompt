@@ -1,5 +1,5 @@
-import { ApiError } from 'shared'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { ApiError } from '@octoprompt/shared'
+import { ProjectFile } from '@octoprompt/schemas'
 import { getProjectById, getProjectFiles } from '@/services/project-service'
 import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter'
 

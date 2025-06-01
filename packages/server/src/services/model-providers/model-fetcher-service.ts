@@ -1,4 +1,4 @@
-import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
+import { APIProviders } from '@octoprompt/schemas'
 import {
   GEMINI_BASE_URL,
   GROQ_BASE_URL,

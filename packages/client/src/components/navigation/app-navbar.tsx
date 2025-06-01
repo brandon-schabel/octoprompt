@@ -13,7 +13,6 @@ import {
   KeyIcon,
   Settings,
   HelpCircle,
-  Sparkles,
   LayoutDashboardIcon,
   Lightbulb
 } from 'lucide-react'
@@ -70,6 +69,7 @@ export function AppNavbar() {
   })
 
   const handleSelectProject = (id: number) => {
+    // 
     updateActiveProjectTab((prev) => ({
       ...prev,
       selectedProjectId: id,

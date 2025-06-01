@@ -1,4 +1,3 @@
-// packages/shared/src/structured-outputs/structured-output-utils.ts
 import { z } from 'zod'
 
 export type JsonSchema = {

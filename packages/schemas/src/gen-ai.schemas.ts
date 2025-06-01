@@ -1,6 +1,7 @@
 import { z } from '@hono/zod-openapi'
-import { MessageRoleEnum } from './common.schemas' // Assume this exists
-import { LOW_MODEL_CONFIG } from '../constants/model-default-configs' // Assume this exists
+import { MessageRoleEnum } from './common.schemas'
+import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
+
 import { ProjectFileSchema } from './project.schemas'
 import { unixTSArraySchemaSpec } from './schema-utils'
 
@@ -204,11 +205,9 @@ export const AiGenerateStructuredResponseSchema = z
   .object({
     success: z.literal(true),
     data: z.object({
-      output: z
-        .any()
-        .openapi({
-          description: "The generated structured data, validated against the schema defined by the 'schemaKey'."
-        })
+      output: z.any().openapi({
+        description: "The generated structured data, validated against the schema defined by the 'schemaKey'."
+      })
       // Consider adding metadata: model used, tokens, latency, etc.
     })
   })

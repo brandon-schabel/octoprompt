@@ -3,7 +3,7 @@ import { octoClient } from '../api'
 import type {
   AiGenerateTextRequest,
   AiGenerateStructuredRequest
-} from 'shared/src/schemas/gen-ai.schemas'
+} from '@octoprompt/schemas'
 import { toast } from 'sonner'
 
 // Simplified hook for generating text

@@ -24,7 +24,7 @@ import {
     ProjectListResponseSchema,
     FileListResponseSchema,
     ProjectSummaryResponseSchema
-} from '../../../shared/src/schemas/project.schemas'
+} from '../../../@octoprompt/schemas'
 import { TEST_API_URL } from './test-config'
 
 

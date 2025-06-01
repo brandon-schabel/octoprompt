@@ -1,4 +1,3 @@
-// packages/server/src/services/prompt-service.test.ts
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import {
   createPrompt,
@@ -11,9 +10,9 @@ import {
   deletePrompt,
   getPromptProjects
 } from '@/services/prompt-service'
-import type { Prompt, PromptProject, CreatePromptBody, UpdatePromptBody } from 'shared/src/schemas/prompt.schemas'
+import type { Prompt, PromptProject, CreatePromptBody, UpdatePromptBody } from '@octoprompt/schemas'
 import type { PromptsStorage, PromptProjectsStorage } from '@/utils/storage/prompt-storage'
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 // In-memory stores for our mocks
@@ -21,13 +20,13 @@ let mockPromptsDb: PromptsStorage = {}
 let mockPromptProjectsDb: PromptProjectsStorage = []
 
 // Base for mock ID generation
-const BASE_TIMESTAMP = 1700000000000; // Nov 2023 as base
-let mockIdCounter = BASE_TIMESTAMP + 300000; // Start with a high offset for prompt IDs
+const BASE_TIMESTAMP = 1700000000000 // Nov 2023 as base
+let mockIdCounter = BASE_TIMESTAMP + 300000 // Start with a high offset for prompt IDs
 
 const generateTestId = () => {
-  mockIdCounter += 1000; // Increment by 1000 for next ID
-  return mockIdCounter;
-};
+  mockIdCounter += 1000 // Increment by 1000 for next ID
+  return mockIdCounter
+}
 
 // Mock the promptStorage utility
 const mockPromptStorage = {
@@ -49,7 +48,10 @@ mock.module('@/utils/storage/prompt-storage', () => ({
 }))
 
 // Helper to generate random strings for test data
-const randomString = (length = 8) => Math.random().toString(36).substring(2, 2 + length)
+const randomString = (length = 8) =>
+  Math.random()
+    .toString(36)
+    .substring(2, 2 + length)
 
 describe('Prompt Service (Mocked Storage)', () => {
   let defaultProjectId: number
@@ -59,7 +61,7 @@ describe('Prompt Service (Mocked Storage)', () => {
     // Reset in-memory stores before each test
     mockPromptsDb = {}
     mockPromptProjectsDb = []
-    mockIdCounter = BASE_TIMESTAMP + 300000; // Reset base for each test
+    mockIdCounter = BASE_TIMESTAMP + 300000 // Reset base for each test
 
     // Define some project IDs for testing (these don't need to exist in a project store for these tests)
     defaultProjectId = 1
@@ -80,7 +82,7 @@ describe('Prompt Service (Mocked Storage)', () => {
     expect(mockPromptsDb[created.id]).toEqual(created)
 
     // Check if linked to project
-    const links = mockPromptProjectsDb.filter(link => link.promptId === created.id)
+    const links = mockPromptProjectsDb.filter((link) => link.promptId === created.id)
     expect(links.length).toBe(1)
     expect(links[0].projectId).toBe(defaultProjectId)
 
@@ -92,7 +94,7 @@ describe('Prompt Service (Mocked Storage)', () => {
     const createdNoProject = await createPrompt(inputNoProject)
     expect(createdNoProject.id).toBeDefined()
     expect(mockPromptsDb[createdNoProject.id]).toEqual(createdNoProject)
-    const linksNoProject = mockPromptProjectsDb.filter(link => link.promptId === createdNoProject.id)
+    const linksNoProject = mockPromptProjectsDb.filter((link) => link.promptId === createdNoProject.id)
     expect(linksNoProject.length).toBe(0)
   })
 
@@ -132,46 +134,57 @@ describe('Prompt Service (Mocked Storage)', () => {
 
     // Associate with defaultProjectId
     await addPromptToProject(prompt1_created.id, defaultProjectId)
-    let links = mockPromptProjectsDb.filter(link => link.promptId === prompt1_created.id)
+    let links = mockPromptProjectsDb.filter((link) => link.promptId === prompt1_created.id)
     expect(links.length).toBe(1)
     expect(links[0].projectId).toBe(defaultProjectId)
 
     // Associate with anotherProjectId (should replace the first one)
     await addPromptToProject(prompt1_created.id, anotherProjectId)
-    links = mockPromptProjectsDb.filter(link => link.promptId === prompt1_created.id)
+    links = mockPromptProjectsDb.filter((link) => link.promptId === prompt1_created.id)
     expect(links.length).toBe(1)
     expect(links[0].projectId).toBe(anotherProjectId) // Now associated with the new project
 
     // Add same association again (should do nothing)
     await addPromptToProject(prompt1_created.id, anotherProjectId)
-    links = mockPromptProjectsDb.filter(link => link.promptId === prompt1_created.id)
+    links = mockPromptProjectsDb.filter((link) => link.promptId === prompt1_created.id)
     expect(links.length).toBe(1)
 
     // Test with non-existent prompt
-    const nonExistentPromptTestId = generateTestId();
-    await expect(addPromptToProject(nonExistentPromptTestId, defaultProjectId))
-      .rejects.toThrow(new ApiError(404, `Prompt with ID ${nonExistentPromptTestId} not found.`, 'PROMPT_NOT_FOUND'))
+    const nonExistentPromptTestId = generateTestId()
+    await expect(addPromptToProject(nonExistentPromptTestId, defaultProjectId)).rejects.toThrow(
+      new ApiError(404, `Prompt with ID ${nonExistentPromptTestId} not found.`, 'PROMPT_NOT_FOUND')
+    )
   })
 
   test('removePromptFromProject disassociates a prompt from a project', async () => {
     const prompt_created = await createPrompt({ name: 'AssocTest', content: 'Content' })
     await addPromptToProject(prompt_created.id, defaultProjectId) // Link it first
 
-    let links = mockPromptProjectsDb.filter(link => link.promptId === prompt_created.id && link.projectId === defaultProjectId)
+    let links = mockPromptProjectsDb.filter(
+      (link) => link.promptId === prompt_created.id && link.projectId === defaultProjectId
+    )
     expect(links.length).toBe(1)
 
     await removePromptFromProject(prompt_created.id, defaultProjectId)
-    links = mockPromptProjectsDb.filter(link => link.promptId === prompt_created.id && link.projectId === defaultProjectId)
+    links = mockPromptProjectsDb.filter(
+      (link) => link.promptId === prompt_created.id && link.projectId === defaultProjectId
+    )
     expect(links.length).toBe(0)
 
     // Try to remove non-existent link
-    await expect(removePromptFromProject(prompt_created.id, defaultProjectId))
-      .rejects.toThrow(new ApiError(404, `Association between prompt ${prompt_created.id} and project ${defaultProjectId} not found.`, 'PROMPT_PROJECT_LINK_NOT_FOUND'))
+    await expect(removePromptFromProject(prompt_created.id, defaultProjectId)).rejects.toThrow(
+      new ApiError(
+        404,
+        `Association between prompt ${prompt_created.id} and project ${defaultProjectId} not found.`,
+        'PROMPT_PROJECT_LINK_NOT_FOUND'
+      )
+    )
 
     // Try to remove link for non-existent prompt - this should throw PROMPT_NOT_FOUND
     const nonExistentPromptId = generateTestId()
-    await expect(removePromptFromProject(nonExistentPromptId, defaultProjectId))
-      .rejects.toThrow(new ApiError(404, `Prompt with ID ${nonExistentPromptId} not found.`, 'PROMPT_NOT_FOUND'))
+    await expect(removePromptFromProject(nonExistentPromptId, defaultProjectId)).rejects.toThrow(
+      new ApiError(404, `Prompt with ID ${nonExistentPromptId} not found.`, 'PROMPT_NOT_FOUND')
+    )
   })
 
   test('getPromptById returns prompt if found, throws ApiError if not', async () => {
@@ -180,8 +193,9 @@ describe('Prompt Service (Mocked Storage)', () => {
     expect(found).toEqual(created)
 
     const nonExistentId = generateTestId()
-    await expect(getPromptById(nonExistentId))
-      .rejects.toThrow(new ApiError(404, `Prompt with ID ${nonExistentId} not found.`, 'PROMPT_NOT_FOUND'))
+    await expect(getPromptById(nonExistentId)).rejects.toThrow(
+      new ApiError(404, `Prompt with ID ${nonExistentId} not found.`, 'PROMPT_NOT_FOUND')
+    )
   })
 
   test('listAllPrompts returns all prompts', async () => {
@@ -222,7 +236,7 @@ describe('Prompt Service (Mocked Storage)', () => {
     const created = await createPrompt({ name: 'Before', content: 'Old' })
     const updates: UpdatePromptBody = { name: 'After', content: 'New content' }
     // required to add a very small delay
-    await new Promise(resolve => setTimeout(resolve, 1))
+    await new Promise((resolve) => setTimeout(resolve, 1))
     const updated = await updatePrompt(created.id, updates)
 
     expect(updated.name).toBe('After')
@@ -233,8 +247,9 @@ describe('Prompt Service (Mocked Storage)', () => {
 
   test('updatePrompt throws ApiError if prompt does not exist', async () => {
     const fakeId = generateTestId()
-    await expect(updatePrompt(fakeId, { name: 'X' }))
-      .rejects.toThrow(new ApiError(404, `Prompt with ID ${fakeId} not found for update.`, 'PROMPT_NOT_FOUND'))
+    await expect(updatePrompt(fakeId, { name: 'X' })).rejects.toThrow(
+      new ApiError(404, `Prompt with ID ${fakeId} not found for update.`, 'PROMPT_NOT_FOUND')
+    )
   })
 
   test('deletePrompt returns true if deleted, false if nonexistent, and removes links', async () => {
@@ -242,12 +257,12 @@ describe('Prompt Service (Mocked Storage)', () => {
     await addPromptToProject(prompt.id, defaultProjectId) // Link it
 
     expect(mockPromptsDb[prompt.id]).toBeDefined()
-    expect(mockPromptProjectsDb.some(link => link.promptId === prompt.id)).toBe(true)
+    expect(mockPromptProjectsDb.some((link) => link.promptId === prompt.id)).toBe(true)
 
     const success = await deletePrompt(prompt.id)
     expect(success).toBe(true)
     expect(mockPromptsDb[prompt.id]).toBeUndefined()
-    expect(mockPromptProjectsDb.some(link => link.promptId === prompt.id)).toBe(false)
+    expect(mockPromptProjectsDb.some((link) => link.promptId === prompt.id)).toBe(false)
 
     const nonExistentDeleteId = generateTestId()
     const nonExistentDelete = await deletePrompt(nonExistentDeleteId)
@@ -265,16 +280,16 @@ describe('Prompt Service (Mocked Storage)', () => {
     await addPromptToProject(prompt1.id, defaultProjectId)
 
     // To test multiple projects, we manually add to mockPromptProjectsDb
-    const link2Id = generateTestId();
+    const link2Id = generateTestId()
     mockPromptProjectsDb.push({
       id: link2Id,
       promptId: prompt1.id,
       projectId: anotherProjectId
-    });
+    })
 
     const projectsForP1 = await getPromptProjects(prompt1.id)
     expect(projectsForP1.length).toBe(2) // Based on manual mock setup
-    expect(projectsForP1.map(p => p.projectId)).toEqual(expect.arrayContaining([defaultProjectId, anotherProjectId]))
+    expect(projectsForP1.map((p) => p.projectId)).toEqual(expect.arrayContaining([defaultProjectId, anotherProjectId]))
 
     const prompt2 = await createPrompt({ name: 'P2', content: 'C2' })
     const projectsForP2 = await getPromptProjects(prompt2.id)

@@ -35,7 +35,7 @@ export {
 import type {
   CreateTicketBody,
   UpdateTicketBody
-} from 'shared/src/schemas/ticket.schemas'
+} from '@octoprompt/schemas'
 
 // Specialized hook that's not in main api.ts
 const TICKET_KEYS = {

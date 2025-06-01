@@ -1,21 +1,9 @@
-// packages/server/src/services/file-services/file-observer-and-sync-service.ts
-// This file combines logic from:
-// - file-change-watcher.ts
-// - file-sync-service.ts
-// - file-change-plugin.ts
-// - watchers-manager.ts
-// - cleanup-service.ts
-
-// -------------------------------------------------------------------------------- //
-// ----------------------------------- IMPORTS ------------------------------------ //
-// -------------------------------------------------------------------------------- //
-
-import { watch as fsWatch, FSWatcher, existsSync as fsLibExistsSync } from 'fs' // fs.watch for watching, fs.existsSync for inferChangeType
+import { watch as fsWatch, FSWatcher, existsSync as fsLibExistsSync } from 'fs'
 import { join, extname, resolve as pathResolve, relative, basename } from 'node:path'
-import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs' // node:fs for file system operations
+import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs'
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '@/utils/path-utils'
-import { Project, ProjectFile } from 'shared/src/schemas/project.schemas'
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from 'shared/src/constants/file-sync-options'
+import { Project, ProjectFile } from '@octoprompt/schemas'
+import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
 import ignorePackage, { Ignore } from 'ignore'
 import {
   getProjectFiles,

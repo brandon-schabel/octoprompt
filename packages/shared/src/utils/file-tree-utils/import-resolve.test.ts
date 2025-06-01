@@ -1,4 +1,4 @@
-import type { ProjectFile } from 'shared/src/schemas/project.schemas'
+import type { ProjectFile } from '@octoprompt/schemas'
 import {
   gatherAliasesFromTsconfigs,
   getRecursiveImports,

@@ -21,7 +21,7 @@ import { FormatTokenCount } from '@/components/format-token-count'
 import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
 
 import { toast } from 'sonner'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { ProjectFile } from '@octoprompt/schemas'
 import { useActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 
 export const Route = createFileRoute('/project-summarization')({

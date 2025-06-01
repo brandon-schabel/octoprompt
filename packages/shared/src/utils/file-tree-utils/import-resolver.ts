@@ -15,7 +15,8 @@
 // - If a file cannot be resolved, it's skipped. Package imports are also skipped.
 // - Returns a list of all fileIds that are imported by a given file, recursively.
 
-import type { ProjectFile } from '../../schemas/project.schemas'
+import type { ProjectFile } from "@octoprompt/schemas"
+
 
 interface AliasMap {
   [aliasPrefix: string]: string[]

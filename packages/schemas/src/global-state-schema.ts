@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { providerSchema, type APIProviders } from './provider-key.schemas'
-import { LOW_MODEL_CONFIG } from '../constants/model-default-configs'
-import { unixTSArraySchemaSpec, unixTSSchemaSpec, idSchemaSpec, idArraySchemaSpec } from './schema-utils'
+import { idSchemaSpec, idArraySchemaSpec } from './schema-utils'
+import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
 
 const defaultModelConfigs = LOW_MODEL_CONFIG
 
@@ -14,7 +14,6 @@ export const EDITOR_OPTIONS = [
 export type EditorType = (typeof EDITOR_OPTIONS)[number]['value']
 
 export const apiProviders = providerSchema.options
-
 
 // the following schemas are used for the state/store, they aren't used in teh API
 // Project tab state - (Keep as is, unless project tabs are also removed)
@@ -35,14 +34,10 @@ export const projectTabStateSchema = z
       .openapi({ description: 'Current search query for files within this project tab.', example: 'userService' }),
     selectedFiles: idArraySchemaSpec.default([]),
     selectedPrompts: idArraySchemaSpec.default([]),
-    userPrompt: z
-      .string()
-      .optional()
-      .default('')
-      .openapi({
-        description: 'The current user-entered text in the main prompt input for this tab.',
-        example: 'Refactor this component to use hooks.'
-      }),
+    userPrompt: z.string().optional().default('').openapi({
+      description: 'The current user-entered text in the main prompt input for this tab.',
+      example: 'Refactor this component to use hooks.'
+    }),
     searchByContent: z
       .boolean()
       .optional()
@@ -53,15 +48,11 @@ export const projectTabStateSchema = z
       .optional()
       .default('Default Tab')
       .openapi({ description: 'User-defined display name for this project tab.', example: 'Backend Services' }),
-    contextLimit: z
-      .number()
-      .optional()
-      .default(128000)
-      .openapi({
-        description:
-          'Context limit (in tokens) specifically configured for this project tab, overriding global settings if set.',
-        example: 16000
-      }),
+    contextLimit: z.number().optional().default(128000).openapi({
+      description:
+        'Context limit (in tokens) specifically configured for this project tab, overriding global settings if set.',
+      example: 16000
+    }),
     resolveImports: z
       .boolean()
       .optional()
@@ -175,14 +166,10 @@ export const appSettingsSchema = z
       .optional()
       .default('light')
       .openapi({ description: 'Selected application color theme.', example: 'dark' }),
-    codeThemeLight: z
-      .string()
-      .optional()
-      .default('atomOneLight')
-      .openapi({
-        description: 'Name of the code syntax highlighting theme used in light mode.',
-        example: 'githubLight'
-      }),
+    codeThemeLight: z.string().optional().default('atomOneLight').openapi({
+      description: 'Name of the code syntax highlighting theme used in light mode.',
+      example: 'githubLight'
+    }),
     codeThemeDark: z
       .string()
       .optional()
@@ -279,13 +266,9 @@ export const chatLinkSettingsSchema = z
     z.string(), // Key is chat ID
     z
       .object({
-        includeSelectedFiles: z
-          .boolean()
-          .optional()
-          .default(false)
-          .openapi({
-            description: 'Whether currently selected files from the linked project tab should be included as context.'
-          }),
+        includeSelectedFiles: z.boolean().optional().default(false).openapi({
+          description: 'Whether currently selected files from the linked project tab should be included as context.'
+        }),
         includePrompts: z
           .boolean()
           .optional()

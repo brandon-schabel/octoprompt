@@ -1,5 +1,4 @@
 import { z } from '@hono/zod-openapi'
-import { unixTimestampSchema } from '../utils/unix-ts-utils'
 import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
 
@@ -16,23 +15,53 @@ export const ProjectSchema = z
   })
   .openapi('Project')
 
-export const ProjectFileSchema = z
-  .object({
-    id: unixTSSchemaSpec,
-    projectId: unixTSSchemaSpec,
-    name: z.string(),
-    path: z.string(),
-    extension: z.string(),
-    size: z.number(),
-    content: z.string().nullable(),
-    summary: z.string().nullable(),
-    summaryLastUpdated: unixTSSchemaSpec.nullable(),
-    meta: z.string().nullable(),
-    checksum: z.string().nullable(),
-    created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec
-  })
-  .openapi('ProjectFile')
+
+export const ProjectFileSchema = z.object({
+  id: unixTSSchemaSpec,
+  projectId: unixTSSchemaSpec,
+  name: z.string(),
+  path: z.string(),
+  extension: z.string(),
+  size: z.number(),
+  content: z.string(),
+  summary: z.string().nullable(),
+  summaryLastUpdated: unixTSSchemaSpec.nullable(),
+  meta: z.string(),
+  checksum: z.string().nullable(),
+  created: unixTSSchemaSpec,
+  updated: unixTSSchemaSpec,
+  
+  // New versioning fields
+  version: z.number().int().positive().default(1), // Version number starting from 1
+  prevId: unixTSSchemaSpec.nullable().default(null), // Points to previous version
+  nextId: unixTSSchemaSpec.nullable().default(null), // Points to next version (null for latest)
+  isLatest: z.boolean().default(true), // Flag to quickly identify latest version
+  originalFileId: unixTSSchemaSpec.nullable().default(null) // Points to the first version of this file
+}).openapi('ProjectFile')
+
+
+// Additional schemas for versioning operations
+export const FileVersionSchema = z.object({
+  fileId: unixTSSchemaSpec,
+  version: z.number().int().positive(),
+  created: unixTSSchemaSpec,
+  updated: unixTSSchemaSpec,
+  isLatest: z.boolean()
+}).openapi('FileVersion')
+
+export const FileVersionListResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.array(FileVersionSchema)
+}).openapi('FileVersionListResponse')
+
+export const GetFileVersionBodySchema = z.object({
+  version: z.number().int().positive().optional()
+}).openapi('GetFileVersionBody')
+
+export const RevertToVersionBodySchema = z.object({
+  version: z.number().int().positive()
+}).openapi('RevertToVersionBody')
+
 
 // Request Parameter Schemas
 export const ProjectIdParamsSchema = z
@@ -126,12 +155,6 @@ export const FileListResponseSchema = z
   })
   .openapi('FileListResponse')
 
-// Type exports
-export type Project = z.infer<typeof ProjectSchema>
-export type ProjectFile = z.infer<typeof ProjectFileSchema>
-export type CreateProjectBody = z.infer<typeof CreateProjectBodySchema>
-export type UpdateProjectBody = z.infer<typeof UpdateProjectBodySchema>
-
 // Define ProjectSummaryResponseSchema for the project summary route
 export const ProjectSummaryResponseSchema = z
   .object({
@@ -145,6 +168,18 @@ export const ProjectFileMapSchema = z
   .map(z.number(), ProjectFileSchema)
   .describe('A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects.')
   .openapi('ProjectFileMap')
+
+
+
+export type FileVersion = z.infer<typeof FileVersionSchema>
+export type FileVersionListResponse = z.infer<typeof FileVersionListResponseSchema>
+export type GetFileVersionBody = z.infer<typeof GetFileVersionBodySchema>
+export type RevertToVersionBody = z.infer<typeof RevertToVersionBodySchema>
+export type Project = z.infer<typeof ProjectSchema>
+export type ProjectFile = z.infer<typeof ProjectFileSchema>
+export type CreateProjectBody = z.infer<typeof CreateProjectBodySchema>
+export type UpdateProjectBody = z.infer<typeof UpdateProjectBodySchema>
+
 
 // a key/value map by id of all project object (content, file name, path, extension, etc)
 export type ProjectFileMap = z.infer<typeof ProjectFileMapSchema>

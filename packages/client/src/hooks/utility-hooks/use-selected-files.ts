@@ -7,7 +7,7 @@ import {
 } from '@/hooks/use-kv-local-storage'
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
-import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
+import { ProjectFileMap } from '@octoprompt/schemas'
 import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
 
 const MAX_HISTORY_SIZE = 50

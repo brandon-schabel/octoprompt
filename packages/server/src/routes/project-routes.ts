@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import {
   ProjectIdParamsSchema,
   CreateProjectBodySchema,
@@ -14,11 +14,13 @@ import {
   SuggestFilesBodySchema,
   SummarizeFilesBodySchema,
   ProjectFileSchema,
-  ProjectFile
-} from 'shared/src/schemas/project.schemas'
-import { unixTSSchemaSpec } from 'shared/src/schemas/schema-utils'
+  ProjectFile,
+  FileVersionListResponseSchema,
+  GetFileVersionBodySchema,
+  RevertToVersionBodySchema
+} from '@octoprompt/schemas'
 
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
 
 import { existsSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
@@ -35,9 +37,9 @@ import {
   SummarizeFilesResponseSchema,
   RemoveSummariesResponseSchema,
   FileSuggestionsZodSchema
-} from 'shared/src/schemas/gen-ai.schemas'
+} from '@octoprompt/schemas'
 import { optimizeUserInput, summarizeFiles } from '@/services/project-service'
-import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from 'shared/src/schemas/prompt.schemas'
+import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
 
 // File operation schemas
 const FileIdParamsSchema = z.object({
@@ -45,26 +47,35 @@ const FileIdParamsSchema = z.object({
   fileId: z.coerce.number().int().positive()
 })
 
+const FileVersionParamsSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  originalFileId: z.coerce.number().int().positive()
+})
+
 const UpdateFileContentBodySchema = z.object({
   content: z.string()
 })
 
 const BulkCreateFilesBodySchema = z.object({
-  files: z.array(z.object({
-    path: z.string(),
-    name: z.string(),
-    extension: z.string(),
-    content: z.string(),
-    size: z.coerce.number().int().nonnegative(),
-    checksum: z.string().optional()
-  }))
+  files: z.array(
+    z.object({
+      path: z.string(),
+      name: z.string(),
+      extension: z.string(),
+      content: z.string(),
+      size: z.coerce.number().int().nonnegative(),
+      checksum: z.string().optional()
+    })
+  )
 })
 
 const BulkUpdateFilesBodySchema = z.object({
-  updates: z.array(z.object({
-    fileId: z.number().int().positive(),
-    content: z.string()
-  }))
+  updates: z.array(
+    z.object({
+      fileId: z.number().int().positive(),
+      content: z.string()
+    })
+  )
 })
 
 const FileResponseSchema = z.object({
@@ -77,6 +88,7 @@ const BulkFilesResponseSchema = z.object({
   data: z.array(ProjectFileSchema)
 })
 
+// Existing route definitions...
 const createProjectRoute = createRoute({
   method: 'post',
   path: '/api/projects',
@@ -90,7 +102,6 @@ const createProjectRoute = createRoute({
       content: { 'application/json': { schema: ProjectResponseSchema } },
       description: 'Project created and initial sync started'
     },
-    // Define the 207 response explicitly
     207: {
       content: { 'application/json': { schema: ProjectResponseMultiStatusSchema } },
       description: 'Project created, but post-creation steps encountered issues'
@@ -196,7 +207,14 @@ const getProjectFilesRoute = createRoute({
   path: '/api/projects/{projectId}/files',
   tags: ['Projects', 'Files'],
   summary: 'Get the list of files associated with a project',
-  request: { params: ProjectIdParamsSchema },
+  request: {
+    params: ProjectIdParamsSchema,
+    query: z
+      .object({
+        includeAllVersions: z.coerce.boolean().optional().default(false)
+      })
+      .optional()
+  },
   responses: {
     200: {
       content: { 'application/json': { schema: FileListResponseSchema } },
@@ -208,11 +226,78 @@ const getProjectFilesRoute = createRoute({
   }
 })
 
+// NEW: File versioning routes
+const getFileVersionsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/files/{originalFileId}/versions',
+  tags: ['Projects', 'Files', 'Versioning'],
+  summary: 'Get all versions of a specific file',
+  request: { params: FileVersionParamsSchema },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: FileVersionListResponseSchema } },
+      description: 'Successfully retrieved file versions'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project or file not found'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const getFileVersionRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/files/{originalFileId}/version',
+  tags: ['Projects', 'Files', 'Versioning'],
+  summary: 'Get a specific version of a file (or latest if no version specified)',
+  request: {
+    params: FileVersionParamsSchema,
+    query: GetFileVersionBodySchema.optional()
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: FileResponseSchema } },
+      description: 'Successfully retrieved file version'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project, file, or version not found'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
+const revertFileToVersionRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/files/{fileId}/revert',
+  tags: ['Projects', 'Files', 'Versioning'],
+  summary: 'Revert a file to a specific version (creates a new version with old content)',
+  request: {
+    params: FileIdParamsSchema,
+    body: { content: { 'application/json': { schema: RevertToVersionBodySchema } } }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: FileResponseSchema } },
+      description: 'File successfully reverted to specified version'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project, file, or version not found'
+    },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
 const updateFileContentRoute = createRoute({
   method: 'put',
   path: '/api/projects/{projectId}/files/{fileId}',
   tags: ['Projects', 'Files'],
-  summary: 'Update the content of a specific file',
+  summary: 'Update the content of a specific file (creates new version)',
   request: {
     params: FileIdParamsSchema,
     body: { content: { 'application/json': { schema: UpdateFileContentBodySchema } } }
@@ -220,9 +305,12 @@ const updateFileContentRoute = createRoute({
   responses: {
     200: {
       content: { 'application/json': { schema: FileResponseSchema } },
-      description: 'File content updated successfully'
+      description: 'File content updated successfully (new version created)'
     },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project or file not found' },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project or file not found'
+    },
     422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
@@ -252,7 +340,7 @@ const bulkUpdateFilesRoute = createRoute({
   method: 'put',
   path: '/api/projects/{projectId}/files/bulk',
   tags: ['Projects', 'Files'],
-  summary: 'Update content of multiple files in a project',
+  summary: 'Update content of multiple files in a project (creates new versions)',
   request: {
     params: ProjectIdParamsSchema,
     body: { content: { 'application/json': { schema: BulkUpdateFilesBodySchema } } }
@@ -260,7 +348,7 @@ const bulkUpdateFilesRoute = createRoute({
   responses: {
     200: {
       content: { 'application/json': { schema: BulkFilesResponseSchema } },
-      description: 'Files updated successfully'
+      description: 'Files updated successfully (new versions created)'
     },
     404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
     422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
@@ -425,7 +513,7 @@ export const projectRoutes = new OpenAPIHono()
 
     let syncWarning: string | undefined
     let syncError: string | undefined
-    let httpStatus: 201 | 207 = 201 // Use explicit status codes
+    let httpStatus: 201 | 207 = 201
 
     try {
       if (!existsSync(createdProject.path)) {
@@ -454,7 +542,6 @@ export const projectRoutes = new OpenAPIHono()
       httpStatus = 207
     }
 
-    // Construct the payload matching the schema for the status code
     if (httpStatus === 201) {
       const payload = {
         success: true,
@@ -462,7 +549,6 @@ export const projectRoutes = new OpenAPIHono()
       } satisfies z.infer<typeof ProjectResponseSchema>
       return c.json(payload, 201)
     } else {
-      // httpStatus === 207
       const payload = {
         success: true,
         data: createdProject,
@@ -516,7 +602,6 @@ export const projectRoutes = new OpenAPIHono()
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
     watchersManager.stopWatchingProject(projectId)
-    // Ensure the returned object matches OperationSuccessResponseSchema
     const payload: z.infer<typeof OperationSuccessResponseSchema> = {
       success: true,
       message: 'Project deleted successfully.'
@@ -531,7 +616,6 @@ export const projectRoutes = new OpenAPIHono()
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
     await syncProject(project)
-    // Ensure the returned object matches OperationSuccessResponseSchema
     const payload: z.infer<typeof OperationSuccessResponseSchema> = {
       success: true,
       message: 'Project sync initiated.'
@@ -541,12 +625,12 @@ export const projectRoutes = new OpenAPIHono()
 
   .openapi(getProjectFilesRoute, async (c) => {
     const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
     const project = await projectService.getProjectById(projectId)
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const files = await projectService.getProjectFiles(projectId)
-    // Files already have ISO dates from service
+    const files = await projectService.getProjectFiles(projectId, query?.includeAllVersions || false)
     const payload = {
       success: true,
       data: files ?? []
@@ -554,12 +638,51 @@ export const projectRoutes = new OpenAPIHono()
     return c.json(payload, 200)
   })
 
+  // NEW: File versioning route handlers
+  .openapi(getFileVersionsRoute, async (c) => {
+    const { projectId, originalFileId } = c.req.valid('param')
+    const versions = await projectService.getFileVersions(projectId, originalFileId)
+    const payload = {
+      success: true,
+      data: versions
+    } satisfies z.infer<typeof FileVersionListResponseSchema>
+    return c.json(payload, 200)
+  })
+
+  .openapi(getFileVersionRoute, async (c) => {
+    const { projectId, originalFileId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    const fileVersion = await projectService.getFileVersion(projectId, originalFileId, query?.version)
+
+    if (!fileVersion) {
+      throw new ApiError(404, `File version not found`, 'FILE_VERSION_NOT_FOUND')
+    }
+
+    const payload = {
+      success: true,
+      data: fileVersion
+    } satisfies z.infer<typeof FileResponseSchema>
+    return c.json(payload, 200)
+  })
+
+  .openapi(revertFileToVersionRoute, async (c) => {
+    const { projectId, fileId } = c.req.valid('param')
+    const { version } = c.req.valid('json')
+
+    const revertedFile = await projectService.revertFileToVersion(projectId, fileId, version)
+
+    const payload = {
+      success: true,
+      data: revertedFile
+    } satisfies z.infer<typeof FileResponseSchema>
+    return c.json(payload, 200)
+  })
+
   .openapi(bulkCreateFilesRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { files } = c.req.valid('json')
 
-    // Convert API format to FileSyncData format
-    const fileSyncData = files.map(file => ({
+    const fileSyncData = files.map((file) => ({
       path: file.path,
       name: file.name,
       extension: file.extension,
@@ -581,18 +704,14 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId } = c.req.valid('param')
     const { updates } = c.req.valid('json')
 
-    // Update each file individually using the simpler updateFileContent function
+    // Create new versions for each file instead of updating existing content
     const updatedFiles: ProjectFile[] = []
 
     console.log({ projectId, updates, updatedFiles })
 
     for (const update of updates) {
       try {
-        const updatedFile = await projectService.updateFileContent(
-          projectId,
-          update.fileId,
-          update.content
-        )
+        const updatedFile = await projectService.updateFileContent(projectId, update.fileId, update.content)
         updatedFiles.push(updatedFile)
       } catch (error) {
         console.error(`Failed to update file ${update.fileId}:`, error)
@@ -633,7 +752,6 @@ export const projectRoutes = new OpenAPIHono()
       await syncProject(project)
     }
     const files = await projectService.getProjectFiles(projectId)
-    // Files are already in API format
     const payload = {
       success: true,
       data: files ?? []
@@ -644,21 +762,17 @@ export const projectRoutes = new OpenAPIHono()
   .openapi(getProjectSummaryRoute, async (c) => {
     const { projectId } = c.req.valid('param')
 
-    // Calculate summary conditionally, default to empty string if no files
     let summary = await getFullProjectSummary(projectId)
 
     if (typeof summary === 'object') {
       throw new ApiError(500, summary.message, 'AI_SUMMARY_ERROR')
     }
 
-
-    // Construct the single success payload at the end
     const payload: z.infer<typeof ProjectSummaryResponseSchema> = {
       success: true,
-      summary: summary as string // Use the calculated summary
+      summary: summary as string
     }
 
-    // Explicitly return status 200
     return c.json(payload, 200)
   })
   .openapi(suggestFilesRoute, async (c) => {
@@ -702,8 +816,9 @@ ${userInput}
         systemMessage: systemPrompt
       })
 
-      // Ensure fileIds from AI (potentially strings) are converted to numbers
-      const numericFileIds = result.object.fileIds.map((id: string | number) => typeof id === 'string' ? parseInt(id, 10) : id).filter((id: number) => !isNaN(id));
+      const numericFileIds = result.object.fileIds
+        .map((id: string | number) => (typeof id === 'string' ? parseInt(id, 10) : id))
+        .filter((id: number) => !isNaN(id))
 
       const payload = {
         success: true,
@@ -738,18 +853,16 @@ ${userInput}
     const { projectId } = c.req.valid('param')
     const { fileIds } = c.req.valid('json')
     const result = await projectService.removeSummariesFromFiles(projectId, fileIds)
-    // Ensure the returned object matches RemoveSummariesResponseSchema (result already has the correct shape)
     if (typeof result.removedCount !== 'number') {
-      // Handle potential failure from the service if needed, though schema expects success:true
       console.error('Removal of summaries reported failure from service:', result)
       throw new ApiError(500, result.message || 'Failed to remove summaries')
     }
     const payload: z.infer<typeof RemoveSummariesResponseSchema> = {
-      success: true, // Explicitly set to true to match schema
+      success: true,
       removedCount: result.removedCount,
       message: result.message
     }
-    return c.json(payload, 200) // Defaults to 200
+    return c.json(payload, 200)
   })
   .openapi(optimizeUserInputRoute, async (c) => {
     const { userContext, projectId } = c.req.valid('json')
@@ -758,6 +871,4 @@ ${userInput}
     return c.json({ success: true, data: responseData } satisfies z.infer<typeof OptimizePromptResponseSchema>, 200)
   })
 
-
-// Export the type for the frontend client generator
 export type ProjectRouteTypes = typeof projectRoutes

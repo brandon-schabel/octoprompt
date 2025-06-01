@@ -1,4 +1,4 @@
-import { unixTimestampSchema } from "../utils/unix-ts-utils";
+import { unixTimestampSchema } from "./unix-ts-utils";
 import { z } from "@hono/zod-openapi";
 
 export const unixTSSchemaSpec = unixTimestampSchema.openapi({ example: 1716537600000, description: 'ID or Timestamp in unix timestamp (milliseconds)' })

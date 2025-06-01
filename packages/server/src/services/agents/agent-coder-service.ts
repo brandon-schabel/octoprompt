@@ -1,6 +1,6 @@
-import { HIGH_MODEL_CONFIG, MEDIUM_MODEL_CONFIG, PLANNING_MODEL_CONFIG } from 'shared'
-import { AiSdkOptions } from 'shared/src/schemas/gen-ai.schemas'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { HIGH_MODEL_CONFIG, PLANNING_MODEL_CONFIG } from '@octoprompt/schemas'
+import { AiSdkOptions } from '@octoprompt/schemas'
+import { ProjectFile } from '@octoprompt/schemas'
 import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
 import { generateStructuredData } from '../gen-ai-services'
 import { computeChecksum } from '../file-services/file-sync-service-unified'
@@ -24,13 +24,11 @@ import {
   FileRewriteResponse,
   AgentTaskSchema,
   AgentContextSchema,
-  AgentCoderRunRequestSchema,
-  AgentCoderRunSuccessDataSchema,
   AgentDataLog
-} from 'shared/src/schemas/agent-coder.schemas'
+} from '@octoprompt/schemas'
 import { FileSyncData, bulkCreateProjectFiles } from '../project-service'
 import { basename, extname } from 'path'
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 const agentCoderPrompts = {
@@ -53,15 +51,15 @@ const agentCoderPrompts = {
       const selectedFilesContext = `
             <selected_files>
     ${selectedFiles
-          .map(
-            (f) => `
+      .map(
+        (f) => `
       <file>
         <id>${f.id}</id>
         <name>${f.name}</name>
         <path>${f.path}</path>
     </file>`
-          )
-          .join('')}
+      )
+      .join('')}
     </selected_files>
             `
 
@@ -552,7 +550,13 @@ export async function mainOrchestrator(
   // Initialize agentDataLog early to ensure it's available in catch/finally
   const agentDataLog: AgentDataLog = {
     // agentJobDirPath will be set once log paths are confirmed or from AGENT_LOGS_DIR structure
-    agentJobDirPath: join(AGENT_LOGS_DIR, 'projects', rawAgentContext.project.id.toString(), 'jobs', agentJobId.toString()), // Initial sensible default
+    agentJobDirPath: join(
+      AGENT_LOGS_DIR,
+      'projects',
+      rawAgentContext.project.id.toString(),
+      'jobs',
+      agentJobId.toString()
+    ), // Initial sensible default
     projectId: rawAgentContext.project.id,
     agentJobId,
     agentJobStartTime: normalizeToUnixMs(new Date()),

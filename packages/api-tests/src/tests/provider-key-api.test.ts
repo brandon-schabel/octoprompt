@@ -16,8 +16,8 @@ import {
     UpdateProviderKeyBodySchema,
     ProviderKeyResponseSchema,
     ProviderKeyListResponseSchema
-} from 'shared/src/schemas/provider-key.schemas'
-import { OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
+} from '@octoprompt/schemas'
+import { OperationSuccessResponseSchema } from '@octoprompt/schemas'
 import { TEST_API_URL } from './test-config'
 
 const BASE_URL = TEST_API_URL

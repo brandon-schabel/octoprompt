@@ -22,9 +22,9 @@ import {
     AiChatStreamRequestSchema,
     ForkChatBodySchema,
     ForkChatFromMessageBodySchema,
-} from '../../../shared/src/schemas/chat.schemas'
-import { OperationSuccessResponseSchema, MessageRoleEnum } from '../../../shared/src/schemas/common.schemas'
-import type { APIProviders } from '../../../shared/src/schemas/provider-key.schemas'
+} from '../../../@octoprompt/schemas'
+import { OperationSuccessResponseSchema, MessageRoleEnum } from '../../../@octoprompt/schemas'
+import type { APIProviders } from '../../../@octoprompt/schemas'
 import { TEST_API_URL } from './test-config'
 
 const BASE_URL = TEST_API_URL

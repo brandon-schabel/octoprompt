@@ -1,5 +1,5 @@
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
-import { Prompt } from 'shared/src/schemas/prompt.schemas'
+import { ProjectFile } from '@octoprompt/schemas'
+import { Prompt } from '@octoprompt/schemas'
 import {
   useGetAgentCoderRunData,
   useRunAgentCoder,
@@ -45,18 +45,14 @@ import {
   FileMinus,
   Eye,
   ClipboardCopy,
-  Maximize,
-  Minimize
 } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
-import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
+import { ProjectFileMap } from '@octoprompt/schemas'
 import { toast } from 'sonner'
 import { OctoCombobox } from '../octo/octo-combobox'
-import { v4 as uuidv4 } from 'uuid'
 import { DiffViewer } from '../file-changes/diff-viewer'
 import { FileViewerDialog } from '../navigation/file-viewer-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
-// import { normalizeToUnixMs } from 'shared/src/utils/date-utils'
 
 interface AgentCoderLogDialogProps {
   open: boolean
@@ -159,7 +155,7 @@ function FileChangePreview({ file, projectFileMap }: { file: UpdatedFileData; pr
             open={showPreview}
             onClose={() => setShowPreview(false)}
             viewedFile={
-              isNewFile ? prepareFileForViewer(file) : existingFile ? prepareFileForViewer(existingFile) : undefined
+              (isNewFile ? prepareFileForViewer(file) : existingFile ? prepareFileForViewer(existingFile) : undefined) as ProjectFile
             }
           />
         ) : (
@@ -667,7 +663,7 @@ export function AgentCoderControlDialog({
                                     entry.level === 'info' && 'border-blue-500/40 hover:ring-blue-500/50',
                                     entry.level === 'debug' && 'border-gray-400/40 hover:ring-gray-500/50',
                                     !['error', 'warn', 'info', 'debug'].includes(entry.level || '') &&
-                                      'border-border hover:ring-primary/30',
+                                    'border-border hover:ring-primary/30',
                                     'hover:ring-2 hover:ring-offset-1 hover:ring-offset-background'
                                   )}
                                 >

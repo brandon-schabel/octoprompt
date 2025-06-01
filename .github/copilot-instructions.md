@@ -332,7 +332,7 @@ Direct schema import approach for type safety (TypeScript types from shared Zod 
 
 **Modern API Hook Pattern (Example `useCreateChat`):**
 ```typescript
-import type { CreateChatBody } from 'shared/src/schemas/chat.schemas'; // Import types directly
+import type { CreateChatBody } from '@octoprompt/schemas'; // Import types directly
 // ... other imports: useQueryClient, useMutation, octoClient, toast
 
 export function useCreateChat() {
@@ -347,7 +347,7 @@ export function useCreateChat() {
 
 **Schema-First Query (Example `useGetPrompt`):**
 ```typescript
-import type { Prompt } from 'shared/src/schemas/prompt.schemas'; // Import types
+import type { Prompt } from '@octoprompt/schemas'; // Import types
 // ... other imports: useQuery, octoClient, PROMPT_KEYS
 
 export function useGetPrompt(promptId: number) {
@@ -411,9 +411,9 @@ export type Todo = z.infer<typeof TodoSchema>; /* ... other types */
 Implements `readTodos`, `writeTodos`, `readTodoCategories`, `writeTodoCategories`, `generateId` using `readJson`, `writeJson` from `json-scribe.ts`. Data validated with Zod schemas.
 ```typescript
 import { z } from 'zod'; // Assuming path
-import { TodoSchema, TodoCategorySchema } from '../../../shared/src/schemas/todo.schemas';
-import { readJson, writeJson } from '../json-scribe'; // Assuming path
-import { normalizeToUnixMs } from '../../../shared/src/utils/unix-ts-utils'; // Assuming path
+import { TodoSchema, TodoCategorySchema } from '@octoprompt/schemas';
+import { readJson, writeJson } from '../json-scribe'; 
+import { normalizeToUnixMs } from '@octoprompt/schmas'; 
 
 export const TodoStorageSchema = z.record(z.string(), TodoSchema);
 // ... (TodoCategoryStorageSchema defined similarly)
@@ -431,7 +431,7 @@ Business logic: `createTodo`, `updateTodoStatus`, `getTodosByProject`, `deleteTo
 ```typescript
 import { Todo, CreateTodoBody, TodoSchema } from 'shared/src/schemas/todo.schemas'; // Assuming path
 import { todoStorage } from '@/utils/storage/todo-storage'; // Assuming path
-import { ApiError } from 'shared'; // Assuming path
+import { ApiError } from '@octoprompt/shared'; // Assuming path
 // ... (other imports like generateStructuredData, getProjectById)
 
 export async function createTodo(data: CreateTodoBody): Promise<Todo> {

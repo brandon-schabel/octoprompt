@@ -3,20 +3,22 @@ import { idSchemaSpec, unixTSArrayOptionalSchemaSpec, unixTSArraySchemaSpec, uni
 
 // Fix the core issue: ensure suggestedFileIds is handled consistently across all schemas
 
-export const suggestedFileIdsSchema = z.preprocess((val) => {
-  if (val === undefined || val === null) return []
-  if (Array.isArray(val)) return val
-  if (typeof val === 'string') {
-    if (val === '' || val.trim() === '') return []
-    try {
-      const parsed = JSON.parse(val)
-      return Array.isArray(parsed) ? parsed : []
-    } catch (e) {
-      return []
+export const suggestedFileIdsSchema = z
+  .preprocess((val) => {
+    if (val === undefined || val === null) return []
+    if (Array.isArray(val)) return val
+    if (typeof val === 'string') {
+      if (val === '' || val.trim() === '') return []
+      try {
+        const parsed = JSON.parse(val)
+        return Array.isArray(parsed) ? parsed : []
+      } catch (e) {
+        return []
+      }
     }
-  }
-  return []
-}, z.array(z.number())).default([])
+    return []
+  }, z.array(z.number()))
+  .default([])
 
 // Base schemas for storage/service layer
 export const TicketCreateSchema = z.object({
@@ -37,7 +39,7 @@ export const TicketReadSchema = z.object({
   priority: z.enum(['low', 'normal', 'high']),
   suggestedFileIds: suggestedFileIdsSchema,
   created: unixTSSchemaSpec,
-  updated: unixTSSchemaSpec,
+  updated: unixTSSchemaSpec
 })
 
 export const TicketUpdateSchema = z.object({
@@ -67,13 +69,13 @@ export const TicketTaskReadSchema = z.object({
   }, z.boolean()),
   orderIndex: z.number(),
   created: unixTSSchemaSpec,
-  updated: unixTSSchemaSpec,
+  updated: unixTSSchemaSpec
 })
 
 // File association schema
 export const TicketFileReadSchema = z.object({
   ticketId: unixTSSchemaSpec,
-  fileId: unixTSSchemaSpec,
+  fileId: unixTSSchemaSpec
 })
 
 // Task suggestions schema
@@ -145,41 +147,41 @@ export const updateSuggestedFilesSchema = z.object({
 
 // Parameter schemas - FIXED: All ID parameters now use unixTSSchemaSpec
 export const updateTicketParamsSchema = z.object({
-  ticketId: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec
 })
 
 export const getOrDeleteTicketParamsSchema = z.object({
-  ticketId: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec
 })
 
 export const linkFilesParamsSchema = z.object({
-  ticketId: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec
 })
 
 export const suggestTasksParamsSchema = z.object({
-  ticketId: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec
 })
 
 export const updateSuggestedFilesParamsSchema = z.object({
-  ticketId: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec
 })
 
 export const createTaskParamsSchema = z.object({
-  ticketId: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec
 })
 
 export const updateTaskParamsSchema = z.object({
   ticketId: unixTSSchemaSpec,
-  taskId: unixTSSchemaSpec, // ADDED: Missing taskId parameter
+  taskId: unixTSSchemaSpec // ADDED: Missing taskId parameter
 })
 
 export const deleteTaskParamsSchema = z.object({
   ticketId: unixTSSchemaSpec,
-  taskId: unixTSSchemaSpec, // ADDED: Missing taskId parameter  
+  taskId: unixTSSchemaSpec // ADDED: Missing taskId parameter
 })
 
 export const reorderTasksParamsSchema = z.object({
-  ticketId: unixTSSchemaSpec,
+  ticketId: unixTSSchemaSpec
 })
 
 // API response schemas - FIXED preprocessing to handle storage format properly
@@ -193,7 +195,7 @@ export const TicketSchema = z
     priority: z.enum(['low', 'normal', 'high']),
     suggestedFileIds: suggestedFileIdsSchema,
     created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
   })
   .openapi('Ticket')
 
@@ -205,7 +207,7 @@ export const TaskSchema = z
     done: z.boolean().openapi({ description: 'Whether the task is completed' }),
     orderIndex: z.number().openapi({ description: 'Task order within the ticket' }),
     created: unixTSSchemaSpec,
-    updated: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
   })
   .openapi('Task')
 
@@ -244,7 +246,7 @@ export const LinkedFilesResponseSchema = z
     linkedFiles: z.array(
       z.object({
         ticketId: unixTSSchemaSpec,
-        fileId: unixTSSchemaSpec,
+        fileId: unixTSSchemaSpec
       })
     )
   })
@@ -270,7 +272,7 @@ export const TicketWithTaskCountSchema = z
   .object({
     ticket: TicketSchema,
     taskCount: z.number(),
-    completedTaskCount: z.number(),
+    completedTaskCount: z.number()
   })
   .openapi('TicketWithTaskCount')
 
@@ -312,7 +314,7 @@ export const TicketIdParamsSchema = z
     ticketId: unixTSSchemaSpec.openapi({
       param: { name: 'ticketId', in: 'path' },
       description: 'Ticket identifier'
-    }),
+    })
   })
   .openapi('TicketIdParams')
 
@@ -321,7 +323,7 @@ export const TaskIdParamsSchema = z
     taskId: unixTSSchemaSpec.openapi({
       param: { name: 'taskId', in: 'path' },
       description: 'Task identifier'
-    }),
+    })
   })
   .openapi('TaskIdParams')
 
@@ -334,18 +336,9 @@ export const TicketTaskIdParamsSchema = z
     taskId: unixTSSchemaSpec.openapi({
       param: { name: 'taskId', in: 'path' },
       description: 'Task identifier'
-    }),
+    })
   })
   .openapi('TicketTaskIdParams')
-
-export const ProjectIdParamsSchema = z
-  .object({
-    projectId: unixTSSchemaSpec.openapi({
-      param: { name: 'projectId', in: 'path' },
-      description: 'Project identifier'
-    }),
-  })
-  .openapi('ProjectIdParams')
 
 export const StatusQuerySchema = z
   .object({
@@ -370,7 +363,6 @@ export type ReorderTasksBody = z.infer<typeof reorderTasksSchema>
 export type Ticket = z.infer<typeof TicketReadSchema>
 export type TicketTask = z.infer<typeof TicketTaskReadSchema>
 export type TicketFile = z.infer<typeof TicketFileReadSchema>
-
 
 export type TicketWithTaskCount = z.infer<typeof TicketWithTaskCountSchema>
 export type TicketWithTasks = z.infer<typeof TicketWithTasksSchema>

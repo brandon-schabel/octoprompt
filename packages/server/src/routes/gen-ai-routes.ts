@@ -1,8 +1,8 @@
 import { createRoute, z } from '@hono/zod-openapi'
 
-import { ApiError } from 'shared'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
-import { ModelsQuerySchema } from 'shared/src/schemas/chat.schemas'
+import { ApiError } from '@octoprompt/shared'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
+import { ModelsQuerySchema } from '@octoprompt/schemas'
 import {
   AiGenerateTextRequestSchema,
   AiGenerateTextResponseSchema,
@@ -10,16 +10,11 @@ import {
   AiGenerateStructuredResponseSchema,
   StructuredDataSchemaConfig,
   ModelsListResponseSchema,
-  FileSummaryListResponseSchema,
-  RemoveSummariesResponseSchema,
-  SummarizeFilesResponseSchema,
-  SuggestFilesResponseSchema,
-  FileSuggestionsZodSchema
-} from 'shared/src/schemas/gen-ai.schemas'
+} from '@octoprompt/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { generateSingleText, generateStructuredData, genTextStream } from '@/services/gen-ai-services' // Import the service instance
-import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas'
+import { APIProviders, ProviderKey } from '@octoprompt/schemas'
 import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-providers/model-fetcher-service'
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/provider-defaults'
 import { providerKeyService } from '@/services/model-providers/provider-key-service'

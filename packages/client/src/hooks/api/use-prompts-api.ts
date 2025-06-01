@@ -15,7 +15,7 @@ export {
 import type {
   CreatePromptBody,
   UpdatePromptBody
-} from 'shared/src/schemas/prompt.schemas'
+} from '@octoprompt/schemas'
 
 export type CreatePromptInput = CreatePromptBody
 export type UpdatePromptInput = UpdatePromptBody

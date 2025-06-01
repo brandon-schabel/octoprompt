@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { ProjectFileSchema, ProjectFileMapSchema, ProjectSchema } from 'shared/src/schemas/project.schemas'
+import { ProjectFileSchema, ProjectFileMapSchema, ProjectSchema } from '@octoprompt/schemas'
 import { PromptSchema } from './prompt.schemas'
 import { unixTSArrayOptionalSchemaSpec, unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 

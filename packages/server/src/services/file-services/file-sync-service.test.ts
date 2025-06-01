@@ -5,8 +5,8 @@ import * as fs from 'node:fs'
 // Using node:path directly for spying consistency
 import nodePath, { join, relative, basename, extname, resolve } from 'node:path'
 import ignore, { type Ignore } from 'ignore'
-import { DEFAULT_FILE_EXCLUSIONS } from 'shared/src/constants/file-sync-options'
-import type { Project, ProjectFile } from 'shared/src/schemas/project.schemas'
+import { DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/shared'
+import type { Project, ProjectFile } from '@octoprompt/schemas'
 import type { PathOrFileDescriptor, PathLike, Dirent, Stats } from 'node:fs' // Import necessary types
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import * as pathUtils from '../../utils/path-utils'

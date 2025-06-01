@@ -1,6 +1,6 @@
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import { agentCoderRoutes } from './routes/agent-coder-routes' // Import the new routes
 import { chatRoutes } from './routes/chat-routes'
 import { genAiRoutes } from './routes/gen-ai-routes'
@@ -14,7 +14,7 @@ import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { corsConfig } from './constants/server-config'
 import { swaggerUI } from '@hono/swagger-ui'
-import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas'
+import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 
 // Helper to format Zod errors for more readable responses
 const formatZodErrors = (error: z.ZodError) => {

@@ -10,8 +10,5 @@
     "dev:watch": "DEV=true bun --watch server.ts",
     "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh"
   },
-  "type": "module",
-  "dependencies": {
-    "@bnk/kv-store": "^1.0.1"
-  }
+  "type": "module"
 }

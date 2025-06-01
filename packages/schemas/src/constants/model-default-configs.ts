@@ -1,5 +1,4 @@
-import type { ModelOptions } from '../schemas/chat.schemas'
-import type { APIProviders } from '../schemas/provider-key.schemas'
+import type { ModelOptions, APIProviders } from '@octoprompt/schemas'
 
 export type ModelOptionsWithProvider = ModelOptions & {
   provider: APIProviders

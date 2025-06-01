@@ -2,7 +2,7 @@
 import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises'
-import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from 'shared/src/schemas/chat.schemas'
+import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from '@octoprompt/schemas'
 import { randomUUID } from 'crypto' // Assuming access to crypto
 import { normalizeToUnixMs } from '../parse-timestamp'
 

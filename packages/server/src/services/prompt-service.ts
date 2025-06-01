@@ -6,9 +6,9 @@ import {
   PromptSchema,
   PromptProject,
   PromptProjectSchema
-} from 'shared/src/schemas/prompt.schemas'
+} from '@octoprompt/schemas'
 
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import { ZodError } from 'zod'
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
