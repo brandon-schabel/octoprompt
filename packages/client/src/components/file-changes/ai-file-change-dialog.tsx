@@ -6,6 +6,7 @@ import { Textarea } from '@ui'
 import { Alert, AlertDescription } from '@ui'
 import { LoaderPinwheel } from 'lucide-react'
 import { DiffViewer } from './diff-viewer'
+import { MonacoDiffViewer } from '@/components/monaco-diff-viewer'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 interface AIFileChangeDialogProps {
@@ -13,6 +14,44 @@ interface AIFileChangeDialogProps {
   onOpenChange: (open: boolean) => void
   filePath?: string
   onSuccess?: () => void
+}
+
+// Helper function to get language by file extension
+function getLanguageByFilePath(filePath: string): string {
+  const extension = '.' + filePath.split('.').pop()?.toLowerCase()
+  const languageMap: Record<string, string> = {
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.json': 'json',
+    '.html': 'html',
+    '.css': 'css',
+    '.scss': 'scss',
+    '.less': 'less',
+    '.md': 'markdown',
+    '.py': 'python',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.c': 'c',
+    '.cs': 'csharp',
+    '.php': 'php',
+    '.rb': 'ruby',
+    '.go': 'go',
+    '.rs': 'rust',
+    '.kt': 'kotlin',
+    '.swift': 'swift',
+    '.yaml': 'yaml',
+    '.yml': 'yaml',
+    '.xml': 'xml',
+    '.sql': 'sql',
+    '.sh': 'shell',
+    '.bash': 'shell',
+    '.zsh': 'shell',
+    '.dockerfile': 'dockerfile',
+    '.txt': 'plaintext'
+  }
+  return languageMap[extension] || 'plaintext'
 }
 
 export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSuccess }: AIFileChangeDialogProps) {
@@ -94,7 +133,12 @@ export function AIFileChangeDialog({ open, onOpenChange, filePath = '', onSucces
                   <LoaderPinwheel />
                 </div>
               ) : changeResponse ? (
-                <DiffViewer oldValue={changeResponse.originalContent} newValue={changeResponse.suggestedContent} />
+                <MonacoDiffViewer
+                  original={changeResponse.originalContent}
+                  modified={changeResponse.suggestedContent}
+                  language={getLanguageByFilePath(filePath)}
+                  height="400px"
+                />
               ) : (
                 <Alert variant='destructive'>
                   <AlertDescription>Failed to load the suggested changes.</AlertDescription>

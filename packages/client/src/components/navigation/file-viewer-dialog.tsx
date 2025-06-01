@@ -5,6 +5,7 @@ import { Edit, Save, XCircle, Copy, FileText, FileCode } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
+import { MonacoEditorWrapper } from '@/components/monaco-editor-wrapper'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
@@ -22,19 +23,40 @@ type FileViewerDialogProps = {
 
 function getLanguageByExtension(extension?: string): string {
   if (!extension) return 'plaintext'
-  switch (extension) {
-    case '.ts':
-    case '.tsx':
-      return 'typescript'
-    case '.js':
-    case '.jsx':
-      return 'javascript'
-    case '.md':
-    case '.txt':
-      return 'markdown'
-    default:
-      return 'plaintext'
+  const ext = extension.toLowerCase()
+  const languageMap: Record<string, string> = {
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.json': 'json',
+    '.html': 'html',
+    '.css': 'css',
+    '.scss': 'scss',
+    '.less': 'less',
+    '.md': 'markdown',
+    '.py': 'python',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.c': 'c',
+    '.cs': 'csharp',
+    '.php': 'php',
+    '.rb': 'ruby',
+    '.go': 'go',
+    '.rs': 'rust',
+    '.kt': 'kotlin',
+    '.swift': 'swift',
+    '.yaml': 'yaml',
+    '.yml': 'yaml',
+    '.xml': 'xml',
+    '.sql': 'sql',
+    '.sh': 'shell',
+    '.bash': 'shell',
+    '.zsh': 'shell',
+    '.dockerfile': 'dockerfile',
+    '.txt': 'plaintext'
   }
+  return languageMap[ext] || 'plaintext'
 }
 
 export function FileViewerDialog({
@@ -188,11 +210,15 @@ export function FileViewerDialog({
               </SyntaxHighlighter>
             )
           ) : (
-            <Textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              className='w-full h-full min-h-[300px]'
-            />
+            <div className="flex-1 min-h-0 relative">
+              <MonacoEditorWrapper
+                value={editedContent}
+                onChange={(value) => setEditedContent(value || '')}
+                language={getLanguageByExtension(viewedFile?.extension)}
+                height="300px"
+                onSave={saveFileEdits}
+              />
+            </div>
           )}
         </div>
         <DialogFooter className='mt-4 flex justify-between'>
