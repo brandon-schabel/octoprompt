@@ -1,7 +1,7 @@
 import { ApiError } from '@octoprompt/shared'
 import { ProjectFile } from '@octoprompt/schemas'
 import { getProjectById, getProjectFiles } from '@/services/project-service'
-import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter'
+import { buildCombinedFileSummariesXml } from '@octoprompt/shared'
 
 const buildProjectSummary = (includedFiles: ProjectFile[]) => {
   // Build the combined summaries using your summary-formatter

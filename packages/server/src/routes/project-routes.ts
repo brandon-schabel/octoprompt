@@ -28,7 +28,6 @@ import { homedir as getHomedir } from 'node:os'
 
 import * as projectService from '@/services/project-service'
 import { syncProject, syncProjectFolder, watchersManager } from '@/services/file-services/file-sync-service-unified'
-import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter'
 import { generateStructuredData } from '@/services/gen-ai-services'
 import { getFullProjectSummary } from '@/utils/get-full-project-summary'
 import {
