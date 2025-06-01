@@ -57,7 +57,7 @@ export function FileUploadInput({
           }
         })
         
-        errors.forEach(error => toast.error(error))
+        errors.forEach((error: string) => toast.error(error))
       })
     }
     
@@ -184,7 +184,7 @@ export function FileUploadButton({
           }
         })
         
-        errors.forEach(error => toast.error(error))
+        errors.forEach((error: string) => toast.error(error))
       })
     }
     
