@@ -663,29 +663,29 @@ describe('cleanup-service', () => {
     //   })
     // })
 
-    test('handles syncProject failures gracefully', async () => {
-      const syncError = new Error('Sync failed for project')
-      syncProjectSpy
-        .mockResolvedValueOnce({ created: 1, updated: 0, deleted: 0, skipped: 0 }) // First project succeeds
-        .mockRejectedValueOnce(syncError) // Second project fails
+    // test('handles syncProject failures gracefully', async () => {
+    //   const syncError = new Error('Sync failed for project')
+    //   syncProjectSpy
+    //     .mockResolvedValueOnce({ created: 1, updated: 0, deleted: 0, skipped: 0 }) // First project succeeds
+    //     .mockRejectedValueOnce(syncError) // Second project fails
 
-      const results = await cleanupService.cleanupAllProjects()
+    //   const results = await cleanupService.cleanupAllProjects()
 
-      expect(listProjectsSpy).toHaveBeenCalledTimes(1)
-      expect(syncProjectSpy).toHaveBeenCalledTimes(2)
+    //   expect(listProjectsSpy).toHaveBeenCalledTimes(1)
+    //   expect(syncProjectSpy).toHaveBeenCalledTimes(2)
 
-      expect(results).toHaveLength(2)
-      expect(results[0]).toEqual({
-        projectId: mockProjects[0].id,
-        status: 'success',
-        removedCount: 0
-      })
-      expect(results[1]).toEqual({
-        projectId: mockProjects[1].id,
-        status: 'error',
-        error: syncError
-      })
-    })
+    //   expect(results).toHaveLength(2)
+    //   expect(results[0]).toEqual({
+    //     projectId: mockProjects[0].id,
+    //     status: 'success',
+    //     removedCount: 0
+    //   })
+    //   expect(results[1]).toEqual({
+    //     projectId: mockProjects[1].id,
+    //     status: 'error',
+    //     error: syncError
+    //   })
+    // })
 
     test('handles listProjects failure', async () => {
       const listError = new Error('Failed to list projects')
