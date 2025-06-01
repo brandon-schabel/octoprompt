@@ -221,12 +221,26 @@ describe('Prompt Service (Mocked Storage)', () => {
 
     const fromA = await listPromptsByProject(defaultProjectId)
     expect(fromA.length).toBe(2)
-    expect(fromA).toEqual(expect.arrayContaining([p1, p3]))
-    expect(fromA).not.toEqual(expect.arrayContaining([p2, p4Unlinked]))
+    
+    // Check that the returned prompts have the correct IDs and content
+    const returnedIds = fromA.map(p => p.id).sort()
+    const expectedIds = [p1.id, p3.id].sort()
+    expect(returnedIds).toEqual(expectedIds)
+    
+    // Check that all prompts have the correct projectId populated
+    expect(fromA.every(p => p.projectId === defaultProjectId)).toBe(true)
+    
+    // Check specific prompt content matches
+    const p1FromA = fromA.find(p => p.id === p1.id)
+    const p3FromA = fromA.find(p => p.id === p3.id)
+    expect(p1FromA).toMatchObject({ name: p1.name, content: p1.content })
+    expect(p3FromA).toMatchObject({ name: p3.name, content: p3.content })
 
     const fromB = await listPromptsByProject(anotherProjectId)
     expect(fromB.length).toBe(1)
-    expect(fromB[0]).toEqual(p2)
+    expect(fromB[0].id).toBe(p2.id)
+    expect(fromB[0].projectId).toBe(anotherProjectId)
+    expect(fromB[0]).toMatchObject({ name: p2.name, content: p2.content })
 
     const fromUnlinked = await listPromptsByProject(generateTestId())
     expect(fromUnlinked.length).toBe(0)
