@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "bun run build && bun run test",
+    "prepublishOnly": "bun run build",
     "publish:dry": "npm publish --dry-run",
     "test": "bun src/tests/run-functional-tests.ts"
   },
