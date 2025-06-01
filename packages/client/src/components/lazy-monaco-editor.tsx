@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Skeleton } from '@ui'
 import { Textarea } from '@ui'
 
