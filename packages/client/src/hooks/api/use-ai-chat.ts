@@ -65,7 +65,7 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
 
   // Enhanced `sendMessage` function using `append`
   const sendMessage = useCallback(
-    async (messageContent: string, modelSettings?: AiSdkOptions) => {
+    async (messageContent: string, modelSettings?: AiSdkOptions & { currentMessageAttachments?: any[] }) => {
       if (!messageContent.trim()) return
 
       // unix timestamp in milliseconds
@@ -103,8 +103,8 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
         // Optional fields:
         tempId: userMessageId, // Optional: Useful for correlating requests/responses
         ...(systemMessage && { systemMessage: systemMessage }), // Include systemMessage from props if provided
-        // options: sdkOptions,
-        ...(sdkOptions ? { options: sdkOptions } : {})
+        ...(sdkOptions ? { options: sdkOptions } : {}),
+        ...(modelSettings?.currentMessageAttachments && { currentMessageAttachments: modelSettings.currentMessageAttachments })
       }
 
       setInput('') // Clear input field immediately
