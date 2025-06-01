@@ -11,7 +11,8 @@
     "build-binaries": "bun run scripts/build-binaries.ts",
     "format": "prettier --write .",
     "test:server": "cd packages/server && bun run test",
-    "test:shared": "cd packages/shared && bun run test"
+    "test:shared": "cd packages/shared && bun run test",
+    "test:schemas": "cd packages/schemas && bun run test"
   },
   "workspaces": [
     "packages/*"
@@ -43,7 +44,9 @@
     "ollama-ai-provider": "^1.2.0",
     "openai": "^4.98.0",
     "picomatch": "^4.0.2",
-    "shared": "workspace:*",
+    "@octoprompt/shared": "workspace:*",
+    "@octoprompt/schemas": "workspace:*",
+    "@octoprompt/api-client": "workspace:*",
     "zod": "^3.24.4",
     "zod-validation-error": "^3.4.1"
   },

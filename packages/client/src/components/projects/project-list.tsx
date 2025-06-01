@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@ui'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@ui'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
-import { Project } from 'shared/src/schemas/project.schemas'
+import { Project } from '@octoprompt/schemas'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
 interface ProjectListProps {

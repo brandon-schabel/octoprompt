@@ -5,7 +5,7 @@ import {
     TicketReadSchema,
     TicketTaskReadSchema,
     TicketFileReadSchema,
-} from 'shared/src/schemas/ticket.schemas'
+} from '@octoprompt/schemas'
 import { normalizeToUnixMs } from '../parse-timestamp'
 
 // Define the base directory for storing ticket data

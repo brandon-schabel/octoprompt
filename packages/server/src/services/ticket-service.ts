@@ -1,4 +1,5 @@
-import { ApiError, MEDIUM_MODEL_CONFIG } from 'shared'
+import { ApiError } from '@octoprompt/shared'
+import { MEDIUM_MODEL_CONFIG } from '@octoprompt/schemas'
 import { getFullProjectSummary } from '@/utils/get-full-project-summary'
 import { z, ZodError } from 'zod'
 import {
@@ -12,9 +13,14 @@ import {
   type TicketFile,
   TaskSuggestions,
   TaskSuggestionsZodSchema
-} from 'shared/src/schemas/ticket.schemas'
+} from '@octoprompt/schemas'
 import { projectStorage } from '@/utils/storage/project-storage'
-import { ticketStorage, type TicketsStorage, type TicketTasksStorage, type TicketFilesStorage } from '@/utils/storage/ticket-storage'
+import {
+  ticketStorage,
+  type TicketsStorage,
+  type TicketTasksStorage,
+  type TicketFilesStorage
+} from '@/utils/storage/ticket-storage'
 import { generateStructuredData } from './gen-ai-services'
 import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
@@ -84,8 +90,8 @@ export async function fetchTaskSuggestionsForTicket(
 
 export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
   let ticketId = ticketStorage.generateId()
-  const initialTicketId = ticketId;
-  let incrementCount = 0;
+  const initialTicketId = ticketId
+  let incrementCount = 0
   const now = normalizeToUnixMs(new Date())
 
   const newTicketData: Omit<Ticket, 'created' | 'updated'> & { created: number; updated: number } = {
@@ -105,15 +111,17 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
 
     const allTickets = await ticketStorage.readTickets()
     while (allTickets[ticketId.toString()]) {
-      ticketId++;
-      incrementCount++;
+      ticketId++
+      incrementCount++
     }
     if (incrementCount > 0) {
-      console.log(`Ticket ID ${initialTicketId} was taken. Found available ID ${ticketId} after ${incrementCount} increment(s).`);
-      newTicketData.id = ticketId;
+      console.log(
+        `Ticket ID ${initialTicketId} was taken. Found available ID ${ticketId} after ${incrementCount} increment(s).`
+      )
+      newTicketData.id = ticketId
     }
 
-    const finalValidatedTicket = TicketReadSchema.parse(newTicketData);
+    const finalValidatedTicket = TicketReadSchema.parse(newTicketData)
     allTickets[finalValidatedTicket.id.toString()] = finalValidatedTicket
     await ticketStorage.writeTickets(allTickets)
     await ticketStorage.writeTicketTasks(finalValidatedTicket.id, {})
@@ -123,7 +131,12 @@ export async function createTicket(data: CreateTicketBody): Promise<Ticket> {
   } catch (error) {
     if (error instanceof ZodError) {
       console.error(`Validation failed for new ticket data: ${error.message}`, error.flatten().fieldErrors)
-      throw new ApiError(500, `Internal validation error creating ticket.`, 'TICKET_VALIDATION_ERROR', error.flatten().fieldErrors)
+      throw new ApiError(
+        500,
+        `Internal validation error creating ticket.`,
+        'TICKET_VALIDATION_ERROR',
+        error.flatten().fieldErrors
+      )
     }
     if (error instanceof ApiError) throw error
     throw new ApiError(500, `Failed to create ticket.`, 'CREATE_TICKET_FAILED', { originalError: error })
@@ -145,17 +158,17 @@ async function updateTicketTimestamp(ticketId: number, allTickets: TicketsStorag
     allTickets[ticketKey] = {
       ...allTickets[ticketKey],
       updated: normalizeToUnixMs(new Date())
-    };
+    }
   }
-  return allTickets;
+  return allTickets
 }
 
 export async function listTicketsByProject(projectId: number, statusFilter?: string): Promise<Ticket[]> {
   const allTickets = await ticketStorage.readTickets()
-  let tickets = Object.values(allTickets).filter(t => t.projectId === projectId)
+  let tickets = Object.values(allTickets).filter((t) => t.projectId === projectId)
 
   if (statusFilter) {
-    tickets = tickets.filter(t => t.status === statusFilter)
+    tickets = tickets.filter((t) => t.status === statusFilter)
   }
 
   tickets.sort((a, b) => b.created - a.created)
@@ -195,15 +208,20 @@ export async function updateTicket(ticketId: number, data: UpdateTicketBody): Pr
   try {
     const dataToValidate = {
       ...updatedData,
-      created: existingTicket.created,
-    };
+      created: existingTicket.created
+    }
     const validatedTicket = TicketReadSchema.parse(dataToValidate)
     allTickets[ticketKey] = validatedTicket
     await ticketStorage.writeTickets(allTickets)
     return validatedTicket
   } catch (error) {
     if (error instanceof ZodError) {
-      throw new ApiError(500, `Validation failed updating ticket ${ticketId}.`, 'TICKET_VALIDATION_ERROR', error.flatten().fieldErrors)
+      throw new ApiError(
+        500,
+        `Validation failed updating ticket ${ticketId}.`,
+        'TICKET_VALIDATION_ERROR',
+        error.flatten().fieldErrors
+      )
     }
     if (error instanceof ApiError) throw error
     throw new ApiError(500, `Failed to update ticket ${ticketId}.`, 'UPDATE_TICKET_FAILED', { originalError: error })
@@ -225,39 +243,39 @@ export async function deleteTicket(ticketId: number): Promise<void> {
 export async function linkFilesToTicket(ticketId: number, fileIds: number[]): Promise<TicketFile[]> {
   const ticket = await getTicketById(ticketId)
 
-  const projectFilesData = await projectStorage.readProjectFiles(ticket.projectId);
+  const projectFilesData = await projectStorage.readProjectFiles(ticket.projectId)
   for (const fileId of fileIds) {
     if (!projectFilesData[fileId.toString()]) {
       throw new ApiError(
         400,
         `File with ID ${fileId} not found in project ${ticket.projectId} for linking.`,
         'FILE_NOT_FOUND_IN_PROJECT'
-      );
+      )
     }
   }
 
   let ticketLinks = await ticketStorage.readTicketFiles(ticketId)
-  const existingFileIds = new Set(ticketLinks.map(link => link.fileId))
+  const existingFileIds = new Set(ticketLinks.map((link) => link.fileId))
 
-  let newLinksMade = false;
+  let newLinksMade = false
   for (const fileId of fileIds) {
     if (!existingFileIds.has(fileId)) {
       ticketLinks.push({ ticketId, fileId })
-      newLinksMade = true;
+      newLinksMade = true
     }
   }
 
   if (newLinksMade) {
     await ticketStorage.writeTicketFiles(ticketId, ticketLinks)
-    let allTickets = await ticketStorage.readTickets();
-    allTickets = await updateTicketTimestamp(ticketId, allTickets);
-    await ticketStorage.writeTickets(allTickets);
+    let allTickets = await ticketStorage.readTickets()
+    allTickets = await updateTicketTimestamp(ticketId, allTickets)
+    await ticketStorage.writeTickets(allTickets)
   }
   return ticketLinks
 }
 
 export async function getTicketFiles(ticketId: number): Promise<TicketFile[]> {
-  await getTicketById(ticketId);
+  await getTicketById(ticketId)
   const ticketLinks = await ticketStorage.readTicketFiles(ticketId)
   return ticketLinks
 }
@@ -292,7 +310,7 @@ export async function getTicketsWithFiles(projectId: number): Promise<(Ticket & 
     const links = await ticketStorage.readTicketFiles(ticket.id)
     results.push({
       ...ticket,
-      fileIds: links.map(link => link.fileId)
+      fileIds: links.map((link) => link.fileId)
     })
   }
   return results
@@ -302,14 +320,13 @@ export async function createTask(ticketId: number, content: string): Promise<Tic
   await getTicketById(ticketId)
 
   let taskId = ticketStorage.generateId()
-  const initialTaskId = taskId;
-  let incrementCount = 0;
+  const initialTaskId = taskId
+  let incrementCount = 0
   const now = normalizeToUnixMs(new Date())
 
   let ticketTasks = await ticketStorage.readTicketTasks(ticketId)
-  const orderIndex = Object.keys(ticketTasks).length > 0
-    ? Math.max(...Object.values(ticketTasks).map(t => t.orderIndex)) + 1
-    : 1;
+  const orderIndex =
+    Object.keys(ticketTasks).length > 0 ? Math.max(...Object.values(ticketTasks).map((t) => t.orderIndex)) + 1 : 1
 
   const newTaskData: TicketTask = {
     id: taskId,
@@ -323,34 +340,43 @@ export async function createTask(ticketId: number, content: string): Promise<Tic
 
   try {
     while (ticketTasks[taskId.toString()]) {
-      taskId++;
-      incrementCount++;
+      taskId++
+      incrementCount++
     }
     if (incrementCount > 0) {
-      console.log(`Task ID ${initialTaskId} for ticket ${ticketId} was taken. Found available ID ${taskId} after ${incrementCount} increment(s).`);
-      newTaskData.id = taskId;
+      console.log(
+        `Task ID ${initialTaskId} for ticket ${ticketId} was taken. Found available ID ${taskId} after ${incrementCount} increment(s).`
+      )
+      newTaskData.id = taskId
     }
 
     const validatedTask = TicketTaskReadSchema.parse(newTaskData)
     ticketTasks[validatedTask.id.toString()] = validatedTask
     await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
 
-    let allTickets = await ticketStorage.readTickets();
-    allTickets = await updateTicketTimestamp(ticketId, allTickets);
-    await ticketStorage.writeTickets(allTickets);
+    let allTickets = await ticketStorage.readTickets()
+    allTickets = await updateTicketTimestamp(ticketId, allTickets)
+    await ticketStorage.writeTickets(allTickets)
 
     return validatedTask
   } catch (error) {
     if (error instanceof ZodError) {
-      throw new ApiError(500, `Validation failed creating task for ticket ${ticketId}.`, 'TASK_VALIDATION_ERROR', error.flatten().fieldErrors)
+      throw new ApiError(
+        500,
+        `Validation failed creating task for ticket ${ticketId}.`,
+        'TASK_VALIDATION_ERROR',
+        error.flatten().fieldErrors
+      )
     }
     if (error instanceof ApiError) throw error
-    throw new ApiError(500, `Failed to create task for ticket ${ticketId}.`, 'CREATE_TASK_FAILED', { originalError: error })
+    throw new ApiError(500, `Failed to create task for ticket ${ticketId}.`, 'CREATE_TASK_FAILED', {
+      originalError: error
+    })
   }
 }
 
 export async function getTasks(ticketId: number): Promise<TicketTask[]> {
-  await getTicketById(ticketId);
+  await getTicketById(ticketId)
   const ticketTasksData = await ticketStorage.readTicketTasks(ticketId)
   const tasks = Object.values(ticketTasksData)
   tasks.sort((a, b) => a.orderIndex - b.orderIndex)
@@ -369,9 +395,9 @@ export async function deleteTask(ticketId: number, taskId: number): Promise<void
   delete ticketTasks[taskKey]
   await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
 
-  let allTickets = await ticketStorage.readTickets();
-  allTickets = await updateTicketTimestamp(ticketId, allTickets);
-  await ticketStorage.writeTickets(allTickets);
+  let allTickets = await ticketStorage.readTickets()
+  allTickets = await updateTicketTimestamp(ticketId, allTickets)
+  await ticketStorage.writeTickets(allTickets)
 }
 
 // FIXED: Handle the updated reorder schema properly
@@ -403,12 +429,12 @@ export async function reorderTasks(
 
   if (changed) {
     await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
-    let allTickets = await ticketStorage.readTickets();
-    allTickets = await updateTicketTimestamp(ticketId, allTickets);
-    await ticketStorage.writeTickets(allTickets);
+    let allTickets = await ticketStorage.readTickets()
+    allTickets = await updateTicketTimestamp(ticketId, allTickets)
+    await ticketStorage.writeTickets(allTickets)
   }
 
-  return Object.values(ticketTasks).sort((a, b) => a.orderIndex - b.orderIndex);
+  return Object.values(ticketTasks).sort((a, b) => a.orderIndex - b.orderIndex)
 }
 
 export async function autoGenerateTasksFromOverview(ticketId: number): Promise<TicketTask[]> {
@@ -419,14 +445,13 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
   const insertedTasks: TicketTask[] = []
   if (titles.length > 0) {
     let ticketTasks = await ticketStorage.readTicketTasks(ticketId)
-    let currentMaxOrder = Object.keys(ticketTasks).length > 0
-      ? Math.max(...Object.values(ticketTasks).map(t => t.orderIndex))
-      : 0;
-    const now = normalizeToUnixMs(new Date());
+    let currentMaxOrder =
+      Object.keys(ticketTasks).length > 0 ? Math.max(...Object.values(ticketTasks).map((t) => t.orderIndex)) : 0
+    const now = normalizeToUnixMs(new Date())
 
     for (const content of titles) {
-      currentMaxOrder++;
-      const taskId = ticketStorage.generateId();
+      currentMaxOrder++
+      const taskId = ticketStorage.generateId()
       const newTaskData: TicketTask = {
         id: taskId,
         ticketId: ticketId,
@@ -435,27 +460,30 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
         orderIndex: currentMaxOrder,
         created: now,
         updated: now
-      };
+      }
       try {
-        const validatedTask = TicketTaskReadSchema.parse(newTaskData);
-        ticketTasks[taskId.toString()] = validatedTask;
-        insertedTasks.push(validatedTask);
+        const validatedTask = TicketTaskReadSchema.parse(newTaskData)
+        ticketTasks[taskId.toString()] = validatedTask
+        insertedTasks.push(validatedTask)
       } catch (error) {
         if (error instanceof ZodError) {
-          console.error(`Validation failed for auto-generated task '${content}': ${error.message}`, error.flatten().fieldErrors);
+          console.error(
+            `Validation failed for auto-generated task '${content}': ${error.message}`,
+            error.flatten().fieldErrors
+          )
         } else {
-          throw error;
+          throw error
         }
       }
     }
     if (insertedTasks.length > 0) {
-      await ticketStorage.writeTicketTasks(ticketId, ticketTasks);
-      let allTickets = await ticketStorage.readTickets();
-      allTickets = await updateTicketTimestamp(ticketId, allTickets);
-      await ticketStorage.writeTickets(allTickets);
+      await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
+      let allTickets = await ticketStorage.readTickets()
+      allTickets = await updateTicketTimestamp(ticketId, allTickets)
+      await ticketStorage.writeTickets(allTickets)
     }
   }
-  return insertedTasks;
+  return insertedTasks
 }
 
 export async function listTicketsWithTaskCount(
@@ -471,7 +499,7 @@ export async function listTicketsWithTaskCount(
     results.push({
       ...ticket,
       taskCount: tasksArray.length,
-      completedTaskCount: tasksArray.filter(t => t.done).length
+      completedTaskCount: tasksArray.filter((t) => t.done).length
     })
   }
   return results
@@ -481,7 +509,7 @@ export async function getTasksForTickets(ticketIds: number[]): Promise<Record<nu
   if (!ticketIds.length) return {}
 
   const tasksByTicket: Record<number, TicketTask[]> = {}
-  const allTickets = await ticketStorage.readTickets();
+  const allTickets = await ticketStorage.readTickets()
 
   for (const ticketId of ticketIds) {
     if (allTickets[ticketId.toString()]) {
@@ -519,7 +547,7 @@ export async function getTicketWithSuggestedFiles(
   try {
     if (ticket.suggestedFileIds) {
       if (Array.isArray(ticket.suggestedFileIds)) {
-        parsedFileIds = ticket.suggestedFileIds.filter(id => typeof id === 'number');
+        parsedFileIds = ticket.suggestedFileIds.filter((id) => typeof id === 'number')
       }
     }
   } catch (e) {
@@ -564,21 +592,26 @@ export async function updateTask(
   if (changed) {
     updatedTask.updated = normalizeToUnixMs(new Date())
     try {
-      const validatedTask = TicketTaskReadSchema.parse(updatedTask);
-      ticketTasks[taskKey] = validatedTask;
+      const validatedTask = TicketTaskReadSchema.parse(updatedTask)
+      ticketTasks[taskKey] = validatedTask
       await ticketStorage.writeTicketTasks(ticketId, ticketTasks)
 
       // Update ticket timestamp
-      let allTickets = await ticketStorage.readTickets();
-      allTickets = await updateTicketTimestamp(ticketId, allTickets);
-      await ticketStorage.writeTickets(allTickets);
+      let allTickets = await ticketStorage.readTickets()
+      allTickets = await updateTicketTimestamp(ticketId, allTickets)
+      await ticketStorage.writeTickets(allTickets)
 
       return validatedTask
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ApiError(500, `Validation failed updating task ${taskId}.`, 'TASK_VALIDATION_ERROR', error.flatten().fieldErrors)
+        throw new ApiError(
+          500,
+          `Validation failed updating task ${taskId}.`,
+          'TASK_VALIDATION_ERROR',
+          error.flatten().fieldErrors
+        )
       }
-      throw error;
+      throw error
     }
   }
 
@@ -593,12 +626,10 @@ export async function suggestFilesForTicket(
 
   try {
     const projectFilesMap = await projectStorage.readProjectFiles(ticket.projectId)
-    const projectFileIdsAsNumbers = Object.keys(projectFilesMap).map(id => parseInt(id, 10))
+    const projectFileIdsAsNumbers = Object.keys(projectFilesMap).map((id) => parseInt(id, 10))
 
     if (projectFileIdsAsNumbers.length === 0) {
-      console.warn(
-        `[TicketService] suggestFilesForTicket: No project files found for project ${ticket.projectId}.`
-      )
+      console.warn(`[TicketService] suggestFilesForTicket: No project files found for project ${ticket.projectId}.`)
       return {
         recommendedFileIds: [],
         message: 'No files found in the project to suggest from.'
@@ -606,7 +637,7 @@ export async function suggestFilesForTicket(
     }
 
     const recommendedFileIds = projectFileIdsAsNumbers.slice(0, Math.min(5, projectFileIdsAsNumbers.length))
-    const combinedSummaries = `Placeholder summary for files in project ${ticket.projectId} related to ticket: ${ticket.title}`;
+    const combinedSummaries = `Placeholder summary for files in project ${ticket.projectId} related to ticket: ${ticket.title}`
 
     return {
       recommendedFileIds,

@@ -205,5 +205,13 @@ TicketBase = TicketRead
 TicketTaskBase = TicketTaskRead
 TicketFileBase = TicketFileRead
 
+class TicketResponseSchema(BaseModel):
+    success: Literal[True] = True
+    ticket: TicketRead
+
+class TaskResponseSchema(BaseModel):
+    success: Literal[True] = True
+    task: TicketTaskRead
+
 # Need to import json for the suggested_file_ids validator
 import json

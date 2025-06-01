@@ -1,12 +1,12 @@
 import { createRoute, z } from '@hono/zod-openapi'
 
 import { createChatService } from '@/services/chat-service'
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import {
     ApiErrorResponseSchema,
     MessageRoleEnum,
     OperationSuccessResponseSchema
-} from 'shared/src/schemas/common.schemas'
+} from '@octoprompt/schemas'
 import {
     ChatListResponseSchema,
     ChatResponseSchema,
@@ -22,10 +22,10 @@ import {
     UpdateChatBodySchema,
     UpdateChatParamsSchema,
     AiChatStreamRequestSchema
-} from 'shared/src/schemas/chat.schemas'
+} from '@octoprompt/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { APIProviders, ProviderKey } from 'shared/src/schemas/provider-key.schemas'
+import { APIProviders, ProviderKey } from '@octoprompt/schemas'
 import { stream } from 'hono/streaming'
 import { handleChatMessage } from '@/services/gen-ai-services'
 

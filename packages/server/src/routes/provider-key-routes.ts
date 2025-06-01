@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi' //
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import {
   CreateProviderKeyBodySchema,
   UpdateProviderKeyBodySchema,
@@ -7,9 +7,9 @@ import {
   ProviderKeyResponseSchema,
   ProviderKeyListResponseSchema,
   ProviderKey
-} from 'shared/src/schemas/provider-key.schemas'
+} from '@octoprompt/schemas'
 import { providerKeyService } from '@/services/model-providers/provider-key-service'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
 
 const createProviderKeyRoute = createRoute({
   method: 'post',

@@ -1,0 +1,81 @@
+name: Schemas CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/schemas/**'
+    tags:
+      - 'schemas-v*.*.*'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/schemas/**'
+
+jobs:
+  schemas-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install schemas dependencies
+        run: cd packages/schemas && bun install
+
+      - name: Run schemas tests
+        run: |
+          echo "🧪 Running Schemas Package Tests..."
+          cd packages/schemas && bun run test
+
+      - name: Build schemas package
+        run: |
+          echo "🔨 Building Schemas Package..."
+          cd packages/schemas && bun run build
+
+      - name: Dry run publish (non-tag builds)
+        if: ${{ !startsWith(github.ref, 'refs/tags/schemas-v') }}
+        run: |
+          echo "🔍 Running publish dry run..."
+          cd packages/schemas && bun run publish:dry
+
+  publish-schemas:
+    needs: [schemas-ci]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/schemas-v')
+    permissions:
+      contents: read
+      id-token: write # Required for npm provenance
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js for npm publishing
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install schemas dependencies
+        run: cd packages/schemas && bun install
+
+      - name: Build schemas package
+        run: |
+          echo "🔨 Building Schemas Package for Release..."
+          cd packages/schemas && bun run build
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "📦 Publishing Schemas Package to npm..."
+          cd packages/schemas && npm publish --provenance

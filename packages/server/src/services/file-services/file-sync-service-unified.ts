@@ -1,21 +1,9 @@
-// packages/server/src/services/file-services/file-observer-and-sync-service.ts
-// This file combines logic from:
-// - file-change-watcher.ts
-// - file-sync-service.ts
-// - file-change-plugin.ts
-// - watchers-manager.ts
-// - cleanup-service.ts
-
-// -------------------------------------------------------------------------------- //
-// ----------------------------------- IMPORTS ------------------------------------ //
-// -------------------------------------------------------------------------------- //
-
-import { watch as fsWatch, FSWatcher, existsSync as fsLibExistsSync } from 'fs' // fs.watch for watching, fs.existsSync for inferChangeType
+import { watch as fsWatch, FSWatcher, existsSync as fsLibExistsSync } from 'fs'
 import { join, extname, resolve as pathResolve, relative, basename } from 'node:path'
-import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs' // node:fs for file system operations
+import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs'
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '@/utils/path-utils'
-import { Project, ProjectFile } from 'shared/src/schemas/project.schemas'
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from 'shared/src/constants/file-sync-options'
+import { Project, ProjectFile } from '@octoprompt/schemas'
+import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
 import ignorePackage, { Ignore } from 'ignore'
 import {
   getProjectFiles,
@@ -23,9 +11,9 @@ import {
   bulkUpdateProjectFiles,
   bulkDeleteProjectFiles,
   FileSyncData, // Interface from project-service
-  listProjects,
-  summarizeSingleFile
+  listProjects
 } from '@/services/project-service' // Adjusted path assuming this file is in services/file-services/
+import { summarizeSingleFile } from '@/services/agents/summarize-files-agent'
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
@@ -252,7 +240,7 @@ export function computeChecksum(content: string): string {
  * @returns True if valid, false otherwise.
  */
 export function isValidChecksum(checksum: string | null | undefined): boolean {
-  return typeof checksum === 'string' && /^[a-f0-9]{64}$/.test(checksum)
+  return typeof checksum === 'string' && /^[a-f0-9]{64}$/i.test(checksum)
 }
 
 const CRITICAL_EXCLUDED_DIRS = new Set([
@@ -616,7 +604,7 @@ export function createFileChangePlugin() {
 
       // Re-summarize the (created or modified) file
       // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
-      await summarizeSingleFile(updatedFile) // From project-service
+      await summarizeSingleFile(updatedFile) // From summarize-files-agent
       // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
     } catch (err) {
       console.error('[FileChangePlugin] Error handling file change:', err)

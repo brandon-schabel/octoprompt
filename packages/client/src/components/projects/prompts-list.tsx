@@ -22,7 +22,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { PromptSchema } from 'shared/src/schemas/prompt.schemas'
+import { PromptSchema } from '@octoprompt/schemas'
 
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import {
@@ -41,7 +41,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '@ui'
 import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { ProjectFile } from '@octoprompt/schemas'
 import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 
@@ -189,7 +189,12 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       meta: '',
       summary: '',
       summaryLastUpdated: new Date().getTime(),
-      checksum: ''
+      checksum: '',
+      isLatest: true,
+      nextId: null,
+      originalFileId: null,
+      prevId: null,
+      version: 1
     })
   }
 
@@ -462,7 +467,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       {/* A "viewer" dialog for prompts, if needed */}
       <FileViewerDialog
         open={!!viewedPrompt}
-        viewedFile={viewedPrompt}
+        viewedFile={viewedPrompt as ProjectFile}
         onClose={handleClosePromptViewer}
         onSave={handleSavePrompt}
       />

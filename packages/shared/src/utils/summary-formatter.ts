@@ -1,4 +1,4 @@
-import type { ProjectFile } from '../schemas/project.schemas'
+import type { ProjectFile } from '@octoprompt/schemas'
 
 /**
  * Helper function to escape characters unsafe for XML content.

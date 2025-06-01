@@ -7,8 +7,8 @@ import { useState } from 'react'
 import { FormatTokenCount } from '../format-token-count'
 import { Badge } from '@ui'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { ProjectFileMap } from 'shared/src/schemas/project.schemas'
-import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+import { ProjectFileMap } from '@octoprompt/schemas'
+import { estimateTokenCount } from '@octoprompt/shared'
 
 type SelectedFilesDrawerProps = {
   selectedFiles: number[]

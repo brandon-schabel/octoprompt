@@ -6,10 +6,31 @@ import {
   PromptSchema,
   PromptProject,
   PromptProjectSchema
-} from 'shared/src/schemas/prompt.schemas'
+} from '@octoprompt/schemas'
 
-import { ApiError } from 'shared'
+import { ApiError } from '@octoprompt/shared'
 import { ZodError } from 'zod'
+
+// Utility function to populate projectId on prompts from associations
+async function populatePromptProjectId(prompt: Prompt): Promise<Prompt> {
+  const promptProjects = await promptStorage.readPromptProjects()
+  const association = promptProjects.find((link) => link.promptId === prompt.id)
+  return {
+    ...prompt,
+    projectId: association?.projectId
+  }
+}
+
+// Utility function to populate projectId on multiple prompts
+async function populatePromptsProjectIds(prompts: Prompt[]): Promise<Prompt[]> {
+  const promptProjects = await promptStorage.readPromptProjects()
+  const associationMap = new Map(promptProjects.map((link) => [link.promptId, link.projectId]))
+
+  return prompts.map((prompt) => ({
+    ...prompt,
+    projectId: associationMap.get(prompt.id)
+  }))
+}
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
   let promptId = promptStorage.generateId()
@@ -24,16 +45,18 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
   }
 
   if (incrementCount > 0) {
-    console.log(`[PromptService] Prompt ID ${initialPromptId} was taken. Found available ID ${promptId} after ${incrementCount} increment(s).`)
+    console.log(
+      `[PromptService] Prompt ID ${initialPromptId} was taken. Found available ID ${promptId} after ${incrementCount} increment(s).`
+    )
   }
 
   const newPromptData: Prompt = {
     id: promptId,
     name: data.name,
     content: data.content,
+    projectId: data.projectId,
     created: now,
     updated: now
-    // projectId is not part of the core Prompt schema, handled by associations
   }
 
   try {
@@ -41,7 +64,12 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
   } catch (error) {
     if (error instanceof ZodError) {
       console.error(`Validation failed for new prompt data: ${error.message}`, error.flatten().fieldErrors)
-      throw new ApiError(500, `Internal validation error creating prompt.`, 'PROMPT_VALIDATION_ERROR', error.flatten().fieldErrors)
+      throw new ApiError(
+        500,
+        `Internal validation error creating prompt.`,
+        'PROMPT_VALIDATION_ERROR',
+        error.flatten().fieldErrors
+      )
     }
     throw error // Should not happen if data is constructed correctly
   }
@@ -53,7 +81,8 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
     await addPromptToProject(newPromptData.id, data.projectId)
   }
 
-  return newPromptData
+  // Return the prompt with populated projectId
+  return await populatePromptProjectId(newPromptData)
 }
 
 export async function addPromptToProject(promptId: number, projectId: number): Promise<void> {
@@ -65,7 +94,7 @@ export async function addPromptToProject(promptId: number, projectId: number): P
   let promptProjects = await promptStorage.readPromptProjects()
 
   // Check if association already exists
-  const existingLink = promptProjects.find(link => link.promptId === promptId && link.projectId === projectId)
+  const existingLink = promptProjects.find((link) => link.promptId === promptId && link.projectId === projectId)
   if (existingLink) {
     return // Association already exists, do nothing
   }
@@ -89,20 +118,22 @@ export async function addPromptToProject(promptId: number, projectId: number): P
   // This means a prompt is assigned to at most one project via the `createPrompt` or direct `addPromptToProject` flow.
 
   // To replicate: filter out existing links for this promptId, then add the new one.
-  promptProjects = promptProjects.filter(link => link.promptId !== promptId)
+  promptProjects = promptProjects.filter((link) => link.promptId !== promptId)
 
   let associationId = promptStorage.generateId()
-  const initialAssociationId = associationId;
-  let associationIncrementCount = 0;
+  const initialAssociationId = associationId
+  let associationIncrementCount = 0
 
   // Ensure the association ID itself is unique within the promptProjects array
-  while (promptProjects.some(link => link.id === associationId)) {
-    associationId++;
-    associationIncrementCount++;
+  while (promptProjects.some((link) => link.id === associationId)) {
+    associationId++
+    associationIncrementCount++
   }
 
   if (associationIncrementCount > 0) {
-    console.log(`[PromptService] Prompt-Project link ID ${initialAssociationId} was taken. Found available ID ${associationId} after ${associationIncrementCount} increment(s).`);
+    console.log(
+      `[PromptService] Prompt-Project link ID ${initialAssociationId} was taken. Found available ID ${associationId} after ${associationIncrementCount} increment(s).`
+    )
   }
 
   const newLink: PromptProject = {
@@ -116,7 +147,12 @@ export async function addPromptToProject(promptId: number, projectId: number): P
   } catch (error) {
     if (error instanceof ZodError) {
       console.error(`Validation failed for new prompt-project link: ${error.message}`, error.flatten().fieldErrors)
-      throw new ApiError(500, `Internal validation error linking prompt to project.`, 'PROMPT_LINK_VALIDATION_ERROR', error.flatten().fieldErrors)
+      throw new ApiError(
+        500,
+        `Internal validation error linking prompt to project.`,
+        'PROMPT_LINK_VALIDATION_ERROR',
+        error.flatten().fieldErrors
+      )
     }
     throw error
   }
@@ -129,7 +165,7 @@ export async function removePromptFromProject(promptId: number, projectId: numbe
   let promptProjects = await promptStorage.readPromptProjects()
   const initialLinkCount = promptProjects.length
 
-  promptProjects = promptProjects.filter(link => !(link.promptId === promptId && link.projectId === projectId))
+  promptProjects = promptProjects.filter((link) => !(link.promptId === promptId && link.projectId === projectId))
 
   if (promptProjects.length === initialLinkCount) {
     const allPrompts = await promptStorage.readPrompts()
@@ -153,7 +189,7 @@ export async function getPromptById(promptId: number): Promise<Prompt> {
   if (!found) {
     throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND')
   }
-  return found
+  return await populatePromptProjectId(found)
 }
 
 export async function listAllPrompts(): Promise<Prompt[]> {
@@ -161,25 +197,26 @@ export async function listAllPrompts(): Promise<Prompt[]> {
   const promptList = Object.values(allPromptsData)
   // Optional: sort if needed, e.g., by upated or name
   promptList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-  return promptList
+  return await populatePromptsProjectIds(promptList)
 }
 
 export const getPromptsByIds = async (promptIds: number[]): Promise<Prompt[]> => {
   const allPrompts = await promptStorage.readPrompts()
-  return promptIds.map(id => allPrompts[id]).filter(Boolean) as Prompt[]
+  const prompts = promptIds.map((id) => allPrompts[id]).filter(Boolean) as Prompt[]
+  return await populatePromptsProjectIds(prompts)
 }
 
 export async function listPromptsByProject(projectId: number): Promise<Prompt[]> {
   const promptProjects = await promptStorage.readPromptProjects()
-  const relevantPromptIds = promptProjects
-    .filter(link => link.projectId === projectId)
-    .map(link => link.promptId)
+  const relevantPromptIds = promptProjects.filter((link) => link.projectId === projectId).map((link) => link.promptId)
 
   if (relevantPromptIds.length === 0) {
     return []
   }
   const allPrompts = await promptStorage.readPrompts()
-  return relevantPromptIds.map(promptId => allPrompts[promptId]).filter(Boolean) as Prompt[] // filter(Boolean) to remove undefined if a link exists for a deleted prompt
+  const prompts = relevantPromptIds.map((promptId) => allPrompts[promptId]).filter(Boolean) as Prompt[]
+  // For prompts retrieved by project, we already know the projectId, so we can set it directly
+  return prompts.map((prompt) => ({ ...prompt, projectId }))
 }
 
 export async function updatePrompt(promptId: number, data: UpdatePromptBody): Promise<Prompt> {
@@ -202,14 +239,19 @@ export async function updatePrompt(promptId: number, data: UpdatePromptBody): Pr
   } catch (error) {
     if (error instanceof ZodError) {
       console.error(`Validation failed updating prompt ${promptId}: ${error.message}`, error.flatten().fieldErrors)
-      throw new ApiError(500, `Internal validation error updating prompt.`, 'PROMPT_VALIDATION_ERROR', error.flatten().fieldErrors)
+      throw new ApiError(
+        500,
+        `Internal validation error updating prompt.`,
+        'PROMPT_VALIDATION_ERROR',
+        error.flatten().fieldErrors
+      )
     }
     throw error
   }
 
   allPrompts[promptId] = updatedPromptData
   await promptStorage.writePrompts(allPrompts)
-  return updatedPromptData
+  return await populatePromptProjectId(updatedPromptData)
 }
 
 export async function deletePrompt(promptId: number): Promise<boolean> {
@@ -224,7 +266,7 @@ export async function deletePrompt(promptId: number): Promise<boolean> {
   // Also remove any associations for this prompt
   let promptProjects = await promptStorage.readPromptProjects()
   const initialLinkCount = promptProjects.length
-  promptProjects = promptProjects.filter(link => link.promptId !== promptId)
+  promptProjects = promptProjects.filter((link) => link.promptId !== promptId)
 
   if (promptProjects.length < initialLinkCount) {
     await promptStorage.writePromptProjects(promptProjects)
@@ -235,6 +277,5 @@ export async function deletePrompt(promptId: number): Promise<boolean> {
 
 export async function getPromptProjects(promptId: number): Promise<PromptProject[]> {
   const promptProjects = await promptStorage.readPromptProjects()
-  return promptProjects.filter(link => link.promptId === promptId)
+  return promptProjects.filter((link) => link.promptId === promptId)
 }
-

@@ -4,7 +4,7 @@ import { Button } from './ui/button'
 import { Plus } from 'lucide-react'
 import { useGetProject } from '@/hooks/api/use-projects-api'
 import { TicketListPanel } from '@/components/tickets/ticket-list-panel'
-import { TicketWithTasks } from 'shared/src/schemas/ticket.schemas'
+import { TicketWithTasks } from '@octoprompt/schemas'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 export function TicketsPage() {

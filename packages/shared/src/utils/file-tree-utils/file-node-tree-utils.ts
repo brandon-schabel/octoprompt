@@ -1,4 +1,4 @@
-import type { ProjectFile, ProjectFileMap } from '../../schemas/project.schemas'
+import type { ProjectFile, ProjectFileMap } from '@octoprompt/schemas'
 import type { TsconfigCache } from './import-resolver'
 
 export type FileNode = {

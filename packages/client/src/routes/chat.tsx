@@ -29,7 +29,7 @@ import {
   useDeleteMessage,
   useForkChatFromMessage
 } from '@/hooks/api/use-chat-api'
-import { Chat } from 'shared/src/schemas/chat.schemas'
+import { Chat } from '@octoprompt/schemas'
 import { cn } from '@/lib/utils'
 import {
   ScrollArea,
@@ -51,7 +51,7 @@ import {
 } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
+import { APIProviders } from '@octoprompt/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
@@ -215,7 +215,7 @@ export function ProviderModelSector({
   onModelChange,
   className
 }: ModelSelectorProps) {
-  const { data: modelsData, isPending: isLoadingModels } = useGetModels()
+  const { data: modelsData, isPending: isLoadingModels } = useGetModels(provider)
 
   const comboboxOptions = useMemo(
     () =>
@@ -995,7 +995,7 @@ function ChatPage() {
   const { settings: modelSettings, setModel } = useChatModelParams()
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
-  const { data: modelsData } = useGetModels()
+  const { data: modelsData } = useGetModels(provider)
   const { copyToClipboard } = useCopyClipboard()
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 

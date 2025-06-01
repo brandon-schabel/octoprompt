@@ -1,8 +1,7 @@
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
-import { AiSdkOptions } from 'shared/src/schemas/gen-ai.schemas'
+import { AiSdkOptions } from '@octoprompt/schemas'
 import { useCallback, useMemo } from 'react'
-import { modelsTempNotAllowed } from 'shared'
-import { APIProviders } from 'shared/src/schemas/provider-key.schemas'
+import { APIProviders, modelsTempNotAllowed } from '@octoprompt/schemas'
 
 type ModelParamMutationFn = (value: number) => void
 

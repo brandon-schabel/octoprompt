@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas'
+import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 
 const EnvironmentInfoSchema = z
   .object({

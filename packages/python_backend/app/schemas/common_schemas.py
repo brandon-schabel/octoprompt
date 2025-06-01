@@ -5,7 +5,7 @@ from enum import Enum
 class ErrorDetail(BaseModel):
     message: str = Field(..., example="An error occurred")
     code: Optional[str] = Field(None, example="ERROR_CODE")
-    details: Optional[Dict[str, Any]] = Field(None, default_factory=dict)
+    details: Dict[str, Any] = Field(default_factory=dict)
 
 class ApiErrorResponse(BaseModel):
     success: Literal[False] = False
