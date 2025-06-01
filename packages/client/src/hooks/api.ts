@@ -397,6 +397,22 @@ export function useRemoveSummaries() {
   })
 }
 
+export function useUpdateFileContent() {
+  const { invalidateProjectFiles } = useInvalidateProjects()
+
+  return useMutation({
+    mutationFn: ({ projectId, fileId, content }: { projectId: number; fileId: number; content: string }) =>
+      octoClient.projects.updateFileContent(projectId, fileId, content),
+    onSuccess: (_, { projectId }) => {
+      invalidateProjectFiles(projectId)
+      toast.success('File updated successfully')
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update file')
+    }
+  })
+}
+
 const PROMPT_KEYS = {
   all: ['prompts'] as const,
   list: () => [...PROMPT_KEYS.all, 'list'] as const,
