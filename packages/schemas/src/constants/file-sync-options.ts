@@ -12,6 +12,7 @@ export const ALLOWED_FILE_CONFIGS = [
   '.ini',
   '.conf',
   '.config',
+  '.env',
 
   // Web Development
   '.ts',
@@ -75,6 +76,7 @@ export const ALLOWED_FILE_CONFIGS = [
 
   // Environment & Version
   '.cursor',
+  '.env',
 
   // Docker & Container
   'Dockerfile',

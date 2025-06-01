@@ -240,7 +240,7 @@ export function computeChecksum(content: string): string {
  * @returns True if valid, false otherwise.
  */
 export function isValidChecksum(checksum: string | null | undefined): boolean {
-  return typeof checksum === 'string' && /^[a-f0-9]{64}$/.test(checksum)
+  return typeof checksum === 'string' && /^[a-f0-9]{64}$/i.test(checksum)
 }
 
 const CRITICAL_EXCLUDED_DIRS = new Set([

@@ -4,11 +4,10 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "test": "bun test src/",
-    "test:watch": "bun test --watch src/",
     "build": "tsc",
     "prepublishOnly": "bun run build && bun run test",
-    "publish:dry": "npm publish --dry-run"
+    "publish:dry": "npm publish --dry-run",
+    "test": "bun src/tests/run-functional-tests.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
