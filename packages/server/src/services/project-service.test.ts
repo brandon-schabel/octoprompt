@@ -11,13 +11,12 @@ import {
   createProjectFileRecord,
   bulkCreateProjectFiles,
   bulkUpdateProjectFiles,
-  summarizeSingleFile,
-  summarizeFiles,
   getFileVersions,
   getFileVersion,
   revertFileToVersion,
   type FileSyncData
 } from '@/services/project-service'
+import { summarizeSingleFile, summarizeFiles } from '@/services/agents/summarize-files-agent'
 import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody, FileVersion } from '@octoprompt/schemas'
 import type { ProjectsStorage, ProjectFilesStorage } from '@/utils/storage/project-storage'
 import { ApiError } from '@octoprompt/shared'

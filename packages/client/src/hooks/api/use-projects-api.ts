@@ -11,7 +11,8 @@ export {
   useSuggestFiles,
   useSummarizeProjectFiles,
   useRemoveSummaries,
-  useOptimizeUserInput
+  useOptimizeUserInput,
+  useInvalidateProjects
 } from '../api'
 
 // Type re-exports for backward compatibility

@@ -38,7 +38,8 @@ import {
   RemoveSummariesResponseSchema,
   FileSuggestionsZodSchema
 } from '@octoprompt/schemas'
-import { optimizeUserInput, summarizeFiles } from '@/services/project-service'
+import { optimizeUserInput } from '@/services/project-service'
+import { summarizeFiles } from '@/services/agents/summarize-files-agent'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
 
 // File operation schemas

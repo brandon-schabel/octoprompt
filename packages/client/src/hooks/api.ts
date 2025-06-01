@@ -1,22 +1,10 @@
-
 import { createOctoPromptClient, DataResponseSchema } from '@octoprompt/api-client'
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
 import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@octoprompt/schemas'
 
-import type {
-  CreateChatBody,
-  UpdateChatBody,
-  Chat,
-  ChatMessage,
-  AiChatStreamRequest
-} from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@octoprompt/schemas'
 
-import type {
-  CreatePromptBody,
-  UpdatePromptBody,
-  Prompt,
-  OptimizePromptRequest
-} from '@octoprompt/schemas'
+import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest } from '@octoprompt/schemas'
 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
@@ -80,12 +68,12 @@ export function useGetMessages(chatId: number) {
 
 // --- Mutation Hooks ---
 export function useCreateChat() {
-  const queryClient = useQueryClient()
+  const { invalidateAllChats } = useInvalidateChats()
 
   return useMutation({
     mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
     onSuccess: (newChat) => {
-      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.list() })
+      invalidateAllChats()
       toast.success('Chat created successfully')
     },
     onError: (error) => {
@@ -95,14 +83,14 @@ export function useCreateChat() {
 }
 
 export function useUpdateChat() {
-  const queryClient = useQueryClient()
+  const { invalidateAllChats, setChatDetail } = useInvalidateChats()
 
   return useMutation({
     mutationFn: ({ chatId, data }: { chatId: number; data: UpdateChatBody }) =>
       octoClient.chats.updateChat(chatId, data),
     onSuccess: ({ data: updatedChat }: DataResponseSchema<Chat>) => {
-      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.list() })
-      queryClient.setQueryData(CHAT_KEYS.detail(updatedChat.id), updatedChat as Chat)
+      invalidateAllChats()
+      setChatDetail(updatedChat)
       toast.success('Chat updated successfully')
     },
     onError: (error) => {
@@ -112,14 +100,13 @@ export function useUpdateChat() {
 }
 
 export function useDeleteChat() {
-  const queryClient = useQueryClient()
+  const { invalidateAllChats, removeChat } = useInvalidateChats()
 
   return useMutation({
     mutationFn: (chatId: number) => octoClient.chats.deleteChat(chatId),
     onSuccess: (_, chatId) => {
-      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.list() })
-      queryClient.removeQueries({ queryKey: CHAT_KEYS.detail(chatId) })
-      queryClient.removeQueries({ queryKey: CHAT_KEYS.messages(chatId) })
+      invalidateAllChats()
+      removeChat(chatId)
       toast.success('Chat deleted successfully')
     },
     onError: (error) => {
@@ -129,13 +116,13 @@ export function useDeleteChat() {
 }
 
 export function useForkChat() {
-  const queryClient = useQueryClient()
+  const { invalidateAllChats } = useInvalidateChats()
 
   return useMutation({
     mutationFn: ({ chatId, excludeMessageIds }: { chatId: number; excludeMessageIds?: number[] }) =>
       octoClient.chats.forkChat(chatId, { excludedMessageIds: excludeMessageIds || [] }),
     onSuccess: (newChat) => {
-      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.list() })
+      invalidateAllChats()
       toast.success('Chat forked successfully')
     },
     onError: (error) => {
@@ -145,7 +132,7 @@ export function useForkChat() {
 }
 
 export function useForkChatFromMessage() {
-  const queryClient = useQueryClient()
+  const { invalidateAllChats } = useInvalidateChats()
 
   return useMutation({
     mutationFn: ({
@@ -161,7 +148,7 @@ export function useForkChatFromMessage() {
         excludedMessageIds: excludedMessageIds || []
       }),
     onSuccess: (newChat) => {
-      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.list() })
+      invalidateAllChats()
       toast.success('Chat forked from message successfully')
     },
     onError: (error) => {
@@ -171,13 +158,13 @@ export function useForkChatFromMessage() {
 }
 
 export function useDeleteMessage() {
-  const queryClient = useQueryClient()
+  const { invalidateChatMessages } = useInvalidateChats()
 
   return useMutation({
     mutationFn: ({ chatId, messageId }: { chatId: number; messageId: number }) =>
       octoClient.chats.deleteMessage(chatId, messageId),
     onSuccess: (_, { chatId }) => {
-      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.messages(chatId) })
+      invalidateChatMessages(chatId)
       toast.success('Message deleted successfully')
     },
     onError: (error) => {
@@ -239,139 +226,6 @@ export function useAIChatV2({
   }
 }
 
-// --- Migration Examples ---
-
-// OLD WAY (Generated Types):
-/*
-export function useGetProjects() {
-  const queryOptions = getApiProjectsOptions({
-    baseUrl: SERVER_HTTP_ENDPOINT
-  })
-  return useQuery(queryOptions)
-}
-
-export function useCreateProject() {
-  const queryClient = useQueryClient()
-  const mutationOptions = postApiProjectsMutation()
-
-  return useMutation<PostApiProjectsResponse, PostApiProjectsError, CreateProjectInput>({
-    mutationFn: (body: CreateProjectInput) => {
-      const opts: Options<PostApiProjectsData> = { body }
-      return mutationOptions.mutationFn!(opts)
-    },
-    onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.lists() })
-    },
-    onError: (error) => commonErrorHandler(error as unknown as Error)
-  })
-}
-*/
-
-// NEW WAY (Client-Based):
-/*
-export function useGetProjects() {
-  return useQuery({
-    queryKey: PROJECT_KEYS.list(),
-    queryFn: () => octoClient.projects.listProjects(),
-    staleTime: 5 * 60 * 1000,
-  })
-}
-
-export function useCreateProject() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: (data: CreateProjectBody) => octoClient.projects.createProject(data),
-    onSuccess: (newProject: Project) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list() })
-      toast.success('Project created successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to create project')
-    },
-  })
-}
-*/
-
-// --- Usage Examples in Components ---
-
-/*
-// Example: Project List Component
-function ProjectList() {
-  const { data: projects, isLoading, error } = useGetProjects()
-  const createProject = useCreateProject()
-  const deleteProject = useDeleteProject()
-  
-  const handleCreate = async (formData: CreateProjectBody) => {
-    try {
-      await createProject.mutateAsync(formData)
-      // Success toast already handled in hook
-    } catch (error) {
-      // Error toast already handled in hook  
-    }
-  }
-  
-  const handleDelete = async (projectId: number) => {
-    if (confirm('Delete project?')) {
-      await deleteProject.mutateAsync(projectId)
-    }
-  }
-
-  if (isLoading) return <div>Loading...</div>
-  if (error) return <div>Error: {error.message}</div>
-  
-  return (
-    <div>
-      {projects?.map(project => (
-        <div key={project.id}>
-          <h3>{project.name}</h3>
-          <button onClick={() => handleDelete(project.id)}>
-            Delete
-          </button>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// Example: Chat Component  
-function ChatInterface({ chatId }: { chatId: number }) {
-  const {
-    messages,
-    sendMessage,
-    isLoading,
-    error
-  } = useAIChatV2({
-    chatId,
-    provider: 'openai',
-    model: 'gpt-4',
-    systemMessage: 'You are a helpful assistant'
-  })
-  
-  const handleSend = async (message: string) => {
-    try {
-      const stream = await sendMessage(message)
-      // Handle stream response
-      const reader = stream.getReader()
-      // ... stream handling logic
-    } catch (error) {
-      console.error('Failed to send message:', error)
-    }
-  }
-  
-  return (
-    <div>
-      <div>
-        {messages.map(msg => (
-          <div key={msg.id}>{msg.content}</div>
-        ))}
-      </div>
-      <MessageInput onSend={handleSend} disabled={isLoading} />
-    </div>
-  )
-}
-*/
-
 const PROJECT_KEYS = {
   all: ['projects'] as const,
   list: () => [...PROJECT_KEYS.all, 'list'] as const,
@@ -419,12 +273,12 @@ export function useGetProjectSummary(projectId: number) {
 
 // --- Mutation Hooks ---
 export function useCreateProject() {
-  const queryClient = useQueryClient()
+  const { invalidateAllProjects } = useInvalidateProjects()
 
   return useMutation({
     mutationFn: (data: CreateProjectBody) => octoClient.projects.createProject(data),
     onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list() })
+      invalidateAllProjects()
       toast.success('Project created successfully')
     },
     onError: (error) => {
@@ -434,14 +288,14 @@ export function useCreateProject() {
 }
 
 export function useUpdateProject() {
-  const queryClient = useQueryClient()
+  const { invalidateAllProjects, setProjectDetail } = useInvalidateProjects()
 
   return useMutation({
     mutationFn: ({ projectId, data }: { projectId: number; data: UpdateProjectBody }) =>
       octoClient.projects.updateProject(projectId, data),
     onSuccess: ({ data: updatedProject }: DataResponseSchema<Project>) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list() })
-      queryClient.setQueryData(PROJECT_KEYS.detail(updatedProject.id), updatedProject)
+      invalidateAllProjects()
+      setProjectDetail(updatedProject)
       toast.success('Project updated successfully')
     },
     onError: (error) => {
@@ -451,15 +305,17 @@ export function useUpdateProject() {
 }
 
 export function useDeleteProject() {
-  const queryClient = useQueryClient()
+  const { invalidateAllProjects, removeProject } = useInvalidateProjects()
+  const { removeProjectPrompts } = useInvalidatePrompts()
+  const { removeProjectTickets } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: (projectId: number) => octoClient.projects.deleteProject(projectId),
     onSuccess: (_, projectId) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list() })
-      queryClient.removeQueries({ queryKey: PROJECT_KEYS.detail(projectId) })
-      queryClient.removeQueries({ queryKey: PROJECT_KEYS.files(projectId) })
-      queryClient.removeQueries({ queryKey: PROJECT_KEYS.summary(projectId) })
+      invalidateAllProjects()
+      removeProject(projectId)
+      removeProjectPrompts(projectId)
+      removeProjectTickets(projectId)
       toast.success('Project deleted successfully')
     },
     onError: (error) => {
@@ -469,13 +325,13 @@ export function useDeleteProject() {
 }
 
 export function useSyncProject() {
-  const queryClient = useQueryClient()
+  const { invalidateProjectFiles, invalidateProject } = useInvalidateProjects()
 
   return useMutation({
     mutationFn: (projectId: number) => octoClient.projects.syncProject(projectId),
     onSuccess: (_, projectId) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(projectId) })
+      invalidateProjectFiles(projectId)
+      invalidateProject(projectId)
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to sync project')
@@ -484,13 +340,13 @@ export function useSyncProject() {
 }
 
 export function useRefreshProject() {
-  const queryClient = useQueryClient()
+  const { invalidateProjectFiles } = useInvalidateProjects()
 
   return useMutation({
     mutationFn: ({ projectId, folder }: { projectId: number; folder?: string }) =>
       octoClient.projects.refreshProject(projectId, folder ? { folder } : undefined),
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
+      invalidateProjectFiles(projectId)
       toast.success('Project refreshed successfully')
     },
     onError: (error) => {
@@ -510,13 +366,13 @@ export function useSuggestFiles() {
 }
 
 export function useSummarizeProjectFiles() {
-  const queryClient = useQueryClient()
+  const { invalidateProjectFiles } = useInvalidateProjects()
 
   return useMutation({
     mutationFn: ({ projectId, fileIds, force = false }: { projectId: number; fileIds: number[]; force?: boolean }) =>
       octoClient.projects.summarizeFiles(projectId, { fileIds, force }),
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
+      invalidateProjectFiles(projectId)
       toast.success('Files summarized successfully')
     },
     onError: (error) => {
@@ -526,13 +382,13 @@ export function useSummarizeProjectFiles() {
 }
 
 export function useRemoveSummaries() {
-  const queryClient = useQueryClient()
+  const { invalidateProjectFiles } = useInvalidateProjects()
 
   return useMutation({
     mutationFn: ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) =>
       octoClient.projects.removeSummaries(projectId, { fileIds }),
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
+      invalidateProjectFiles(projectId)
       toast.success('Summaries removed successfully')
     },
     onError: (error) => {
@@ -577,12 +433,12 @@ export function useGetProjectPrompts(projectId: number) {
 
 // --- Mutation Hooks ---
 export function useCreatePrompt() {
-  const queryClient = useQueryClient()
+  const { invalidateAllPrompts } = useInvalidatePrompts()
 
   return useMutation({
     mutationFn: (data: CreatePromptBody) => octoClient.prompts.createPrompt(data),
     onSuccess: (newPrompt) => {
-      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.list() })
+      invalidateAllPrompts()
       toast.success('Prompt created successfully')
     },
     onError: (error) => {
@@ -592,14 +448,14 @@ export function useCreatePrompt() {
 }
 
 export function useUpdatePrompt() {
-  const queryClient = useQueryClient()
+  const { invalidateAllPrompts, setPromptDetail } = useInvalidatePrompts()
 
   return useMutation({
     mutationFn: ({ promptId, data }: { promptId: number; data: UpdatePromptBody }) =>
       octoClient.prompts.updatePrompt(promptId, data),
     onSuccess: ({ data: updatedPrompt }: DataResponseSchema<Prompt>) => {
-      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.list() })
-      queryClient.setQueryData(PROMPT_KEYS.detail(updatedPrompt.id), updatedPrompt)
+      invalidateAllPrompts()
+      setPromptDetail(updatedPrompt)
       toast.success('Prompt updated successfully')
     },
     onError: (error) => {
@@ -609,14 +465,14 @@ export function useUpdatePrompt() {
 }
 
 export function useDeletePrompt() {
-  const queryClient = useQueryClient()
+  const invalidatePrompts = useInvalidatePrompts()
 
   return useMutation({
     mutationFn: ({ promptId }: { promptId: number }) => octoClient.prompts.deletePrompt(promptId),
     onSuccess: (_, { promptId }) => {
-      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.list() })
-      queryClient.removeQueries({ queryKey: PROMPT_KEYS.detail(promptId) })
-      //  TODO : invalidate all project prompts?
+      // Invalidate all prompt-related queries including project prompts
+      invalidatePrompts.invalidateAllPrompts()
+      invalidatePrompts.removePrompt(promptId)
       toast.success('Prompt deleted successfully')
     },
     onError: (error) => {
@@ -626,13 +482,15 @@ export function useDeletePrompt() {
 }
 
 export function useAddPromptToProject() {
-  const queryClient = useQueryClient()
+  const invalidatePrompts = useInvalidatePrompts()
 
   return useMutation({
     mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) =>
       octoClient.prompts.addPromptToProject(projectId, promptId),
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
+      // Invalidate both project-specific prompts and all prompts list
+      invalidatePrompts.invalidateProjectPrompts(projectId)
+      invalidatePrompts.invalidateAllPrompts()
       toast.success('Prompt added to project successfully')
     },
     onError: (error) => {
@@ -642,13 +500,15 @@ export function useAddPromptToProject() {
 }
 
 export function useRemovePromptFromProject() {
-  const queryClient = useQueryClient()
+  const invalidatePrompts = useInvalidatePrompts()
 
   return useMutation({
     mutationFn: ({ projectId, promptId }: { projectId: number; promptId: number }) =>
       octoClient.prompts.removePromptFromProject(projectId, promptId),
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
+      // Invalidate both project-specific prompts and all prompts list
+      invalidatePrompts.invalidateProjectPrompts(projectId)
+      invalidatePrompts.invalidateAllPrompts()
       toast.success('Prompt removed from project successfully')
     },
     onError: (error) => {
@@ -692,12 +552,12 @@ export function useGetKey(keyId: number) {
 
 // --- Mutation Hooks ---
 export function useCreateKey() {
-  const queryClient = useQueryClient()
+  const { invalidateAllKeys } = useInvalidateKeys()
 
   return useMutation({
     mutationFn: (data: CreateProviderKeyBody) => octoClient.keys.createKey(data),
     onSuccess: (newKey) => {
-      queryClient.invalidateQueries({ queryKey: KEY_KEYS.list() })
+      invalidateAllKeys()
       toast.success('API key created successfully')
     },
     onError: (error) => {
@@ -707,14 +567,14 @@ export function useCreateKey() {
 }
 
 export function useUpdateKey() {
-  const queryClient = useQueryClient()
+  const { invalidateAllKeys, setKeyDetail } = useInvalidateKeys()
 
   return useMutation({
     mutationFn: ({ keyId, data }: { keyId: number; data: UpdateProviderKeyBody }) =>
       octoClient.keys.updateKey(keyId, data),
     onSuccess: ({ data: updatedKey }: DataResponseSchema<ProviderKey>) => {
-      queryClient.invalidateQueries({ queryKey: KEY_KEYS.list() })
-      queryClient.setQueryData(KEY_KEYS.detail(updatedKey.id), updatedKey as ProviderKey)
+      invalidateAllKeys()
+      setKeyDetail(updatedKey)
       toast.success('API key updated successfully')
     },
     onError: (error) => {
@@ -724,13 +584,13 @@ export function useUpdateKey() {
 }
 
 export function useDeleteKey() {
-  const queryClient = useQueryClient()
+  const { invalidateAllKeys, removeKey } = useInvalidateKeys()
 
   return useMutation({
     mutationFn: (keyId: number) => octoClient.keys.deleteKey(keyId),
     onSuccess: (_, keyId) => {
-      queryClient.invalidateQueries({ queryKey: KEY_KEYS.list() })
-      queryClient.removeQueries({ queryKey: KEY_KEYS.detail(keyId) })
+      invalidateAllKeys()
+      removeKey(keyId)
       toast.success('API key deleted successfully')
     },
     onError: (error) => {
@@ -776,14 +636,15 @@ export function useGetTasks(ticketId: number) {
 
 // --- Mutation Hooks ---
 export function useCreateTicket() {
-  const queryClient = useQueryClient()
+  const { invalidateProjectTickets, invalidateProjectBulkTicketQueries } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: (data: CreateTicketBody) => octoClient.tickets.createTicket(data),
     onSuccess: ({ ticket: newTicket }) => {
-      queryClient.invalidateQueries({
-        queryKey: TICKET_KEYS.projectTickets(newTicket.projectId)
-      })
+      // Invalidate all ticket queries for the project
+      invalidateProjectTickets(newTicket.projectId)
+      // Invalidate bulk ticket operations for the project
+      invalidateProjectBulkTicketQueries(newTicket.projectId)
       toast.success('Ticket created successfully')
     },
     onError: (error) => {
@@ -793,16 +654,17 @@ export function useCreateTicket() {
 }
 
 export function useUpdateTicket() {
-  const queryClient = useQueryClient()
+  const { invalidateProjectTickets, setTicketDetail, invalidateProjectBulkTicketQueries } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: ({ ticketId, data }: { ticketId: number; data: UpdateTicketBody }) =>
       octoClient.tickets.updateTicket(ticketId, data),
     onSuccess: ({ ticket: updatedTicket }) => {
-      queryClient.invalidateQueries({
-        queryKey: TICKET_KEYS.projectTickets(updatedTicket.projectId)
-      })
-      queryClient.setQueryData(TICKET_KEYS.detail(updatedTicket.id), updatedTicket)
+      // Invalidate all ticket queries for the project
+      invalidateProjectTickets(updatedTicket.projectId)
+      setTicketDetail(updatedTicket)
+      // Invalidate bulk ticket operations for the project
+      invalidateProjectBulkTicketQueries(updatedTicket.projectId)
       toast.success('Ticket updated successfully')
     },
     onError: (error) => {
@@ -812,14 +674,17 @@ export function useUpdateTicket() {
 }
 
 export function useDeleteTicket() {
-  const queryClient = useQueryClient()
+  const { invalidateAllTickets, removeTicket, removeTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: (ticketId: number) => octoClient.tickets.deleteTicket(ticketId),
     onSuccess: (_, ticketId) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.all })
-      queryClient.removeQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
-      queryClient.removeQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+      // Invalidate all ticket queries and remove specific ticket data
+      invalidateAllTickets()
+      removeTicket(ticketId)
+      removeTasks(ticketId)
+      // Invalidate bulk operations that might include this ticket
+      invalidateGlobalBulkTicketQueries()
       toast.success('Ticket deleted successfully')
     },
     onError: (error) => {
@@ -829,13 +694,16 @@ export function useDeleteTicket() {
 }
 
 export function useCreateTask() {
-  const queryClient = useQueryClient()
+  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: ({ ticketId, content }: { ticketId: number; content: string }) =>
       octoClient.tickets.createTask(ticketId, content),
     onSuccess: (newTask, { ticketId }) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+      // Invalidate tasks for the specific ticket
+      invalidateTicketTasks(ticketId)
+      // Invalidate bulk operations that include task counts
+      invalidateGlobalBulkTicketQueries()
       toast.success('Task created successfully')
     },
     onError: (error) => {
@@ -845,13 +713,16 @@ export function useCreateTask() {
 }
 
 export function useUpdateTask() {
-  const queryClient = useQueryClient()
+  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: ({ ticketId, taskId, data }: { ticketId: number; taskId: number; data: UpdateTaskBody }) =>
       octoClient.tickets.updateTask(ticketId, taskId, data),
     onSuccess: (updatedTask, { ticketId }) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+      // Invalidate tasks for the specific ticket
+      invalidateTicketTasks(ticketId)
+      // Invalidate bulk operations that might be affected by task status changes
+      invalidateGlobalBulkTicketQueries()
       toast.success('Task updated successfully')
     },
     onError: (error) => {
@@ -861,13 +732,16 @@ export function useUpdateTask() {
 }
 
 export function useDeleteTask() {
-  const queryClient = useQueryClient()
+  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: ({ ticketId, taskId }: { ticketId: number; taskId: number }) =>
       octoClient.tickets.deleteTask(ticketId, taskId),
     onSuccess: (_, { ticketId }) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+      // Invalidate tasks for the specific ticket
+      invalidateTicketTasks(ticketId)
+      // Invalidate bulk operations that include task counts
+      invalidateGlobalBulkTicketQueries()
       toast.success('Task deleted successfully')
     },
     onError: (error) => {
@@ -877,13 +751,13 @@ export function useDeleteTask() {
 }
 
 export function useReorderTasks() {
-  const queryClient = useQueryClient()
+  const { setTasks } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: ({ ticketId, data }: { ticketId: number; data: ReorderTasksBody }) =>
       octoClient.tickets.reorderTasks(ticketId, data),
     onSuccess: (reorderedTasks, { ticketId }) => {
-      queryClient.setQueryData(TICKET_KEYS.tasks(ticketId), reorderedTasks)
+      setTasks(ticketId, reorderedTasks)
       toast.success('Tasks reordered successfully')
     },
     onError: (error) => {
@@ -893,12 +767,15 @@ export function useReorderTasks() {
 }
 
 export function useAutoGenerateTasks() {
-  const queryClient = useQueryClient()
+  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: (ticketId: number) => octoClient.tickets.autoGenerateTasks(ticketId),
     onSuccess: (generatedTasks, ticketId) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+      // Invalidate tasks for the specific ticket
+      invalidateTicketTasks(ticketId)
+      // Invalidate bulk operations that include task counts
+      invalidateGlobalBulkTicketQueries()
       toast.success('Tasks generated successfully')
     },
     onError: (error) => {
@@ -908,13 +785,13 @@ export function useAutoGenerateTasks() {
 }
 
 export function useLinkFilesToTicket() {
-  const queryClient = useQueryClient()
+  const { invalidateTicket } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: ({ ticketId, fileIds }: { ticketId: number; fileIds: number[] }) =>
       octoClient.tickets.linkFilesToTicket(ticketId, fileIds),
     onSuccess: (linkedFiles, { ticketId }) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
+      invalidateTicket(ticketId)
       toast.success('Files linked to ticket successfully')
     },
     onError: (error) => {
@@ -993,7 +870,227 @@ export function useInvalidateChat(chatId: number) {
   }
 }
 
-// Batch operations
+// --- Prompt Invalidation Utilities ---
+export function useInvalidatePrompts() {
+  const queryClient = useQueryClient()
+
+  return {
+    invalidateAllPrompts: () => {
+      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all })
+    },
+    invalidatePrompt: (promptId: number) => {
+      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.detail(promptId) })
+    },
+    invalidateProjectPrompts: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
+    },
+    removePrompt: (promptId: number) => {
+      queryClient.removeQueries({ queryKey: PROMPT_KEYS.detail(promptId) })
+    },
+    /** NEW: Removes queries for all prompts associated with a specific project. */
+    removeProjectPrompts: (projectId: number) => {
+      queryClient.removeQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
+    },
+    /** NEW: Sets specific prompt detail in the cache. */
+    setPromptDetail: (prompt: Prompt) => {
+      queryClient.setQueryData(PROMPT_KEYS.detail(prompt.id), prompt)
+    },
+    invalidateAllPromptsAndProjects: (projectId?: number) => {
+      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.all })
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
+      }
+    }
+  }
+}
+
+// --- Project Invalidation Utilities ---
+export function useInvalidateProjects() {
+  const queryClient = useQueryClient()
+
+  return {
+    invalidateAllProjects: () => {
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.all })
+    },
+    invalidateProject: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(projectId) })
+    },
+    invalidateProjectFiles: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
+    },
+    invalidateProjectSummary: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summary(projectId) })
+    },
+    removeProject: (projectId: number) => {
+      queryClient.removeQueries({ queryKey: PROJECT_KEYS.detail(projectId) })
+      queryClient.removeQueries({ queryKey: PROJECT_KEYS.files(projectId) })
+      queryClient.removeQueries({ queryKey: PROJECT_KEYS.summary(projectId) })
+    },
+    /** NEW: Sets specific project detail in the cache. */
+    setProjectDetail: (project: Project) => {
+      queryClient.setQueryData(PROJECT_KEYS.detail(project.id), project)
+    },
+    /** MODIFIED/CLARIFIED: Invalidate all data related to a project (including related entities by invalidation) */
+    invalidateProjectData: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(projectId) })
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summary(projectId) })
+      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
+    }
+  }
+}
+
+// --- Chat Invalidation Utilities ---
+export function useInvalidateChats() {
+  const queryClient = useQueryClient()
+
+  return {
+    // Invalidate all chat-related queries
+    invalidateAllChats: () => {
+      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.all })
+    },
+
+    // Invalidate specific chat detail
+    invalidateChat: (chatId: number) => {
+      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.detail(chatId) })
+    },
+
+    // Invalidate chat messages
+    invalidateChatMessages: (chatId: number) => {
+      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.messages(chatId) })
+    },
+
+    // Remove chat from cache completely
+    removeChat: (chatId: number) => {
+      queryClient.removeQueries({ queryKey: CHAT_KEYS.detail(chatId) })
+      queryClient.removeQueries({ queryKey: CHAT_KEYS.messages(chatId) })
+    },
+
+    /** NEW: Sets specific chat detail in the cache. */
+    setChatDetail: (chat: Chat) => {
+      queryClient.setQueryData(CHAT_KEYS.detail(chat.id), chat)
+    },
+
+    // Invalidate all data related to a chat
+    invalidateChatData: (chatId: number) => {
+      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.detail(chatId) })
+      queryClient.invalidateQueries({ queryKey: CHAT_KEYS.messages(chatId) })
+    }
+  }
+}
+
+// --- Ticket Invalidation Utilities ---
+export function useInvalidateTickets() {
+  const queryClient = useQueryClient()
+
+  return {
+    // Invalidate all ticket-related queries
+    invalidateAllTickets: () => {
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.all })
+    },
+
+    // Invalidate specific ticket detail
+    invalidateTicket: (ticketId: number) => {
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
+    },
+
+    // Invalidate tickets for a specific project
+    invalidateProjectTickets: (projectId: number, status?: string) => {
+      if (status) {
+        queryClient.invalidateQueries({ queryKey: [...TICKET_KEYS.projectTickets(projectId), status] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
+      }
+    },
+
+    // Invalidate tasks for a specific ticket
+    invalidateTicketTasks: (ticketId: number) => {
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+    },
+
+    // Remove ticket from cache completely
+    removeTicket: (ticketId: number) => {
+      queryClient.removeQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
+      queryClient.removeQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+    },
+
+    // Remove tasks for a specific ticket
+    removeTasks: (ticketId: number) => {
+      queryClient.removeQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+    },
+
+    /** NEW: Removes queries for all tickets associated with a specific project. */
+    removeProjectTickets: (projectId: number) => {
+      queryClient.removeQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
+    },
+
+    /** NEW: Sets specific ticket detail in the cache. */
+    setTicketDetail: (ticket: Ticket) => {
+      queryClient.setQueryData(TICKET_KEYS.detail(ticket.id), ticket)
+    },
+
+    /** NEW: Sets tasks for a specific ticket in the cache. */
+    setTasks: (ticketId: number, tasks: any) => {
+      queryClient.setQueryData(TICKET_KEYS.tasks(ticketId), tasks)
+    },
+
+    // Invalidate all data related to a ticket
+    invalidateTicketData: (ticketId: number) => {
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
+    },
+
+    /** NEW: Invalidate bulk ticket queries for a specific project. */
+    invalidateProjectBulkTicketQueries: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: ['tickets-with-count', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['tickets-with-tasks', projectId] })
+    },
+
+    /** NEW: Invalidate global bulk ticket queries across all projects. */
+    invalidateGlobalBulkTicketQueries: () => {
+      queryClient.invalidateQueries({ queryKey: ['bulk-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tickets-with-count'] })
+      queryClient.invalidateQueries({ queryKey: ['tickets-with-tasks'] })
+    },
+
+    // Invalidate bulk ticket operations
+    invalidateBulkTicketQueries: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: ['tickets-with-count', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['tickets-with-tasks', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['bulk-tasks'] })
+    }
+  }
+}
+
+// --- Key Invalidation Utilities ---
+export function useInvalidateKeys() {
+  const queryClient = useQueryClient()
+
+  return {
+    // Invalidate all key-related queries
+    invalidateAllKeys: () => {
+      queryClient.invalidateQueries({ queryKey: KEY_KEYS.all })
+    },
+
+    // Invalidate specific key detail
+    invalidateKey: (keyId: number) => {
+      queryClient.invalidateQueries({ queryKey: KEY_KEYS.detail(keyId) })
+    },
+
+    // Remove key from cache completely
+    removeKey: (keyId: number) => {
+      queryClient.removeQueries({ queryKey: KEY_KEYS.detail(keyId) })
+    },
+
+    /** NEW: Sets specific key detail in the cache. */
+    setKeyDetail: (key: ProviderKey) => {
+      queryClient.setQueryData(KEY_KEYS.detail(key.id), key)
+    }
+  }
+}
+
+// --- Enhanced Batch Operations ---
 export function useBatchProjectOperations() {
   const queryClient = useQueryClient()
 
@@ -1012,6 +1109,15 @@ export function useBatchProjectOperations() {
 
     setProjectOptimistically: (project: Project) => {
       queryClient.setQueryData(PROJECT_KEYS.detail(project.id), project)
+    },
+
+    // Invalidate all data related to a project
+    invalidateProjectData: (projectId: number) => {
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(projectId) })
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(projectId) })
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.summary(projectId) })
+      queryClient.invalidateQueries({ queryKey: PROMPT_KEYS.projectPrompts(projectId) })
+      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
     }
   }
 }

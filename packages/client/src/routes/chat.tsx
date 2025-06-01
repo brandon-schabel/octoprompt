@@ -215,7 +215,7 @@ export function ProviderModelSector({
   onModelChange,
   className
 }: ModelSelectorProps) {
-  const { data: modelsData, isPending: isLoadingModels } = useGetModels()
+  const { data: modelsData, isPending: isLoadingModels } = useGetModels(provider)
 
   const comboboxOptions = useMemo(
     () =>
@@ -995,7 +995,7 @@ function ChatPage() {
   const { settings: modelSettings, setModel } = useChatModelParams()
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
-  const { data: modelsData } = useGetModels()
+  const { data: modelsData } = useGetModels(provider)
   const { copyToClipboard } = useCopyClipboard()
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 

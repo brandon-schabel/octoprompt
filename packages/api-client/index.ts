@@ -793,7 +793,7 @@ export class TicketService extends BaseApiClient {
       responseSchema: LinkedFilesResponseSchemaZ
     })
     return result as {
-      linkedFiles: Array<{ticketId: number, fileId: number}>
+      linkedFiles: Array<{ ticketId: number; fileId: number }>
       success: boolean
     }
   }
@@ -1065,6 +1065,7 @@ export class GenAiService extends BaseApiClient {
       params: { provider },
       responseSchema: ModelsListResponseSchema
     })
+
     return result as { success: true; data: UnifiedModel[] }
   }
 

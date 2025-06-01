@@ -1,4 +1,3 @@
-
 export {
   useGetAllPrompts,
   useGetPrompt,
@@ -8,7 +7,8 @@ export {
   useDeletePrompt,
   useAddPromptToProject,
   useRemovePromptFromProject,
-  useOptimizeUserInput
+  useOptimizeUserInput,
+  useInvalidatePrompts 
 } from '../api'
 
 // Type exports for backward compatibility

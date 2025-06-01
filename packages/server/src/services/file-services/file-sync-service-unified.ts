@@ -11,9 +11,9 @@ import {
   bulkUpdateProjectFiles,
   bulkDeleteProjectFiles,
   FileSyncData, // Interface from project-service
-  listProjects,
-  summarizeSingleFile
+  listProjects
 } from '@/services/project-service' // Adjusted path assuming this file is in services/file-services/
+import { summarizeSingleFile } from '@/services/agents/summarize-files-agent'
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
@@ -604,7 +604,7 @@ export function createFileChangePlugin() {
 
       // Re-summarize the (created or modified) file
       // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
-      await summarizeSingleFile(updatedFile) // From project-service
+      await summarizeSingleFile(updatedFile) // From summarize-files-agent
       // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
     } catch (err) {
       console.error('[FileChangePlugin] Error handling file change:', err)

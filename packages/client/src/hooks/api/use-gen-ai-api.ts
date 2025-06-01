@@ -1,10 +1,16 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { octoClient } from '../api'
 import type {
   AiGenerateTextRequest,
   AiGenerateStructuredRequest
 } from '@octoprompt/schemas'
 import { toast } from 'sonner'
+
+// Query Keys
+const GEN_AI_KEYS = {
+  all: ['genAi'] as const,
+  models: (provider: string) => [...GEN_AI_KEYS.all, 'models', provider] as const
+}
 
 // Simplified hook for generating text
 export const useGenerateText = () => {
@@ -37,11 +43,11 @@ export const useStreamText = () => {
 }
 
 // Hook for getting available models
-export const useGetModels = () => {
-  return useMutation({
-    mutationFn: (provider: string) => octoClient.genAi.getModels(provider),
-    onError: (error) => {
-      toast.error(error.message || 'Failed to fetch models')
-    }
+export const useGetModels = (provider: string) => {
+  return useQuery({
+    queryKey: GEN_AI_KEYS.models(provider),
+    queryFn: () => octoClient.genAi.getModels(provider),
+    enabled: !!provider,
+    staleTime: 10 * 60 * 1000 // 10 minutes - models don't change frequently
   })
 }

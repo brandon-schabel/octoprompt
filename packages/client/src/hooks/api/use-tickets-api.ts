@@ -20,7 +20,8 @@ export {
   useSuggestFilesForTicket,
   useGetTasksForTickets,
   useListTicketsWithTaskCount,
-  useListTicketsWithTasks
+  useListTicketsWithTasks,
+  useInvalidateTickets
 } from '../api'
 
 // Alias exports for backward compatibility

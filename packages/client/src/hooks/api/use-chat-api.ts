@@ -10,6 +10,7 @@ export {
   useForkChatFromMessage,
   useDeleteMessage,
   useStreamChat,
-  useAIChatV2
+  useAIChatV2,
+  useInvalidateChats
 } from '../api'
 
