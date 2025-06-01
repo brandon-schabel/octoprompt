@@ -40,7 +40,7 @@ import {
   formatTokenCount,
   FileNode,
   estimateTokenCount
-} from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+} from '@octoprompt/shared/src/utils/file-tree-utils/file-node-tree-utils'
 import { buildNodeContent, buildNodeSummaries } from 'shared/src/utils/projects-utils'
 
 import { getEditorUrl } from '@/utils/editor-urls'

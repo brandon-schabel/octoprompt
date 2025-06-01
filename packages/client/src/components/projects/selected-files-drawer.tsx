@@ -8,7 +8,7 @@ import { FormatTokenCount } from '../format-token-count'
 import { Badge } from '@ui'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { ProjectFileMap } from '@octoprompt/schemas'
-import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+import { estimateTokenCount } from '@octoprompt/shared/src/utils/file-tree-utils/file-node-tree-utils'
 
 type SelectedFilesDrawerProps = {
   selectedFiles: number[]

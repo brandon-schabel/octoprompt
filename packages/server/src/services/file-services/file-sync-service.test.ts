@@ -5,7 +5,7 @@ import * as fs from 'node:fs'
 // Using node:path directly for spying consistency
 import nodePath, { join, relative, basename, extname, resolve } from 'node:path'
 import ignore, { type Ignore } from 'ignore'
-import { DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/shared'
+import { DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
 import type { Project, ProjectFile } from '@octoprompt/schemas'
 import type { PathOrFileDescriptor, PathLike, Dirent, Stats } from 'node:fs' // Import necessary types
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
@@ -77,10 +77,10 @@ describe('FileSync Service', () => {
     mtimeMs: Date.now(),
     ctimeMs: Date.now(),
     birthtimeMs: Date.now(),
-    atimeNs: (BigInt(Date.now())) * 1000000n,
-    mtimeNs: (BigInt(Date.now())) * 1000000n,
-    ctimeNs: (BigInt(Date.now())) * 1000000n,
-    birthtimeNs: (BigInt(Date.now())) * 1000000n,
+    atimeNs: BigInt(Date.now()) * 1000000n,
+    mtimeNs: BigInt(Date.now()) * 1000000n,
+    ctimeNs: BigInt(Date.now()) * 1000000n,
+    birthtimeNs: BigInt(Date.now()) * 1000000n,
     atime: new Date(),
     mtime: new Date(),
     ctime: new Date(),
@@ -89,7 +89,6 @@ describe('FileSync Service', () => {
 
   // Outer beforeEach: Initialize spies/mocks needed by *most* tests
   beforeEach(() => {
-
     // Spy on projectService functions
     getProjectFilesSpy = spyOn(projectService, 'getProjectFiles')
     bulkCreateSpy = spyOn(projectService, 'bulkCreateProjectFiles').mockResolvedValue([])
@@ -103,8 +102,8 @@ describe('FileSync Service', () => {
     readFileSyncSpy = spyOn(fs, 'readFileSync') as Mock<typeof fs.readFileSync>
 
     // Spy on console
-    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => { })
-    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => { })
+    consoleWarnSpy = spyOn(console, 'warn').mockImplementation(() => {})
+    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {})
 
     // Mock Bun.file().text()
     if (typeof Bun !== 'undefined') {
@@ -270,28 +269,36 @@ describe('FileSync Service', () => {
           return createStats(false)
         throw new Error(`Unexpected statSync call: ${path}`)
       })
-      readdirSyncSpy.mockImplementation((path: PathLike, options?: { encoding?: BufferEncoding | null; withFileTypes?: boolean; recursive?: boolean } | BufferEncoding | null): string[] | fs.Dirent[] => {
-        const pathString = path.toString()
-        const withFileTypes = typeof options === 'object' && options?.withFileTypes;
+      readdirSyncSpy.mockImplementation(
+        (
+          path: PathLike,
+          options?:
+            | { encoding?: BufferEncoding | null; withFileTypes?: boolean; recursive?: boolean }
+            | BufferEncoding
+            | null
+        ): string[] | fs.Dirent[] => {
+          const pathString = path.toString()
+          const withFileTypes = typeof options === 'object' && options?.withFileTypes
 
-        if (pathString === dir) {
-          return withFileTypes
-            ? [
-              createDirent('file.ts', false, dir),
-              createDirent('image.png', false, dir),
-              createDirent('src', true, dir),
-              createDirent('empty', true, dir)
-            ]
-            : ['file.ts', 'image.png', 'src', 'empty']
+          if (pathString === dir) {
+            return withFileTypes
+              ? [
+                  createDirent('file.ts', false, dir),
+                  createDirent('image.png', false, dir),
+                  createDirent('src', true, dir),
+                  createDirent('empty', true, dir)
+                ]
+              : ['file.ts', 'image.png', 'src', 'empty']
+          }
+          if (pathString === subDir) {
+            return withFileTypes ? [createDirent('another.js', false, subDir)] : ['another.js']
+          }
+          if (pathString === emptyDirPath) {
+            return withFileTypes ? [] : []
+          }
+          throw new Error(`Unexpected readdirSync call: ${pathString}`)
         }
-        if (pathString === subDir) {
-          return withFileTypes ? [createDirent('another.js', false, subDir)] : ['another.js']
-        }
-        if (pathString === emptyDirPath) {
-          return withFileTypes ? [] : []
-        }
-        throw new Error(`Unexpected readdirSync call: ${pathString}`)
-      })
+      )
 
       const result = fileSyncService.getTextFiles(dir, projectRoot, ig)
       expect(result).toEqual([
@@ -327,27 +334,35 @@ describe('FileSync Service', () => {
           return createStats(false)
         throw new Error(`Unexpected statSync call: ${pStr}`)
       })
-      readdirSyncSpy.mockImplementation((path: PathLike, options?: { encoding?: BufferEncoding | null; withFileTypes?: boolean; recursive?: boolean } | BufferEncoding | null): string[] | fs.Dirent[] => {
-        const pStr = path.toString()
-        const withFileTypes = typeof options === 'object' && options?.withFileTypes;
-        if (pStr === dir) {
-          return withFileTypes
-            ? [
-              createDirent('src', true, dir),
-              createDirent('build.log', false, dir),
-              createDirent('dist', true, dir),
-              createDirent('node_modules', true, dir)
-            ]
-            : ['src', 'build.log', 'dist', 'node_modules']
+      readdirSyncSpy.mockImplementation(
+        (
+          path: PathLike,
+          options?:
+            | { encoding?: BufferEncoding | null; withFileTypes?: boolean; recursive?: boolean }
+            | BufferEncoding
+            | null
+        ): string[] | fs.Dirent[] => {
+          const pStr = path.toString()
+          const withFileTypes = typeof options === 'object' && options?.withFileTypes
+          if (pStr === dir) {
+            return withFileTypes
+              ? [
+                  createDirent('src', true, dir),
+                  createDirent('build.log', false, dir),
+                  createDirent('dist', true, dir),
+                  createDirent('node_modules', true, dir)
+                ]
+              : ['src', 'build.log', 'dist', 'node_modules']
+          }
+          if (pStr === srcDir) {
+            return withFileTypes ? [createDirent('allowed.ts', false, srcDir)] : ['allowed.ts']
+          }
+          if (pStr === ignoredDirPath || pStr === nodeModulesPath) {
+            return withFileTypes ? [] : []
+          }
+          throw new Error(`Unexpected readdirSync call: ${pStr}`)
         }
-        if (pStr === srcDir) {
-          return withFileTypes ? [createDirent('allowed.ts', false, srcDir)] : ['allowed.ts']
-        }
-        if (pStr === ignoredDirPath || pStr === nodeModulesPath) {
-          return withFileTypes ? [] : []
-        }
-        throw new Error(`Unexpected readdirSync call: ${pStr}`)
-      })
+      )
 
       const result = fileSyncService.getTextFiles(dir, projectRoot, ig)
       expect(result).toEqual([allowedFilePath])
@@ -434,26 +449,31 @@ describe('FileSync Service', () => {
         return createStats(false) // Default to file if needed
         // throw new Error(`Unexpected statSync call in syncFileSet test: ${pStr}`);
       })
-      readFileSyncSpy.mockImplementation((path: PathOrFileDescriptor, options?: { encoding?: fs.EncodingOption | null; flag?: string } | fs.EncodingOption | null): string | Buffer => {
-        const pStr = path.toString()
-        const contentMap: Record<string, string> = {
-          [file1PathAbs]: file1Content,
-          [file2PathAbs]: file2Content,
-          [ignoredPathAbs]: ignoredContent,
-          [join(projectPath, 'newfile.md')]: '# New File'
-        }
-        if (contentMap[pStr] !== undefined) {
-          const encoding = (typeof options === 'string' ? options : options?.encoding);
-          if (encoding) {
-            return contentMap[pStr]; // Returns string
+      readFileSyncSpy.mockImplementation(
+        (
+          path: PathOrFileDescriptor,
+          options?: { encoding?: fs.EncodingOption | null; flag?: string } | fs.EncodingOption | null
+        ): string | Buffer => {
+          const pStr = path.toString()
+          const contentMap: Record<string, string> = {
+            [file1PathAbs]: file1Content,
+            [file2PathAbs]: file2Content,
+            [ignoredPathAbs]: ignoredContent,
+            [join(projectPath, 'newfile.md')]: '# New File'
           }
-          return Buffer.from(contentMap[pStr]); // Returns Buffer
-        }
+          if (contentMap[pStr] !== undefined) {
+            const encoding = typeof options === 'string' ? options : options?.encoding
+            if (encoding) {
+              return contentMap[pStr] // Returns string
+            }
+            return Buffer.from(contentMap[pStr]) // Returns Buffer
+          }
 
-        const err = new Error(`ENOENT: no such file or directory, open '${pStr}'`) as NodeJS.ErrnoException
-        err.code = 'ENOENT'
-        throw err
-      })
+          const err = new Error(`ENOENT: no such file or directory, open '${pStr}'`) as NodeJS.ErrnoException
+          err.code = 'ENOENT'
+          throw err
+        }
+      )
     })
 
     // --- Keep passing syncFileSet tests ---
@@ -933,7 +953,8 @@ describe('cleanup-service', () => {
     })
 
     // Mock fs.statSync
-    spyOn(fs, 'statSync').mockImplementation((pathValue: fs.PathLike): fs.BigIntStats => { // Return BigIntStats
+    spyOn(fs, 'statSync').mockImplementation((pathValue: fs.PathLike): fs.BigIntStats => {
+      // Return BigIntStats
       const pathStr = pathValue.toString()
       if (
         pathStr === '/test/project1' ||
@@ -966,10 +987,10 @@ describe('cleanup-service', () => {
           mtime: new Date(),
           ctime: new Date(),
           birthtime: new Date(),
-          atimeNs: (BigInt(Date.now())) * 1000000n,
-          mtimeNs: (BigInt(Date.now())) * 1000000n,
-          ctimeNs: (BigInt(Date.now())) * 1000000n,
-          birthtimeNs: (BigInt(Date.now())) * 1000000n
+          atimeNs: BigInt(Date.now()) * 1000000n,
+          mtimeNs: BigInt(Date.now()) * 1000000n,
+          ctimeNs: BigInt(Date.now()) * 1000000n,
+          birthtimeNs: BigInt(Date.now()) * 1000000n
         } as fs.BigIntStats // Explicit cast, ensure all BigIntStats fields are present and correctly typed
       }
       // console.warn(`[Test fs.statSync] Unhandled path: ${pathStr}, falling back to original.`);

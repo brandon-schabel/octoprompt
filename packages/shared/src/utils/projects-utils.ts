@@ -1,6 +1,6 @@
-import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
-import type { FileNode } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
-import type { ProjectFile, ProjectFileMap, Prompt,  } from '@octoprompt/schemas'
+import { estimateTokenCount } from './file-tree-utils/file-node-tree-utils'
+import type { FileNode } from './file-tree-utils/file-node-tree-utils'
+import type { ProjectFile, ProjectFileMap, Prompt } from '@octoprompt/schemas'
 
 export function buildPromptContent({
   fileMap,

@@ -11,6 +11,29 @@ import {
 import { ApiError } from '@octoprompt/shared'
 import { ZodError } from 'zod'
 
+// Utility function to populate projectId on prompts from associations
+async function populatePromptProjectId(prompt: Prompt): Promise<Prompt> {
+  const promptProjects = await promptStorage.readPromptProjects()
+  const association = promptProjects.find(link => link.promptId === prompt.id)
+  return {
+    ...prompt,
+    projectId: association?.projectId
+  }
+}
+
+// Utility function to populate projectId on multiple prompts
+async function populatePromptsProjectIds(prompts: Prompt[]): Promise<Prompt[]> {
+  const promptProjects = await promptStorage.readPromptProjects()
+  const associationMap = new Map(
+    promptProjects.map(link => [link.promptId, link.projectId])
+  )
+  
+  return prompts.map(prompt => ({
+    ...prompt,
+    projectId: associationMap.get(prompt.id)
+  }))
+}
+
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
   let promptId = promptStorage.generateId()
   const now = Date.now()
@@ -31,9 +54,9 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
     id: promptId,
     name: data.name,
     content: data.content,
+    projectId: data.projectId,
     created: now,
     updated: now
-    // projectId is not part of the core Prompt schema, handled by associations
   }
 
   try {
@@ -53,7 +76,8 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
     await addPromptToProject(newPromptData.id, data.projectId)
   }
 
-  return newPromptData
+  // Return the prompt with populated projectId
+  return await populatePromptProjectId(newPromptData)
 }
 
 export async function addPromptToProject(promptId: number, projectId: number): Promise<void> {
@@ -153,7 +177,7 @@ export async function getPromptById(promptId: number): Promise<Prompt> {
   if (!found) {
     throw new ApiError(404, `Prompt with ID ${promptId} not found.`, 'PROMPT_NOT_FOUND')
   }
-  return found
+  return await populatePromptProjectId(found)
 }
 
 export async function listAllPrompts(): Promise<Prompt[]> {
@@ -161,12 +185,13 @@ export async function listAllPrompts(): Promise<Prompt[]> {
   const promptList = Object.values(allPromptsData)
   // Optional: sort if needed, e.g., by upated or name
   promptList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-  return promptList
+  return await populatePromptsProjectIds(promptList)
 }
 
 export const getPromptsByIds = async (promptIds: number[]): Promise<Prompt[]> => {
   const allPrompts = await promptStorage.readPrompts()
-  return promptIds.map(id => allPrompts[id]).filter(Boolean) as Prompt[]
+  const prompts = promptIds.map(id => allPrompts[id]).filter(Boolean) as Prompt[]
+  return await populatePromptsProjectIds(prompts)
 }
 
 export async function listPromptsByProject(projectId: number): Promise<Prompt[]> {
@@ -179,7 +204,9 @@ export async function listPromptsByProject(projectId: number): Promise<Prompt[]>
     return []
   }
   const allPrompts = await promptStorage.readPrompts()
-  return relevantPromptIds.map(promptId => allPrompts[promptId]).filter(Boolean) as Prompt[] // filter(Boolean) to remove undefined if a link exists for a deleted prompt
+  const prompts = relevantPromptIds.map(promptId => allPrompts[promptId]).filter(Boolean) as Prompt[]
+  // For prompts retrieved by project, we already know the projectId, so we can set it directly
+  return prompts.map(prompt => ({ ...prompt, projectId }))
 }
 
 export async function updatePrompt(promptId: number, data: UpdatePromptBody): Promise<Prompt> {
@@ -209,7 +236,7 @@ export async function updatePrompt(promptId: number, data: UpdatePromptBody): Pr
 
   allPrompts[promptId] = updatedPromptData
   await promptStorage.writePrompts(allPrompts)
-  return updatedPromptData
+  return await populatePromptProjectId(updatedPromptData)
 }
 
 export async function deletePrompt(promptId: number): Promise<boolean> {

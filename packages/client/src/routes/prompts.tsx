@@ -20,7 +20,7 @@ import { Badge } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { Prompt } from '@octoprompt/schemas'
-import { estimateTokenCount, formatTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+import { estimateTokenCount, formatTokenCount } from '@octoprompt/shared/src/utils/file-tree-utils/file-node-tree-utils'
 
 export function PromptsPage() {
   const [searchQuery, setSearchQuery] = useState('')

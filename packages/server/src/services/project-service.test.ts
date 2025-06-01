@@ -133,8 +133,19 @@ const mockProjectStorage = {
     const files = mockProjectFilesDbPerProject[projectId] || {}
     const versions: ProjectFile[] = []
 
+    // First, find the actual original file ID
+    // If the requested ID has originalFileId set, use that, otherwise use the ID itself
+    const fileRequested = files[originalFileId]
+    const actualOriginalFileId = fileRequested?.originalFileId || originalFileId
+
     for (const file of Object.values(files)) {
-      if (file.originalFileId === originalFileId || file.id === originalFileId) {
+      // A file is part of the version chain if:
+      // 1. It IS the original file (originalFileId is null and id matches actualOriginalFileId)
+      // 2. OR it has originalFileId that matches actualOriginalFileId
+      if (
+        (file.originalFileId === null && file.id === actualOriginalFileId) ||
+        (file.originalFileId === actualOriginalFileId)
+      ) {
         versions.push(file)
       }
     }
@@ -511,7 +522,7 @@ describe('Project Service (File Storage with Versioning)', () => {
     test('updateFileContent throws if file not found', async () => {
       const nonExistentFileId = generateTestId()
       await expect(updateFileContent(projectId, nonExistentFileId, 'new content')).rejects.toThrowError(
-        new Error(`File not found: ${nonExistentFileId} in project ${projectId}`)
+        `Failed to update file content for ${nonExistentFileId}. Reason: File not found: ${nonExistentFileId} in project ${projectId}`
       )
     })
 

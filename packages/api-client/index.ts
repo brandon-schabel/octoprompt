@@ -793,7 +793,7 @@ export class TicketService extends BaseApiClient {
       responseSchema: LinkedFilesResponseSchemaZ
     })
     return result as {
-      linkedFiles: ProjectFile[]
+      linkedFiles: Array<{ticketId: number, fileId: number}>
       success: boolean
     }
   }
