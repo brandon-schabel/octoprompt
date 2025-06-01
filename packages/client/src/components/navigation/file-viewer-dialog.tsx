@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
 import { Button } from '@ui'
-import { Edit, Save, XCircle, Copy, FileText, FileCode } from 'lucide-react'
+import { Edit, Save, XCircle, Copy, FileText, FileCode, Expand, Minimize2 } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
+import { LazyMonacoEditor } from '@/components/lazy-monaco-editor'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
@@ -22,19 +23,40 @@ type FileViewerDialogProps = {
 
 function getLanguageByExtension(extension?: string): string {
   if (!extension) return 'plaintext'
-  switch (extension) {
-    case '.ts':
-    case '.tsx':
-      return 'typescript'
-    case '.js':
-    case '.jsx':
-      return 'javascript'
-    case '.md':
-    case '.txt':
-      return 'markdown'
-    default:
-      return 'plaintext'
+  const ext = extension.toLowerCase()
+  const languageMap: Record<string, string> = {
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.json': 'json',
+    '.html': 'html',
+    '.css': 'css',
+    '.scss': 'scss',
+    '.less': 'less',
+    '.md': 'markdown',
+    '.py': 'python',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.c': 'c',
+    '.cs': 'csharp',
+    '.php': 'php',
+    '.rb': 'ruby',
+    '.go': 'go',
+    '.rs': 'rust',
+    '.kt': 'kotlin',
+    '.swift': 'swift',
+    '.yaml': 'yaml',
+    '.yml': 'yaml',
+    '.xml': 'xml',
+    '.sql': 'sql',
+    '.sh': 'shell',
+    '.bash': 'shell',
+    '.zsh': 'shell',
+    '.dockerfile': 'dockerfile',
+    '.txt': 'plaintext'
   }
+  return languageMap[ext] || 'plaintext'
 }
 
 export function FileViewerDialog({
@@ -48,6 +70,7 @@ export function FileViewerDialog({
   const [isEditingFile, setIsEditingFile] = useState(false)
   const [editedContent, setEditedContent] = useState<string>('')
   const [showRawMarkdown, setShowRawMarkdown] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const { copyToClipboard } = useCopyClipboard()
   const isDarkMode = useSelectSetting('theme') === 'dark'
@@ -64,12 +87,29 @@ export function FileViewerDialog({
     if (open) {
       setIsEditingFile(false)
       setEditedContent(viewedFile?.content || markdownText || '')
+      setIsFullscreen(false)
     }
   }, [viewedFile, markdownText, open])
+
+  // Handle F11 key for fullscreen toggle
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F11' && open) {
+        event.preventDefault()
+        setIsFullscreen((prev) => !prev)
+      }
+    }
+
+    if (open) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
 
   const closeFileViewer = () => {
     setIsEditingFile(false)
     setEditedContent('')
+    setIsFullscreen(false)
     onClose?.()
   }
 
@@ -97,6 +137,10 @@ export function FileViewerDialog({
     })
   }
 
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen)
+  }
+
   if (!viewedFile && !markdownText) return null
 
   return (
@@ -106,11 +150,25 @@ export function FileViewerDialog({
         if (!o) closeFileViewer()
       }}
     >
-      <DialogContent className='max-w-4xl max-h-[80vh] overflow-auto flex flex-col'>
-        <DialogHeader>
+      <DialogContent
+        className={`${
+          isFullscreen ? 'w-screen h-screen max-w-none max-h-none m-0 p-0 rounded-none' : 'max-w-4xl max-h-[80vh]'
+        } overflow-auto flex flex-col`}
+      >
+        <DialogHeader className={isFullscreen ? 'p-4' : ''}>
           <div className='flex items-center justify-between'>
             <DialogTitle>{viewedFile?.path || 'Text View'}</DialogTitle>
             <div className='flex items-center gap-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={toggleFullscreen}
+                className='flex items-center gap-2'
+                title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              >
+                {isFullscreen ? <Minimize2 className='h-4 w-4' /> : <Expand className='h-4 w-4' />}
+                {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              </Button>
               <Button variant='outline' size='sm' onClick={() => copyContent()} className='flex items-center gap-2'>
                 <FileText className='h-4 w-4' />
                 Copy Content
@@ -149,7 +207,7 @@ export function FileViewerDialog({
             )}
           </DialogDescription>
         </DialogHeader>
-        <div className='flex-1 min-h-0 overflow-auto border rounded-md p-2'>
+        <div className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-2 mx-4' : 'p-2'}`}>
           {!isEditingFile ? (
             markdownText ? (
               showRawMarkdown ? (
@@ -188,14 +246,18 @@ export function FileViewerDialog({
               </SyntaxHighlighter>
             )
           ) : (
-            <Textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              className='w-full h-full min-h-[300px]'
-            />
+            <div className='flex-1 min-h-0 relative'>
+              <LazyMonacoEditor
+                value={editedContent}
+                onChange={(value) => setEditedContent(value || '')}
+                language={getLanguageByExtension(viewedFile?.extension)}
+                height={isFullscreen ? 'calc(100vh - 200px)' : '300px'}
+                onSave={saveFileEdits}
+              />
+            </div>
           )}
         </div>
-        <DialogFooter className='mt-4 flex justify-between'>
+        <DialogFooter className={`mt-4 flex justify-between ${isFullscreen ? 'p-4' : ''}`}>
           <div className='flex gap-2'>
             {!isEditingFile && viewedFile && (
               <Button variant='outline' onClick={() => setIsEditingFile(true)}>
