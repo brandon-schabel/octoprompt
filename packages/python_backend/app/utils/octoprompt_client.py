@@ -5,18 +5,20 @@
 # 3. Full Pydantic validation for requests and responses
 # 4. Async/await support with httpx for performance
 # 5. Custom exception handling for API errors
+# 6. Aligned ChatService with TypeScript client, updated _request method.
 
 import asyncio
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, AsyncIterator
 import httpx
 from pydantic import BaseModel, ValidationError
 import json
+import time # Added import for time
 
 # Import your existing schemas
 from app.schemas.chat_schemas import (
     Chat, ChatMessage, CreateChatBody, UpdateChatBody, AiChatStreamRequest,
     ChatResponse, ChatListResponse, ChatMessageResponse, ChatMessagesListResponse,
-    ForkChatBody, ForkChatFromMessageBody
+    ForkChatBody, ForkChatFromMessageBody # Ensure these are correctly defined/imported
 )
 from app.schemas.project_schemas import (
     Project, ProjectFile, CreateProjectBody, UpdateProjectBody,
@@ -41,14 +43,15 @@ from app.schemas.common_schemas import ApiErrorResponse, OperationSuccessRespons
 
 class OctoPromptError(Exception):
     """Base exception for OctoPrompt API errors"""
-    def __init__(self, message: str, status_code: Optional[int] = None, error_code: Optional[str] = None):
+    def __init__(self, message: str, status_code: Optional[int] = None, error_code: Optional[str] = None, details: Optional[Any] = None):
         super().__init__(message)
-        self.status_code = status_code
+        self.status_code = status_code 
         self.error_code = error_code
+        self.details = details
 
 def ms_timestamp() -> int:
     """Generate unix timestamp in milliseconds"""
-    import time
+    # import time # Moved to top-level import
     return int(time.time() * 1000)
 
 class BaseApiClient:
@@ -76,7 +79,7 @@ class BaseApiClient:
     async def _request(self, method: str, endpoint: str, 
                       json_data: Optional[Dict] = None, 
                       params: Optional[Dict] = None,
-                      response_model: Optional[BaseModel] = None) -> Any:
+                      response_model: Optional[Any] = None) -> Any: # Changed BaseModel to Any for response_model type
         """Make HTTP request with error handling and validation"""
         url = f"{self.base_url}/api{endpoint}"
         
@@ -90,31 +93,52 @@ class BaseApiClient:
             )
             
             if not response.is_success:
+                error_data: Optional[Dict[str, Any]] = None
+                error_message = f"HTTP error {response.status_code}"
+                error_code_val: Optional[str] = None
+                error_details: Optional[Any] = None
                 try:
-                    error_data = response.json()
-                    if 'error' in error_data:
-                        raise OctoPromptError(
-                            error_data['error'].get('message', 'Unknown error'),
-                            response.status_code,
-                            error_data['error'].get('code')
-                        )
+                    error_payload = response.json()
+                    if isinstance(error_payload, dict):
+                        error_data = error_payload
+                        error_message = error_data.get("message", error_message)
+                        error_code_val = error_data.get("errorCode") # Match TS client
+                        error_details = error_data.get("details")
                 except json.JSONDecodeError:
-                    pass
+                    error_message = response.text or error_message
                 
-                raise OctoPromptError(f"HTTP {response.status_code}: {response.text}", response.status_code)
-            
+                raise OctoPromptError(
+                    message=error_message, 
+                    status_code=response.status_code, 
+                    error_code=error_code_val,
+                    details=error_details
+                )
+
+            # No content responses
+            if response.status_code == 204:
+                return None
+
             data = response.json()
             
             if response_model:
                 try:
                     return response_model.model_validate(data)
                 except ValidationError as e:
-                    raise OctoPromptError(f"Response validation failed: {e}")
+                    raise OctoPromptError(
+                        message="Invalid API response structure",
+                        status_code=response.status_code,
+                        error_code="VALIDATION_ERROR",
+                        details=e.errors()
+                    )
             
             return data
             
         except httpx.RequestError as e:
             raise OctoPromptError(f"Request failed: {e}")
+        except OctoPromptError: # Re-raise OctoPromptError if already caught
+            raise
+        except Exception as e: # Catch any other unexpected errors
+            raise OctoPromptError(f"An unexpected error occurred: {str(e)}")
 
 class ChatService(BaseApiClient):
     """Chat API operations"""
@@ -123,43 +147,83 @@ class ChatService(BaseApiClient):
         result = await self._request("GET", "/chats", response_model=ChatListResponse)
         return result.data
     
-    async def create_chat(self, title: str, copy_existing: Optional[bool] = None, 
-                         current_chat_id: Optional[int] = None) -> Chat:
-        body = CreateChatBody(title=title, copyExisting=copy_existing, currentChatId=current_chat_id)
-        result = await self._request("POST", "/chats", body.model_dump(exclude_none=True), response_model=ChatResponse)
+    async def create_chat(self, data: CreateChatBody) -> Chat:
+        result = await self._request("POST", "/chats", json_data=data.model_dump(exclude_none=True), response_model=ChatResponse)
         return result.data
     
     async def get_chat(self, chat_id: int) -> Chat:
         result = await self._request("GET", f"/chats/{chat_id}", response_model=ChatResponse)
         return result.data
     
-    async def update_chat(self, chat_id: int, title: str) -> Chat:
-        body = UpdateChatBody(title=title)
-        result = await self._request("PATCH", f"/chats/{chat_id}", body.model_dump(), response_model=ChatResponse)
+    async def update_chat(self, chat_id: int, data: UpdateChatBody) -> Chat:
+        result = await self._request("PATCH", f"/chats/{chat_id}", json_data=data.model_dump(exclude_none=True), response_model=ChatResponse)
         return result.data
     
     async def delete_chat(self, chat_id: int) -> bool:
-        await self._request("DELETE", f"/chats/{chat_id}", response_model=OperationSuccessResponse)
-        return True
+        result = await self._request("DELETE", f"/chats/{chat_id}", response_model=OperationSuccessResponse)
+        return result.success
     
     async def get_messages(self, chat_id: int) -> List[ChatMessage]:
         result = await self._request("GET", f"/chats/{chat_id}/messages", response_model=ChatMessagesListResponse)
         return result.data
     
-    async def fork_chat(self, chat_id: int, excluded_message_ids: Optional[List[int]] = None) -> Chat:
-        body = ForkChatBody(excludedMessageIds=excluded_message_ids or [])
-        result = await self._request("POST", f"/chats/{chat_id}/fork", body.model_dump(), response_model=ChatResponse)
+    async def fork_chat(self, chat_id: int, data: ForkChatBody) -> Chat:
+        result = await self._request("POST", f"/chats/{chat_id}/fork", json_data=data.model_dump(exclude_none=True), response_model=ChatResponse)
         return result.data
     
-    async def fork_chat_from_message(self, chat_id: int, message_id: int, 
-                                   excluded_message_ids: Optional[List[int]] = None) -> Chat:
-        body = ForkChatFromMessageBody(excludedMessageIds=excluded_message_ids or [])
-        result = await self._request("POST", f"/chats/{chat_id}/fork/{message_id}", body.model_dump(), response_model=ChatResponse)
+    async def fork_chat_from_message(self, chat_id: int, message_id: int, data: ForkChatFromMessageBody) -> Chat:
+        result = await self._request("POST", f"/chats/{chat_id}/messages/{message_id}/fork", json_data=data.model_dump(exclude_none=True), response_model=ChatResponse)
         return result.data
     
     async def delete_message(self, chat_id: int, message_id: int) -> bool:
-        await self._request("DELETE", f"/chats/{chat_id}/messages/{message_id}", response_model=OperationSuccessResponse)
-        return True
+        result = await self._request("DELETE", f"/chats/{chat_id}/messages/{message_id}", response_model=OperationSuccessResponse)
+        return result.success
+
+    async def stream_chat(self, data: AiChatStreamRequest) -> httpx.Response:
+        """
+        Initiates a streaming chat session.
+        Returns the raw httpx.Response object. The caller is responsible for handling the stream,
+        e.g., by iterating over `response.aiter_bytes()`.
+        """
+        url = f"{self.base_url}/api/chats/stream"
+        # Note: httpx.stream context manager is preferred for consuming streams.
+        # This method returns the response object for the caller to manage.
+        
+        # We are not using self._request here because it tries to parse response.json()
+        # which is not applicable for streams.
+        try:
+            # Open a stream request. Note: httpx.stream() is for consuming.
+            # For sending a request that expects a stream, a normal request is made.
+            # The server will respond with a streaming body.
+            response = await self.client.post(
+                url,
+                json=data.model_dump(exclude_none=True),
+                headers={"Content-Type": "application/json", "Accept": "text/event-stream"} # Or appropriate Accept header
+            )
+            response.raise_for_status() # Check for HTTP errors before returning the stream
+            return response
+        except httpx.HTTPStatusError as e:
+            # Attempt to parse error details if possible
+            error_message = f"HTTP error {e.response.status_code}"
+            error_code_val: Optional[str] = None
+            error_details: Optional[Any] = None
+            try:
+                error_payload = e.response.json()
+                if isinstance(error_payload, dict):
+                    error_message = error_payload.get("message", error_message)
+                    error_code_val = error_payload.get("errorCode")
+                    error_details = error_payload.get("details")
+            except json.JSONDecodeError:
+                error_message = e.response.text or error_message
+            raise OctoPromptError(
+                message=error_message,
+                status_code=e.response.status_code,
+                error_code=error_code_val,
+                details=error_details
+            )
+        except httpx.RequestError as e:
+            raise OctoPromptError(f"Request failed: {e}")
+
 
 class ProjectService(BaseApiClient):
     """Project API operations"""
