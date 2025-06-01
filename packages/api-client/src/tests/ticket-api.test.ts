@@ -25,10 +25,12 @@ const SpecificTaskResponseSchema = z.object({ success: z.literal(true), task: Ta
 const SpecificTaskListResponseSchema = z.object({ success: z.literal(true), tasks: z.array(TaskSchema) })
 const SpecificLinkedFilesResponseSchema = z.object({
   success: z.literal(true),
-  linkedFiles: z.array(z.object({
-    ticketId: z.number(),
-    fileId: z.number()
-  }))
+  linkedFiles: z.array(
+    z.object({
+      ticketId: z.number(),
+      fileId: z.number()
+    })
+  )
 })
 const SpecificBulkTasksResponseSchema = z.object({
   success: z.literal(true),
@@ -69,7 +71,7 @@ describe('Ticket API Tests', () => {
     try {
       // Create a temporary directory for the test project
       const tempDir = mkdtempSync(join(tmpdir(), `ticket-test-${Date.now()}-`))
-      
+
       const projectResult = await client.projects.createProject({
         name: 'Test Project for Tickets',
         path: tempDir,

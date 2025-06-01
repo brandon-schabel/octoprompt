@@ -111,7 +111,7 @@ export const updateTicketSchema = z.object({
   overview: z.string().optional(),
   status: z.enum(['open', 'in_progress', 'done', 'closed']).optional(),
   priority: z.enum(['low', 'normal', 'high']).optional(),
-  suggestedFileIds: suggestedFileIdsSchema
+  suggestedFileIds: suggestedFileIdsSchema.optional()
 })
 
 // Other request schemas
