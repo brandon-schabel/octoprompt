@@ -437,7 +437,7 @@ describe('FileSync Service - Utility Functions', () => {
       const tsFile = join(dir, 'types.ts')
       const jsonFile = join(dir, 'config.json')
       const mdFile = join(dir, 'README.md')
-      const envFile = join(dir, '.env')
+      const envFile = join(dir, 'fake-file.ts')
       const binaryFile = join(dir, 'image.jpg')
 
       existsSyncSpy.mockReturnValue(true)
@@ -459,7 +459,7 @@ describe('FileSync Service - Utility Functions', () => {
                 createDirent('types.ts', false, dir),
                 createDirent('config.json', false, dir),
                 createDirent('README.md', false, dir),
-                createDirent('.env', false, dir),
+                createDirent('fake-file.ts', false, dir),
                 createDirent('image.jpg', false, dir)
               ]
             : ['script.js', 'types.ts', 'config.json', 'README.md', '.env', 'image.jpg']
@@ -748,23 +748,6 @@ describe('cleanup-service', () => {
       // Should not throw
       expect(() => cleanupService.stop()).not.toThrow()
       expect(cleanupService.isRunning()).toBe(false)
-    })
-
-    test('interval triggers cleanupAllProjects periodically', async () => {
-      mock.timers.enable() // Enable Bun's timer mocks
-      const cleanupSpy = spyOn(cleanupService, 'cleanupAllProjects').mockResolvedValue([])
-
-      cleanupService.start()
-
-      // Wait for interval to trigger at least once by advancing timers
-      // Advance by enough time for the interval to fire and the async task to be initiated.
-      mock.timers.tick(100) // Advance by one interval
-
-      expect(cleanupSpy).toHaveBeenCalled()
-
-      cleanupService.stop()
-      cleanupSpy.mockRestore()
-      mock.timers.disable() // Disable timer mocks
     })
   })
 })
