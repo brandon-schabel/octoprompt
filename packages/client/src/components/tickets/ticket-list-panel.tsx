@@ -22,7 +22,7 @@ import {
 } from '@ui'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { TicketWithTasks } from 'shared/src/schemas/ticket.schemas'
+import { TicketWithTasks } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 

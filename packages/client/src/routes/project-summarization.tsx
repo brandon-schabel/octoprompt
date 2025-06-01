@@ -12,16 +12,16 @@ import {
   useRemoveSummariesFromFiles,
   useSummarizeProjectFiles
 } from '@/hooks/api/use-projects-api'
-import { buildCombinedFileSummariesXml } from 'shared/src/utils/summary-formatter'
+import { buildCombinedFileSummariesXml } from '@octoprompt/shared'
 
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { SummaryDialog } from '@/components/projects/summary-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { FormatTokenCount } from '@/components/format-token-count'
-import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+import { estimateTokenCount } from '@octoprompt/shared'
 
 import { toast } from 'sonner'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { ProjectFile } from '@octoprompt/schemas'
 import { useActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 
 export const Route = createFileRoute('/project-summarization')({
@@ -279,7 +279,7 @@ export function ProjectSummarizationSettingsPage() {
           onSuccess: (resp) => {
             toast.success(resp.message || 'Selected files have been summarized')
           },
-          onError: () => {}
+          onError: () => { }
         }
       )
     })
@@ -533,9 +533,8 @@ export function ProjectSummarizationSettingsPage() {
                   return (
                     <li
                       key={file.id}
-                      className={`group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0 ${
-                        hasSummary ? 'bg-green-50 dark:bg-green-900/30' : '' // Highlight summarized files
-                      }`}
+                      className={`group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0 ${hasSummary ? 'bg-green-50 dark:bg-green-900/30' : '' // Highlight summarized files
+                        }`}
                     >
                       <div className='flex items-center gap-2'>
                         <Checkbox
@@ -623,8 +622,8 @@ export function ProjectSummarizationSettingsPage() {
                   size='sm'
                 >
                   {summarizeMutation.isPending &&
-                  selectedFileIds.some((id) => summarizeMutation.variables?.fileIds.includes(id)) &&
-                  summarizeMutation.variables?.force
+                    selectedFileIds.some((id) => summarizeMutation.variables?.fileIds.includes(id)) &&
+                    summarizeMutation.variables?.force
                     ? 'Re-summarizing...'
                     : 'Force Re-summarize'}
                   ({selectedFileIds.length})

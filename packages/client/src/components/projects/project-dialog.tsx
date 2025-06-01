@@ -6,7 +6,7 @@ import { Input } from '@ui'
 import { Label } from '@ui'
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from '@/hooks/api/use-projects-api'
 import { useEffect, useState } from 'react'
-import { CreateProjectRequestBody } from 'shared/src/schemas/project.schemas'
+import { CreateProjectRequestBody } from '@octoprompt/schemas'
 import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type ProjectDialogProps = {

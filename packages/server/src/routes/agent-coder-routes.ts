@@ -2,16 +2,16 @@ import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
 import { z } from 'zod'
 import { dirname, join } from 'node:path'
 import { mkdir, rm, stat } from 'node:fs/promises'
-import { ApiError } from 'shared'
-import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas'
-import { ProjectFileMap, ProjectIdParamsSchema, type ProjectFile } from 'shared/src/schemas/project.schemas'
+import { ApiError } from '@octoprompt/shared'
+import { ApiErrorResponseSchema } from '@octoprompt/schemas'
+import { ProjectFileMap, ProjectIdParamsSchema, type ProjectFile } from '@octoprompt/schemas'
 import { mainOrchestrator } from '@/services/agents/agent-coder-service'
 import {
   AgentCoderRunRequestSchema,
   AgentCoderRunResponseSchema,
   CoderAgentDataContext,
   AgentDataLogSchema
-} from 'shared/src/schemas/agent-coder.schemas'
+} from '@octoprompt/schemas'
 import {
   AGENT_LOGS_DIR,
   getOrchestratorLogFilePaths,
@@ -19,7 +19,7 @@ import {
   getAgentDataLogFilePath
 } from '@/services/agents/agent-logger'
 import { getProjectById, getProjectFiles } from '@/services/project-service'
-import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
+import { buildProjectFileMap } from '@octoprompt/shared'
 import { getFullProjectSummary } from '@/utils/get-full-project-summary'
 import { resolvePath } from '@/utils/path-utils'
 import { fromZodError } from 'zod-validation-error'
@@ -171,12 +171,10 @@ const ConfirmAgentRunChangesResponseSchema = z
   .object({
     success: z.literal(true),
     message: z.string().openapi({ example: 'Agent run changes successfully written to filesystem.' }),
-    writtenFiles: z
-      .array(z.string())
-      .openapi({
-        description: 'Relative paths of files proposed for writing (actual writes depend on checksums).',
-        example: ['src/new-feature.ts', 'test/new-feature.test.ts']
-      })
+    writtenFiles: z.array(z.string()).openapi({
+      description: 'Relative paths of files proposed for writing (actual writes depend on checksums).',
+      example: ['src/new-feature.ts', 'test/new-feature.test.ts']
+    })
   })
   .openapi('ConfirmAgentRunChangesResponse')
 
@@ -329,7 +327,7 @@ export const agentCoderRoutes = new OpenAPIHono()
       selectedPromptIds
     } = c.req.valid('json')
 
-    const prompts = await getPromptsByIds(selectedPromptIds || [])
+    const prompts = await getPromptsByIds((selectedPromptIds || []) as number[])
 
     await log(`[Agent Coder Route] Starting run ${routeAgentJobId} for project ${routeProjectId}`, 'info', {
       agentJobId: routeAgentJobId,

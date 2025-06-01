@@ -10,7 +10,7 @@ import {
   toggleFile,
   toggleFolder
 } from './file-node-tree-utils'
-import type { ProjectFile } from '../../schemas/project.schemas'
+import type { ProjectFile } from '@octoprompt/schemas'
 
 describe('estimateTokenCount', () => {
   test('should correctly estimate tokens for normal text', () => {

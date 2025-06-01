@@ -4,14 +4,15 @@ export {
   useGetKey,
   useCreateKey,
   useUpdateKey,
-  useDeleteKey
+  useDeleteKey,
+  useInvalidateKeys
 } from '../api'
 
 // Type exports for backward compatibility
 import type {
   CreateProviderKeyBody,
   UpdateProviderKeyBody
-} from 'shared/src/schemas/provider-key.schemas'
+} from '@octoprompt/schemas'
 
 export type CreateKeyInput = CreateProviderKeyBody
 export type UpdateKeyInput = UpdateProviderKeyBody

@@ -1,4 +1,4 @@
-import { Ticket, TicketTask as Task, TicketWithTasks } from 'shared/src/schemas/ticket.schemas'
+import { Ticket, TicketTask as Task, TicketWithTasks } from '@octoprompt/schemas'
 
 export function buildTicketContent(ticket: Ticket, tasks?: Task[]): string {
   let content = ''

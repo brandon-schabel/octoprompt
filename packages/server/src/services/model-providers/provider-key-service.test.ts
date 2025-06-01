@@ -1,9 +1,7 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { createProviderKeyService } from '@/services/model-providers/provider-key-service'
-import type { ProviderKey } from 'shared/src/schemas/provider-key.schemas'
 import type { ProviderKeysStorage } from '@/utils/storage/provider-key-storage' // ADDED
-import { randomUUID } from 'crypto' // For mocking generateId
-import { ApiError } from 'shared/src/error/api-error'
+import { ApiError } from '@octoprompt/shared'
 import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 // In-memory store for our mock

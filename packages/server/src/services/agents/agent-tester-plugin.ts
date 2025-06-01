@@ -1,7 +1,7 @@
 import { $ } from 'bun'
 import { XMLParser } from 'fast-xml-parser'
-import { ProjectFile, ProjectFileMap } from 'shared/src/schemas/project.schemas'
-import { Task } from 'shared/src/schemas/agent-coder.schemas'
+import { ProjectFile, ProjectFileMap } from '@octoprompt/schemas'
+import { Task } from '@octoprompt/schemas'
 
 // Define ParsedJUnitResults type (structure based on JUnit XML)
 export type ParsedJUnitResults = {

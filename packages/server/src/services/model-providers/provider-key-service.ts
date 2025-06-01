@@ -1,12 +1,11 @@
-// packages/server/src/services/model-providers/provider-key-service.ts
 import { providerKeyStorage } from '@/utils/storage/provider-key-storage' // ADDED
 import {
   CreateProviderKeyInputSchema,
   ProviderKey,
   ProviderKeySchema,
   UpdateProviderKeyInput
-} from 'shared/src/schemas/provider-key.schemas'
-import { ApiError } from 'shared'
+} from '@octoprompt/schemas'
+import { ApiError } from '@octoprompt/shared'
 import { z } from '@hono/zod-openapi'
 import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
@@ -44,7 +43,9 @@ export function createProviderKeyService() {
     }
 
     if (incrementCount > 0) {
-      console.log(`Provider key ID ${initialId} was taken. Found available ID ${id} after ${incrementCount} increment(s).`)
+      console.log(
+        `Provider key ID ${initialId} was taken. Found available ID ${id} after ${incrementCount} increment(s).`
+      )
     }
 
     const newKeyData: ProviderKey = {
@@ -54,7 +55,7 @@ export function createProviderKeyService() {
       key: data.key, // Stored in plaintext initially
       isDefault: data.isDefault ?? false, // Added isDefault, defaults to false
       created: now,
-      updated: now,
+      updated: now
     }
 
     // Validate the new key data against the schema before saving
@@ -65,10 +66,15 @@ export function createProviderKeyService() {
         constructedData: newKeyData,
         error: parseResult.error.flatten()
       })
-      throw new ApiError(500, 'Internal validation error creating provider key.', 'PROVIDER_KEY_VALIDATION_ERROR', parseResult.error.flatten())
+      throw new ApiError(
+        500,
+        'Internal validation error creating provider key.',
+        'PROVIDER_KEY_VALIDATION_ERROR',
+        parseResult.error.flatten()
+      )
     }
 
-    const validatedNewKey = parseResult.data;
+    const validatedNewKey = parseResult.data
 
     allKeys[validatedNewKey.id] = validatedNewKey
     await providerKeyStorage.writeProviderKeys(allKeys)
@@ -77,13 +83,12 @@ export function createProviderKeyService() {
 
   async function listKeysCensoredKeys(): Promise<ProviderKey[]> {
     const allKeys = await providerKeyStorage.readProviderKeys()
-    const keyList = Object.values(allKeys).map(key => {
+    const keyList = Object.values(allKeys).map((key) => {
       // Mask the API key
-      const maskedKey = key.key.length > 8
-        ? `${key.key.substring(0, 4)}****${key.key.substring(key.key.length - 4)}`
-        : '********'; // Or handle very short keys differently
-      return { ...key, key: maskedKey };
-    });
+      const maskedKey =
+        key.key.length > 8 ? `${key.key.substring(0, 4)}****${key.key.substring(key.key.length - 4)}` : '********' // Or handle very short keys differently
+      return { ...key, key: maskedKey }
+    })
 
     // Sort by provider, then by created descending (as in original SQL)
     keyList.sort((a, b) => {
@@ -150,14 +155,18 @@ export function createProviderKeyService() {
       throw new ApiError(404, `Provider key with ID ${id} not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE')
     }
 
-    const now = normalizeToUnixMs(new Date());
+    const now = normalizeToUnixMs(new Date())
 
     // If this key is being set to default, unset other defaults for the same provider
     if (data.isDefault === true && existingKey.provider === (data.provider ?? existingKey.provider)) {
       for (const keyId in allKeys) {
-        if (allKeys[keyId].id !== id && allKeys[keyId].provider === (data.provider ?? existingKey.provider) && allKeys[keyId].isDefault) {
-          allKeys[keyId].isDefault = false;
-          allKeys[keyId].updated = now;
+        if (
+          allKeys[keyId].id !== id &&
+          allKeys[keyId].provider === (data.provider ?? existingKey.provider) &&
+          allKeys[keyId].isDefault
+        ) {
+          allKeys[keyId].isDefault = false
+          allKeys[keyId].updated = now
         }
       }
     }
@@ -179,10 +188,15 @@ export function createProviderKeyService() {
         mergedData: updatedKeyData,
         error: parseResult.error.flatten()
       })
-      throw new ApiError(500, `Internal validation error updating provider key.`, 'PROVIDER_KEY_UPDATE_VALIDATION_ERROR', parseResult.error.flatten())
+      throw new ApiError(
+        500,
+        `Internal validation error updating provider key.`,
+        'PROVIDER_KEY_UPDATE_VALIDATION_ERROR',
+        parseResult.error.flatten()
+      )
     }
 
-    const validatedUpdatedKey = parseResult.data;
+    const validatedUpdatedKey = parseResult.data
     allKeys[id] = validatedUpdatedKey
     await providerKeyStorage.writeProviderKeys(allKeys)
     return validatedUpdatedKey

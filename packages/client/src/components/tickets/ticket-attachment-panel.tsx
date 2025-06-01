@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLinkFilesToTicket } from '../../hooks/api/use-tickets-api'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { ProjectFile } from '@octoprompt/schemas'
 
 interface TicketAttachmentsPanelProps {
   ticketId: number

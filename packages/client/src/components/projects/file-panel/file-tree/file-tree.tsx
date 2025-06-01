@@ -29,7 +29,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
-import { buildTsconfigAliasMap, getRecursiveImports } from 'shared/src/utils/file-tree-utils/import-resolver'
+import { buildTsconfigAliasMap, getRecursiveImports } from '@octoprompt/shared'
 import {
   toggleFile as toggleFileUtil,
   toggleFolder as toggleFolderUtil,
@@ -40,17 +40,16 @@ import {
   formatTokenCount,
   FileNode,
   estimateTokenCount
-} from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
-import { buildNodeContent, buildNodeSummaries } from 'shared/src/utils/projects-utils'
+} from '@octoprompt/shared'
+import { buildNodeContent, buildNodeSummaries } from '@octoprompt/shared'
 
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useRefreshProject } from '@/hooks/api/use-projects-api'
 import { useSummarizeProjectFiles } from '@/hooks/api/use-projects-api'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { EditorType, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
-import { EditorType } from 'shared/index'
 
 export type VisibleItem = {
   path: string

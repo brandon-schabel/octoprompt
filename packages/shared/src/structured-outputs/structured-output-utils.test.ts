@@ -1,4 +1,3 @@
-/** packages/shared/src/structured-outputs/structured-output-utils.test.ts */
 import { describe, it, expect } from 'bun:test'
 import { z } from 'zod'
 import { zodToStructuredJsonSchema } from './structured-output-utils'

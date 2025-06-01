@@ -4,7 +4,7 @@ import { octoClient } from '../api'
 import type {
   GenerateChangeBody,
   AIFileChangeRecord
-} from 'shared/src/schemas/ai-file-change.schemas'
+} from '@octoprompt/schemas'
 
 const AI_FILE_CHANGE_KEYS = {
   all: ['aiFileChanges'] as const,

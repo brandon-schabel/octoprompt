@@ -7,11 +7,10 @@ import { Input } from '@ui'
 import { Slider } from '@ui'
 import { useSyncProject, useGetProject } from '@/hooks/api/use-projects-api'
 import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
-import { EDITOR_OPTIONS } from 'shared/src/schemas/global-state-schema'
-import { EditorType } from 'shared/src/schemas/global-state-schema'
 import { useEffect } from 'react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { EditorType, EDITOR_OPTIONS } from '@octoprompt/schemas'
 
 export function ProjectSettingsDialog() {
   const updateActiveProjectTab = useUpdateActiveProjectTab()

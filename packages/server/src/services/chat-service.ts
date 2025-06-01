@@ -1,6 +1,6 @@
-import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage } from 'shared/src/schemas/chat.schemas'
-import { ApiError } from 'shared'
-import { chatStorage, type ChatsStorage, type ChatMessagesStorage } from '@/utils/storage/chat-storage' // New import
+import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage } from '@octoprompt/schemas'
+import { ApiError } from '@octoprompt/shared'
+import { chatStorage, type ChatMessagesStorage } from '@/utils/storage/chat-storage' // New import
 import { ZodError } from 'zod'
 import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
@@ -29,7 +29,12 @@ export function createChatService() {
     } catch (error) {
       if (error instanceof ZodError) {
         console.error(`Validation failed for new chat data: ${error.message}`, error.flatten().fieldErrors)
-        throw new ApiError(500, `Internal validation error creating chat.`, 'CHAT_VALIDATION_ERROR', error.flatten().fieldErrors)
+        throw new ApiError(
+          500,
+          `Internal validation error creating chat.`,
+          'CHAT_VALIDATION_ERROR',
+          error.flatten().fieldErrors
+        )
       }
       throw error // Should not happen if data is constructed correctly
     }
@@ -47,7 +52,7 @@ export function createChatService() {
     }
     if (allChats[chatId]) {
       // Extremely unlikely with UUIDs but good to check
-      throw new ApiError(509, `Chat ID conflict for ${chatId}`, 'CHAT_ID_CONFLICT');
+      throw new ApiError(509, `Chat ID conflict for ${chatId}`, 'CHAT_ID_CONFLICT')
     }
 
     allChats[chatId] = newChatData
@@ -62,30 +67,35 @@ export function createChatService() {
 
       for (const msg of Object.values(sourceMessages)) {
         let newMessageId = chatStorage.generateId()
-        const initialMessageId = newMessageId;
-        let incrementCount = 0;
+        const initialMessageId = newMessageId
+        let incrementCount = 0
 
         // Handle potential ID conflicts for messages within the new chat
         while (newMessagesData[newMessageId]) {
-          newMessageId++;
-          incrementCount++;
+          newMessageId++
+          incrementCount++
         }
         if (incrementCount > 0) {
-          console.log(`Copied Message ID ${initialMessageId} for new chat ${chatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`);
+          console.log(
+            `Copied Message ID ${initialMessageId} for new chat ${chatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`
+          )
         }
 
         // Preserve original creation timestamp for ordering, assign new ID and new chatId
         const copiedMsg: ChatMessage = {
           ...msg,
           id: newMessageId,
-          chatId: chatId,
+          chatId: chatId
         }
         try {
-          ChatMessageSchema.parse(copiedMsg);
-          newMessagesData[newMessageId] = copiedMsg; // Add to the new chat's message data directly
+          ChatMessageSchema.parse(copiedMsg)
+          newMessagesData[newMessageId] = copiedMsg // Add to the new chat's message data directly
         } catch (error) {
           if (error instanceof ZodError) {
-            console.error(`Validation failed for copied message ${msg.id} to new chat ${chatId}: ${error.message}`, error.flatten().fieldErrors);
+            console.error(
+              `Validation failed for copied message ${msg.id} to new chat ${chatId}: ${error.message}`,
+              error.flatten().fieldErrors
+            )
             // Decide whether to skip this message or throw an error for the whole operation
           }
         }
@@ -104,13 +114,18 @@ export function createChatService() {
     }
     allChats[chatId].updated = normalizeToUnixMs(new Date())
     try {
-      ChatSchema.parse(allChats[chatId]); // Re-validate before writing
+      ChatSchema.parse(allChats[chatId]) // Re-validate before writing
       await chatStorage.writeChats(allChats)
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ApiError(500, `Validation failed updating chat timestamp for ${chatId}.`, 'CHAT_VALIDATION_ERROR', error.flatten().fieldErrors);
+        throw new ApiError(
+          500,
+          `Validation failed updating chat timestamp for ${chatId}.`,
+          'CHAT_VALIDATION_ERROR',
+          error.flatten().fieldErrors
+        )
       }
-      throw error;
+      throw error
     }
   }
 
@@ -132,24 +147,29 @@ export function createChatService() {
       chatId: message.chatId,
       role: message.role,
       content: message.content,
-      created: message.created || normalizeToUnixMs(now), // Use provided createdAt if exists (e.g. for imported messages), else new
+      created: message.created || normalizeToUnixMs(now) // Use provided createdAt if exists (e.g. for imported messages), else new
     }
 
     try {
-      ChatMessageSchema.parse(finalMessageData);
+      ChatMessageSchema.parse(finalMessageData)
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error(`Validation failed for new message data: ${error.message}`, error.flatten().fieldErrors);
-        throw new ApiError(500, `Internal validation error saving message.`, 'MESSAGE_VALIDATION_ERROR', error.flatten().fieldErrors);
+        console.error(`Validation failed for new message data: ${error.message}`, error.flatten().fieldErrors)
+        throw new ApiError(
+          500,
+          `Internal validation error saving message.`,
+          'MESSAGE_VALIDATION_ERROR',
+          error.flatten().fieldErrors
+        )
       }
-      throw error;
+      throw error
     }
 
     const chatMessages = await chatStorage.readChatMessages(message.chatId)
     if (chatMessages[messageId]) {
       // Handle update or throw conflict, for now, let's assume saveMessage can overwrite if ID is provided and exists.
       // Or, more strictly, throw an error if message.id was provided and already exists.
-      console.warn(`Message with ID ${messageId} already exists in chat ${message.chatId}. Overwriting.`);
+      console.warn(`Message with ID ${messageId} already exists in chat ${message.chatId}. Overwriting.`)
     }
     chatMessages[messageId] = finalMessageData
     await chatStorage.writeChatMessages(message.chatId, chatMessages)
@@ -167,20 +187,32 @@ export function createChatService() {
 
     const chatMessages = await chatStorage.readChatMessages(chatId)
     if (!chatMessages[messageId]) {
-      throw new ApiError(404, `Message with ID ${messageId} not found in chat ${chatId} for update.`, 'MESSAGE_NOT_FOUND')
+      throw new ApiError(
+        404,
+        `Message with ID ${messageId} not found in chat ${chatId} for update.`,
+        'MESSAGE_NOT_FOUND'
+      )
     }
 
     chatMessages[messageId].content = content
     // chatMessages[messageId].updated = new Date().toISOString(); // If messages had an updatedAt field
 
     try {
-      ChatMessageSchema.parse(chatMessages[messageId]); // Re-validate before writing
+      ChatMessageSchema.parse(chatMessages[messageId]) // Re-validate before writing
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error(`Validation failed updating message content for ${messageId}: ${error.message}`, error.flatten().fieldErrors);
-        throw new ApiError(500, `Internal validation error updating message.`, 'MESSAGE_VALIDATION_ERROR', error.flatten().fieldErrors);
+        console.error(
+          `Validation failed updating message content for ${messageId}: ${error.message}`,
+          error.flatten().fieldErrors
+        )
+        throw new ApiError(
+          500,
+          `Internal validation error updating message.`,
+          'MESSAGE_VALIDATION_ERROR',
+          error.flatten().fieldErrors
+        )
       }
-      throw error;
+      throw error
     }
 
     await chatStorage.writeChatMessages(chatId, chatMessages)
@@ -216,13 +248,18 @@ export function createChatService() {
     allChats[chatId].updated = normalizeToUnixMs(new Date())
 
     try {
-      ChatSchema.parse(allChats[chatId]);
+      ChatSchema.parse(allChats[chatId])
     } catch (error) {
       if (error instanceof ZodError) {
-        console.error(`Validation failed updating chat ${chatId}: ${error.message}`, error.flatten().fieldErrors);
-        throw new ApiError(500, `Internal validation error updating chat.`, 'CHAT_VALIDATION_ERROR', error.flatten().fieldErrors);
+        console.error(`Validation failed updating chat ${chatId}: ${error.message}`, error.flatten().fieldErrors)
+        throw new ApiError(
+          500,
+          `Internal validation error updating chat.`,
+          'CHAT_VALIDATION_ERROR',
+          error.flatten().fieldErrors
+        )
       }
-      throw error;
+      throw error
     }
     await chatStorage.writeChats(allChats)
     return allChats[chatId]
@@ -243,11 +280,19 @@ export function createChatService() {
   async function deleteMessage(chatId: number, messageId: number): Promise<void> {
     const allChats = await chatStorage.readChats()
     if (!allChats[chatId]) {
-      throw new ApiError(404, `Chat with ID ${chatId} not found when attempting to delete message ${messageId}.`, 'CHAT_NOT_FOUND')
+      throw new ApiError(
+        404,
+        `Chat with ID ${chatId} not found when attempting to delete message ${messageId}.`,
+        'CHAT_NOT_FOUND'
+      )
     }
     const chatMessages = await chatStorage.readChatMessages(chatId)
     if (!chatMessages[messageId]) {
-      throw new ApiError(404, `Message with ID ${messageId} not found in chat ${chatId} for deletion.`, 'MESSAGE_NOT_FOUND')
+      throw new ApiError(
+        404,
+        `Message with ID ${messageId} not found in chat ${chatId} for deletion.`,
+        'MESSAGE_NOT_FOUND'
+      )
     }
 
     delete chatMessages[messageId]
@@ -271,7 +316,7 @@ export function createChatService() {
       created: normalizeToUnixMs(now),
       updated: normalizeToUnixMs(now)
     }
-    ChatSchema.parse(newChatData); // Validate
+    ChatSchema.parse(newChatData) // Validate
 
     allChats[newChatId] = newChatData
     await chatStorage.writeChats(allChats)
@@ -282,26 +327,28 @@ export function createChatService() {
     for (const msg of Object.values(sourceMessagesAll)) {
       if (!excludedMessageIds.includes(msg.id)) {
         let newMessageId = chatStorage.generateId() // New ID for the message in the new chat
-        const initialMessageId = newMessageId;
-        let incrementCount = 0;
+        const initialMessageId = newMessageId
+        let incrementCount = 0
 
         // Handle potential ID conflicts for messages within the new forked chat
         // It's less likely here if messagesToCopyRecord starts empty, but good practice
         while (messagesToCopyRecord[newMessageId]) {
-          newMessageId++;
-          incrementCount++;
+          newMessageId++
+          incrementCount++
         }
         if (incrementCount > 0) {
-          console.log(`Forked Message ID ${initialMessageId} for new chat ${newChatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`);
+          console.log(
+            `Forked Message ID ${initialMessageId} for new chat ${newChatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`
+          )
         }
 
         const copiedMsgData: ChatMessage = {
           ...msg,
           id: newMessageId,
-          chatId: newChatId,
+          chatId: newChatId
           // createdAt is preserved from original message
         }
-        ChatMessageSchema.parse(copiedMsgData); // Validate
+        ChatMessageSchema.parse(copiedMsgData) // Validate
         messagesToCopyRecord[newMessageId] = copiedMsgData
       }
     }
@@ -324,15 +371,24 @@ export function createChatService() {
     const sourceMessagesAll = await chatStorage.readChatMessages(sourceChatId)
     const startMessage = sourceMessagesAll[messageId]
     if (!startMessage) {
-      throw new ApiError(404, `Starting message with ID ${messageId} not found in chat ${sourceChatId}.`, 'MESSAGE_NOT_FOUND')
+      throw new ApiError(
+        404,
+        `Starting message with ID ${messageId} not found in chat ${sourceChatId}.`,
+        'MESSAGE_NOT_FOUND'
+      )
     }
     // No need for: if (startMessage.chat_id !== sourceChatId) as we fetched from the correct file.
 
     const newTitle = `Fork from ${sourceChat.title} at message (${messageId})`
     const newChatId = chatStorage.generateId()
     const now = new Date().toISOString()
-    const newChatData: Chat = { id: newChatId, title: newTitle, created: normalizeToUnixMs(now), updated: normalizeToUnixMs(now) }
-    ChatSchema.parse(newChatData); // Validate
+    const newChatData: Chat = {
+      id: newChatId,
+      title: newTitle,
+      created: normalizeToUnixMs(now),
+      updated: normalizeToUnixMs(now)
+    }
+    ChatSchema.parse(newChatData) // Validate
 
     allChats[newChatId] = newChatData
     await chatStorage.writeChats(allChats)
@@ -343,7 +399,11 @@ export function createChatService() {
 
     if (indexOfStart === -1) {
       // Should not happen if startMessage was found above
-      throw new ApiError(500, `Internal error: Could not re-find the starting message ${messageId} in chat sequence.`, 'MESSAGE_SEQUENCE_ERROR')
+      throw new ApiError(
+        500,
+        `Internal error: Could not re-find the starting message ${messageId} in chat sequence.`,
+        'MESSAGE_SEQUENCE_ERROR'
+      )
     }
 
     const messagesToConsider = sourceMessagesArray.slice(0, indexOfStart + 1)
@@ -352,21 +412,23 @@ export function createChatService() {
     for (const msg of messagesToConsider) {
       if (!excludedMessageIds.includes(msg.id)) {
         let newMessageId = chatStorage.generateId()
-        const initialMessageId = newMessageId;
-        let incrementCount = 0;
+        const initialMessageId = newMessageId
+        let incrementCount = 0
 
         // Handle potential ID conflicts for messages within the new forked chat
         // It's less likely here if messagesToCopyRecord starts empty, but good practice
         while (messagesToCopyRecord[newMessageId]) {
-          newMessageId++;
-          incrementCount++;
+          newMessageId++
+          incrementCount++
         }
         if (incrementCount > 0) {
-          console.log(`Forked (from message) Message ID ${initialMessageId} for new chat ${newChatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`);
+          console.log(
+            `Forked (from message) Message ID ${initialMessageId} for new chat ${newChatId} was taken. Found available ID ${newMessageId} after ${incrementCount} increment(s).`
+          )
         }
 
         const copiedMsgData: ChatMessage = { ...msg, id: newMessageId, chatId: newChatId }
-        ChatMessageSchema.parse(copiedMsgData); // Validate
+        ChatMessageSchema.parse(copiedMsgData) // Validate
         messagesToCopyRecord[newMessageId] = copiedMsgData
       }
     }

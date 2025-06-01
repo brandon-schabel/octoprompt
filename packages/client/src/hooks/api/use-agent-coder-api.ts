@@ -5,7 +5,7 @@ import type {
   AgentCoderRunRequest,
   AgentCoderRunResponse,
   AgentDataLog
-} from 'shared/src/schemas/agent-coder.schemas'
+} from '@octoprompt/schemas'
 
 const AGENT_CODER_KEYS = {
   all: ['agentCoder'] as const,

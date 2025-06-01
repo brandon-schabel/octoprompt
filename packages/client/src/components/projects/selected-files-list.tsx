@@ -25,7 +25,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { FileViewerDialog } from '../navigation/file-viewer-dialog'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { Project, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 
@@ -260,7 +260,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
     return (
       <>
-        <FileViewerDialog open={!!viewedFile} viewedFile={viewedFile} onClose={closeFileViewer} />
+        <FileViewerDialog open={!!viewedFile} viewedFile={viewedFile as ProjectFile} onClose={closeFileViewer} />
 
         <Dialog open={bookmarkDialogOpen} onOpenChange={setBookmarkDialogOpen}>
           <DialogContent>

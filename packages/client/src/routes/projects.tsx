@@ -8,7 +8,7 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { ResizablePanel } from '@ui'
-import { ProjectResponse } from 'shared/src/schemas/project.schemas'
+import { ProjectResponse } from '@octoprompt/schemas'
 import {
   useActiveProjectTab,
   useGetProjectTabs,

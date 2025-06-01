@@ -1,4 +1,3 @@
-
 export {
   useGetAllPrompts,
   useGetPrompt,
@@ -8,14 +7,15 @@ export {
   useDeletePrompt,
   useAddPromptToProject,
   useRemovePromptFromProject,
-  useOptimizeUserInput
+  useOptimizeUserInput,
+  useInvalidatePrompts 
 } from '../api'
 
 // Type exports for backward compatibility
 import type {
   CreatePromptBody,
   UpdatePromptBody
-} from 'shared/src/schemas/prompt.schemas'
+} from '@octoprompt/schemas'
 
 export type CreatePromptInput = CreatePromptBody
 export type UpdatePromptInput = UpdatePromptBody

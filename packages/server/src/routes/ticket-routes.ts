@@ -1,5 +1,5 @@
-import { ApiError } from 'shared'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
+import { ApiError } from '@octoprompt/shared'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
 import {
   createTicket,
   getTicketById,
@@ -49,7 +49,7 @@ import {
   updateTaskSchema,
   UpdateTicketBodySchema,
   updateTicketSchema
-} from 'shared/src/schemas/ticket.schemas'
+} from '@octoprompt/schemas'
 import { normalizeToUnixMs } from '@/utils/parse-timestamp'
 
 const LinkFilesBodySchema = linkFilesSchema

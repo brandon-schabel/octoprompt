@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { ApiErrorResponseSchema } from 'shared/src/schemas/common.schemas'
+import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 import {
   generateFileChange,
   getFileChange,
@@ -10,9 +10,9 @@ import {
   AIFileChangeRecordSchema,
   GenerateChangeBodySchema as AIChangeGenerateBodySchema,
   FileChangeIdParamsSchema as AIChangeFileChangeIdParamsSchema
-} from 'shared/src/schemas/ai-file-change.schemas'
-import { ProjectIdParamsSchema } from 'shared/src/schemas/project.schemas'
-import { ApiError } from 'shared'
+} from '@octoprompt/schemas'
+import { ProjectIdParamsSchema } from '@octoprompt/schemas'
+import { ApiError } from '@octoprompt/shared'
 
 const AIFileChangeRecordResponseSchema = AIFileChangeRecordSchema.openapi('AIFileChangeRecordResponse')
 

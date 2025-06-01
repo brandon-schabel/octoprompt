@@ -1,4 +1,4 @@
-import { Ticket } from 'shared/src/schemas/ticket.schemas'
+import { Ticket } from '@octoprompt/schemas'
 import { Badge } from '@ui'
 
 interface TicketListProps {

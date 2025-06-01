@@ -1,4 +1,4 @@
-import { EditorType } from 'shared/src/schemas/global-state-schema'
+import { EditorType } from '@octoprompt/schemas'
 
 export function getEditorUrl(editor: EditorType, filePath: string): string {
   const normalizedPath = filePath.replace(/\\/g, '/')

@@ -8,12 +8,12 @@ import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
-import { ProjectFile } from 'shared/src/schemas/project.schemas'
+import { ProjectFile } from '@octoprompt/schemas'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
 type FileViewerDialogProps = {
   open: boolean
-  viewedFile?: ProjectFile | null
+  viewedFile?: ProjectFile
   markdownText?: string
   onClose?: () => void
   onSave?: (content: string) => void

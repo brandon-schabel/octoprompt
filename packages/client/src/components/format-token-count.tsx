@@ -1,7 +1,7 @@
-import { estimateTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+import { estimateTokenCount } from '@octoprompt/shared'
 import { useMemo } from 'react'
 import { clsx } from 'clsx'
-import { formatTokenCount } from 'shared/src/utils/file-tree-utils/file-node-tree-utils'
+import { formatTokenCount } from '@octoprompt/shared'
 
 /** Formats and displays the token count for given content, color-coding it based on thresholds. */
 export const FormatTokenCount = ({ tokenContent }: { tokenContent: string | number }) => {
