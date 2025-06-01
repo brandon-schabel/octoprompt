@@ -1,7 +1,7 @@
 import { HIGH_MODEL_CONFIG, PLANNING_MODEL_CONFIG } from '@octoprompt/schemas'
 import { AiSdkOptions } from '@octoprompt/schemas'
 import { ProjectFile } from '@octoprompt/schemas'
-import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
+import { buildProjectFileMap } from '@octoprompt/shared'
 import { generateStructuredData } from '../gen-ai-services'
 import { computeChecksum } from '../file-services/file-sync-service-unified'
 import { fromZodError } from 'zod-validation-error'

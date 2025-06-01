@@ -8,7 +8,7 @@ import {
 import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
 import { ProjectFileMap } from '@octoprompt/schemas'
-import { buildProjectFileMap } from 'shared/src/utils/projects-utils'
+import { buildProjectFileMap } from '@octoprompt/shared'
 
 const MAX_HISTORY_SIZE = 50
 

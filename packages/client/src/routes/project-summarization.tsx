@@ -18,7 +18,7 @@ import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { SummaryDialog } from '@/components/projects/summary-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { FormatTokenCount } from '@/components/format-token-count'
-import { estimateTokenCount } from '@octoprompt/shared/src/utils/file-tree-utils/file-node-tree-utils'
+import { estimateTokenCount } from '@octoprompt/shared'
 
 import { toast } from 'sonner'
 import { ProjectFile } from '@octoprompt/schemas'
