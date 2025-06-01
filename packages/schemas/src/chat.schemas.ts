@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi'
 import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
 import { MessageRoleEnum } from './common.schemas'
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
+import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 
 import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 

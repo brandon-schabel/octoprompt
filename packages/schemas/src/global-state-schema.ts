@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { providerSchema, type APIProviders } from './provider-key.schemas'
 import { idSchemaSpec, idArraySchemaSpec } from './schema-utils'
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
+import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 
 const defaultModelConfigs = LOW_MODEL_CONFIG
 
