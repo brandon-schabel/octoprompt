@@ -225,25 +225,21 @@ async def health_check(): return {"success": True}
 
 # --- Import and include actual API routers ---
 from app.api.endpoints.admin_api import router as admin_router
-from app.api.endpoints.agent_coder_api import router as agent_coder_router
 from app.api.endpoints.chat_api import router as chat_router
 from app.api.endpoints.prompt_api import router as prompt_router    
 from app.api.endpoints.projects_api import router as project_router
 from app.api.endpoints.provider_key_api import router as provider_key_router
 from app.api.endpoints.ticket_api import router as ticket_router
 from app.api.endpoints.gen_ai_api import router as gen_ai_router
-from app.api.endpoints.ai_file_change_api import router as ai_file_change_router
 # Potentially more routers from app.api.endpoints can be added here
 
 app.include_router(admin_router)
-app.include_router(agent_coder_router)
 app.include_router(chat_router)
 app.include_router(prompt_router)
 app.include_router(project_router)
 app.include_router(provider_key_router)
 app.include_router(ticket_router)
 app.include_router(gen_ai_router)
-app.include_router(ai_file_change_router)
 
 # --- WebSocket Endpoint (from server.ts) ---
 @app.websocket("/ws")
