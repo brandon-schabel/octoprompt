@@ -114,6 +114,12 @@ export async function handleChatMessage({
     })
 
     userCoreMessage.content = content
+  } else if (currentMessageAttachments && currentMessageAttachments.length > 0) {
+    // Log a warning if attachments were provided but model doesn't support them
+    console.warn(`Model ${finalOptions.model} from provider ${finalOptions.provider} does not support multimodal content. Attachments will be ignored.`)
+    if (debug) {
+      console.debug('Skipped attachments:', currentMessageAttachments.map(a => a.fileName || a.id))
+    }
   }
 
   messagesToProcess.push(userCoreMessage)
