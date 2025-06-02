@@ -1,7 +1,19 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
 import { Button } from '@ui'
-import { Edit, Save, XCircle, Copy, FileText, FileCode, Expand, Minimize2, History, RotateCcw, Clock } from 'lucide-react'
+import {
+  Edit,
+  Save,
+  XCircle,
+  Copy,
+  FileText,
+  FileCode,
+  Expand,
+  Minimize2,
+  History,
+  RotateCcw,
+  Clock
+} from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
@@ -13,7 +25,12 @@ import { ProjectFile, FileVersion } from '@octoprompt/schemas'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
 import { DiffViewer } from '@/components/file-changes/diff-viewer'
-import { useGetFileVersions, useGetFileVersion, useUpdateFileContent, useRevertFileToVersion } from '@/hooks/api/use-projects-api'
+import {
+  useGetFileVersions,
+  useGetFileVersion,
+  useUpdateFileContent,
+  useRevertFileToVersion
+} from '@/hooks/api/use-projects-api'
 import { Slider } from '@ui'
 
 type FileViewerDialogProps = {
@@ -88,10 +105,7 @@ export function FileViewerDialog({
 
   // File versioning hooks
   const originalFileId = viewedFile?.originalFileId || viewedFile?.id
-  const { data: fileVersions, isLoading: versionsLoading } = useGetFileVersions(
-    projectId || 0, 
-    originalFileId || 0
-  )
+  const { data: fileVersions, isLoading: versionsLoading } = useGetFileVersions(projectId || 0, originalFileId || 0)
   const { data: selectedVersionData } = useGetFileVersion(
     projectId || 0,
     originalFileId || 0,
@@ -255,7 +269,11 @@ export function FileViewerDialog({
         </DialogHeader>
         {/* Only show tabs for actual files with versioning capability */}
         {viewedFile && projectId ? (
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'edit' | 'history')} className='flex-1 flex flex-col min-h-0'>
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as 'edit' | 'history')}
+            className='flex-1 flex flex-col min-h-0'
+          >
             <TabsList className='grid w-full grid-cols-2'>
               <TabsTrigger value='edit' className='flex items-center gap-2'>
                 <Edit className='h-4 w-4' />
@@ -266,7 +284,7 @@ export function FileViewerDialog({
                 History
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value='edit' className='flex-1 min-h-0 mt-4'>
               <div className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-2 mx-4' : 'p-2'}`}>
                 {!isEditingFile ? (
@@ -292,9 +310,11 @@ export function FileViewerDialog({
                 )}
               </div>
             </TabsContent>
-            
+
             <TabsContent value='history' className='flex-1 min-h-0 mt-4'>
-              <div className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-4 mx-4' : 'p-4'} space-y-4`}>
+              <div
+                className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-4 mx-4' : 'p-4'} space-y-4`}
+              >
                 {versionsLoading ? (
                   <div className='flex items-center justify-center p-8'>
                     <div className='text-muted-foreground'>Loading version history...</div>
@@ -314,7 +334,7 @@ export function FileViewerDialog({
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Version list */}
                     <div className='space-y-2 max-h-[200px] overflow-y-auto'>
                       {fileVersions.data.map((version) => (
@@ -358,17 +378,14 @@ export function FileViewerDialog({
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Content viewer for selected version */}
                     {selectedHistoryVersion && selectedVersionData?.data && (
                       <div className='mt-4'>
                         <h4 className='text-md font-medium mb-2'>Version {selectedHistoryVersion} Content</h4>
                         {showDiff && viewedFile ? (
                           <div className='border rounded-md p-2'>
-                            <DiffViewer 
-                              oldValue={selectedVersionData.data.content}
-                              newValue={viewedFile.content}
-                            />
+                            <DiffViewer oldValue={selectedVersionData.data.content} newValue={viewedFile.content} />
                           </div>
                         ) : (
                           <div className='border rounded-md p-2 max-h-[300px] overflow-auto'>
@@ -464,11 +481,7 @@ export function FileViewerDialog({
                   <XCircle className='mr-2 h-4 w-4' />
                   Cancel
                 </Button>
-                <Button 
-                  variant='default' 
-                  onClick={saveFileEdits}
-                  disabled={updateFileContent.isPending}
-                >
+                <Button variant='default' onClick={saveFileEdits} disabled={updateFileContent.isPending}>
                   <Save className='mr-2 h-4 w-4' />
                   {updateFileContent.isPending ? 'Saving...' : 'Save'}
                 </Button>
