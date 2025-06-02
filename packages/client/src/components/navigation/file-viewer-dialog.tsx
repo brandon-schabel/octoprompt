@@ -25,6 +25,7 @@ import { ProjectFile, FileVersion } from '@octoprompt/schemas'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
 import { DiffViewer } from '@/components/file-changes/diff-viewer'
+import { computeLineDiff } from '@/components/file-changes/compute-line-diff'
 import {
   useGetFileVersions,
   useGetFileVersion,
@@ -197,6 +198,20 @@ export function FileViewerDialog({
     })
   }
 
+  // Calculate diff stats for each version compared to current content
+  const calculateDiffStats = (versionContent: string, currentContent: string) => {
+    const diffChunks = computeLineDiff(versionContent, currentContent)
+    let linesAdded = 0
+    let linesRemoved = 0
+
+    diffChunks.forEach((chunk) => {
+      if (chunk.type === 'add') linesAdded++
+      if (chunk.type === 'remove') linesRemoved++
+    })
+
+    return { linesAdded, linesRemoved }
+  }
+
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)
   }
@@ -313,134 +328,179 @@ export function FileViewerDialog({
 
             <TabsContent value='history' className='flex-1 min-h-0 mt-4'>
               <div
-                className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-4 mx-4' : 'p-4'} space-y-4`}
+                className={`flex-1 min-h-0 overflow-hidden border rounded-md ${isFullscreen ? 'mx-4' : ''} flex gap-4 p-4`}
               >
                 {versionsLoading ? (
-                  <div className='flex items-center justify-center p-8'>
+                  <div className='flex items-center justify-center w-full p-8'>
                     <div className='text-muted-foreground'>Loading version history...</div>
                   </div>
                 ) : fileVersions && fileVersions.data && fileVersions.data.length > 0 ? (
                   <>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h3 className='text-lg font-semibold'>Version History</h3>
-                      {!selectedHistoryVersion && (
-                        <div className='text-sm text-muted-foreground'>
-                          Click a version below to view its content or compare with current file
+                    {/* Left Panel - Version List */}
+                    <div className='w-1/3 flex flex-col border-r pr-4'>
+                      <div className='flex items-center justify-between mb-4'>
+                        <h3 className='text-lg font-semibold'>Version History</h3>
+                      </div>
+
+                      <div className='flex-1 space-y-2 overflow-y-auto'>
+                        {fileVersions.data.map((version) => {
+                          return (
+                            <div
+                              key={version.fileId}
+                              className={`p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors ${
+                                selectedHistoryVersion === version.version ? 'bg-muted border-primary' : ''
+                              }`}
+                              onClick={() => {
+                                setSelectedHistoryVersion(version.version)
+                                // Reset diff view when selecting a new version
+                                setShowDiff(false)
+                              }}
+                            >
+                              <div className='flex flex-col gap-2'>
+                                <div className='flex items-center justify-between'>
+                                  <div className='flex items-center gap-2'>
+                                    <Clock className='h-4 w-4 text-muted-foreground' />
+                                    <span className='font-medium'>Version {version.version}</span>
+                                    {version.isLatest && (
+                                      <span className='text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full'>
+                                        Latest
+                                      </span>
+                                    )}
+                                  </div>
+                                  {!version.isLatest && (
+                                    <Button
+                                      variant='outline'
+                                      size='sm'
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRevertToVersion(version.version)
+                                      }}
+                                      disabled={revertFileToVersion.isPending}
+                                    >
+                                      <RotateCcw className='h-3 w-3 mr-1' />
+                                      Revert
+                                    </Button>
+                                  )}
+                                </div>
+                                <div className='text-sm text-muted-foreground'>
+                                  {new Date(version.created).toLocaleString()}
+                                </div>
+
+                                {/* Diff stats display - only show for selected version */}
+                                {selectedHistoryVersion === version.version &&
+                                  selectedVersionData?.data &&
+                                  viewedFile && (
+                                    <div className='flex items-center gap-3 text-xs pt-1'>
+                                      {(() => {
+                                        const diffStats = calculateDiffStats(
+                                          selectedVersionData.data.content,
+                                          viewedFile.content
+                                        )
+                                        return (
+                                          <>
+                                            {diffStats.linesAdded > 0 && (
+                                              <span className='text-green-600 flex items-center gap-1'>
+                                                <span className='w-2 h-2 bg-green-600 rounded-full'></span>+
+                                                {diffStats.linesAdded}
+                                              </span>
+                                            )}
+                                            {diffStats.linesRemoved > 0 && (
+                                              <span className='text-red-600 flex items-center gap-1'>
+                                                <span className='w-2 h-2 bg-red-600 rounded-full'></span>-
+                                                {diffStats.linesRemoved}
+                                              </span>
+                                            )}
+                                            {diffStats.linesAdded === 0 && diffStats.linesRemoved === 0 && (
+                                              <span className='text-muted-foreground'>No changes</span>
+                                            )}
+                                          </>
+                                        )
+                                      })()}
+                                    </div>
+                                  )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Right Panel - Content Viewer */}
+                    <div className='flex-1 flex flex-col min-h-0'>
+                      {!selectedHistoryVersion ? (
+                        <div className='flex items-center justify-center h-full text-center text-muted-foreground'>
+                          <div>
+                            <FileText className='h-8 w-8 mx-auto mb-3 opacity-50' />
+                            <p className='text-lg mb-2'>Select a version to view</p>
+                            <p className='text-sm'>Click on any version from the list to see its content</p>
+                          </div>
+                        </div>
+                      ) : selectedVersionData?.data ? (
+                        <>
+                          <div className='flex items-center justify-between mb-4 pb-2 border-b'>
+                            <div className='flex items-center gap-2'>
+                              <h4 className='text-lg font-medium'>Version {selectedHistoryVersion}</h4>
+                              <span className='text-sm text-muted-foreground'>
+                                {showDiff ? '(Diff View)' : '(Content View)'}
+                              </span>
+                            </div>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => setShowDiff(!showDiff)}
+                              className='flex items-center gap-2'
+                            >
+                              {showDiff ? (
+                                <>
+                                  <FileText className='h-4 w-4' />
+                                  Show Content
+                                </>
+                              ) : (
+                                <>
+                                  <FileCode className='h-4 w-4' />
+                                  Show Diff
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          <div className='flex-1 overflow-auto'>
+                            {showDiff && viewedFile ? (
+                              <div className='h-full'>
+                                <div className='text-sm text-muted-foreground mb-3 px-3 py-2 bg-muted/30 rounded'>
+                                  Comparing Version {selectedHistoryVersion} (left) with Current File (right)
+                                </div>
+                                <DiffViewer oldValue={selectedVersionData.data.content} newValue={viewedFile.content} />
+                              </div>
+                            ) : (
+                              <div className='h-full'>
+                                <div className='text-sm text-muted-foreground mb-3 px-3 py-2 bg-muted/30 rounded'>
+                                  Version {selectedHistoryVersion} content
+                                </div>
+                                <div className='border rounded-md p-3 bg-background h-full overflow-auto'>
+                                  {/* @ts-ignore */}
+                                  <SyntaxHighlighter
+                                    language={getLanguageByExtension(viewedFile?.extension)}
+                                    style={selectedSyntaxTheme}
+                                    showLineNumbers
+                                    wrapLongLines
+                                  >
+                                    {selectedVersionData.data.content}
+                                  </SyntaxHighlighter>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className='flex items-center justify-center h-full'>
+                          <div className='text-muted-foreground'>Loading version content...</div>
                         </div>
                       )}
                     </div>
-
-                    {/* Version list */}
-                    <div className='space-y-2 max-h-[200px] overflow-y-auto'>
-                      {fileVersions.data.map((version) => (
-                        <div
-                          key={version.fileId}
-                          className={`p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors ${
-                            selectedHistoryVersion === version.version ? 'bg-muted border-primary' : ''
-                          }`}
-                          onClick={() => {
-                            setSelectedHistoryVersion(version.version)
-                            // Reset diff view when selecting a new version
-                            setShowDiff(false)
-                          }}
-                        >
-                          <div className='flex items-center justify-between'>
-                            <div className='flex items-center gap-2'>
-                              <Clock className='h-4 w-4 text-muted-foreground' />
-                              <span className='font-medium'>Version {version.version}</span>
-                              {version.isLatest && (
-                                <span className='text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full'>
-                                  Latest
-                                </span>
-                              )}
-                            </div>
-                            <div className='flex items-center gap-2'>
-                              <span className='text-sm text-muted-foreground'>
-                                {new Date(version.created).toLocaleString()}
-                              </span>
-                              {!version.isLatest && (
-                                <Button
-                                  variant='outline'
-                                  size='sm'
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleRevertToVersion(version.version)
-                                  }}
-                                  disabled={revertFileToVersion.isPending}
-                                >
-                                  <RotateCcw className='h-3 w-3 mr-1' />
-                                  Revert
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Instruction when no version is selected */}
-                    {!selectedHistoryVersion && fileVersions?.data && fileVersions.data.length > 0 && (
-                      <div className='mt-4 p-4 border border-dashed rounded-md text-center text-muted-foreground'>
-                        <FileText className='h-6 w-6 mx-auto mb-2' />
-                        <p className='text-sm'>Select a version from the list above to view its content</p>
-                        <p className='text-xs mt-1'>You can then toggle between content view and diff view</p>
-                      </div>
-                    )}
-
-                    {/* Content viewer for selected version */}
-                    {selectedHistoryVersion && selectedVersionData?.data && (
-                      <div className='mt-4'>
-                        <div className='flex items-center justify-between mb-2'>
-                          <h4 className='text-md font-medium'>
-                            Version {selectedHistoryVersion} {showDiff ? 'vs Current File (Diff)' : 'Content'}
-                          </h4>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => setShowDiff(!showDiff)}
-                            className='flex items-center gap-2'
-                          >
-                            {showDiff ? (
-                              <>
-                                <FileText className='h-4 w-4' />
-                                Show Content
-                              </>
-                            ) : (
-                              <>
-                                <FileCode className='h-4 w-4' />
-                                Show Diff
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {showDiff && viewedFile ? (
-                          <div className='border rounded-md p-2'>
-                            <div className='text-sm text-muted-foreground mb-2 px-2 py-1 bg-muted/30 rounded'>
-                              Comparing Version {selectedHistoryVersion} (left) with Current File (right)
-                            </div>
-                            <DiffViewer oldValue={selectedVersionData.data.content} newValue={viewedFile.content} />
-                          </div>
-                        ) : (
-                          <div className='border rounded-md p-2 max-h-[300px] overflow-auto'>
-                            <div className='text-sm text-muted-foreground mb-2 px-2 py-1 bg-muted/30 rounded'>
-                              Viewing Version {selectedHistoryVersion} content
-                            </div>
-                            {/* @ts-ignore */}
-                            <SyntaxHighlighter
-                              language={getLanguageByExtension(viewedFile?.extension)}
-                              style={selectedSyntaxTheme}
-                              showLineNumbers
-                              wrapLongLines
-                            >
-                              {selectedVersionData.data.content}
-                            </SyntaxHighlighter>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </>
                 ) : (
-                  <div className='flex items-center justify-center p-8'>
+                  <div className='flex items-center justify-center w-full p-8'>
                     <div className='text-muted-foreground'>No version history available</div>
                   </div>
                 )}
