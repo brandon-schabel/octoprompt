@@ -323,16 +323,11 @@ export function FileViewerDialog({
                   <>
                     <div className='flex items-center justify-between mb-4'>
                       <h3 className='text-lg font-semibold'>Version History</h3>
-                      <div className='flex items-center gap-2'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => setShowDiff(!showDiff)}
-                          disabled={!selectedHistoryVersion}
-                        >
-                          {showDiff ? 'Hide Diff' : 'Show Diff'}
-                        </Button>
-                      </div>
+                      {!selectedHistoryVersion && (
+                        <div className='text-sm text-muted-foreground'>
+                          Click a version below to view its content or compare with current file
+                        </div>
+                      )}
                     </div>
 
                     {/* Version list */}
@@ -343,7 +338,11 @@ export function FileViewerDialog({
                           className={`p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors ${
                             selectedHistoryVersion === version.version ? 'bg-muted border-primary' : ''
                           }`}
-                          onClick={() => setSelectedHistoryVersion(version.version)}
+                          onClick={() => {
+                            setSelectedHistoryVersion(version.version)
+                            // Reset diff view when selecting a new version
+                            setShowDiff(false)
+                          }}
                         >
                           <div className='flex items-center justify-between'>
                             <div className='flex items-center gap-2'>
@@ -379,16 +378,53 @@ export function FileViewerDialog({
                       ))}
                     </div>
 
+                    {/* Instruction when no version is selected */}
+                    {!selectedHistoryVersion && fileVersions?.data && fileVersions.data.length > 0 && (
+                      <div className='mt-4 p-4 border border-dashed rounded-md text-center text-muted-foreground'>
+                        <FileText className='h-6 w-6 mx-auto mb-2' />
+                        <p className='text-sm'>Select a version from the list above to view its content</p>
+                        <p className='text-xs mt-1'>You can then toggle between content view and diff view</p>
+                      </div>
+                    )}
+
                     {/* Content viewer for selected version */}
                     {selectedHistoryVersion && selectedVersionData?.data && (
                       <div className='mt-4'>
-                        <h4 className='text-md font-medium mb-2'>Version {selectedHistoryVersion} Content</h4>
+                        <div className='flex items-center justify-between mb-2'>
+                          <h4 className='text-md font-medium'>
+                            Version {selectedHistoryVersion} {showDiff ? 'vs Current File (Diff)' : 'Content'}
+                          </h4>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => setShowDiff(!showDiff)}
+                            className='flex items-center gap-2'
+                          >
+                            {showDiff ? (
+                              <>
+                                <FileText className='h-4 w-4' />
+                                Show Content
+                              </>
+                            ) : (
+                              <>
+                                <FileCode className='h-4 w-4' />
+                                Show Diff
+                              </>
+                            )}
+                          </Button>
+                        </div>
                         {showDiff && viewedFile ? (
                           <div className='border rounded-md p-2'>
+                            <div className='text-sm text-muted-foreground mb-2 px-2 py-1 bg-muted/30 rounded'>
+                              Comparing Version {selectedHistoryVersion} (left) with Current File (right)
+                            </div>
                             <DiffViewer oldValue={selectedVersionData.data.content} newValue={viewedFile.content} />
                           </div>
                         ) : (
                           <div className='border rounded-md p-2 max-h-[300px] overflow-auto'>
+                            <div className='text-sm text-muted-foreground mb-2 px-2 py-1 bg-muted/30 rounded'>
+                              Viewing Version {selectedHistoryVersion} content
+                            </div>
                             {/* @ts-ignore */}
                             <SyntaxHighlighter
                               language={getLanguageByExtension(viewedFile?.extension)}
