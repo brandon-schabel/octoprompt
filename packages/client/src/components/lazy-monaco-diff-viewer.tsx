@@ -7,8 +7,8 @@ const MonacoDiffViewer = lazy(() =>
   import('./monaco-diff-viewer').then(module => ({
     default: module.MonacoDiffViewer
   })).catch(() => ({
-    // Fallback to null if Monaco fails to load
-    default: () => null
+    // Fallback to null component if Monaco fails to load
+    default: () => <div>Monaco Diff Viewer failed to load</div>
   }))
 )
 

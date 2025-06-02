@@ -7,8 +7,8 @@ const MonacoEditorWrapper = lazy(() =>
   import('./monaco-editor-wrapper').then(module => ({
     default: module.MonacoEditorWrapper
   })).catch(() => ({
-    // Fallback to null if Monaco fails to load
-    default: () => null
+    // Fallback component if Monaco fails to load
+    default: () => <div>Monaco Editor failed to load</div>
   }))
 )
 

@@ -31,13 +31,25 @@ export const ChatSchema = z
   })
   .openapi('Chat')
 
+// Schema for chat message attachments
+export const ChatMessageAttachmentSchema = z.object({
+  id: unixTSSchemaSpec.describe('Unique ID for the attachment itself.'),
+  fileName: z.string().openapi({ description: 'Original name of the uploaded file.' }),
+  mimeType: z.string().openapi({ description: 'MIME type of the file.' }),
+  size: z.number().int().positive().openapi({ description: 'File size in bytes.' }),
+  url: z.string().url().openapi({ description: 'URL to access/download the attachment.' }),
+  created: unixTSSchemaSpec,
+}).openapi('ChatMessageAttachment')
+
 export const ChatMessageSchema = z
   .object({
     id: unixTSSchemaSpec,
     chatId: unixTSSchemaSpec,
     role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
     content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
-    created: unixTSSchemaSpec
+    created: unixTSSchemaSpec,
+    attachments: z.array(ChatMessageAttachmentSchema).optional()
+      .openapi({ description: 'Optional list of attachments for the message.' })
   })
   .openapi('ChatMessage')
 
@@ -69,6 +81,20 @@ export const CreateChatMessageBodySchema = z
     content: z.string().min(1).openapi({ example: 'How can I implement authentication?' })
   })
   .openapi('CreateChatMessageRequestBody')
+
+// File upload schemas
+export const UploadFileParamsSchema = z
+  .object({
+    chatId: unixTSSchemaSpec
+  })
+  .openapi('UploadFileParams')
+
+export const FileUploadResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: ChatMessageAttachmentSchema
+  })
+  .openapi('FileUploadResponse')
 
 // Response Schemas
 export const ChatResponseSchema = z
@@ -195,6 +221,15 @@ export const AiChatStreamRequestSchema = z
       description: 'The latest message content from the user.',
       example: 'Thanks! Can you elaborate on the E=mc^2 part?'
     }),
+    // ADD THIS FIELD:
+    currentMessageAttachments: z.array(
+      z.object({
+        id: unixTSSchemaSpec.describe("ID of the pre-uploaded attachment."),
+        url: z.string().url().describe("Accessible URL of the attachment for the AI model."),
+        mimeType: z.string().describe("MIME type of the attachment."),
+        fileName: z.string().optional().describe("Original filename, if helpful for context."),
+      })
+    ).optional().openapi({ description: 'Attachments specifically for the current user message being sent to the AI.'}),
     options: AiSdkOptionsSchema.optional().openapi({
       description: 'Optional parameters for the AI model.'
     }),
@@ -246,12 +281,16 @@ export const chatApiValidation = {
   },
   deleteMessage: {
     params: DeleteMessageParamsSchema
+  },
+  uploadFile: {
+    params: UploadFileParamsSchema
   }
 } as const
 
 // Type exports
 export type Chat = z.infer<typeof ChatSchema>
 export type ChatMessage = z.infer<typeof ChatMessageSchema>
+export type ChatMessageAttachment = z.infer<typeof ChatMessageAttachmentSchema>
 export type CreateChatBody = z.infer<typeof CreateChatBodySchema>
 export type UpdateChatBody = z.infer<typeof UpdateChatBodySchema>
 export type CreateChatMessageBody = z.infer<typeof CreateChatMessageBodySchema>
