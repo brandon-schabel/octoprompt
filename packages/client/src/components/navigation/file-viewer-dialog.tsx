@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
 import { Button } from '@ui'
-import { Edit, Save, XCircle, Copy, FileText, FileCode, Expand, Minimize2 } from 'lucide-react'
+import { Edit, Save, XCircle, Copy, FileText, FileCode, Expand, Minimize2, History, RotateCcw, Clock } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
@@ -9,8 +9,12 @@ import { LazyMonacoEditor } from '@/components/lazy-monaco-editor'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile, FileVersion } from '@octoprompt/schemas'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui'
+import { DiffViewer } from '@/components/file-changes/diff-viewer'
+import { useGetFileVersions, useGetFileVersion, useUpdateFileContent, useRevertFileToVersion } from '@/hooks/api/use-projects-api'
+import { Slider } from '@ui'
 
 type FileViewerDialogProps = {
   open: boolean
@@ -19,6 +23,7 @@ type FileViewerDialogProps = {
   onClose?: () => void
   onSave?: (content: string) => void
   filePath?: string
+  projectId?: number
 }
 
 function getLanguageByExtension(extension?: string): string {
@@ -65,17 +70,35 @@ export function FileViewerDialog({
   markdownText: markdownText,
   onClose,
   onSave,
-  filePath
+  filePath,
+  projectId
 }: FileViewerDialogProps) {
   const [isEditingFile, setIsEditingFile] = useState(false)
   const [editedContent, setEditedContent] = useState<string>('')
   const [showRawMarkdown, setShowRawMarkdown] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'edit' | 'history'>('edit')
+  const [selectedHistoryVersion, setSelectedHistoryVersion] = useState<number | null>(null)
+  const [showDiff, setShowDiff] = useState(false)
 
   const { copyToClipboard } = useCopyClipboard()
   const isDarkMode = useSelectSetting('theme') === 'dark'
   const codeThemeDark = useSelectSetting('codeThemeDark')
   const codeThemeLight = useSelectSetting('codeThemeLight')
+
+  // File versioning hooks
+  const originalFileId = viewedFile?.originalFileId || viewedFile?.id
+  const { data: fileVersions, isLoading: versionsLoading } = useGetFileVersions(
+    projectId || 0, 
+    originalFileId || 0
+  )
+  const { data: selectedVersionData } = useGetFileVersion(
+    projectId || 0,
+    originalFileId || 0,
+    selectedHistoryVersion || undefined
+  )
+  const updateFileContent = useUpdateFileContent()
+  const revertFileToVersion = useRevertFileToVersion()
 
   const selectedSyntaxTheme = useMemo(() => {
     const themeName = isDarkMode ? codeThemeDark : codeThemeLight
@@ -88,6 +111,9 @@ export function FileViewerDialog({
       setIsEditingFile(false)
       setEditedContent(viewedFile?.content || markdownText || '')
       setIsFullscreen(false)
+      setActiveTab('edit')
+      setSelectedHistoryVersion(null)
+      setShowDiff(false)
     }
   }, [viewedFile, markdownText, open])
 
@@ -110,14 +136,34 @@ export function FileViewerDialog({
     setIsEditingFile(false)
     setEditedContent('')
     setIsFullscreen(false)
+    setActiveTab('edit')
+    setSelectedHistoryVersion(null)
+    setShowDiff(false)
     onClose?.()
   }
 
   const saveFileEdits = () => {
-    if (viewedFile && editedContent !== viewedFile.content) {
-      onSave?.(editedContent)
+    if (viewedFile && editedContent !== viewedFile.content && projectId) {
+      updateFileContent.mutate({
+        projectId,
+        fileId: viewedFile.id,
+        content: editedContent
+      })
+    } else if (onSave) {
+      // Fallback to the original onSave prop for backward compatibility
+      onSave(editedContent)
     }
     setIsEditingFile(false)
+  }
+
+  const handleRevertToVersion = (version: number) => {
+    if (viewedFile && projectId) {
+      revertFileToVersion.mutate({
+        projectId,
+        fileId: viewedFile.id,
+        targetVersion: version
+      })
+    }
   }
 
   const copyContent = async () => {
@@ -207,21 +253,163 @@ export function FileViewerDialog({
             )}
           </DialogDescription>
         </DialogHeader>
-        <div className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-2 mx-4' : 'p-2'}`}>
-          {!isEditingFile ? (
-            markdownText ? (
+        {/* Only show tabs for actual files with versioning capability */}
+        {viewedFile && projectId ? (
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'edit' | 'history')} className='flex-1 flex flex-col min-h-0'>
+            <TabsList className='grid w-full grid-cols-2'>
+              <TabsTrigger value='edit' className='flex items-center gap-2'>
+                <Edit className='h-4 w-4' />
+                Edit
+              </TabsTrigger>
+              <TabsTrigger value='history' className='flex items-center gap-2'>
+                <History className='h-4 w-4' />
+                History
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value='edit' className='flex-1 min-h-0 mt-4'>
+              <div className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-2 mx-4' : 'p-2'}`}>
+                {!isEditingFile ? (
+                  // @ts-ignore
+                  <SyntaxHighlighter
+                    language={getLanguageByExtension(viewedFile?.extension)}
+                    style={selectedSyntaxTheme}
+                    showLineNumbers
+                    wrapLongLines
+                  >
+                    {viewedFile?.content || ''}
+                  </SyntaxHighlighter>
+                ) : (
+                  <div className='flex-1 min-h-0 relative'>
+                    <LazyMonacoEditor
+                      value={editedContent}
+                      onChange={(value) => setEditedContent(value || '')}
+                      language={getLanguageByExtension(viewedFile?.extension)}
+                      height={isFullscreen ? 'calc(100vh - 300px)' : '300px'}
+                      onSave={saveFileEdits}
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value='history' className='flex-1 min-h-0 mt-4'>
+              <div className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-4 mx-4' : 'p-4'} space-y-4`}>
+                {versionsLoading ? (
+                  <div className='flex items-center justify-center p-8'>
+                    <div className='text-muted-foreground'>Loading version history...</div>
+                  </div>
+                ) : fileVersions && fileVersions.data && fileVersions.data.length > 0 ? (
+                  <>
+                    <div className='flex items-center justify-between mb-4'>
+                      <h3 className='text-lg font-semibold'>Version History</h3>
+                      <div className='flex items-center gap-2'>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => setShowDiff(!showDiff)}
+                          disabled={!selectedHistoryVersion}
+                        >
+                          {showDiff ? 'Hide Diff' : 'Show Diff'}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Version list */}
+                    <div className='space-y-2 max-h-[200px] overflow-y-auto'>
+                      {fileVersions.data.map((version) => (
+                        <div
+                          key={version.fileId}
+                          className={`p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors ${
+                            selectedHistoryVersion === version.version ? 'bg-muted border-primary' : ''
+                          }`}
+                          onClick={() => setSelectedHistoryVersion(version.version)}
+                        >
+                          <div className='flex items-center justify-between'>
+                            <div className='flex items-center gap-2'>
+                              <Clock className='h-4 w-4 text-muted-foreground' />
+                              <span className='font-medium'>Version {version.version}</span>
+                              {version.isLatest && (
+                                <span className='text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full'>
+                                  Latest
+                                </span>
+                              )}
+                            </div>
+                            <div className='flex items-center gap-2'>
+                              <span className='text-sm text-muted-foreground'>
+                                {new Date(version.created).toLocaleString()}
+                              </span>
+                              {!version.isLatest && (
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleRevertToVersion(version.version)
+                                  }}
+                                  disabled={revertFileToVersion.isPending}
+                                >
+                                  <RotateCcw className='h-3 w-3 mr-1' />
+                                  Revert
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Content viewer for selected version */}
+                    {selectedHistoryVersion && selectedVersionData?.data && (
+                      <div className='mt-4'>
+                        <h4 className='text-md font-medium mb-2'>Version {selectedHistoryVersion} Content</h4>
+                        {showDiff && viewedFile ? (
+                          <div className='border rounded-md p-2'>
+                            <DiffViewer 
+                              oldValue={selectedVersionData.data.content}
+                              newValue={viewedFile.content}
+                            />
+                          </div>
+                        ) : (
+                          <div className='border rounded-md p-2 max-h-[300px] overflow-auto'>
+                            {/* @ts-ignore */}
+                            <SyntaxHighlighter
+                              language={getLanguageByExtension(viewedFile?.extension)}
+                              style={selectedSyntaxTheme}
+                              showLineNumbers
+                              wrapLongLines
+                            >
+                              {selectedVersionData.data.content}
+                            </SyntaxHighlighter>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className='flex items-center justify-center p-8'>
+                    <div className='text-muted-foreground'>No version history available</div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          /* Fallback for markdown content or files without versioning */
+          <div className={`flex-1 min-h-0 overflow-auto border rounded-md ${isFullscreen ? 'p-2 mx-4' : 'p-2'}`}>
+            {markdownText ? (
               showRawMarkdown ? (
                 <div className='relative my-2 overflow-x-auto break-words'>
                   <button
                     onClick={() => copyToClipboard(markdownText)}
                     className={`
-                                            absolute top-2 right-2 text-xs px-2 py-1 border rounded shadow z-10
-                                            ${
-                                              isDarkMode
-                                                ? 'bg-neutral-800 text-neutral-100 hover:bg-neutral-700'
-                                                : 'bg-neutral-50 text-neutral-900 hover:bg-neutral-200'
-                                            }
-                                        `}
+                      absolute top-2 right-2 text-xs px-2 py-1 border rounded shadow z-10
+                      ${
+                        isDarkMode
+                          ? 'bg-neutral-800 text-neutral-100 hover:bg-neutral-700'
+                          : 'bg-neutral-50 text-neutral-900 hover:bg-neutral-200'
+                      }
+                    `}
                     title='Copy code'
                   >
                     Copy
@@ -234,7 +422,7 @@ export function FileViewerDialog({
               ) : (
                 <MarkdownRenderer content={markdownText} copyToClipboard={copyToClipboard} />
               )
-            ) : (
+            ) : viewedFile ? (
               // @ts-ignore
               <SyntaxHighlighter
                 language={getLanguageByExtension(viewedFile?.extension)}
@@ -244,22 +432,20 @@ export function FileViewerDialog({
               >
                 {viewedFile?.content || ''}
               </SyntaxHighlighter>
-            )
-          ) : (
-            <div className='flex-1 min-h-0 relative'>
-              <LazyMonacoEditor
-                value={editedContent}
-                onChange={(value) => setEditedContent(value || '')}
-                language={getLanguageByExtension(viewedFile?.extension)}
-                height={isFullscreen ? 'calc(100vh - 200px)' : '300px'}
-                onSave={saveFileEdits}
-              />
-            </div>
-          )}
-        </div>
+            ) : null}
+          </div>
+        )}
         <DialogFooter className={`mt-4 flex justify-between ${isFullscreen ? 'p-4' : ''}`}>
           <div className='flex gap-2'>
-            {!isEditingFile && viewedFile && (
+            {/* Only show edit controls for files with versioning and on edit tab */}
+            {viewedFile && projectId && activeTab === 'edit' && !isEditingFile && (
+              <Button variant='outline' onClick={() => setIsEditingFile(true)}>
+                <Edit className='mr-2 h-4 w-4' />
+                Edit
+              </Button>
+            )}
+            {/* Show edit controls for non-versioned files */}
+            {viewedFile && !projectId && !isEditingFile && (
               <Button variant='outline' onClick={() => setIsEditingFile(true)}>
                 <Edit className='mr-2 h-4 w-4' />
                 Edit
@@ -273,13 +459,18 @@ export function FileViewerDialog({
                     setIsEditingFile(false)
                     setEditedContent(viewedFile?.content || '')
                   }}
+                  disabled={updateFileContent.isPending}
                 >
                   <XCircle className='mr-2 h-4 w-4' />
                   Cancel
                 </Button>
-                <Button variant='default' onClick={saveFileEdits}>
+                <Button 
+                  variant='default' 
+                  onClick={saveFileEdits}
+                  disabled={updateFileContent.isPending}
+                >
                   <Save className='mr-2 h-4 w-4' />
-                  Save
+                  {updateFileContent.isPending ? 'Saving...' : 'Save'}
                 </Button>
               </>
             )}

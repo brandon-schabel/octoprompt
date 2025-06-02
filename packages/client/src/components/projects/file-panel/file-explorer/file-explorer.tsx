@@ -393,8 +393,15 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         />
       )}
 
-      {/* FileViewerDialog uses `viewedFile` state, unchanged */}
-      {viewedFile && <FileViewerDialog viewedFile={viewedFile} open={!!viewedFile} onClose={closeFileViewer} />}
+      {/* FileViewerDialog with versioning support */}
+      {viewedFile && (
+        <FileViewerDialog 
+          viewedFile={viewedFile} 
+          open={!!viewedFile} 
+          onClose={closeFileViewer}
+          projectId={selectedProjectId || undefined}
+        />
+      )}
     </div>
   )
 }

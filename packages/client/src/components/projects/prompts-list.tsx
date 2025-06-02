@@ -470,6 +470,7 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         viewedFile={viewedPrompt as ProjectFile}
         onClose={handleClosePromptViewer}
         onSave={handleSavePrompt}
+        projectId={selectedProjectId}
       />
 
       {/* Prompt dialog for create/update */}

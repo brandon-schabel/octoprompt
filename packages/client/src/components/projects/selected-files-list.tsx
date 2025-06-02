@@ -260,7 +260,12 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
     return (
       <>
-        <FileViewerDialog open={!!viewedFile} viewedFile={viewedFile as ProjectFile} onClose={closeFileViewer} />
+        <FileViewerDialog 
+          open={!!viewedFile} 
+          viewedFile={viewedFile as ProjectFile} 
+          onClose={closeFileViewer}
+          projectId={projectTab?.selectedProjectId}
+        />
 
         <Dialog open={bookmarkDialogOpen} onOpenChange={setBookmarkDialogOpen}>
           <DialogContent>

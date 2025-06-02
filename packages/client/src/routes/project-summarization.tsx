@@ -659,6 +659,7 @@ export function ProjectSummarizationSettingsPage() {
           setSummaryDialogOpen(false)
           setSelectedFileRecord(null)
         }}
+        projectId={selectedProjectId}
       />
 
       <SummaryDialog

@@ -12,7 +12,11 @@ export {
   useSummarizeProjectFiles,
   useRemoveSummaries,
   useOptimizeUserInput,
-  useInvalidateProjects
+  useInvalidateProjects,
+  useGetFileVersions,
+  useGetFileVersion,
+  useUpdateFileContent,
+  useRevertFileToVersion
 } from '../api'
 
 // Type re-exports for backward compatibility
