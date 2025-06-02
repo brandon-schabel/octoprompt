@@ -104,9 +104,14 @@ export function FileViewerDialog({
   const codeThemeDark = useSelectSetting('codeThemeDark')
   const codeThemeLight = useSelectSetting('codeThemeLight')
 
-  // File versioning hooks
+  // File versioning hooks - only call when we have valid IDs
   const originalFileId = viewedFile?.originalFileId || viewedFile?.id
-  const { data: fileVersions, isLoading: versionsLoading } = useGetFileVersions(projectId || 0, originalFileId || 0)
+  const hasValidIds = projectId && projectId > 0 && originalFileId && originalFileId > 0
+  
+  const { data: fileVersions, isLoading: versionsLoading } = useGetFileVersions(
+    projectId || 0, 
+    originalFileId || 0
+  )
   const { data: selectedVersionData } = useGetFileVersion(
     projectId || 0,
     originalFileId || 0,
@@ -330,7 +335,11 @@ export function FileViewerDialog({
               <div
                 className={`flex-1 min-h-0 overflow-hidden border rounded-md ${isFullscreen ? 'mx-4' : ''} flex gap-4 p-4`}
               >
-                {versionsLoading ? (
+                {!hasValidIds ? (
+                  <div className='flex items-center justify-center w-full p-8'>
+                    <div className='text-muted-foreground'>File versioning not available for this file</div>
+                  </div>
+                ) : versionsLoading ? (
                   <div className='flex items-center justify-center w-full p-8'>
                     <div className='text-muted-foreground'>Loading version history...</div>
                   </div>

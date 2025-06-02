@@ -533,7 +533,7 @@ export function useGetFileVersions(projectId: number, originalFileId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.fileVersions(projectId, originalFileId),
     queryFn: () => octoClient.projects.getFileVersions(projectId, originalFileId),
-    enabled: !!projectId && !!originalFileId,
+    enabled: projectId > 0 && originalFileId > 0,
     staleTime: 5 * 60 * 1000
   })
 }
@@ -542,7 +542,7 @@ export function useGetFileVersion(projectId: number, originalFileId: number, ver
   return useQuery({
     queryKey: PROJECT_KEYS.fileVersion(projectId, originalFileId, version),
     queryFn: () => octoClient.projects.getFileVersion(projectId, originalFileId, version),
-    enabled: !!projectId && !!originalFileId,
+    enabled: projectId > 0 && originalFileId > 0,
     staleTime: 5 * 60 * 1000
   })
 }

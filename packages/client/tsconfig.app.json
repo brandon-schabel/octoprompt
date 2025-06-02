@@ -24,7 +24,7 @@
       "@/*": ["./src/*"],
       "shared/*": ["../shared/*"]
     },
-    "types": ["bun-types"]
+    "types": []
   },
   "include": ["src"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
