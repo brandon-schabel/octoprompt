@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Application Loading', () => {
-  test('loads the homepage', async ({ page }) => {
+  test('loads and redirects to projects page', async ({ page }) => {
     await page.goto('/')
+
+    // The app should redirect to /projects
+    await page.waitForURL('**/projects**', { timeout: 10000 })
+    expect(page.url()).toContain('/projects')
 
     // Check if the page loads and has the expected title
     await expect(page).toHaveTitle(/OctoPrompt/)
@@ -13,10 +17,10 @@ test.describe('Application Loading', () => {
   })
 
   test('shows navigation elements', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/projects') // Go directly to projects since / redirects
 
     // Wait for the app to load
-    await page.waitForSelector('[data-testid="app-sidebar"], .sidebar, nav', { timeout: 10000 })
+    await page.waitForLoadState('networkidle')
 
     // The app should have some form of navigation visible
     // This could be a sidebar, navbar, or other navigation elements
@@ -25,7 +29,7 @@ test.describe('Application Loading', () => {
   })
 
   test('has working command palette trigger', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/projects')
     
     // Wait for the page to be fully loaded
     await page.waitForLoadState('networkidle')

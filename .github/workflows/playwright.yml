@@ -24,23 +24,13 @@ jobs:
         node-version: '20'
         cache: 'npm'
     
-    - name: Install dependencies
+    - name: Install workspace dependencies
       run: npm ci
-    
-    - name: Install client dependencies
-      run: |
-        cd packages/client
-        npm ci
     
     - name: Install Playwright Browsers
       run: |
         cd packages/client
         npx playwright install --with-deps
-    
-    - name: Build client
-      run: |
-        cd packages/client
-        npm run build
     
     - name: Run Playwright tests
       run: |
