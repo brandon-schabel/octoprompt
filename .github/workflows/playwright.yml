@@ -1,0 +1,55 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/client/**'
+      - 'packages/shared/**'
+      - 'packages/schemas/**'
+      - '.github/workflows/playwright.yml'
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Install client dependencies
+      run: |
+        cd packages/client
+        npm ci
+    
+    - name: Install Playwright Browsers
+      run: |
+        cd packages/client
+        npx playwright install --with-deps
+    
+    - name: Build client
+      run: |
+        cd packages/client
+        npm run build
+    
+    - name: Run Playwright tests
+      run: |
+        cd packages/client
+        npm run test:e2e
+    
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: packages/client/playwright-report/
+        retention-days: 30

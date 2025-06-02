@@ -9,7 +9,12 @@
     "build:prod": "tsc -b tsconfig.app.json && ENVIRONMENT=prod vite build",
     "preview": "vite preview",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "playwright:install": "playwright install"
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.9",
@@ -70,6 +75,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.1",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-query-devtools": "^5.65.1",
     "@tanstack/router-devtools": "^1.97.25",
@@ -84,6 +90,7 @@
     "autoprefixer": "^10.4.20",
     "bun-types": "latest",
     "globals": "^15.14.0",
+    "msw": "^2.7.0",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
