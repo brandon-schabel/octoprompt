@@ -401,8 +401,15 @@ export function useUpdateFileContent() {
   const { invalidateProjectFiles } = useInvalidateProjects()
 
   return useMutation({
-    mutationFn: ({ projectId, fileId, content }: { projectId: number; fileId: number; content: string }) =>
-      octoClient.projects.updateFileContent(projectId, fileId, content),
+    mutationFn: async ({ projectId, fileId, content }: { projectId: number; fileId: number; content: string }) => {
+      // Update the file content
+      const result = await octoClient.projects.updateFileContent(projectId, fileId, content)
+      
+      // Sync the project to ensure file system and data store are synchronized
+      await octoClient.projects.syncProject(projectId)
+      
+      return result
+    },
     onSuccess: (_, { projectId }) => {
       invalidateProjectFiles(projectId)
       toast.success('File updated successfully')
