@@ -10,6 +10,7 @@ import { providerKeyRoutes } from './routes/provider-key-routes'
 import { adminRoutes } from './routes/admin-routes'
 import { aiFileChangeRoutes } from './routes/ai-file-change-routes'
 import { promptRoutes } from './routes/prompt-routes'
+import { fileServingRoutes } from './routes/file-serving-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { corsConfig } from './constants/server-config'
@@ -50,6 +51,7 @@ app.use('*', logger())
 app.get('/api/health', (c) => c.json({ success: true }))
 
 // register all hono routes
+app.route('/', fileServingRoutes) // Static file serving must come first
 app.route('/', chatRoutes)
 app.route('/', ticketRoutes)
 app.route('/', projectRoutes)

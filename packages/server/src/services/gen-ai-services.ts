@@ -20,13 +20,30 @@ const DEFAULT_LMSTUDIO_BASE_URL = process.env.LMSTUDIO_BASE_URL || 'http://local
 
 let providerKeysCache: ProviderKey[] | null = null
 
+// Helper function to check if a model supports multimodal content (images, files)
+function isMultimodalModel(provider: string, model?: string): boolean {
+  // const multimodalModels = {
+  //   'openai': ['gpt-4-vision-preview', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+  //   'anthropic': ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3-5-sonnet-20241022'],
+  //   'google': ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro-vision'],
+  //   'openrouter': ['openai/gpt-4o', 'openai/gpt-4o-mini', 'anthropic/claude-3-opus', 'anthropic/claude-3-sonnet', 'anthropic/claude-3-haiku', 'google/gemini-pro-vision']
+  // }
+
+  // if (!model) return false
+
+  // const providerModels = multimodalModels[provider as keyof typeof multimodalModels]
+  // return providerModels ? providerModels.some(m => model.includes(m)) : false
+  return true
+}
+
 export async function handleChatMessage({
   chatId,
   userMessage,
   options = {},
   systemMessage,
   tempId,
-  debug = false
+  debug = false,
+  currentMessageAttachments
 }: AiChatStreamRequest): Promise<ReturnType<typeof streamText>> {
   let finalAssistantMessageId: number | undefined
   const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
@@ -39,20 +56,68 @@ export async function handleChatMessage({
     messagesToProcess.push({ role: 'system', content: systemMessage })
   }
 
-  const dbMessages = (await chatService.getChatMessages(chatId)).map((msg) => ({
-    role: msg.role as 'user' | 'assistant' | 'system',
-    content: msg.content
-  }))
+  // Process existing messages, including their attachments
+  const dbMessages = (await chatService.getChatMessages(chatId)).map((msg) => {
+    const coreMessage: CoreMessage = {
+      role: msg.role as 'user' | 'assistant' | 'system',
+      content: msg.content
+    }
+
+    // Add attachments if they exist and the model supports multimodal content
+    if (msg.attachments && msg.attachments.length > 0 && isMultimodalModel(finalOptions.provider, finalOptions.model)) {
+      const content: any[] = [{ type: 'text', text: msg.content }]
+
+      msg.attachments.forEach((attachment) => {
+        if (attachment.mimeType.startsWith('image/')) {
+          content.push({
+            type: 'image',
+            image: attachment.url
+          })
+        }
+      })
+
+      coreMessage.content = content
+    }
+
+    return coreMessage
+  })
   messagesToProcess.push(...dbMessages)
 
   const savedUserMessage = await chatService.saveMessage({
     chatId,
     role: 'user',
     content: userMessage,
-    tempId: tempId ? `${tempId}-user` : undefined
+    tempId: tempId ? `${tempId}-user` : undefined,
+    attachments: currentMessageAttachments
   } as any)
 
-  messagesToProcess.push({ role: 'user', content: userMessage })
+  // Add the current user message with attachments if supported
+  const userCoreMessage: CoreMessage = {
+    role: 'user',
+    content: userMessage
+  }
+
+  // Add attachments to the current message if model supports multimodal content
+  if (
+    currentMessageAttachments &&
+    currentMessageAttachments.length > 0 &&
+    isMultimodalModel(finalOptions.provider, finalOptions.model)
+  ) {
+    const content: any[] = [{ type: 'text', text: userMessage }]
+
+    currentMessageAttachments.forEach((attachment) => {
+      if (attachment.mimeType.startsWith('image/')) {
+        content.push({
+          type: 'image',
+          image: attachment.url
+        })
+      }
+    })
+
+    userCoreMessage.content = content
+  }
+
+  messagesToProcess.push(userCoreMessage)
 
   await chatService.updateChatTimestamp(chatId)
 

@@ -61,7 +61,7 @@ class ApiErrorResponseSchema(BaseModel):
     success: bool = False
     error: ErrorDetailSchema
 # --- Package Info ---
-package_info = {"name": "OctoPrompt FastAPI Python Server", "version": "0.5.3"}
+package_info = {"name": "OctoPrompt FastAPI Python Server", "version": "0.5.4"}
 PACKAGE_JSON_PATH = PROJECT_ROOT / "package.json"
 if PACKAGE_JSON_PATH.exists():
     try:

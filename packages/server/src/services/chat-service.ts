@@ -147,7 +147,8 @@ export function createChatService() {
       chatId: message.chatId,
       role: message.role,
       content: message.content,
-      created: message.created || normalizeToUnixMs(now) // Use provided createdAt if exists (e.g. for imported messages), else new
+      created: message.created || normalizeToUnixMs(now), // Use provided createdAt if exists (e.g. for imported messages), else new
+      attachments: message.attachments // Include attachments if provided
     }
 
     try {

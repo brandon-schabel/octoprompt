@@ -1,6 +1,7 @@
 import { createRoute, z } from '@hono/zod-openapi'
 
 import { createChatService } from '@/services/chat-service'
+import { attachmentStorage } from '@/utils/storage/attachment-storage'
 import { ApiError } from '@octoprompt/shared'
 import {
     ApiErrorResponseSchema,
@@ -21,7 +22,9 @@ import {
     MessageListResponseSchema,
     UpdateChatBodySchema,
     UpdateChatParamsSchema,
-    AiChatStreamRequestSchema
+    AiChatStreamRequestSchema,
+    UploadFileParamsSchema,
+    FileUploadResponseSchema
 } from '@octoprompt/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
@@ -320,6 +323,45 @@ const deleteChatRoute = createRoute({
         }
     }
 })
+
+// POST /chats/{chatId}/upload
+const uploadFileRoute = createRoute({
+    method: 'post',
+    path: '/api/chats/{chatId}/upload',
+    tags: ['Chats'],
+    summary: 'Upload a file attachment for a chat',
+    request: {
+        params: UploadFileParamsSchema,
+        body: {
+            content: { 'multipart/form-data': { schema: z.object({ file: z.any() }) } },
+            required: true,
+            description: 'File to upload as attachment'
+        }
+    },
+    responses: {
+        201: {
+            content: { 'application/json': { schema: FileUploadResponseSchema } },
+            description: 'File uploaded successfully'
+        },
+        400: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Bad request - no file provided or invalid file'
+        },
+        404: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Chat not found'
+        },
+        413: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'File too large'
+        },
+        500: {
+            content: { 'application/json': { schema: ApiErrorResponseSchema } },
+            description: 'Internal Server Error'
+        }
+    }
+})
+
 export const chatRoutes = new OpenAPIHono()
     .openapi(getAllChatsRoute, async (c) => {
         const userChats = await chatService.getAllChats()
@@ -467,6 +509,40 @@ export const chatRoutes = new OpenAPIHono()
                 message: 'Chat deleted successfully'
             } satisfies z.infer<typeof OperationSuccessResponseSchema>,
             200
+        )
+    })
+    .openapi(uploadFileRoute, async (c) => {
+        const { chatId } = c.req.valid('param')
+        
+        // Check if chat exists
+        const chat = await chatService.getChatById(chatId)
+        if (!chat) {
+            throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND')
+        }
+        
+        // Get the uploaded file from form data
+        const body = await c.req.parseBody()
+        const file = body.file as File
+        
+        if (!file || !(file instanceof File)) {
+            throw new ApiError(400, 'No file provided', 'NO_FILE_PROVIDED')
+        }
+        
+        // Validate file size (10MB limit)
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (file.size > maxSize) {
+            throw new ApiError(413, 'File too large. Maximum size is 10MB', 'FILE_TOO_LARGE')
+        }
+        
+        // Save the file and create attachment record
+        const attachment = await attachmentStorage.saveFile(chatId, file)
+        
+        return c.json(
+            {
+                success: true,
+                data: attachment
+            } satisfies z.infer<typeof FileUploadResponseSchema>,
+            201
         )
     })
 
