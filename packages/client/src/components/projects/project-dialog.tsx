@@ -32,7 +32,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
   // We'll use this state to know when we have a newly created project to sync
   const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<number | null>(null)
   const { mutate: syncProject } = useSyncProject()
-  
+
   // Ref for the hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -75,7 +75,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
       const firstFile = files[0]
       // Extract the folder path by removing the file name from the webkitRelativePath
       const relativePath = firstFile.webkitRelativePath
-      
+
       if (relativePath) {
         const folderPath = relativePath.substring(0, relativePath.lastIndexOf('/'))
         setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: folderPath }))
@@ -144,13 +144,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
                   required
                   className='flex-1'
                 />
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  onClick={handleBrowseFolder}
-                  className='px-3'
-                >
+                <Button type='button' variant='outline' size='sm' onClick={handleBrowseFolder} className='px-3'>
                   <FolderOpen className='h-4 w-4' />
                 </Button>
               </div>
@@ -165,10 +159,12 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
             </div>
             <div className='grid gap-2'>
               <Label htmlFor='description'>Description</Label>
-              <Input 
-                id='description' 
-                value={formData.description} 
-                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, description: e.target.value }))}
+              <Input
+                id='description'
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev: CreateProjectRequestBody) => ({ ...prev, description: e.target.value }))
+                }
               />
             </div>
           </div>
