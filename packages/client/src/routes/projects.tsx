@@ -80,12 +80,23 @@ export function ProjectsPage() {
   ])
 
   const handleSelectProject = (id: number) => {
-    updateActiveProjectTab((prev) => ({
-      ...(prev || {}),
-      selectedProjectId: id,
-      selectedFiles: [],
-      selectedPrompts: []
-    }))
+    // If there are no tabs, create one for the selected project
+    if (noTabsYet) {
+      const selectedProject = projects.find(p => p.id === id)
+      const newTabId = createProjectTabFromHook({
+        displayName: selectedProject?.name || `Tab for ${id.toString().substring(0, 6)}`,
+        selectedProjectId: id
+      })
+      setActiveProjectTabId(newTabId)
+    } else {
+      // Update the existing active tab
+      updateActiveProjectTab((prev) => ({
+        ...(prev || {}),
+        selectedProjectId: id,
+        selectedFiles: [],
+        selectedPrompts: []
+      }))
+    }
     setProjectModalOpen(false)
   }
 
