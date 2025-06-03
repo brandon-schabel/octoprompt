@@ -5,9 +5,10 @@ import { Button } from '@ui'
 import { Input } from '@ui'
 import { Label } from '@ui'
 import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } from '@/hooks/api/use-projects-api'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { CreateProjectRequestBody } from '@octoprompt/schemas'
 import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
+import { FolderOpen } from 'lucide-react'
 
 type ProjectDialogProps = {
   open: boolean
@@ -31,6 +32,9 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
   // We'll use this state to know when we have a newly created project to sync
   const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<number | null>(null)
   const { mutate: syncProject } = useSyncProject()
+  
+  // Ref for the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (projectData?.data?.id && projectId) {
@@ -59,6 +63,27 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
       })
     }
   }, [newlyCreatedProjectId, syncProject, navigate, onOpenChange])
+
+  const handleBrowseFolder = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFolderSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files && files.length > 0) {
+      // Get the first file to extract the folder path
+      const firstFile = files[0]
+      // Extract the folder path by removing the file name from the webkitRelativePath
+      const relativePath = firstFile.webkitRelativePath
+      
+      if (relativePath) {
+        const folderPath = relativePath.substring(0, relativePath.lastIndexOf('/'))
+        setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: folderPath }))
+      }
+    }
+    // Reset the input so the same folder can be selected again if needed
+    event.target.value = ''
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,16 +136,40 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
             </div>
             <div className='grid gap-2'>
               <Label htmlFor='path'>Path</Label>
-              <Input
-                id='path'
-                value={formData.path}
-                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: e.target.value }))}
-                required
+              <div className='flex gap-2'>
+                <Input
+                  id='path'
+                  value={formData.path}
+                  onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: e.target.value }))}
+                  required
+                  className='flex-1'
+                />
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={handleBrowseFolder}
+                  className='px-3'
+                >
+                  <FolderOpen className='h-4 w-4' />
+                </Button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type='file'
+                style={{ display: 'none' }}
+                {...({ webkitdirectory: '' } as any)}
+                multiple
+                onChange={handleFolderSelection}
               />
             </div>
             <div className='grid gap-2'>
               <Label htmlFor='description'>Description</Label>
-              <Input id='description' value={formData.description} />
+              <Input 
+                id='description' 
+                value={formData.description} 
+                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, description: e.target.value }))}
+              />
             </div>
           </div>
           <DialogFooter>
