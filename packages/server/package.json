@@ -10,5 +10,9 @@
     "dev:watch": "DEV=true bun --watch server.ts",
     "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@mastra/core": "^0.10.2",
+    "@mastra/rag": "^0.10.2"
+  }
 }

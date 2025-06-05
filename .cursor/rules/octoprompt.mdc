@@ -1,6 +1,3 @@
-Okay, here's a revised version of your OctoPrompt Development Guide, optimized for conciseness and token count while aiming to preserve all essential information and remove redundancies.
-
-```markdown
 # OctoPrompt Development Guide
 
 ## General Code Principles
@@ -36,73 +33,6 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 - **Test-Driven Mindset**: Add/update tests when introducing new logic. Keep functions small and unit-testable.
 - **Inline Documentation**: Provide concise docstrings or inline comments for complex logic. Keep them accurate.
 
----
-## Python Rules for Functional, Testable, and Robust Code
-- Environment: `uv` with `.venv` (`source .venv/bin/activate`)
-- Testing: `uv pytest` (run with `uv run pytest`)
-- Execution: Use `uv` for running Python files.
-
-### 1. Embrace Functional Programming
-* **Prefer Pure Functions**: Functions should return the same output for the same input with no side effects.
-  ```python
-  # Good: Pure function
-  def add(a: int, b: int) -> int:
-      return a + b
-  ```
-* **Immutability**: Treat data as immutable. Create new data structures instead of modifying in-place.
-  ```python
-  # Good: Returning a new list
-  def append_item(my_list: list[int], item: int) -> list[int]:
-      return my_list + [item]
-  ```
-* **Avoid Side Effects**: Isolate side effects (I/O, API calls).
-* **Higher-Order Functions**: Utilize `map`, `filter`, `functools.reduce`.
-
-### 2. Prioritize Functions Over Classes
-* **Default to Functions**: Use standalone functions for most logic.
-* **When to Use Classes (Sparingly)**: For managing complex state coupled with multiple methods, implementing external interfaces, or for Pydantic models.
-* **Avoid "Manager" or "Util" Classes**: Use modules with functions instead.
-* **SRP for Functions**: Each function does one thing well.
-
-### 3. Leverage Pydantic for Data Validation and Settings
-* **Define Clear Data Structures**: Use Pydantic models for runtime data validation and serialization.
-  ```python
-  from pydantic import BaseModel, PositiveInt, EmailStr
-  from typing import List
-
-  class UserProfile(BaseModel):
-      user_id: PositiveInt; username: str; email: EmailStr; tags: List[str] = []
-  ```
-* **Configuration Management**: Use Pydantic's `BaseSettings` for app settings.
-  ```python
-  from pydantic_settings import BaseSettings
-  class AppSettings(BaseSettings):
-      database_url: str; api_key: str; debug_mode: bool = False
-      class Config: env_file = ".env"
-  ```
-* **API Request/Response Validation**: Use Pydantic models for API data integrity.
-
-### 4. Write Testable Code
-* **Design for Testability**: Pure functions, decoupled components, dependency injection.
-  ```python
-  from typing import Protocol
-  class DataStore(Protocol):
-      def get_user(self, user_id: int) -> dict | None: ...
-
-  def process_user_data(user_id: int, store: DataStore) -> str:
-      user = store.get_user(user_id)
-      return f"Processing {user['name']}" if user else "User not found"
-  ```
-* **Unit Tests**: Test every function, especially pure functions and core logic.
-* **Test Edge Cases**: Test invalid inputs, boundary conditions, and failure modes.
-* **Aim for High Test Coverage**.
-
-### 5. General Good Coding Practices
-* **Type Hinting (PEP 484)**: Use for all function signatures and relevant variable declarations.
-  ```python
-  def greet(name: str, age: int) -> str:
-      return f"Hello, {name}! You are {age} years old."
-  ```
 * **Readability and Simplicity (KISS)**: Write clear, concise code.
 * **Modularity**: Organize code into logical modules/packages. Avoid circular dependencies.
 * **Error Handling**: Handle exceptions gracefully. Use specific exception types.
@@ -123,7 +53,6 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
     - Routes/API file: API route definitions.
 - **API Type Safety**:
     - TypeScript: Zod with Hono for validation (note: route/API params often parse as strings).
-    - Python: Pydantic models for type safety and validation.
 - **OpenAPI Specs**: Every API must have proper OpenAPI specifications.
 - **Route Ordering**: Crucial. Incorrect order leads to incorrect route matching. Pay very close attention.
 
@@ -165,18 +94,6 @@ OctoPrompt
 │   │       ├── hooks
 │   │       │   └── api // API hooks directly importing shared schema types
 │   │       └── generated // Legacy generated files (being phased out)
-│   ├── python_backend
-│   │   ├── app
-│   │   ├── schemas
-│   │   ├── services
-│   │   │   ├── chat_service.py
-│   │   │   ├── prompt_service.py
-│   │   │   └── project_service.py
-│   │   └── utils
-│   │       └── storage
-│   │           ├── chat_storage.py
-│   │           ├── prompt_storage.py
-│   │           └── project_storage.py
 │   ├── shared
 │   │   └── src
 │   │       ├── constants
@@ -296,13 +213,6 @@ OctoPrompt
 
 **`packages/shared/src/constants/model-default-configs.ts`:**
 - `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`: `ModelOptionsWithProvider` objects with settings for temperature, maxTokens, provider, model, etc. (e.g., `LOW_MODEL_CONFIG` uses `google/gemini-2.5-flash-preview`).
-
----
-## Python Backend (`packages/python_backend`)
-- Activate env: `source ./.venv/bin/activate`
-- Run server: `python main.py`
-- Run unit tests: `uv run tests` (Note: original doc said `uv run pytest` and `uv run tests`. `uv run pytest` is more standard if `pytest` is the task name in `pyproject.toml`)
-
 ---
 ## Frontend
 ### Major Packages
@@ -564,4 +474,3 @@ Use Zod for param validation, e.g., `z.coerce.number().int().positive()`.
 - `/path` vs `/path/`: Normalize using middleware if needed.
 - For IDs that might conflict with literal segments (e.g., "bulk", "me"), validate as string + regex first, then cast, rather than direct `z.coerce.number()`.
 - For many versioned routes, consider sub-routers: `app.route('/v1', v1Router)`.
-```

@@ -12,7 +12,7 @@ export const parseTimestamp = (tsValue: unknown): Date | null => {
 
   if (typeof tsValue === 'number') {
     if (isNaN(tsValue)) return null
-    // Using a threshold to distinguish seconds from milliseconds, similar to the Python backend.
+    // Using a threshold to distinguish seconds from milliseconds
     const NUMERIC_TIMESTAMP_MS_THRESHOLD = 100000000000 // 10^11
     const date = new Date(tsValue > NUMERIC_TIMESTAMP_MS_THRESHOLD ? tsValue : tsValue * 1000)
     return !isNaN(date.getTime()) ? date : null
@@ -38,7 +38,6 @@ export const parseTimestamp = (tsValue: unknown): Date | null => {
 
 /**
  * Safely parses a timestamp value and converts it to a Unix timestamp in milliseconds.
- * This is the TypeScript equivalent of the Python `convert_timestamp_to_ms_int`.
  * @param tsValue - The timestamp value to parse (number, string, Date, null, or undefined).
  * @returns A number representing milliseconds since epoch, otherwise null.
  */
