@@ -1,5 +1,5 @@
 import { resolvePath } from '@/utils/path-utils'
-import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@/utils/storage/project-storage'
+import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@octoprompt/storage'
 import {
   CreateProjectBody,
   Project,
@@ -11,9 +11,7 @@ import {
 } from '@octoprompt/schemas'
 import path from 'path'
 import { z, ZodError } from 'zod'
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
 
-import { APIProviders } from '@octoprompt/schemas'
 import { generateSingleText, generateStructuredData } from './gen-ai-services'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { ApiError } from '@octoprompt/shared'

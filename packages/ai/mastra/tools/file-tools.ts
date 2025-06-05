@@ -8,9 +8,9 @@
 
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { projectStorage } from "@/utils/storage/project-storage";
+import { projectStorage } from "@octoprompt/storage";
 import { computeChecksum } from "@/services/file-services/file-sync-service-unified";
-import { normalizeToUnixMs } from "@/utils/parse-timestamp";
+import { normalizeToUnixMs } from "@octoprompt/shared";
 import { ProjectFile } from '@octoprompt/schemas';
 
 export const readProjectFileTool = createTool({

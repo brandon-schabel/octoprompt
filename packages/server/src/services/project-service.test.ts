@@ -18,10 +18,10 @@ import {
 } from '@/services/project-service'
 import { summarizeSingleFile, summarizeFiles } from '@/services/agents/summarize-files-agent'
 import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody, FileVersion } from '@octoprompt/schemas'
-import type { ProjectsStorage, ProjectFilesStorage } from '@/utils/storage/project-storage'
+import type { ProjectsStorage, ProjectFilesStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
 import { z } from 'zod'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // In-memory stores for our mocks
 let mockProjectsDb: ProjectsStorage = {}
@@ -191,7 +191,7 @@ const mockProjectStorage = {
   }
 }
 
-mock.module('@/utils/storage/project-storage', () => ({
+mock.module('@octoprompt/storage', () => ({
   projectStorage: mockProjectStorage
 }))
 

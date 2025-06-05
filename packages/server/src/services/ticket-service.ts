@@ -14,15 +14,15 @@ import {
   TaskSuggestions,
   TaskSuggestionsZodSchema
 } from '@octoprompt/schemas'
-import { projectStorage } from '@/utils/storage/project-storage'
+import { projectStorage } from '@octoprompt/storage'
 import {
   ticketStorage,
   type TicketsStorage,
   type TicketTasksStorage,
   type TicketFilesStorage
-} from '@/utils/storage/ticket-storage'
+} from '@octoprompt/storage'
 import { generateStructuredData } from './gen-ai-services'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
 {
@@ -47,6 +47,7 @@ export async function fetchTaskSuggestionsForTicket(
   userContext: string | undefined
 ): Promise<TaskSuggestions> {
   const projectSummary = await getFullProjectSummary(ticket.projectId)
+  
 
   const userMessage = `
   <goal>

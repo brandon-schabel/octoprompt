@@ -34,8 +34,6 @@ export const parseTimestamp = (tsValue: unknown): Date | null => {
   return null
 }
 
-
-
 /**
  * Safely parses a timestamp value and converts it to a Unix timestamp in milliseconds.
  * @param tsValue - The timestamp value to parse (number, string, Date, null, or undefined).

@@ -1,4 +1,4 @@
-import { promptStorage, type PromptsStorage, type PromptProjectsStorage } from '@/utils/storage/prompt-storage'
+import { promptStorage, type PromptsStorage, type PromptProjectsStorage } from '@octoprompt/storage'
 import {
   CreatePromptBody,
   UpdatePromptBody,

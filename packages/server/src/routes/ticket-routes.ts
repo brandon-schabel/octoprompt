@@ -50,7 +50,7 @@ import {
   UpdateTicketBodySchema,
   updateTicketSchema
 } from '@octoprompt/schemas'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 const LinkFilesBodySchema = linkFilesSchema
 const SuggestTasksBodySchema = suggestTasksSchema

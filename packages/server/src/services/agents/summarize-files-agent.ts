@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { ProjectFile } from '@octoprompt/schemas'
 import { LOW_MODEL_CONFIG, APIProviders } from '@octoprompt/schemas'
 import { generateStructuredData } from '../gen-ai-services'
-import { projectStorage } from '@/utils/storage/project-storage'
+import { projectStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
 import { getProjectFiles } from '../project-service'
 

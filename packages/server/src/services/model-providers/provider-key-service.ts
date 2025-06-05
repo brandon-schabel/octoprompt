@@ -1,4 +1,4 @@
-import { providerKeyStorage } from '@/utils/storage/provider-key-storage' // ADDED
+import { providerKeyStorage } from '@octoprompt/storage' // ADDED
 import {
   CreateProviderKeyInputSchema,
   ProviderKey,
@@ -7,7 +7,7 @@ import {
 } from '@octoprompt/schemas'
 import { ApiError } from '@octoprompt/shared'
 import { z } from '@hono/zod-openapi'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // The mapDbRowToProviderKey function is no longer needed as we store objects directly
 // that should conform to the ProviderKey schema.

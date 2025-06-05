@@ -340,7 +340,7 @@ export const todoStorage = {
 Business logic: `createTodo`, `updateTodoStatus`, `getTodosByProject`, `deleteTodo`, `generateTodoSuggestions` (uses `generateStructuredData`). Handles ID conflicts, validation, and error wrapping (`ApiError`).
 ```typescript
 import { Todo, CreateTodoBody, TodoSchema } from '@octoprompt/schemas'; // Assuming path
-import { todoStorage } from '@/utils/storage/todo-storage'; // Assuming path
+import { todoStorage } from '@octoprompt/storage/todo-storage'; // Assuming path
 import { ApiError } from '@octoprompt/shared'; // Assuming path
 // ... (other imports like generateStructuredData, getProjectById)
 

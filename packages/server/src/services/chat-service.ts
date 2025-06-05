@@ -1,8 +1,8 @@
 import { ChatSchema, ChatMessageSchema, ChatMessage, Chat, ExtendedChatMessage } from '@octoprompt/schemas'
 import { ApiError } from '@octoprompt/shared'
-import { chatStorage, type ChatMessagesStorage } from '@/utils/storage/chat-storage' // New import
+import { chatStorage, type ChatMessagesStorage } from '@octoprompt/storage' // New import
 import { ZodError } from 'zod'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 export type CreateChatOptions = {
   copyExisting?: boolean

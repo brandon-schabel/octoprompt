@@ -10,11 +10,7 @@ import { z } from 'zod'
 
 import { ApiError } from '@octoprompt/shared'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
-import {
-  executeMastraCodeChange,
-  batchSummarizeWithMastra,
-  summarizeFileWithMastra
-} from '@/mastra/agents/mastra-coder-simplified-service'
+import { executeMastraCodeChange, batchSummarizeWithMastra, summarizeFileWithMastra } from '@octoprompt/ai'
 
 // Request/Response Schemas
 const MastraCodeChangeRequestSchema = z.object({
@@ -217,14 +213,17 @@ export const mastraRoutes = new OpenAPIHono()
         throw new ApiError(500, result.error || 'Code generation failed', 'MASTRA_CODE_CHANGE_FAILED')
       }
 
-      return c.json({
-        success: true as const,
-        data: {
-          agentJobId: result.agentJobId,
-          updatedFiles: result.updatedFiles,
-          summary: result.summary
-        }
-      }, 200)
+      return c.json(
+        {
+          success: true as const,
+          data: {
+            agentJobId: result.agentJobId,
+            updatedFiles: result.updatedFiles,
+            summary: result.summary
+          }
+        },
+        200
+      )
     } catch (error) {
       console.error('[MastraRoutes] Code change error:', error)
       throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'INTERNAL_ERROR')
@@ -239,10 +238,13 @@ export const mastraRoutes = new OpenAPIHono()
 
       const result = await batchSummarizeWithMastra(projectId, fileIds)
 
-      return c.json({
-        success: true as const,
-        data: result
-      }, 200)
+      return c.json(
+        {
+          success: true as const,
+          data: result
+        },
+        200
+      )
     } catch (error) {
       console.error('[MastraRoutes] Batch summarize error:', error)
       throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'BATCH_SUMMARIZE_ERROR')
@@ -257,14 +259,17 @@ export const mastraRoutes = new OpenAPIHono()
 
       const result = await summarizeFileWithMastra(projectId, fileId, focusArea)
 
-      return c.json({
-        success: true as const,
-        data: {
-          summary: result.summary,
-          fileId,
-          path: result.updatedFile.path
-        }
-      }, 200)
+      return c.json(
+        {
+          success: true as const,
+          data: {
+            summary: result.summary,
+            fileId,
+            path: result.updatedFile.path
+          }
+        },
+        200
+      )
     } catch (error) {
       console.error('[MastraRoutes] Single summarize error:', error)
       throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'FILE_SUMMARIZE_ERROR')
@@ -347,19 +352,22 @@ export const comparisonRoutes = new OpenAPIHono().openapi(comparisonRoute, async
       // originalTime = Date.now() - originalStart;
     }
 
-    return c.json({
-      success: true as const,
-      data: {
-        comparison: {
-          mastraTime,
-          originalTime,
-          mastraSuccess: mastraResult.success,
-          originalSuccess: originalResult?.success
-        },
-        mastraResult,
-        originalResult
-      }
-    }, 200)
+    return c.json(
+      {
+        success: true as const,
+        data: {
+          comparison: {
+            mastraTime,
+            originalTime,
+            mastraSuccess: mastraResult.success,
+            originalSuccess: originalResult?.success
+          },
+          mastraResult,
+          originalResult
+        }
+      },
+      200
+    )
   } catch (error) {
     console.error('[MastraRoutes] Comparison error:', error)
     throw error instanceof ApiError ? error : new ApiError(500, 'Comparison failed', 'COMPARISON_FAILED')

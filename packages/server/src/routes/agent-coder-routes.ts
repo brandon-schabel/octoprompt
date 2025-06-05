@@ -387,7 +387,7 @@ export const agentCoderRoutes = new OpenAPIHono()
     const responsePayload: z.infer<typeof AgentCoderRunResponseSchema> = {
       success: true,
       data: {
-        updatedFiles: orchestratorResultData.updatedFiles,
+        updatedFiles: orchestratorResultData.updatedFiles.map(file => file.id),
         taskPlan: orchestratorResultData.taskPlan === null ? undefined : orchestratorResultData.taskPlan,
         agentJobId: orchestratorResultData.agentJobId
       }
@@ -475,9 +475,9 @@ export const agentCoderRoutes = new OpenAPIHono()
       )
     }
 
-    const { updatedFiles: agentProposedFiles } = validationResult.data
+    const { updatedFiles: agentProposedFileIds } = validationResult.data
 
-    if (!agentProposedFiles || agentProposedFiles.length === 0) {
+    if (!agentProposedFileIds || agentProposedFileIds.length === 0) {
       await log(`[Agent Confirm Route ${agentJobId}] No file changes proposed in data log. Nothing to write.`, 'info', {
         agentJobId
       })
@@ -492,9 +492,9 @@ export const agentCoderRoutes = new OpenAPIHono()
     }
 
     await log(
-      `[Agent Confirm Route] Found ${agentProposedFiles.length} proposed file changes in data log for project ${projectId}.`,
+      `[Agent Confirm Route] Found ${agentProposedFileIds.length} proposed file changes in data log for project ${projectId}.`,
       'info',
-      { agentJobId, projectId, fileCount: agentProposedFiles.length }
+      { agentJobId, projectId, fileCount: agentProposedFileIds.length }
     )
 
     const projectData = await getProjectById(projectId)
@@ -549,18 +549,19 @@ export const agentCoderRoutes = new OpenAPIHono()
     )
 
     await log(`[Agent Confirm Route ${agentJobId}] Calling writeFilesToFileSystem...`, 'info', { agentJobId })
+
     await writeFilesToFileSystem({
       agentJobId,
       projectFileMap: originalProjectFileMap,
       absoluteProjectPath,
-      updatedFiles: agentProposedFiles
+      updatedFiles: agentProposedFileIds
     })
     await log(`[Agent Confirm Route ${agentJobId}] writeFilesToFileSystem completed.`, 'info', { agentJobId })
 
     const successPayload: z.infer<typeof ConfirmAgentRunChangesResponseSchema> = {
       success: true,
       message: 'Agent run changes successfully written to filesystem.',
-      writtenFiles: agentProposedFiles.map((f) => f.path)
+      writtenFiles: agentProposedFileIds.map((f) => f.path)
     }
     return c.json(successPayload, 200)
   })

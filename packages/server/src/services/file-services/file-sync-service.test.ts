@@ -9,7 +9,7 @@ import type { Project } from '@octoprompt/schemas'
 import type { PathLike, Dirent, Stats } from 'node:fs'
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import { createCleanupService } from './file-sync-service-unified'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // --- Mocks/Spies for external dependencies (fs, projectService, console, Bun) ---
 let getProjectFilesSpy: Mock<typeof projectService.getProjectFiles>

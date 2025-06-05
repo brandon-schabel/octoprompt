@@ -8,7 +8,7 @@
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '../parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
 
 // Define a base directory for chat attachments
 const CHAT_ATTACHMENTS_BASE_DIR = path.resolve(process.cwd(), 'data', 'chat_attachments')

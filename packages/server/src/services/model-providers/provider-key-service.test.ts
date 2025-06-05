@@ -1,16 +1,16 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { createProviderKeyService } from '@/services/model-providers/provider-key-service'
-import type { ProviderKeysStorage } from '@/utils/storage/provider-key-storage' // ADDED
+import type { ProviderKeysStorage } from '@octoprompt/storage' // ADDED
 import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // In-memory store for our mock
 let mockProviderKeysDb: ProviderKeysStorage = {}
 
 // Mock the providerKeyStorage utility
 // Ensure the path to the module is correct based on your project structure.
-// If provider-key-storage.ts is in '@/utils/storage/', this path should be correct.
-mock.module('@/utils/storage/provider-key-storage', () => ({
+// If provider-key-storage.ts is in '@octoprompt/storage/', this path should be correct.
+mock.module('@octoprompt/storage', () => ({
   providerKeyStorage: {
     readProviderKeys: async () => JSON.parse(JSON.stringify(mockProviderKeysDb)),
     writeProviderKeys: async (data: ProviderKeysStorage) => {

@@ -1,10 +1,9 @@
-// packages/server/src/utils/storage/provider-key-storage.ts
 import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { ProviderKeySchema, type ProviderKey } from '@octoprompt/schemas'
 import { randomUUID } from 'crypto'
-import { normalizeToUnixMs } from '../parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
 
 // Define the base directory for storing provider key data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'provider_key_storage')

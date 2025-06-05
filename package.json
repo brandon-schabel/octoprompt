@@ -47,6 +47,8 @@
     "@octoprompt/shared": "workspace:*",
     "@octoprompt/schemas": "workspace:*",
     "@octoprompt/api-client": "workspace:*",
+    "@octoprompt/ai": "workspace:*",
+    "@octoprompt/storage": "workspace:*",
     "zod": "^3.24.4",
     "zod-validation-error": "^3.4.1"
   },

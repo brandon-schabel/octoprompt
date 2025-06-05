@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { createChatService } from '@/services/chat-service'
 import { randomString } from '../utils/test-utils'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
-import type { ChatsStorage, ChatMessagesStorage } from '@/utils/storage/chat-storage'
+import { normalizeToUnixMs } from '@octoprompt/shared'
+import type { ChatsStorage, ChatMessagesStorage } from '@octoprompt/storage'
 
 // Use realistic unix timestamps for test IDs
 const BASE_TIMESTAMP = 1700000000000; // Nov 2023 as base
@@ -37,7 +37,7 @@ const mockChatStorage = {
   generateId: () => generateTestId()
 }
 
-mock.module('@/utils/storage/chat-storage', () => ({
+mock.module('@octoprompt/storage', () => ({
   chatStorage: mockChatStorage
 }))
 

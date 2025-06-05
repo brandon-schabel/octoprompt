@@ -4,10 +4,10 @@ import { generateStructuredData } from '../gen-ai-services'
 import { resolvePath } from '@/utils/path-utils'
 import { APIProviders } from '@octoprompt/schemas'
 import { MEDIUM_MODEL_CONFIG } from '@octoprompt/schemas'
-import { projectStorage } from '@/utils/storage/project-storage'
+import { projectStorage } from '@octoprompt/storage'
 import { type AIFileChangeRecord, AIFileChangeStatusSchema, type AIFileChangeStatus } from '@octoprompt/schemas'
 import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 export const FileChangeResponseSchema = z.object({
   updatedContent: z.string().describe('The complete, updated content of the file after applying the changes.'),

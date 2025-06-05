@@ -1,8 +1,9 @@
 import { executeCodeChangeWorkflow } from '../workflows/mastra-code-change-workflow'
-import { projectStorage } from '@/utils/storage/project-storage'
-import { getProjectById, getProjectFiles } from '../../services/project-service'
-import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { projectStorage } from '@octoprompt/storage'
+import { getProjectById, getProjectFiles } from '../../../server/src/services/project-service'
+import { ApiError, buildProjectSummary } from '@octoprompt/shared'
+import { normalizeToUnixMs } from '@octoprompt/shared'
+import type { ProjectFile } from '@octoprompt/schemas'
 
 export interface MastraCoderRequest {
   projectId: number
@@ -212,7 +213,10 @@ export async function batchSummarizeWithMastra(
       })
       included++
     } catch (error) {
-      console.warn(`[MastraCoderService] Skipped file ${fileId}:`, error instanceof Error ? error.message : String(error))
+      console.warn(
+        `[MastraCoderService] Skipped file ${fileId}:`,
+        error instanceof Error ? error.message : String(error)
+      )
       skipped++
     }
   }
@@ -226,7 +230,8 @@ export async function batchSummarizeWithMastra(
  */
 export async function buildSimpleProjectContext(
   projectId: number,
-  selectedFileIds: number[]
+  selectedFileIds: number[],
+  projectFiles: ProjectFile[]
 ): Promise<{
   projectSummary: string
   selectedFiles: Array<{
@@ -235,13 +240,11 @@ export async function buildSimpleProjectContext(
     content: string
   }>
 }> {
-  const { getFullProjectSummary } = await import('@/utils/get-full-project-summary')
+  // const { getFullProjectSummary } = await import('@/utils/get-full-project-summary')
 
   // Get project summary
-  const projectSummaryResult = await getFullProjectSummary(projectId)
-  const projectSummary = typeof projectSummaryResult === 'string' 
-    ? projectSummaryResult 
-    : projectSummaryResult.message || 'No project summary available'
+  const projectSummaryResult = await buildProjectSummary(projectFiles)
+  const projectSummary = projectSummaryResult
 
   // Get selected files
   const selectedFiles = []
@@ -261,4 +264,3 @@ export async function buildSimpleProjectContext(
     selectedFiles
   }
 }
-

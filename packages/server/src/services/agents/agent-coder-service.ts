@@ -28,8 +28,7 @@ import {
 } from '@octoprompt/schemas'
 import { FileSyncData, bulkCreateProjectFiles } from '../project-service'
 import { basename, extname } from 'path'
-import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { ApiError, normalizeToUnixMs } from '@octoprompt/shared'
 
 const agentCoderPrompts = {
   planningAgent: {
@@ -570,7 +569,7 @@ export async function mainOrchestrator(
     errorMessage: '',
     errorStack: '',
     agentJobEndTime: normalizeToUnixMs(new Date()),
-    updatedFiles: [] // Ensure it's always an array
+    updatedFileIds: [] // Ensure it's always an array
   }
 
   let logFilePath: string | null = null // Ensure it's null if not set
@@ -688,7 +687,7 @@ export async function mainOrchestrator(
         'info',
         { agentJobId, changedFileCount: changedFiles.length }
       )
-      agentDataLog.updatedFiles = changedFiles
+      agentDataLog.updatedFileIds = changedFiles.map((file) => file.id)
       agentDataLog.finalStatus = 'Success'
     }
   } catch (error: any) {
@@ -751,8 +750,18 @@ export async function mainOrchestrator(
   // After the finally block, return the result.
   // If an error was thrown in the try or catch block, it would have propagated out,
   // and this return statement wouldn't be reached for error cases.
+  const updatedFiles = Array.from(agentDataLog.updatedFileIds || []).map((fileId) => {
+    const file = agentContext.projectFileMap.get(fileId)
+    if (!file) {
+      throw new ApiError(500, `File with ID ${fileId} not found in project file map`, 'FILE_NOT_FOUND', {
+        fileId,
+        projectId: agentContext.project.id
+      })
+    }
+    return file
+  })
   return {
-    updatedFiles: agentDataLog.updatedFiles || [], // Ensure array output
+    updatedFiles,
     taskPlan: agentDataLog.finalTaskPlan,
     agentJobId,
     agentDataLog

@@ -37,6 +37,15 @@
         "typescript": "^5.8.3",
       },
     },
+    "packages/ai": {
+      "name": "@octoprompt/ai",
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/api-client": {
       "name": "@octoprompt/api-client",
       "version": "0.5.4",
@@ -151,6 +160,15 @@
     "packages/shared": {
       "name": "@octoprompt/shared",
       "version": "0.5.4",
+    },
+    "packages/storage": {
+      "name": "@octoprompt/storage",
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
     },
   },
   "packages": {
@@ -444,11 +462,15 @@
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
+    "@octoprompt/ai": ["@octoprompt/ai@workspace:packages/ai"],
+
     "@octoprompt/api-client": ["@octoprompt/api-client@workspace:packages/api-client"],
 
     "@octoprompt/schemas": ["@octoprompt/schemas@workspace:packages/schemas"],
 
     "@octoprompt/shared": ["@octoprompt/shared@workspace:packages/shared"],
+
+    "@octoprompt/storage": ["@octoprompt/storage@workspace:packages/storage"],
 
     "@open-draft/deferred-promise": ["@open-draft/deferred-promise@2.2.0", "", {}, "sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA=="],
 

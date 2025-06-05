@@ -101,3 +101,10 @@ export function buildCombinedFileSummariesXml(files: ProjectFile[], options: Sum
 
   return output
 }
+
+export const buildProjectSummary = (includedFiles: ProjectFile[]) => {
+  // Build the combined summaries using your summary-formatter
+  return buildCombinedFileSummariesXml(includedFiles, {
+    includeEmptySummaries: true
+  })
+}

@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { enhancedCoderAgent, enhancedPlanningAgent } from '../agents/enhanced-coder-agent'
 import { getProjectById } from '@/services/project-service'
 import { getFullProjectSummary } from '@/utils/get-full-project-summary'
-import { projectStorage } from '@/utils/storage/project-storage'
+import { projectStorage } from '@octoprompt/storage'
 
 // Input schema for the orchestrator
 const AgentOrchestratorInput = z.object({

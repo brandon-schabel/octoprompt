@@ -1,7 +1,7 @@
 import { createRoute, z } from '@hono/zod-openapi'
 
 import { createChatService } from '@/services/chat-service'
-import { attachmentStorage } from '@/utils/storage/attachment-storage'
+import { attachmentStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
 import {
     ApiErrorResponseSchema,

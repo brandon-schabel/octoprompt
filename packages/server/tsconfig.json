@@ -36,7 +36,7 @@
     "server.ts",
     "build.ts",
     "../api-tests/src/tests",
-    "src/utils/parse-timestamp.test.ts",
-    "src/utils/parse-timestamp.ts",
+    "../shared/src/utils/parse-timestamp.test.ts",
+    "../shared/src/utils/parse-timestamp.ts", "../ai/mastra", "../shared/src/utils/extract-full-project-summary.ts", "../storage/src/attachment-storage.ts", "../storage/src/chat-storage.ts", "../storage/src/project-storage.ts", "../storage/src/prompt-storage.ts", "../storage/src/provider-key-storage.ts", "../storage/src/ticket-storage.ts",
   ]
 }

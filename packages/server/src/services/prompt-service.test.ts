@@ -11,9 +11,9 @@ import {
   getPromptProjects
 } from '@/services/prompt-service'
 import type { Prompt, PromptProject, CreatePromptBody, UpdatePromptBody } from '@octoprompt/schemas'
-import type { PromptsStorage, PromptProjectsStorage } from '@/utils/storage/prompt-storage'
+import type { PromptsStorage, PromptProjectsStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // In-memory stores for our mocks
 let mockPromptsDb: PromptsStorage = {}
@@ -43,7 +43,7 @@ const mockPromptStorage = {
   generateId: () => generateTestId()
 }
 
-mock.module('@/utils/storage/prompt-storage', () => ({
+mock.module('@octoprompt/storage', () => ({
   promptStorage: mockPromptStorage
 }))
 

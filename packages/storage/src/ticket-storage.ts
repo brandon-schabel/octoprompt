@@ -6,7 +6,7 @@ import {
     TicketTaskReadSchema,
     TicketFileReadSchema,
 } from '@octoprompt/schemas'
-import { normalizeToUnixMs } from '../parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
 
 // Define the base directory for storing ticket data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'ticket_storage')

@@ -1,10 +1,9 @@
-// src/utils/chat-storage.ts
 import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { ChatSchema, ChatMessageSchema, type Chat, type ChatMessage } from '@octoprompt/schemas'
 import { randomUUID } from 'crypto' // Assuming access to crypto
-import { normalizeToUnixMs } from '../parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
 
 // Define the base directory for storing chat data
 const DATA_DIR = path.resolve(process.cwd(), 'data', 'chat_storage')
