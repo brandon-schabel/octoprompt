@@ -9,6 +9,7 @@ import type { Project } from '@octoprompt/schemas'
 import type { PathLike, Dirent, Stats } from 'node:fs'
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import { createCleanupService } from './file-sync-service-unified'
+import { normalizePathForDb } from '../utils/path-utils'
 import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // --- Mocks/Spies for external dependencies (fs, projectService, console, Bun) ---
@@ -178,23 +179,23 @@ describe('FileSync Service - Utility Functions', () => {
 
   describe('normalizePathForDb', () => {
     test('converts backslashes to forward slashes', () => {
-      expect(fileSyncService.normalizePathForDb('path\\to\\file')).toBe('path/to/file')
-      expect(fileSyncService.normalizePathForDb('src\\components\\Button.tsx')).toBe('src/components/Button.tsx')
+      expect(normalizePathForDb('path\\to\\file')).toBe('path/to/file')
+      expect(normalizePathForDb('src\\components\\Button.tsx')).toBe('src/components/Button.tsx')
     })
 
     test('leaves forward slashes unchanged', () => {
-      expect(fileSyncService.normalizePathForDb('path/to/file')).toBe('path/to/file')
-      expect(fileSyncService.normalizePathForDb('src/components/Button.tsx')).toBe('src/components/Button.tsx')
+      expect(normalizePathForDb('path/to/file')).toBe('path/to/file')
+      expect(normalizePathForDb('src/components/Button.tsx')).toBe('src/components/Button.tsx')
     })
 
     test('handles mixed separators', () => {
-      expect(fileSyncService.normalizePathForDb('path\\to/mixed\\separators')).toBe('path/to/mixed/separators')
+      expect(normalizePathForDb('path\\to/mixed\\separators')).toBe('path/to/mixed/separators')
     })
 
     test('handles edge cases', () => {
-      expect(fileSyncService.normalizePathForDb('')).toBe('')
-      expect(fileSyncService.normalizePathForDb('\\\\')).toBe('//')
-      expect(fileSyncService.normalizePathForDb('single\\slash')).toBe('single/slash')
+      expect(normalizePathForDb('')).toBe('')
+      expect(normalizePathForDb('\\\\')).toBe('//')
+      expect(normalizePathForDb('single\\slash')).toBe('single/slash')
     })
   })
 

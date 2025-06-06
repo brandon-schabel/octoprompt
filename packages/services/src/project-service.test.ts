@@ -202,13 +202,14 @@ const mockGenerateStructuredData = mock(async ({ schema }: { schema: z.ZodSchema
   }
   return { object: {} }
 })
-mock.module('@/services/gen-ai-services', () => ({
+mock.module('./gen-ai-services', () => ({
   generateStructuredData: mockGenerateStructuredData
 }))
 
 // --- Mocking file-sync-service-unified ---
 const mockSyncProject = mock(async (project: Project) => {
-  if (!mockProjectFilesDbPerProject[project.id] || Object.keys(mockProjectFilesDbPerProject[project.id]).length === 0) {
+  const projectFiles = mockProjectFilesDbPerProject[project.id] || {}
+  if (!mockProjectFilesDbPerProject[project.id] || Object.keys(projectFiles).length === 0) {
     const fileId = mockProjectStorage.generateId()
     mockProjectFilesDbPerProject[project.id] = {
       [fileId]: {
@@ -225,7 +226,6 @@ const mockSyncProject = mock(async (project: Project) => {
         checksum: 'checksum-synced',
         created: normalizeToUnixMs(Date.now()),
         updated: normalizeToUnixMs(Date.now()),
-        // New versioning fields
         version: 1,
         prevId: null,
         nextId: null,
@@ -243,7 +243,7 @@ const mockSyncProject = mock(async (project: Project) => {
     error: null
   }
 })
-mock.module('@/services/file-services/file-sync-service-unified', () => ({
+mock.module('./file-services/file-sync-service-unified', () => ({
   syncProject: mockSyncProject
 }))
 
@@ -569,7 +569,7 @@ describe('Project Service (File Storage with Versioning)', () => {
         expect(file.originalFileId).toBeNull()
       })
 
-      const filesInDb = Object.values(mockProjectFilesDbPerProject[projectId])
+      const filesInDb = Object.values(mockProjectFilesDbPerProject[projectId] || {})
       expect(filesInDb.length).toBe(2)
       expect(filesInDb.find((f) => f.path === 'bulk1.js')).toBeDefined()
       expect(filesInDb.find((f) => f.path === 'sub/bulk2.ts')).toBeDefined()

@@ -12,7 +12,7 @@ import {
   type FileSyncData, // Interface from project-service
   listProjects
 } from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
-import { resolvePath, normalizePathForDb } from '../utils/path-utils'
+import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
 import { summarizeSingleFile } from '@octoprompt/services'
 
 // -------------------------------------------------------------------------------- //
@@ -310,7 +310,7 @@ export function getTextFiles(
     const fullPath = join(dir, entry.name)
     // Relative path from projectRoot for ignore checking
     const relativePath = relative(projectRoot, fullPath)
-    const normalizedRelativePath = normalizePathForDb(relativePath)
+    const normalizedRelativePath = normalizePathForDbUtil(relativePath)
 
     if (entry.isDirectory() && CRITICAL_EXCLUDED_DIRS.has(entry.name)) {
       continue
@@ -371,11 +371,11 @@ export async function syncFileSet(
     throw new Error(`Could not retrieve existing files for project ${project.id}`)
   }
 
-  const dbFileMap = new Map<string, ProjectFile>(existingDbFiles.map((f) => [normalizePathForDb(f.path), f]))
+  const dbFileMap = new Map<string, ProjectFile>(existingDbFiles.map((f) => [normalizePathForDbUtil(f.path), f]))
 
   for (const absFilePath of absoluteFilePathsOnDisk) {
     const relativePath = relative(absoluteProjectPath, absFilePath)
-    const normalizedRelativePath = normalizePathForDb(relativePath)
+    const normalizedRelativePath = normalizePathForDbUtil(relativePath)
 
     try {
       const content = readFileSync(absFilePath, 'utf-8')
@@ -575,9 +575,9 @@ export function createFileChangePlugin() {
       }
 
       const absoluteProjectPath = resolvePath(currentProject.path)
-      const relativeChangedPath = normalizePathForDb(relative(absoluteProjectPath, changedFilePath))
+      const relativeChangedPath = normalizePathForDbUtil(relative(absoluteProjectPath, changedFilePath))
 
-      const updatedFile = allFiles.find((f) => normalizePathForDb(f.path) === relativeChangedPath)
+      const updatedFile = allFiles.find((f) => normalizePathForDbUtil(f.path) === relativeChangedPath)
 
       if (event === 'deleted') {
         // console.log(`[FileChangePlugin] File ${relativeChangedPath} was deleted. No summarization needed.`);
