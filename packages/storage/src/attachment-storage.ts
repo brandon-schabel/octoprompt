@@ -142,5 +142,39 @@ export const attachmentStorage = {
       // Don't throw if file not found, just return false or handle as per need
       return false
     }
+  },
+
+  async deleteFileById(
+    chatId: number,
+    messageId: number,
+    attachmentId: number
+  ): Promise<boolean> {
+    // Find files that match the attachment ID pattern in the message directory
+    const messageDir = path.join(CHAT_ATTACHMENTS_BASE_DIR, chatId.toString(), messageId.toString())
+    try {
+      const files = await fs.readdir(messageDir)
+      const matchingFile = files.find(file => file.startsWith(`${attachmentId}_`))
+      
+      if (matchingFile) {
+        const fullPath = path.join(messageDir, matchingFile)
+        await fs.unlink(fullPath)
+        
+        // Clean up empty directories
+        const remainingFiles = await fs.readdir(messageDir)
+        if (remainingFiles.length === 0) {
+          await fs.rmdir(messageDir)
+          const chatDir = path.dirname(messageDir)
+          const remainingChatFiles = await fs.readdir(chatDir)
+          if (remainingChatFiles.length === 0) {
+            await fs.rmdir(chatDir)
+          }
+        }
+        return true
+      }
+      return false
+    } catch (error: any) {
+      console.error(`Error deleting attachment by ID ${attachmentId}:`, error)
+      return false
+    }
   }
 }

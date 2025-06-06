@@ -10,7 +10,7 @@ export const SERVER_PORT = isDevEnv ? DEV_PORT : PROD_PORT
 
 export const corsConfig = {
   origin: [`http://localhost:${CLIENT_PORT}`, `https://${process.env.DOMAIN}`],
-  allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
   allowHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }
