@@ -5,8 +5,8 @@ import * as ticketService from './ticket-service'
 import type { CreateTicketBody, UpdateTicketBody } from '@octoprompt/schemas'
 import { ticketStorage } from '@octoprompt/storage'
 import { projectStorage } from '@octoprompt/storage'
-import * as genAiServices from './gen-ai-services'
-import * as getFullProjectSummaryModule from '@octoprompt/services'
+// import * as mastraGeneralAi from '@octoprompt/ai'
+import * as getFullProjectSummaryModule from './utils/get-full-project-summary'
 
 // Use realistic unix timestamps for test IDs
 const BASE_TIMESTAMP = 1700000000000 // Nov 2023 as base
@@ -108,7 +108,8 @@ describe('Ticket Service (File Storage Mock)', () => {
 
     spyOn(projectStorage, 'readProjectFiles').mockImplementation(mockProjectStorage.readProjectFiles)
 
-    spyOn(genAiServices, 'generateStructuredData').mockImplementation(mockGenerateStructuredData)
+    // spyOn(mastraGeneralAi, 'generateStructuredDataWithMastra').mockImplementation(mockGenerateStructuredData)
+    spyOn(ticketService, 'generateStructuredDataWithMastra').mockImplementation(mockGenerateStructuredData)
     spyOn(getFullProjectSummaryModule, 'getFullProjectSummary').mockImplementation(mockGetFullProjectSummary)
   })
 

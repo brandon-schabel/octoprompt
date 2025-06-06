@@ -1,5 +1,5 @@
 import { ApiError, buildProjectSummary } from '@octoprompt/shared'
-import { getProjectFiles } from '@octoprompt/services'
+import { getProjectFiles } from '../project-service'
 
 export const getSafeAllProjectFiles = async (projectId: number) => {
   const allFiles = await getProjectFiles(projectId, true)

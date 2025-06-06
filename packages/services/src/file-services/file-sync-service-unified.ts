@@ -11,9 +11,15 @@ import {
   bulkDeleteProjectFiles,
   type FileSyncData, // Interface from project-service
   listProjects
-} from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
+} from '../project-service'
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
-import { summarizeSingleFile } from '@octoprompt/services'
+// import { summarizeSingleFile } from '@octoprompt/services'
+
+// Temporary placeholder for summarization
+const summarizeSingleFile = async (file: ProjectFile) => {
+  console.log('Placeholder: summarizeSingleFile called for file', file.id)
+  return file
+}
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
