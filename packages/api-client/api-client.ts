@@ -1153,6 +1153,23 @@ export class MastraService extends BaseApiClient {
     })
     return result as MastraSingleSummarizeResponse
   }
+
+  async editFile(projectId: number, fileId: number, prompt: string): Promise<any> {
+    const data = { projectId, fileId, prompt }
+    // This uses the new mastra file edit endpoint
+    const result = await this.request('POST', '/mastra/edit-file', {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          agentJobId: z.number(),
+          updatedFiles: z.array(z.any()),
+          summary: z.string()
+        })
+      })
+    })
+    return result
+  }
 }
 
 // Main OctoPrompt Client

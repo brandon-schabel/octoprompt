@@ -11,12 +11,12 @@ import {
 import path from 'path'
 import { z, ZodError } from 'zod'
 
-import { generateSingleText, generateStructuredData } from './gen-ai-services'
+import { generateTextWithMastra, generateStructuredDataWithMastra } from '@octoprompt/ai'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { ApiError } from '@octoprompt/shared'
 import { promptsMap } from '@octoprompt/shared'
 import { buildProjectSummary } from '@octoprompt/shared'
-import { summarizeFiles } from './agents/summarize-files-agent'
+import { batchSummarizeWithMastra } from '@octoprompt/ai' // Replace old summarize agent
 import { resolvePath } from './utils/path-utils'
 
 // Existing project CRUD functions remain the same...
@@ -313,7 +313,8 @@ export async function resummarizeAllFiles(projectId: number): Promise<void> {
   }
 
   try {
-    await summarizeFiles(
+    // Use Mastra batch summarize instead of old summarize files
+    await batchSummarizeWithMastra(
       projectId,
       allFiles.map((f) => f.id)
     )
@@ -716,7 +717,8 @@ ${promptsMap.contemplativePrompt}
   }
 
   try {
-    const optimizedPrompt = await generateSingleText({
+    // Use Mastra text generation instead of old generate single text
+    const optimizedPrompt = await generateTextWithMastra({
       systemMessage: systemMessage,
       prompt: userMessage
     })

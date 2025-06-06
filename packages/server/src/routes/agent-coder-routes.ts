@@ -379,7 +379,7 @@ export const agentCoderRoutes = new OpenAPIHono()
       selectedFileIds: routeSelectedFileIds
     }
     const mastraResult = await executeMastraCodeChange({
-      projectId,
+      projectId: routeProjectId,
       userRequest: userInput,
       selectedFileIds: routeSelectedFileIds
     })

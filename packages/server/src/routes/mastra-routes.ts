@@ -17,8 +17,19 @@ import {
   generateTaskSuggestionsWithMastra,
   suggestFilesForTicketWithMastra,
   optimizePromptWithMastra,
-  analyzePromptWithMastra
+  analyzePromptWithMastra,
+  generateTextWithMastra,
+  generateStructuredDataWithMastra,
+  streamTextWithMastra
 } from '@octoprompt/ai'
+import {
+  AiGenerateTextRequestSchema,
+  AiGenerateTextResponseSchema,
+  AiGenerateStructuredRequestSchema,
+  AiGenerateStructuredResponseSchema,
+  StructuredDataSchemaConfig
+} from '@octoprompt/schemas'
+import { stream } from 'hono/streaming'
 
 // Request/Response Schemas
 const MastraCodeChangeRequestSchema = z.object({
@@ -378,8 +389,286 @@ const mastraFileSuggestionRoute = createRoute({
   }
 })
 
+// Basic text generation routes (migrated from gen-ai-routes)
+const generateTextRoute = createRoute({
+  method: 'post',
+  path: '/api/gen-ai/text',
+  tags: ['AI', 'Mastra'],
+  summary: 'Generate text using Mastra',
+  request: {
+    body: {
+      content: { 'application/json': { schema: AiGenerateTextRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: AiGenerateTextResponseSchema } },
+      description: 'Successfully generated text'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
+const generateStreamRoute = createRoute({
+  method: 'post',
+  path: '/api/gen-ai/stream',
+  tags: ['AI', 'Mastra'],
+  summary: 'Generate streaming text using Mastra',
+  request: {
+    body: {
+      content: { 'application/json': { schema: AiGenerateTextRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'text/event-stream': {
+          schema: z.string().openapi({ description: 'Stream of response tokens' })
+        }
+      },
+      description: 'Successfully initiated AI response stream'
+    }
+  }
+})
+
+const generateStructuredRoute = createRoute({
+  method: 'post',
+  path: '/api/gen-ai/structured',
+  tags: ['AI', 'Mastra'],
+  summary: 'Generate structured data using Mastra',
+  request: {
+    body: {
+      content: { 'application/json': { schema: AiGenerateStructuredRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: AiGenerateStructuredResponseSchema } },
+      description: 'Successfully generated structured data'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid schema key'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
+// Define structured data schemas for compatibility
+const structuredDataSchemas: Record<string, StructuredDataSchemaConfig<any>> = {
+  filenameSuggestion: {
+    name: 'Filename Suggestion',
+    description: "Suggests 5 suitable filenames based on a description of the file's content.",
+    promptTemplate:
+      'Based on the following file description, suggest 5 suitable and conventional filenames. File Description: {userInput}',
+    systemPrompt:
+      'You are an expert programmer specializing in clear code organization and naming conventions. Provide concise filename suggestions.',
+    modelSettings: {
+      model: 'gpt-4o',
+      temperature: 0.5
+    },
+    schema: z.object({
+      suggestions: z.array(z.string()).length(5),
+      reasoning: z.string().optional()
+    }).openapi('FilenameSuggestionOutput')
+  },
+  basicSummary: {
+    name: 'Basic Summary',
+    description: 'Generates a short summary of the input text.',
+    promptTemplate: 'Summarize the following text concisely: {userInput}',
+    systemPrompt: 'You are a summarization expert.',
+    modelSettings: { model: 'gpt-4o', temperature: 0.6, maxTokens: 150 },
+    schema: z.object({
+      summary: z.string().openapi({ description: 'The generated summary.' })
+    }).openapi('BasicSummaryOutput')
+  }
+}
+
+// File editing route (replaces ai-file-change functionality)
+const mastraFileEditRoute = createRoute({
+  method: 'post',
+  path: '/api/mastra/edit-file',
+  tags: ['AI', 'Mastra'],
+  summary: 'Edit a single file using Mastra agent',
+  description: 'AI-powered file editing that combines previous ai-file-change with agent coder functionality',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            projectId: z.number().int().positive(),
+            fileId: z.number().int().positive(),
+            prompt: z.string().min(1).max(5000).describe('Description of the changes to make to this file'),
+            options: z
+              .object({
+                temperature: z.number().min(0).max(2).optional(),
+                maxTokens: z.number().int().positive().optional()
+              })
+              .optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              agentJobId: z.number(),
+              updatedFiles: z.array(
+                z.object({
+                  id: z.number(),
+                  path: z.string(),
+                  content: z.string(),
+                  explanation: z.string()
+                })
+              ),
+              summary: z.string()
+            })
+          })
+        }
+      },
+      description: 'File edited successfully'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid request parameters'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project or file not found'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal server error'
+    }
+  }
+})
+
 // Route Handlers
 export const mastraRoutes = new OpenAPIHono()
+  // Basic AI generation routes
+  .openapi(generateTextRoute, async (c) => {
+    const body = c.req.valid('json')
+
+    const generatedText = await generateTextWithMastra({
+      prompt: body.prompt,
+      ...(body.options && {
+        options: body.options
+      }),
+      systemMessage: body.systemMessage
+    })
+
+    return c.json(
+      {
+        success: true,
+        data: { text: generatedText }
+      } satisfies z.infer<typeof AiGenerateTextResponseSchema>,
+      200
+    )
+  })
+
+  .openapi(generateStreamRoute, async (c) => {
+    const body = c.req.valid('json')
+    const { prompt, options, systemMessage } = body
+
+    const aiSDKStream = await streamTextWithMastra({
+      prompt,
+      ...(options && {
+        options: options
+      }),
+      systemMessage
+    })
+
+    return stream(c, async (streamInstance) => {
+      await streamInstance.pipe(aiSDKStream.toDataStream())
+    })
+  })
+
+  .openapi(generateStructuredRoute, async (c) => {
+    const body = c.req.valid('json')
+    const { schemaKey, userInput, options } = body
+
+    const config: StructuredDataSchemaConfig<z.ZodTypeAny> =
+      structuredDataSchemas[schemaKey as keyof typeof structuredDataSchemas]
+    if (!config) {
+      throw new ApiError(
+        400,
+        `Invalid schemaKey provided: ${schemaKey}. Valid keys are: ${Object.keys(structuredDataSchemas).join(', ')}`,
+        'INVALID_SCHEMA_KEY'
+      )
+    }
+
+    const finalPrompt = config?.promptTemplate?.replace('{userInput}', userInput)
+    const finalModel = options?.model ?? config?.modelSettings?.model ?? 'gpt-4o'
+    const finalOptions = { ...config.modelSettings, ...options, model: finalModel }
+    const finalSystemPrompt = config.systemPrompt
+
+    const result = await generateStructuredDataWithMastra({
+      prompt: finalPrompt ?? '',
+      schema: config.schema,
+      options: finalOptions,
+      systemMessage: finalSystemPrompt
+    })
+
+    return c.json(
+      {
+        success: true,
+        data: { output: result.object }
+      } satisfies z.infer<typeof AiGenerateStructuredResponseSchema>,
+      200
+    )
+  })
+
+  // File editing route (combines ai-file-change with agent coder)
+  .openapi(mastraFileEditRoute, async (c) => {
+    try {
+      const { projectId, fileId, prompt, options } = c.req.valid('json')
+
+      console.log(`[MastraRoutes] File edit request for project ${projectId}, file ${fileId}`)
+      console.log(`[MastraRoutes] Prompt: ${prompt.substring(0, 100)}...`)
+
+      // Use the same Mastra code change functionality but with a single file
+      const result = await executeMastraCodeChange({
+        projectId,
+        userRequest: prompt,
+        selectedFileIds: [fileId]
+      })
+
+      if (!result.success) {
+        throw new ApiError(500, result.error || 'File edit failed', 'MASTRA_FILE_EDIT_FAILED')
+      }
+
+      return c.json(
+        {
+          success: true as const,
+          data: {
+            agentJobId: result.agentJobId,
+            updatedFiles: result.updatedFiles,
+            summary: result.summary
+          }
+        },
+        200
+      )
+    } catch (error) {
+      console.error('[MastraRoutes] File edit error:', error)
+      throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'INTERNAL_ERROR')
+    }
+  })
+
+  // Specialized Mastra routes
   .openapi(mastraCodeChangeRoute, async (c) => {
     try {
       const { projectId, userRequest, selectedFileIds, options } = c.req.valid('json')

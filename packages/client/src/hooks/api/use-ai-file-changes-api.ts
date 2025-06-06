@@ -1,63 +1,55 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { octoClient } from '../api-hooks'
-import type {
-  GenerateChangeBody,
-  AIFileChangeRecord
-} from '@octoprompt/schemas'
 
-const AI_FILE_CHANGE_KEYS = {
-  all: ['aiFileChanges'] as const,
-  detail: (projectId: number, changeId: number) => [...AI_FILE_CHANGE_KEYS.all, 'detail', projectId, changeId] as const,
+const MASTRA_FILE_EDIT_KEYS = {
+  all: ['mastraFileEdit'] as const,
 }
 
+// Updated to use Mastra file editing instead of old AI file changes
 export function useGenerateFileChange() {
   return useMutation({
-    mutationFn: (data: GenerateChangeBody) =>
-      octoClient.aiFileChanges.generateChange(data.projectId, {
-        filePath: data.filePath,
-        prompt: data.prompt
-      }),
+    mutationFn: async (data: { projectId: number; fileId: number; prompt: string }) => {
+      // Use the new Mastra file editing endpoint instead of old AI file changes
+      return await octoClient.mastra.editFile(data.projectId, data.fileId, data.prompt)
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success('File changes generated successfully using Mastra!')
+      }
+    },
     onError: (error) => {
       toast.error(error.message || 'Failed to generate file change')
     },
   })
 }
 
+// Deprecated - use agent coder functionality instead
 export function useGetFileChange(projectId: number | null, changeId: number | null) {
   return useQuery({
-    queryKey: AI_FILE_CHANGE_KEYS.detail(projectId || -1, changeId || -1),
-    queryFn: async (): Promise<AIFileChangeRecord | null> => {
-      if (!projectId || !changeId) return null
-      const result = await octoClient.aiFileChanges.getChange(projectId, changeId)
-      return result.fileChange
+    queryKey: ['deprecated', 'fileChange', projectId, changeId],
+    queryFn: async () => {
+      console.warn('useGetFileChange is deprecated. Use agent coder functionality instead.')
+      return null
     },
-    enabled: !!projectId && !!changeId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: (failureCount, error) => {
-      if (error instanceof Error && error.message.includes('404')) {
-        return false
-      }
-      return failureCount < 3
-    },
-    refetchOnWindowFocus: false
+    enabled: false, // Disable this deprecated functionality
   })
 }
 
+// Deprecated - use agent coder functionality instead  
 export function useConfirmFileChange() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ projectId, changeId }: { projectId: number; changeId: number }) =>
-      octoClient.aiFileChanges.confirmChange(projectId, changeId),
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: AI_FILE_CHANGE_KEYS.detail(variables.projectId, variables.changeId)
-      })
-      toast.success('File change confirmed successfully')
+    mutationFn: async ({ projectId, changeId }: { projectId: number; changeId: number }) => {
+      console.warn('useConfirmFileChange is deprecated. Use agent coder functionality instead.')
+      return { success: true }
+    },
+    onSuccess: () => {
+      toast.info('This functionality has been replaced by the Agent Coder. Please use that instead.')
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to confirm file change')
+      toast.error(error.message || 'This functionality is deprecated')
     },
   })
 }

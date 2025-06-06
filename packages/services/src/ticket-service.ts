@@ -19,7 +19,7 @@ import {
   ticketStorage,
   type TicketsStorage,
 } from '@octoprompt/storage'
-import { generateStructuredData } from './gen-ai-services'
+import { generateStructuredDataWithMastra } from '@octoprompt/ai'
 import { normalizeToUnixMs } from '@octoprompt/shared'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
@@ -76,7 +76,7 @@ export async function fetchTaskSuggestionsForTicket(
     throw new ApiError(500, `Model not configured for 'suggest-ticket-tasks'`, 'CONFIG_ERROR')
   }
 
-  const result = await generateStructuredData({
+  const result = await generateStructuredDataWithMastra({
     prompt: userMessage,
     systemMessage: defaultTaskPrompt,
     schema: TaskSuggestionsZodSchema,

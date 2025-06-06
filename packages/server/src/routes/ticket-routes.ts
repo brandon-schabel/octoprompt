@@ -16,9 +16,8 @@ import {
   autoGenerateTasksFromOverview,
   getTasksForTickets,
   listTicketsWithTasks,
-  suggestFilesForTicket
 } from '@octoprompt/services'
-import { generateTaskSuggestionsWithMastra } from '@octoprompt/ai'
+import { generateTaskSuggestionsWithMastra, suggestFilesForTicketWithMastra } from '@octoprompt/ai'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import {
   BulkTasksResponseSchema,
@@ -468,13 +467,20 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(suggestFilesRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { extraUserInput } = c.req.valid('json')
-    const result = await suggestFilesForTicket(ticketId, { extraUserInput })
+    
+    // Get the ticket first
+    const ticket = await getTicketById(ticketId)
+    if (!ticket) {
+      throw new ApiError(404, `Ticket not found: ${ticketId}`, 'TICKET_NOT_FOUND')
+    }
+    
+    const result = await suggestFilesForTicketWithMastra(ticket, 5) // Use Mastra implementation
 
     const payload: z.infer<typeof SuggestedFilesResponseSchema> = {
       success: true,
       recommendedFileIds: result.recommendedFileIds || [],
-      combinedSummaries: result.combinedSummaries,
-      message: result.message
+      combinedSummaries: result.reasoning, // Use reasoning from Mastra as combined summaries
+      message: `Suggested ${result.recommendedFileIds.length} files based on ticket requirements`
     }
     return c.json(payload, 200)
   })
