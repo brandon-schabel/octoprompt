@@ -12,7 +12,8 @@ export {
   useSummarizeProjectFiles,
   useRemoveSummaries,
   useOptimizeUserInput,
-  useInvalidateProjects
+  useInvalidateProjects,
+  useUpdateFileContent
 } from '../api-hooks'
 
 // Type re-exports for backward compatibility
@@ -22,11 +23,7 @@ export type {
 } from '@octoprompt/schemas'
 
 import type { z } from 'zod'
-import type {
-  SummarizeFilesBodySchema,
-  RemoveSummariesBodySchema,
-  SuggestFilesBodySchema
-} from '@octoprompt/schemas'
+import type { SummarizeFilesBodySchema, RemoveSummariesBodySchema, SuggestFilesBodySchema } from '@octoprompt/schemas'
 
 export type SummarizeFilesInput = z.infer<typeof SummarizeFilesBodySchema>
 export type RemoveSummariesInput = z.infer<typeof RemoveSummariesBodySchema>

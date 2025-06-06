@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
 import { Button } from '@ui'
-import { Edit, Save, XCircle, Copy, FileText, FileCode, Expand, Minimize2 } from 'lucide-react'
+import { Edit, Save, XCircle, Copy, FileText, FileCode, Expand, Minimize2, Loader2 } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
@@ -17,7 +17,7 @@ type FileViewerDialogProps = {
   viewedFile?: ProjectFile
   markdownText?: string
   onClose?: () => void
-  onSave?: (content: string) => void
+  onSave?: (content: string) => Promise<void> | void
   filePath?: string
 }
 
@@ -71,6 +71,7 @@ export function FileViewerDialog({
   const [editedContent, setEditedContent] = useState<string>('')
   const [showRawMarkdown, setShowRawMarkdown] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const { copyToClipboard } = useCopyClipboard()
   const isDarkMode = useSelectSetting('theme') === 'dark'
@@ -113,11 +114,19 @@ export function FileViewerDialog({
     onClose?.()
   }
 
-  const saveFileEdits = () => {
-    if (viewedFile && editedContent !== viewedFile.content) {
-      onSave?.(editedContent)
+  const saveFileEdits = async () => {
+    if (!viewedFile || editedContent === viewedFile.content || !onSave) return
+
+    setIsSaving(true)
+    try {
+      await onSave(editedContent)
+      setIsEditingFile(false)
+    } catch (error) {
+      console.error('Failed to save file:', error)
+      // Don't exit edit mode if save failed
+    } finally {
+      setIsSaving(false)
     }
-    setIsEditingFile(false)
   }
 
   const copyContent = async () => {
@@ -277,9 +286,9 @@ export function FileViewerDialog({
                   <XCircle className='mr-2 h-4 w-4' />
                   Cancel
                 </Button>
-                <Button variant='default' onClick={saveFileEdits}>
-                  <Save className='mr-2 h-4 w-4' />
-                  Save
+                <Button variant='default' onClick={saveFileEdits} disabled={isSaving}>
+                  {isSaving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Save className='mr-2 h-4 w-4' />}
+                  {isSaving ? 'Saving...' : 'Save'}
                 </Button>
               </>
             )}
