@@ -26,7 +26,7 @@ const FileSummaryOutputSchema = z.object({
 // Create the file summarization agent
 const fileSummarizationAgent = new Agent({
   name: 'file-summarizer',
-  description: 'Analyzes and summarizes code files providing concise overviews',
+  instructions: 'You are a coding assistant specializing in concise code summaries. Analyze and summarize code files providing concise overviews.',
   model: openai(LOW_MODEL_CONFIG.model || 'gpt-4o-mini'),
   tools: {
     readProjectFileTool
@@ -75,25 +75,14 @@ ${fileContent}
 Provide a structured summary with the main purpose, exports, and key features.`
 
     // Use the agent to generate structured summary
-    const result = await fileSummarizationAgent.generate(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      {
-        output: 'object',
-        schema: FileSummaryOutputSchema
-      }
-    )
+    const result = await fileSummarizationAgent.generate([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ])
 
-    const summaryData = result.object
-    
-    // Create a comprehensive summary text
-    const summaryText = `${summaryData.summary}
-
-Main exports: ${summaryData.mainExports.join(', ')}
-File type: ${summaryData.fileType}
-Key features: ${summaryData.keyFeatures.join(', ')}`
+    // For now, use the text response directly
+    // In the future, this can be enhanced with proper structured output
+    const summaryText = result.text.trim()
 
     // Update the file with the summary
     const updatedFile = await projectStorage.updateProjectFile(projectId, fileId, {

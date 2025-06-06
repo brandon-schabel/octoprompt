@@ -13,7 +13,8 @@ import {
 } from '@octoprompt/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { generateSingleText, generateStructuredData, genTextStream, providerKeyService } from '@octoprompt/services' // Import the service instance
+import { generateTextWithMastra, generateStructuredDataWithMastra, streamTextWithMastra } from '@octoprompt/ai'
+import { providerKeyService } from '@octoprompt/services' // Keep this for provider key management
 import { APIProviders, ProviderKey } from '@octoprompt/schemas'
 import { ProviderKeysConfig, ModelFetcherService } from '@octoprompt/services/src/model-providers/model-fetcher-service'
 import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@octoprompt/services/src/model-providers/provider-defaults'
@@ -220,7 +221,7 @@ export const genAiRoutes = new OpenAPIHono()
     const body = c.req.valid('json')
     const { prompt, options, systemMessage } = body
 
-    const aiSDKStream = await genTextStream({
+    const aiSDKStream = await streamTextWithMastra({
       prompt,
       ...(options && {
         options: options
@@ -235,7 +236,7 @@ export const genAiRoutes = new OpenAPIHono()
   .openapi(generateTextRoute, async (c) => {
     const body = c.req.valid('json')
 
-    const generatedText = await generateSingleText({
+    const generatedText = await generateTextWithMastra({
       prompt: body.prompt,
       ...(body.options && {
         options: body.options
@@ -270,7 +271,7 @@ export const genAiRoutes = new OpenAPIHono()
     const finalOptions = { ...config.modelSettings, ...options, model: finalModel }
     const finalSystemPrompt = config.systemPrompt
 
-    const result = await generateStructuredData({
+    const result = await generateStructuredDataWithMastra({
       prompt: finalPrompt ?? '',
       schema: config.schema,
       options: finalOptions,
@@ -318,7 +319,7 @@ export const genAiRoutes = new OpenAPIHono()
 
     console.log(`[Hono AI Generate] /ai/generate/text request: Provider=${options?.provider}, Model=${options?.model}`)
 
-    const generatedText = await generateSingleText({
+    const generatedText = await generateTextWithMastra({
       prompt,
       ...(options && {
         options: options

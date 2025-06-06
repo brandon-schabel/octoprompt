@@ -1,6 +1,11 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
-import { generateFileChange, getFileChange, confirmFileChange, rejectFileChange } from '@octoprompt/services'
+import { 
+  generateFileChangeWithMastra,
+  getMastraFileChange,
+  confirmMastraFileChange,
+  rejectMastraFileChange
+} from '@octoprompt/ai'
 import {
   AIFileChangeRecordSchema,
   GenerateChangeBodySchema as AIChangeGenerateBodySchema,
@@ -129,7 +134,7 @@ export const aiFileChangeRoutes = new OpenAPIHono()
     try {
       const { projectId } = c.req.valid('param')
       const body = c.req.valid('json')
-      const changeRecord = await generateFileChange({
+      const changeRecord = await generateFileChangeWithMastra({
         projectId,
         filePath: body.filePath,
         prompt: body.prompt
@@ -170,7 +175,7 @@ export const aiFileChangeRoutes = new OpenAPIHono()
         throw new ApiError(400, 'Project ID and File Change ID are required', 'INVALID_INPUT')
       }
 
-      const fileChangeRecord = await getFileChange(projectId, aiFileChangeId)
+      const fileChangeRecord = await getMastraFileChange(projectId, aiFileChangeId)
 
       if (!fileChangeRecord) {
         throw new ApiError(404, 'File change not found', 'NOT_FOUND')
@@ -211,7 +216,7 @@ export const aiFileChangeRoutes = new OpenAPIHono()
         throw new ApiError(400, 'Project ID and File Change ID are required', 'INVALID_INPUT')
       }
 
-      const result = await confirmFileChange(projectId, aiFileChangeId)
+      const result = await confirmMastraFileChange(projectId, aiFileChangeId)
 
       const payload = {
         success: true as const,
@@ -246,7 +251,7 @@ export const aiFileChangeRoutes = new OpenAPIHono()
       if (!projectId || !aiFileChangeId) {
         throw new ApiError(400, 'Project ID and File Change ID are required', 'INVALID_INPUT')
       }
-      const result = await rejectFileChange(projectId, aiFileChangeId)
+      const result = await rejectMastraFileChange(projectId, aiFileChangeId)
       const payload = {
         success: true as const,
         result: result
