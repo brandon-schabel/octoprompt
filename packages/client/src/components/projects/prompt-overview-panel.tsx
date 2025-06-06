@@ -20,7 +20,7 @@ import {
   useProjectTabField,
   useActiveChatId
 } from '@/hooks/use-kv-local-storage'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
+import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '@ui'
@@ -71,7 +71,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // Read selected files
-    const { selectedFiles, projectFileMap } = useSelectedFiles()
+    const { selectedFiles} = useSelectedFiles()
+    const projectFileMap = useProjectFileMap(activeProjectTabId??-1)
 
     // Calculate total tokens
     const totalTokens = useMemo(() => {

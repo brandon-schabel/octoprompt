@@ -241,6 +241,7 @@ const PROJECT_KEYS = {
   list: () => [...PROJECT_KEYS.all, 'list'] as const,
   detail: (projectId: number) => [...PROJECT_KEYS.all, 'detail', projectId] as const,
   files: (projectId: number) => [...PROJECT_KEYS.all, 'files', projectId] as const,
+  filesWithoutContent: (projectId: number) => [...PROJECT_KEYS.all, 'filesWithoutContent', projectId] as const,
   summary: (projectId: number) => [...PROJECT_KEYS.all, 'summary', projectId] as const,
   fileVersions: (projectId: number, originalFileId: number) => [...PROJECT_KEYS.all, 'fileVersions', projectId, originalFileId] as const,
   fileVersion: (projectId: number, originalFileId: number, version?: number) => [...PROJECT_KEYS.all, 'fileVersion', projectId, originalFileId, version || 'latest'] as const
@@ -270,6 +271,16 @@ export function useGetProjectFiles(projectId: number) {
     queryFn: () => octoClient.projects.getProjectFiles(projectId),
     enabled: !!projectId,
     staleTime: 2 * 60 * 1000, // 2 minutes for files
+    refetchOnWindowFocus: true
+  })
+}
+
+export function useGetProjectFilesWithoutContent(projectId: number) {
+  return useQuery({
+    queryKey: PROJECT_KEYS.filesWithoutContent(projectId),
+    queryFn: () => octoClient.projects.getProjectFilesWithoutContent(projectId),
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000, // 5 minutes for file metadata
     refetchOnWindowFocus: true
   })
 }

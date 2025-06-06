@@ -11,7 +11,7 @@ import { X } from 'lucide-react'
 import { ResizablePanel } from '@ui'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useActiveProjectTab, useProjectTabField } from '@/hooks/use-kv-local-storage'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
+import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useClickAway } from '@/hooks/utility-hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
 import { buildFileTree } from '@octoprompt/shared'
@@ -40,7 +40,7 @@ type FileExplorerProps = {
 }
 
 export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) {
-  const [activeProjectTabState, setActiveProjectTab, activeProjectTabId] = useActiveProjectTab()
+  const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const queryClient = useQueryClient()
 
@@ -95,7 +95,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     },
     [debouncedSetFileSearch]
   )
-  const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  const { selectedFiles, selectFiles } = useSelectedFiles()
+  const projectFileMap = useProjectFileMap(selectedProjectId ?? -1)
 
   const filteredFiles = useMemo(() => {
     if (!projectFiles) return []

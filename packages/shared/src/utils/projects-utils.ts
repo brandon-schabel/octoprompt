@@ -73,7 +73,7 @@ export function calculateTotalTokens(
   return total
 }
 
-export const buildFileTree = (files: ProjectFile[]): Record<string, any> => {
+export const buildFileTree = <T extends Pick<ProjectFile, 'path'>>(files: T[]): Record<string, any> => {
   const root: Record<string, any> = {}
   for (const f of files) {
     const parts = f.path.split('/')

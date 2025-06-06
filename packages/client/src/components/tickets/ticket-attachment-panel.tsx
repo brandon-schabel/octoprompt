@@ -1,15 +1,25 @@
+// Recent changes:
+// 1. Optimized to use useGetProjectFilesWithoutContent instead of requiring full ProjectFile[] props
+// 2. Updated interface to accept metadata-only files (without content) for performance
+// 3. Added projectId prop to fetch files directly instead of receiving them as props
+// 4. Removed dependency on external projectFiles prop for better encapsulation
+// 5. Enhanced error handling for file fetching
 import React from 'react'
 import { useLinkFilesToTicket } from '../../hooks/api/use-tickets-api'
-import { ProjectFile } from '@octoprompt/schemas'
+import { useGetProjectFilesWithoutContent } from '../../hooks/api/use-projects-api'
+import type { ProjectFile } from '@octoprompt/schemas'
 
 interface TicketAttachmentsPanelProps {
   ticketId: number
-  projectFiles: ProjectFile[]
+  projectId: number
 }
 
-export function TicketAttachmentsPanel({ ticketId, projectFiles }: TicketAttachmentsPanelProps) {
+export function TicketAttachmentsPanel({ ticketId, projectId }: TicketAttachmentsPanelProps) {
   const [selectedFiles, setSelectedFiles] = React.useState<number[]>([])
   const { mutateAsync: linkFiles, isPending } = useLinkFilesToTicket()
+  
+  // Use optimized hook that fetches only file metadata (id, name, path) without content
+  const { data: projectFiles, isLoading, error } = useGetProjectFilesWithoutContent(projectId)
 
   function toggleFile(fileId: number) {
     setSelectedFiles((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]))
@@ -24,11 +34,31 @@ export function TicketAttachmentsPanel({ ticketId, projectFiles }: TicketAttachm
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className='mt-4 border p-3 rounded space-y-2'>
+        <h3 className='font-semibold'>Attach Files</h3>
+        <div className='text-sm text-gray-500'>Loading files...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className='mt-4 border p-3 rounded space-y-2'>
+        <h3 className='font-semibold'>Attach Files</h3>
+        <div className='text-sm text-red-500'>Failed to load files. Please try again.</div>
+      </div>
+    )
+  }
+
+  const files = projectFiles || []
+
   return (
     <div className='mt-4 border p-3 rounded space-y-2'>
       <h3 className='font-semibold'>Attach Files</h3>
       <div className='max-h-40 overflow-auto border rounded p-2'>
-        {projectFiles.map((file) => {
+        {files.map((file) => {
           const checked = selectedFiles.includes(file.id)
           return (
             <label key={file.id} className='block cursor-pointer'>
