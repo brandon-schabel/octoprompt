@@ -12,5 +12,5 @@ export {
   useStreamChat,
   useAIChatV2,
   useInvalidateChats
-} from '../api'
+} from '../api-hooks'
 

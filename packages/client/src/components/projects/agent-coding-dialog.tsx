@@ -321,7 +321,7 @@ export function AgentCoderControlDialog({
 
   const canConfirm = useMemo(() => {
     return (
-      agentRunData?.updatedFiles && Array.isArray(agentRunData.updatedFiles) && agentRunData.updatedFiles.length > 0
+      agentRunData?.updatedFileIds && Array.isArray(agentRunData.updatedFileIds) && agentRunData.updatedFileIds.length > 0
     )
   }, [agentRunData])
 
@@ -747,7 +747,7 @@ export function AgentCoderControlDialog({
                 )}
                 {!isDataLoading &&
                   !isDataError &&
-                  (!agentRunData?.updatedFiles || agentRunData.updatedFiles.length === 0) &&
+                  (!agentRunData?.updatedFileIds || agentRunData.updatedFileIds.length === 0) &&
                   selectedJobId &&
                   selectedJobId !== -1 && (
                     <p className='text-center p-4 text-muted-foreground'>
@@ -759,12 +759,12 @@ export function AgentCoderControlDialog({
                 )}
                 {!isDataLoading &&
                   !isDataError &&
-                  agentRunData?.updatedFiles &&
-                  agentRunData.updatedFiles.length > 0 && (
+                  agentRunData?.updatedFileIds &&
+                  agentRunData.updatedFileIds.length > 0 && (
                     <div className='flex flex-col flex-1 min-h-0'>
                       <div className='flex-1 overflow-y-auto p-2'>
                         <h3 className='text-sm font-medium mb-2'>Proposed Changes</h3>
-                        {agentRunData.updatedFiles.map((fileId) => {
+                        {agentRunData.updatedFileIds.map((fileId) => {
                           const file = projectFileMap.get(fileId as number)
                           if (!file) return null
                           return <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} projectId={projectId} />

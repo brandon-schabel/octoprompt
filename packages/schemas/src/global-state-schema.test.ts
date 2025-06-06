@@ -8,9 +8,6 @@ import {
     globalStateSchema,
     projectTabStateSchema,
     appSettingsSchema,
-    type GlobalState,
-    type ProjectTabState,
-    type AppSettings
 } from './global-state-schema'
 
 describe('Global State Schema', () => {

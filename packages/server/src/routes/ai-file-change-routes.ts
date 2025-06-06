@@ -1,11 +1,6 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
-import {
-  generateFileChange,
-  getFileChange,
-  confirmFileChange,
-  rejectFileChange
-} from '@/services/file-services/ai-file-change-service'
+import { generateFileChange, getFileChange, confirmFileChange, rejectFileChange } from '@octoprompt/services'
 import {
   AIFileChangeRecordSchema,
   GenerateChangeBodySchema as AIChangeGenerateBodySchema,
@@ -16,23 +11,29 @@ import { ApiError } from '@octoprompt/shared'
 
 const AIFileChangeRecordResponseSchema = AIFileChangeRecordSchema.openapi('AIFileChangeRecordResponse')
 
-const GenerateAIFileChangeResponseSchema = z.object({
-  success: z.literal(true),
-  result: AIFileChangeRecordResponseSchema
-}).openapi('GenerateAIFileChangeResponse')
-
-const GetAIFileChangeDetailsResponseSchema = z.object({
-  success: z.literal(true),
-  fileChange: AIFileChangeRecordResponseSchema
-}).openapi('GetAIFileChangeDetailsResponse')
-
-const ConfirmAIFileChangeResponseSchema = z.object({
-  success: z.literal(true),
-  result: z.object({
-    status: z.string(),
-    message: z.string()
+const GenerateAIFileChangeResponseSchema = z
+  .object({
+    success: z.literal(true),
+    result: AIFileChangeRecordResponseSchema
   })
-}).openapi('ConfirmAIFileChangeResponse')
+  .openapi('GenerateAIFileChangeResponse')
+
+const GetAIFileChangeDetailsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    fileChange: AIFileChangeRecordResponseSchema
+  })
+  .openapi('GetAIFileChangeDetailsResponse')
+
+const ConfirmAIFileChangeResponseSchema = z
+  .object({
+    success: z.literal(true),
+    result: z.object({
+      status: z.string(),
+      message: z.string()
+    })
+  })
+  .openapi('ConfirmAIFileChangeResponse')
 
 const generateFileChangeRoute = createRoute({
   method: 'post',
@@ -142,7 +143,13 @@ export const aiFileChangeRoutes = new OpenAPIHono()
     } catch (error) {
       console.error('Error generating file change:', error)
       if (error instanceof ApiError) {
-        return c.json({ success: false as const, error: { message: error.message, code: error.code, details: error.details || {} } } satisfies z.infer<typeof ApiErrorResponseSchema>, error.status as any)
+        return c.json(
+          {
+            success: false as const,
+            error: { message: error.message, code: error.code, details: error.details || {} }
+          } satisfies z.infer<typeof ApiErrorResponseSchema>,
+          error.status as any
+        )
       }
       const errorPayload = {
         success: false as const,
@@ -177,7 +184,13 @@ export const aiFileChangeRoutes = new OpenAPIHono()
     } catch (error) {
       console.error('Error retrieving file change:', error)
       if (error instanceof ApiError) {
-        return c.json({ success: false as const, error: { message: error.message, code: error.code, details: error.details || {} } } satisfies z.infer<typeof ApiErrorResponseSchema>, error.status as any)
+        return c.json(
+          {
+            success: false as const,
+            error: { message: error.message, code: error.code, details: error.details || {} }
+          } satisfies z.infer<typeof ApiErrorResponseSchema>,
+          error.status as any
+        )
       }
       const errorPayload = {
         success: false as const,
@@ -208,7 +221,13 @@ export const aiFileChangeRoutes = new OpenAPIHono()
     } catch (error) {
       console.error('Error confirming file change:', error)
       if (error instanceof ApiError) {
-        return c.json({ success: false as const, error: { message: error.message, code: error.code, details: error.details || {} } } satisfies z.infer<typeof ApiErrorResponseSchema>, error.status as any)
+        return c.json(
+          {
+            success: false as const,
+            error: { message: error.message, code: error.code, details: error.details || {} }
+          } satisfies z.infer<typeof ApiErrorResponseSchema>,
+          error.status as any
+        )
       }
       const errorPayload = {
         success: false as const,
@@ -236,7 +255,13 @@ export const aiFileChangeRoutes = new OpenAPIHono()
     } catch (error) {
       console.error('Error rejecting file change:', error)
       if (error instanceof ApiError) {
-        return c.json({ success: false as const, error: { message: error.message, code: error.code, details: error.details || {} } } satisfies z.infer<typeof ApiErrorResponseSchema>, error.status as any)
+        return c.json(
+          {
+            success: false as const,
+            error: { message: error.message, code: error.code, details: error.details || {} }
+          } satisfies z.infer<typeof ApiErrorResponseSchema>,
+          error.status as any
+        )
       }
       const errorPayload = {
         success: false as const,

@@ -13,7 +13,7 @@ import { promptRoutes } from './routes/prompt-routes'
 import { fileServingRoutes } from './routes/file-serving-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
-import { corsConfig } from './constants/server-config'
+import { corsConfig } from '@octoprompt/services/src/constants/server-config'
 import { swaggerUI } from '@hono/swagger-ui'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 
