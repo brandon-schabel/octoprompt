@@ -179,7 +179,7 @@ export async function streamTextWithMastra({
     // For streaming, we'll use the AI SDK directly with Mastra's model configuration
     // since Mastra agents don't have native streaming support yet
     const createOpenAI = (await import('@ai-sdk/openai')).openai
-    const model = createOpenAI()(finalOptions.model || 'gpt-4o-mini')
+    const model = createOpenAI(finalOptions.model || 'gpt-4o-mini')
 
     let messagesToProcess: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = []
     

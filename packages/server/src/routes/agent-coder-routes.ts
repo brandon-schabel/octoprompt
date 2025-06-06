@@ -5,7 +5,7 @@ import { mkdir, rm, stat } from 'node:fs/promises'
 import { ApiError } from '@octoprompt/shared'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 import { ProjectFileMap, ProjectIdParamsSchema, type ProjectFile } from '@octoprompt/schemas'
-import { mainOrchestrator } from '@octoprompt/services'
+import { executeMastraCodeChange } from '@octoprompt/ai'
 import {
   AgentCoderRunRequestSchema,
   AgentCoderRunResponseSchema,
@@ -378,18 +378,22 @@ export const agentCoderRoutes = new OpenAPIHono()
       prompts,
       selectedFileIds: routeSelectedFileIds
     }
-    const orchestratorResultData = await mainOrchestrator(coderAgentDataContext)
+    const mastraResult = await executeMastraCodeChange({
+      projectId,
+      userRequest: userInput,
+      selectedFileIds: routeSelectedFileIds
+    })
 
-    await log(`[Agent Coder Route ${routeAgentJobId}] Orchestrator finished successfully.`, 'info', {
+    await log(`[Agent Coder Route ${routeAgentJobId}] Mastra execution finished successfully.`, 'info', {
       agentJobId: routeAgentJobId
     })
 
     const responsePayload: z.infer<typeof AgentCoderRunResponseSchema> = {
       success: true,
       data: {
-        updatedFiles: orchestratorResultData.updatedFiles.map((file) => file.id),
-        taskPlan: orchestratorResultData.taskPlan === null ? undefined : orchestratorResultData.taskPlan,
-        agentJobId: orchestratorResultData.agentJobId
+        updatedFiles: mastraResult.updatedFiles.map((file) => file.id),
+        taskPlan: undefined, // Mastra doesn't have taskPlan in the same format
+        agentJobId: mastraResult.agentJobId
       }
     }
     return c.json(responsePayload, 200)

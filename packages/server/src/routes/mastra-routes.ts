@@ -64,6 +64,7 @@ const MastraSummarizeResponseSchema = z.object({
         path: z.string(),
         summary: z.string()
       })
+    )
   })
 })
 

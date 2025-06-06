@@ -6,7 +6,6 @@ import {
   updateTicket,
   deleteTicket,
   linkFilesToTicket,
-  suggestTasksForTicket,
   listTicketsByProject,
   listTicketsWithTaskCount,
   createTask,
@@ -19,6 +18,7 @@ import {
   listTicketsWithTasks,
   suggestFilesForTicket
 } from '@octoprompt/services'
+import { generateTaskSuggestionsWithMastra } from '@octoprompt/ai'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import {
   BulkTasksResponseSchema,
@@ -482,8 +482,18 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(suggestTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { userContext } = c.req.valid('json')
-    const tasks = await suggestTasksForTicket(ticketId, userContext)
-    const payload: z.infer<typeof SuggestedTasksResponseSchema> = { success: true, suggestedTasks: tasks }
+    
+    // Get the ticket first
+    const ticket = await getTicketById(ticketId)
+    if (!ticket) {
+      throw new ApiError(404, `Ticket not found: ${ticketId}`, 'TICKET_NOT_FOUND')
+    }
+    
+    const result = await generateTaskSuggestionsWithMastra(ticket, userContext)
+    const payload: z.infer<typeof SuggestedTasksResponseSchema> = { 
+      success: true, 
+      suggestedTasks: result.tasks.map(task => task.title) // Convert format to match expected schema
+    }
     return c.json(payload, 200)
   })
 
