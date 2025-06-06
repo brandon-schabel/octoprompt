@@ -26,10 +26,8 @@ import { existsSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
 import { homedir as getHomedir } from 'node:os'
 
-import * as projectService from '@/services/project-service'
-import { syncProject, syncProjectFolder, watchersManager } from '@/services/file-services/file-sync-service-unified'
-import { generateStructuredData } from '@/services/gen-ai-services'
-import { getFullProjectSummary } from '@/utils/get-full-project-summary'
+import * as projectService from '@octoprompt/services'
+import { getFullProjectSummary } from '@octoprompt/services'
 import {
   SuggestFilesResponseSchema,
   FileSummaryListResponseSchema,
@@ -37,8 +35,14 @@ import {
   RemoveSummariesResponseSchema,
   FileSuggestionsZodSchema
 } from '@octoprompt/schemas'
-import { optimizeUserInput } from '@/services/project-service'
-import { summarizeFiles } from '@/services/agents/summarize-files-agent'
+import {
+  optimizeUserInput,
+  summarizeFiles,
+  generateStructuredData,
+  syncProject,
+  syncProjectFolder,
+  watchersManager
+} from '@octoprompt/services'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
 
 // File operation schemas

@@ -1,6 +1,3 @@
-Okay, here's a revised version of your OctoPrompt Development Guide, optimized for conciseness and token count while aiming to preserve all essential information and remove redundancies.
-
-```markdown
 # OctoPrompt Development Guide
 
 ## General Code Principles
@@ -36,73 +33,6 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 - **Test-Driven Mindset**: Add/update tests when introducing new logic. Keep functions small and unit-testable.
 - **Inline Documentation**: Provide concise docstrings or inline comments for complex logic. Keep them accurate.
 
----
-## Python Rules for Functional, Testable, and Robust Code
-- Environment: `uv` with `.venv` (`source .venv/bin/activate`)
-- Testing: `uv pytest` (run with `uv run pytest`)
-- Execution: Use `uv` for running Python files.
-
-### 1. Embrace Functional Programming
-* **Prefer Pure Functions**: Functions should return the same output for the same input with no side effects.
-  ```python
-  # Good: Pure function
-  def add(a: int, b: int) -> int:
-      return a + b
-  ```
-* **Immutability**: Treat data as immutable. Create new data structures instead of modifying in-place.
-  ```python
-  # Good: Returning a new list
-  def append_item(my_list: list[int], item: int) -> list[int]:
-      return my_list + [item]
-  ```
-* **Avoid Side Effects**: Isolate side effects (I/O, API calls).
-* **Higher-Order Functions**: Utilize `map`, `filter`, `functools.reduce`.
-
-### 2. Prioritize Functions Over Classes
-* **Default to Functions**: Use standalone functions for most logic.
-* **When to Use Classes (Sparingly)**: For managing complex state coupled with multiple methods, implementing external interfaces, or for Pydantic models.
-* **Avoid "Manager" or "Util" Classes**: Use modules with functions instead.
-* **SRP for Functions**: Each function does one thing well.
-
-### 3. Leverage Pydantic for Data Validation and Settings
-* **Define Clear Data Structures**: Use Pydantic models for runtime data validation and serialization.
-  ```python
-  from pydantic import BaseModel, PositiveInt, EmailStr
-  from typing import List
-
-  class UserProfile(BaseModel):
-      user_id: PositiveInt; username: str; email: EmailStr; tags: List[str] = []
-  ```
-* **Configuration Management**: Use Pydantic's `BaseSettings` for app settings.
-  ```python
-  from pydantic_settings import BaseSettings
-  class AppSettings(BaseSettings):
-      database_url: str; api_key: str; debug_mode: bool = False
-      class Config: env_file = ".env"
-  ```
-* **API Request/Response Validation**: Use Pydantic models for API data integrity.
-
-### 4. Write Testable Code
-* **Design for Testability**: Pure functions, decoupled components, dependency injection.
-  ```python
-  from typing import Protocol
-  class DataStore(Protocol):
-      def get_user(self, user_id: int) -> dict | None: ...
-
-  def process_user_data(user_id: int, store: DataStore) -> str:
-      user = store.get_user(user_id)
-      return f"Processing {user['name']}" if user else "User not found"
-  ```
-* **Unit Tests**: Test every function, especially pure functions and core logic.
-* **Test Edge Cases**: Test invalid inputs, boundary conditions, and failure modes.
-* **Aim for High Test Coverage**.
-
-### 5. General Good Coding Practices
-* **Type Hinting (PEP 484)**: Use for all function signatures and relevant variable declarations.
-  ```python
-  def greet(name: str, age: int) -> str:
-      return f"Hello, {name}! You are {age} years old."
-  ```
 * **Readability and Simplicity (KISS)**: Write clear, concise code.
 * **Modularity**: Organize code into logical modules/packages. Avoid circular dependencies.
 * **Error Handling**: Handle exceptions gracefully. Use specific exception types.
@@ -123,7 +53,6 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
     - Routes/API file: API route definitions.
 - **API Type Safety**:
     - TypeScript: Zod with Hono for validation (note: route/API params often parse as strings).
-    - Python: Pydantic models for type safety and validation.
 - **OpenAPI Specs**: Every API must have proper OpenAPI specifications.
 - **Route Ordering**: Crucial. Incorrect order leads to incorrect route matching. Pay very close attention.
 
@@ -146,63 +75,60 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 ---
 ## Project Overall Structure
 ```
-OctoPrompt
-├── packages
-│   ├── api-tests
-│   │   └── tests
-│   │       ├── chat-api.ts
-│   │       ├── project-api.ts
-│   │       └── prompt-api.ts
-│   ├── client
-│   │   └── src
-│   │       ├── constants
-│   │       ├── utils
-│   │       ├── routes
-│   │       │   ├── chat.tsx
-│   │       │   ├── projects.tsx
-│   │       │   └── prompts.tsx
-│   │       ├── components
-│   │       ├── hooks
-│   │       │   └── api // API hooks directly importing shared schema types
-│   │       └── generated // Legacy generated files (being phased out)
-│   ├── python_backend
-│   │   ├── app
-│   │   ├── schemas
-│   │   ├── services
-│   │   │   ├── chat_service.py
-│   │   │   ├── prompt_service.py
-│   │   │   └── project_service.py
-│   │   └── utils
-│   │       └── storage
-│   │           ├── chat_storage.py
-│   │           ├── prompt_storage.py
-│   │           └── project_storage.py
-│   ├── shared
-│   │   └── src
-│   │       ├── constants
-│   │       │   └── model-default.ts // LLM default configs (low, med, high)
-│   │       └── schemas
-│   │           ├── project.schema.ts
-│   │           ├── chat.schema.ts
-│   │           ├── prompt.schema.ts
-│   │           // All TS types inferred from Zod schemas via z.infer<>
-│   └── server
-│       ├── server.ts // Main server entry
-│       └── src
-│           ├── app.ts // Hono router, routes, middleware, global error handling
-│           ├── routes
-│           │   ├── chat-routes.ts
-│           │   ├── prompt-routes.ts
-│           │   └── project-routes.ts
-│           ├── services
-│           │   ├── chat-service.ts
-│           │   ├── prompt-service.ts
-│           │   └── project-service.ts
-│           └── utils
-│               └── storage
-│                   ├── chat-storage.ts
-│                   ├── prompt-storage.ts
-│                   └── project-storage.ts
+OctoPrompt  
+	packages
+		ai
+			src
+				mastra
+				
+		api-client
+			index.ts // contains the entire octoprompt client
+			src
+				tests // contains a test suite that tests the client against the server endpoints
+	
+		client
+			src
+				constants
+				utils
+				routes
+					chat.tsx
+					projects.tsx
+					prompts.tsx
+				components
+				hooks
+					api // api hooks directly importing shared schema types
+		schemas
+			src
+					project.schema.ts
+					chat.schema.ts
+					prompt.schema.ts
+
+	    shared
+			src
+				constants
+					model-default.ts // contains llm model default configs like temp, max tokens, etc, 3 configs, low, med, high
+schemas using z.infer<>
+
+    	server
+			server.ts // main serverentry
+        	src
+				app.ts // where hono router is defined, all routes are imported and mapped here, middleware, and global server error handling live here
+				routes
+					chat-routes.ts
+					prompt-routes.ts
+					project-routes.ts
+
+				
+		services
+			src
+				chat-service.ts
+				prompt-service.ts
+				project-service.ts
+		storage
+			chat-storage.ts
+			prompt-storage.ts
+			project-storage.ts
+```
 ```
 
 ---
@@ -211,17 +137,15 @@ OctoPrompt
 **Root `package.json`:**
 ```json
 {
-  "dev": "bun run scripts/start-dev.ts",
-  "dev:client": "bun run openapi-ts && bun run scripts/start-client-dev.ts",
-  "dev:server": "bun run scripts/start-server-dev.ts",
-  "stop": "bun run scripts/stop.ts",
-  "build-binaries": "bun run scripts/build-binaries.ts",
-  "format": "prettier --write .",
-  "test:server": "cd packages/server && bun run test",
-  "test:shared": "cd packages/shared && bun run test",
-  "generate-openapi-spec": "bun run scripts/generate-openapi-spec.ts",
-  "openapi-ts": "bun run generate-openapi-spec && openapi-ts && prettier --write packages/client/src/generated",
-  "openapi-ts:prod": "bun run generate-openapi-spec && ENVIRONMENT=prod bun run openapi-ts"
+	"dev": "bun run scripts/start-dev.ts",
+    "dev:client": "bun run scripts/start-client-dev.ts",
+    "dev:server": "bun run scripts/start-server-dev.ts",
+    "stop": "bun run scripts/stop.ts",
+    "build-binaries": "bun run scripts/build-binaries.ts",
+    "format": "prettier --write .",
+    "test:server": "cd packages/server && bun run test",
+    "test:shared": "cd packages/shared && bun run test",
+    "test:schemas": "cd packages/schemas && bun run test"Ï
 }
 ```
 
@@ -258,50 +182,34 @@ OctoPrompt
 ---
 ## Useful Utils
 
-**`shared/schemas/schema-utils`:**
+**`@octoprompt/schemas`:**
 - `unixTSSchemaSpec`: Standard Unix timestamp (ms) schema.
 - `unixTSOptionalSchemaSpec`: Optional Unix timestamp (ms).
 - `unixTSArraySchemaSpec`: Required array of Unix timestamps (ms).
 - `unixTSArrayOptionalSchemaSpec`: Optional array of Unix timestamps (ms).
 
-**`shared/utils/merge-deep.ts`:**
+**`@octoprompt/shared`:**
 - `mergeDeep<T>([obj1, obj2, ...]): T`: Recursively merges objects.
-
-**`shared/utils/pattern-match.ts`:**
 - `normalizePath(filePath: string): string`: Normalizes path separators.
 - `filterByPatterns(filePaths: string[], patterns: string[], options?: picomatch.PicomatchOptions): string[]`: Filters file paths by glob patterns.
-
-**`shared/utils/project-utils.ts`:**
 - `buildPromptContent({ fileMap, promptData, selectedFiles, selectedPrompts, userPrompt }): string`
 - `calculateTotalTokens({ promptData, selectedPrompts, userPrompt, selectedFiles, fileMap }): number`
 - `buildFileTree(files: ProjectFile[]): Record<string, any>`
+- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `octopromptPlanningMetaPrompt`) 
+- `promptsMap`: Exported object mapping names to prompt strings.
+**`packages/shared/src/constants/model-default-configs.ts`:**
+- `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`: `ModelOptionsWithProvider` objects with settings for temperature, maxTokens, provider, model, etc. (e.g., `LOW_MODEL_CONFIG` uses `google/gemini-2.5-flash-preview`).
 
-**`packages/server/src/utils/get-full-project-summary.ts`:**
+
+**`@octoprompt/shared`:**
 - `getFullProjectSummary(projectId: number): Promise<string>`: Generates a full project summary.
-
-**`packages/server/src/utils/json-scribe.ts` (`json-scribe.ts`):**
 - `resolveJsonPath(rawPath: string | string[], basePath?: string): string`: Resolves input to a normalized file path.
 - `writeJson<TData, S extends ZodTypeAny>(options: { path, data, schema?, basePath? }): Promise<S extends ZodTypeAny ? z.infer<S> : TData>`: Writes data to JSON, optionally validating. Creates directories.
 - `readJson<T = unknown>(options: { path, basePath? }): Promise<T | null>`: Reads and parses JSON (no validation on read).
 - `parseTimestamp(tsValue: unknown): Date | null`: Safely parses various timestamp formats to `Date`.
 - `normalizeToUnixMs(tsValue: unknown): number`: Parses timestamp and converts to Unix ms (defaulting to `new Date().getTime()` if parsing fails).
-
-**`packages/server/src/utils/path-utils.ts`:**
 - `resolvePath(path: string): string`: Resolves path, expanding tilde.
 - `normalizePathForDb(path: string): string`: Normalizes path for database storage (consistent format).
-
-**`packages/server/src/utils/prompts-map.ts`:**
-- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `octopromptPlanningMetaPrompt`) loaded via `Bun.file().text()`.
-- `promptsMap`: Exported object mapping names to prompt strings.
-
-**`packages/shared/src/constants/model-default-configs.ts`:**
-- `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`: `ModelOptionsWithProvider` objects with settings for temperature, maxTokens, provider, model, etc. (e.g., `LOW_MODEL_CONFIG` uses `google/gemini-2.5-flash-preview`).
-
----
-## Python Backend (`packages/python_backend`)
-- Activate env: `source ./.venv/bin/activate`
-- Run server: `python main.py`
-- Run unit tests: `uv run tests` (Note: original doc said `uv run pytest` and `uv run tests`. `uv run pytest` is more standard if `pytest` is the task name in `pyproject.toml`)
 
 ---
 ## Frontend
@@ -368,16 +276,16 @@ Singleton client in `packages/client/src/hooks/api.ts` (created via `createOctoP
 TypeScript/Bun backend: AI-powered project management, layered architecture, file-based JSON storage, service-oriented logic, OpenAPI-compliant REST APIs.
 
 ### Architecture Layers
-- **Storage Layer (`src/utils/storage/`)**: JSON file storage with CRUD and Zod validation.
+- **Storage Layer (`@octoprompt/storage`)**: JSON file storage with CRUD and Zod validation.
   Example: `projectStorage.readProjects()`, `projectStorage.writeProjectFiles()`.
   Files: `project-storage.ts`, `chat-storage.ts`, `prompt-storage.ts`, `ticket-storage.ts`, `provider-key-storage.ts`.
   Patterns: Unix ms IDs, `Record<string, Entity>` data structure, Zod validation, atomic file ops.
 
-- **Services Layer (`src/services/`)**: Business logic orchestrating storage.
+- **Services Layer (`@octprompt/services`)**: Business logic orchestrating storage.
   Example: `projectService.createProject(data)`.
   Services: `project-service.ts`, `chat-service.ts`, `gen-ai-services.ts`, `file-services/`.
 
-- **API Layer (`src/routes/`)**: Hono-based routes with OpenAPI specs.
+- **API Layer (`packages/server/src/routes`)**: Hono-based routes with OpenAPI specs.
   Example: `createRoute()` for OpenAPI definitions, `OpenAPIHono().openapi(route, handler)`.
 
 ### Core Systems
@@ -388,7 +296,7 @@ TypeScript/Bun backend: AI-powered project management, layered architecture, fil
 ## Complete Feature Example: Todo System
 Illustrates schema, storage, service, and API route implementation.
 
-### 1. Schemas (`shared/src/schemas/todo.schemas.ts`)
+### 1. Schemas (`schemas/src/todo.schemas.ts`)
 Defines `TodoSchema`, `TodoCategorySchema`, `CreateTodoBodySchema`, `TodoResponseSchema`, `TodoListResponseSchema` using Zod and `openapi()` helpers. Includes type exports derived via `z.infer`.
 ```typescript
 import { z } from '@hono/zod-openapi'
@@ -407,7 +315,7 @@ export const TodoSchema = z.object({
 export type Todo = z.infer<typeof TodoSchema>; /* ... other types */
 ```
 
-### 2. Storage (`src/utils/storage/todo-storage.ts`)
+### 2. Storage (`packages/storage/src/todo-storage.ts`)
 Implements `readTodos`, `writeTodos`, `readTodoCategories`, `writeTodoCategories`, `generateId` using `readJson`, `writeJson` from `json-scribe.ts`. Data validated with Zod schemas.
 ```typescript
 import { z } from 'zod'; // Assuming path
@@ -426,7 +334,7 @@ export const todoStorage = {
 };
 ```
 
-### 3. Service (`src/services/todo-service.ts`)
+### 3. Service (`packages/services/src/todo-service.ts`)
 Business logic: `createTodo`, `updateTodoStatus`, `getTodosByProject`, `deleteTodo`, `generateTodoSuggestions` (uses `generateStructuredData`). Handles ID conflicts, validation, and error wrapping (`ApiError`).
 ```typescript
 import { Todo, CreateTodoBody, TodoSchema } from '@octoprompt/schemas'; // Assuming path
@@ -443,7 +351,7 @@ export async function createTodo(data: CreateTodoBody): Promise<Todo> {
 // ... (updateTodoStatus, getTodosByProject, deleteTodo, generateTodoSuggestions)
 ```
 
-### 4. Routes (`src/routes/todo-routes.ts`)
+### 4. Routes (`packages/storage/src/routes/todo-routes.ts`)
 Hono `OpenAPIHono` routes for CRUD operations and suggestions. Uses `createRoute` for OpenAPI definitions, Zod schemas for request/response validation.
 ```typescript
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'; // Assuming path
@@ -462,7 +370,7 @@ export const todoRoutes = new OpenAPIHono()
   // ... (other route handlers for get, patch, delete, suggestions)
 ```
 
-### 5. Register Routes (`src/app.ts`)
+### 5. Register Routes (`packages/server/src/app.ts`)
 Todo routes are registered with the main Hono app instance.
 ```typescript
 // import { todoRoutes } from './routes/todo-routes'; // Assuming path
@@ -470,7 +378,7 @@ Todo routes are registered with the main Hono app instance.
 ```
 (Actual registration may vary based on full `app.ts` structure)
 
-### 6. Tests (`src/services/todo-service.test.ts`)
+### 6. Tests (`packages/services/src/todo-service.test.ts`)
 Unit tests for `todo-service` using `bun:test`. Mocks `todoStorage` and `project-service` for isolated testing of service logic, including ID generation and conflict resolution.
 ```typescript
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
@@ -564,4 +472,3 @@ Use Zod for param validation, e.g., `z.coerce.number().int().positive()`.
 - `/path` vs `/path/`: Normalize using middleware if needed.
 - For IDs that might conflict with literal segments (e.g., "bulk", "me"), validate as string + regex first, then cast, rather than direct `z.coerce.number()`.
 - For many versioned routes, consider sub-routers: `app.route('/v1', v1Router)`.
-```

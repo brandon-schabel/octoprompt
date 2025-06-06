@@ -5,7 +5,7 @@ import { mkdir, rm, stat } from 'node:fs/promises'
 import { ApiError } from '@octoprompt/shared'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 import { ProjectFileMap, ProjectIdParamsSchema, type ProjectFile } from '@octoprompt/schemas'
-import { mainOrchestrator } from '@/services/agents/agent-coder-service'
+import { mainOrchestrator } from '@octoprompt/services'
 import {
   AgentCoderRunRequestSchema,
   AgentCoderRunResponseSchema,
@@ -17,14 +17,14 @@ import {
   getOrchestratorLogFilePaths,
   listAgentJobs,
   getAgentDataLogFilePath
-} from '@/services/agents/agent-logger'
-import { getProjectById, getProjectFiles } from '@/services/project-service'
+} from '@octoprompt/services'
+import { getProjectById, getProjectFiles } from '@octoprompt/services'
 import { buildProjectFileMap } from '@octoprompt/shared'
-import { getFullProjectSummary } from '@/utils/get-full-project-summary'
-import { resolvePath } from '@/utils/path-utils'
+import { getFullProjectSummary } from '@octoprompt/services'
+import { resolvePath } from '@octoprompt/services'
 import { fromZodError } from 'zod-validation-error'
-import { log } from '@/services/agents/agent-logger'
-import { getPromptsByIds } from '@/services/prompt-service'
+import { log } from '@octoprompt/services'
+import { getPromptsByIds } from '@octoprompt/services'
 
 // --- Run Agent Coder Route ---
 const runAgentCoderRoute = createRoute({
@@ -387,7 +387,7 @@ export const agentCoderRoutes = new OpenAPIHono()
     const responsePayload: z.infer<typeof AgentCoderRunResponseSchema> = {
       success: true,
       data: {
-        updatedFiles: orchestratorResultData.updatedFiles,
+        updatedFiles: orchestratorResultData.updatedFiles.map((file) => file.id),
         taskPlan: orchestratorResultData.taskPlan === null ? undefined : orchestratorResultData.taskPlan,
         agentJobId: orchestratorResultData.agentJobId
       }
@@ -475,9 +475,9 @@ export const agentCoderRoutes = new OpenAPIHono()
       )
     }
 
-    const { updatedFiles: agentProposedFiles } = validationResult.data
+    const { updatedFileIds } = validationResult.data
 
-    if (!agentProposedFiles || agentProposedFiles.length === 0) {
+    if (!updatedFileIds || updatedFileIds.length === 0) {
       await log(`[Agent Confirm Route ${agentJobId}] No file changes proposed in data log. Nothing to write.`, 'info', {
         agentJobId
       })
@@ -492,9 +492,9 @@ export const agentCoderRoutes = new OpenAPIHono()
     }
 
     await log(
-      `[Agent Confirm Route] Found ${agentProposedFiles.length} proposed file changes in data log for project ${projectId}.`,
+      `[Agent Confirm Route] Found ${updatedFileIds.length} proposed file changes in data log for project ${projectId}.`,
       'info',
-      { agentJobId, projectId, fileCount: agentProposedFiles.length }
+      { agentJobId, projectId, fileCount: updatedFileIds.length }
     )
 
     const projectData = await getProjectById(projectId)
@@ -549,18 +549,23 @@ export const agentCoderRoutes = new OpenAPIHono()
     )
 
     await log(`[Agent Confirm Route ${agentJobId}] Calling writeFilesToFileSystem...`, 'info', { agentJobId })
+
+    const agentProposedFileIds = updatedFileIds
+      .map((fileId) => originalProjectFileMap.get(fileId))
+      .filter((file): file is ProjectFile => file !== undefined)
+
     await writeFilesToFileSystem({
       agentJobId,
       projectFileMap: originalProjectFileMap,
       absoluteProjectPath,
-      updatedFiles: agentProposedFiles
+      updatedFiles: agentProposedFileIds
     })
     await log(`[Agent Confirm Route ${agentJobId}] writeFilesToFileSystem completed.`, 'info', { agentJobId })
 
     const successPayload: z.infer<typeof ConfirmAgentRunChangesResponseSchema> = {
       success: true,
       message: 'Agent run changes successfully written to filesystem.',
-      writtenFiles: agentProposedFiles.map((f) => f.path)
+      writtenFiles: agentProposedFileIds.map((f) => f.path)
     }
     return c.json(successPayload, 200)
   })
