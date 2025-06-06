@@ -61,7 +61,7 @@ export type VisibleItem = {
 
 export type FileTreeProps = {
   root: Record<string, FileNode>
-  onViewFile?: (file: ProjectFile | null) => void
+  onViewFile?: (file: ProjectFile | null, editMode?: boolean) => void
   projectRoot: string
   resolveImports?: boolean
   preferredEditor: EditorType
@@ -103,7 +103,7 @@ interface FileTreeNodeRowProps {
   isFocused: boolean
   onFocus: () => void
   onToggleOpen: () => void
-  onViewFile?: (file: ProjectFile) => void
+  onViewFile?: (file: ProjectFile, editMode?: boolean) => void
   projectRoot: string
   onRequestAIFileChange?: (filePath: string) => void
 }
@@ -167,7 +167,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
     if (isFolder) {
       onToggleOpen()
     } else if (item.node.file && onViewFile) {
-      onViewFile(item.node.file)
+      onViewFile(item.node.file, false)
     }
   }, [isFolder, item.node.file, onToggleOpen, onViewFile])
 
@@ -205,6 +205,11 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
           }}
           tabIndex={0}
           onClick={onFocus}
+          onDoubleClick={() => {
+            if (!isFolder && item.node.file && onViewFile) {
+              onViewFile(item.node.file, true)
+            }
+          }}
           onKeyDown={handleKeyDown}
         >
           <div className='flex items-center hover:bg-muted/50 rounded-sm gap-1 group'>

@@ -55,7 +55,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const project = useMemo(() => projectDataResponse?.data, [projectDataResponse])
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
-  const closeFileViewer = () => setViewedFile(null)
+  const [startFileViewerInEditMode, setStartFileViewerInEditMode] = useState(false)
+  const closeFileViewer = () => {
+    setViewedFile(null);
+    setStartFileViewerInEditMode(false);
+  }
 
   const updateFileContentMutation = useUpdateFileContent()
 
@@ -347,7 +351,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                     <FileTree
                       ref={ref.fileTreeRef}
                       root={fileTree}
-                      onViewFile={(file) => setViewedFile(file as ProjectFile)}
+                      onViewFile={(file: ProjectFile, editMode?: boolean) => {
+                        setViewedFile(file as ProjectFile);
+                        setStartFileViewerInEditMode(editMode || false);
+                      }}
                       projectRoot={project?.path || ''}
                       resolveImports={resolveImports}
                       preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
@@ -390,7 +397,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               <FileTree
                 ref={ref.fileTreeRef}
                 root={fileTree}
-                onViewFile={(file) => setViewedFile(file as ProjectFile)}
+                onViewFile={(file: ProjectFile, editMode?: boolean) => {
+                  setViewedFile(file as ProjectFile);
+                  setStartFileViewerInEditMode(editMode || false);
+                }}
                 projectRoot={project?.path || ''}
                 resolveImports={resolveImports}
                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
@@ -423,6 +433,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           open={!!viewedFile}
           onClose={closeFileViewer}
           projectId={selectedProjectId || undefined}
+          startInEditMode={startFileViewerInEditMode}
         />
       )}
     </div>
