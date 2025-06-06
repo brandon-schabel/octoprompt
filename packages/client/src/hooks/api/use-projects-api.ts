@@ -13,7 +13,7 @@ export {
   useRemoveSummaries,
   useOptimizeUserInput,
   useInvalidateProjects
-} from '../api'
+} from '../api-hooks'
 
 // Type re-exports for backward compatibility
 export type {
@@ -33,5 +33,5 @@ export type RemoveSummariesInput = z.infer<typeof RemoveSummariesBodySchema>
 export type SuggestFilesInput = z.infer<typeof SuggestFilesBodySchema>
 
 // Legacy aliases for hooks that had different names
-export { useSuggestFiles as useFindSuggestedFiles } from '../api'
-export { useRemoveSummaries as useRemoveSummariesFromFiles } from '../api'
+export { useSuggestFiles as useFindSuggestedFiles } from '../api-hooks'
+export { useRemoveSummaries as useRemoveSummariesFromFiles } from '../api-hooks'

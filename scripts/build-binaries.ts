@@ -46,15 +46,10 @@ async function buildProject() {
   }
   await Bun.write(join(distDir, 'package.json'), JSON.stringify(pkg, null, 2))
 
-
   // this is already done becuase its set in vite.config.ts
   // // Copy built client files
   // console.log('Copying built client files to server dist...')
   // await $`cp -r ${join(clientDir, 'dist')}/* ${join(distDir, 'client-dist')}/`
-
-  // Copy prompts folder
-  console.log('Copying prompts folder to dist...')
-  await $`cp -r ${join('prompts')} ${join(distDir, 'prompts')}`
 
   // Define targets with proper executable extensions
   const bundleNamePrefix = `${pkg.name}-${pkg.version}`
@@ -72,11 +67,36 @@ async function buildProject() {
   }
 
   const targets: PlatformTarget[] = [
-    { name: `${bundleNamePrefix}-linux-arm64`, target: 'bun-linux-arm64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-linux-arm64` },
-    { name: `${bundleNamePrefix}-linux-x64`, target: 'bun-linux-x64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-linux-x64` },
-    { name: `${bundleNamePrefix}-macos-x64`, target: 'bun-darwin-x64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-macos-x64` },
-    { name: `${bundleNamePrefix}-macos-arm64`, target: 'bun-darwin-arm64', executableExt: '', outputDirName: `${pkg.name}-${pkg.version}-macos-arm64` },
-    { name: `${bundleNamePrefix}-windows-x64`, target: 'bun-windows-x64', executableExt: '.exe', outputDirName: `${pkg.name}-${pkg.version}-windows-x64` }
+    {
+      name: `${bundleNamePrefix}-linux-arm64`,
+      target: 'bun-linux-arm64',
+      executableExt: '',
+      outputDirName: `${pkg.name}-${pkg.version}-linux-arm64`
+    },
+    {
+      name: `${bundleNamePrefix}-linux-x64`,
+      target: 'bun-linux-x64',
+      executableExt: '',
+      outputDirName: `${pkg.name}-${pkg.version}-linux-x64`
+    },
+    {
+      name: `${bundleNamePrefix}-macos-x64`,
+      target: 'bun-darwin-x64',
+      executableExt: '',
+      outputDirName: `${pkg.name}-${pkg.version}-macos-x64`
+    },
+    {
+      name: `${bundleNamePrefix}-macos-arm64`,
+      target: 'bun-darwin-arm64',
+      executableExt: '',
+      outputDirName: `${pkg.name}-${pkg.version}-macos-arm64`
+    },
+    {
+      name: `${bundleNamePrefix}-windows-x64`,
+      target: 'bun-windows-x64',
+      executableExt: '.exe',
+      outputDirName: `${pkg.name}-${pkg.version}-windows-x64`
+    }
   ]
 
   for (const { name, target, executableExt, outputDirName } of targets) {

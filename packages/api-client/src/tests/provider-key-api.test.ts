@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { createOctoPromptClient, OctoPromptError } from '../../../api-client' // Adjusted path
-import type { OctoPromptClient } from '../../../api-client' // Adjusted path
+import { createOctoPromptClient, OctoPromptError } from '../../api-client' // Adjusted path
+import type { OctoPromptClient } from '../../api-client' // Adjusted path
 
 import { ProviderKeySchema, type ProviderKey } from '@octoprompt/schemas' // Path kept as is from original (note: this was different from others)
 import { TEST_API_URL } from './test-config'
