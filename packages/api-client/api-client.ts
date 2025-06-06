@@ -600,6 +600,10 @@ export class ProjectService extends BaseApiClient {
     return result
   }
 
+  async updateFile(projectId: number, fileId: number, content: string) {
+    return this.updateFileContent(projectId, fileId, content)
+  }
+
   async bulkCreateFiles(
     projectId: number,
     files: Array<{
