@@ -321,33 +321,45 @@ const deleteChatRoute = createRoute({
 
 // DELETE /chats/{chatId}/messages/{messageId}/attachments/{attachmentId}
 const deleteAttachmentParamsSchema = z.object({
-    chatId: z.coerce.number().int().positive().openapi({ param: { name: 'chatId', in: 'path' } }),
-    messageId: z.coerce.number().int().positive().openapi({ param: { name: 'messageId', in: 'path' } }),
-    attachmentId: z.coerce.number().int().positive().openapi({ param: { name: 'attachmentId', in: 'path' } })
+  chatId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: 'chatId', in: 'path' } }),
+  messageId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: 'messageId', in: 'path' } }),
+  attachmentId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: 'attachmentId', in: 'path' } })
 })
 
 const deleteAttachmentRoute = createRoute({
-    method: 'delete',
-    path: '/api/chats/{chatId}/messages/{messageId}/attachments/{attachmentId}',
-    tags: ['Chats', 'Attachments'],
-    summary: 'Delete a file attachment from a chat message',
-    request: {
-        params: deleteAttachmentParamsSchema
+  method: 'delete',
+  path: '/api/chats/{chatId}/messages/{messageId}/attachments/{attachmentId}',
+  tags: ['Chats', 'Attachments'],
+  summary: 'Delete a file attachment from a chat message',
+  request: {
+    params: deleteAttachmentParamsSchema
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Attachment deleted successfully'
     },
-    responses: {
-        200: {
-            content: { 'application/json': { schema: OperationSuccessResponseSchema } },
-            description: 'Attachment deleted successfully'
-        },
-        404: {
-            content: { 'application/json': { schema: ApiErrorResponseSchema } },
-            description: 'Chat, message, or attachment not found'
-        },
-        500: {
-            content: { 'application/json': { schema: ApiErrorResponseSchema } },
-            description: 'Internal Server Error'
-        }
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Chat, message, or attachment not found'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
     }
+  }
 })
 
 // POST /chats/{chatId}/upload
@@ -430,6 +442,132 @@ export const chatRoutes = new OpenAPIHono()
       200
     )
   })
+  .openapi(forkChatFromMessageRoute, async (c) => {
+    const { chatId, messageId } = c.req.valid('param')
+    const { excludedMessageIds } = c.req.valid('json')
+    const newChat = await chatService.forkChatFromMessage(chatId, messageId, excludedMessageIds)
+    return c.json(
+      {
+        success: true,
+        data: newChat
+      } satisfies z.infer<typeof ChatResponseSchema>,
+      201
+    )
+  })
+  .openapi(deleteMessageRoute, async (c) => {
+    const { messageId, chatId } = c.req.valid('param')
+    await chatService.deleteMessage(chatId, messageId)
+    return c.json(
+      {
+        success: true,
+        message: 'Message deleted successfully'
+      } satisfies z.infer<typeof OperationSuccessResponseSchema>,
+      200
+    )
+  })
+  .openapi(updateChatRoute, async (c) => {
+    const { chatId } = c.req.valid('param')
+    const { title } = c.req.valid('json')
+    const updatedChat = await chatService.updateChat(chatId, title)
+    return c.json(
+      {
+        success: true,
+        data: updatedChat
+      } satisfies z.infer<typeof ChatResponseSchema>,
+      200
+    )
+  })
+  .openapi(deleteChatRoute, async (c) => {
+    const { chatId } = c.req.valid('param')
+    await chatService.deleteChat(chatId)
+    return c.json(
+      {
+        success: true,
+        message: 'Chat deleted successfully'
+      } satisfies z.infer<typeof OperationSuccessResponseSchema>,
+      200
+    )
+  })
+  .openapi(uploadFileRoute, async (c) => {
+    const { chatId } = c.req.valid('param')
+
+    // Check if chat exists
+    const chat = await chatService.getChatById(chatId)
+    if (!chat) {
+      throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND')
+    }
+
+    // Get the uploaded file from form data
+    const body = await c.req.parseBody()
+    const file = body.file as File
+
+    if (!file || !(file instanceof File)) {
+      throw new ApiError(400, 'No file provided', 'NO_FILE_PROVIDED')
+    }
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      throw new ApiError(413, 'File too large. Maximum size is 10MB', 'FILE_TOO_LARGE')
+    }
+
+    // Save the file and create attachment record
+    // Use a temporary messageId (timestamp) since the actual message isn't created yet
+    const tempMessageId = Date.now()
+    const attachment = await attachmentStorage.saveFile(chatId, file)
+
+    // Generate the URL for accessing the file
+    const fileUrl = `/api/files/chats/${chatId}/${tempMessageId}/${attachment.id}/${encodeURIComponent(attachment.fileName)}`
+
+    // Create the response with the correct schema format
+    const attachmentResponse = {
+      id: attachment.id,
+      fileName: attachment.fileName,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      url: fileUrl,
+      created: attachment.created
+    }
+
+    return c.json(
+      {
+        success: true,
+        data: attachmentResponse
+      } satisfies z.infer<typeof FileUploadResponseSchema>,
+      201
+    )
+  })
+  .openapi(deleteAttachmentRoute, async (c) => {
+    const { chatId, messageId, attachmentId } = c.req.valid('param')
+
+    // Check if chat exists
+    const chat = await chatService.getChatById(chatId)
+    if (!chat) {
+      throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND')
+    }
+
+    // For the delete operation, we need the fileName from the attachment
+    // Since we don't have a direct way to get the fileName from just the IDs,
+    // we'll need to either store attachment metadata or get it from the message
+    // For now, we'll use a wildcard approach or require the fileName in the URL
+
+    // Try to delete the file using a pattern match
+    // This is a simplified approach - in a real implementation you might want to
+    // store attachment metadata in a database
+    const success = await attachmentStorage.deleteFileById(chatId, messageId, attachmentId)
+
+    if (!success) {
+      throw new ApiError(404, 'Attachment not found', 'ATTACHMENT_NOT_FOUND')
+    }
+
+    return c.json(
+      {
+        success: true,
+        message: 'Attachment deleted successfully'
+      } satisfies z.infer<typeof OperationSuccessResponseSchema>,
+      200
+    )
+  })
   .openapi(postAiChatSdkRoute, async (c) => {
     const { chatId, userMessage, options, systemMessage, tempId } = c.req.valid('json')
 
@@ -469,132 +607,15 @@ export const chatRoutes = new OpenAPIHono()
           'CHAT_NOT_FOUND',
           { originalError: error.message }
         )
-    })
-    .openapi(forkChatFromMessageRoute, async (c) => {
-        const { chatId, messageId } = c.req.valid('param')
-        const { excludedMessageIds } = c.req.valid('json')
-        const newChat = await chatService.forkChatFromMessage(chatId, messageId, excludedMessageIds)
-        return c.json(
-            {
-                success: true,
-                data: newChat
-            } satisfies z.infer<typeof ChatResponseSchema>,
-            201
-        )
-    })
-    .openapi(deleteMessageRoute, async (c) => {
-        const { messageId, chatId } = c.req.valid('param')
-        await chatService.deleteMessage(chatId, messageId)
-        return c.json(
-            {
-                success: true,
-                message: 'Message deleted successfully'
-            } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-            200
-        )
-    })
-    .openapi(updateChatRoute, async (c) => {
-        const { chatId } = c.req.valid('param')
-        const { title } = c.req.valid('json')
-        const updatedChat = await chatService.updateChat(chatId, title)
-        return c.json(
-            {
-                success: true,
-                data: updatedChat
-            } satisfies z.infer<typeof ChatResponseSchema>,
-            200
-        )
-    })
-    .openapi(deleteChatRoute, async (c) => {
-        const { chatId } = c.req.valid('param')
-        await chatService.deleteChat(chatId)
-        return c.json(
-            {
-                success: true,
-                message: 'Chat deleted successfully'
-            } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-            200
-        )
-    })
-    .openapi(uploadFileRoute, async (c) => {
-        const { chatId } = c.req.valid('param')
-        
-        // Check if chat exists
-        const chat = await chatService.getChatById(chatId)
-        if (!chat) {
-            throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND')
-        }
-        
-        // Get the uploaded file from form data
-        const body = await c.req.parseBody()
-        const file = body.file as File
-        
-        if (!file || !(file instanceof File)) {
-            throw new ApiError(400, 'No file provided', 'NO_FILE_PROVIDED')
-        }
-        
-        // Validate file size (10MB limit)
-        const maxSize = 10 * 1024 * 1024 // 10MB
-        if (file.size > maxSize) {
-            throw new ApiError(413, 'File too large. Maximum size is 10MB', 'FILE_TOO_LARGE')
-        }
-        
-        // Save the file and create attachment record
-        // Use a temporary messageId (timestamp) since the actual message isn't created yet
-        const tempMessageId = Date.now()
-        const attachment = await attachmentStorage.saveFile(chatId, tempMessageId, file)
-        
-        // Generate the URL for accessing the file
-        const fileUrl = `/api/files/chats/${chatId}/${tempMessageId}/${attachment.id}/${encodeURIComponent(attachment.fileName)}`
-        
-        // Create the response with the correct schema format
-        const attachmentResponse = {
-            id: attachment.id,
-            fileName: attachment.fileName,
-            mimeType: attachment.mimeType,
-            size: attachment.size,
-            url: fileUrl,
-            created: attachment.created
-        }
-        
-        return c.json(
-            {
-                success: true,
-                data: attachmentResponse
-            } satisfies z.infer<typeof FileUploadResponseSchema>,
-            201
-        )
-    })
-    .openapi(deleteAttachmentRoute, async (c) => {
-        const { chatId, messageId, attachmentId } = c.req.valid('param')
-        
-        // Check if chat exists
-        const chat = await chatService.getChatById(chatId)
-        if (!chat) {
-            throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND')
-        }
-        
-        // For the delete operation, we need the fileName from the attachment
-        // Since we don't have a direct way to get the fileName from just the IDs,
-        // we'll need to either store attachment metadata or get it from the message
-        // For now, we'll use a wildcard approach or require the fileName in the URL
-        
-        // Try to delete the file using a pattern match
-        // This is a simplified approach - in a real implementation you might want to 
-        // store attachment metadata in a database
-        const success = await attachmentStorage.deleteFileById(chatId, messageId, attachmentId)
-        
-        if (!success) {
-            throw new ApiError(404, 'Attachment not found', 'ATTACHMENT_NOT_FOUND')
-        }
-        
-        return c.json(
-            {
-                success: true,
-                message: 'Attachment deleted successfully'
-            } satisfies z.infer<typeof OperationSuccessResponseSchema>,
-            200
-        )
-    })
+      }
+      if (error.message?.toLowerCase().includes('api key') || error.code === 'MISSING_API_KEY') {
+        throw new ApiError(400, error.message, 'MISSING_API_KEY', { originalError: error.message })
+      }
+      // Add more specific error conversions if identifiable from `handleChatMessage`
+      throw new ApiError(500, error.message || 'Error processing AI chat stream', 'AI_STREAM_ERROR', {
+        originalError: error.message
+      })
+    }
+  })
 
 export type ChatRouteTypes = typeof chatRoutes
