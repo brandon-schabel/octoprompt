@@ -18,7 +18,7 @@ import {
   getTasksForTickets,
   listTicketsWithTasks,
   suggestFilesForTicket
-} from '../services/ticket-service'
+} from '@octoprompt/services'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import {
   BulkTasksResponseSchema,
@@ -393,7 +393,7 @@ const formatTicketData = (ticket: any): z.infer<typeof TicketSchema> => {
   const dataToValidate = {
     ...ticket,
     created: normalizeToUnixMs(ticket.created),
-    updated: normalizeToUnixMs(ticket.updated),
+    updated: normalizeToUnixMs(ticket.updated)
   }
   return TicketSchema.parse(dataToValidate)
 }
@@ -422,7 +422,7 @@ export const ticketRoutes = new OpenAPIHono()
   // CRITICAL: Handle bulk-tasks BEFORE the generic {ticketId} route to avoid route conflicts
   .openapi(getTasksForTicketsRoute, async (c) => {
     const { ids } = c.req.valid('query')
-    const numericIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+    const numericIds = ids.map((id) => parseInt(id, 10)).filter((id) => !isNaN(id))
     const tasksByTicketId = await getTasksForTickets(numericIds)
 
     const formattedTasks: Record<string, z.infer<typeof TaskSchema>[]> = {}

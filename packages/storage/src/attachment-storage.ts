@@ -44,7 +44,34 @@ function getAttachmentStoragePath(
 export const attachmentStorage = {
   async saveFile(
     chatId: number,
-    messageId: number, // Can be a temporary ID client sends
+    file: File // Bun's File object from Hono form data
+  ): Promise<{ id: number; fileName: string; mimeType: string; size: number; storagePath: string; created: number }> {
+    const attachmentId = generateAttachmentId()
+    // Use a temporary messageId of 0 for now - this can be updated when the message is created
+    const tempMessageId = 0
+    const storagePath = getAttachmentStoragePath(chatId, tempMessageId, attachmentId, file.name)
+    const dir = path.dirname(storagePath)
+    await ensureDirExists(dir)
+
+    try {
+      await Bun.write(storagePath, file) // Use Bun.write for efficient file saving
+      return {
+        id: attachmentId,
+        fileName: file.name,
+        mimeType: file.type,
+        size: file.size,
+        storagePath, // Store the full path or a relative one depending on serving strategy
+        created: normalizeToUnixMs(Date.now()),
+      }
+    } catch (error: any) {
+      console.error(`Failed to save attachment to ${storagePath}:`, error)
+      throw new ApiError(500, `Storage error: Could not save file ${file.name}.`)
+    }
+  },
+
+  async saveFileWithMessage(
+    chatId: number,
+    messageId: number,
     file: File // Bun's File object from Hono form data
   ): Promise<{ id: number; fileName: string; mimeType: string; size: number; storagePath: string; created: number }> {
     const attachmentId = generateAttachmentId()

@@ -17,7 +17,7 @@ import {
   listPromptsByProject,
   removePromptFromProject,
   updatePrompt,
-} from '@/services/prompt-service'
+} from '@octoprompt/services'
 import { ProjectIdParamsSchema } from '@octoprompt/schemas'
 
 const createPromptRoute = createRoute({

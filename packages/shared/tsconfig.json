@@ -27,7 +27,7 @@
     "*.ts",
     "src/**/*.ts",
     "schema.ts"
-  ],
+, "../services/src/utils/get-full-project-summary.ts", "../services/src/utils/path-utils.ts", "../services/src/utils/json-scribe.ts"  ],
   "exclude": [
     "node_modules",
     "dist"

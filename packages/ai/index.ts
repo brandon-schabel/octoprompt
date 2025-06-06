@@ -1,10 +1,9 @@
 // agents
-export * from './mastra/agents/enhanced-coder-agent'
-export * from './mastra/agents/mastra-coder-simplified-service'
+export * from './src/mastra/agents/enhanced-coder-agent'
+export * from './src/mastra/agents/mastra-coder-simplified-service'
 
-// Tools    
-export * from './mastra/tools/file-tools'
+// Tools
+export * from './src/mastra/tools/file-tools'
 
 // Workflows
-export * from './mastra/workflows/simple-agent-orchestrator'
-export * from './mastra/workflows/mastra-code-change-workflow'
+export * from './src/mastra/workflows/simple-agent-orchestrator'

@@ -26,17 +26,13 @@
         "./src/*"
       ],
       "@db": [
-        "./src/utils/database.ts"
+        "../services/src/utils/database.ts"
       ]
     }
   },
   "include": [
     "src",
-    "src/middleware.ts",
     "server.ts",
     "build.ts",
-    "../api-tests/src/tests",
-    "../shared/src/utils/parse-timestamp.test.ts",
-    "../shared/src/utils/parse-timestamp.ts", "../ai/mastra", "../shared/src/utils/extract-full-project-summary.ts", "../storage/src/attachment-storage.ts", "../storage/src/chat-storage.ts", "../storage/src/project-storage.ts", "../storage/src/prompt-storage.ts", "../storage/src/provider-key-storage.ts", "../storage/src/ticket-storage.ts",
   ]
 }

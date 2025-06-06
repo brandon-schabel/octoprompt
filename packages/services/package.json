@@ -1,9 +1,11 @@
 {
-  "name": "@octoprompt/storage",
+  "name": "@octoprompt/services",
   "version": "0.5.4",
   "module": "index.ts",
   "type": "module",
-
+  "scripts": {
+    "test": "bun test src/"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

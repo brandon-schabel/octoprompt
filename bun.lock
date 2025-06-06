@@ -13,9 +13,12 @@
         "@hono/swagger-ui": "^0.5.1",
         "@hono/zod-openapi": "^0.19.6",
         "@hono/zod-validator": "^0.4.3",
+        "@octoprompt/ai": "workspace:*",
         "@octoprompt/api-client": "workspace:*",
         "@octoprompt/schemas": "workspace:*",
+        "@octoprompt/services": "workspace:*",
         "@octoprompt/shared": "workspace:*",
+        "@octoprompt/storage": "workspace:*",
         "@openrouter/ai-sdk-provider": "^0.4.5",
         "ai": "^4.3.15",
         "fast-xml-parser": "^5.2.2",
@@ -155,6 +158,15 @@
       "dependencies": {
         "@mastra/core": "^0.10.2",
         "@mastra/rag": "^0.10.2",
+      },
+    },
+    "packages/services": {
+      "name": "@octoprompt/services",
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
       },
     },
     "packages/shared": {
@@ -467,6 +479,8 @@
     "@octoprompt/api-client": ["@octoprompt/api-client@workspace:packages/api-client"],
 
     "@octoprompt/schemas": ["@octoprompt/schemas@workspace:packages/schemas"],
+
+    "@octoprompt/services": ["@octoprompt/services@workspace:packages/services"],
 
     "@octoprompt/shared": ["@octoprompt/shared@workspace:packages/shared"],
 

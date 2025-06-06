@@ -349,6 +349,21 @@ export const projectStorage = {
     }
   },
 
+  async getProjectFileArray(projectId: number) {
+    const filesMap = await this.readProjectFiles(projectId)
+    const filesArray: ProjectFile[] = []
+    for (const fileId in filesMap) {
+      if (Object.prototype.hasOwnProperty.call(filesMap, fileId)) {
+        const file = filesMap[fileId]
+        if (file) {
+          filesArray.push(file)
+        }
+      }
+
+      return filesArray
+    }
+  },
+
   generateId: (): number => {
     try {
       return unixTimestampSchema.parse(Date.now())

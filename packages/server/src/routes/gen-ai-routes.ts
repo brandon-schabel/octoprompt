@@ -9,15 +9,14 @@ import {
   AiGenerateStructuredRequestSchema,
   AiGenerateStructuredResponseSchema,
   StructuredDataSchemaConfig,
-  ModelsListResponseSchema,
+  ModelsListResponseSchema
 } from '@octoprompt/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { generateSingleText, generateStructuredData, genTextStream } from '@/services/gen-ai-services' // Import the service instance
+import { generateSingleText, generateStructuredData, genTextStream, providerKeyService } from '@octoprompt/services' // Import the service instance
 import { APIProviders, ProviderKey } from '@octoprompt/schemas'
-import { ProviderKeysConfig, ModelFetcherService } from '@/services/model-providers/model-fetcher-service'
-import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@/services/model-providers/provider-defaults'
-import { providerKeyService } from '@/services/model-providers/provider-key-service'
+import { ProviderKeysConfig, ModelFetcherService } from '@octoprompt/services/src/model-providers/model-fetcher-service'
+import { OLLAMA_BASE_URL, LMSTUDIO_BASE_URL } from '@octoprompt/services/src/model-providers/provider-defaults'
 import { stream } from 'hono/streaming'
 
 // Define the Zod schema for filename suggestions

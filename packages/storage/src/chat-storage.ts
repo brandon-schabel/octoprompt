@@ -120,6 +120,13 @@ export const chatStorage = {
         return writeValidatedJson(getChatsIndexPath(), chats, ChatsStorageSchema)
     },
 
+    /** Gets a specific chat by ID. */
+    async getChatById(chatId: number): Promise<Chat | null> {
+        const chats = await this.readChats()
+        const chat = chats[chatId.toString()]
+        return chat || null
+    },
+
     /** Reads a specific chat's messages file. */
     async readChatMessages(chatId: number): Promise<ChatMessagesStorage> {
         return readValidatedJson(getChatMessagesPath(chatId), ChatMessagesStorageSchema, {})
