@@ -23,7 +23,7 @@ import { SelectedFilesDrawer } from '../../selected-files-drawer'
 import { AIFileChangeDialog } from '@/components/file-changes/ai-file-change-dialog'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
-import { useGetProjectFiles, useGetProject } from '@/hooks/api/use-projects-api'
+import { useGetProjectFiles, useGetProject, useUpdateFileContent } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@octoprompt/schemas'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
@@ -56,6 +56,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
   const closeFileViewer = () => setViewedFile(null)
+
+  const updateFileContentMutation = useUpdateFileContent()
 
   const { data: searchByContent = false, mutate: setSearchByContent } = useProjectTabField(
     'searchByContent',
@@ -160,6 +162,27 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       setAiDialogOpen(true)
     }
   }
+
+  const handleSaveFileContent = useCallback(
+    async (content: string) => {
+      if (!viewedFile || !selectedProjectId) return
+
+      try {
+        await updateFileContentMutation.mutateAsync({
+          projectId: selectedProjectId,
+          fileId: viewedFile.id,
+          content
+        })
+        // Don't close the viewer here - let the component handle it
+        // since it has its own logic for exiting edit mode
+      } catch (error) {
+        // Error is already handled by the mutation
+        console.error('Failed to save file:', error)
+        throw error // Re-throw so FileViewerDialog can handle failed saves
+      }
+    },
+    [viewedFile, selectedProjectId, updateFileContentMutation]
+  )
 
   return (
     <div className='flex flex-col h-full min-h-0 space-y-5'>
@@ -394,7 +417,14 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       )}
 
       {/* FileViewerDialog uses `viewedFile` state, unchanged */}
-      {viewedFile && <FileViewerDialog viewedFile={viewedFile} open={!!viewedFile} onClose={closeFileViewer} />}
+      {viewedFile && (
+        <FileViewerDialog
+          viewedFile={viewedFile}
+          open={!!viewedFile}
+          onClose={closeFileViewer}
+          onSave={handleSaveFileContent}
+        />
+      )}
     </div>
   )
 }
