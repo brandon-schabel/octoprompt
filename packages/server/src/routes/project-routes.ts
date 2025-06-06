@@ -16,8 +16,8 @@ import {
   ProjectFileSchema,
   ProjectFile,
   FileVersionListResponseSchema,
-  GetFileVersionBodySchema,
-  RevertToVersionBodySchema
+  RevertToVersionBodySchema,
+  GetFileVersionParams
 } from '@octoprompt/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
@@ -258,7 +258,7 @@ const getFileVersionRoute = createRoute({
   summary: 'Get a specific version of a file (or latest if no version specified)',
   request: {
     params: FileVersionParamsSchema,
-    query: GetFileVersionBodySchema.optional()
+    query: GetFileVersionParams.optional()
   },
   responses: {
     200: {
@@ -656,7 +656,7 @@ export const projectRoutes = new OpenAPIHono()
   .openapi(getFileVersionRoute, async (c) => {
     const { projectId, originalFileId } = c.req.valid('param')
     const query = c.req.valid('query')
-    const fileVersion = await projectService.getFileVersion(projectId, originalFileId, query?.version)
+    const fileVersion = await projectService.getFileVersion(projectId, originalFileId, Number(query?.version))
 
     if (!fileVersion) {
       throw new ApiError(404, `File version not found`, 'FILE_VERSION_NOT_FOUND')

@@ -663,7 +663,11 @@ export async function bulkDeleteProjectFiles(
   }
 }
 
-export async function getProjectFilesByIds(projectId: number, fileIds: number[]): Promise<ProjectFile[]> {
+export async function getProjectFilesByIds(
+  projectId: number, 
+  fileIds: number[], 
+  includeAllVersions: boolean = false
+): Promise<ProjectFile[]> {
   if (!fileIds || fileIds.length === 0) {
     return []
   }
@@ -675,8 +679,16 @@ export async function getProjectFilesByIds(projectId: number, fileIds: number[])
     const resultFiles: ProjectFile[] = []
 
     for (const id of uniqueFileIds) {
-      if (filesMap[id]) {
-        resultFiles.push(filesMap[id])
+      const file = filesMap[id]
+      if (file) {
+        // If not including all versions, only add files that are latest versions
+        if (includeAllVersions || file.isLatest !== false) {
+          resultFiles.push(file)
+        } else {
+          console.warn(
+            `[getProjectFilesByIds] Skipping non-latest version file: ${file.path} (ID: ${id}, version: ${file.version}) in project ${projectId}`
+          )
+        }
       }
     }
     return resultFiles

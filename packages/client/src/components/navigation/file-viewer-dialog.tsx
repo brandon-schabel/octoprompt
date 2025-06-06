@@ -230,7 +230,7 @@ export function FileViewerDialog({
       }}
     >
       <DialogContent
-        className={`${isFullscreen ? 'w-screen h-screen max-w-none max-h-none m-0 p-0 rounded-none' : 'max-w-4xl max-h-[80vh]'
+        className={`${isFullscreen ? 'w-screen h-screen max-w-none max-h-none m-0 p-0 rounded-none' : 'max-w-[96rem] max-h-[80vh]'
           } overflow-auto flex flex-col`}
       >
         <DialogHeader className={isFullscreen ? 'p-4' : ''}>
