@@ -590,6 +590,163 @@ describe('file-change-watcher utilities', () => {
   })
 })
 
+// --- Tests for syncProject with pre-emptive deletion ---
+describe('syncProject with pre-emptive deletion', () => {
+  const mockProject: Project = {
+    id: 1,
+    path: '/fake/project',
+    name: 'TestProject',
+    created: 0,
+    updated: 0,
+    description: ''
+  }
+  const absoluteProjectPath = '/fake/project'
+
+  // Spies for functions external to file-sync-service-unified
+  let getProjectFilesSpyExt: Mock<typeof projectService.getProjectFiles>
+  let bulkDeleteProjectFilesSpyExt: Mock<typeof projectService.bulkDeleteProjectFiles>
+  let existsSyncSpyFs: Mock<typeof fs.existsSync>
+  let statSyncSpyFs: Mock<typeof fs.statSync>
+  let consoleErrorSpyGlobal: Mock<typeof console.error>
+
+  // Spies for functions within file-sync-service-unified that syncProject calls
+  let syncFileSetSpyLocal: Mock<typeof fileSyncService.syncFileSet>
+  let getTextFilesSpyLocal: Mock<typeof fileSyncService.getTextFiles>
+  let loadIgnoreRulesSpyLocal: Mock<typeof fileSyncService.loadIgnoreRules>
+
+  beforeEach(() => {
+    // Spy on external services
+    getProjectFilesSpyExt = spyOn(projectService, 'getProjectFiles')
+    bulkDeleteProjectFilesSpyExt = spyOn(projectService, 'bulkDeleteProjectFiles')
+
+    // Spy on fs module functions
+    existsSyncSpyFs = spyOn(fs, 'existsSync')
+    statSyncSpyFs = spyOn(fs, 'statSync')
+
+    // Spy on console.error
+    consoleErrorSpyGlobal = spyOn(console, 'error').mockImplementation(() => {})
+
+    // Spy on other functions from fileSyncService that are called by syncProject
+    // These are imported as fileSyncService.*
+    syncFileSetSpyLocal = spyOn(fileSyncService, 'syncFileSet').mockResolvedValue({ created: 0, updated: 0, deleted: 0, skipped: 0 })
+    getTextFilesSpyLocal = spyOn(fileSyncService, 'getTextFiles').mockReturnValue([])
+    loadIgnoreRulesSpyLocal = spyOn(fileSyncService, 'loadIgnoreRules').mockResolvedValue({ ignores: () => false } as unknown as Ignore)
+
+    // Default fs.existsSync mock for project path (called at the start of syncProject)
+    existsSyncSpyFs.mockImplementation((p: PathLike) => {
+      if (p === absoluteProjectPath) return true
+      return false // Default for other paths unless overridden in test
+    })
+    // Default fs.statSync mock for project path
+    statSyncSpyFs.mockImplementation((p: PathLike) => {
+      if (p === absoluteProjectPath) return { isDirectory: () => true, size: BigInt(0) } as fs.Stats
+      return { isDirectory: () => false, size: BigInt(0) } as fs.Stats // Default for other paths
+    })
+  })
+
+  afterEach(() => {
+    // Restore all spies
+    getProjectFilesSpyExt?.mockRestore()
+    bulkDeleteProjectFilesSpyExt?.mockRestore()
+    existsSyncSpyFs?.mockRestore()
+    statSyncSpyFs?.mockRestore()
+    consoleErrorSpyGlobal?.mockRestore()
+    syncFileSetSpyLocal?.mockRestore()
+    getTextFilesSpyLocal?.mockRestore()
+    loadIgnoreRulesSpyLocal?.mockRestore()
+  })
+
+  test('should delete files from DB if they do not exist on disk', async () => {
+    const mockDbFiles: projectService.ProjectFile[] = [
+      { id: 101, projectId: 1, name: 'file1.txt', path: 'file1.txt', extension: '.txt', size: 1, content: 'a', checksum:'a', created:0, updated:0, version:1, isLatest:true, originalFileId:101, prevId:null, nextId:null, summary:null, summaryLastUpdated:null, meta:'{}'},
+      { id: 102, projectId: 1, name: 'file2.txt', path: 'file2.txt', extension: '.txt', size: 1, content: 'b', checksum:'b', created:0, updated:0, version:1, isLatest:true, originalFileId:102, prevId:null, nextId:null, summary:null, summaryLastUpdated:null, meta:'{}'}, // This one will be missing
+      { id: 103, projectId: 1, name: 'file3.txt', path: 'file3.txt', extension: '.txt', size: 1, content: 'c', checksum:'c', created:0, updated:0, version:1, isLatest:true, originalFileId:103, prevId:null, nextId:null, summary:null, summaryLastUpdated:null, meta:'{}'},
+    ];
+    getProjectFilesSpyExt.mockResolvedValue(mockDbFiles)
+    bulkDeleteProjectFilesSpyExt.mockResolvedValue({ deletedCount: 1 })
+
+    existsSyncSpyFs.mockImplementation((filePath: PathLike) => {
+      const p = filePath.toString()
+      if (p === absoluteProjectPath) return true
+      if (p === join(absoluteProjectPath, 'file1.txt')) return true
+      if (p === join(absoluteProjectPath, 'file2.txt')) return false
+      if (p === join(absoluteProjectPath, 'file3.txt')) return true
+      return false
+    })
+
+    await fileSyncService.syncProject(mockProject)
+
+    expect(getProjectFilesSpyExt).toHaveBeenCalledWith(mockProject.id, true)
+    expect(existsSyncSpyFs).toHaveBeenCalledWith(join(absoluteProjectPath, 'file1.txt'))
+    expect(existsSyncSpyFs).toHaveBeenCalledWith(join(absoluteProjectPath, 'file2.txt'))
+    expect(existsSyncSpyFs).toHaveBeenCalledWith(join(absoluteProjectPath, 'file3.txt'))
+    expect(bulkDeleteProjectFilesSpyExt).toHaveBeenCalledWith(mockProject.id, [102])
+    expect(syncFileSetSpyLocal).toHaveBeenCalled()
+  })
+
+  test('should not call bulkDeleteProjectFiles if all DB files exist on disk', async () => {
+    const mockDbFiles: projectService.ProjectFile[] = [
+      { id: 101, path: 'file1.txt', name:'file1.txt', projectId:1, extension:'.txt',size:0,content:'',checksum:'',created:0,updated:0,version:1,isLatest:true,originalFileId:101,nextId:null,prevId:null,meta:'{}',summary:null,summaryLastUpdated:null } as projectService.ProjectFile,
+    ];
+    getProjectFilesSpyExt.mockResolvedValue(mockDbFiles)
+
+    existsSyncSpyFs.mockImplementation((filePath: PathLike) => {
+      const p = filePath.toString()
+      if (p === absoluteProjectPath) return true
+      if (p === join(absoluteProjectPath, 'file1.txt')) return true
+      return false
+    })
+
+    await fileSyncService.syncProject(mockProject)
+
+    expect(bulkDeleteProjectFilesSpyExt).not.toHaveBeenCalled()
+    expect(syncFileSetSpyLocal).toHaveBeenCalled()
+  })
+
+  test('should not call bulkDeleteProjectFiles if no files are in DB', async () => {
+    getProjectFilesSpyExt.mockResolvedValue([])
+
+    await fileSyncService.syncProject(mockProject)
+
+    expect(bulkDeleteProjectFilesSpyExt).not.toHaveBeenCalled()
+    expect(loadIgnoreRulesSpyLocal).toHaveBeenCalled()
+    expect(getTextFilesSpyLocal).toHaveBeenCalled()
+    expect(syncFileSetSpyLocal).toHaveBeenCalled()
+  })
+
+  test('should handle errors from getProjectFiles gracefully and continue sync', async () => {
+    getProjectFilesSpyExt.mockRejectedValue(new Error('DB error'))
+
+    await fileSyncService.syncProject(mockProject)
+
+    expect(consoleErrorSpyGlobal).toHaveBeenCalledWith(expect.stringContaining(`Project ${mockProject.id}: Error during DB file validation or deletion:`), expect.any(Error))
+    expect(loadIgnoreRulesSpyLocal).toHaveBeenCalled()
+    expect(getTextFilesSpyLocal).toHaveBeenCalled()
+    expect(syncFileSetSpyLocal).toHaveBeenCalled()
+  })
+
+  test('should handle errors from bulkDeleteProjectFiles gracefully and continue sync', async () => {
+    const mockDbFiles: projectService.ProjectFile[] = [
+      { id: 102, path: 'file2.txt', name:'file2.txt',projectId:1,extension:'.txt',size:0,content:'',checksum:'',created:0,updated:0,version:1,isLatest:true,originalFileId:102,nextId:null,prevId:null,meta:'{}',summary:null,summaryLastUpdated:null } as projectService.ProjectFile,
+    ];
+    getProjectFilesSpyExt.mockResolvedValue(mockDbFiles)
+    existsSyncSpyFs.mockImplementation((filePath: PathLike) => {
+      const p = filePath.toString()
+      if (p === absoluteProjectPath) return true
+      if (p === join(absoluteProjectPath, 'file2.txt')) return false // Simulate file missing
+      return false
+    })
+    bulkDeleteProjectFilesSpyExt.mockRejectedValue(new Error('Delete error'))
+
+    await fileSyncService.syncProject(mockProject)
+
+    expect(consoleErrorSpyGlobal).toHaveBeenCalledWith(expect.stringContaining(`Project ${mockProject.id}: Error during DB file validation or deletion:`), expect.any(Error))
+    expect(loadIgnoreRulesSpyLocal).toHaveBeenCalled()
+    expect(getTextFilesSpyLocal).toHaveBeenCalled()
+    expect(syncFileSetSpyLocal).toHaveBeenCalled()
+  })
+})
+
 // --- Cleanup Service Tests (Properly Isolated) ---
 describe('cleanup-service', () => {
   let cleanupService: ReturnType<typeof createCleanupService>
