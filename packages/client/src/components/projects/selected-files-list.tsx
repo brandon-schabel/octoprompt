@@ -23,9 +23,9 @@ import {
 import { toast } from 'sonner'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { formatShortcut } from '@/lib/shortcuts'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
+import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { FileViewerDialog } from '../navigation/file-viewer-dialog'
-import { Project, ProjectFile } from '@octoprompt/schemas'
+import {  ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useUpdateFileContent } from '@/hooks/api/use-projects-api'
@@ -44,9 +44,14 @@ export type SelectedFilesListRef = {
 
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(
   ({ onRemoveFile, onNavigateLeft, className = '', projectTabId }, ref) => {
-    const { undo, redo, canUndo, canRedo, clearSelectedFiles, selectedFiles, projectFileMap } = useSelectedFiles({
+    const { undo, redo, canUndo, canRedo, clearSelectedFiles, selectedFiles } = useSelectedFiles({
       tabId: projectTabId
     })
+    const projectTab = useProjectTabById(projectTabId)
+
+    const { selectedProjectId } = projectTab
+
+    const projectFileMap = useProjectFileMap(selectedProjectId)
 
     const [focusedIndex, setFocusedIndex] = useState<number>(-1)
     const itemRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -59,7 +64,6 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     const closeFileViewer = () => setViewedFile(null)
     const { copyToClipboard } = useCopyClipboard()
 
-    const projectTab = useProjectTabById(projectTabId)
     const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
     const updateFileContentMutation = useUpdateFileContent()
 

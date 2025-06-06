@@ -6,7 +6,7 @@
 // 4. Implemented helper functions for data processing and formatting.
 // 5. Added loading and error states.
 import React from 'react'
-import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
+import { useGetProjectFilesWithoutContent } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@octoprompt/schemas' // Using direct schema type
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
@@ -40,7 +40,7 @@ const formatBytes = (bytes: number, decimals = 2) => {
 }
 
 export function ProjectStatsDisplay({ projectId }: ProjectStatsDisplayProps) {
-  const { data: projectFilesData, isLoading, error } = useGetProjectFiles(projectId)
+  const { data: projectFilesData, isLoading, error } = useGetProjectFilesWithoutContent(projectId)
   const files = projectFilesData?.data || []
 
   const stats = React.useMemo(() => {

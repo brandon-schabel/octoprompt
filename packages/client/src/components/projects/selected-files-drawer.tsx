@@ -6,9 +6,10 @@ import { SelectedFilesList } from '@/components/projects/selected-files-list'
 import { useState } from 'react'
 import { FormatTokenCount } from '../format-token-count'
 import { Badge } from '@ui'
-import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { ProjectFileMap } from '@octoprompt/schemas'
+import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
+import { ProjectFileMap, ProjectTabState } from '@octoprompt/schemas'
 import { estimateTokenCount } from '@octoprompt/shared'
+import { useActiveProjectTab, useGetActiveProjectTabId } from '@/hooks/use-kv-local-storage'
 
 type SelectedFilesDrawerProps = {
   selectedFiles: number[]
@@ -29,7 +30,10 @@ const getTotalFileTokens = ({ files, fileMap }: { files: number[]; fileMap: Proj
 }
 
 export function SelectedFilesDrawer({ onRemoveFile, trigger, projectTabId }: SelectedFilesDrawerProps) {
-  const { selectedFiles, projectFileMap } = useSelectedFiles({ tabId: projectTabId })
+  const [projectTabState] = useActiveProjectTab()
+  const { selectedProjectId } = projectTabState as ProjectTabState
+  const { selectedFiles, } = useSelectedFiles({ tabId: projectTabId })
+  const projectFileMap = useProjectFileMap(selectedProjectId)
   const [open, setOpen] = useState(false)
 
   const totalTokens = getTotalFileTokens({

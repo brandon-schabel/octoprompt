@@ -5,7 +5,7 @@ import {
   useUpdateActiveProjectTab,
   useUpdateProjectTabById
 } from '@/hooks/use-kv-local-storage'
-import { useGetProjectFiles } from '@/hooks/api/use-projects-api'
+import { useGetProjectFilesWithoutContent } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
 import { ProjectFileMap } from '@octoprompt/schemas'
 import { buildProjectFileMap } from '@octoprompt/shared'
@@ -23,8 +23,13 @@ const undoRedoKeys = {
   tab: (tabId: number) => [...undoRedoKeys.all, tabId] as const
 }
 
-// TODO Implment the ability to pass in a tab id instead of it just defaulting to the
-// active project tab, becuase it needs to work with chat as well
+export const useProjectFileMap = (projectId: number) => {
+  const { data: fileData } = useGetProjectFilesWithoutContent(projectId)
+  return useMemo(() => buildProjectFileMap(fileData?.data ?? []), [fileData?.data])
+}
+
+// Hook for managing file selection with undo/redo support
+// Supports both active project tab and specific tab IDs for chat functionality
 export function useSelectedFiles({
   tabId = null
 }: {
@@ -42,8 +47,6 @@ export function useSelectedFiles({
     : activeProjectTabState?.selectedFiles
 
   // Get all project files and build the file map
-  const { data: fileData } = useGetProjectFiles(activeProjectTabState?.selectedProjectId ?? -1)
-  const fileMap: ProjectFileMap = useMemo(() => buildProjectFileMap(fileData?.data ?? []), [fileData?.data])
 
   // Query for getting the undo/redo state
   const { data: undoRedoState } = useQuery({
@@ -116,11 +119,17 @@ export function useSelectedFiles({
     const newIndex = undoRedoState.index - 1
     const newSelected = undoRedoState.history[newIndex]
 
-    // Update global selection
-    updateActiveProjectTab((prevTab) => ({
-      ...prevTab,
-      selectedFiles: newSelected
-    }))
+    // Update global selection based on which tab we're working with
+    if (tabId) {
+      updateProjectTabById(tabId, {
+        selectedFiles: newSelected
+      })
+    } else {
+      updateActiveProjectTab((prevTab) => ({
+        ...prevTab,
+        selectedFiles: newSelected
+      }))
+    }
 
     updateUndoRedoState({
       history: undoRedoState.history,
@@ -135,11 +144,17 @@ export function useSelectedFiles({
     const newIndex = undoRedoState.index + 1
     const newSelected = undoRedoState.history[newIndex]
 
-    // Update global selection
-    updateActiveProjectTab((prevTab) => ({
-      ...prevTab,
-      selectedFiles: newSelected
-    }))
+    // Update global selection based on which tab we're working with
+    if (tabId) {
+      updateProjectTabById(tabId, {
+        selectedFiles: newSelected
+      })
+    } else {
+      updateActiveProjectTab((prevTab) => ({
+        ...prevTab,
+        selectedFiles: newSelected
+      }))
+    }
 
     updateUndoRedoState({
       history: undoRedoState.history,
@@ -193,7 +208,6 @@ export function useSelectedFiles({
 
   return {
     selectedFiles: selectedFiles ?? [],
-    projectFileMap: fileMap,
     commitSelectionChange,
     undo,
     redo,

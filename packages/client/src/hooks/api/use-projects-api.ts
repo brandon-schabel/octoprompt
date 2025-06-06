@@ -2,6 +2,7 @@ export {
   useGetProjects,
   useGetProject,
   useGetProjectFiles,
+  useGetProjectFilesWithoutContent,
   useGetProjectSummary,
   useCreateProject,
   useUpdateProject,

@@ -230,6 +230,30 @@ const getProjectFilesRoute = createRoute({
   }
 })
 
+const getProjectFilesWithoutContentRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/files/metadata',
+  tags: ['Projects', 'Files'],
+  summary: 'Get the list of files associated with a project without content (for performance)',
+  request: {
+    params: ProjectIdParamsSchema,
+    query: z
+      .object({
+        includeAllVersions: z.coerce.boolean().optional().default(false)
+      })
+      .optional()
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: FileListResponseSchema } },
+      description: 'Successfully retrieved project files metadata'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
 // NEW: File versioning routes
 const getFileVersionsRoute = createRoute({
   method: 'get',
@@ -635,6 +659,21 @@ export const projectRoutes = new OpenAPIHono()
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
     const files = await projectService.getProjectFiles(projectId, query?.includeAllVersions || false)
+    const payload = {
+      success: true,
+      data: files ?? []
+    } satisfies z.infer<typeof FileListResponseSchema>
+    return c.json(payload, 200)
+  })
+
+  .openapi(getProjectFilesWithoutContentRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const query = c.req.valid('query')
+    const project = await projectService.getProjectById(projectId)
+    if (!project) {
+      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+    }
+    const files = await projectService.getProjectFilesWithoutContent(projectId, query?.includeAllVersions || false)
     const payload = {
       success: true,
       data: files ?? []

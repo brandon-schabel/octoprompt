@@ -329,7 +329,6 @@ export class ChatService extends BaseApiClient {
     return result as DataResponseSchema<Chat[]>
   }
 
-  // TODO: adjust the apis to use the new 3 params setup
   async createChat(data: CreateChatBody) {
     const validatedData = this.validateBody(CreateChatBodySchema, data)
     const result = await this.request('POST', '/chats', {
@@ -506,6 +505,15 @@ export class ProjectService extends BaseApiClient {
       responseSchema: FileListResponseSchemaZ
     })
     return result as DataResponseSchema<ProjectFile[]>
+  }
+
+  // NEW: Get project files without content for performance optimization
+  async getProjectFilesWithoutContent(projectId: number, includeAllVersions: boolean = false) {
+    const result = await this.request('GET', `/projects/${projectId}/files/metadata`, {
+      params: { includeAllVersions },
+      responseSchema: FileListResponseSchemaZ
+    })
+    return result as DataResponseSchema<Omit<ProjectFile, 'content'>[]>
   }
 
   // NEW: File versioning methods

@@ -199,6 +199,43 @@ export async function getProjectFiles(
   }
 }
 
+// NEW: Get project files without content for performance optimization
+export async function getProjectFilesWithoutContent(
+  projectId: number,
+  includeAllVersions: boolean = false
+): Promise<Omit<ProjectFile, 'content'>[] | null> {
+  try {
+    await getProjectById(projectId)
+    const files = await projectStorage.readProjectFiles(projectId)
+    const fileList = Object.values(files)
+
+    // Remove content from all files for performance
+    const filesWithoutContent = fileList.map(file => {
+      const { content, ...fileWithoutContent } = file
+      return fileWithoutContent
+    })
+
+    if (includeAllVersions) {
+      return filesWithoutContent.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
+    } else {
+      // Only return latest versions
+      return filesWithoutContent.filter((file) => file.isLatest).sort((a, b) => a.path.localeCompare(b.path))
+    }
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null
+    }
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_FILES_GET_FAILED'
+    )
+  }
+}
+
+
+
 // UPDATED: Create new version instead of updating existing file
 export async function updateFileContent(
   projectId: number,
