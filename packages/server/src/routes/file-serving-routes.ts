@@ -6,7 +6,7 @@
 // 5. Support for inline display and download of attachments
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import { attachmentStorage } from '@/utils/storage/attachment-storage'
+import { attachmentStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
 import { ApiErrorResponseSchema, unixTSSchemaSpec } from '@octoprompt/schemas'
 import { stream } from 'hono/streaming'

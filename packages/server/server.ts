@@ -3,9 +3,9 @@ import { join } from 'node:path'
 import { statSync } from 'node:fs'
 import { app } from './src/app'
 
-import { listProjects } from '@/services/project-service'
-import { isDevEnv, SERVER_PORT } from '@/constants/server-config'
-import { watchersManager, createCleanupService } from '@/services/file-services/file-sync-service-unified'
+import { listProjects } from '@octoprompt/services'
+import { isDevEnv, SERVER_PORT } from '@octoprompt/services'
+import { watchersManager, createCleanupService } from '@octoprompt/services'
 
 // Use the imported watchersManager, remove the local creation
 // export const watchersManager = createWatchersManager();
@@ -80,16 +80,16 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
     }
   })
 
-    // Start watchers for existing projects
-    ; (async () => {
-      const allProjects = await listProjects()
-      for (const project of allProjects) {
-        // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
-        watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
-      }
+  // Start watchers for existing projects
+  ;(async () => {
+    const allProjects = await listProjects()
+    for (const project of allProjects) {
+      // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
+      watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+    }
 
-      cleanupService.start()
-    })()
+    cleanupService.start()
+  })()
 
   console.log(`Server running at http://localhost:${server.port}`)
   console.log(`Server swagger at http://localhost:${server.port}/swagger`)
@@ -112,15 +112,15 @@ function serveStatic(path: string): Response {
 
 if (import.meta.main) {
   console.log('Starting server...')
-    ; (async () => {
-      const server = await instantiateServer()
-      function handleShutdown() {
-        console.log('Received kill signal. Shutting down gracefully...')
-        watchersManager.stopAllWatchers?.()
-        server.stop()
-        process.exit(0)
-      }
-      process.on('SIGINT', handleShutdown)
-      process.on('SIGTERM', handleShutdown)
-    })()
+  ;(async () => {
+    const server = await instantiateServer()
+    function handleShutdown() {
+      console.log('Received kill signal. Shutting down gracefully...')
+      watchersManager.stopAllWatchers?.()
+      server.stop()
+      process.exit(0)
+    }
+    process.on('SIGINT', handleShutdown)
+    process.on('SIGTERM', handleShutdown)
+  })()
 }

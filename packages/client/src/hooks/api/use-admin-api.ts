@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { octoClient } from '../api'
+import { octoClient } from '../api-hooks'
 
 export interface TableCount {
   count: number

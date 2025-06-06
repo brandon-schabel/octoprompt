@@ -6,7 +6,7 @@ export {
   useUpdateKey,
   useDeleteKey,
   useInvalidateKeys
-} from '../api'
+} from '../api-hooks'
 
 // Type exports for backward compatibility
 import type {

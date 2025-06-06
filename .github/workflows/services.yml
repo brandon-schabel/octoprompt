@@ -1,0 +1,50 @@
+name: Services CI
+on:
+  push:
+    branches: [main]
+
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/services/**'
+
+jobs:
+  services-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install services dependencies
+        run: cd packages/services && bun install
+
+      - name: Run services tests
+        run: |
+          echo "🧪 Running Services Package Tests..."
+          cd packages/services && bun run test
+
+      - name: Install services dependencies
+        run: cd packages/services && bun install
+
+      - name: Run unit tests
+        run: |
+          echo "🧪 Running Unit Tests..."
+          cd packages/services && bun run test
+
+    #   - name: Run E2E tests
+    #     run: |
+    #       echo "🔄 Running E2E Tests..."
+    #       cd server && bun run test:e2e
+
+  # deploy:
+  #   needs: [test-server]
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - name: Deploy application
+  #       run: echo "Add your deployment steps here"

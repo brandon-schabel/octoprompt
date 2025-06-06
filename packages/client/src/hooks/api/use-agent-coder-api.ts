@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { octoClient } from '../api'
+import { octoClient } from '../api-hooks'
 import type {
   AgentCoderRunRequest,
   AgentCoderRunResponse,
