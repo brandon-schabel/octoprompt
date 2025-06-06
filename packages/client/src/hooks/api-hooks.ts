@@ -580,28 +580,6 @@ export function useGetFileVersion(projectId: number, originalFileId: number, ver
   })
 }
 
-export function useUpdateFileContent() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ projectId, fileId, content }: { projectId: number; fileId: number; content: string }) =>
-      octoClient.projects.updateFile(projectId, fileId, content),
-    onSuccess: (_, { projectId, fileId }) => {
-      invalidateProjectFiles(projectId)
-      // Also invalidate version-related queries for this file
-      queryClient.invalidateQueries({ 
-        queryKey: ['projects', 'fileVersions', projectId], 
-        type: 'active' 
-      })
-      toast.success('File updated successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update file')
-    }
-  })
-}
-
 export function useRevertFileToVersion() {
   const { invalidateProjectFiles } = useInvalidateProjects()
   const queryClient = useQueryClient()
