@@ -10,7 +10,15 @@ import { z } from 'zod'
 
 import { ApiError } from '@octoprompt/shared'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
-import { executeMastraCodeChange, batchSummarizeWithMastra, summarizeFileWithMastra } from '@octoprompt/ai'
+import { 
+  executeMastraCodeChange, 
+  batchSummarizeWithMastra, 
+  summarizeFileWithMastra,
+  generateTaskSuggestionsWithMastra,
+  suggestFilesForTicketWithMastra,
+  optimizePromptWithMastra,
+  analyzePromptWithMastra
+} from '@octoprompt/ai'
 
 // Request/Response Schemas
 const MastraCodeChangeRequestSchema = z.object({
@@ -56,7 +64,67 @@ const MastraSummarizeResponseSchema = z.object({
         path: z.string(),
         summary: z.string()
       })
-    )
+  })
+})
+
+// Schema for prompt optimization requests
+const MastraPromptOptimizationRequestSchema = z.object({
+  prompt: z.string().min(1).max(10000).describe('The prompt to optimize'),
+  optimizationGoals: z.array(z.string()).optional().describe('Specific optimization goals'),
+  context: z.string().optional().describe('Additional context for optimization')
+})
+
+const MastraPromptOptimizationResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    optimizedPrompt: z.string(),
+    improvements: z.array(z.object({
+      category: z.string(),
+      description: z.string(),
+      impact: z.string()
+    })),
+    qualityScore: z.object({
+      original: z.number(),
+      optimized: z.number()
+    }),
+    reasoning: z.string(),
+    suggestions: z.array(z.string())
+  })
+})
+
+// Schema for task generation requests  
+const MastraTaskGenerationRequestSchema = z.object({
+  ticketId: z.number().int().positive(),
+  userContext: z.string().optional().describe('Additional context for task generation')
+})
+
+const MastraTaskGenerationResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    tasks: z.array(z.object({
+      title: z.string(),
+      description: z.string(),
+      priority: z.string(),
+      estimatedTime: z.string(),
+      dependencies: z.array(z.string()),
+      tags: z.array(z.string())
+    })),
+    reasoning: z.string()
+  })
+})
+
+// Schema for file suggestion requests
+const MastraFileSuggestionRequestSchema = z.object({
+  ticketId: z.number().int().positive(),
+  maxSuggestions: z.number().int().min(1).max(20).optional().default(5)
+})
+
+const MastraFileSuggestionResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    recommendedFileIds: z.array(z.number()),
+    reasoning: z.string(),
+    confidenceScore: z.number()
   })
 })
 
@@ -193,6 +261,122 @@ const mastraSingleSummarizeRoute = createRoute({
   }
 })
 
+// Prompt optimization route
+const mastraPromptOptimizationRoute = createRoute({
+  method: 'post',
+  path: '/api/mastra/optimize-prompt',
+  tags: ['AI', 'Mastra'],
+  summary: 'Optimize a prompt using Mastra',
+  description: 'Improve prompt quality and effectiveness using AI analysis',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: MastraPromptOptimizationRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: MastraPromptOptimizationResponseSchema
+        }
+      },
+      description: 'Prompt optimized successfully'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid request parameters'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal server error'
+    }
+  }
+})
+
+// Task generation route
+const mastraTaskGenerationRoute = createRoute({
+  method: 'post',
+  path: '/api/mastra/generate-tasks',
+  tags: ['AI', 'Mastra'],
+  summary: 'Generate tasks for a ticket using Mastra',
+  description: 'AI-powered task generation based on ticket requirements',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: MastraTaskGenerationRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: MastraTaskGenerationResponseSchema
+        }
+      },
+      description: 'Tasks generated successfully'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid request parameters'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Ticket not found'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal server error'
+    }
+  }
+})
+
+// File suggestion route
+const mastraFileSuggestionRoute = createRoute({
+  method: 'post',
+  path: '/api/mastra/suggest-files',
+  tags: ['AI', 'Mastra'],
+  summary: 'Suggest relevant files for a ticket using Mastra',
+  description: 'AI-powered file suggestion based on ticket context',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: MastraFileSuggestionRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: MastraFileSuggestionResponseSchema
+        }
+      },
+      description: 'Files suggested successfully'
+    },
+    400: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Invalid request parameters'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Ticket not found'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal server error'
+    }
+  }
+})
+
 // Route Handlers
 export const mastraRoutes = new OpenAPIHono()
   .openapi(mastraCodeChangeRoute, async (c) => {
@@ -273,6 +457,87 @@ export const mastraRoutes = new OpenAPIHono()
     } catch (error) {
       console.error('[MastraRoutes] Single summarize error:', error)
       throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'FILE_SUMMARIZE_ERROR')
+    }
+  })
+
+  .openapi(mastraPromptOptimizationRoute, async (c) => {
+    try {
+      const { prompt, optimizationGoals, context } = c.req.valid('json')
+
+      console.log(`[MastraRoutes] Prompt optimization request: ${prompt.substring(0, 100)}...`)
+
+      const result = await optimizePromptWithMastra(prompt, optimizationGoals, context)
+
+      return c.json(
+        {
+          success: true as const,
+          data: result
+        },
+        200
+      )
+    } catch (error) {
+      console.error('[MastraRoutes] Prompt optimization error:', error)
+      throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'PROMPT_OPTIMIZATION_ERROR')
+    }
+  })
+
+  .openapi(mastraTaskGenerationRoute, async (c) => {
+    try {
+      const { ticketId, userContext } = c.req.valid('json')
+
+      console.log(`[MastraRoutes] Task generation request for ticket ${ticketId}`)
+
+      // First get the ticket
+      const { ticketStorage } = await import('@octoprompt/storage')
+      const allTickets = await ticketStorage.readTickets()
+      const ticket = allTickets[ticketId.toString()]
+      
+      if (!ticket) {
+        throw new ApiError(404, `Ticket not found: ${ticketId}`, 'TICKET_NOT_FOUND')
+      }
+
+      const result = await generateTaskSuggestionsWithMastra(ticket, userContext)
+
+      return c.json(
+        {
+          success: true as const,
+          data: result
+        },
+        200
+      )
+    } catch (error) {
+      console.error('[MastraRoutes] Task generation error:', error)
+      throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'TASK_GENERATION_ERROR')
+    }
+  })
+
+  .openapi(mastraFileSuggestionRoute, async (c) => {
+    try {
+      const { ticketId, maxSuggestions } = c.req.valid('json')
+
+      console.log(`[MastraRoutes] File suggestion request for ticket ${ticketId}`)
+
+      // First get the ticket
+      const { ticketStorage } = await import('@octoprompt/storage')
+      const allTickets = await ticketStorage.readTickets()
+      const ticket = allTickets[ticketId.toString()]
+      
+      if (!ticket) {
+        throw new ApiError(404, `Ticket not found: ${ticketId}`, 'TICKET_NOT_FOUND')
+      }
+
+      const result = await suggestFilesForTicketWithMastra(ticket, maxSuggestions)
+
+      return c.json(
+        {
+          success: true as const,
+          data: result
+        },
+        200
+      )
+    } catch (error) {
+      console.error('[MastraRoutes] File suggestion error:', error)
+      throw error instanceof ApiError ? error : new ApiError(500, 'Internal server error', 'FILE_SUGGESTION_ERROR')
     }
   })
 
