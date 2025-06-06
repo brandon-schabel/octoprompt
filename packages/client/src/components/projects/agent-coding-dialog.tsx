@@ -91,7 +91,7 @@ type LogEntry = {
   raw?: any
 }
 
-function FileChangePreview({ file, projectFileMap }: { file: UpdatedFileData; projectFileMap: ProjectFileMap }) {
+function FileChangePreview({ file, projectFileMap, projectId }: { file: UpdatedFileData; projectFileMap: ProjectFileMap; projectId: number }) {
   const [showPreview, setShowPreview] = useState(false)
   const existingFile = projectFileMap.get(file.id)
   const isNewFile = !existingFile
@@ -157,6 +157,7 @@ function FileChangePreview({ file, projectFileMap }: { file: UpdatedFileData; pr
             viewedFile={
               (isNewFile ? prepareFileForViewer(file) : existingFile ? prepareFileForViewer(existingFile) : undefined) as ProjectFile
             }
+            projectId={projectId}
           />
         ) : (
           <Dialog open={showPreview} onOpenChange={setShowPreview}>
@@ -766,7 +767,7 @@ export function AgentCoderControlDialog({
                         {agentRunData.updatedFileIds.map((fileId) => {
                           const file = projectFileMap.get(fileId as number)
                           if (!file) return null
-                          return <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} />
+                          return <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} projectId={projectId} />
                         })}
                       </div>
                       <div className='shrink-0 mt-auto pt-2 border-t p-2'>

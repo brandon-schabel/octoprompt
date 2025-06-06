@@ -147,7 +147,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       <SelectedFilesDrawer
         selectedFiles={selectedFiles}
         fileMap={projectFileMap}
-        onRemoveFile={() => {}}
+        onRemoveFile={() => { }}
         trigger={trigger}
         projectTabId={activeProjectTabId ?? -1}
       />
@@ -296,9 +296,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               return (
                 <li
                   key={file.id}
-                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
-                    isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
-                  }`}
+                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                    }`}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -416,13 +415,13 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         />
       )}
 
-      {/* FileViewerDialog uses `viewedFile` state, unchanged */}
+      {/* FileViewerDialog with versioning support */}
       {viewedFile && (
         <FileViewerDialog
           viewedFile={viewedFile}
           open={!!viewedFile}
           onClose={closeFileViewer}
-          onSave={handleSaveFileContent}
+          projectId={selectedProjectId || undefined}
         />
       )}
     </div>

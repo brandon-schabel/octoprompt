@@ -13,6 +13,9 @@ export {
   useRemoveSummaries,
   useOptimizeUserInput,
   useInvalidateProjects,
+  useGetFileVersions,
+  useGetFileVersion,
+  useRevertFileToVersion,
   useUpdateFileContent
 } from '../api-hooks'
 

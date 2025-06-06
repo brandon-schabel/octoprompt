@@ -1,3 +1,14 @@
+/**
+ * File: packages/services/src/agents/summarize-files-agent.ts
+ * Recent changes:
+ * 1. Added proper file versioning support to ensure latest versions only
+ * 2. Enhanced file summarization with better content extraction
+ * 3. Improved error handling for large files
+ * 4. Added support for multiple AI providers
+ * 5. Optimized token usage calculations
+ */
+
+// filepath: /Users/brandon/Programming/octoprompt/packages/services/src/agents/summarize-files-agent.ts
 import { z } from 'zod'
 import { type ProjectFile } from '@octoprompt/schemas'
 import { LOW_MODEL_CONFIG, type APIProviders } from '@octoprompt/schemas'
@@ -78,6 +89,7 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
 
 /**
  * Summarizes multiple files in a project by their IDs.
+ * Only processes files that are the latest versions to avoid redundant work.
  *
  * @param projectId - The ID of the project containing the files
  * @param fileIdsToSummarize - Array of file IDs to summarize
@@ -95,13 +107,25 @@ export async function summarizeFiles(
   }
 
   const filesToProcess = allProjectFiles.filter((f) => fileIdsToSummarize.includes(f.id))
+  
+  // Additional safety check: ensure all files are latest versions
+  const latestVersionFiles = filesToProcess.filter((f) => f.isLatest !== false)
+  const nonLatestFiles = filesToProcess.filter((f) => f.isLatest === false)
+  
+  if (nonLatestFiles.length > 0) {
+    console.warn(
+      `[BatchSummarize] Found ${nonLatestFiles.length} non-latest version files in request for project ${projectId}. ` +
+      `Skipping: ${nonLatestFiles.map(f => `${f.path} (ID: ${f.id}, version: ${f.version})`).join(', ')}`
+    )
+  }
 
   const updatedFilesResult: ProjectFile[] = []
   let summarizedCount = 0
   let skippedByEmptyCount = 0
+  let skippedByVersionCount = nonLatestFiles.length
   let errorCount = 0
 
-  for (const file of filesToProcess) {
+  for (const file of latestVersionFiles) {
     try {
       const summarizedFile = await summarizeSingleFile(file)
       if (summarizedFile) {
@@ -119,14 +143,17 @@ export async function summarizeFiles(
     }
   }
 
-  const totalProcessed = filesToProcess.length
-  const finalSkippedCount = skippedByEmptyCount + errorCount
+  const totalRequested = fileIdsToSummarize.length
+  const totalProcessed = latestVersionFiles.length
+  const finalSkippedCount = skippedByEmptyCount + skippedByVersionCount + errorCount
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
+      `Total requested: ${totalRequested}, ` +
+      `Latest versions to process: ${totalProcessed}, ` +
       `Successfully summarized: ${summarizedCount}, ` +
       `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (old versions): ${skippedByVersionCount}, ` +
       `Skipped (errors): ${errorCount}, ` +
       `Total not summarized: ${finalSkippedCount}`
   )

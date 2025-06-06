@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // Import only the actual types we need (not response schemas)
-import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage, FileVersion } from '@octoprompt/schemas'
 
 import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody } from '@octoprompt/schemas'
 
@@ -45,10 +45,7 @@ import {
   SuggestFilesBodySchema,
   RefreshQuerySchema,
   FileVersionListResponseSchema,
-  GetFileVersionBodySchema,
   RevertToVersionBodySchema,
-  FileVersionSchema,
-  type FileVersion
 } from '@octoprompt/schemas'
 
 import {
@@ -599,7 +596,6 @@ export class ProjectService extends BaseApiClient {
     })
     return result
   }
-
   async bulkCreateFiles(
     projectId: number,
     files: Array<{

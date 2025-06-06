@@ -54,8 +54,8 @@ export const FileVersionListResponseSchema = z.object({
   data: z.array(FileVersionSchema)
 }).openapi('FileVersionListResponse')
 
-export const GetFileVersionBodySchema = z.object({
-  version: z.number().int().positive().optional()
+export const GetFileVersionParams = z.object({
+  version: z.string().optional()
 }).openapi('GetFileVersionBody')
 
 export const RevertToVersionBodySchema = z.object({
@@ -173,7 +173,7 @@ export const ProjectFileMapSchema = z
 
 export type FileVersion = z.infer<typeof FileVersionSchema>
 export type FileVersionListResponse = z.infer<typeof FileVersionListResponseSchema>
-export type GetFileVersionBody = z.infer<typeof GetFileVersionBodySchema>
+export type GetFileVersionBody = z.infer<typeof GetFileVersionParams>
 export type RevertToVersionBody = z.infer<typeof RevertToVersionBodySchema>
 export type Project = z.infer<typeof ProjectSchema>
 export type ProjectFile = z.infer<typeof ProjectFileSchema>
