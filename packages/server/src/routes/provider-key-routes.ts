@@ -8,7 +8,7 @@ import {
   ProviderKeyListResponseSchema,
   ProviderKey
 } from '@octoprompt/schemas'
-import { providerKeyService } from '@/services/model-providers/provider-key-service'
+import { providerKeyService } from '@octoprompt/services'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
 
 const createProviderKeyRoute = createRoute({

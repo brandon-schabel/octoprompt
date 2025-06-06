@@ -37,7 +37,7 @@ export const AgentTaskSchema = z
       description: "Optional: AI's estimation of the task's complexity.",
       example: 'MEDIUM'
     }),
-    dependencies: unixTSArraySchemaSpec.optional(),
+    dependencies: unixTSArraySchemaSpec.optional()
   })
   .openapi('AgentTask', {
     description:
@@ -76,16 +76,14 @@ export const AgentContextSchema = z
     projectFileMap: ProjectFileMapSchema.refine((map) => map.size > 0, {
       message: 'Project file map cannot be empty.'
     }).openapi({ description: 'Map representation of project files for quick lookup.' }),
-    projectSummaryContext: z
-      .string()
-      .openapi({
-        description: "A summary of the project's purpose and structure.",
-        example: 'A Node.js backend service for managing user accounts.'
-      }),
+    projectSummaryContext: z.string().openapi({
+      description: "A summary of the project's purpose and structure.",
+      example: 'A Node.js backend service for managing user accounts.'
+    }),
     project: ProjectSchema,
     agentJobId: unixTSSchemaSpec,
     prompts: z.array(PromptSchema).openapi({ description: 'The prompts to use for the agent.' }),
-    selectedFileIds: unixTSArraySchemaSpec,
+    selectedFileIds: unixTSArraySchemaSpec
   })
   .refine((ctx) => ctx.projectFiles[0]?.projectId, {
     message: 'Could not determine projectId from the first project file.',
@@ -96,19 +94,14 @@ export const AgentContextSchema = z
 export const AgentTaskPlanSchema = z
   .object({
     projectId: unixTSSchemaSpec,
-    overallGoal: z
-      .string()
-      .openapi({
-        description: 'A concise summary of the original user request being addressed by this plan.',
-        example: 'Implement JWT-based authentication flow.'
-      }),
-    tasks: z
-      .array(AgentTaskSchema)
-      .min(1)
-      .openapi({
-        description:
-          'An ordered list of tasks designed to collectively achieve the overall goal. Order implies execution sequence unless overridden by dependencies.'
-      })
+    overallGoal: z.string().openapi({
+      description: 'A concise summary of the original user request being addressed by this plan.',
+      example: 'Implement JWT-based authentication flow.'
+    }),
+    tasks: z.array(AgentTaskSchema).min(1).openapi({
+      description:
+        'An ordered list of tasks designed to collectively achieve the overall goal. Order implies execution sequence unless overridden by dependencies.'
+    })
   })
   .openapi('AgentTaskPlan', {
     description:
@@ -125,7 +118,7 @@ export const AgentCoderRunRequestSchema = z
     selectedFileIds: unixTSArraySchemaSpec,
     // generated on the client side and passed to the server to retrieve the execution logs and data for this run.
     agentJobId: unixTSSchemaSpec.optional(),
-    selectedPromptIds: unixTSArrayOptionalSchemaSpec,
+    selectedPromptIds: unixTSArrayOptionalSchemaSpec
   })
   .openapi('AgentCoderRunRequest')
 
@@ -179,7 +172,7 @@ export const AgentDataLogSchema = z
     errorMessage: z.string().optional().openapi({ description: 'Error message if the agent run failed.' }),
     errorStack: z.string().optional().openapi({ description: 'Stack trace if the agent run failed.' }),
     // Crucial for the confirm route: list of files proposed for writing
-    updatedFiles: unixTSArrayOptionalSchemaSpec,
+    updatedFileIds: unixTSArraySchemaSpec
   })
   .openapi('AgentDataLog') // Give it a unique OpenAPI name
 

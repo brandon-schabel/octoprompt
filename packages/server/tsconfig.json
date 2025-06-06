@@ -26,17 +26,13 @@
         "./src/*"
       ],
       "@db": [
-        "./src/utils/database.ts"
+        "../services/src/utils/database.ts"
       ]
     }
   },
   "include": [
     "src",
-    "src/middleware.ts",
     "server.ts",
     "build.ts",
-    "../api-tests/src/tests",
-    "src/utils/parse-timestamp.test.ts",
-    "src/utils/parse-timestamp.ts",
   ]
 }

@@ -22,7 +22,7 @@ export {
   useListTicketsWithTaskCount,
   useListTicketsWithTasks,
   useInvalidateTickets
-} from '../api'
+} from '../api-hooks'
 
 // Alias exports for backward compatibility
 export {
@@ -30,7 +30,7 @@ export {
   useListTicketsWithTaskCount as useListTicketsWithCount,
   useGetTasksForTickets as useBulkTicketTasks,
   useGetTasks as useListTasks
-} from '../api'
+} from '../api-hooks'
 
 // Type exports for backward compatibility
 import type {
