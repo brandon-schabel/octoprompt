@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { Badge } from '@ui'
 import { FormatTokenCount } from '../format-token-count'
-import { forwardRef, useRef, useState, useImperativeHandle, KeyboardEvent, useMemo } from 'react'
+import { forwardRef, useRef, useState, useImperativeHandle, KeyboardEvent, useMemo, useCallback } from 'react'
 import { Input } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@ui'
 import {
@@ -28,6 +28,7 @@ import { FileViewerDialog } from '../navigation/file-viewer-dialog'
 import { Project, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
+import { useUpdateFileContent } from '@/hooks/api/use-projects-api'
 
 type SelectedFilesListProps = {
   onRemoveFile: (fileId: number) => void
@@ -60,6 +61,25 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
     const projectTab = useProjectTabById(projectTabId)
     const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
+    const updateFileContentMutation = useUpdateFileContent()
+
+    const handleSaveFileContent = useCallback(
+      async (content: string) => {
+        if (!viewedFile || !projectTab?.selectedProjectId) return
+
+        try {
+          await updateFileContentMutation.mutateAsync({
+            projectId: projectTab.selectedProjectId,
+            fileId: viewedFile.id,
+            content
+          })
+        } catch (error) {
+          console.error('Failed to save file:', error)
+          throw error
+        }
+      },
+      [viewedFile, projectTab?.selectedProjectId, updateFileContentMutation]
+    )
 
     const copyAllSelectedFiles = async () => {
       if (!selectedFiles.length) return
@@ -260,9 +280,9 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
     return (
       <>
-        <FileViewerDialog 
-          open={!!viewedFile} 
-          viewedFile={viewedFile as ProjectFile} 
+        <FileViewerDialog
+          open={!!viewedFile}
+          viewedFile={viewedFile as ProjectFile}
           onClose={closeFileViewer}
           projectId={projectTab?.selectedProjectId}
         />

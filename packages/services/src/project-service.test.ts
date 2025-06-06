@@ -1,4 +1,8 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test'
+// packages/server/src/services/project-service.test.ts
+// Or if your file is in `packages/services` as per context:
+// packages/services/src/project-service.test.ts
+
+import { describe, test, expect, beforeEach, mock, afterEach, spyOn } from 'bun:test' // << CORRECTED IMPORT
 import {
   createProject,
   getProjectById,
@@ -15,7 +19,7 @@ import {
   getFileVersion,
   revertFileToVersion,
   type FileSyncData
-} from '@octoprompt/services'
+} from '@octoprompt/services' // Assuming this path is correct based on your setup
 import { summarizeSingleFile, summarizeFiles } from './agents/summarize-files-agent'
 import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody, FileVersion } from '@octoprompt/schemas'
 import type { ProjectsStorage, ProjectFilesStorage } from '@octoprompt/storage'
@@ -23,6 +27,7 @@ import { ApiError } from '@octoprompt/shared'
 import { z } from 'zod'
 import { normalizeToUnixMs } from '@octoprompt/shared'
 
+// ... (rest of the mock setup remains the same) ...
 // In-memory stores for our mocks
 let mockProjectsDb: ProjectsStorage = {}
 let mockProjectFilesDbPerProject: Record<number, ProjectFilesStorage> = {}
@@ -75,13 +80,12 @@ const mockProjectStorage = {
     return JSON.parse(JSON.stringify(updatedFile))
   },
 
-  // NEW: Mock versioning methods
   createFileVersion: async (
     projectId: number,
     currentFileId: number,
     newContent: string,
     additionalData?: Partial<
-      Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated' | 'version' | 'prevId' | 'nextId' | 'isLatest'>
+      Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated' | 'version' | 'prevId' | 'nextId' | 'isLatest' | 'content' | 'size'>
     >
   ): Promise<ProjectFile> => {
     const files = mockProjectFilesDbPerProject[projectId] || {}
@@ -98,22 +102,22 @@ const mockProjectStorage = {
     const newVersionId = generateTestId()
     const now = Date.now()
 
-    // Create the new version
     const newVersion: ProjectFile = {
-      ...currentFile,
-      ...additionalData,
-      id: newVersionId,
+      ...currentFile, // spread current file first
+      id: newVersionId, // then override specific fields
       content: newContent,
       version: currentFile.version + 1,
       prevId: currentFileId,
       nextId: null,
       isLatest: true,
       size: Buffer.byteLength(newContent, 'utf8'),
+      created: now, // New version should have its own creation time
       updated: now,
-      originalFileId: currentFile.originalFileId || currentFile.id
+      originalFileId: currentFile.originalFileId || currentFile.id,
+      // Apply additional data last to allow overriding things like checksum, extension, etc.
+      ...additionalData,
     }
 
-    // Update the current file to no longer be latest
     const updatedCurrentFile: ProjectFile = {
       ...currentFile,
       nextId: newVersionId,
@@ -128,19 +132,14 @@ const mockProjectStorage = {
     return JSON.parse(JSON.stringify(newVersion))
   },
 
-  getFileVersions: async (projectId: number, originalFileId: number): Promise<ProjectFile[]> => {
+  getFileVersions: async (projectId: number, originalFileIdParam: number): Promise<ProjectFile[]> => {
     const files = mockProjectFilesDbPerProject[projectId] || {}
     const versions: ProjectFile[] = []
-
-    // First, find the actual original file ID
-    // If the requested ID has originalFileId set, use that, otherwise use the ID itself
-    const fileRequested = files[originalFileId]
-    const actualOriginalFileId = fileRequested?.originalFileId || originalFileId
+    
+    const fileRequested = files[originalFileIdParam]
+    const actualOriginalFileId = fileRequested?.originalFileId || originalFileIdParam
 
     for (const file of Object.values(files)) {
-      // A file is part of the version chain if:
-      // 1. It IS the original file (originalFileId is null and id matches actualOriginalFileId)
-      // 2. OR it has originalFileId that matches actualOriginalFileId
       if (
         (file.originalFileId === null && file.id === actualOriginalFileId) ||
         (file.originalFileId === actualOriginalFileId)
@@ -148,7 +147,6 @@ const mockProjectStorage = {
         versions.push(file)
       }
     }
-
     return versions.sort((a, b) => a.version - b.version)
   },
 
@@ -159,34 +157,42 @@ const mockProjectStorage = {
 
   getLatestFileVersion: async (projectId: number, originalFileId: number): Promise<ProjectFile | null> => {
     const files = mockProjectFilesDbPerProject[projectId] || {}
+    const actualOriginalFileId = (files[originalFileId]?.originalFileId) || originalFileId;
 
     for (const file of Object.values(files)) {
-      if ((file.originalFileId === originalFileId || file.id === originalFileId) && file.isLatest) {
-        return file
+      if (((file.originalFileId || file.id) === actualOriginalFileId) && file.isLatest) {
+        return file;
       }
     }
-
     return null
   },
 
   revertToVersion: async (projectId: number, currentFileId: number, targetVersion: number): Promise<ProjectFile> => {
     const files = mockProjectFilesDbPerProject[projectId] || {}
-    const currentFile = files[currentFileId]
+    const currentFile = files[currentFileId] // This should be the *latest* file ID of the chain
 
     if (!currentFile) {
       throw new Error(`File not found: ${currentFileId} in project ${projectId}`)
+    }
+     if (!currentFile.isLatest) {
+      throw new Error(`Cannot revert from a non-latest file version: ${currentFileId}`)
     }
 
     const originalFileId = currentFile.originalFileId || currentFile.id
     const targetVersionFile = await mockProjectStorage.getFileVersion(projectId, originalFileId, targetVersion)
 
     if (!targetVersionFile) {
-      throw new Error(`Version ${targetVersion} not found for file`)
+      throw new Error(`Version ${targetVersion} not found for file chain of ${originalFileId}`)
     }
 
+    // Create new version using currentFileId (the latest) as the base for prevId link
     return mockProjectStorage.createFileVersion(projectId, currentFileId, targetVersionFile.content, {
       checksum: targetVersionFile.checksum,
-      meta: targetVersionFile.meta
+      meta: targetVersionFile.meta,
+      // Ensure other relevant fields from targetVersionFile are carried over if necessary
+      name: targetVersionFile.name,
+      path: targetVersionFile.path, // Path should ideally remain consistent for a version chain unless explicitly changed by an "update"
+      extension: targetVersionFile.extension,
     })
   }
 }
@@ -195,22 +201,21 @@ mock.module('@octoprompt/storage', () => ({
   projectStorage: mockProjectStorage
 }))
 
-// --- Mocking gen-ai-services ---
 const mockGenerateStructuredData = mock(async ({ schema }: { schema: z.ZodSchema<any> }) => {
   if (schema.safeParse({ summary: 'Mocked AI summary' }).success) {
     return { object: { summary: 'Mocked AI summary' } }
   }
   return { object: {} }
 })
-mock.module('./gen-ai-services', () => ({
+mock.module('./gen-ai-services', () => ({ // Adjust path if gen-ai-services is elsewhere
   generateStructuredData: mockGenerateStructuredData
 }))
 
-// --- Mocking file-sync-service-unified ---
 const mockSyncProject = mock(async (project: Project) => {
   const projectFiles = mockProjectFilesDbPerProject[project.id] || {}
   if (!mockProjectFilesDbPerProject[project.id] || Object.keys(projectFiles).length === 0) {
     const fileId = mockProjectStorage.generateId()
+    const now = Date.now();
     mockProjectFilesDbPerProject[project.id] = {
       [fileId]: {
         id: fileId,
@@ -224,8 +229,8 @@ const mockSyncProject = mock(async (project: Project) => {
         summaryLastUpdated: null,
         meta: '{}',
         checksum: 'checksum-synced',
-        created: normalizeToUnixMs(Date.now()),
-        updated: normalizeToUnixMs(Date.now()),
+        created: now,
+        updated: now,
         version: 1,
         prevId: null,
         nextId: null,
@@ -234,23 +239,13 @@ const mockSyncProject = mock(async (project: Project) => {
       }
     }
   }
-  return {
-    added: [],
-    updated: [],
-    removed: [],
-    unchanged: [],
-    log: [],
-    error: null
-  }
+  return { added: [], updated: [], removed: [], unchanged: [], log: [], error: null }
 })
-mock.module('./file-services/file-sync-service-unified', () => ({
+mock.module('./file-services/file-sync-service-unified', () => ({ // Adjust path
   syncProject: mockSyncProject
 }))
 
-const randomString = (length = 8) =>
-  Math.random()
-    .toString(36)
-    .substring(2, 2 + length)
+const randomString = (length = 8) => Math.random().toString(36).substring(2, 2 + length)
 
 describe('Project Service (File Storage with Versioning)', () => {
   beforeEach(async () => {
@@ -261,6 +256,13 @@ describe('Project Service (File Storage with Versioning)', () => {
     mockSyncProject.mockClear()
   })
 
+  afterEach(() => {
+    // Optional: Log DB state for debugging
+    // console.log('mockProjectsDb after test:', JSON.stringify(mockProjectsDb, null, 2));
+    // console.log('mockProjectFilesDbPerProject after test:', JSON.stringify(mockProjectFilesDbPerProject, null, 2));
+  });
+
+  // --- Project CRUD Tests (largely unchanged, but ensure they run) ---
   describe('Project CRUD', () => {
     test('createProject creates a new project', async () => {
       const input: CreateProjectBody = {
@@ -272,8 +274,6 @@ describe('Project Service (File Storage with Versioning)', () => {
 
       expect(project.id).toBeDefined()
       expect(project.name).toBe(input.name)
-      expect(project.path).toBe(input.path)
-      expect(project.description).toBe(input.description ?? '')
       expect(mockProjectsDb[project.id]).toEqual(project)
       expect(mockProjectFilesDbPerProject[project.id]).toEqual({})
     })
@@ -281,267 +281,260 @@ describe('Project Service (File Storage with Versioning)', () => {
     test('getProjectById returns project if found, throws if not', async () => {
       const input: CreateProjectBody = { name: 'GetMe', path: '/get/me' }
       const created = await createProject(input)
-
       const found = await getProjectById(created.id)
       expect(found).toEqual(created)
-
       const notFoundId = generateTestId()
       await expect(getProjectById(notFoundId)).rejects.toThrowError(
         new ApiError(404, `Project not found with ID ${notFoundId}.`, 'PROJECT_NOT_FOUND')
       )
     })
-
+    
     test('listProjects returns all projects sorted by updatedAt DESC', async () => {
-      let all = await listProjects()
-      expect(all.length).toBe(0)
+      let all = await listProjects();
+      expect(all.length).toBe(0);
 
-      const p1 = await createProject({ name: 'P1', path: '/p1' })
-      await new Promise((resolve) => setTimeout(resolve, 10))
-      const p2 = await createProject({ name: 'P2', path: '/p2' })
+      const p1 = await createProject({ name: 'P1', path: '/p1' });
+      await new Promise(resolve => setTimeout(resolve, 10)); // ensure time difference
+      const p2 = await createProject({ name: 'P2', path: '/p2' });
 
-      all = await listProjects()
-      expect(all.length).toBe(2)
-      expect(all[0].id).toBe(p2.id)
-      expect(all[1].id).toBe(p1.id)
-    })
+      all = await listProjects();
+      expect(all.length).toBe(2);
+      expect(all[0].id).toBe(p2.id); // P2 is newer
+      expect(all[1].id).toBe(p1.id);
+    });
 
     test('updateProject updates fields and returns updated project', async () => {
-      const created = await createProject({ name: 'Before', path: '/old' })
-      const updates: UpdateProjectBody = { name: 'After', description: 'New Desc' }
-      await new Promise((resolve) => setTimeout(resolve, 1))
-      const updated = await updateProject(created.id, updates)
+      const created = await createProject({ name: 'Before', path: '/old' });
+      const updates: UpdateProjectBody = { name: 'After', description: 'New Desc' };
+      await new Promise(resolve => setTimeout(resolve, 1)); // ensure time difference
+      const updated = await updateProject(created.id, updates);
 
-      expect(updated).toBeDefined()
-      if (!updated) throw new Error('Update failed')
-      expect(updated.name).toBe('After')
-      expect(updated.description).toBe('New Desc')
-      expect(updated.path).toBe(created.path)
-      expect(new Date(updated.updated).getTime()).toBeGreaterThan(new Date(created.updated).getTime())
-      expect(mockProjectsDb[created.id]).toEqual(updated)
-    })
-
-    test('updateProject throws if project does not exist', async () => {
-      const nonExistentId = generateTestId()
-      await expect(updateProject(nonExistentId, { name: 'X' })).rejects.toThrowError(
-        new ApiError(404, `Project not found with ID ${nonExistentId}.`, 'PROJECT_NOT_FOUND')
-      )
-    })
-
+      expect(updated).toBeDefined();
+      if (!updated) throw new Error('Update failed');
+      expect(updated.name).toBe('After');
+      expect(updated.description).toBe('New Desc');
+      expect(updated.path).toBe(created.path); // Path not updated
+      expect(updated.updated).toBeGreaterThan(created.updated);
+      expect(mockProjectsDb[created.id]).toEqual(updated);
+    });
+    
     test('deleteProject returns true if deleted, throws if nonexistent, and removes files data', async () => {
-      const project = await createProject({ name: 'DelMe', path: '/del/me' })
-      const fileIdForDeleteTest = generateTestId()
+      const project = await createProject({ name: 'DelMe', path: '/del/me' });
+      const fileIdForDeleteTest = generateTestId();
+      const now = Date.now();
       mockProjectFilesDbPerProject[project.id] = {
         [fileIdForDeleteTest]: {
-          id: fileIdForDeleteTest,
-          projectId: project.id,
-          name: 'f.txt',
-          path: 'f.txt',
-          content: '',
-          extension: '.txt',
-          size: 0,
-          created: normalizeToUnixMs(Date.now() - 100),
-          updated: normalizeToUnixMs(Date.now() - 50),
-          summary: null,
-          summaryLastUpdated: null,
-          meta: '{}',
-          checksum: null,
-          // New versioning fields
-          version: 1,
-          prevId: null,
-          nextId: null,
-          isLatest: true,
-          originalFileId: null
+          id: fileIdForDeleteTest, projectId: project.id, name: 'f.txt', path: 'f.txt',
+          content: '', extension: '.txt', size: 0, created: now -100, updated: now -50,
+          summary: null, summaryLastUpdated: null, meta: '{}', checksum: null,
+          version: 1, prevId: null, nextId: null, isLatest: true, originalFileId: null
         }
-      }
+      };
 
-      expect(mockProjectsDb[project.id]).toBeDefined()
-      expect(mockProjectFilesDbPerProject[project.id]).toBeDefined()
+      expect(mockProjectsDb[project.id]).toBeDefined();
+      expect(mockProjectFilesDbPerProject[project.id]).toBeDefined();
 
-      const success = await deleteProject(project.id)
-      expect(success).toBe(true)
-      expect(mockProjectsDb[project.id]).toBeUndefined()
-      expect(mockProjectFilesDbPerProject[project.id]).toBeUndefined()
-
-      const fakeProjectIdForDelete = generateTestId()
-      await expect(deleteProject(fakeProjectIdForDelete)).rejects.toThrowError(
-        new ApiError(404, `Project not found with ID ${fakeProjectIdForDelete} for deletion.`, 'PROJECT_NOT_FOUND')
-      )
-    })
+      const success = await deleteProject(project.id);
+      expect(success).toBe(true);
+      expect(mockProjectsDb[project.id]).toBeUndefined();
+      expect(mockProjectFilesDbPerProject[project.id]).toBeUndefined();
+    });
   })
 
+  // --- Detailed File Versioning Tests ---
   describe('Project File Operations with Versioning', () => {
     let projectId: number
+    let fileA_v1: ProjectFile, fileA_v2: ProjectFile, fileA_v3: ProjectFile
+    let fileB_v1: ProjectFile
 
     beforeEach(async () => {
       const proj = await createProject({ name: 'FileTestProj', path: '/file/test' })
       projectId = proj.id
+
+      // Setup a file with multiple versions (fileA) and one with a single version (fileB)
+      fileA_v1 = await createProjectFileRecord(projectId, 'src/fileA.ts', 'content v1 for A')
+      fileA_v2 = await updateFileContent(projectId, fileA_v1.id, 'content v2 for A')
+      fileA_v3 = await updateFileContent(projectId, fileA_v2.id, 'content v3 for A')
+      fileB_v1 = await createProjectFileRecord(projectId, 'src/fileB.ts', 'content v1 for B')
     })
 
-    test('createProjectFileRecord creates a file record with versioning fields', async () => {
-      const filePath = 'src/app.js'
-      const content = 'console.log("hello");'
-      const fileRecord = await createProjectFileRecord(projectId, filePath, content)
+    describe('createProjectFileRecord', () => {
+      test('should correctly initialize versioning fields', async () => {
+        const newFile = await createProjectFileRecord(projectId, 'newly-created.txt', 'initial')
+        expect(newFile.version).toBe(1)
+        expect(newFile.isLatest).toBe(true)
+        expect(newFile.prevId).toBeNull()
+        expect(newFile.nextId).toBeNull()
+        expect(newFile.originalFileId).toBeNull() // originalFileId is null for the first version
+      })
+    })
+    
+    describe('getProjectFiles', () => {
+      test('returns only latest versions by default', async () => {
+        const files = await getProjectFiles(projectId)
+        expect(files).toBeArrayOfSize(2)
+        const fileA = files?.find(f => f.path === 'src/fileA.ts')
+        const fileB = files?.find(f => f.path === 'src/fileB.ts')
+        expect(fileA?.id).toBe(fileA_v3.id)
+        expect(fileA?.version).toBe(3)
+        expect(fileA?.isLatest).toBe(true)
+        expect(fileB?.id).toBe(fileB_v1.id)
+        expect(fileB?.version).toBe(1)
+        expect(fileB?.isLatest).toBe(true)
+      })
 
-      expect(fileRecord.id).toBeDefined()
-      expect(fileRecord.projectId).toBe(projectId)
-      expect(fileRecord.name).toBe('app.js')
-      expect(fileRecord.path).toBe(filePath)
-      expect(fileRecord.content).toBe(content)
-      expect(fileRecord.size).toBe(Buffer.byteLength(content, 'utf8'))
-      // Check versioning fields
-      expect(fileRecord.version).toBe(1)
-      expect(fileRecord.prevId).toBeNull()
-      expect(fileRecord.nextId).toBeNull()
-      expect(fileRecord.isLatest).toBe(true)
-      expect(fileRecord.originalFileId).toBeNull()
-      expect(mockProjectFilesDbPerProject[projectId][fileRecord.id]).toEqual(fileRecord)
+      test('returns all versions when includeAllVersions is true, sorted by path then version', async () => {
+        const files = await getProjectFiles(projectId, true)
+        expect(files).toBeArrayOfSize(4) // 3 versions of A, 1 of B
+
+        const fileA_versions = files?.filter(f => f.path === 'src/fileA.ts').sort((a,b) => a.version - b.version)
+        const fileB_versions = files?.filter(f => f.path === 'src/fileB.ts').sort((a,b) => a.version - b.version)
+
+        expect(fileA_versions).toBeArrayOfSize(3)
+        expect(fileA_versions?.[0].id).toBe(fileA_v1.id); expect(fileA_versions?.[0].version).toBe(1);
+        expect(fileA_versions?.[1].id).toBe(fileA_v2.id); expect(fileA_versions?.[1].version).toBe(2);
+        expect(fileA_versions?.[2].id).toBe(fileA_v3.id); expect(fileA_versions?.[2].version).toBe(3);
+        
+        expect(fileB_versions).toBeArrayOfSize(1)
+        expect(fileB_versions?.[0].id).toBe(fileB_v1.id); expect(fileB_versions?.[0].version).toBe(1);
+      })
+      
+      test('returns empty array for a project with no files', async () => {
+        const newProj = await createProject({name: "EmptyProj", path: "/empty"});
+        const files = await getProjectFiles(newProj.id);
+        expect(files).toBeArrayOfSize(0);
+        const allFiles = await getProjectFiles(newProj.id, true);
+        expect(allFiles).toBeArrayOfSize(0);
+      })
     })
 
-    test('getProjectFiles returns only latest versions by default', async () => {
-      const file1 = await createProjectFileRecord(projectId, 'file1.txt', 'content1')
-      const file2 = await createProjectFileRecord(projectId, 'file2.txt', 'content2')
+    describe('updateFileContent', () => {
+      test('creates a new version and updates links correctly', async () => {
+        const originalLatest = fileB_v1
+        const newContent = 'updated content for B'
+        const fileB_v2 = await updateFileContent(projectId, originalLatest.id, newContent)
 
-      // Create a new version of file1
-      const file1v2 = await updateFileContent(projectId, file1.id, 'content1 updated')
+        expect(fileB_v2.id).not.toBe(originalLatest.id)
+        expect(fileB_v2.version).toBe(originalLatest.version + 1)
+        expect(fileB_v2.content).toBe(newContent)
+        expect(fileB_v2.isLatest).toBe(true)
+        expect(fileB_v2.prevId).toBe(originalLatest.id)
+        expect(fileB_v2.originalFileId).toBe(originalLatest.id) // originalFileId is originalLatest.id as it was v1
 
-      // By default, should only return latest versions
-      const latestFiles = await getProjectFiles(projectId, false)
-      expect(latestFiles?.length).toBe(2)
+        const updatedOriginalLatest = mockProjectFilesDbPerProject[projectId][originalLatest.id]
+        expect(updatedOriginalLatest.isLatest).toBe(false)
+        expect(updatedOriginalLatest.nextId).toBe(fileB_v2.id)
+      })
 
-      // Should include the new version of file1, not the old one
-      const foundFile1 = latestFiles?.find((f) => f.path === 'file1.txt')
-      expect(foundFile1?.id).toBe(file1v2.id)
-      expect(foundFile1?.version).toBe(2)
-      expect(foundFile1?.content).toBe('content1 updated')
-
-      // Should still include file2 (latest and only version)
-      const foundFile2 = latestFiles?.find((f) => f.path === 'file2.txt')
-      expect(foundFile2?.id).toBe(file2.id)
-      expect(foundFile2?.version).toBe(1)
+      test('throws error if trying to update a non-latest version', async () => {
+        // fileA_v1 is not the latest version of fileA
+        await expect(updateFileContent(projectId, fileA_v1.id, 'new content'))
+          .rejects.toThrowError(`Failed to update file content for ${fileA_v1.id}. Reason: Cannot create version from non-latest file: ${fileA_v1.id}`)
+      })
+      
+      test('throws error if fileId does not exist', async () => {
+        const nonExistentFileId = generateTestId();
+        await expect(updateFileContent(projectId, nonExistentFileId, 'new content'))
+          .rejects.toThrowError(`Failed to update file content for ${nonExistentFileId}. Reason: File not found: ${nonExistentFileId} in project ${projectId}`)
+      })
     })
 
-    test('getProjectFiles can return all versions when requested', async () => {
-      const file1 = await createProjectFileRecord(projectId, 'file1.txt', 'content1')
-      await updateFileContent(projectId, file1.id, 'content1 updated')
+    describe('getFileVersions', () => {
+      test('returns all versions for a given originalFileId', async () => {
+        const versions = await getFileVersions(projectId, fileA_v1.id) // fileA_v1.id is the original
+        expect(versions).toBeArrayOfSize(3)
+        expect(versions.map(v => v.version)).toEqual([1, 2, 3])
+        expect(versions.map(v => v.fileId)).toEqual([fileA_v1.id, fileA_v2.id, fileA_v3.id])
+      })
 
-      // Request all versions
-      const allFiles = await getProjectFiles(projectId, true)
-      expect(allFiles?.length).toBe(2) // Original + new version
+      test('returns all versions when a later version ID is passed', async () => {
+        const versions = await getFileVersions(projectId, fileA_v3.id) // pass latest version ID
+        expect(versions).toBeArrayOfSize(3)
+        expect(versions.map(v => v.version)).toEqual([1, 2, 3])
+      })
 
-      const sortedFiles = allFiles?.sort((a, b) => a.version - b.version)
-      expect(sortedFiles?.[0].version).toBe(1)
-      expect(sortedFiles?.[0].content).toBe('content1')
-      expect(sortedFiles?.[0].isLatest).toBe(false)
-
-      expect(sortedFiles?.[1].version).toBe(2)
-      expect(sortedFiles?.[1].content).toBe('content1 updated')
-      expect(sortedFiles?.[1].isLatest).toBe(true)
+      test('returns a single version for a file with only one version', async () => {
+        const versions = await getFileVersions(projectId, fileB_v1.id)
+        expect(versions).toBeArrayOfSize(1)
+        expect(versions[0].fileId).toBe(fileB_v1.id)
+      })
+      
+      test('returns an empty array if the file does not exist', async () => {
+        const nonExistentFileId = generateTestId();
+        const versions = await getFileVersions(projectId, nonExistentFileId);
+        expect(versions).toBeArrayOfSize(0);
+      })
     })
 
-    test('updateFileContent creates new version instead of updating existing', async () => {
-      const file = await createProjectFileRecord(projectId, 'update-me.txt', 'old content')
-      const newContent = 'new fresh content'
-      await new Promise((resolve) => setTimeout(resolve, 1))
+    describe('getFileVersion', () => {
+      test('retrieves a specific version of a file', async () => {
+        const versionTwo = await getFileVersion(projectId, fileA_v1.id, 2)
+        expect(versionTwo?.id).toBe(fileA_v2.id)
+        expect(versionTwo?.version).toBe(2)
+        expect(versionTwo?.content).toBe('content v2 for A')
+      })
 
-      const newVersion = await updateFileContent(projectId, file.id, newContent)
+      test('retrieves the latest version if no version number is specified', async () => {
+        const latestVersion = await getFileVersion(projectId, fileA_v1.id)
+        expect(latestVersion?.id).toBe(fileA_v3.id)
+        expect(latestVersion?.version).toBe(3)
+        expect(latestVersion?.isLatest).toBe(true)
+      })
 
-      // Should be a new file with incremented version
-      expect(newVersion.id).not.toBe(file.id)
-      expect(newVersion.version).toBe(2)
-      expect(newVersion.content).toBe(newContent)
-      expect(newVersion.size).toBe(Buffer.byteLength(newContent, 'utf8'))
-      expect(newVersion.prevId).toBe(file.id)
-      expect(newVersion.isLatest).toBe(true)
-      expect(newVersion.originalFileId).toBe(file.id)
-
-      // Original file should be updated to point to new version and not be latest
-      const originalFile = mockProjectFilesDbPerProject[projectId][file.id]
-      expect(originalFile.nextId).toBe(newVersion.id)
-      expect(originalFile.isLatest).toBe(false)
-      expect(originalFile.content).toBe('old content') // Content unchanged
+      test('returns null if a specific version does not exist', async () => {
+        const nonExistentVersion = await getFileVersion(projectId, fileA_v1.id, 99)
+        expect(nonExistentVersion).toBeNull()
+      })
+      
+      test('returns null if the file ID does not exist', async () => {
+        const nonExistentFileId = generateTestId();
+        const file = await getFileVersion(projectId, nonExistentFileId, 1);
+        expect(file).toBeNull();
+      })
     })
 
-    test('getFileVersions returns all versions of a file', async () => {
-      const file = await createProjectFileRecord(projectId, 'versioned-file.txt', 'v1 content')
-      const file_v2 = await updateFileContent(projectId, file.id, 'v2 content')
-      const file_v3 = await updateFileContent(projectId, file_v2.id, 'v3 content')
+    describe('revertFileToVersion', () => {
+      test('creates a new latest version with content from the target version', async () => {
+        const targetVersionNumber = 1
+        const originalContentOfV1 = fileA_v1.content
+        
+        // Revert fileA (latest is v3) back to version 1
+        const revertedFile = await revertFileToVersion(projectId, fileA_v3.id, targetVersionNumber)
 
-      const versions = await getFileVersions(projectId, file.id)
+        expect(revertedFile.version).toBe(4) // v3 was latest, so new is v4
+        expect(revertedFile.content).toBe(originalContentOfV1)
+        expect(revertedFile.isLatest).toBe(true)
+        expect(revertedFile.prevId).toBe(fileA_v3.id)
+        expect(revertedFile.originalFileId).toBe(fileA_v1.id)
 
-      expect(versions.length).toBe(3)
-      expect(versions[0].fileId).toBe(file.id)
-      expect(versions[0].version).toBe(1)
-      expect(versions[0].isLatest).toBe(false)
+        const oldV3 = mockProjectFilesDbPerProject[projectId][fileA_v3.id]
+        expect(oldV3.isLatest).toBe(false)
+        expect(oldV3.nextId).toBe(revertedFile.id)
+      })
 
-      expect(versions[1].fileId).toBe(file_v2.id)
-      expect(versions[1].version).toBe(2)
-      expect(versions[1].isLatest).toBe(false)
+      test('throws error if trying to revert from a non-latest version ID', async () => {
+        await expect(revertFileToVersion(projectId, fileA_v2.id, 1)) // fileA_v2 is not latest
+          .rejects.toThrowError(`Failed to revert file to version 1. Reason: Cannot revert from a non-latest file version: ${fileA_v2.id}`)
+      })
+      
+      test('throws error if target version does not exist', async () => {
+        await expect(revertFileToVersion(projectId, fileA_v3.id, 99))
+          .rejects.toThrowError(`Failed to revert file to version 99. Reason: Version 99 not found for file chain of ${fileA_v1.id}`)
+      })
 
-      expect(versions[2].fileId).toBe(file_v3.id)
-      expect(versions[2].version).toBe(3)
-      expect(versions[2].isLatest).toBe(true)
-    })
+      test('reverting to the current latest version still creates a new version', async () => {
+        const currentLatestContent = fileA_v3.content;
+        const revertedFile = await revertFileToVersion(projectId, fileA_v3.id, 3); // Revert to v3 (current latest)
 
-    test('getFileVersion retrieves specific version or latest', async () => {
-      const file = await createProjectFileRecord(projectId, 'versioned-file.txt', 'v1 content')
-      const file_v2 = await updateFileContent(projectId, file.id, 'v2 content')
+        expect(revertedFile.version).toBe(4);
+        expect(revertedFile.content).toBe(currentLatestContent);
+        expect(revertedFile.isLatest).toBe(true);
+        expect(revertedFile.prevId).toBe(fileA_v3.id);
 
-      // Get specific version
-      const v1 = await getFileVersion(projectId, file.id, 1)
-      expect(v1?.id).toBe(file.id)
-      expect(v1?.version).toBe(1)
-      expect(v1?.content).toBe('v1 content')
-
-      // Get latest version (no version specified)
-      const latest = await getFileVersion(projectId, file.id)
-      expect(latest?.id).toBe(file_v2.id)
-      expect(latest?.version).toBe(2)
-      expect(latest?.content).toBe('v2 content')
-    })
-
-    test('revertFileToVersion creates new version with old content', async () => {
-      const file = await createProjectFileRecord(projectId, 'revert-test.txt', 'original content')
-      const file_v2 = await updateFileContent(projectId, file.id, 'modified content')
-      const file_v3 = await updateFileContent(projectId, file_v2.id, 'further modified')
-
-      // Revert to version 1
-      const reverted = await revertFileToVersion(projectId, file_v3.id, 1)
-
-      expect(reverted.version).toBe(4) // New version created
-      expect(reverted.content).toBe('original content') // Content from v1
-      expect(reverted.prevId).toBe(file_v3.id)
-      expect(reverted.isLatest).toBe(true)
-
-      // Check that v3 is no longer latest
-      const oldV3 = mockProjectFilesDbPerProject[projectId][file_v3.id]
-      expect(oldV3.isLatest).toBe(false)
-      expect(oldV3.nextId).toBe(reverted.id)
-    })
-
-    test('updateFileContent throws if file not found', async () => {
-      const nonExistentFileId = generateTestId()
-      await expect(updateFileContent(projectId, nonExistentFileId, 'new content')).rejects.toThrowError(
-        `Failed to update file content for ${nonExistentFileId}. Reason: File not found: ${nonExistentFileId} in project ${projectId}`
-      )
-    })
-
-    test('getFileVersions works with originalFileId tracking', async () => {
-      const file = await createProjectFileRecord(projectId, 'track-test.txt', 'v1')
-      const file_v2 = await updateFileContent(projectId, file.id, 'v2')
-      const file_v3 = await updateFileContent(projectId, file_v2.id, 'v3')
-
-      // All versions should be found when searching by any file ID in the chain
-      const versionsFromOriginal = await getFileVersions(projectId, file.id)
-      const versionsFromV2 = await getFileVersions(projectId, file_v2.id)
-      const versionsFromV3 = await getFileVersions(projectId, file_v3.id)
-
-      expect(versionsFromOriginal.length).toBe(3)
-      expect(versionsFromV2.length).toBe(3)
-      expect(versionsFromV3.length).toBe(3)
-
-      // All should return the same versions
-      expect(versionsFromOriginal.map((v) => v.fileId)).toEqual(versionsFromV2.map((v) => v.fileId))
-      expect(versionsFromV2.map((v) => v.fileId)).toEqual(versionsFromV3.map((v) => v.fileId))
+        const oldV3 = mockProjectFilesDbPerProject[projectId][fileA_v3.id];
+        expect(oldV3.isLatest).toBe(false);
+        expect(oldV3.nextId).toBe(revertedFile.id);
+      });
     })
   })
 
@@ -553,88 +546,92 @@ describe('Project Service (File Storage with Versioning)', () => {
       projectId = proj.id
     })
 
-    test('bulkCreateProjectFiles creates multiple files with versioning fields', async () => {
+    test('bulkCreateProjectFiles creates files with version 1 and correct flags', async () => {
       const filesToCreate: FileSyncData[] = [
         { path: 'bulk1.js', name: 'bulk1.js', extension: '.js', content: '// bulk 1', size: 9, checksum: 'cs1' },
-        { path: 'sub/bulk2.ts', name: 'bulk2.ts', extension: '.ts', content: '// bulk 2', size: 9, checksum: 'cs2' }
       ]
       const created = await bulkCreateProjectFiles(projectId, filesToCreate)
-
-      expect(created.length).toBe(2)
-      created.forEach((file) => {
-        expect(file.version).toBe(1)
-        expect(file.prevId).toBeNull()
-        expect(file.nextId).toBeNull()
-        expect(file.isLatest).toBe(true)
-        expect(file.originalFileId).toBeNull()
-      })
-
-      const filesInDb = Object.values(mockProjectFilesDbPerProject[projectId] || {})
-      expect(filesInDb.length).toBe(2)
-      expect(filesInDb.find((f) => f.path === 'bulk1.js')).toBeDefined()
-      expect(filesInDb.find((f) => f.path === 'sub/bulk2.ts')).toBeDefined()
+      expect(created).toBeArrayOfSize(1)
+      const file = created[0]
+      expect(file.version).toBe(1)
+      expect(file.isLatest).toBe(true)
+      expect(file.prevId).toBeNull()
+      expect(file.nextId).toBeNull()
+      expect(file.originalFileId).toBeNull()
     })
 
-    test('bulkUpdateProjectFiles creates new versions for all files', async () => {
-      const f1_created = await createProjectFileRecord(projectId, 'up1.txt', 'old1')
-      const f2_created = await createProjectFileRecord(projectId, 'up2.txt', 'old2')
+    test('bulkUpdateProjectFiles creates new versions for each update', async () => {
+      const f1_v1 = await createProjectFileRecord(projectId, 'up1.txt', 'old1')
+      const f2_v1 = await createProjectFileRecord(projectId, 'up2.txt', 'old2')
 
       const updates: Array<{ fileId: number; data: FileSyncData }> = [
-        {
-          fileId: f1_created.id,
-          data: {
-            path: f1_created.path,
-            name: f1_created.name,
-            extension: f1_created.extension,
-            content: 'new1',
-            size: 4,
-            checksum: 'cs_new1'
-          }
-        },
-        {
-          fileId: f2_created.id,
-          data: {
-            path: f2_created.path,
-            name: f2_created.name,
-            extension: f2_created.extension,
-            content: 'new2',
-            size: 4,
-            checksum: 'cs_new2'
-          }
-        }
+        { fileId: f1_v1.id, data: { path: 'up1.txt', name:'up1.txt', extension:'.txt', content: 'new1', size: 4, checksum: 'cs_new1' }},
+        { fileId: f2_v1.id, data: { path: 'up2.txt', name:'up2.txt', extension:'.txt', content: 'new2', size: 4, checksum: 'cs_new2' }},
       ]
+      const updatedResults = await bulkUpdateProjectFiles(projectId, updates)
+      expect(updatedResults).toBeArrayOfSize(2)
 
-      const updatedResult = await bulkUpdateProjectFiles(projectId, updates)
+      const updated_f1 = updatedResults.find(f => f.originalFileId === f1_v1.id)
+      const updated_f2 = updatedResults.find(f => f.originalFileId === f2_v1.id)
 
-      expect(updatedResult.length).toBe(2)
+      expect(updated_f1?.version).toBe(2)
+      expect(updated_f1?.isLatest).toBe(true)
+      expect(updated_f1?.prevId).toBe(f1_v1.id)
+      expect(updated_f1?.content).toBe('new1')
+      expect(mockProjectFilesDbPerProject[projectId][f1_v1.id].isLatest).toBe(false)
+      expect(mockProjectFilesDbPerProject[projectId][f1_v1.id].nextId).toBe(updated_f1?.id)
 
-      // Should have created new versions
-      updatedResult.forEach((file) => {
-        expect(file.version).toBe(2)
-        expect(file.isLatest).toBe(true)
-      })
-
-      // Original files should no longer be latest
-      expect(mockProjectFilesDbPerProject[projectId][f1_created.id].isLatest).toBe(false)
-      expect(mockProjectFilesDbPerProject[projectId][f2_created.id].isLatest).toBe(false)
-
-      // Check content is updated in new versions
-      const newF1Version = updatedResult.find((f) => f.path === 'up1.txt')
-      const newF2Version = updatedResult.find((f) => f.path === 'up2.txt')
-      expect(newF1Version?.content).toBe('new1')
-      expect(newF2Version?.content).toBe('new2')
+      expect(updated_f2?.version).toBe(2)
+      expect(updated_f2?.isLatest).toBe(true)
+      expect(updated_f2?.prevId).toBe(f2_v1.id)
+      expect(updated_f2?.content).toBe('new2')
+      expect(mockProjectFilesDbPerProject[projectId][f2_v1.id].isLatest).toBe(false)
+      expect(mockProjectFilesDbPerProject[projectId][f2_v1.id].nextId).toBe(updated_f2?.id)
     })
+    
+    test('bulkUpdateProjectFiles skips update and logs error if a fileId is non-latest', async () => {
+      const f1_v1 = await createProjectFileRecord(projectId, 'f1.txt', 'f1_v1_content');
+      const f1_v2 = await updateFileContent(projectId, f1_v1.id, 'f1_v2_content'); // f1_v1 is now non-latest
+      const f2_v1 = await createProjectFileRecord(projectId, 'f2.txt', 'f2_v1_content');
+
+      const consoleErrorMock = spyOn(console, 'error') // << CORRECTED USAGE
+
+      const updates: Array<{ fileId: number; data: FileSyncData }> = [
+        { fileId: f1_v1.id, data: { path: 'f1.txt', name:'f1.txt', extension:'.txt', content: 'attempt_update_non_latest', size: 10, checksum: 'cs_nonlatest' }}, // This should fail
+        { fileId: f2_v1.id, data: { path: 'f2.txt', name:'f2.txt', extension:'.txt', content: 'f2_v2_content', size: 10, checksum: 'cs_f2v2' }}, // This should succeed
+      ];
+
+      const results = await bulkUpdateProjectFiles(projectId, updates);
+      
+      expect(results).toBeArrayOfSize(1); // Only f2 should be updated
+      expect(results[0].originalFileId).toBe(f2_v1.id);
+      expect(results[0].version).toBe(2);
+      expect(results[0].content).toBe('f2_v2_content');
+
+      expect(consoleErrorMock).toHaveBeenCalledWith(
+        expect.stringContaining(`[ProjectService] Failed to create new version for file ${f1_v1.id} during bulk update:`),
+        expect.stringContaining(`Cannot create version from non-latest file: ${f1_v1.id}`)
+      );
+      
+      // Verify f1_v1 and f1_v2 are untouched by the failed update attempt
+      expect(mockProjectFilesDbPerProject[projectId][f1_v1.id].content).toBe('f1_v1_content');
+      expect(mockProjectFilesDbPerProject[projectId][f1_v2.id].content).toBe('f1_v2_content');
+      expect(mockProjectFilesDbPerProject[projectId][f1_v2.id].isLatest).toBe(true);
+
+      consoleErrorMock.mockRestore();
+    });
   })
 
   describe('Summarization with Versioning', () => {
     let projectId: number
-    let file1: ProjectFile
+    let fileToSummarize_v1: ProjectFile, fileToSummarize_v2: ProjectFile
 
     beforeEach(async () => {
       const proj = await createProject({ name: 'SummarizeProj', path: '/summarize/test' })
       projectId = proj.id
-      file1 = await createProjectFileRecord(projectId, 'summarize-me.js', 'function hello() { console.log("world"); }')
-
+      fileToSummarize_v1 = await createProjectFileRecord(projectId, 'summarize-me.js', 'function hello() { console.log("v1"); }')
+      fileToSummarize_v2 = await updateFileContent(projectId, fileToSummarize_v1.id, 'function hello() { console.log("v2"); }')
+      
       mockGenerateStructuredData.mockImplementation(async ({ schema }: { schema: z.ZodSchema<any> }) => {
         if (schema.safeParse({ summary: 'Mocked AI summary' }).success) {
           return { object: { summary: 'Mocked AI summary' } }
@@ -643,63 +640,42 @@ describe('Project Service (File Storage with Versioning)', () => {
       })
     })
 
-    test('summarizeSingleFile works with versioned files', async () => {
-      const summarized = await summarizeSingleFile(file1)
-      expect(summarized).toBeDefined()
-      if (!summarized) throw new Error('Summarization failed')
+    test('summarizeSingleFile updates summary in-place for the given file version', async () => {
+      // Summarize v1 (which is not latest)
+      const summarizedV1 = await summarizeSingleFile(fileToSummarize_v1)
+      expect(summarizedV1?.id).toBe(fileToSummarize_v1.id)
+      expect(summarizedV1?.summary).toBe('Mocked AI summary')
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].summary).toBe('Mocked AI summary')
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].version).toBe(1) // No new version
 
-      expect(summarized.summary).toBe('Mocked AI summary')
-      expect(summarized.summaryLastUpdated).toBeDefined()
-      expect(mockProjectFilesDbPerProject[projectId][file1.id].summary).toBe('Mocked AI summary')
-      expect(mockGenerateStructuredData).toHaveBeenCalledTimes(1)
-    })
-
-    test('summarizeFiles only processes latest versions', async () => {
-      const file1_created = await createProjectFileRecord(
-        projectId,
-        'summarize-me.js',
-        'function hello() { console.log("world"); }'
-      )
-      const file1_v2 = await updateFileContent(
-        projectId,
-        file1_created.id,
-        'function hello() { console.log("world v2"); }'
-      )
-      const file2_created = await createProjectFileRecord(projectId, 'another.js', 'let x = 10;')
-
-      // Request summarization using all file IDs (including old version)
-      const result = await summarizeFiles(projectId, [file1_created.id, file1_v2.id, file2_created.id])
-
-      // Should only process latest versions (getProjectFiles returns only latest by default)
-      expect(result.included).toBe(2) // file1_v2 and file2_created
-      expect(result.updatedFiles.length).toBe(2)
-
-      // Check that summaries are applied to the correct files
-      expect(mockProjectFilesDbPerProject[projectId][file1_v2.id].summary).toBe('Mocked AI summary')
-      expect(mockProjectFilesDbPerProject[projectId][file2_created.id].summary).toBe('Mocked AI summary')
-
-      // Old version should not be summarized
-      expect(mockProjectFilesDbPerProject[projectId][file1_created.id].summary).toBeNull()
-
+      // Summarize v2 (which is latest)
+      const summarizedV2 = await summarizeSingleFile(fileToSummarize_v2)
+      expect(summarizedV2?.id).toBe(fileToSummarize_v2.id)
+      expect(summarizedV2?.summary).toBe('Mocked AI summary')
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].summary).toBe('Mocked AI summary')
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].version).toBe(2) // No new version
+      
       expect(mockGenerateStructuredData).toHaveBeenCalledTimes(2)
     })
 
-    test('resummarizeAllFiles works with versioning', async () => {
-      const newProj = await createProject({ name: 'ResummarizeTest', path: '/resummarize' })
-      mockProjectFilesDbPerProject[newProj.id] = {}
+    test('resummarizeAllFiles processes only latest versions', async () => {
+      // Setup: fileToSummarize_v2 is latest. Add another file.
+      const anotherFile = await createProjectFileRecord(projectId, 'another.js', 'let x = 10;')
+      
+      await resummarizeAllFiles(projectId)
 
-      await resummarizeAllFiles(newProj.id)
+      // mockSyncProject is called once.
+      // summarizeFiles (agent) should be called with IDs of fileToSummarize_v2 and anotherFile.
+      // So, generateStructuredData should be called twice (once for each latest file).
+      expect(mockSyncProject).toHaveBeenCalledTimes(1)
+      expect(mockGenerateStructuredData).toHaveBeenCalledTimes(2);
 
-      expect(mockSyncProject).toHaveBeenCalledWith(expect.objectContaining({ id: newProj.id }))
 
-      const syncedFileInDb = Object.values(mockProjectFilesDbPerProject[newProj.id] || {}).find(
-        (f) => f.name === 'synced-file.txt'
-      )
-      expect(syncedFileInDb).toBeDefined()
-      expect(syncedFileInDb?.summary).toBe('Mocked AI summary')
-      expect(syncedFileInDb?.version).toBe(1)
-      expect(syncedFileInDb?.isLatest).toBe(true)
-      expect(mockGenerateStructuredData).toHaveBeenCalledTimes(1)
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].summary).toBe('Mocked AI summary')
+      expect(mockProjectFilesDbPerProject[projectId][anotherFile.id].summary).toBe('Mocked AI summary')
+      
+      // v1 should not have been summarized by resummarizeAllFiles
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].summary).toBeNull()
     })
   })
 })

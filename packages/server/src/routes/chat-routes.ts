@@ -319,6 +319,49 @@ const deleteChatRoute = createRoute({
   }
 })
 
+// DELETE /chats/{chatId}/messages/{messageId}/attachments/{attachmentId}
+const deleteAttachmentParamsSchema = z.object({
+  chatId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: 'chatId', in: 'path' } }),
+  messageId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: 'messageId', in: 'path' } }),
+  attachmentId: z.coerce
+    .number()
+    .int()
+    .positive()
+    .openapi({ param: { name: 'attachmentId', in: 'path' } })
+})
+
+const deleteAttachmentRoute = createRoute({
+  method: 'delete',
+  path: '/api/chats/{chatId}/messages/{messageId}/attachments/{attachmentId}',
+  tags: ['Chats', 'Attachments'],
+  summary: 'Delete a file attachment from a chat message',
+  request: {
+    params: deleteAttachmentParamsSchema
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: OperationSuccessResponseSchema } },
+      description: 'Attachment deleted successfully'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Chat, message, or attachment not found'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
 // POST /chats/{chatId}/upload
 const uploadFileRoute = createRoute({
   method: 'post',
@@ -399,67 +442,6 @@ export const chatRoutes = new OpenAPIHono()
       200
     )
   })
-  .openapi(postAiChatSdkRoute, async (c) => {
-    const { chatId, userMessage, options, systemMessage, tempId } = c.req.valid('json')
-
-    const provider = options?.provider as APIProviders
-    const model = options?.model as string
-
-    console.log(`[Hono AI Chat] /ai/chat request: ChatID=${chatId}, Provider=${provider}, Model=${model}`)
-
-    try {
-      const unifiedOptions = { ...options, model }
-
-      c.header('Content-Type', 'text/event-stream; charset=utf-8')
-      c.header('Cache-Control', 'no-cache')
-      c.header('Connection', 'keep-alive')
-
-      const readableStream = await handleChatMessage({
-        chatId,
-        userMessage,
-        options: unifiedOptions,
-        systemMessage,
-        tempId
-      })
-
-      return stream(c, async (streamInstance) => {
-        await streamInstance.pipe(readableStream.toDataStream())
-      })
-    } catch (error: any) {
-      console.error(`[Hono AI Chat] /ai/chat Error:`, error)
-      if (error instanceof ApiError) {
-        throw error
-      }
-      if (error.message?.includes('not found') || error.code === 'CHAT_NOT_FOUND') {
-        // Check code too
-        throw new ApiError(
-          404,
-          `Chat session with ID ${chatId} not found. Details: ${error.message}`,
-          'CHAT_NOT_FOUND',
-          { originalError: error.message }
-        )
-      }
-      if (error.message?.toLowerCase().includes('api key') || error.code === 'MISSING_API_KEY') {
-        throw new ApiError(400, error.message, 'MISSING_API_KEY', { originalError: error.message })
-      }
-      // Add more specific error conversions if identifiable from `handleChatMessage`
-      throw new ApiError(500, error.message || 'Error processing AI chat stream', 'AI_STREAM_ERROR', {
-        originalError: error.message
-      })
-    }
-  })
-  .openapi(forkChatRoute, async (c) => {
-    const { chatId } = c.req.valid('param')
-    const { excludedMessageIds } = c.req.valid('json')
-    const newChat = await chatService.forkChat(chatId, excludedMessageIds)
-    return c.json(
-      {
-        success: true,
-        data: newChat
-      } satisfies z.infer<typeof ChatResponseSchema>,
-      201
-    )
-  })
   .openapi(forkChatFromMessageRoute, async (c) => {
     const { chatId, messageId } = c.req.valid('param')
     const { excludedMessageIds } = c.req.valid('json')
@@ -530,15 +512,110 @@ export const chatRoutes = new OpenAPIHono()
     }
 
     // Save the file and create attachment record
+    // Use a temporary messageId (timestamp) since the actual message isn't created yet
+    const tempMessageId = Date.now()
     const attachment = await attachmentStorage.saveFile(chatId, file)
+
+    // Generate the URL for accessing the file
+    const fileUrl = `/api/files/chats/${chatId}/${tempMessageId}/${attachment.id}/${encodeURIComponent(attachment.fileName)}`
+
+    // Create the response with the correct schema format
+    const attachmentResponse = {
+      id: attachment.id,
+      fileName: attachment.fileName,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      url: fileUrl,
+      created: attachment.created
+    }
 
     return c.json(
       {
         success: true,
-        data: attachment
+        data: attachmentResponse
       } satisfies z.infer<typeof FileUploadResponseSchema>,
       201
     )
+  })
+  .openapi(deleteAttachmentRoute, async (c) => {
+    const { chatId, messageId, attachmentId } = c.req.valid('param')
+
+    // Check if chat exists
+    const chat = await chatService.getChatById(chatId)
+    if (!chat) {
+      throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND')
+    }
+
+    // For the delete operation, we need the fileName from the attachment
+    // Since we don't have a direct way to get the fileName from just the IDs,
+    // we'll need to either store attachment metadata or get it from the message
+    // For now, we'll use a wildcard approach or require the fileName in the URL
+
+    // Try to delete the file using a pattern match
+    // This is a simplified approach - in a real implementation you might want to
+    // store attachment metadata in a database
+    const success = await attachmentStorage.deleteFileById(chatId, messageId, attachmentId)
+
+    if (!success) {
+      throw new ApiError(404, 'Attachment not found', 'ATTACHMENT_NOT_FOUND')
+    }
+
+    return c.json(
+      {
+        success: true,
+        message: 'Attachment deleted successfully'
+      } satisfies z.infer<typeof OperationSuccessResponseSchema>,
+      200
+    )
+  })
+  .openapi(postAiChatSdkRoute, async (c) => {
+    const { chatId, userMessage, options, systemMessage, tempId } = c.req.valid('json')
+
+    const provider = options?.provider as APIProviders
+    const model = options?.model as string
+
+    console.log(`[Hono AI Chat] /ai/chat request: ChatID=${chatId}, Provider=${provider}, Model=${model}`)
+
+    try {
+      const unifiedOptions = { ...options, model }
+
+      c.header('Content-Type', 'text/event-stream; charset=utf-8')
+      c.header('Cache-Control', 'no-cache')
+      c.header('Connection', 'keep-alive')
+
+      const readableStream = await handleChatMessage({
+        chatId,
+        userMessage,
+        options: unifiedOptions,
+        systemMessage,
+        tempId
+      })
+
+      return stream(c, async (streamInstance) => {
+        await streamInstance.pipe(readableStream.toDataStream())
+      })
+    } catch (error: any) {
+      console.error(`[Hono AI Chat] /ai/chat Error:`, error)
+      if (error instanceof ApiError) {
+        throw error
+      }
+      if (error.message?.includes('not found') || error.code === 'CHAT_NOT_FOUND') {
+        // Check code too
+        throw new ApiError(
+          404,
+          `Chat session with ID ${chatId} not found. Details: ${error.message}`,
+          'CHAT_NOT_FOUND',
+          { originalError: error.message }
+        )
+      }
+      if (error.message?.toLowerCase().includes('api key') || error.code === 'MISSING_API_KEY') {
+        throw new ApiError(400, error.message, 'MISSING_API_KEY', { originalError: error.message })
+      }
+      // Add more specific error conversions if identifiable from `handleChatMessage`
+      throw new ApiError(500, error.message || 'Error processing AI chat stream', 'AI_STREAM_ERROR', {
+        originalError: error.message
+      })
+    }
   })
 
 export type ChatRouteTypes = typeof chatRoutes

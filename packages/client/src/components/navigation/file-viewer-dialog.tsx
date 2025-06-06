@@ -39,7 +39,7 @@ type FileViewerDialogProps = {
   viewedFile?: ProjectFile
   markdownText?: string
   onClose?: () => void
-  onSave?: (content: string) => void
+  onSave?: (content: string) => Promise<void> | void
   filePath?: string
   projectId?: number
 }
@@ -107,9 +107,9 @@ export function FileViewerDialog({
   // File versioning hooks - only call when we have valid IDs
   const originalFileId = viewedFile?.originalFileId || viewedFile?.id
   const hasValidIds = projectId && projectId > 0 && originalFileId && originalFileId > 0
-  
+
   const { data: fileVersions, isLoading: versionsLoading } = useGetFileVersions(
-    projectId || 0, 
+    projectId || 0,
     originalFileId || 0
   )
   const { data: selectedVersionData } = useGetFileVersion(
@@ -173,7 +173,6 @@ export function FileViewerDialog({
       // Fallback to the original onSave prop for backward compatibility
       onSave(editedContent)
     }
-    setIsEditingFile(false)
   }
 
   const handleRevertToVersion = (version: number) => {
@@ -231,9 +230,8 @@ export function FileViewerDialog({
       }}
     >
       <DialogContent
-        className={`${
-          isFullscreen ? 'w-screen h-screen max-w-none max-h-none m-0 p-0 rounded-none' : 'max-w-4xl max-h-[80vh]'
-        } overflow-auto flex flex-col`}
+        className={`${isFullscreen ? 'w-screen h-screen max-w-none max-h-none m-0 p-0 rounded-none' : 'max-w-4xl max-h-[80vh]'
+          } overflow-auto flex flex-col`}
       >
         <DialogHeader className={isFullscreen ? 'p-4' : ''}>
           <div className='flex items-center justify-between'>
@@ -356,9 +354,8 @@ export function FileViewerDialog({
                           return (
                             <div
                               key={version.fileId}
-                              className={`p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors ${
-                                selectedHistoryVersion === version.version ? 'bg-muted border-primary' : ''
-                              }`}
+                              className={`p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors ${selectedHistoryVersion === version.version ? 'bg-muted border-primary' : ''
+                                }`}
                               onClick={() => {
                                 setSelectedHistoryVersion(version.version)
                                 // Reset diff view when selecting a new version
@@ -526,10 +523,9 @@ export function FileViewerDialog({
                     onClick={() => copyToClipboard(markdownText)}
                     className={`
                       absolute top-2 right-2 text-xs px-2 py-1 border rounded shadow z-10
-                      ${
-                        isDarkMode
-                          ? 'bg-neutral-800 text-neutral-100 hover:bg-neutral-700'
-                          : 'bg-neutral-50 text-neutral-900 hover:bg-neutral-200'
+                      ${isDarkMode
+                        ? 'bg-neutral-800 text-neutral-100 hover:bg-neutral-700'
+                        : 'bg-neutral-50 text-neutral-900 hover:bg-neutral-200'
                       }
                     `}
                     title='Copy code'
@@ -591,13 +587,14 @@ export function FileViewerDialog({
                   {updateFileContent.isPending ? 'Saving...' : 'Save'}
                 </Button>
               </>
-            )}
-          </div>
+            )
+            }
+          </div >
           <Button variant='outline' onClick={closeFileViewer}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogFooter >
+      </DialogContent >
+    </Dialog >
   )
 }

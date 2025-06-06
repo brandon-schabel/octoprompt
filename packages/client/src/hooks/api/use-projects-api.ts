@@ -15,8 +15,8 @@ export {
   useInvalidateProjects,
   useGetFileVersions,
   useGetFileVersion,
-  useUpdateFileContent,
-  useRevertFileToVersion
+  useRevertFileToVersion,
+  useUpdateFileContent
 } from '../api-hooks'
 
 // Type re-exports for backward compatibility
