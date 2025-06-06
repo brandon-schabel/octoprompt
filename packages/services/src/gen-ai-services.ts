@@ -21,18 +21,17 @@ let providerKeysCache: ProviderKey[] | null = null
 
 // Helper function to check if a model supports multimodal content (images, files)
 function isMultimodalModel(provider: string, model?: string): boolean {
-  // const multimodalModels = {
-  //   'openai': ['gpt-4-vision-preview', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
-  //   'anthropic': ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3-5-sonnet-20241022'],
-  //   'google': ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro-vision'],
-  //   'openrouter': ['openai/gpt-4o', 'openai/gpt-4o-mini', 'anthropic/claude-3-opus', 'anthropic/claude-3-sonnet', 'anthropic/claude-3-haiku', 'google/gemini-pro-vision']
-  // }
+  const multimodalModels = {
+    'openai': ['gpt-4-vision-preview', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+    'anthropic': ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3-5-sonnet-20241022'],
+    'google': ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro-vision', 'gemini-2.0-flash-exp'],
+    'openrouter': ['openai/gpt-4o', 'openai/gpt-4o-mini', 'anthropic/claude-3-opus', 'anthropic/claude-3-sonnet', 'anthropic/claude-3-haiku', 'google/gemini-pro-vision']
+  }
 
-  // if (!model) return false
+  if (!model) return false
 
-  // const providerModels = multimodalModels[provider as keyof typeof multimodalModels]
-  // return providerModels ? providerModels.some(m => model.includes(m)) : false
-  return true
+  const providerModels = multimodalModels[provider as keyof typeof multimodalModels]
+  return providerModels ? providerModels.some(m => model.includes(m)) : false
 }
 
 export async function handleChatMessage({
@@ -114,6 +113,12 @@ export async function handleChatMessage({
     })
 
     userCoreMessage.content = content
+  } else if (currentMessageAttachments && currentMessageAttachments.length > 0) {
+    // Log a warning if attachments were provided but model doesn't support them
+    console.warn(`Model ${finalOptions.model} from provider ${finalOptions.provider} does not support multimodal content. Attachments will be ignored.`)
+    if (debug) {
+      console.debug('Skipped attachments:', currentMessageAttachments.map(a => a.fileName || a.id))
+    }
   }
 
   messagesToProcess.push(userCoreMessage)
