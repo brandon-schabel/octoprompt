@@ -104,9 +104,6 @@ async function buildProject() {
     const platformDir = join(distDir, outputDirName)
     mkdirSync(platformDir, { recursive: true })
 
-    // Copy prompts folder to platform directory
-    await $`cp -r ${join(distDir, 'prompts')} ${join(platformDir, 'prompts')}`
-
     // Copy client-dist folder to platform directory
     await $`cp -r ${clientBuildOutputDir} ${join(platformDir, 'client-dist')}`
 
@@ -157,7 +154,6 @@ async function createBunBundleZip(sourceDir: string, outputPath: string): Promis
     archive.file(join(sourceDir, 'server.js'), { name: 'server.js' })
     archive.file(join(sourceDir, 'package.json'), { name: 'package.json' })
     archive.directory(join(sourceDir, 'client-dist'), 'client-dist')
-    archive.directory(join(sourceDir, 'prompts'), 'prompts')
     archive.finalize()
   })
 }
