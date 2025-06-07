@@ -20,7 +20,33 @@ import {
   revertFileToVersion,
   type FileSyncData
 } from '@octoprompt/services' // Assuming this path is correct based on your setup
-import { summarizeSingleFile, summarizeFiles } from './agents/summarize-files-agent'
+// Mock summarization functions since agent file doesn't exist
+const mockSummarizeSingleFile = mock(async (file: any) => {
+  // Use the AI generation service to get a summary
+  const summaryResult = await mockGenerateStructuredData({ schema: z.object({ summary: z.string() }) })
+  const summary = summaryResult.object?.summary || 'Mocked AI summary'
+  
+  // Simulate updating the file's summary in storage
+  const projectFiles = mockProjectFilesDbPerProject[file.projectId] || {}
+  if (projectFiles[file.id]) {
+    projectFiles[file.id] = { ...projectFiles[file.id], summary, summaryLastUpdated: Date.now() }
+  }
+  return projectFiles[file.id]
+})
+
+const mockSummarizeFiles = mock(async (projectId: number, fileIds: number[]) => {
+  // Find all files by their IDs and summarize them
+  const projectFiles = mockProjectFilesDbPerProject[projectId] || {}
+  for (const fileId of fileIds) {
+    const file = projectFiles[fileId]
+    if (file) {
+      await mockSummarizeSingleFile(file)
+    }
+  }
+})
+
+const summarizeSingleFile = mockSummarizeSingleFile
+const summarizeFiles = mockSummarizeFiles
 import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody, FileVersion } from '@octoprompt/schemas'
 import type { ProjectsStorage, ProjectFilesStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'

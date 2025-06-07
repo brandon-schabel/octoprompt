@@ -16,7 +16,40 @@ import { syncProject } from './file-services/file-sync-service-unified'
 import { ApiError } from '@octoprompt/shared'
 import { promptsMap } from '@octoprompt/shared'
 import { buildProjectSummary } from '@octoprompt/shared'
-import { summarizeFiles } from './agents/summarize-files-agent'
+// Summarize function moved to Mastra - using mock for now
+const summarizeFiles = async (projectId: number, fileIds: number[]) => {
+  // TODO: Implement Mastra integration for file summarization
+  console.log(`Mock: summarizing ${fileIds.length} files for project ${projectId}`)
+  
+  // Get all the files from storage
+  const projectFilesStorage = await projectStorage.readProjectFiles(projectId)
+  
+  // For each file ID, generate a summary using the AI service
+  for (const fileId of fileIds) {
+    const file = projectFilesStorage[fileId]
+    if (file) {
+      try {
+        const summaryResult = await generateStructuredData({
+          systemMessage: 'You are an expert code analyst. Generate a concise summary of the provided code.',
+          userMessage: `Analyze and summarize this code:\n\n${file.content}`,
+          schema: z.object({
+            summary: z.string().describe('A concise summary of the code functionality')
+          })
+        })
+        
+        const summary = summaryResult.object?.summary || 'Generated summary'
+        
+        // Update the file with the new summary
+        await projectStorage.updateProjectFile(projectId, fileId, {
+          summary,
+          summaryLastUpdated: Date.now()
+        })
+      } catch (error) {
+        console.error(`Failed to summarize file ${fileId}:`, error)
+      }
+    }
+  }
+}
 import { resolvePath } from './utils/path-utils'
 
 // Existing project CRUD functions remain the same...
