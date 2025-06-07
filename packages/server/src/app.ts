@@ -1,7 +1,6 @@
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { ApiError } from '@octoprompt/shared'
-import { agentCoderRoutes } from './routes/agent-coder-routes' // Import the new routes
 import { chatRoutes } from './routes/chat-routes'
 import { genAiRoutes } from './routes/gen-ai-routes'
 import { ticketRoutes } from './routes/ticket-routes'
@@ -11,6 +10,7 @@ import { adminRoutes } from './routes/admin-routes'
 import { aiFileChangeRoutes } from './routes/ai-file-change-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { fileServingRoutes } from './routes/file-serving-routes'
+import { mastraRoutes } from './routes/mastra-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { corsConfig } from '@octoprompt/services/src/constants/server-config'
@@ -60,7 +60,7 @@ app.route('/', adminRoutes)
 app.route('/', aiFileChangeRoutes)
 app.route('/', promptRoutes)
 app.route('/', genAiRoutes)
-app.route('/', agentCoderRoutes)
+app.route('/', mastraRoutes)
 // Global error handler
 app.onError((err, c) => {
   console.error('[ErrorHandler]', err)

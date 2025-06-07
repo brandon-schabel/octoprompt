@@ -95,15 +95,6 @@ import {
   RemoveSummariesResponseSchema as RemoveSummariesResponseSchemaZ
 } from '@octoprompt/schemas'
 
-// Import schemas and types for the new services
-import {
-  AgentCoderRunRequestSchema,
-  AgentCoderRunResponseSchema,
-  AgentDataLogSchema,
-  type AgentCoderRunRequest,
-  type AgentCoderRunResponse,
-  type AgentDataLog
-} from '@octoprompt/schemas'
 
 import {
   AIFileChangeRecordSchema,
@@ -951,62 +942,6 @@ export class AdminService extends BaseApiClient {
   }
 }
 
-// Agent Coder Service
-export class AgentCoderService extends BaseApiClient {
-  async runAgentCoder(projectId: number, data: AgentCoderRunRequest) {
-    const validatedData = this.validateBody(AgentCoderRunRequestSchema, data)
-    const result = await this.request('POST', `/projects/${projectId}/agent-coder`, {
-      body: validatedData,
-      responseSchema: AgentCoderRunResponseSchema
-    })
-    return result as AgentCoderRunResponse
-  }
-
-  async listAgentRuns(projectId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs`, {
-      responseSchema: z.object({
-        success: z.boolean(),
-        data: z.array(z.number())
-      })
-    })
-    return result as { success: boolean; data: number[] }
-  }
-
-  async getAgentRunLogs(projectId: number, agentJobId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/logs`, {
-      responseSchema: z.array(z.record(z.unknown()))
-    })
-    return result as Array<Record<string, unknown>>
-  }
-
-  async getAgentRunData(projectId: number, agentJobId: number) {
-    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/data`, {
-      responseSchema: AgentDataLogSchema
-    })
-    return result as AgentDataLog
-  }
-
-  async confirmAgentRun(projectId: number, agentJobId: number) {
-    const result = await this.request('POST', `/agent-coder/project/${projectId}/runs/${agentJobId}/confirm`, {
-      responseSchema: z.object({
-        success: z.literal(true),
-        message: z.string(),
-        writtenFiles: z.array(z.string())
-      })
-    })
-    return result as { success: true; message: string; writtenFiles: string[] }
-  }
-
-  async deleteAgentRun(agentJobId: number) {
-    const result = await this.request('DELETE', `/agent-coder/runs/${agentJobId}`, {
-      responseSchema: z.object({
-        success: z.literal(true),
-        message: z.string()
-      })
-    })
-    return result as { success: true; message: string }
-  }
-}
 
 // AI File Change Service
 export class AiFileChangeService extends BaseApiClient {
@@ -1167,7 +1102,6 @@ export class OctoPromptClient {
   public readonly keys: ProviderKeyService
   public readonly tickets: TicketService
   public readonly admin: AdminService
-  public readonly agentCoder: AgentCoderService
   public readonly aiFileChanges: AiFileChangeService
   public readonly genAi: GenAiService
   public readonly mastra: MastraService
@@ -1179,7 +1113,6 @@ export class OctoPromptClient {
     this.keys = new ProviderKeyService(config)
     this.tickets = new TicketService(config)
     this.admin = new AdminService(config)
-    this.agentCoder = new AgentCoderService(config)
     this.aiFileChanges = new AiFileChangeService(config)
     this.genAi = new GenAiService(config)
     this.mastra = new MastraService(config)

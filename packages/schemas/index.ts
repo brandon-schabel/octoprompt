@@ -1,4 +1,3 @@
-export * from './src/agent-coder.schemas'
 export * from './src/ai-file-change.schemas'
 export * from './src/chat.schemas'
 export * from './src/common.schemas'

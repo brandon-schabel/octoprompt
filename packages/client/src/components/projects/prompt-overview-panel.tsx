@@ -29,7 +29,6 @@ import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Binoculars, Bot, Copy, FileText, MessageCircleCode, Search } from 'lucide-react'
 import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-api'
-import { AgentCoderControlDialog } from './agent-coding-dialog'
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
@@ -46,7 +45,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
   function PromptOverviewPanel({ className }, ref) {
     const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
     const updateActiveProjectTab = useUpdateActiveProjectTab()
-    const [isLogDialogOpen, setIsLogDialogOpen] = useState(false)
 
     const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId ?? -1)
     const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId ?? -1)
@@ -191,10 +189,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       }
     }))
 
-    // --- NEW: Handler to view the currently running agent's logs ---
-    const handleViewAgentDialog = () => {
-      setIsLogDialogOpen(true) // Open the dialog
-    }
     const fileTree = useProjectFileTree()
 
     const tree = useMemo(() => {
@@ -341,23 +335,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             <p>Copy the project summary and file tree to clipboard.</p>
                           </TooltipContent>
                         </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              onClick={handleViewAgentDialog}
-                              variant={'outline'}
-                              size='sm'
-                              className={cn(
-                                'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50'
-                              )}
-                            >
-                              <Bot className='h-3.5 w-3.5 mr-1' /> Agent
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Open the Agent Coder control panel to run AI tasks.</p>
-                          </TooltipContent>
-                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -371,17 +348,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               />
             </div>
 
-            <AgentCoderControlDialog
-              open={isLogDialogOpen}
-              onOpenChange={setIsLogDialogOpen}
-              userInput={localUserPrompt}
-              selectedFiles={selectedFiles}
-              projectId={activeProjectTabState?.selectedProjectId || -1}
-              selectedPrompts={selectedPrompts}
-              promptData={promptData}
-              totalTokens={totalTokens}
-              projectFileMap={projectFileMap}
-            />
           </div>
         </TooltipProvider>
       </ErrorBoundary>
