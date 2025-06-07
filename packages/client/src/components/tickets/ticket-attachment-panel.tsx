@@ -52,7 +52,7 @@ export function TicketAttachmentsPanel({ ticketId, projectId }: TicketAttachment
     )
   }
 
-  const files = projectFiles || []
+  const files = projectFiles?.data || []
 
   return (
     <div className='mt-4 border p-3 rounded space-y-2'>
