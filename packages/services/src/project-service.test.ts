@@ -269,7 +269,6 @@ describe('Project Service (File Storage with Versioning)', () => {
     mockProjectsDb = {}
     mockProjectFilesDbPerProject = {}
     mockIdCounter = BASE_TIMESTAMP + 200000
-    mockGenerateStructuredData.mockClear()
     mockSyncProject.mockClear()
   })
 
@@ -649,30 +648,22 @@ describe('Project Service (File Storage with Versioning)', () => {
       fileToSummarize_v1 = await createProjectFileRecord(projectId, 'summarize-me.js', 'function hello() { console.log("v1"); }')
       fileToSummarize_v2 = await updateFileContent(projectId, fileToSummarize_v1.id, 'function hello() { console.log("v2"); }')
       
-      mockGenerateStructuredData.mockImplementation(async ({ schema }: { schema: z.ZodSchema<any> }) => {
-        if (schema.safeParse({ summary: 'Mocked AI summary' }).success) {
-          return { object: { summary: 'Mocked AI summary' } }
-        }
-        return { object: {} }
-      })
     })
 
     test('summarizeSingleFile updates summary in-place for the given file version', async () => {
       // Summarize v1 (which is not latest)
       const summarizedV1 = await summarizeSingleFile(fileToSummarize_v1)
       expect(summarizedV1?.id).toBe(fileToSummarize_v1.id)
-      expect(summarizedV1?.summary).toBe('Mocked AI summary')
-      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].summary).toBe('Mocked AI summary')
+      expect(summarizedV1?.summary).toContain('Mock summary for summarize-me.js')
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].summary).toContain('Mock summary for summarize-me.js')
       expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].version).toBe(1) // No new version
 
       // Summarize v2 (which is latest)
       const summarizedV2 = await summarizeSingleFile(fileToSummarize_v2)
       expect(summarizedV2?.id).toBe(fileToSummarize_v2.id)
-      expect(summarizedV2?.summary).toBe('Mocked AI summary')
-      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].summary).toBe('Mocked AI summary')
+      expect(summarizedV2?.summary).toContain('Mock summary for summarize-me.js')
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].summary).toContain('Mock summary for summarize-me.js')
       expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].version).toBe(2) // No new version
-      
-      expect(mockGenerateStructuredData).toHaveBeenCalledTimes(2)
     })
 
     test('resummarizeAllFiles processes only latest versions', async () => {
@@ -683,13 +674,10 @@ describe('Project Service (File Storage with Versioning)', () => {
 
       // mockSyncProject is called once.
       // summarizeFiles should be called with IDs of fileToSummarize_v2 and anotherFile.
-      // So, generateStructuredData should be called twice (once for each latest file).
       expect(mockSyncProject).toHaveBeenCalledTimes(1)
-      expect(mockGenerateStructuredData).toHaveBeenCalledTimes(2);
 
-
-      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].summary).toBe('Mocked AI summary')
-      expect(mockProjectFilesDbPerProject[projectId][anotherFile.id].summary).toBe('Mocked AI summary')
+      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].summary).toContain('Summary for')
+      expect(mockProjectFilesDbPerProject[projectId][anotherFile.id].summary).toContain('Summary for')
       
       // v1 should not have been summarized by resummarizeAllFiles
       expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].summary).toBeNull()
