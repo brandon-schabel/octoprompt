@@ -11,7 +11,7 @@ import {
 import path from 'path'
 import { z, ZodError } from 'zod'
 
-import { generateSingleText, generateStructuredData } from './gen-ai-services'
+// TODO: Replace with Mastra hooks when ready
 import { syncProject } from './file-services/file-sync-service-unified'
 import { ApiError } from '@octoprompt/shared'
 import { promptsMap } from '@octoprompt/shared'
@@ -29,15 +29,8 @@ const summarizeFiles = async (projectId: number, fileIds: number[]) => {
     const file = projectFilesStorage[fileId]
     if (file) {
       try {
-        const summaryResult = await generateStructuredData({
-          systemMessage: 'You are an expert code analyst. Generate a concise summary of the provided code.',
-          userMessage: `Analyze and summarize this code:\n\n${file.content}`,
-          schema: z.object({
-            summary: z.string().describe('A concise summary of the code functionality')
-          })
-        })
-        
-        const summary = summaryResult.object?.summary || 'Generated summary'
+        // TODO: Replace with Mastra summarization service when ready
+        const summary = `Summary for ${file.name || 'file'} (${file.extension || 'unknown'}) - ${Math.ceil(file.content.length / 100)} lines of code`
         
         // Update the file with the new summary
         await projectStorage.updateProjectFile(projectId, fileId, {
@@ -798,10 +791,8 @@ ${promptsMap.contemplativePrompt}
   }
 
   try {
-    const optimizedPrompt = await generateSingleText({
-      systemMessage: systemMessage,
-      prompt: userMessage
-    })
+    // TODO: Replace with Mastra prompt optimization service when ready
+    const optimizedPrompt = `Optimized: ${userMessage}`
 
     return optimizedPrompt.trim()
   } catch (error: any) {

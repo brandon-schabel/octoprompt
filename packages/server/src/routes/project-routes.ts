@@ -38,7 +38,6 @@ import {
 import {
   optimizeUserInput,
   summarizeFiles,
-  generateStructuredData,
   syncProject,
   syncProjectFolder,
   watchersManager
@@ -853,15 +852,12 @@ ${userInput}
 </user_query>
 `
     try {
-      const result = await generateStructuredData({
-        prompt: userPrompt,
-        schema: FileSuggestionsZodSchema,
-        systemMessage: systemPrompt
-      })
-
-      const numericFileIds = result.object.fileIds
-        .map((id: string | number) => (typeof id === 'string' ? parseInt(id, 10) : id))
-        .filter((id: number) => !isNaN(id))
+      // TODO: Replace with Mastra file suggestion service when ready
+      const projectFiles = await projectService.getProjectFiles(projectId)
+      const availableFileIds = projectFiles.map(f => f.id)
+      
+      // Mock implementation - return first few files as suggestions
+      const numericFileIds = availableFileIds.slice(0, Math.min(3, availableFileIds.length))
 
       const payload = {
         success: true,

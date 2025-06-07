@@ -20,7 +20,6 @@ import { SelectedFilesListDisplay } from './selected-files-list-display'
 import { NoResultsScreen } from './no-results-screen'
 import { EmptyProjectScreen } from './empty-project-screen'
 import { SelectedFilesDrawer } from '../../selected-files-drawer'
-import { AIFileChangeDialog } from '@/components/file-changes/ai-file-change-dialog'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject, useUpdateFileContent } from '@/hooks/api/use-projects-api'
@@ -72,8 +71,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteIndex, setAutocompleteIndex] = useState(-1)
 
-  const [aiDialogOpen, setAiDialogOpen] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<ProjectFile>()
 
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
 
@@ -155,14 +152,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     )
   }
 
-  const handleRequestAIFileChange = (filePath: string) => {
-    // Use the derived `projectFiles` array
-    const file = fileDataArray?.find((f) => f.path === filePath)
-    if (file) {
-      setSelectedFile(file as ProjectFile)
-      setAiDialogOpen(true)
-    }
-  }
 
   const handleSaveFileContent = useCallback(
     async (content: string) => {
@@ -353,7 +342,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                       preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                       onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
                       onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
-                      onRequestAIFileChange={handleRequestAIFileChange}
                     />
                   </ScrollArea>
                 </div>
@@ -396,25 +384,12 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
                 onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
                 onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
-                onRequestAIFileChange={handleRequestAIFileChange}
               />
             </ScrollArea>
           </div>
         </div>
       )}
 
-      {project && (
-        <AIFileChangeDialog
-          open={aiDialogOpen}
-          onOpenChange={setAiDialogOpen}
-          filePath={`${project.path}/${selectedFile?.path || ''}`}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['projectFiles', selectedProjectId || -1] })
-            setAiDialogOpen(false)
-            setSelectedFile(undefined)
-          }}
-        />
-      )}
 
       {/* FileViewerDialog with versioning support */}
       {viewedFile && (

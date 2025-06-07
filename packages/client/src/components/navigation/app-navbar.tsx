@@ -13,7 +13,6 @@ import {
   KeyIcon,
   Settings,
   HelpCircle,
-  LayoutDashboardIcon,
   Lightbulb
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
@@ -29,14 +28,13 @@ export function AppNavbar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const matches = useMatches()
-  // We treat /tickets and /project-summarization as part of "projects" route
+  // We treat /project-summarization as part of "projects" route
   const isOnProjectsRoute = matches.some((match) =>
-    ['/projects', '/tickets', '/project-summarization'].includes(match.routeId)
+    ['/projects', '/project-summarization'].includes(match.routeId)
   )
   const isOnChatRoute = matches.some((match) => match.routeId === '/chat')
   const isOnKeysRoute = matches.some((match) => match.routeId === '/keys')
   const isOnPromptsRoute = matches.some((match) => match.routeId === '/prompts')
-  const isOnAdminRoute = matches.some((match) => match.routeId === '/admin')
 
   const theme = useSelectSetting('theme')
 
@@ -162,23 +160,6 @@ export function AppNavbar() {
             >
               <Lightbulb className='w-4 h-4 flex-shrink-0' />
               <span className='hidden md:inline'>Prompts</span>
-            </Link>
-            <div className='h-4 w-[1px] bg-border' />
-
-            {/* Admin link */}
-            <Link
-              to='/admin'
-              className={`inline-flex items-center gap-1 md:gap-2 text-sm font-medium transition-colors 
-                                px-2 py-1 md:px-3 md:py-2 rounded-md 
-                                ${
-                                  isOnAdminRoute
-                                    ? 'text-accent-foreground bg-accent/20'
-                                    : 'text-foreground hover:text-accent-foreground hover:bg-accent/10'
-                                }`}
-              title='Admin'
-            >
-              <LayoutDashboardIcon className='w-4 h-4 flex-shrink-0' />
-              <span className='hidden md:inline'>Admin</span>
             </Link>
           </div>
 

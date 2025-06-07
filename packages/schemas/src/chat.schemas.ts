@@ -1,5 +1,18 @@
 import { z } from '@hono/zod-openapi'
-import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
+// TODO: Replace with Mastra schemas when ready
+// Temporary minimal schemas until Mastra integration is complete
+const AiSdkOptionsSchema = z.object({
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  temperature: z.number().optional(),
+  maxTokens: z.number().optional()
+}).optional()
+
+const UnifiedModelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  provider: z.string()
+})
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 

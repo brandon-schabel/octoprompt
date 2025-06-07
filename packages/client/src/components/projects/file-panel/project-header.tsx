@@ -8,7 +8,6 @@ import { Link, useMatches } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { Pencil, Trash2, Icon } from 'lucide-react'
 import { tab } from '@lucide/lab'
-import { useListTicketsWithTasks } from '@/hooks/api/use-tickets-api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
 import { ProjectResponse } from '@octoprompt/schemas'
 import {
@@ -30,9 +29,6 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
   const { deleteTab } = useDeleteProjectTabById()
   const selectedProjectId = projectTabData?.selectedProjectId
 
-  // Tickets for this project
-  const { data: ticketsData } = useListTicketsWithTasks(selectedProjectId ?? -1)
-  const openTicketsCount = ticketsData?.ticketsWithTasks?.filter((t) => t.ticket.status === 'open').length ?? 0
 
   if (!projectData) return null
 

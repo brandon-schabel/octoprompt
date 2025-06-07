@@ -221,7 +221,6 @@ export const useCreateProjectTab = () => {
       sortOrder: 0,
       displayName: `Tab ${Date.now()}`,
       searchByContent: false,
-      ticketId: -1,
       contextLimit: 64000
     }
 

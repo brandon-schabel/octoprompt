@@ -22,9 +22,8 @@ import {
 } from '@octoprompt/services' // Assuming this path is correct based on your setup
 // Mock summarization functions
 const mockSummarizeSingleFile = mock(async (file: any) => {
-  // Use the AI generation service to get a summary
-  const summaryResult = await mockGenerateStructuredData({ schema: z.object({ summary: z.string() }) })
-  const summary = summaryResult.object?.summary || 'Mocked AI summary'
+  // Mock implementation until Mastra integration is complete
+  const summary = `Mock summary for ${file.name || 'file'}`
   
   // Simulate updating the file's summary in storage
   const projectFiles = mockProjectFilesDbPerProject[file.projectId] || {}
@@ -227,15 +226,7 @@ mock.module('@octoprompt/storage', () => ({
   projectStorage: mockProjectStorage
 }))
 
-const mockGenerateStructuredData = mock(async ({ schema }: { schema: z.ZodSchema<any> }) => {
-  if (schema.safeParse({ summary: 'Mocked AI summary' }).success) {
-    return { object: { summary: 'Mocked AI summary' } }
-  }
-  return { object: {} }
-})
-mock.module('./gen-ai-services', () => ({ // Adjust path if gen-ai-services is elsewhere
-  generateStructuredData: mockGenerateStructuredData
-}))
+// TODO: Remove gen-ai-services mock when Mastra integration is complete
 
 const mockSyncProject = mock(async (project: Project) => {
   const projectFiles = mockProjectFilesDbPerProject[project.id] || {}

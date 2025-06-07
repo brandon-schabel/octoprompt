@@ -37,7 +37,6 @@ describe('Global State Schema', () => {
                 expect(defaultTab.editPromptId).toBe(-1)
                 expect(defaultTab.selectedFiles).toEqual([])
                 expect(defaultTab.selectedPrompts).toEqual([])
-                expect(defaultTab.ticketId).toBe(-1)
                 expect(defaultTab.displayName).toBe('Default Project Tab')
 
                 // Validate against schema
@@ -197,7 +196,6 @@ describe('Global State Schema', () => {
             expect(result.selectedProjectId).toBe(-1)
             expect(result.selectedFiles).toEqual([])
             expect(result.editProjectId).toBe(-1)
-            expect(result.ticketId).toBe(-1)
 
             // Should also work when parsing empty object
             const validTab = projectTabStateSchema.parse({})

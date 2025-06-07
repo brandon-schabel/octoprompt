@@ -26,7 +26,7 @@ import {
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { APIProviders, ProviderKey } from '@octoprompt/schemas'
 import { stream } from 'hono/streaming'
-import { handleChatMessage } from '@octoprompt/services'
+// TODO: Replace with Mastra chat handling when ready
 
 const chatService = createChatService()
 
@@ -583,16 +583,27 @@ export const chatRoutes = new OpenAPIHono()
       c.header('Cache-Control', 'no-cache')
       c.header('Connection', 'keep-alive')
 
-      const readableStream = await handleChatMessage({
+      // TODO: Replace with Mastra chat handling when ready
+      // Mock implementation for now
+      const userMsg = await chatService.saveMessage({
         chatId,
-        userMessage,
-        options: unifiedOptions,
-        systemMessage,
-        tempId
-      })
+        role: 'user',
+        content: userMessage,
+        tempId: tempId ? `${tempId}-user` : undefined
+      } as any)
 
+      const assistantMsg = await chatService.saveMessage({
+        chatId,
+        role: 'assistant',
+        content: 'This is a mock response until Mastra integration is complete.',
+        tempId: tempId
+      } as any)
+
+      // Return a simple stream with the mock response
       return stream(c, async (streamInstance) => {
-        await streamInstance.pipe(readableStream.toDataStream())
+        const encoder = new TextEncoder()
+        await streamInstance.write(encoder.encode('data: {"type":"text","text":"This is a mock response until Mastra integration is complete."}\n\n'))
+        await streamInstance.write(encoder.encode('data: [DONE]\n\n'))
       })
     } catch (error: any) {
       console.error(`[Hono AI Chat] /ai/chat Error:`, error)

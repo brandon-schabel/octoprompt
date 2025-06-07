@@ -2,12 +2,6 @@ import { z, ZodError, type ZodTypeAny } from 'zod'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { ProjectSchema, ProjectFileSchema, type ProjectFile } from '@octoprompt/schemas'
-import {
-  AIFileChangesStorageSchema,
-  type AIFileChangesStorage,
-  type AIFileChangeRecord,
-  AIFileChangeRecordSchema
-} from '@octoprompt/schemas'
 import { unixTimestampSchema } from '@octoprompt/schemas'
 
 // Define the base directory for storing project data
@@ -33,9 +27,6 @@ function getProjectFilesPath(projectId: number): string {
   return path.join(getProjectDataDir(projectId), 'files.json')
 }
 
-function getProjectAIFileChangesPath(projectId: number): string {
-  return path.join(getProjectDataDir(projectId), 'ai-file-changes.json')
-}
 
 // --- Core Read/Write Functions ---
 async function ensureDirExists(dirPath: string): Promise<void> {
@@ -146,33 +137,6 @@ export const projectStorage = {
     return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema)
   },
 
-  async readAIFileChanges(projectId: number): Promise<AIFileChangesStorage> {
-    return readValidatedJson(getProjectAIFileChangesPath(projectId), AIFileChangesStorageSchema, {})
-  },
-
-  async writeAIFileChanges(projectId: number, changes: AIFileChangesStorage): Promise<AIFileChangesStorage> {
-    return writeValidatedJson(getProjectAIFileChangesPath(projectId), changes, AIFileChangesStorageSchema)
-  },
-
-  async saveAIFileChange(projectId: number, changeData: AIFileChangeRecord): Promise<AIFileChangeRecord> {
-    const validationResult = await AIFileChangeRecordSchema.safeParseAsync(changeData)
-    if (!validationResult.success) {
-      console.error(`Zod validation failed for AI file change in project ${projectId}:`, validationResult.error.errors)
-      throw new ZodError(validationResult.error.errors)
-    }
-    const validatedChangeData = validationResult.data
-
-    const currentChanges = await this.readAIFileChanges(projectId)
-    currentChanges[validatedChangeData.id] = validatedChangeData
-
-    await this.writeAIFileChanges(projectId, currentChanges)
-    return validatedChangeData
-  },
-
-  async getAIFileChangeById(projectId: number, aiFileChangeId: number): Promise<AIFileChangeRecord | undefined> {
-    const changes = await this.readAIFileChanges(projectId)
-    return changes[aiFileChangeId]
-  },
 
   // UPDATED: Enhanced updateProjectFile with versioning support
   async updateProjectFile(

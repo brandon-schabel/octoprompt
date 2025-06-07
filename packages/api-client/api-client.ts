@@ -9,17 +9,6 @@ import type { CreatePromptBody, UpdatePromptBody, OptimizePromptRequest, Prompt 
 
 import type { CreateProviderKeyBody, ProviderKey, UpdateProviderKeyBody } from '@octoprompt/schemas'
 
-import type {
-  CreateTicketBody,
-  UpdateTicketBody,
-  CreateTaskBody,
-  UpdateTaskBody,
-  ReorderTasksBody,
-  Ticket,
-  TicketTask,
-  TicketWithTaskCount,
-  TicketWithTasks
-} from '@octoprompt/schemas'
 
 // Import the actual schemas for validation
 import {
@@ -64,25 +53,6 @@ import {
   UpdateProviderKeyBodySchema
 } from '@octoprompt/schemas'
 
-import {
-  TicketResponseSchema as TicketResponseSchemaZ,
-  TicketListResponseSchema as TicketListResponseSchemaZ,
-  TaskResponseSchema as TaskResponseSchemaZ,
-  TaskListResponseSchema as TaskListResponseSchemaZ,
-  LinkedFilesResponseSchema as LinkedFilesResponseSchemaZ,
-  SuggestedTasksResponseSchema as SuggestedTasksResponseSchemaZ,
-  SuggestedFilesResponseSchema as SuggestedFilesResponseSchemaZ,
-  TicketWithTaskCountListResponseSchema as TicketWithTaskCountListResponseSchemaZ,
-  TicketWithTasksListResponseSchema as TicketWithTasksListResponseSchemaZ,
-  BulkTasksResponseSchema as BulkTasksResponseSchemaZ,
-  CreateTicketBodySchema,
-  UpdateTicketBodySchema,
-  createTaskSchema,
-  updateTaskSchema,
-  reorderTasksSchema,
-  linkFilesSchema,
-  suggestTasksSchema
-} from '@octoprompt/schemas'
 
 import {
   OperationSuccessResponseSchema as OperationSuccessResponseSchemaZ,
@@ -96,22 +66,6 @@ import {
 } from '@octoprompt/schemas'
 
 
-import {
-  AIFileChangeRecordSchema,
-  GenerateChangeBodySchema,
-  type AIFileChangeRecord,
-  type GenerateChangeBody
-} from '@octoprompt/schemas'
-
-import {
-  AiGenerateTextRequestSchema,
-  AiGenerateTextResponseSchema,
-  AiGenerateStructuredRequestSchema,
-  AiGenerateStructuredResponseSchema,
-  ModelsListResponseSchema,
-  type AiGenerateTextRequest,
-  type UnifiedModel
-} from '@octoprompt/schemas'
 
 import {
   MastraCodeChangeRequestSchema,
@@ -128,51 +82,6 @@ import {
   type MastraSingleSummarizeResponse
 } from '@octoprompt/schemas'
 
-// Admin schemas - local definitions since they may not be exported from admin routes
-const AdminEnvInfoResponseSchema = z.object({
-  success: z.literal(true),
-  environment: z.object({
-    NODE_ENV: z.string().nullable(),
-    BUN_ENV: z.string().nullable(),
-    SERVER_PORT: z.string().nullable()
-  }),
-  serverInfo: z.object({
-    version: z.string(),
-    bunVersion: z.string(),
-    platform: z.string(),
-    arch: z.string(),
-    memoryUsage: z.object({
-      rss: z.number(),
-      heapTotal: z.number(),
-      heapUsed: z.number(),
-      external: z.number(),
-      arrayBuffers: z.number()
-    }),
-    uptime: z.number()
-  }),
-  databaseStats: z.object({
-    chats: z.object({ count: z.number() }),
-    chat_messages: z.object({ count: z.number() }),
-    projects: z.object({ count: z.number() }),
-    files: z.object({ count: z.number() }),
-    prompts: z.object({ count: z.number() }),
-    prompt_projects: z.object({ count: z.number() }),
-    provider_keys: z.object({ count: z.number() }),
-    tickets: z.object({ count: z.number() }),
-    ticket_files: z.object({ count: z.number() }),
-    ticket_tasks: z.object({ count: z.number() }),
-    file_changes: z.object({ count: z.number() })
-  })
-})
-
-const AdminSystemStatusResponseSchema = z.object({
-  success: z.literal(true),
-  status: z.string(),
-  checks: z.object({
-    api: z.string(),
-    timestamp: z.string()
-  })
-})
 
 export type DataResponseSchema<T> = {
   success: boolean
@@ -742,326 +651,10 @@ export class ProviderKeyService extends BaseApiClient {
   }
 }
 
-// Ticket Service
-export class TicketService extends BaseApiClient {
-  async createTicket(data: CreateTicketBody) {
-    const validatedData = this.validateBody(CreateTicketBodySchema, data)
-    const result = await this.request('POST', '/tickets', {
-      body: validatedData,
-      responseSchema: TicketResponseSchemaZ
-    })
-    return result as {
-      ticket: Ticket
-      success: boolean
-    }
-  }
-
-  async getTicket(ticketId: number) {
-    const result = await this.request('GET', `/tickets/${ticketId}`, {
-      responseSchema: TicketResponseSchemaZ
-    })
-    return result as {
-      ticket: Ticket
-      success: boolean
-    }
-  }
-
-  async updateTicket(ticketId: number, data: UpdateTicketBody) {
-    const validatedData = this.validateBody(UpdateTicketBodySchema, data)
-    const result = await this.request('PATCH', `/tickets/${ticketId}`, {
-      body: validatedData,
-      responseSchema: TicketResponseSchemaZ
-    })
-    return result as {
-      ticket: Ticket
-      success: boolean
-    }
-  }
-
-  async deleteTicket(ticketId: number): Promise<boolean> {
-    await this.request('DELETE', `/tickets/${ticketId}`, {
-      responseSchema: OperationSuccessResponseSchemaZ
-    })
-    return true
-  }
-
-  async listProjectTickets(projectId: number, status?: string) {
-    const result = await this.request('GET', `/projects/${projectId}/tickets`, {
-      params: status ? { status } : undefined,
-      responseSchema: TicketListResponseSchemaZ
-    })
-    return result as {
-      tickets: Ticket[]
-      success: boolean
-    }
-  }
-
-  async linkFilesToTicket(ticketId: number, fileIds: number[]) {
-    const validatedData = this.validateBody(linkFilesSchema, { fileIds })
-    const result = await this.request('POST', `/tickets/${ticketId}/link-files`, {
-      body: validatedData,
-      responseSchema: LinkedFilesResponseSchemaZ
-    })
-    return result as {
-      linkedFiles: Array<{ ticketId: number; fileId: number }>
-      success: boolean
-    }
-  }
-
-  async suggestFilesForTicket(ticketId: number, extraUserInput?: string) {
-    const body = extraUserInput ? { extraUserInput } : {}
-    return await this.request('POST', `/tickets/${ticketId}/suggest-files`, {
-      body,
-      responseSchema: SuggestedFilesResponseSchemaZ
-    })
-  }
-
-  async suggestTasksForTicket(ticketId: number, userContext?: string) {
-    const validatedData = this.validateBody(suggestTasksSchema, { userContext })
-    const result = await this.request('POST', `/tickets/${ticketId}/suggest-tasks`, {
-      body: validatedData,
-      responseSchema: SuggestedTasksResponseSchemaZ
-    })
-    return result as {
-      suggestedTasks: string[]
-      success: boolean
-    }
-  }
-
-  async createTask(ticketId: number, content: string) {
-    const validatedData = this.validateBody(createTaskSchema, { content })
-    const result = await this.request('POST', `/tickets/${ticketId}/tasks`, {
-      body: validatedData,
-      responseSchema: TaskResponseSchemaZ
-    })
-    return result as {
-      task: TicketTask
-      success: boolean
-    }
-  }
-
-  async getTasks(ticketId: number) {
-    const result = await this.request('GET', `/tickets/${ticketId}/tasks`, {
-      responseSchema: TaskListResponseSchemaZ
-    })
-    return result as {
-      tasks: TicketTask[]
-      success: boolean
-    }
-  }
-
-  async updateTask(ticketId: number, taskId: number, data: UpdateTaskBody) {
-    const validatedData = this.validateBody(updateTaskSchema, data)
-    const result = await this.request('PATCH', `/tickets/${ticketId}/tasks/${taskId}`, {
-      body: validatedData,
-      responseSchema: TaskResponseSchemaZ
-    })
-    return result as {
-      task: TicketTask
-      success: boolean
-    }
-  }
-
-  async deleteTask(ticketId: number, taskId: number): Promise<boolean> {
-    await this.request('DELETE', `/tickets/${ticketId}/tasks/${taskId}`, {
-      responseSchema: OperationSuccessResponseSchemaZ
-    })
-    return true
-  }
-
-  async reorderTasks(ticketId: number, data: ReorderTasksBody) {
-    const validatedData = this.validateBody(reorderTasksSchema, data)
-    const result = await this.request('PATCH', `/tickets/${ticketId}/tasks/reorder`, {
-      body: validatedData,
-      responseSchema: TaskListResponseSchemaZ
-    })
-    return result as {
-      tasks: TicketTask[]
-      success: boolean
-    }
-  }
-
-  async autoGenerateTasks(ticketId: number) {
-    const result = await this.request('POST', `/tickets/${ticketId}/auto-generate-tasks`, {
-      responseSchema: TaskListResponseSchemaZ
-    })
-    return result as {
-      tasks: TicketTask[]
-      success: boolean
-    }
-  }
-
-  async getTasksForTickets(ticketIds: number[]) {
-    const result = await this.request('GET', '/tickets/bulk-tasks', {
-      params: { ids: ticketIds.join(',') },
-      responseSchema: BulkTasksResponseSchemaZ
-    })
-    return result as {
-      tasks: Record<string, TicketTask[]>
-      success: boolean
-    }
-  }
-
-  async listTicketsWithTaskCount(projectId: number, status?: string) {
-    const result = await this.request('GET', `/projects/${projectId}/tickets-with-count`, {
-      params: status ? { status } : undefined,
-      responseSchema: TicketWithTaskCountListResponseSchemaZ
-    })
-    return result as {
-      success: boolean
-      ticketsWithCount: TicketWithTaskCount[]
-    }
-  }
-
-  async listTicketsWithTasks(projectId: number, status?: string) {
-    const result = await this.request('GET', `/projects/${projectId}/tickets-with-tasks`, {
-      params: status ? { status } : undefined,
-      responseSchema: TicketWithTasksListResponseSchemaZ
-    })
-    return result as {
-      success: boolean
-      ticketsWithTasks: TicketWithTasks[]
-    }
-  }
-}
-
-// Admin Service
-export class AdminService extends BaseApiClient {
-  async getEnvironmentInfo() {
-    const result = await this.request('GET', '/admin/env-info', {
-      responseSchema: AdminEnvInfoResponseSchema
-    })
-    return result
-  }
-
-  async getSystemStatus() {
-    const result = await this.request('GET', '/admin/system-status', {
-      responseSchema: AdminSystemStatusResponseSchema
-    })
-    return result
-  }
-}
 
 
-// AI File Change Service
-export class AiFileChangeService extends BaseApiClient {
-  async generateChange(projectId: number, data: Omit<GenerateChangeBody, 'projectId'>) {
-    const validatedData = this.validateBody(GenerateChangeBodySchema.omit({ projectId: true }), data)
-    const result = await this.request('POST', `/projects/${projectId}/ai-file-changes`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.literal(true),
-        result: AIFileChangeRecordSchema
-      })
-    })
-    return result as { success: true; result: AIFileChangeRecord }
-  }
 
-  async getChange(projectId: number, changeId: number) {
-    const result = await this.request('GET', `/projects/${projectId}/ai-file-changes/${changeId}`, {
-      responseSchema: z.object({
-        success: z.literal(true),
-        fileChange: AIFileChangeRecordSchema
-      })
-    })
-    return result as { success: true; fileChange: AIFileChangeRecord }
-  }
 
-  async confirmChange(projectId: number, changeId: number) {
-    const result = await this.request('POST', `/projects/${projectId}/ai-file-changes/${changeId}/confirm`, {
-      responseSchema: z.object({
-        success: z.literal(true),
-        result: z.object({
-          status: z.string(),
-          message: z.string()
-        })
-      })
-    })
-    return result as { success: true; result: { status: string; message: string } }
-  }
-
-  async rejectChange(projectId: number, changeId: number) {
-    const result = await this.request('POST', `/projects/${projectId}/ai-file-changes/${changeId}/reject`, {
-      responseSchema: z.object({
-        success: z.literal(true),
-        result: z.object({
-          status: z.string(),
-          message: z.string()
-        })
-      })
-    })
-    return result as { success: true; result: { status: string; message: string } }
-  }
-}
-
-// Gen AI Service
-export class GenAiService extends BaseApiClient {
-  async generateText(data: AiGenerateTextRequest) {
-    const validatedData = this.validateBody(AiGenerateTextRequestSchema, data)
-    const result = await this.request('POST', '/gen-ai/text', {
-      body: validatedData,
-      responseSchema: AiGenerateTextResponseSchema
-    })
-    return result as { success: true; data: { text: string } }
-  }
-
-  async generateStructured(data: z.infer<typeof AiGenerateStructuredRequestSchema>) {
-    const validatedData = this.validateBody(AiGenerateStructuredRequestSchema, data)
-    const result = await this.request('POST', '/gen-ai/structured', {
-      body: validatedData,
-      responseSchema: AiGenerateStructuredResponseSchema
-    })
-    return result as { success: true; data: { output: any } }
-  }
-
-  async getModels(provider: string) {
-    const result = await this.request('GET', '/models', {
-      params: { provider },
-      responseSchema: ModelsListResponseSchema
-    })
-
-    return result as { success: true; data: UnifiedModel[] }
-  }
-
-  async streamText(data: AiGenerateTextRequest): Promise<ReadableStream> {
-    const validatedData = this.validateBody(AiGenerateTextRequestSchema, data)
-    const url = new URL(`${this.baseUrl}/api/gen-ai/stream`)
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
-
-    try {
-      const response = await fetch(url.toString(), {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify(validatedData),
-        signal: controller.signal
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
-      }
-
-      if (!response.body) {
-        throw new OctoPromptError('No response body for stream')
-      }
-
-      return response.body
-    } catch (e) {
-      if (e instanceof OctoPromptError) throw e
-      if (e instanceof Error) {
-        if (e.name === 'AbortError') {
-          throw new OctoPromptError('Stream request timeout', undefined, 'TIMEOUT')
-        }
-        throw new OctoPromptError(`Stream request failed: ${e.message}`)
-      }
-      throw new OctoPromptError('Unknown error occurred during stream request')
-    }
-  }
-}
 
 // Mastra Service
 export class MastraService extends BaseApiClient {
@@ -1100,10 +693,6 @@ export class OctoPromptClient {
   public readonly projects: ProjectService
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
-  public readonly tickets: TicketService
-  public readonly admin: AdminService
-  public readonly aiFileChanges: AiFileChangeService
-  public readonly genAi: GenAiService
   public readonly mastra: MastraService
 
   constructor(config: ApiConfig) {
@@ -1111,10 +700,6 @@ export class OctoPromptClient {
     this.projects = new ProjectService(config)
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
-    this.tickets = new TicketService(config)
-    this.admin = new AdminService(config)
-    this.aiFileChanges = new AiFileChangeService(config)
-    this.genAi = new GenAiService(config)
     this.mastra = new MastraService(config)
   }
 }

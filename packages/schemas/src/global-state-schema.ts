@@ -79,22 +79,6 @@ export const projectTabStateSchema = z
         description: 'A record of user-defined file groups (bookmarks), mapping group names to arrays of file IDs.',
         example: { 'Auth Files': [1, 2] }
       }),
-    ticketSearch: z
-      .string()
-      .optional()
-      .default('')
-      .openapi({ description: 'Current search query for tickets.', example: 'UI bug' }),
-    ticketSort: z
-      .enum(['created_desc', 'created_asc', 'status', 'priority'])
-      .optional()
-      .default('created_desc')
-      .openapi({ description: 'Sorting criteria for the ticket list.' }),
-    ticketStatusFilter: z
-      .enum(['all', 'open', 'in_progress', 'closed'])
-      .optional()
-      .default('all')
-      .openapi({ description: 'Filter criteria for ticket status.' }),
-    ticketId: idSchemaSpec.default(-1),
     sortOrder: z
       .number()
       .optional()
@@ -373,10 +357,6 @@ export const createSafeGlobalState = (): GlobalState => ({
       preferredEditor: 'vscode' as const,
       suggestedFileIds: [],
       bookmarkedFileGroups: {},
-      ticketSearch: '',
-      ticketSort: 'created_desc' as const,
-      ticketStatusFilter: 'all' as const,
-      ticketId: -1,
       sortOrder: 0
     }
   },
