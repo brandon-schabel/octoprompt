@@ -20,7 +20,7 @@ import {
   revertFileToVersion,
   type FileSyncData
 } from '@octoprompt/services' // Assuming this path is correct based on your setup
-// Mock summarization functions since agent file doesn't exist
+// Mock summarization functions
 const mockSummarizeSingleFile = mock(async (file: any) => {
   // Use the AI generation service to get a summary
   const summaryResult = await mockGenerateStructuredData({ schema: z.object({ summary: z.string() }) })
@@ -691,7 +691,7 @@ describe('Project Service (File Storage with Versioning)', () => {
       await resummarizeAllFiles(projectId)
 
       // mockSyncProject is called once.
-      // summarizeFiles (agent) should be called with IDs of fileToSummarize_v2 and anotherFile.
+      // summarizeFiles should be called with IDs of fileToSummarize_v2 and anotherFile.
       // So, generateStructuredData should be called twice (once for each latest file).
       expect(mockSyncProject).toHaveBeenCalledTimes(1)
       expect(mockGenerateStructuredData).toHaveBeenCalledTimes(2);

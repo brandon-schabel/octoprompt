@@ -626,7 +626,7 @@ export function createFileChangePlugin() {
 
       // Re-summarize the (created or modified) file
       // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
-      await summarizeSingleFile(updatedFile) // From summarize-files-agent
+      await summarizeSingleFile(updatedFile)
       // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
     } catch (err) {
       console.error('[FileChangePlugin] Error handling file change:', err)
