@@ -319,7 +319,6 @@ export function useUpdateProject() {
 export function useDeleteProject() {
   const { invalidateAllProjects, removeProject } = useInvalidateProjects()
   const { removeProjectPrompts } = useInvalidatePrompts()
-  const { removeProjectTickets } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: (projectId: number) => octoClient.projects.deleteProject(projectId),
@@ -327,7 +326,6 @@ export function useDeleteProject() {
       invalidateAllProjects()
       removeProject(projectId)
       removeProjectPrompts(projectId)
-      removeProjectTickets(projectId)
       toast.success('Project deleted successfully')
     },
     onError: (error) => {

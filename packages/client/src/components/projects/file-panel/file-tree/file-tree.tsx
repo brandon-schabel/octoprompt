@@ -303,8 +303,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                       summarizeMutation.mutate(
                         { fileIds: [item.node.file!.id], force: false, projectId }, // force: false initially
                         {
-                          onSuccess: (resp) => {
-                            toast.success(resp.message || 'File summary started.')
+                          onSuccess: () => {
+                            toast.success('File summary started.')
                           },
                           onError: (error: any) => {
                             // Added 'any' type temporarily

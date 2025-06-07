@@ -8,8 +8,9 @@ export * from './src/prompt.schemas'
 export * from './src/provider-key.schemas'
 export * from './src/schema-utils'
 export * from './src/unix-ts-utils'
+export * from './src/gen-ai.schemas'
 
-// export constants
+// export constan ts
 export * from './src/constants/file-sync-options'
 export * from './src/constants/models-temp-not-allowed'
 export * from './src/constants/model-default-configs'

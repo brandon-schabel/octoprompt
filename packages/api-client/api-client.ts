@@ -68,6 +68,16 @@ import {
 
 
 import {
+  AiGenerateTextRequestSchema,
+  AiGenerateTextResponseSchema,
+  AiGenerateStructuredRequestSchema,
+  AiGenerateStructuredResponseSchema,
+  ModelsListResponseSchema,
+  type AiGenerateTextRequest,
+  type UnifiedModel
+} from '@octoprompt/schemas'
+
+import {
   MastraCodeChangeRequestSchema,
   MastraCodeChangeResponseSchema,
   MastraSummarizeRequestSchema,
@@ -654,7 +664,74 @@ export class ProviderKeyService extends BaseApiClient {
 
 
 
+// Gen AI Service
+export class GenAiService extends BaseApiClient {
+  async generateText(data: AiGenerateTextRequest) {
+    const validatedData = this.validateBody(AiGenerateTextRequestSchema, data)
+    const result = await this.request('POST', '/gen-ai/text', {
+      body: validatedData,
+      responseSchema: AiGenerateTextResponseSchema
+    })
+    return result as { success: true; data: { text: string } }
+  }
 
+  async generateStructured(data: z.infer<typeof AiGenerateStructuredRequestSchema>) {
+    const validatedData = this.validateBody(AiGenerateStructuredRequestSchema, data)
+    const result = await this.request('POST', '/gen-ai/structured', {
+      body: validatedData,
+      responseSchema: AiGenerateStructuredResponseSchema
+    })
+    return result as { success: true; data: { output: any } }
+  }
+
+  async getModels(provider: string) {
+    const result = await this.request('GET', '/models', {
+      params: { provider },
+      responseSchema: ModelsListResponseSchema
+    })
+
+    return result as { success: true; data: UnifiedModel[] }
+  }
+
+  async streamText(data: AiGenerateTextRequest): Promise<ReadableStream> {
+    const validatedData = this.validateBody(AiGenerateTextRequestSchema, data)
+    const url = new URL(`${this.baseUrl}/api/gen-ai/stream`)
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(validatedData),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
+      }
+
+      if (!response.body) {
+        throw new OctoPromptError('No response body for stream')
+      }
+
+      return response.body
+    } catch (e) {
+      if (e instanceof OctoPromptError) throw e
+      if (e instanceof Error) {
+        if (e.name === 'AbortError') {
+          throw new OctoPromptError('Stream request timeout', undefined, 'TIMEOUT')
+        }
+        throw new OctoPromptError(`Stream request failed: ${e.message}`)
+      }
+      throw new OctoPromptError('Unknown error occurred during stream request')
+    }
+  }
+}
 
 // Mastra Service
 export class MastraService extends BaseApiClient {
@@ -693,6 +770,7 @@ export class OctoPromptClient {
   public readonly projects: ProjectService
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
+  public readonly genAi: GenAiService
   public readonly mastra: MastraService
 
   constructor(config: ApiConfig) {
@@ -700,6 +778,7 @@ export class OctoPromptClient {
     this.projects = new ProjectService(config)
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
+    this.genAi = new GenAiService(config)
     this.mastra = new MastraService(config)
   }
 }

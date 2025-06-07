@@ -37,7 +37,6 @@ import {
 } from '@octoprompt/schemas'
 import {
   optimizeUserInput,
-  summarizeFiles,
   syncProject,
   syncProjectFolder,
   watchersManager
