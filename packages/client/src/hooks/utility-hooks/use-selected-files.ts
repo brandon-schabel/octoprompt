@@ -5,10 +5,9 @@ import {
   useUpdateActiveProjectTab,
   useUpdateProjectTabById
 } from '@/hooks/use-kv-local-storage'
-import { useGetProjectFilesWithoutContent } from '@/hooks/api/use-projects-api'
+import { useGetProjectFilesWithoutContent, useGetProjectFiles } from '@/hooks/api/use-projects-api'
 import { useMemo } from 'react'
-import { ProjectFileMap } from '@octoprompt/schemas'
-import { buildProjectFileMap } from '@octoprompt/shared'
+import { buildProjectFileMapWithoutContent, buildProjectFileMap } from '@octoprompt/shared'
 
 const MAX_HISTORY_SIZE = 50
 
@@ -23,8 +22,13 @@ const undoRedoKeys = {
   tab: (tabId: number) => [...undoRedoKeys.all, tabId] as const
 }
 
-export const useProjectFileMap = (projectId: number) => {
+export const useProjectFileMapWithoutContent = (projectId: number) => {
   const { data: fileData } = useGetProjectFilesWithoutContent(projectId)
+  return useMemo(() => buildProjectFileMapWithoutContent(fileData?.data ?? []), [fileData?.data])
+}
+
+export const useProjectFileMap = (projectId: number) => {
+  const { data: fileData } = useGetProjectFiles(projectId)
   return useMemo(() => buildProjectFileMap(fileData?.data ?? []), [fileData?.data])
 }
 
@@ -47,6 +51,8 @@ export function useSelectedFiles({
     : activeProjectTabState?.selectedFiles
 
   // Get all project files and build the file map
+  const projectId = activeProjectTabState?.selectedProjectId ?? -1
+  const projectFileMap = useProjectFileMap(projectId)
 
   // Query for getting the undo/redo state
   const { data: undoRedoState } = useQuery({
@@ -208,6 +214,7 @@ export function useSelectedFiles({
 
   return {
     selectedFiles: selectedFiles ?? [],
+    projectFileMap,
     commitSelectionChange,
     undo,
     redo,
