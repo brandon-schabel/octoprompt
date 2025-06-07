@@ -158,3 +158,7 @@ export function buildNodeSummaries(node: FileNode, isFolder: boolean): string {
 export const buildProjectFileMap = (files: ProjectFile[]): ProjectFileMap => {
   return new Map(files.map((file) => [file.id, file]))
 }
+
+export const buildProjectFileMapWithoutContent = <T extends Pick<ProjectFile, 'id'>>(files: T[]): Map<number, T> => {
+  return new Map(files.map((file) => [file.id, file]))
+}

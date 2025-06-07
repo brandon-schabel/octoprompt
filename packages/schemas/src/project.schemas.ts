@@ -163,11 +163,18 @@ export const ProjectSummaryResponseSchema = z
   })
   .openapi('ProjectSummaryResponse')
 
-// Define ProjectFileMapSchema using z.map
+// Define schemas for file maps
 export const ProjectFileMapSchema = z
   .map(z.number(), ProjectFileSchema)
   .describe('A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects.')
   .openapi('ProjectFileMap')
+
+export const ProjectFileWithoutContentSchema = ProjectFileSchema.omit({ content: true }).openapi('ProjectFileWithoutContent')
+
+export const ProjectFileMapWithoutContentSchema = z
+  .map(z.number(), ProjectFileWithoutContentSchema)
+  .describe('A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects without content.')
+  .openapi('ProjectFileMapWithoutContent')
 
 
 
@@ -177,12 +184,14 @@ export type GetFileVersionBody = z.infer<typeof GetFileVersionParams>
 export type RevertToVersionBody = z.infer<typeof RevertToVersionBodySchema>
 export type Project = z.infer<typeof ProjectSchema>
 export type ProjectFile = z.infer<typeof ProjectFileSchema>
+export type ProjectFileWithoutContent = z.infer<typeof ProjectFileWithoutContentSchema>
 export type CreateProjectBody = z.infer<typeof CreateProjectBodySchema>
 export type UpdateProjectBody = z.infer<typeof UpdateProjectBodySchema>
 
 
 // a key/value map by id of all project object (content, file name, path, extension, etc)
 export type ProjectFileMap = z.infer<typeof ProjectFileMapSchema>
+export type ProjectFileMapWithoutContent = z.infer<typeof ProjectFileMapWithoutContentSchema>
 export type CreateProjectRequestBody = z.infer<typeof CreateProjectBodySchema>
 export type UpdateProjectRequestBody = z.infer<typeof UpdateProjectBodySchema>
 export type ProjectResponse = z.infer<typeof ProjectResponseSchema>
