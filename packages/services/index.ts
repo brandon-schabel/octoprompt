@@ -6,6 +6,7 @@ export * from './src/file-services/file-sync-service-unified'
 export * from './src/model-providers/model-fetcher-service'
 export * from './src/model-providers/provider-defaults'
 export * from './src/constants/server-config'
+export * from './src/gen-ai-services'
 
 // server side utils
 export * from './src/utils/get-full-project-summary'
