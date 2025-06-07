@@ -532,8 +532,8 @@ const ChatMessageItem = React.memo(
           {/* Display attachments if present */}
           {messageAttachments && messageAttachments.length > 0 && (
             <div className='mb-2'>
-              <FileAttachmentList 
-                attachments={messageAttachments} 
+              <FileAttachmentList
+                attachments={messageAttachments}
                 showRemove={false}
                 className='space-y-1'
               />
@@ -552,8 +552,8 @@ const ChatMessageItem = React.memo(
         {/* Display attachments if present */}
         {messageAttachments && messageAttachments.length > 0 && (
           <div className='mb-2'>
-            <FileAttachmentList 
-              attachments={messageAttachments} 
+            <FileAttachmentList
+              attachments={messageAttachments}
               showRemove={false}
               className='space-y-1'
             />
@@ -1197,7 +1197,7 @@ function ChatPage() {
                   />
                 </div>
               )}
-              
+
               <div className='mx-auto flex w-full max-w-[72rem] items-end gap-2 px-4 py-3'>
                 <div className='flex flex-col flex-grow gap-2'>
                   <AdaptiveChatInput

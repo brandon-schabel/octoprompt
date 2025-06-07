@@ -50,8 +50,8 @@ function ResummarizeButton({ projectId, fileId, disabled }: { projectId: number;
         summarizeMutation.mutate(
           { projectId, fileIds: [fileId], force: true },
           {
-            onSuccess: (resp) => {
-              toast.success(resp.message || 'File has been successfully re-summarized')
+            onSuccess: () => {
+              toast.success('File has been successfully re-summarized')
             },
             onError: (error) => {
               toast.error(error?.message || 'Failed to re-summarize file')
@@ -276,8 +276,8 @@ export function ProjectSummarizationSettingsPage() {
       summarizeMutation.mutate(
         { fileIds: selectedFileIds, projectId: selectedProjectId ?? -1 },
         {
-          onSuccess: (resp) => {
-            toast.success(resp.message || 'Selected files have been summarized')
+          onSuccess: () => {
+            toast.success('Selected files have been summarized')
           },
           onError: () => { }
         }
@@ -295,8 +295,8 @@ export function ProjectSummarizationSettingsPage() {
     summarizeMutation.mutate(
       { fileIds: selectedFileIds, force: true, projectId: selectedProjectId ?? -1 },
       {
-        onSuccess: (resp) => {
-          toast.success(resp.message || 'Selected files have been force re-summarized', {
+        onSuccess: () => {
+          toast.success('Selected files have been force re-summarized', {
             description: 'Selected files have been force re-summarized'
           })
         }
@@ -314,8 +314,8 @@ export function ProjectSummarizationSettingsPage() {
     removeSummariesMutation.mutate(
       { fileIds: selectedFileIds, projectId: selectedProjectId ?? -1 },
       {
-        onSuccess: (resp) => {
-          toast.success(resp.message || `Removed ${resp.removedCount} summaries`, {
+        onSuccess: () => {
+          toast.success('Removed summaries', {
             description: 'Summaries have been removed'
           })
           // Deselect files whose summaries were removed if desired

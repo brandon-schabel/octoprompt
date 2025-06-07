@@ -97,7 +97,6 @@ describe('KV Store Schemas', () => {
                     editPromptId: -1,
                     selectedFiles: [1, 2, 3],
                     selectedPrompts: [4, 5],
-                    ticketId: -1,
                     displayName: 'Test Tab'
                 }
             }

@@ -10,16 +10,6 @@ import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest 
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
 
 import type {
-  CreateTicketBody,
-  UpdateTicketBody,
-  CreateTaskBody,
-  UpdateTaskBody,
-  ReorderTasksBody,
-  Ticket,
-  TaskSchema
-} from '@octoprompt/schemas'
-
-import type {
   MastraCodeChangeRequest,
   MastraCodeChangeResponse,
   MastraSummarizeRequest,
@@ -31,9 +21,6 @@ import type {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
-
-// Import the Task type properly
-type Task = z.infer<typeof TaskSchema>
 
 // Create a singleton client instance
 export const octoClient = createOctoPromptClient({
@@ -243,8 +230,10 @@ const PROJECT_KEYS = {
   files: (projectId: number) => [...PROJECT_KEYS.all, 'files', projectId] as const,
   filesWithoutContent: (projectId: number) => [...PROJECT_KEYS.all, 'filesWithoutContent', projectId] as const,
   summary: (projectId: number) => [...PROJECT_KEYS.all, 'summary', projectId] as const,
-  fileVersions: (projectId: number, originalFileId: number) => [...PROJECT_KEYS.all, 'fileVersions', projectId, originalFileId] as const,
-  fileVersion: (projectId: number, originalFileId: number, version?: number) => [...PROJECT_KEYS.all, 'fileVersion', projectId, originalFileId, version || 'latest'] as const
+  fileVersions: (projectId: number, originalFileId: number) =>
+    [...PROJECT_KEYS.all, 'fileVersions', projectId, originalFileId] as const,
+  fileVersion: (projectId: number, originalFileId: number, version?: number) =>
+    [...PROJECT_KEYS.all, 'fileVersion', projectId, originalFileId, version || 'latest'] as const
 }
 
 // --- Query Hooks ---
@@ -330,7 +319,6 @@ export function useUpdateProject() {
 export function useDeleteProject() {
   const { invalidateAllProjects, removeProject } = useInvalidateProjects()
   const { removeProjectPrompts } = useInvalidatePrompts()
-  const { removeProjectTickets } = useInvalidateTickets()
 
   return useMutation({
     mutationFn: (projectId: number) => octoClient.projects.deleteProject(projectId),
@@ -338,7 +326,6 @@ export function useDeleteProject() {
       invalidateAllProjects()
       removeProject(projectId)
       removeProjectPrompts(projectId)
-      removeProjectTickets(projectId)
       toast.success('Project deleted successfully')
     },
     onError: (error) => {
@@ -427,10 +414,10 @@ export function useUpdateFileContent() {
     mutationFn: async ({ projectId, fileId, content }: { projectId: number; fileId: number; content: string }) => {
       // Update the file content
       const result = await octoClient.projects.updateFileContent(projectId, fileId, content)
-      
+
       // Sync the project to ensure file system and data store are synchronized
       await octoClient.projects.syncProject(projectId)
-      
+
       return result
     },
     onSuccess: (_, { projectId }) => {
@@ -601,13 +588,13 @@ export function useRevertFileToVersion() {
     onSuccess: (_, { projectId }) => {
       invalidateProjectFiles(projectId)
       // Invalidate all version-related queries
-      queryClient.invalidateQueries({ 
-        queryKey: ['projects', 'fileVersions', projectId], 
-        type: 'active' 
+      queryClient.invalidateQueries({
+        queryKey: ['projects', 'fileVersions', projectId],
+        type: 'active'
       })
-      queryClient.invalidateQueries({ 
-        queryKey: ['projects', 'fileVersion', projectId], 
-        type: 'active' 
+      queryClient.invalidateQueries({
+        queryKey: ['projects', 'fileVersion', projectId],
+        type: 'active'
       })
       toast.success('File reverted successfully')
     },
@@ -695,248 +682,6 @@ const TICKET_KEYS = {
   projectTickets: (projectId: number) => [...TICKET_KEYS.all, 'project', projectId] as const,
   detail: (ticketId: number) => [...TICKET_KEYS.all, 'detail', ticketId] as const,
   tasks: (ticketId: number) => [...TICKET_KEYS.all, 'tasks', ticketId] as const
-}
-
-// --- Query Hooks ---
-export function useGetProjectTickets(projectId: number, status?: string) {
-  return useQuery({
-    queryKey: [...TICKET_KEYS.projectTickets(projectId), status || 'all'],
-    queryFn: () => octoClient.tickets.listProjectTickets(projectId, status),
-    enabled: !!projectId,
-    staleTime: 2 * 60 * 1000 // 2 minutes
-  })
-}
-
-export function useGetTicket(ticketId: number) {
-  return useQuery({
-    queryKey: TICKET_KEYS.detail(ticketId),
-    queryFn: () => octoClient.tickets.getTicket(ticketId),
-    enabled: !!ticketId,
-    staleTime: 2 * 60 * 1000
-  })
-}
-
-export function useGetTasks(ticketId: number) {
-  return useQuery({
-    queryKey: TICKET_KEYS.tasks(ticketId),
-    queryFn: () => octoClient.tickets.getTasks(ticketId),
-    enabled: !!ticketId,
-    staleTime: 30 * 1000 // 30 seconds for tasks
-  })
-}
-
-// --- Mutation Hooks ---
-export function useCreateTicket() {
-  const { invalidateProjectTickets, invalidateProjectBulkTicketQueries } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: (data: CreateTicketBody) => octoClient.tickets.createTicket(data),
-    onSuccess: ({ ticket: newTicket }) => {
-      // Invalidate all ticket queries for the project
-      invalidateProjectTickets(newTicket.projectId)
-      // Invalidate bulk ticket operations for the project
-      invalidateProjectBulkTicketQueries(newTicket.projectId)
-      toast.success('Ticket created successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to create ticket')
-    }
-  })
-}
-
-export function useUpdateTicket() {
-  const { invalidateProjectTickets, setTicketDetail, invalidateProjectBulkTicketQueries } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: ({ ticketId, data }: { ticketId: number; data: UpdateTicketBody }) =>
-      octoClient.tickets.updateTicket(ticketId, data),
-    onSuccess: ({ ticket: updatedTicket }) => {
-      // Invalidate all ticket queries for the project
-      invalidateProjectTickets(updatedTicket.projectId)
-      setTicketDetail(updatedTicket)
-      // Invalidate bulk ticket operations for the project
-      invalidateProjectBulkTicketQueries(updatedTicket.projectId)
-      toast.success('Ticket updated successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update ticket')
-    }
-  })
-}
-
-export function useDeleteTicket() {
-  const { invalidateAllTickets, removeTicket, removeTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: (ticketId: number) => octoClient.tickets.deleteTicket(ticketId),
-    onSuccess: (_, ticketId) => {
-      // Invalidate all ticket queries and remove specific ticket data
-      invalidateAllTickets()
-      removeTicket(ticketId)
-      removeTasks(ticketId)
-      // Invalidate bulk operations that might include this ticket
-      invalidateGlobalBulkTicketQueries()
-      toast.success('Ticket deleted successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to delete ticket')
-    }
-  })
-}
-
-export function useCreateTask() {
-  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: ({ ticketId, content }: { ticketId: number; content: string }) =>
-      octoClient.tickets.createTask(ticketId, content),
-    onSuccess: (newTask, { ticketId }) => {
-      // Invalidate tasks for the specific ticket
-      invalidateTicketTasks(ticketId)
-      // Invalidate bulk operations that include task counts
-      invalidateGlobalBulkTicketQueries()
-      toast.success('Task created successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to create task')
-    }
-  })
-}
-
-export function useUpdateTask() {
-  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: ({ ticketId, taskId, data }: { ticketId: number; taskId: number; data: UpdateTaskBody }) =>
-      octoClient.tickets.updateTask(ticketId, taskId, data),
-    onSuccess: (updatedTask, { ticketId }) => {
-      // Invalidate tasks for the specific ticket
-      invalidateTicketTasks(ticketId)
-      // Invalidate bulk operations that might be affected by task status changes
-      invalidateGlobalBulkTicketQueries()
-      toast.success('Task updated successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to update task')
-    }
-  })
-}
-
-export function useDeleteTask() {
-  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: ({ ticketId, taskId }: { ticketId: number; taskId: number }) =>
-      octoClient.tickets.deleteTask(ticketId, taskId),
-    onSuccess: (_, { ticketId }) => {
-      // Invalidate tasks for the specific ticket
-      invalidateTicketTasks(ticketId)
-      // Invalidate bulk operations that include task counts
-      invalidateGlobalBulkTicketQueries()
-      toast.success('Task deleted successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to delete task')
-    }
-  })
-}
-
-export function useReorderTasks() {
-  const { setTasks } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: ({ ticketId, data }: { ticketId: number; data: ReorderTasksBody }) =>
-      octoClient.tickets.reorderTasks(ticketId, data),
-    onSuccess: (reorderedTasks, { ticketId }) => {
-      setTasks(ticketId, reorderedTasks)
-      toast.success('Tasks reordered successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to reorder tasks')
-    }
-  })
-}
-
-export function useAutoGenerateTasks() {
-  const { invalidateTicketTasks, invalidateGlobalBulkTicketQueries } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: (ticketId: number) => octoClient.tickets.autoGenerateTasks(ticketId),
-    onSuccess: (generatedTasks, ticketId) => {
-      // Invalidate tasks for the specific ticket
-      invalidateTicketTasks(ticketId)
-      // Invalidate bulk operations that include task counts
-      invalidateGlobalBulkTicketQueries()
-      toast.success('Tasks generated successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to generate tasks')
-    }
-  })
-}
-
-export function useLinkFilesToTicket() {
-  const { invalidateTicket } = useInvalidateTickets()
-
-  return useMutation({
-    mutationFn: ({ ticketId, fileIds }: { ticketId: number; fileIds: number[] }) =>
-      octoClient.tickets.linkFilesToTicket(ticketId, fileIds),
-    onSuccess: (linkedFiles, { ticketId }) => {
-      invalidateTicket(ticketId)
-      toast.success('Files linked to ticket successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to link files to ticket')
-    }
-  })
-}
-
-export function useSuggestTasksForTicket() {
-  return useMutation({
-    mutationFn: ({ ticketId, userContext }: { ticketId: number; userContext?: string }) =>
-      octoClient.tickets.suggestTasksForTicket(ticketId, userContext),
-    onError: (error) => {
-      toast.error(error.message || 'Failed to suggest tasks')
-    }
-  })
-}
-
-export function useSuggestFilesForTicket() {
-  return useMutation({
-    mutationFn: ({ ticketId, extraUserInput }: { ticketId: number; extraUserInput?: string }) =>
-      octoClient.tickets.suggestFilesForTicket(ticketId, extraUserInput),
-    onError: (error) => {
-      toast.error(error.message || 'Failed to suggest files')
-    }
-  })
-}
-
-// --- Bulk Operations ---
-export function useGetTasksForTickets(ticketIds: number[]) {
-  return useQuery({
-    queryKey: ['bulk-tasks', ...ticketIds.sort()],
-    queryFn: () => octoClient.tickets.getTasksForTickets(ticketIds),
-    enabled: ticketIds.length > 0,
-    staleTime: 2 * 60 * 1000
-  })
-}
-
-export function useListTicketsWithTaskCount(projectId: number, status?: string) {
-  return useQuery({
-    queryKey: ['tickets-with-count', projectId, status || 'all'],
-    queryFn: () => octoClient.tickets.listTicketsWithTaskCount(projectId, status),
-    enabled: !!projectId,
-    staleTime: 2 * 60 * 1000
-  })
-}
-
-export function useListTicketsWithTasks(projectId: number, status?: string) {
-  return useQuery({
-    queryKey: ['tickets-with-tasks', projectId, status || 'all'],
-    queryFn: () => octoClient.tickets.listTicketsWithTasks(projectId, status),
-    enabled: !!projectId,
-    staleTime: 2 * 60 * 1000
-  })
 }
 
 // --- Utility Hooks for Complex Operations ---
@@ -1071,89 +816,6 @@ export function useInvalidateChats() {
   }
 }
 
-// --- Ticket Invalidation Utilities ---
-export function useInvalidateTickets() {
-  const queryClient = useQueryClient()
-
-  return {
-    // Invalidate all ticket-related queries
-    invalidateAllTickets: () => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.all })
-    },
-
-    // Invalidate specific ticket detail
-    invalidateTicket: (ticketId: number) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
-    },
-
-    // Invalidate tickets for a specific project
-    invalidateProjectTickets: (projectId: number, status?: string) => {
-      if (status) {
-        queryClient.invalidateQueries({ queryKey: [...TICKET_KEYS.projectTickets(projectId), status] })
-      } else {
-        queryClient.invalidateQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
-      }
-    },
-
-    // Invalidate tasks for a specific ticket
-    invalidateTicketTasks: (ticketId: number) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
-    },
-
-    // Remove ticket from cache completely
-    removeTicket: (ticketId: number) => {
-      queryClient.removeQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
-      queryClient.removeQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
-    },
-
-    // Remove tasks for a specific ticket
-    removeTasks: (ticketId: number) => {
-      queryClient.removeQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
-    },
-
-    /** NEW: Removes queries for all tickets associated with a specific project. */
-    removeProjectTickets: (projectId: number) => {
-      queryClient.removeQueries({ queryKey: TICKET_KEYS.projectTickets(projectId) })
-    },
-
-    /** NEW: Sets specific ticket detail in the cache. */
-    setTicketDetail: (ticket: Ticket) => {
-      queryClient.setQueryData(TICKET_KEYS.detail(ticket.id), ticket)
-    },
-
-    /** NEW: Sets tasks for a specific ticket in the cache. */
-    setTasks: (ticketId: number, tasks: any) => {
-      queryClient.setQueryData(TICKET_KEYS.tasks(ticketId), tasks)
-    },
-
-    // Invalidate all data related to a ticket
-    invalidateTicketData: (ticketId: number) => {
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.detail(ticketId) })
-      queryClient.invalidateQueries({ queryKey: TICKET_KEYS.tasks(ticketId) })
-    },
-
-    /** NEW: Invalidate bulk ticket queries for a specific project. */
-    invalidateProjectBulkTicketQueries: (projectId: number) => {
-      queryClient.invalidateQueries({ queryKey: ['tickets-with-count', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['tickets-with-tasks', projectId] })
-    },
-
-    /** NEW: Invalidate global bulk ticket queries across all projects. */
-    invalidateGlobalBulkTicketQueries: () => {
-      queryClient.invalidateQueries({ queryKey: ['bulk-tasks'] })
-      queryClient.invalidateQueries({ queryKey: ['tickets-with-count'] })
-      queryClient.invalidateQueries({ queryKey: ['tickets-with-tasks'] })
-    },
-
-    // Invalidate bulk ticket operations
-    invalidateBulkTicketQueries: (projectId: number) => {
-      queryClient.invalidateQueries({ queryKey: ['tickets-with-count', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['tickets-with-tasks', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['bulk-tasks'] })
-    }
-  }
-}
-
 // --- Key Invalidation Utilities ---
 export function useInvalidateKeys() {
   const queryClient = useQueryClient()
@@ -1247,10 +909,6 @@ export function useSmartCaching() {
           queryKey: PROMPT_KEYS.projectPrompts(projectId),
           queryFn: () => octoClient.prompts.listProjectPrompts(projectId)
         }),
-        queryClient.prefetchQuery({
-          queryKey: TICKET_KEYS.projectTickets(projectId),
-          queryFn: () => octoClient.tickets.listProjectTickets(projectId)
-        })
       ])
     },
 

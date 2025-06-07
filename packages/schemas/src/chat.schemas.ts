@@ -1,9 +1,12 @@
 import { z } from '@hono/zod-openapi'
-import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
+// TODO: Replace with Mastra schemas when ready
+// Temporary minimal schemas until Mastra integration is complete
+
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 
 import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
+import { AiSdkOptionsSchema, UnifiedModelSchema } from './gen-ai.schemas'
 
 export type MessageRole = z.infer<typeof MessageRoleEnum> // Export the type if needed elsewhere
 
@@ -32,14 +35,16 @@ export const ChatSchema = z
   .openapi('Chat')
 
 // Schema for chat message attachments
-export const ChatMessageAttachmentSchema = z.object({
-  id: unixTSSchemaSpec.describe('Unique ID for the attachment itself.'),
-  fileName: z.string().openapi({ description: 'Original name of the uploaded file.' }),
-  mimeType: z.string().openapi({ description: 'MIME type of the file.' }),
-  size: z.number().int().positive().openapi({ description: 'File size in bytes.' }),
-  url: z.string().url().openapi({ description: 'URL to access/download the attachment.' }),
-  created: unixTSSchemaSpec,
-}).openapi('ChatMessageAttachment')
+export const ChatMessageAttachmentSchema = z
+  .object({
+    id: unixTSSchemaSpec.describe('Unique ID for the attachment itself.'),
+    fileName: z.string().openapi({ description: 'Original name of the uploaded file.' }),
+    mimeType: z.string().openapi({ description: 'MIME type of the file.' }),
+    size: z.number().int().positive().openapi({ description: 'File size in bytes.' }),
+    url: z.string().url().openapi({ description: 'URL to access/download the attachment.' }),
+    created: unixTSSchemaSpec
+  })
+  .openapi('ChatMessageAttachment')
 
 export const ChatMessageSchema = z
   .object({
@@ -48,7 +53,9 @@ export const ChatMessageSchema = z
     role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
     content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
     created: unixTSSchemaSpec,
-    attachments: z.array(ChatMessageAttachmentSchema).optional()
+    attachments: z
+      .array(ChatMessageAttachmentSchema)
+      .optional()
       .openapi({ description: 'Optional list of attachments for the message.' })
   })
   .openapi('ChatMessage')
@@ -222,14 +229,17 @@ export const AiChatStreamRequestSchema = z
       example: 'Thanks! Can you elaborate on the E=mc^2 part?'
     }),
     // ADD THIS FIELD:
-    currentMessageAttachments: z.array(
-      z.object({
-        id: unixTSSchemaSpec.describe("ID of the pre-uploaded attachment."),
-        url: z.string().url().describe("Accessible URL of the attachment for the AI model."),
-        mimeType: z.string().describe("MIME type of the attachment."),
-        fileName: z.string().optional().describe("Original filename, if helpful for context."),
-      })
-    ).optional().openapi({ description: 'Attachments specifically for the current user message being sent to the AI.'}),
+    currentMessageAttachments: z
+      .array(
+        z.object({
+          id: unixTSSchemaSpec.describe('ID of the pre-uploaded attachment.'),
+          url: z.string().url().describe('Accessible URL of the attachment for the AI model.'),
+          mimeType: z.string().describe('MIME type of the attachment.'),
+          fileName: z.string().optional().describe('Original filename, if helpful for context.')
+        })
+      )
+      .optional()
+      .openapi({ description: 'Attachments specifically for the current user message being sent to the AI.' }),
     options: AiSdkOptionsSchema.optional().openapi({
       description: 'Optional parameters for the AI model.'
     }),

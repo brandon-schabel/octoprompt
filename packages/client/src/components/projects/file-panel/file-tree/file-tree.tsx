@@ -67,7 +67,6 @@ export type FileTreeProps = {
   preferredEditor: EditorType
   onNavigateRight?: () => void
   onNavigateToSearch?: () => void
-  onRequestAIFileChange?(filePath: string): void
 }
 
 async function copyFilePath(path: string) {
@@ -105,7 +104,6 @@ interface FileTreeNodeRowProps {
   onToggleOpen: () => void
   onViewFile?: (file: ProjectFile) => void
   projectRoot: string
-  onRequestAIFileChange?: (filePath: string) => void
 }
 
 /**
@@ -113,7 +111,7 @@ interface FileTreeNodeRowProps {
  * ForwardRef so we can focus DOM nodes from parent.
  */
 const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(function FileTreeNodeRow(
-  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, projectRoot, onRequestAIFileChange },
+  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, projectRoot },
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
@@ -305,8 +303,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                       summarizeMutation.mutate(
                         { fileIds: [item.node.file!.id], force: false, projectId }, // force: false initially
                         {
-                          onSuccess: (resp) => {
-                            toast.success(resp.message || 'File summary started.')
+                          onSuccess: () => {
+                            toast.success('File summary started.')
                           },
                           onError: (error: any) => {
                             // Added 'any' type temporarily
@@ -388,19 +386,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                   </Button>
                 )}
 
-                {onRequestAIFileChange && (
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='opacity-0 group-hover:opacity-100 transition-opacity'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onRequestAIFileChange(item.node.file!.path)
-                    }}
-                  >
-                    <Wand2 className='h-4 w-4' />
-                  </Button>
-                )}
               </>
             )}
           </div>
@@ -474,15 +459,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
         )}
 
         {/* "Modify with AI..." for files */}
-        {!isFolder && item.node.file?.path && onRequestAIFileChange && (
-          <ContextMenuItem
-            onClick={() => {
-              onRequestAIFileChange(item.node.file!.path)
-            }}
-          >
-            Modify with AI...
-          </ContextMenuItem>
-        )}
 
         {/* Refresh options for folders */}
         {isFolder && (
@@ -510,7 +486,7 @@ export type FileTreeRef = {
 }
 
 export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree(
-  { root, onViewFile, projectRoot, resolveImports, onNavigateRight, onNavigateToSearch, onRequestAIFileChange },
+  { root, onViewFile, projectRoot, resolveImports, onNavigateRight, onNavigateToSearch },
   ref
 ) {
   const totalFiles = countTotalFiles(root)
@@ -759,7 +735,6 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
               onToggleOpen={() => toggleOpen(item.path)}
               onViewFile={onViewFile}
               projectRoot={projectRoot}
-              onRequestAIFileChange={onRequestAIFileChange}
             />
           ))}
         </div>

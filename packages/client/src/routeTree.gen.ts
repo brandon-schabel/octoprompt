@@ -17,7 +17,6 @@ import { Route as ProjectSummarizationImport } from './routes/project-summarizat
 import { Route as KeysImport } from './routes/keys'
 import { Route as HealthImport } from './routes/health'
 import { Route as ChatImport } from './routes/chat'
-import { Route as AdminImport } from './routes/admin'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
@@ -58,12 +57,6 @@ const ChatRoute = ChatImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const AdminRoute = AdminImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
@@ -79,13 +72,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminImport
       parentRoute: typeof rootRoute
     }
     '/chat': {
@@ -137,7 +123,6 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
@@ -148,7 +133,6 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
@@ -160,7 +144,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/chat': typeof ChatRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
@@ -173,7 +156,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin'
     | '/chat'
     | '/health'
     | '/keys'
@@ -183,7 +165,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/chat'
     | '/health'
     | '/keys'
@@ -193,7 +174,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/admin'
     | '/chat'
     | '/health'
     | '/keys'
@@ -205,7 +185,6 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
   ChatRoute: typeof ChatRoute
   HealthRoute: typeof HealthRoute
   KeysRoute: typeof KeysRoute
@@ -216,7 +195,6 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
   ChatRoute: ChatRoute,
   HealthRoute: HealthRoute,
   KeysRoute: KeysRoute,
@@ -236,7 +214,6 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/admin",
         "/chat",
         "/health",
         "/keys",
@@ -247,9 +224,6 @@ export const routeTree = rootRoute
     },
     "/": {
       "filePath": "index.tsx"
-    },
-    "/admin": {
-      "filePath": "admin.tsx"
     },
     "/chat": {
       "filePath": "chat.tsx"

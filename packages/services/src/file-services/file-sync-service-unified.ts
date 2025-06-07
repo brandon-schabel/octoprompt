@@ -13,7 +13,11 @@ import {
   listProjects
 } from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
-import { summarizeSingleFile } from '@octoprompt/services'
+// Summarize function moved to Mastra - using mock for now
+const summarizeSingleFile = async (file: any) => {
+  console.log(`Mock: summarizing file ${file.path}`)
+  return file
+}
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
@@ -622,7 +626,7 @@ export function createFileChangePlugin() {
 
       // Re-summarize the (created or modified) file
       // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
-      await summarizeSingleFile(updatedFile) // From summarize-files-agent
+      await summarizeSingleFile(updatedFile)
       // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
     } catch (err) {
       console.error('[FileChangePlugin] Error handling file change:', err)

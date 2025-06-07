@@ -13,7 +13,6 @@ import {
   Settings as SettingsIcon, // Renamed to avoid conflict with Settings state
   HelpCircleIcon,
   LightbulbIcon,
-  LayoutDashboardIcon,
   MenuIcon, // Icon for SidebarTrigger if needed, or use default
   FolderCogIcon,
   FolderTreeIcon
@@ -42,12 +41,11 @@ const mainNavItems = [
     title: 'Projects',
     to: '/projects',
     icon: FolderIcon,
-    routeIds: ['/projects', '/tickets', '/project-summarization']
+    routeIds: ['/projects', '/project-summarization']
   },
   { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
   { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },
   { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] },
-  { id: 'admin', title: 'Admin', to: '/admin', icon: LayoutDashboardIcon, routeIds: ['/admin'] }
 ]
 
 export function AppSidebar() {
