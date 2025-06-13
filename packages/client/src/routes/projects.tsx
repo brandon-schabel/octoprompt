@@ -81,7 +81,7 @@ export function ProjectsPage() {
   const handleSelectProject = (id: number) => {
     // If there are no tabs, create one for the selected project
     if (noTabsYet) {
-      const selectedProject = projects.find(p => p.id === id)
+      const selectedProject = projects.find((p) => p.id === id)
       const newTabId = createProjectTabFromHook({
         displayName: selectedProject?.name || `Tab for ${id.toString().substring(0, 6)}`,
         selectedProjectId: id
