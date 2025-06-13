@@ -3,22 +3,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Maximize2, Minimize2, X } from 'lucide-react'
 import { ClaudeCodeAgent } from './claude-code-agent'
-import { useProjectStore } from '@/stores/project-store'
+import { useGetProject } from '@/hooks/api/use-projects-api'
 
 interface ClaudeCodeModalProps {
   isOpen: boolean
   onClose: () => void
-  projectId?: number
+  projectId: number
   initialPrompt?: string
 }
 
 export function ClaudeCodeModal({ isOpen, onClose, projectId: propProjectId, initialPrompt }: ClaudeCodeModalProps) {
   const [isMaximized, setIsMaximized] = useState(false)
-  const { activeProject } = useProjectStore()
 
-  // Use prop projectId or fall back to active project
-  const projectId = propProjectId || activeProject?.id
-  const project = projectId ? activeProject : undefined
+  // Fetch project data if projectId is provided
+  const { data: project } = useGetProject(propProjectId)
+
+  const projectId = propProjectId
+  const projectData = projectId && project ? project : undefined
 
   // Reset maximized state when modal opens
   useEffect(() => {
@@ -30,14 +31,13 @@ export function ClaudeCodeModal({ isOpen, onClose, projectId: propProjectId, ini
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className={`${
-          isMaximized ? 'max-w-full w-full h-screen m-0 rounded-none' : 'max-w-4xl w-[90vw] max-h-[80vh]'
-        } p-0 overflow-hidden transition-all duration-200`}
+        className={`${isMaximized ? 'max-w-full w-full h-screen m-0 rounded-none' : 'max-w-4xl w-[90vw] max-h-[80vh]'
+          } p-0 overflow-hidden transition-all duration-200`}
       >
         <DialogHeader className='px-6 py-4 border-b flex flex-row items-center justify-between'>
           <DialogTitle className='text-lg font-semibold'>
             Claude Code Assistant
-            {project && <span className='ml-2 text-sm text-muted-foreground'>- {project.name}</span>}
+            {projectData && <span className='ml-2 text-sm text-muted-foreground'>- {projectData.name}</span>}
           </DialogTitle>
           <div className='flex items-center gap-2'>
             <Button
@@ -57,8 +57,8 @@ export function ClaudeCodeModal({ isOpen, onClose, projectId: propProjectId, ini
         <div className={`${isMaximized ? 'h-[calc(100vh-73px)]' : 'h-[calc(80vh-73px)]'} overflow-hidden`}>
           <ClaudeCodeAgent
             projectId={projectId}
-            projectName={project?.name}
-            projectPath={project?.folderPath}
+            projectName={projectData?.name}
+            projectPath={projectData?.folderPath}
             initialPrompt={initialPrompt}
             className='h-full'
           />

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useNavigate, useParams } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
@@ -24,41 +24,13 @@ import { ProjectStatsDisplay } from '@/components/projects/project-stats-display
 import { ProjectSummarizationSettingsPage } from '@/routes/project-summarization'
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
-import { ClaudeCodeCard } from '@/components/claude-code/claude-code-card'
-import { ClaudeCodeFab } from '@/components/claude-code/claude-code-fab'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
   const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
-  const navigate = useNavigate()
-  const params = useParams({ from: '/projects/$tabId/$projectId' })
   const [activeProjectTabState] = useActiveProjectTab()
-  const pathname = window.location.pathname
 
-  // Use URL params if available, otherwise fall back to localStorage
-  const selectedProjectId = params?.projectId ? parseInt(params.projectId) : activeProjectTabState?.selectedProjectId
-  const activeTabId = params?.tabId ? parseInt(params.tabId) : activeProjectTabState?.id
-
-  // Sync URL params with localStorage when they change
-  useEffect(() => {
-    if (params?.tabId && params?.projectId) {
-      const urlTabId = parseInt(params.tabId)
-      const urlProjectId = parseInt(params.projectId)
-      
-      // Set active tab if different from URL
-      if (activeProjectTabState?.id !== urlTabId) {
-        setActiveProjectTabId(urlTabId)
-      }
-      
-      // Update tab's selected project if different from URL
-      if (tabs?.[urlTabId] && tabs[urlTabId].selectedProjectId !== urlProjectId) {
-        updateProjectTabs({
-          ...tabs,
-          [urlTabId]: { ...tabs[urlTabId], selectedProjectId: urlProjectId }
-        })
-      }
-    }
-  }, [params?.tabId, params?.projectId, activeProjectTabState?.id, tabs, setActiveProjectTabId, updateProjectTabs])
+  const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
   const projectData = projectResponse?.data
 
@@ -67,37 +39,6 @@ export function ProjectsPage() {
   const { createProjectTab: createProjectTabFromHook } = useCreateProjectTab()
   const updateActiveProjectTab = useUpdateActiveProjectTab()
   const { mutate: deleteProjectMutate } = useDeleteProject()
-  
-  // Redirect from /projects to a specific tab/project if available
-  useEffect(() => {
-    if (pathname === '/projects' && !params?.tabId && !params?.projectId) {
-      // If we have an active tab with a project, navigate to it
-      if (activeProjectTabState?.id && activeProjectTabState?.selectedProjectId) {
-        navigate({ 
-          to: '/projects/$tabId/$projectId', 
-          params: { 
-            tabId: activeProjectTabState.id.toString(), 
-            projectId: activeProjectTabState.selectedProjectId.toString() 
-          },
-          replace: true
-        })
-      } else if (tabs && Object.keys(tabs).length > 0) {
-        // Find first tab with a project
-        const firstTabWithProject = Object.entries(tabs).find(([_, tab]) => tab.selectedProjectId)
-        if (firstTabWithProject) {
-          const [tabId, tab] = firstTabWithProject
-          navigate({ 
-            to: '/projects/$tabId/$projectId', 
-            params: { 
-              tabId: tabId, 
-              projectId: tab.selectedProjectId!.toString() 
-            },
-            replace: true
-          })
-        }
-      }
-    }
-  }, [pathname, params, activeProjectTabState, tabs, navigate])
 
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [projectFormOpen, setProjectFormOpen] = useState(false)
@@ -113,28 +54,16 @@ export function ProjectsPage() {
 
   useEffect(() => {
     if (projects.length === 1 && noTabsYet) {
-      const newTabId = createProjectTabFromHook({
+      createProjectTabFromHook({
         displayName: projects[0].name || `Tab for ${projects[0].id.toString().substring(0, 6)}`,
         selectedProjectId: projects[0].id
       })
-      // Navigate to the new tab/project
-      navigate({ 
-        to: '/projects/$tabId/$projectId', 
-        params: { 
-          tabId: newTabId.toString(), 
-          projectId: projects[0].id.toString() 
-        } 
-      })
     }
     if (!selectedProjectId && projects.length === 1 && tabsLen === 1) {
-      // Navigate to the existing tab/project
-      navigate({ 
-        to: '/projects/$tabId/$projectId', 
-        params: { 
-          tabId: tabsKeys[0], 
-          projectId: projects[0].id.toString() 
-        } 
+      updateProjectTabs({
+        [tabsKeys[0]]: { ...tabsArray[0], selectedProjectId: projects[0].id }
       })
+      setActiveProjectTabId(parseInt(tabsKeys[0]))
     }
   }, [
     projects,
@@ -146,26 +75,26 @@ export function ProjectsPage() {
     tabsKeys,
     tabsArray,
     setActiveProjectTabId,
-    tabsLen,
-    navigate
+    tabsLen
   ])
 
   const handleSelectProject = (id: number) => {
     // If there are no tabs, create one for the selected project
     if (noTabsYet) {
-      const selectedProject = projects.find((p) => p.id === id)
+      const selectedProject = projects.find(p => p.id === id)
       const newTabId = createProjectTabFromHook({
         displayName: selectedProject?.name || `Tab for ${id.toString().substring(0, 6)}`,
         selectedProjectId: id
       })
-      // Navigate to the new tab/project URL
-      navigate({ to: '/projects/$tabId/$projectId', params: { tabId: newTabId.toString(), projectId: id.toString() } })
+      setActiveProjectTabId(newTabId)
     } else {
-      // Navigate to the selected project with current tab
-      const currentTabId = activeTabId || Object.keys(tabs || {})[0]
-      if (currentTabId) {
-        navigate({ to: '/projects/$tabId/$projectId', params: { tabId: currentTabId.toString(), projectId: id.toString() } })
-      }
+      // Update the existing active tab
+      updateActiveProjectTab((prev) => ({
+        ...(prev || {}),
+        selectedProjectId: id,
+        selectedFiles: [],
+        selectedPrompts: []
+      }))
     }
     setProjectModalOpen(false)
   }
@@ -263,7 +192,6 @@ export function ProjectsPage() {
                 <TabsTrigger value='context'>Context</TabsTrigger>
                 <TabsTrigger value='stats'>Statistics</TabsTrigger>
                 <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-                <TabsTrigger value='claude-code'>Claude Code</TabsTrigger>
               </TabsList>
             </div>
             <div className='ml-auto'>
@@ -296,24 +224,6 @@ export function ProjectsPage() {
               <p>No project selected for summarization settings.</p>
             )}
           </TabsContent>
-          <TabsContent
-            value='claude-code'
-            className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'
-          >
-            {selectedProjectId && projectData ? (
-              <div className='max-w-2xl mx-auto'>
-                <h3 className='text-lg font-semibold mb-4'>Claude Code for {projectData.name}</h3>
-                <ClaudeCodeCard
-                  projectPath={projectData.folderPath}
-                  projectName={projectData.name}
-                  projectId={selectedProjectId}
-                  className='w-full'
-                />
-              </div>
-            ) : (
-              <p>No project selected for Claude Code.</p>
-            )}
-          </TabsContent>
         </Tabs>
       </div>
     )
@@ -342,17 +252,12 @@ export function ProjectsPage() {
           </DialogContent>
         </Dialog>
         <ProjectDialog open={projectFormOpen} projectId={editingProjectId} onOpenChange={setProjectFormOpen} />
-
-        {/* Floating Claude Code button - only show when a project is selected */}
-        {selectedProjectId && <ClaudeCodeFab projectId={selectedProjectId} />}
       </>
     </ErrorBoundary>
   )
 }
 
-export const Route = createFileRoute('/projects')({ 
-  component: ProjectsPage
-})
+export const Route = createFileRoute('/projects')({ component: ProjectsPage })
 
 type MainProjectsLayoutProps = {
   projectData: ProjectResponse['data'] | undefined
