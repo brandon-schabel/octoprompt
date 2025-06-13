@@ -27,7 +27,6 @@ function getProjectFilesPath(projectId: number): string {
   return path.join(getProjectDataDir(projectId), 'files.json')
 }
 
-
 // --- Core Read/Write Functions ---
 async function ensureDirExists(dirPath: string): Promise<void> {
   try {
@@ -136,7 +135,6 @@ export const projectStorage = {
   async writeProjectFiles(projectId: number, files: ProjectFilesStorage): Promise<ProjectFilesStorage> {
     return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema)
   },
-
 
   // UPDATED: Enhanced updateProjectFile with versioning support
   async updateProjectFile(

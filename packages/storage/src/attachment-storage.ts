@@ -18,7 +18,8 @@ async function ensureDirExists(dirPath: string): Promise<void> {
   try {
     await fs.mkdir(dirPath, { recursive: true })
   } catch (error: any) {
-    if (error.code !== 'EEXIST') { // Ignore if directory already exists
+    if (error.code !== 'EEXIST') {
+      // Ignore if directory already exists
       console.error(`Error creating directory ${dirPath}:`, error)
       throw new ApiError(500, `Failed to ensure directory exists: ${dirPath}`)
     }
@@ -38,7 +39,12 @@ function getAttachmentStoragePath(
   fileName: string
 ): string {
   const safeFileName = fileName.replace(/[^a-zA-Z0-9_.-]/g, '_') // Sanitize filename
-  return path.join(CHAT_ATTACHMENTS_BASE_DIR, chatId.toString(), messageId.toString(), `${attachmentId}_${safeFileName}`)
+  return path.join(
+    CHAT_ATTACHMENTS_BASE_DIR,
+    chatId.toString(),
+    messageId.toString(),
+    `${attachmentId}_${safeFileName}`
+  )
 }
 
 export const attachmentStorage = {
@@ -61,7 +67,7 @@ export const attachmentStorage = {
         mimeType: file.type,
         size: file.size,
         storagePath, // Store the full path or a relative one depending on serving strategy
-        created: normalizeToUnixMs(Date.now()),
+        created: normalizeToUnixMs(Date.now())
       }
     } catch (error: any) {
       console.error(`Failed to save attachment to ${storagePath}:`, error)
@@ -87,7 +93,7 @@ export const attachmentStorage = {
         mimeType: file.type,
         size: file.size,
         storagePath, // Store the full path or a relative one depending on serving strategy
-        created: normalizeToUnixMs(Date.now()),
+        created: normalizeToUnixMs(Date.now())
       }
     } catch (error: any) {
       console.error(`Failed to save attachment to ${storagePath}:`, error)
@@ -114,12 +120,7 @@ export const attachmentStorage = {
     }
   },
 
-  async deleteFile(
-    chatId: number,
-    messageId: number,
-    attachmentId: number,
-    fileName: string
-  ): Promise<boolean> {
+  async deleteFile(chatId: number, messageId: number, attachmentId: number, fileName: string): Promise<boolean> {
     const storagePath = getAttachmentStoragePath(chatId, messageId, attachmentId, fileName)
     try {
       if (await Bun.file(storagePath).exists()) {
@@ -144,21 +145,17 @@ export const attachmentStorage = {
     }
   },
 
-  async deleteFileById(
-    chatId: number,
-    messageId: number,
-    attachmentId: number
-  ): Promise<boolean> {
+  async deleteFileById(chatId: number, messageId: number, attachmentId: number): Promise<boolean> {
     // Find files that match the attachment ID pattern in the message directory
     const messageDir = path.join(CHAT_ATTACHMENTS_BASE_DIR, chatId.toString(), messageId.toString())
     try {
       const files = await fs.readdir(messageDir)
-      const matchingFile = files.find(file => file.startsWith(`${attachmentId}_`))
-      
+      const matchingFile = files.find((file) => file.startsWith(`${attachmentId}_`))
+
       if (matchingFile) {
         const fullPath = path.join(messageDir, matchingFile)
         await fs.unlink(fullPath)
-        
+
         // Clean up empty directories
         const remainingFiles = await fs.readdir(messageDir)
         if (remainingFiles.length === 0) {

@@ -102,7 +102,7 @@ Then run to remove the quarantine:
 sudo xattr -r -d com.apple.quarantine ./octoprompt
 ```
 
-Finally  you can run the Octoprompt app by running the binary file as you normally would
+Finally you can run the Octoprompt app by running the binary file as you normally would
 
 ```bash
 ./octoprompt

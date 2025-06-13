@@ -1,4 +1,4 @@
-import { Folder, Pencil, Trash, Plus } from 'lucide-react'
+import { Folder, Pencil, Trash, Plus, Bot } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Project } from '@octoprompt/schemas'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { useNavigate } from '@tanstack/react-router'
 
 interface ProjectListProps {
   loading: boolean
@@ -35,6 +36,7 @@ export function ProjectList({
   onDeleteProject,
   onCreateProject
 }: ProjectListProps) {
+  const navigate = useNavigate()
   if (loading) {
     return (
       <ErrorBoundary>
@@ -90,6 +92,12 @@ export function ProjectList({
                     <DropdownMenuItem onClick={() => onEditProject(project.id)}>
                       <Pencil className='mr-2 h-4 w-4' />
                       <span>Edit Project</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate({ to: '/claude-code', search: { projectId: project.id.toString() } })}
+                    >
+                      <Bot className='mr-2 h-4 w-4' />
+                      <span>Open in Claude Code</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <AlertDialog>

@@ -9,6 +9,8 @@ export * from './src/provider-key.schemas'
 export * from './src/schema-utils'
 export * from './src/unix-ts-utils'
 export * from './src/gen-ai.schemas'
+export * from './src/claude-code.schemas'
+export * from './src/claude-code-audit.schemas'
 
 // export constan ts
 export * from './src/constants/file-sync-options'

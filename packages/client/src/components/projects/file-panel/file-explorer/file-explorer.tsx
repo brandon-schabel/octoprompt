@@ -71,7 +71,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteIndex, setAutocompleteIndex] = useState(-1)
 
-
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
 
   useHotkeys(
@@ -145,13 +144,12 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       <SelectedFilesDrawer
         selectedFiles={selectedFiles}
         fileMap={projectFileMap}
-        onRemoveFile={() => { }}
+        onRemoveFile={() => {}}
         trigger={trigger}
         projectTabId={activeProjectTabId ?? -1}
       />
     )
   }
-
 
   const handleSaveFileContent = useCallback(
     async (content: string) => {
@@ -286,8 +284,9 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               return (
                 <li
                   key={file.id}
-                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
-                    }`}
+                  className={`px-2 py-1 cursor-pointer flex items-center justify-between ${
+                    isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                  }`}
                   onMouseDown={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -389,7 +388,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           </div>
         </div>
       )}
-
 
       {/* FileViewerDialog with versioning support */}
       {viewedFile && (

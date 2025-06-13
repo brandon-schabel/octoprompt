@@ -16,3 +16,6 @@ export * from './src/utils/merge-deep'
 export * from './src/utils/pattern-matcher'
 export * from './src/utils/parse-timestamp'
 export * from './src/utils/prompts-map'
+
+// constants
+export * from './src/constants/claude-code-templates'

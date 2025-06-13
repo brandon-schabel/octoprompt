@@ -35,12 +35,7 @@ import {
   RemoveSummariesResponseSchema,
   FileSuggestionsZodSchema
 } from '@octoprompt/schemas'
-import {
-  optimizeUserInput,
-  syncProject,
-  syncProjectFolder,
-  watchersManager
-} from '@octoprompt/services'
+import { optimizeUserInput, syncProject, syncProjectFolder, watchersManager } from '@octoprompt/services'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
 
 // File operation schemas
@@ -853,8 +848,8 @@ ${userInput}
     try {
       // TODO: Replace with Mastra file suggestion service when ready
       const projectFiles = await projectService.getProjectFiles(projectId)
-      const availableFileIds = projectFiles.map(f => f.id)
-      
+      const availableFileIds = projectFiles.map((f) => f.id)
+
       // Mock implementation - return first few files as suggestions
       const numericFileIds = availableFileIds.slice(0, Math.min(3, availableFileIds.length))
 

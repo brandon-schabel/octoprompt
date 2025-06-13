@@ -53,7 +53,6 @@ export async function executeSimpleAgentOrchestrator(input: OrchestratorInput): 
     }
 
     const projectSummary = await getFullProjectSummary(projectId)
-    
 
     // 2. Get selected files
     const selectedFiles: Array<{ id: number; path: string; content: string }> = []

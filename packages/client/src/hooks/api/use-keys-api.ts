@@ -1,18 +1,7 @@
-
-export {
-  useGetKeys,
-  useGetKey,
-  useCreateKey,
-  useUpdateKey,
-  useDeleteKey,
-  useInvalidateKeys
-} from '../api-hooks'
+export { useGetKeys, useGetKey, useCreateKey, useUpdateKey, useDeleteKey, useInvalidateKeys } from '../api-hooks'
 
 // Type exports for backward compatibility
-import type {
-  CreateProviderKeyBody,
-  UpdateProviderKeyBody
-} from '@octoprompt/schemas'
+import type { CreateProviderKeyBody, UpdateProviderKeyBody } from '@octoprompt/schemas'
 
 export type CreateKeyInput = CreateProviderKeyBody
 export type UpdateKeyInput = UpdateProviderKeyBody

@@ -1,35 +1,44 @@
 # OctoPrompt Development Guide
 
 ## General Code Principles
+
 Write self-explanatory, modular, and functional code. Adhere to DRY (Don't Repeat Yourself), SRP (Single Responsibility Principle), and KISS (Keep It Simple, Stupid). Code should be easily unit-testable and read like a clear sentence, avoiding magic numbers. Include a comment at the top of each file detailing the 5 most recent changes to prevent repeated mistakes. Minimize file size by writing concise code and fitting more characters per line where readable.
 
 ---
+
 ## TypeScript Rules
+
 Apply these to all TypeScript files for a consistent, high-quality codebase.
 
 ### 1. Strong Typing & Advanced TS Features
+
 - **No `any` Unless Absolutely Necessary**: Use strong typing. For unknown shapes, use or create a Zod schema and derive the TS type.
 - **Generics & Inference**: Leverage TypeScript’s generics and advanced inference to avoid wide or unknown types.
 - **Modern TS Constructs**: Use mapped types, intersection types, `satisfies` expressions, etc., for clarity or correctness.
 
 ### 2. Functional & Readable Code
+
 - **Functional Programming Style**: Prefer pure functions; avoid side effects unless essential.
 - **No Bloated Functions**: Each function should have a single, small responsibility. Refactor large functions.
 - **Descriptive Naming**: Use clear names. Avoid abbreviations or single-letter variables (except in trivial loops).
 
 ### 3. Error Handling & Logging
+
 - **Throw or Return**: On error, throw a typed error (`Error` subclass) or return a descriptive error object. Do not silently swallow errors.
 - **Logging**: Use a consistent logging approach (e.g., custom `logger` module). Prefer structured logs over `console.log` for production.
 
 ### 4. Minimal External Dependencies
+
 - **Prefer Bun & Standard Lib**: Rely on Bun’s built-in features or TS/Node standard libraries. Verify necessary external libraries carefully.
 - **Tree Shaking & Dead Code**: Minimize imports and remove unused code. Don’t import entire libraries for small parts.
 
 ### 5. File & Module Organization
+
 - **Single-Responsibility Files**: Each file should typically contain one main concept (class, service, or small group of related functions).
 - **Clear Imports & Exports**: Use named exports unless a file’s purpose is a single main export. Sort and group imports logically.
 
 ### 6. Testing & Documentation
+
 - **Test-Driven Mindset**: Add/update tests when introducing new logic. Keep functions small and unit-testable.
 - **Inline Documentation**: Provide concise docstrings or inline comments for complex logic. Keep them accurate.
 
@@ -43,21 +52,25 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 * **Regularly Refactor**.
 
 ---
+
 ## OctoPrompt Specifics
+
 - **Timestamps & IDs**: All IDs, `created`, and `updated` timestamps are Unix timestamps in milliseconds. For IDs, `-1` signifies `null`; otherwise, it must be a valid Unix timestamp (ms).
 - **Maps with Numeric Keys**: Prefer `new Map()` over plain objects, as object keys are converted to strings.
 - **Service File Structure**: Typically:
-    - Schema file: Base schema + CRUD operation schemas (e.g., `id`, `created`, `updated` excluded on create).
-    - Storage file: JSON file-based data persistence.
-    - Service file: Business logic for data manipulation.
-    - Routes/API file: API route definitions.
+  - Schema file: Base schema + CRUD operation schemas (e.g., `id`, `created`, `updated` excluded on create).
+  - Storage file: JSON file-based data persistence.
+  - Service file: Business logic for data manipulation.
+  - Routes/API file: API route definitions.
 - **API Type Safety**:
-    - TypeScript: Zod with Hono for validation (note: route/API params often parse as strings).
+  - TypeScript: Zod with Hono for validation (note: route/API params often parse as strings).
 - **OpenAPI Specs**: Every API must have proper OpenAPI specifications.
 - **Route Ordering**: Crucial. Incorrect order leads to incorrect route matching. Pay very close attention.
 
 ---
+
 ## Major Features/Services
+
 - **Projects and Files**: Core concept; projects contain chats.
 - **Chats and Messages**: Built-in AI chat functionality.
 - **Gen AI**: Services for generating structured data, coding agents, file search, and summarization.
@@ -67,25 +80,29 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 - **Global State**: Primarily frontend; synced to local storage to preserve user context.
 
 ---
+
 ## Other Technical Info
+
 - **Functional API Tests**: Each API must have them.
 - **Unit Testable Functions**: Design functions with minimal external reliance, predictable I/O (except Gen AI).
 - **Single Source of Truth (SSOT)**: Adhere to this principle.
 
 ---
+
 ## Project Overall Structure
+
 ```
-OctoPrompt  
+OctoPrompt
 	packages
 		ai
 			src
 				mastra
-				
+
 		api-client
 			index.ts // contains the entire octoprompt client
 			src
 				tests // contains a test suite that tests the client against the server endpoints
-	
+
 		client
 			src
 				constants
@@ -118,7 +135,7 @@ schemas using z.infer<>
 					prompt-routes.ts
 					project-routes.ts
 
-				
+
 		services
 			src
 				chat-service.ts
@@ -129,7 +146,8 @@ schemas using z.infer<>
 			prompt-storage.ts
 			project-storage.ts
 ```
-```
+
+````
 
 ---
 ## Scripts
@@ -147,9 +165,10 @@ schemas using z.infer<>
     "test:shared": "cd packages/shared && bun run test",
     "test:schemas": "cd packages/schemas && bun run test"Ï
 }
-```
+````
 
 **`packages/server/package.json`:**
+
 ```json
 {
   "test": "bun test src/",
@@ -162,6 +181,7 @@ schemas using z.infer<>
 ```
 
 **`packages/client/package.json`:**
+
 ```json
 {
   "dev": "vite",
@@ -174,34 +194,39 @@ schemas using z.infer<>
 ```
 
 **`packages/shared/package.json`:** (Assuming a `package.json` exists here)
+
 ```json
 {
   "test": "bun test"
 }
 ```
+
 ---
+
 ## Useful Utils
 
 **`@octoprompt/schemas`:**
+
 - `unixTSSchemaSpec`: Standard Unix timestamp (ms) schema.
 - `unixTSOptionalSchemaSpec`: Optional Unix timestamp (ms).
 - `unixTSArraySchemaSpec`: Required array of Unix timestamps (ms).
 - `unixTSArrayOptionalSchemaSpec`: Optional array of Unix timestamps (ms).
 
 **`@octoprompt/shared`:**
+
 - `mergeDeep<T>([obj1, obj2, ...]): T`: Recursively merges objects.
 - `normalizePath(filePath: string): string`: Normalizes path separators.
 - `filterByPatterns(filePaths: string[], patterns: string[], options?: picomatch.PicomatchOptions): string[]`: Filters file paths by glob patterns.
 - `buildPromptContent({ fileMap, promptData, selectedFiles, selectedPrompts, userPrompt }): string`
 - `calculateTotalTokens({ promptData, selectedPrompts, userPrompt, selectedFiles, fileMap }): number`
 - `buildFileTree(files: ProjectFile[]): Record<string, any>`
-- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `octopromptPlanningMetaPrompt`) 
+- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `octopromptPlanningMetaPrompt`)
 - `promptsMap`: Exported object mapping names to prompt strings.
-**`packages/shared/src/constants/model-default-configs.ts`:**
+  **`packages/shared/src/constants/model-default-configs.ts`:**
 - `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`: `ModelOptionsWithProvider` objects with settings for temperature, maxTokens, provider, model, etc. (e.g., `LOW_MODEL_CONFIG` uses `google/gemini-2.5-flash-preview`).
 
-
 **`@octoprompt/shared`:**
+
 - `getFullProjectSummary(projectId: number): Promise<string>`: Generates a full project summary.
 - `resolveJsonPath(rawPath: string | string[], basePath?: string): string`: Resolves input to a normalized file path.
 - `writeJson<TData, S extends ZodTypeAny>(options: { path, data, schema?, basePath? }): Promise<S extends ZodTypeAny ? z.infer<S> : TData>`: Writes data to JSON, optionally validating. Creates directories.
@@ -212,50 +237,62 @@ schemas using z.infer<>
 - `normalizePathForDb(path: string): string`: Normalizes path for database storage (consistent format).
 
 ---
+
 ## Frontend
+
 ### Major Packages
+
 React (v19), TanStack Router, DND Kit, ShadCN (Radix), React Hook Form, Tailwind CSS, TanStack Query, AI SDK (Vercel AI SDK).
 
 Organized by major features (Projects, Chat & Messages, Prompts, Tickets & Tasks).
 
 ### Routes (`packages/client/src/routes`)
+
 `__root.tsx` (base layout), `index.tsx`, `projects.tsx`, `chat.tsx`, `prompts.tsx`, `keys.tsx`, `project-summarization.tsx`, `tickets.tsx`, `admin.tsx`, `health.tsx`.
 
 ### Components (`packages/client/src/components`)
+
 - `components/ui`: ShadCN components (e.g., `button.tsx`, `card.tsx`, `dialog.tsx`).
 - Feature-specific components:
-    - `file-changes`: `diff-viewer.tsx`, `ai-file-change-dialog.tsx`.
-    - `settings`: `settings-dialog.tsx`.
-    - `tickets`: `ticket-list-panel.tsx`, `ticket-dialog.tsx`.
-    - `projects`: `project-list.tsx`, `file-panel/file-tree.tsx`, `agent-coding-dialog.tsx`.
-    - `navigation`: `app-navbar.tsx`, `app-sidebar.tsx`.
-    - `prompts`: `all-prompts-dialog.tsx`.
+  - `file-changes`: `diff-viewer.tsx`, `ai-file-change-dialog.tsx`.
+  - `settings`: `settings-dialog.tsx`.
+  - `tickets`: `ticket-list-panel.tsx`, `ticket-dialog.tsx`.
+  - `projects`: `project-list.tsx`, `file-panel/file-tree.tsx`, `agent-coding-dialog.tsx`.
+  - `navigation`: `app-navbar.tsx`, `app-sidebar.tsx`.
+  - `prompts`: `all-prompts-dialog.tsx`.
 - Common components: `markdown-renderer.tsx`, `error-boundary/error-boundary.tsx`, `shortcuts-palette.tsx`.
 
 ### Data Fetching
+
 Direct schema import approach for type safety (TypeScript types from shared Zod schemas).
 
 **API Hooks (`packages/client/src/hooks/api`):**
 `use-projects-api.ts`, `use-chat-api.ts`, `use-prompts-api.ts`, `use-keys-api.ts`, `use-tickets-api.ts`, `use-gen-ai-api.ts`, `use-agent-coder-api.ts`, `use-admin-api.ts`, `use-ai-chat.ts`, `use-ai-file-changes-api.ts`, `common-mutation-error-handler.ts`.
 
 **Modern API Hook Pattern (Example `useCreateChat`):**
+
 ```typescript
-import type { CreateChatBody } from '@octoprompt/schemas'; // Import types directly
+import type { CreateChatBody } from '@octoprompt/schemas' // Import types directly
 // ... other imports: useQueryClient, useMutation, octoClient, toast
 
 export function useCreateChat() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
-    onSuccess: () => { /* Invalidate queries, show toast */ },
-    onError: (error) => { /* Show error toast */ },
-  });
+    onSuccess: () => {
+      /* Invalidate queries, show toast */
+    },
+    onError: (error) => {
+      /* Show error toast */
+    }
+  })
 }
 ```
 
 **Schema-First Query (Example `useGetPrompt`):**
+
 ```typescript
-import type { Prompt } from '@octoprompt/schemas'; // Import types
+import type { Prompt } from '@octoprompt/schemas' // Import types
 // ... other imports: useQuery, octoClient, PROMPT_KEYS
 
 export function useGetPrompt(promptId: number) {
@@ -263,8 +300,8 @@ export function useGetPrompt(promptId: number) {
     queryKey: PROMPT_KEYS.detail(promptId),
     queryFn: () => octoClient.prompts.getPrompt(promptId),
     enabled: !!promptId,
-    staleTime: 5 * 60 * 1000,
-  });
+    staleTime: 5 * 60 * 1000
+  })
 }
 ```
 
@@ -272,10 +309,13 @@ export function useGetPrompt(promptId: number) {
 Singleton client in `packages/client/src/hooks/api.ts` (created via `createOctoPromptClient`) provides type-safe methods for each service (e.g., `octoClient.chats.createChat(data)`).
 
 ---
+
 ## OctoPrompt Backend Architecture
+
 TypeScript/Bun backend: AI-powered project management, layered architecture, file-based JSON storage, service-oriented logic, OpenAPI-compliant REST APIs.
 
 ### Architecture Layers
+
 - **Storage Layer (`@octoprompt/storage`)**: JSON file storage with CRUD and Zod validation.
   Example: `projectStorage.readProjects()`, `projectStorage.writeProjectFiles()`.
   Files: `project-storage.ts`, `chat-storage.ts`, `prompt-storage.ts`, `ticket-storage.ts`, `provider-key-storage.ts`.
@@ -289,62 +329,87 @@ TypeScript/Bun backend: AI-powered project management, layered architecture, fil
   Example: `createRoute()` for OpenAPI definitions, `OpenAPIHono().openapi(route, handler)`.
 
 ### Core Systems
+
 - **File Synchronization**: `syncProject()` uses `getTextFiles`, `loadIgnoreRules`, `syncFileSet`. `createFileChangeWatcher()` for live updates, triggering sync and summarization.
 - **AI Integration**: Multi-provider AI via Vercel AI SDK. `getProviderLanguageModelInterface()` (handles OpenAI, Anthropic, OpenRouter), `generateStructuredData()` (uses `generateObject` from AI SDK).
 
 ---
+
 ## Complete Feature Example: Todo System
+
 Illustrates schema, storage, service, and API route implementation.
 
 ### 1. Schemas (`schemas/src/todo.schemas.ts`)
+
 Defines `TodoSchema`, `TodoCategorySchema`, `CreateTodoBodySchema`, `TodoResponseSchema`, `TodoListResponseSchema` using Zod and `openapi()` helpers. Includes type exports derived via `z.infer`.
+
 ```typescript
 import { z } from '@hono/zod-openapi'
 import { unixTSSchemaSpec, unixTSArraySchemaSpec } from './schema-utils' // Assuming path
 
-export const TodoSchema = z.object({
-  id: unixTSSchemaSpec, projectId: unixTSSchemaSpec, title: z.string().min(1),
-  description: z.string().optional(), status: z.enum(['pending', 'in_progress', 'completed']),
-  priority: z.enum(['low', 'medium', 'high']), assignedTo: z.string().optional(),
-  dueDate: unixTSSchemaSpec.optional(), tags: z.array(z.string()).default([]),
-  created: unixTSSchemaSpec, updated: unixTSSchemaSpec
-}).openapi('Todo')
+export const TodoSchema = z
+  .object({
+    id: unixTSSchemaSpec,
+    projectId: unixTSSchemaSpec,
+    title: z.string().min(1),
+    description: z.string().optional(),
+    status: z.enum(['pending', 'in_progress', 'completed']),
+    priority: z.enum(['low', 'medium', 'high']),
+    assignedTo: z.string().optional(),
+    dueDate: unixTSSchemaSpec.optional(),
+    tags: z.array(z.string()).default([]),
+    created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec
+  })
+  .openapi('Todo')
 
 // ... (TodoCategorySchema, CreateTodoBodySchema, etc. are similarly defined)
 
-export type Todo = z.infer<typeof TodoSchema>; /* ... other types */
+export type Todo = z.infer<typeof TodoSchema> /* ... other types */
 ```
 
 ### 2. Storage (`packages/storage/src/todo-storage.ts`)
-Implements `readTodos`, `writeTodos`, `readTodoCategories`, `writeTodoCategories`, `generateId` using `readJson`, `writeJson` from `json-scribe.ts`. Data validated with Zod schemas.
-```typescript
-import { z } from 'zod'; // Assuming path
-import { TodoSchema, TodoCategorySchema } from '@octoprompt/schemas';
-import { readJson, writeJson } from '../json-scribe'; // Assuming path
-import { normalizeToUnixMs } from '@octoprompt/schemas'; // Assuming path
 
-export const TodoStorageSchema = z.record(z.string(), TodoSchema);
+Implements `readTodos`, `writeTodos`, `readTodoCategories`, `writeTodoCategories`, `generateId` using `readJson`, `writeJson` from `json-scribe.ts`. Data validated with Zod schemas.
+
+```typescript
+import { z } from 'zod' // Assuming path
+import { TodoSchema, TodoCategorySchema } from '@octoprompt/schemas'
+import { readJson, writeJson } from '../json-scribe' // Assuming path
+import { normalizeToUnixMs } from '@octoprompt/schemas' // Assuming path
+
+export const TodoStorageSchema = z.record(z.string(), TodoSchema)
 // ... (TodoCategoryStorageSchema defined similarly)
-const getTodosPath = (projectId: number): string[] => ['data', 'projects', projectId.toString(), 'todos.json'];
+const getTodosPath = (projectId: number): string[] => ['data', 'projects', projectId.toString(), 'todos.json']
 
 export const todoStorage = {
-  async readTodos(projectId: number): Promise<z.infer<typeof TodoStorageSchema>> { /* ... */ },
-  async writeTodos(projectId: number, todos: z.infer<typeof TodoStorageSchema>): Promise<z.infer<typeof TodoStorageSchema>> { /* ... */ },
+  async readTodos(projectId: number): Promise<z.infer<typeof TodoStorageSchema>> {
+    /* ... */
+  },
+  async writeTodos(
+    projectId: number,
+    todos: z.infer<typeof TodoStorageSchema>
+  ): Promise<z.infer<typeof TodoStorageSchema>> {
+    /* ... */
+  }
   // ... (category methods and generateId)
-};
+}
 ```
 
 ### 3. Service (`packages/services/src/todo-service.ts`)
+
 Business logic: `createTodo`, `updateTodoStatus`, `getTodosByProject`, `deleteTodo`, `generateTodoSuggestions` (uses `generateStructuredData`). Handles ID conflicts, validation, and error wrapping (`ApiError`).
+
 ```typescript
-import { Todo, CreateTodoBody, TodoSchema } from '@octoprompt/schemas'; // Assuming path
-import { todoStorage } from '@/utils/storage/todo-storage'; // Assuming path
-import { ApiError } from '@octoprompt/shared'; // Assuming path
+import { Todo, CreateTodoBody, TodoSchema } from '@octoprompt/schemas' // Assuming path
+import { todoStorage } from '@/utils/storage/todo-storage' // Assuming path
+import { ApiError } from '@octoprompt/shared' // Assuming path
 // ... (other imports like generateStructuredData, getProjectById)
 
 export async function createTodo(data: CreateTodoBody): Promise<Todo> {
-  let todoId = todoStorage.generateId(); const now = Date.now();
-  const newTodoData: Todo = { id: todoId, ...data, status: 'pending', created: now, updated: now };
+  let todoId = todoStorage.generateId()
+  const now = Date.now()
+  const newTodoData: Todo = { id: todoId, ...data, status: 'pending', created: now, updated: now }
   // try-catch for error handling, ID conflict resolution, validation, and writing
   // ...
 }
@@ -352,38 +417,44 @@ export async function createTodo(data: CreateTodoBody): Promise<Todo> {
 ```
 
 ### 4. Routes (`packages/storage/src/routes/todo-routes.ts`)
-Hono `OpenAPIHono` routes for CRUD operations and suggestions. Uses `createRoute` for OpenAPI definitions, Zod schemas for request/response validation.
-```typescript
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'; // Assuming path
-import { CreateTodoBodySchema, TodoResponseSchema, /* ... */ } from 'shared/src/schemas/todo.schemas'; // Path
-import { createTodo, /* ... */ } from '@/services/todo-service'; // Path
 
-const createTodoRoute = createRoute({ method: 'post', path: '/api/todos', /* ... */ });
+Hono `OpenAPIHono` routes for CRUD operations and suggestions. Uses `createRoute` for OpenAPI definitions, Zod schemas for request/response validation.
+
+```typescript
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi' // Assuming path
+import { CreateTodoBodySchema, TodoResponseSchema /* ... */ } from 'shared/src/schemas/todo.schemas' // Path
+import { createTodo /* ... */ } from '@/services/todo-service' // Path
+
+const createTodoRoute = createRoute({ method: 'post', path: '/api/todos' /* ... */ })
 // ... (other route definitions: getTodosRoute, updateTodoStatusRoute, etc.)
 
-export const todoRoutes = new OpenAPIHono()
-  .openapi(createTodoRoute, async (c) => {
-    const body = c.req.valid('json');
-    const todo = await createTodo(body);
-    return c.json({ success: true, data: todo }, 201);
-  })
-  // ... (other route handlers for get, patch, delete, suggestions)
+export const todoRoutes = new OpenAPIHono().openapi(createTodoRoute, async (c) => {
+  const body = c.req.valid('json')
+  const todo = await createTodo(body)
+  return c.json({ success: true, data: todo }, 201)
+})
+// ... (other route handlers for get, patch, delete, suggestions)
 ```
 
 ### 5. Register Routes (`packages/server/src/app.ts`)
+
 Todo routes are registered with the main Hono app instance.
+
 ```typescript
 // import { todoRoutes } from './routes/todo-routes'; // Assuming path
 // export const app = new OpenAPIHono().route('/', todoRoutes); // Example
 ```
+
 (Actual registration may vary based on full `app.ts` structure)
 
 ### 6. Tests (`packages/services/src/todo-service.test.ts`)
+
 Unit tests for `todo-service` using `bun:test`. Mocks `todoStorage` and `project-service` for isolated testing of service logic, including ID generation and conflict resolution.
+
 ```typescript
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { createTodo, /* ... */ } from './todo-service'; // Path
-import { CreateTodoBody, Todo } from 'shared/src/schemas/todo.schemas'; // Path
+import { describe, test, expect, beforeEach, mock } from 'bun:test'
+import { createTodo /* ... */ } from './todo-service' // Path
+import { CreateTodoBody, Todo } from 'shared/src/schemas/todo.schemas' // Path
 
 // Mock setup for todoStorage and projectService
 // In-memory DB for tests: mockTodosDb
@@ -391,13 +462,17 @@ import { CreateTodoBody, Todo } from 'shared/src/schemas/todo.schemas'; // Path
 // Test cases for createTodo, updateTodoStatus, getTodosByProject, deleteTodo, ID conflict
 describe('TodoService (Mocked Storage)', () => {
   // ... (setup like testProjectId, beforeEach, afterEach)
-  test('createTodo should insert a new todo record', async () => { /* ... */ });
+  test('createTodo should insert a new todo record', async () => {
+    /* ... */
+  })
   // ... (other tests)
-});
+})
 ```
 
 ---
+
 ## Key Backend Patterns
+
 - **Error Handling**: Custom `ApiError` class for consistent API error responses. Global error handler in `app.ts` catches `ApiError` instances.
   ```typescript
   // if (!project) throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND');
@@ -407,10 +482,13 @@ describe('TodoService (Mocked Storage)', () => {
 - **ID Generation**: `storage.generateId()` (typically `normalizeToUnixMs(new Date())` or `Date.now()`). Handles collisions by incrementing ID if already exists in the storage record.
 
 ---
+
 ## Functional API Testing (`packages/api-tests/`)
+
 End-to-end tests verifying complete request/response cycles against a running server.
 Uses a helper like `apiFetch` to make requests and validate responses against Zod schemas.
 Ensures proper cleanup of test data.
+
 ```typescript
 // Example: todo-api.test.ts
 // describe('Todo API Tests', () => {
@@ -423,20 +501,27 @@ Ensures proper cleanup of test data.
 //   // ... (tests for GET, PATCH, DELETE, error scenarios)
 // });
 ```
+
 Examples: `chat-api.test.ts`, `projects-api.test.ts` cover CRUD, error handling, and complex workflows.
 
 ---
+
 ## Hono Route Matching (First-Match-Wins)
+
 Routes are evaluated in registration order; the earliest match handles the request.
 
 ### 1. Matching Basics
+
 ```ts
-app.get('/users/{id}', h1)   // /users/profile matches this if h1 is registered first
-   .get('/users/profile', h2); // This would be unreachable
+app
+  .get('/users/{id}', h1) // /users/profile matches this if h1 is registered first
+  .get('/users/profile', h2) // This would be unreachable
 ```
-Different HTTP verbs on the *same* path are fine but subject to ordering if paths are similar (e.g., `/path/{param}` vs `/path/literal`).
+
+Different HTTP verbs on the _same_ path are fine but subject to ordering if paths are similar (e.g., `/path/{param}` vs `/path/literal`).
 
 ### 2. Ordering Strategy: High → Low Specificity
+
 1.  Exact literals (e.g., `/api/health`)
 2.  Literal segments + param (e.g., `/api/users/me`)
 3.  Specific literal actions (e.g., `/api/projects/{pId}/files/bulk`) before more general params.
@@ -445,18 +530,22 @@ Different HTTP verbs on the *same* path are fine but subject to ordering if path
 6.  Catch-alls (e.g., `/api/{resource}`, `*`)
 
 ### 3. Typical Conflict Patterns & Fixes
-| Pattern        | Wrong                           | Right                                           |
-|----------------|---------------------------------|-------------------------------------------------|
-| Literal vs Param | `/{userId}` before `/me`        | `/me` first                                     |
-| Nested action  | `/{fileId}` before `/bulk`      | `/bulk` first                                   |
-| Param type     | `z.coerce.number()` captures "bulk" → NaN | Reorder; or validate param as string then cast/check |
+
+| Pattern          | Wrong                                     | Right                                                |
+| ---------------- | ----------------------------------------- | ---------------------------------------------------- |
+| Literal vs Param | `/{userId}` before `/me`                  | `/me` first                                          |
+| Nested action    | `/{fileId}` before `/bulk`                | `/bulk` first                                        |
+| Param type       | `z.coerce.number()` captures "bulk" → NaN | Reorder; or validate param as string then cast/check |
 
 ### 4. Debugging
+
 - Log registered paths.
 - Use middleware to log `c.req.method`, `c.req.path`, `c.req.param()` on match.
 
 ### 5. Testing Precedence
+
 Write tests that explicitly check if the more specific route is hit before a parameterized one.
+
 ```ts
 // it('bulk vs param', async () => {
 //   expect((await app.request('/api/projects/1/files/bulk', { method:'PUT' })).status).toBe(200); // Specific
@@ -465,9 +554,11 @@ Write tests that explicitly check if the more specific route is hit before a par
 ```
 
 ### 6. Parameter Schemas
+
 Use Zod for param validation, e.g., `z.coerce.number().int().positive()`.
 
 ### 7. Gotchas & Mitigations
+
 - Paths are case-sensitive.
 - `/path` vs `/path/`: Normalize using middleware if needed.
 - For IDs that might conflict with literal segments (e.g., "bulk", "me"), validate as string + regex first, then cast, rather than direct `z.coerce.number()`.

@@ -1,6 +1,6 @@
 import { ChangeEvent, KeyboardEvent, ClipboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
 import {
   MessageSquareIcon,
   PlusIcon,
@@ -532,11 +532,7 @@ const ChatMessageItem = React.memo(
           {/* Display attachments if present */}
           {messageAttachments && messageAttachments.length > 0 && (
             <div className='mb-2'>
-              <FileAttachmentList
-                attachments={messageAttachments}
-                showRemove={false}
-                className='space-y-1'
-              />
+              <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
             </div>
           )}
           <pre className='whitespace-pre-wrap font-mono p-2 bg-background/50 rounded text-xs sm:text-sm overflow-x-auto'>
@@ -552,11 +548,7 @@ const ChatMessageItem = React.memo(
         {/* Display attachments if present */}
         {messageAttachments && messageAttachments.length > 0 && (
           <div className='mb-2'>
-            <FileAttachmentList
-              attachments={messageAttachments}
-              showRemove={false}
-              className='space-y-1'
-            />
+            <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
           </div>
         )}
         {hasThinkBlock ? (
@@ -751,6 +743,8 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const [editingChatId, setEditingChatId] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [visibleCount, setVisibleCount] = useState(50)
+  const navigate = useNavigate()
+  const params = useParams({ from: '/chat/$chatId' })
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const activeChatRef = useRef<HTMLDivElement>(null)
@@ -775,7 +769,10 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       })
       const newChatId = newChat?.data.id
       if (newChatId) {
-        setActiveChatId(newChatId)
+        navigate({ 
+          to: '/chat/$chatId', 
+          params: { chatId: newChatId.toString() } 
+        })
         toast.success('New chat created')
         setEditingTitle('')
         setEditingChatId(null)
@@ -797,7 +794,8 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         await deleteChatMutation.mutateAsync(chatId)
         toast.success('Chat deleted')
         if (activeChatId === chatId) {
-          setActiveChatId(null)
+          // Navigate back to base chat route
+          navigate({ to: '/chat' })
         }
         if (editingChatId === chatId) {
           setEditingChatId(null)
@@ -847,11 +845,14 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const handleSelectChat = useCallback(
     (chatId: number) => {
       if (!editingChatId) {
-        setActiveChatId(chatId)
+        navigate({ 
+          to: '/chat/$chatId', 
+          params: { chatId: chatId.toString() } 
+        })
         onClose()
       }
     },
-    [setActiveChatId, editingChatId, onClose]
+    [navigate, editingChatId, onClose]
   )
 
   useEffect(() => {
@@ -973,11 +974,10 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   )
 }
 
-export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
-  const [activeChatId] = useActiveChatId()
+export function ChatHeader({ onToggleSidebar, chatId }: { onToggleSidebar: () => void; chatId: number | null }) {
   const { data: chatsData } = useGetChats()
 
-  const activeChat = useMemo(() => chatsData?.data?.find((c) => c.id === activeChatId), [chatsData, activeChatId])
+  const activeChat = useMemo(() => chatsData?.data?.find((c) => c.id === chatId), [chatsData, chatId])
 
   return (
     <div className='flex items-center justify-between gap-x-4 bg-background px-4 py-2 border-b h-14 w-full max-w-7xl xl:rounded-b xl:border-x'>
@@ -996,7 +996,7 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
 
       {/* Middle: Chat Title (takes up remaining space, centered text, truncated) */}
       <div className='flex-1 min-w-0 text-center'>
-        {activeChatId ? (
+        {chatId ? (
           <span className='font-semibold text-lg truncate block' title={activeChat?.title || 'Loading...'}>
             {activeChat?.title || 'Loading Chat...'}
           </span>
@@ -1008,7 +1008,7 @@ export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
       {/* Right: Model Settings or Placeholder */}
       <div className='flex-shrink-0 w-8'>
         {/* Ensure right side takes up same space as left button */}
-        {activeChatId && <ModelSettingsPopover />}
+        {chatId && <ModelSettingsPopover />}
       </div>
     </div>
   )
@@ -1018,11 +1018,17 @@ export const Route = createFileRoute('/chat')({
   component: ChatPage
 })
 
-function ChatPage() {
+export function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const navigate = useNavigate()
+  const params = useParams({ from: '/chat/$chatId' })
+  const pathname = window.location.pathname
 
-  const [activeChatId] = useActiveChatId()
+  const [activeChatId, setActiveChatId] = useActiveChatId()
   const { settings: modelSettings, setModel } = useChatModelParams()
+  
+  // Use URL param if available, otherwise use localStorage
+  const chatId = params?.chatId ? parseInt(params.chatId) : activeChatId
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
   const { data: modelsData } = useGetModels(provider)
@@ -1030,14 +1036,34 @@ function ChatPage() {
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 
   const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null)
+  
+  // Sync URL param with localStorage
+  useEffect(() => {
+    if (params?.chatId && chatId !== activeChatId) {
+      setActiveChatId(chatId)
+    }
+  }, [params?.chatId, chatId, activeChatId, setActiveChatId])
+  
+  // Redirect from /chat to a specific chat if available
+  useEffect(() => {
+    if (pathname === '/chat' && !params?.chatId && activeChatId) {
+      navigate({ 
+        to: '/chat/$chatId', 
+        params: { chatId: activeChatId.toString() },
+        replace: true
+      })
+    }
+  }, [pathname, params, activeChatId, navigate])
 
   useEffect(() => {
-    if (activeChatId && !model) {
-      const newModelSelection = modelsData?.data[0].id ?? ''
-      console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
-      setModel(newModelSelection)
+    if (chatId && !model) {
+      const newModelSelection = modelsData?.data[0]?.id ?? ''
+      if (newModelSelection) {
+        console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
+        setModel(newModelSelection)
+      }
     }
-  }, [activeChatId, setModel])
+  }, [chatId, model, modelsData, setModel])
 
   const {
     messages,
@@ -1048,7 +1074,7 @@ function ChatPage() {
     sendMessage
   } = useAIChat({
     // ai sdk uses strings for chatId
-    chatId: activeChatId ?? -1,
+    chatId: chatId ?? -1,
     provider,
     model: model ?? '',
     systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.'
@@ -1058,28 +1084,31 @@ function ChatPage() {
   const [pendingAttachments, setPendingAttachments] = useState<ChatMessageAttachment[]>([])
   const uploadFileMutation = useUploadFile()
 
-  const handleFileSelect = useCallback(async (files: File[]) => {
-    if (!activeChatId) {
-      toast.error('Please select a chat first')
-      return
-    }
-
-    for (const file of files) {
-      try {
-        const attachment = await uploadFileMutation.mutateAsync({
-          chatId: activeChatId,
-          file
-        })
-        setPendingAttachments(prev => [...prev, attachment])
-      } catch (error) {
-        console.error('File upload failed:', error)
-        // Error is already handled by the mutation
+  const handleFileSelect = useCallback(
+    async (files: File[]) => {
+      if (!chatId) {
+        toast.error('Please select a chat first')
+        return
       }
-    }
-  }, [activeChatId, uploadFileMutation])
+
+      for (const file of files) {
+        try {
+          const attachment = await uploadFileMutation.mutateAsync({
+            chatId: chatId,
+            file
+          })
+          setPendingAttachments((prev) => [...prev, attachment])
+        } catch (error) {
+          console.error('File upload failed:', error)
+          // Error is already handled by the mutation
+        }
+      }
+    },
+    [activeChatId, uploadFileMutation]
+  )
 
   const handleRemoveAttachment = useCallback((attachmentId: number) => {
-    setPendingAttachments(prev => prev.filter(att => att.id !== attachmentId))
+    setPendingAttachments((prev) => prev.filter((att) => att.id !== attachmentId))
   }, [])
 
   const selectedModelName = useMemo(() => {
@@ -1102,7 +1131,7 @@ function ChatPage() {
   const handleFormSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
-      if (!input?.trim() || isAiLoading || !activeChatId) {
+      if (!input?.trim() || isAiLoading || !chatId) {
         return
       }
       try {
@@ -1117,16 +1146,16 @@ function ChatPage() {
         toast.error('Failed to send message.')
       }
     },
-    [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId, pendingAttachments]
+    [input, isAiLoading, sendMessage, modelSettings, setInput, chatId, pendingAttachments]
   )
 
-  const hasActiveChat = !!activeChatId
+  const hasActiveChat = !!chatId
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen((prev) => !prev), [])
 
   useEffect(() => {
     if (
-      activeChatId &&
+      chatId &&
       initialChatContent &&
       setInput &&
       (input === '' || input === null) &&
@@ -1137,28 +1166,28 @@ function ChatPage() {
       toast.success('Context loaded into input.')
       setInitialChatContent(null) // Clear from localStorage after setting input
     }
-  }, [activeChatId, initialChatContent, setInput, input, messages, isAiLoading, setInitialChatContent])
+  }, [chatId, initialChatContent, setInput, input, messages, isAiLoading, setInitialChatContent])
 
   // Cleanup effect to ensure ref is reset if chat changes or content is cleared
   useEffect(() => {
-    if (!activeChatId || !initialChatContent) {
+    if (!chatId || !initialChatContent) {
       // If chat ID changes or there's no initial content, ensure we're ready for a new load
     }
-  }, [activeChatId, initialChatContent])
+  }, [chatId, initialChatContent])
 
   return (
     <div className='flex flex-col md:flex-row overflow-hidden h-full'>
       <ChatSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className='flex-1 flex flex-col min-w-0 h-full items-center w-full'>
-        <ChatHeader onToggleSidebar={toggleSidebar} />
+        <ChatHeader onToggleSidebar={toggleSidebar} chatId={chatId} />
 
         {hasActiveChat && model ? (
           <>
             <ScrollArea className='flex-1 w-full min-h-0 overflow-y-auto'>
               <div className='mx-auto w-full max-w-[72rem] px-4 pb-4'>
                 <ChatMessages
-                  chatId={activeChatId}
+                  chatId={chatId}
                   messages={messages ?? []}
                   isLoading={isAiLoading}
                   excludedMessageIds={excludedMessageIds}
@@ -1191,10 +1220,7 @@ function ChatPage() {
               {/* File attachments section */}
               {pendingAttachments.length > 0 && (
                 <div className='mx-auto w-full max-w-[72rem] px-4 pt-2'>
-                  <FileAttachmentList
-                    attachments={pendingAttachments}
-                    onRemove={handleRemoveAttachment}
-                  />
+                  <FileAttachmentList attachments={pendingAttachments} onRemove={handleRemoveAttachment} />
                 </div>
               )}
 
@@ -1208,7 +1234,7 @@ function ChatPage() {
                     className='flex-grow rounded-lg'
                   />
                 </div>
-                <FileUploadButton onFileSelect={handleFileSelect} disabled={!activeChatId} />
+                <FileUploadButton onFileSelect={handleFileSelect} disabled={!chatId} />
                 <Button
                   type='submit'
                   disabled={input?.trim() === ''}
@@ -1231,15 +1257,15 @@ function ChatPage() {
             <Card className='p-6 max-w-md text-center'>
               <MessageSquareIcon className='mx-auto h-12 w-12 text-muted-foreground mb-4' />
               <h2 className='text-xl font-semibold text-foreground mb-2'>
-                {activeChatId ? 'Loading Chat...' : 'Welcome!'}
+                {chatId ? 'Loading Chat...' : 'Welcome!'}
               </h2>
               <p className='text-sm text-muted-foreground mb-4'>
-                {activeChatId
+                {chatId
                   ? 'Loading model information and messages.'
                   : 'Select a chat from the sidebar or start a new conversation.'}
               </p>
-              {activeChatId && !model && <p className='text-sm text-muted-foreground'>Initializing model...</p>}
-              {!activeChatId && (
+              {chatId && !model && <p className='text-sm text-muted-foreground'>Initializing model...</p>}
+              {!chatId && (
                 <Button variant='outline' size='sm' onClick={toggleSidebar}>
                   <PlusIcon className='mr-2 h-4 w-4' /> Create or Select Chat
                 </Button>

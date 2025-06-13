@@ -15,7 +15,8 @@ import {
   LightbulbIcon,
   MenuIcon, // Icon for SidebarTrigger if needed, or use default
   FolderCogIcon,
-  FolderTreeIcon
+  FolderTreeIcon,
+  Bot
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
@@ -41,11 +42,12 @@ const mainNavItems = [
     title: 'Projects',
     to: '/projects',
     icon: FolderIcon,
-    routeIds: ['/projects', '/project-summarization']
+    routeIds: ['/projects', '/projects/$tabId/$projectId', '/project-summarization']
   },
-  { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
+  { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat', '/chat/$chatId'], search: { prefill: false } },
+  { id: 'claude-code', title: 'Claude Code', to: '/claude-code', icon: Bot, routeIds: ['/claude-code'] },
   { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },
-  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] },
+  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] }
 ]
 
 export function AppSidebar() {
@@ -88,14 +90,27 @@ export function AppSidebar() {
   })
 
   const handleSelectProjectInDialog = (id: number) => {
-    updateActiveProjectTab((prev) => ({
-      ...(prev || {}), // Ensure prev is not null
-      selectedProjectId: id,
-      selectedFiles: [],
-      selectedPrompts: []
-    }))
     setOpenProjectListDialog(false)
-    navigate({ to: '/projects' })
+    
+    // If we have an active tab, navigate to it with the new project
+    if (activeProjectTabState?.id) {
+      navigate({ 
+        to: '/projects/$tabId/$projectId', 
+        params: { 
+          tabId: activeProjectTabState.id.toString(), 
+          projectId: id.toString() 
+        } 
+      })
+    } else {
+      // Otherwise, just update localStorage and navigate to base projects
+      updateActiveProjectTab((prev) => ({
+        ...(prev || {}),
+        selectedProjectId: id,
+        selectedFiles: [],
+        selectedPrompts: []
+      }))
+      navigate({ to: '/projects' })
+    }
   }
 
   const handleOpenNewProject = () => {

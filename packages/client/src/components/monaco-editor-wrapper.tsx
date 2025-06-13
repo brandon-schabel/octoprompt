@@ -4,7 +4,7 @@ import { useSelectSetting } from '@/hooks/use-kv-local-storage'
 // Monaco Editor imports - will be available after installation
 // @ts-ignore - Monaco types will be available after installation
 import Editor, { Monaco } from '@monaco-editor/react'
-// @ts-ignore - Monaco types will be available after installation  
+// @ts-ignore - Monaco types will be available after installation
 import type { editor } from 'monaco-editor'
 
 interface MonacoEditorWrapperProps {
@@ -33,24 +33,18 @@ export function MonacoEditorWrapper({
   const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor, monacoInstance: Monaco) => {
     editorRef.current = editor
     setMonaco(monacoInstance)
-    
+
     // Add Ctrl+S keyboard shortcut for save
     if (onSave) {
-      editor.addCommand(
-        monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyS,
-        () => {
-          onSave()
-        }
-      )
+      editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyS, () => {
+        onSave()
+      })
     }
-    
+
     // Add format document shortcut
-    editor.addCommand(
-      monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.KeyF,
-      () => {
-        editor.getAction('editor.action.formatDocument')?.run()
-      }
-    )
+    editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.KeyF, () => {
+      editor.getAction('editor.action.formatDocument')?.run()
+    })
 
     onMount?.(editor, monacoInstance)
   }

@@ -6,7 +6,7 @@ import {
   PromptIdParamsSchema,
   ProjectAndPromptIdParamsSchema,
   PromptResponseSchema,
-  PromptListResponseSchema,
+  PromptListResponseSchema
 } from '@octoprompt/schemas'
 import {
   addPromptToProject,
@@ -16,7 +16,7 @@ import {
   listAllPrompts,
   listPromptsByProject,
   removePromptFromProject,
-  updatePrompt,
+  updatePrompt
 } from '@octoprompt/services'
 import { ProjectIdParamsSchema } from '@octoprompt/schemas'
 
@@ -213,7 +213,6 @@ const updatePromptRoute = createRoute({
     }
   }
 })
-
 
 const deletePromptRoute = createRoute({
   method: 'delete',

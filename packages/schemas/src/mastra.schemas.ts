@@ -53,7 +53,11 @@ export const MastraCodeChangeResponseSchema = z
 
 // --- Mastra Batch Summarize Schemas ---
 const MastraSummarizeRequestBodySchema = z.object({
-  fileIds: z.array(z.number().int().positive()).min(1).max(50).openapi({ description: 'Array of file IDs to summarize' }),
+  fileIds: z
+    .array(z.number().int().positive())
+    .min(1)
+    .max(50)
+    .openapi({ description: 'Array of file IDs to summarize' }),
   focusArea: z.string().optional().openapi({ description: 'Specific area to focus on in the summary' })
 })
 

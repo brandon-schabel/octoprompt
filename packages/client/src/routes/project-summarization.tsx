@@ -279,7 +279,7 @@ export function ProjectSummarizationSettingsPage() {
           onSuccess: () => {
             toast.success('Selected files have been summarized')
           },
-          onError: () => { }
+          onError: () => {}
         }
       )
     })
@@ -533,8 +533,9 @@ export function ProjectSummarizationSettingsPage() {
                   return (
                     <li
                       key={file.id}
-                      className={`group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0 ${hasSummary ? 'bg-green-50 dark:bg-green-900/30' : '' // Highlight summarized files
-                        }`}
+                      className={`group flex flex-col gap-1 text-xs rounded hover:bg-accent/50 transition-colors duration-150 p-1.5 border-b last:border-b-0 ${
+                        hasSummary ? 'bg-green-50 dark:bg-green-900/30' : '' // Highlight summarized files
+                      }`}
                     >
                       <div className='flex items-center gap-2'>
                         <Checkbox
@@ -622,8 +623,8 @@ export function ProjectSummarizationSettingsPage() {
                   size='sm'
                 >
                   {summarizeMutation.isPending &&
-                    selectedFileIds.some((id) => summarizeMutation.variables?.fileIds.includes(id)) &&
-                    summarizeMutation.variables?.force
+                  selectedFileIds.some((id) => summarizeMutation.variables?.fileIds.includes(id)) &&
+                  summarizeMutation.variables?.force
                     ? 'Re-summarizing...'
                     : 'Force Re-summarize'}
                   ({selectedFileIds.length})

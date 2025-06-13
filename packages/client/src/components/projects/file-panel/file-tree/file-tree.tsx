@@ -385,7 +385,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                     <ClipboardList className='h-4 w-4' />
                   </Button>
                 )}
-
               </>
             )}
           </div>

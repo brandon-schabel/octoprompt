@@ -29,7 +29,6 @@ const ProjectHeader = function ProjectHeader({ projectData }: ProjectHeaderProps
   const { deleteTab } = useDeleteProjectTabById()
   const selectedProjectId = projectTabData?.selectedProjectId
 
-
   if (!projectData) return null
 
   const [isEditing, setIsEditing] = useState(false)

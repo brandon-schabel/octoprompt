@@ -8,241 +8,263 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as PromptsRouteImport } from './routes/prompts'
+import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as ProjectSummarizationRouteImport } from './routes/project-summarization'
+import { Route as KeysRouteImport } from './routes/keys'
+import { Route as HealthRouteImport } from './routes/health'
+import { Route as ClaudeCodeRouteImport } from './routes/claude-code'
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChatChatIdRouteImport } from './routes/chat.$chatId'
+import { Route as ProjectsTabIdProjectIdRouteImport } from './routes/projects.$tabId.$projectId'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as PromptsImport } from './routes/prompts'
-import { Route as ProjectsImport } from './routes/projects'
-import { Route as ProjectSummarizationImport } from './routes/project-summarization'
-import { Route as KeysImport } from './routes/keys'
-import { Route as HealthImport } from './routes/health'
-import { Route as ChatImport } from './routes/chat'
-import { Route as IndexImport } from './routes/index'
-
-// Create/Update Routes
-
-const PromptsRoute = PromptsImport.update({
+const PromptsRoute = PromptsRouteImport.update({
   id: '/prompts',
   path: '/prompts',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const ProjectsRoute = ProjectsImport.update({
+const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const ProjectSummarizationRoute = ProjectSummarizationImport.update({
+const ProjectSummarizationRoute = ProjectSummarizationRouteImport.update({
   id: '/project-summarization',
   path: '/project-summarization',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const KeysRoute = KeysImport.update({
+const KeysRoute = KeysRouteImport.update({
   id: '/keys',
   path: '/keys',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const HealthRoute = HealthImport.update({
+const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const ChatRoute = ChatImport.update({
+const ClaudeCodeRoute = ClaudeCodeRouteImport.update({
+  id: '/claude-code',
+  path: '/claude-code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatImport
-      parentRoute: typeof rootRoute
-    }
-    '/health': {
-      id: '/health'
-      path: '/health'
-      fullPath: '/health'
-      preLoaderRoute: typeof HealthImport
-      parentRoute: typeof rootRoute
-    }
-    '/keys': {
-      id: '/keys'
-      path: '/keys'
-      fullPath: '/keys'
-      preLoaderRoute: typeof KeysImport
-      parentRoute: typeof rootRoute
-    }
-    '/project-summarization': {
-      id: '/project-summarization'
-      path: '/project-summarization'
-      fullPath: '/project-summarization'
-      preLoaderRoute: typeof ProjectSummarizationImport
-      parentRoute: typeof rootRoute
-    }
-    '/projects': {
-      id: '/projects'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof ProjectsImport
-      parentRoute: typeof rootRoute
-    }
-    '/prompts': {
-      id: '/prompts'
-      path: '/prompts'
-      fullPath: '/prompts'
-      preLoaderRoute: typeof PromptsImport
-      parentRoute: typeof rootRoute
-    }
-  }
-}
-
-// Create and export the route tree
+const ChatChatIdRoute = ChatChatIdRouteImport.update({
+  id: '/$chatId',
+  path: '/$chatId',
+  getParentRoute: () => ChatRoute,
+} as any)
+const ProjectsTabIdProjectIdRoute = ProjectsTabIdProjectIdRouteImport.update({
+  id: '/$tabId/$projectId',
+  path: '/$tabId/$projectId',
+  getParentRoute: () => ProjectsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
+  '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
-  '/projects': typeof ProjectsRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/prompts': typeof PromptsRoute
+  '/chat/$chatId': typeof ChatChatIdRoute
+  '/projects/$tabId/$projectId': typeof ProjectsTabIdProjectIdRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
+  '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
-  '/projects': typeof ProjectsRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/prompts': typeof PromptsRoute
+  '/chat/$chatId': typeof ChatChatIdRoute
+  '/projects/$tabId/$projectId': typeof ProjectsTabIdProjectIdRoute
 }
-
 export interface FileRoutesById {
-  __root__: typeof rootRoute
+  __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/chat': typeof ChatRoute
+  '/chat': typeof ChatRouteWithChildren
+  '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
   '/project-summarization': typeof ProjectSummarizationRoute
-  '/projects': typeof ProjectsRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/prompts': typeof PromptsRoute
+  '/chat/$chatId': typeof ChatChatIdRoute
+  '/projects/$tabId/$projectId': typeof ProjectsTabIdProjectIdRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/chat'
+    | '/claude-code'
     | '/health'
     | '/keys'
     | '/project-summarization'
     | '/projects'
     | '/prompts'
+    | '/chat/$chatId'
+    | '/projects/$tabId/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/chat'
+    | '/claude-code'
     | '/health'
     | '/keys'
     | '/project-summarization'
     | '/projects'
     | '/prompts'
+    | '/chat/$chatId'
+    | '/projects/$tabId/$projectId'
   id:
     | '__root__'
     | '/'
     | '/chat'
+    | '/claude-code'
     | '/health'
     | '/keys'
     | '/project-summarization'
     | '/projects'
     | '/prompts'
+    | '/chat/$chatId'
+    | '/projects/$tabId/$projectId'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ChatRoute: typeof ChatRoute
+  ChatRoute: typeof ChatRouteWithChildren
+  ClaudeCodeRoute: typeof ClaudeCodeRoute
   HealthRoute: typeof HealthRoute
   KeysRoute: typeof KeysRoute
   ProjectSummarizationRoute: typeof ProjectSummarizationRoute
-  ProjectsRoute: typeof ProjectsRoute
+  ProjectsRoute: typeof ProjectsRouteWithChildren
   PromptsRoute: typeof PromptsRoute
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  ChatRoute: ChatRoute,
-  HealthRoute: HealthRoute,
-  KeysRoute: KeysRoute,
-  ProjectSummarizationRoute: ProjectSummarizationRoute,
-  ProjectsRoute: ProjectsRoute,
-  PromptsRoute: PromptsRoute,
-}
-
-export const routeTree = rootRoute
-  ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/chat",
-        "/health",
-        "/keys",
-        "/project-summarization",
-        "/projects",
-        "/prompts"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/chat": {
-      "filePath": "chat.tsx"
-    },
-    "/health": {
-      "filePath": "health.tsx"
-    },
-    "/keys": {
-      "filePath": "keys.tsx"
-    },
-    "/project-summarization": {
-      "filePath": "project-summarization.tsx"
-    },
-    "/projects": {
-      "filePath": "projects.tsx"
-    },
-    "/prompts": {
-      "filePath": "prompts.tsx"
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/prompts': {
+      id: '/prompts'
+      path: '/prompts'
+      fullPath: '/prompts'
+      preLoaderRoute: typeof PromptsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project-summarization': {
+      id: '/project-summarization'
+      path: '/project-summarization'
+      fullPath: '/project-summarization'
+      preLoaderRoute: typeof ProjectSummarizationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/keys': {
+      id: '/keys'
+      path: '/keys'
+      fullPath: '/keys'
+      preLoaderRoute: typeof KeysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/claude-code': {
+      id: '/claude-code'
+      path: '/claude-code'
+      fullPath: '/claude-code'
+      preLoaderRoute: typeof ClaudeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat/$chatId': {
+      id: '/chat/$chatId'
+      path: '/$chatId'
+      fullPath: '/chat/$chatId'
+      preLoaderRoute: typeof ChatChatIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
+    '/projects/$tabId/$projectId': {
+      id: '/projects/$tabId/$projectId'
+      path: '/$tabId/$projectId'
+      fullPath: '/projects/$tabId/$projectId'
+      preLoaderRoute: typeof ProjectsTabIdProjectIdRouteImport
+      parentRoute: typeof ProjectsRoute
     }
   }
 }
-ROUTE_MANIFEST_END */
+
+interface ChatRouteChildren {
+  ChatChatIdRoute: typeof ChatChatIdRoute
+}
+
+const ChatRouteChildren: ChatRouteChildren = {
+  ChatChatIdRoute: ChatChatIdRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
+
+interface ProjectsRouteChildren {
+  ProjectsTabIdProjectIdRoute: typeof ProjectsTabIdProjectIdRoute
+}
+
+const ProjectsRouteChildren: ProjectsRouteChildren = {
+  ProjectsTabIdProjectIdRoute: ProjectsTabIdProjectIdRoute,
+}
+
+const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
+  ProjectsRouteChildren,
+)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  ChatRoute: ChatRouteWithChildren,
+  ClaudeCodeRoute: ClaudeCodeRoute,
+  HealthRoute: HealthRoute,
+  KeysRoute: KeysRoute,
+  ProjectSummarizationRoute: ProjectSummarizationRoute,
+  ProjectsRoute: ProjectsRouteWithChildren,
+  PromptsRoute: PromptsRoute,
+}
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()

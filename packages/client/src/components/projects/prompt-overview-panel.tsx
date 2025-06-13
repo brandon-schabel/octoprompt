@@ -69,8 +69,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // Read selected files
-    const { selectedFiles} = useSelectedFiles()
-    const projectFileMap = useProjectFileMap(activeProjectTabId??-1)
+    const { selectedFiles } = useSelectedFiles()
+    const projectFileMap = useProjectFileMap(activeProjectTabId ?? -1)
 
     // Calculate total tokens
     const totalTokens = useMemo(() => {
@@ -160,9 +160,11 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
           // Ensure newChat has an ID (adjust based on actual return type)
           const newChatId = newChat?.data.id // Type assertion might be needed
           if (newChatId) {
-            setActiveChatId(newChatId)
-            // navigate to the chat, where the chat page will load the initial content from local storage
-            navigate({ to: '/chat' })
+            // Navigate to the new chat with the chatId in the URL
+            navigate({ 
+              to: '/chat/$chatId', 
+              params: { chatId: newChatId.toString() } 
+            })
 
             toast.success('New chat created')
           } else {
@@ -347,7 +349,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 resizerClassName='my-1'
               />
             </div>
-
           </div>
         </TooltipProvider>
       </ErrorBoundary>

@@ -1,14 +1,20 @@
 import { z } from 'zod'
 
 // Import only the actual types we need (not response schemas)
-import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage, FileVersion } from '@octoprompt/schemas'
+import type {
+  CreateChatBody,
+  UpdateChatBody,
+  AiChatStreamRequest,
+  Chat,
+  ChatMessage,
+  FileVersion
+} from '@octoprompt/schemas'
 
 import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody } from '@octoprompt/schemas'
 
 import type { CreatePromptBody, UpdatePromptBody, OptimizePromptRequest, Prompt } from '@octoprompt/schemas'
 
 import type { CreateProviderKeyBody, ProviderKey, UpdateProviderKeyBody } from '@octoprompt/schemas'
-
 
 // Import the actual schemas for validation
 import {
@@ -34,7 +40,7 @@ import {
   SuggestFilesBodySchema,
   RefreshQuerySchema,
   FileVersionListResponseSchema,
-  RevertToVersionBodySchema,
+  RevertToVersionBodySchema
 } from '@octoprompt/schemas'
 
 import {
@@ -53,7 +59,6 @@ import {
   UpdateProviderKeyBodySchema
 } from '@octoprompt/schemas'
 
-
 import {
   OperationSuccessResponseSchema as OperationSuccessResponseSchemaZ,
   ApiErrorResponseSchema as ApiErrorResponseSchemaZ
@@ -64,8 +69,6 @@ import {
   SummarizeFilesResponseSchema as SummarizeFilesResponseSchemaZ,
   RemoveSummariesResponseSchema as RemoveSummariesResponseSchemaZ
 } from '@octoprompt/schemas'
-
-
 
 import {
   AiGenerateTextRequestSchema,
@@ -91,7 +94,6 @@ import {
   type MastraSingleSummarizeRequest,
   type MastraSingleSummarizeResponse
 } from '@octoprompt/schemas'
-
 
 export type DataResponseSchema<T> = {
   success: boolean
@@ -660,9 +662,6 @@ export class ProviderKeyService extends BaseApiClient {
     return true
   }
 }
-
-
-
 
 // Gen AI Service
 export class GenAiService extends BaseApiClient {

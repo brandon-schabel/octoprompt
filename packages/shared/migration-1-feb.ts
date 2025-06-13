@@ -172,9 +172,6 @@ function main() {
       FROM oldDb.provider_keys;
     `)
 
-
-
-
     // 10) file_changes is a new table.
     // Since legacy data doesn't exist for it, no INSERT is necessary.
     // (It will be empty in the new DB.)
