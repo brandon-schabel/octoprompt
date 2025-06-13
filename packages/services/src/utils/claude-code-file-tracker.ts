@@ -1,6 +1,6 @@
 import { type ProjectFile } from '@octoprompt/schemas'
 import {
-  syncProjectFiles,
+  syncProject,
   type FileChangeEvent,
   type FileChangeListener
 } from '../file-services/file-sync-service-unified'
@@ -39,7 +39,7 @@ export class ClaudeCodeFileTracker implements FileChangeListener {
 
       // The file sync service already has watchers running
       // We just need to ensure it's syncing this project
-      await syncProjectFiles(project)
+      await syncProject(project)
 
       // Mark this project as being watched
       this.activeWatchers.set(projectId, () => {

@@ -35,6 +35,26 @@ export const ProviderKeySchema = z
       .boolean()
       .default(false)
       .openapi({ example: false, description: 'Whether this key is the default for its provider' }),
+    isActive: z
+      .boolean()
+      .default(true)
+      .openapi({ example: true, description: 'Whether this key is currently active' }),
+    environment: z
+      .string()
+      .default('production')
+      .openapi({ example: 'production', description: 'Environment this key is for (production, staging, etc.)' }),
+    description: z
+      .string()
+      .optional()
+      .openapi({ example: 'Main production key', description: 'Optional description of the key' }),
+    expiresAt: z
+      .number()
+      .optional()
+      .openapi({ example: 1716537600000, description: 'Optional expiration timestamp' }),
+    lastUsed: z
+      .number()
+      .optional()
+      .openapi({ example: 1716537600000, description: 'Last time this key was used' }),
     created: z.number().openapi({ example: 1716537600000, description: 'Creation timestamp (ISO 8601)' }),
     updated: z.number().openapi({ example: 1716537600000, description: 'Last update timestamp (ISO 8601)' })
   })

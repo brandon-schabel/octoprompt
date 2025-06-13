@@ -4,8 +4,7 @@ import path from 'path'
 import { getFullProjectSummary } from './utils/get-full-project-summary'
 import { buildClaudeCodeContext } from './utils/claude-code-context-builder'
 import { claudeCodeFileTracker } from './utils/claude-code-file-tracker'
-import { getProject } from './project-service'
-import { syncProjectFiles } from './file-services/file-sync-service-unified'
+import { syncProject } from './file-services/file-sync-service-unified'
 import { claudeCodeAuditService } from './claude-code-audit-service'
 import {
   getAllClaudeCodeSessions,
@@ -16,6 +15,7 @@ import {
   getClaudeCodeSessionMessages,
   cleanupOldClaudeCodeSessions
 } from '@octoprompt/storage'
+import { getProject } from './project-service'
 
 export interface ClaudeCodeSession {
   id: string
@@ -78,7 +78,7 @@ export function createClaudeCodeService() {
       if (projectId) {
         const project = await getProject(projectId)
         if (project) {
-          workingDirectory = path.resolve(project.folderPath)
+          workingDirectory = path.resolve(project.path)
 
           // Include project context if requested
           if (includeProjectContext) {
@@ -207,7 +207,7 @@ export function createClaudeCodeService() {
           const project = await getProject(projectId)
           if (project) {
             console.log('[ClaudeCodeService] Syncing project files after execution')
-            await syncProjectFiles(project)
+            await syncProject(project)
           }
 
           // Log session completion
@@ -340,7 +340,7 @@ export function createClaudeCodeService() {
       if (projectId) {
         const project = await getProject(projectId)
         if (project) {
-          workingDirectory = path.resolve(project.folderPath)
+          workingDirectory = path.resolve(project.path)
 
           // Include project context if requested
           if (includeProjectContext) {
@@ -430,7 +430,7 @@ export function createClaudeCodeService() {
                 await claudeCodeFileTracker.startTracking(currentSessionId, projectId)
                 const project = await getProject(projectId)
                 if (project) {
-                  await syncProjectFiles(project)
+                  await syncProject(project)
                 }
               } catch (error) {
                 console.warn('[ClaudeCodeService] Failed to track/sync files in stream:', error)

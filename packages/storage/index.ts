@@ -1,7 +1,75 @@
-export * from './src/attachment-storage'
-export * from './src/chat-storage'
+// Export existing storage
 export * from './src/project-storage'
+export * from './src/chat-storage'
 export * from './src/prompt-storage'
-export * from './src/provider-key-storage'
 export * from './src/claude-code-storage'
-export * from './src/claude-code-audit-storage'
+export * from './src/provider-key-storage'
+
+// Export new enhanced storage system
+export * from './src/core/storage-adapter'
+export * from './src/core/locks'
+export * from './src/core/multi-level-cache'
+export * from './src/core/storage-factory'
+
+// Export adapters
+export * from './src/adapters/memory-storage-adapter'
+export * from './src/adapters/file-storage-adapter'
+
+// Export migration utilities
+export * from './src/migration/storage-migrator'
+export * from './src/migration/v2-migrations'
+
+// Export enhanced storage implementations
+export * from './src/project-storage'
+
+// Re-export core types and utilities
+export type {
+  StorageAdapter,
+  StorageConfig,
+  StorageAdapterType,
+  StorageError,
+  StorageErrorCode,
+  StorageMetrics
+} from './src/core/storage-adapter'
+
+export type {
+  ReadWriteLock,
+  Lock,
+  LockManager
+} from './src/core/locks'
+
+export type {
+  MultiLevelCache,
+  MultiLevelCacheConfig,
+  CacheLevel,
+  CacheStats
+} from './src/core/multi-level-cache'
+
+export type {
+  CachedStorageAdapter,
+  StorageRegistry
+} from './src/core/storage-factory'
+
+export {
+  globalStorageRegistry,
+  createProjectStorage,
+  createTestStorage
+} from './src/core/storage-factory'
+
+export {
+  globalLockManager
+} from './src/core/locks'
+
+export type {
+  MigrationStep,
+  MigrationContext,
+  MigrationOptions,
+  MigrationResult
+} from './src/migration/storage-migrator'
+
+export {
+  StorageMigrator,
+  MigrationSteps,
+  StorageMigrationUtils,
+  migrateStorage
+} from './src/migration/storage-migrator'

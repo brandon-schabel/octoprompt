@@ -357,48 +357,6 @@ export function useRefreshProject() {
   })
 }
 
-export function useSuggestFiles() {
-  return useMutation({
-    mutationFn: ({ projectId, userInput }: { projectId: number; userInput: string }) =>
-      octoClient.projects.suggestFiles(projectId, { userInput }),
-    onError: (error) => {
-      toast.error(error.message || 'Failed to suggest files')
-    }
-  })
-}
-
-export function useSummarizeProjectFiles() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-
-  return useMutation({
-    mutationFn: ({ projectId, fileIds, force = false }: { projectId: number; fileIds: number[]; force?: boolean }) =>
-      octoClient.projects.summarizeFiles(projectId, { fileIds, force }),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      toast.success('Files summarized successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to summarize files')
-    }
-  })
-}
-
-export function useRemoveSummaries() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-
-  return useMutation({
-    mutationFn: ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) =>
-      octoClient.projects.removeSummaries(projectId, { fileIds }),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      toast.success('Summaries removed successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to remove summaries')
-    }
-  })
-}
-
 export function useUpdateFileContent() {
   const { invalidateProjectFiles } = useInvalidateProjects()
 

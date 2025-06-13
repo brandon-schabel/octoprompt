@@ -17,23 +17,6 @@ const SpecificProjectSummaryResponseSchema = z.object({
   summary: z.string()
 })
 
-const SpecificSuggestFilesResponseSchema = z.object({
-  success: z.literal(true),
-  recommendedFileIds: z.array(z.number())
-})
-
-const SpecificSummarizeFilesResponseSchema = z.object({
-  success: z.literal(true),
-  included: z.number(),
-  skipped: z.number()
-})
-
-const SpecificRemoveSummariesResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string(),
-  removedCount: z.number()
-})
-
 describe('Project API Tests', () => {
   let client: OctoPromptClient
   let testProjects: Project[] = []
@@ -313,58 +296,6 @@ describe('Project API Tests', () => {
     const result = await client.projects.getProjectSummary(project.id)
     expect(SpecificProjectSummaryResponseSchema.parse(result).success).toBe(true)
     expect(typeof result.summary).toBe('string')
-  })
-
-  test('POST /api/projects/{projectId}/suggest-files - Suggest files', async () => {
-    if (testProjects.length === 0) return
-    const project = testProjects[0]
-    if (!project) return
-
-    const result = await client.projects.suggestFiles(project.id, { userInput: 'Find authentication related files' })
-    expect(SpecificSuggestFilesResponseSchema.parse(result).success).toBe(true)
-    expect(Array.isArray(result.recommendedFileIds)).toBe(true)
-  })
-
-  test('POST /api/projects/{projectId}/summarize - Summarize files', async () => {
-    const project = testProjects[0]
-    if (!project) return
-
-    const filesResult = await client.projects.getProjectFiles(project.id)
-    if (!filesResult.success || filesResult.data.length === 0) {
-      console.warn('Skipping summarize files test: no files in project.')
-      return
-    }
-    const fileIdsToSummarize = filesResult.data.slice(0, 2).map((f) => f.id)
-    if (fileIdsToSummarize.length === 0) {
-      console.warn('Skipping summarize files test: no file IDs to summarize.')
-      return
-    }
-
-    const result = await client.projects.summarizeFiles(project.id, { fileIds: fileIdsToSummarize, force: false })
-    expect(SpecificSummarizeFilesResponseSchema.parse(result).success).toBe(true)
-    expect(typeof result.included).toBe('number')
-    expect(typeof result.skipped).toBe('number')
-  })
-
-  test('POST /api/projects/{projectId}/remove-summaries - Remove summaries', async () => {
-    const project = testProjects[0]
-    if (!project) return
-
-    const filesResult = await client.projects.getProjectFiles(project.id)
-    if (!filesResult.success || filesResult.data.length === 0) {
-      console.warn('Skipping remove summaries test: no files in project.')
-      return
-    }
-    const fileIdsToRemoveSummaries = filesResult.data.slice(0, 2).map((f) => f.id)
-    if (fileIdsToRemoveSummaries.length === 0) {
-      console.warn('Skipping remove summaries test: no file IDs to process.')
-      return
-    }
-
-    const result = await client.projects.removeSummaries(project.id, { fileIds: fileIdsToRemoveSummaries })
-    expect(SpecificRemoveSummariesResponseSchema.parse(result).success).toBe(true)
-    expect(typeof result.removedCount).toBe('number')
-    expect(typeof result.message).toBe('string')
   })
 
   test('DELETE /api/projects/{projectId} - Delete all test projects and verify', async () => {

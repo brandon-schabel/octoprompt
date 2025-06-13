@@ -18,10 +18,8 @@ import {
   Eye,
   Code,
   Copy,
-  Wand2,
   RefreshCw,
-  ClipboardList,
-  Sparkles
+  ClipboardList
 } from 'lucide-react'
 import clsx from 'clsx'
 import { toast } from 'sonner'
@@ -46,7 +44,6 @@ import { buildNodeContent, buildNodeSummaries } from '@octoprompt/shared'
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useRefreshProject } from '@/hooks/api/use-projects-api'
-import { useSummarizeProjectFiles } from '@/hooks/api/use-projects-api'
 import { EditorType, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
@@ -122,7 +119,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const projectId = projectTabState?.selectedProjectId ?? -1
 
   const { mutate: refreshProject } = useRefreshProject()
-  const summarizeMutation = useSummarizeProjectFiles()
 
   const isFolder = item.node._folder === true
 
@@ -287,36 +283,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                   ></div>
                 )}
 
-                {/* Conditionally show Summarize button */}
-                {!hasSummary && (
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    title='Summarize this file'
-                    className='h-6 w-6 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity'
-                    disabled={
-                      summarizeMutation.isPending && summarizeMutation.variables?.fileIds.includes(item.node.file.id)
-                    }
-                    onClick={(e) => {
-                      e.stopPropagation()
 
-                      summarizeMutation.mutate(
-                        { fileIds: [item.node.file!.id], force: false, projectId }, // force: false initially
-                        {
-                          onSuccess: () => {
-                            toast.success('File summary started.')
-                          },
-                          onError: (error: any) => {
-                            // Added 'any' type temporarily
-                            toast.error(error?.error?.message || 'Failed to start summarization.')
-                          }
-                        }
-                      )
-                    }}
-                  >
-                    <RefreshCw className='h-3.5 w-3.5 animate-spin' />
-                  </Button>
-                )}
 
                 {onViewFile && (
                   <Button

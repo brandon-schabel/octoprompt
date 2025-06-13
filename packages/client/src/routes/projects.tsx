@@ -21,7 +21,6 @@ import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectStatsDisplay } from '@/components/projects/project-stats-display'
-import { ProjectSummarizationSettingsPage } from '@/routes/project-summarization'
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 
@@ -191,7 +190,6 @@ export function ProjectsPage() {
               <TabsList>
                 <TabsTrigger value='context'>Context</TabsTrigger>
                 <TabsTrigger value='stats'>Statistics</TabsTrigger>
-                <TabsTrigger value='summarization'>Summarization</TabsTrigger>
               </TabsList>
             </div>
             <div className='ml-auto'>
@@ -212,16 +210,6 @@ export function ProjectsPage() {
               <ProjectStatsDisplay projectId={selectedProjectId} />
             ) : (
               <p>No project selected for stats.</p>
-            )}
-          </TabsContent>
-          <TabsContent
-            value='summarization'
-            className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'
-          >
-            {selectedProjectId ? (
-              <ProjectSummarizationSettingsPage />
-            ) : (
-              <p>No project selected for summarization settings.</p>
             )}
           </TabsContent>
         </Tabs>

@@ -1,212 +1,701 @@
-import { z, ZodError } from 'zod'
-import path from 'node:path'
-import fs from 'node:fs/promises'
-import {
-  ClaudeCodeSessionSchema,
-  ClaudeCodeMessageSchema,
-  type ClaudeCodeSession,
-  type ClaudeCodeMessage
-} from '@octoprompt/schemas'
-import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
+import { z } from 'zod'
+import * as path from 'node:path'
+import { ClaudeCodeSessionSchema, ClaudeCodeMessageSchema, type ClaudeCodeSession, type ClaudeCodeMessage } from '@octoprompt/schemas'
+import { BaseStorageString, type StorageOptions } from './core/base-storage-string'
+import { IndexManager, type IndexConfig } from './core/index-manager'
 
-// Define the base directory for storing Claude Code data
-const DATA_DIR = path.resolve(process.cwd(), 'data', 'claude_code_storage')
-const SESSION_DATA_SUBDIR = 'session_data'
-
-// --- Schemas for Storage ---
-// Store all sessions (metadata) as a map (Record) keyed by sessionId
+// Storage schemas
 export const ClaudeCodeSessionsStorageSchema = z.record(z.string(), ClaudeCodeSessionSchema)
+export const ClaudeCodeMessagesStorageSchema = z.record(z.string(), ClaudeCodeMessageSchema)
 export type ClaudeCodeSessionsStorage = z.infer<typeof ClaudeCodeSessionsStorageSchema>
-
-// Store messages within a specific session as an array
-export const ClaudeCodeMessagesStorageSchema = z.array(ClaudeCodeMessageSchema)
 export type ClaudeCodeMessagesStorage = z.infer<typeof ClaudeCodeMessagesStorageSchema>
 
-// --- Path Helpers ---
+/**
+ * Enhanced Claude Code storage with session management and message search
+ */
+export class ClaudeCodeStorage extends BaseStorageString<ClaudeCodeSession, ClaudeCodeSessionsStorage> {
+  private indexManager: IndexManager
+  private messageStorages: Map<string, ClaudeCodeMessageStorage> = new Map()
 
-/** Gets the absolute path to the main sessions index file. */
-function getSessionsIndexPath(): string {
-  return path.join(DATA_DIR, 'sessions.json')
-}
+  constructor(options: StorageOptions = {}) {
+    const dataDir = path.join('data', 'claude_code_storage')
+    super(ClaudeCodeSessionsStorageSchema, ClaudeCodeSessionSchema, dataDir, options)
+    
+    this.indexManager = new IndexManager(this.basePath, this.dataDir)
+    
+    // Initialize indexes
+    this.initializeIndexes()
+  }
 
-/** Gets the absolute path to a specific session's data directory. */
-function getSessionDataDir(sessionId: string): string {
-  return path.join(DATA_DIR, SESSION_DATA_SUBDIR, sessionId)
-}
+  protected getIndexPath(): string {
+    return path.join(this.basePath, this.dataDir, 'sessions.json')
+  }
 
-/** Gets the absolute path to a specific session's messages file. */
-function getSessionMessagesPath(sessionId: string): string {
-  return path.join(getSessionDataDir(sessionId), 'messages.json')
-}
+  protected getEntityPath(id: string): string | null {
+    return path.join(this.basePath, this.dataDir, 'messages', `${id}.json`)
+  }
 
-// --- Core Read/Write Functions ---
+  protected async initializeIndexes(): Promise<void> {
+    const indexes: IndexConfig[] = [
+      {
+        name: 'sessions_by_projectPath',
+        type: 'hash',
+        fields: ['projectPath']
+      },
+      {
+        name: 'sessions_by_status',
+        type: 'hash',
+        fields: ['status']
+      },
+      {
+        name: 'sessions_by_lastActivity',
+        type: 'btree',
+        fields: ['lastActivity']
+      },
+      {
+        name: 'sessions_by_created',
+        type: 'btree',
+        fields: ['created']
+      }
+    ]
 
-/** Ensures the specified directory exists. */
-async function ensureDirExists(dirPath: string): Promise<void> {
-  try {
-    await fs.mkdir(dirPath, { recursive: true })
-  } catch (error: any) {
-    if (error.code !== 'EEXIST') {
-      console.error(`Error creating directory ${dirPath}:`, error)
-      throw new Error(`Failed to ensure directory exists: ${dirPath}`)
+    for (const indexConfig of indexes) {
+      try {
+        await this.indexManager.createIndex(indexConfig)
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.error(`Failed to create index ${indexConfig.name}:`, error)
+        }
+      }
+    }
+  }
+
+  // Override create to handle indexes
+  public async create(data: Omit<ClaudeCodeSession, 'id' | 'created' | 'updated'>): Promise<ClaudeCodeSession> {
+    const session = await super.create(data)
+    
+    // Update indexes
+    await this.updateSessionIndexes(session)
+    
+    return session
+  }
+
+  // Override update to maintain indexes
+  public async update(id: string, data: Partial<Omit<ClaudeCodeSession, 'id' | 'created' | 'updated'>>): Promise<ClaudeCodeSession | null> {
+    // Remove from indexes before update
+    await this.removeSessionFromIndexes(id)
+
+    const updated = await super.update(id, data)
+    if (!updated) return null
+
+    // Re-add to indexes
+    await this.updateSessionIndexes(updated)
+
+    return updated
+  }
+
+  // Override delete to maintain indexes
+  public async delete(id: string): Promise<boolean> {
+    const result = await super.delete(id)
+    if (result) {
+      // Remove from indexes
+      await this.removeSessionFromIndexes(id)
+      
+      // Also delete message storage
+      this.messageStorages.delete(id)
+    }
+    return result
+  }
+
+  // --- Session Management ---
+
+  /**
+   * Create a new session
+   */
+  public async createSession(data: Omit<ClaudeCodeSession, 'id' | 'created' | 'updated'>): Promise<ClaudeCodeSession> {
+    return this.create(data)
+  }
+
+  /**
+   * Get session by project path
+   */
+  public async getByProject(projectId: number): Promise<ClaudeCodeSession[]> {
+    const projectPath = projectId.toString()
+    const ids = await this.indexManager.query('sessions_by_projectPath', projectPath)
+    const sessions: ClaudeCodeSession[] = []
+    
+    for (const id of ids) {
+      const session = await this.getById(id)
+      if (session && session.projectPath === projectPath) {
+        sessions.push(session)
+      }
+    }
+    
+    return sessions.sort((a, b) => b.lastActivity - a.lastActivity)
+  }
+
+  /**
+   * Get sessions by status
+   */
+  public async getByStatus(status: string): Promise<ClaudeCodeSession[]> {
+    const ids = await this.indexManager.query('sessions_by_status', status)
+    const sessions: ClaudeCodeSession[] = []
+    
+    for (const id of ids) {
+      const session = await this.getById(id)
+      if (session) sessions.push(session)
+    }
+    
+    return sessions.sort((a, b) => b.lastActivity - a.lastActivity)
+  }
+
+  /**
+   * Get recent sessions
+   */
+  public async getRecent(limit: number = 10): Promise<ClaudeCodeSession[]> {
+    const sessions = await this.list()
+    return sessions
+      .sort((a, b) => b.lastActivity - a.lastActivity)
+      .slice(0, limit)
+  }
+
+  /**
+   * Get active sessions
+   */
+  public async getActive(): Promise<ClaudeCodeSession[]> {
+    return this.getByStatus('active')
+  }
+
+  /**
+   * Search sessions by title or project path
+   */
+  public async searchByTitle(query: string): Promise<ClaudeCodeSession[]> {
+    const sessions = await this.list()
+    const searchTerm = query.toLowerCase()
+    
+    return sessions
+      .filter(session => 
+        (session.projectPath && session.projectPath.toLowerCase().includes(searchTerm)) ||
+        (session.id && session.id.toLowerCase().includes(searchTerm))
+      )
+      .sort((a, b) => b.lastActivity - a.lastActivity)
+  }
+
+  /**
+   * Update session activity
+   */
+  public async updateActivity(sessionId: string): Promise<void> {
+    await this.update(sessionId, { 
+      lastActivity: Date.now(),
+      status: 'active'
+    })
+  }
+
+  // --- Message Management ---
+
+  /**
+   * Get message storage for a session
+   */
+  public getMessageStorage(sessionId: string): ClaudeCodeMessageStorage {
+    if (!this.messageStorages.has(sessionId)) {
+      this.messageStorages.set(sessionId, new ClaudeCodeMessageStorage(sessionId, this.basePath, this.dataDir, this.options))
+    }
+    return this.messageStorages.get(sessionId)!
+  }
+
+  /**
+   * Add message to session
+   */
+  public async addMessage(sessionId: string, messageData: Omit<ClaudeCodeMessage, 'id' | 'created'>): Promise<ClaudeCodeMessage> {
+    const messageStorage = this.getMessageStorage(sessionId)
+    const message = await messageStorage.create(messageData)
+    
+    // Update session activity
+    await this.updateActivity(sessionId)
+    
+    return message
+  }
+
+  /**
+   * Get messages for session
+   */
+  public async getMessages(sessionId: string): Promise<ClaudeCodeMessage[]> {
+    const messageStorage = this.getMessageStorage(sessionId)
+    return messageStorage.list()
+  }
+
+  /**
+   * Search messages across all sessions
+   */
+  public async searchMessages(query: string, sessionId?: string): Promise<ClaudeCodeMessage[]> {
+    if (sessionId) {
+      const messageStorage = this.getMessageStorage(sessionId)
+      return messageStorage.search(query)
+    }
+    
+    // Search across all sessions
+    const sessions = await this.list()
+    const allMessages: ClaudeCodeMessage[] = []
+    
+    for (const session of sessions) {
+      const messageStorage = this.getMessageStorage(session.id)
+      const sessionMessages = await messageStorage.search(query)
+      allMessages.push(...sessionMessages)
+    }
+    
+    return allMessages.sort((a, b) => b.updated - a.updated)
+  }
+
+  // --- Legacy API Compatibility ---
+
+  /**
+   * Get all Claude Code sessions (legacy API)
+   */
+  public async getAllClaudeCodeSessions(): Promise<ClaudeCodeSession[]> {
+    return this.list()
+  }
+
+  /**
+   * Get Claude Code session messages (legacy API)
+   */
+  public async getClaudeCodeSessionMessages(sessionId: string): Promise<ClaudeCodeMessage[]> {
+    return this.getMessages(sessionId)
+  }
+
+  /**
+   * Get all sessions
+   */
+  public async getAllSessions(): Promise<ClaudeCodeSession[]> {
+    return this.list()
+  }
+
+  // --- Index Management ---
+
+  private async updateSessionIndexes(session: ClaudeCodeSession): Promise<void> {
+    await this.indexManager.addToIndex('sessions_by_projectPath', session.id, session)
+    await this.indexManager.addToIndex('sessions_by_status', session.id, session)
+    await this.indexManager.addToIndex('sessions_by_lastActivity', session.id, session)
+    await this.indexManager.addToIndex('sessions_by_created', session.id, session)
+  }
+
+  private async removeSessionFromIndexes(sessionId: string): Promise<void> {
+    const indexNames = [
+      'sessions_by_projectPath',
+      'sessions_by_status',
+      'sessions_by_lastActivity',
+      'sessions_by_created'
+    ]
+    
+    for (const indexName of indexNames) {
+      await this.indexManager.removeFromIndex(indexName, sessionId)
+    }
+  }
+
+  public async rebuildIndexes(): Promise<void> {
+    const sessions = await this.list()
+    
+    const indexNames = [
+      'sessions_by_projectPath',
+      'sessions_by_status', 
+      'sessions_by_lastActivity',
+      'sessions_by_created'
+    ]
+    
+    for (const indexName of indexNames) {
+      await this.indexManager.rebuildIndex(indexName, sessions)
     }
   }
 }
 
-/** Reads and parses a JSON file with the specified Zod schema. */
-async function readJsonFile<T>(filePath: string, schema: z.ZodType<T>): Promise<T | null> {
-  try {
-    const fileContent = await fs.readFile(filePath, 'utf8')
-    const data = JSON.parse(fileContent)
-    return schema.parse(data)
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
-      return null
-    }
-    if (error instanceof ZodError) {
-      console.error(`Validation error reading ${filePath}:`, error.errors)
-      throw new Error(`Invalid data format in ${filePath}`)
-    }
-    console.error(`Error reading ${filePath}:`, error)
-    throw new Error(`Failed to read ${filePath}`)
-  }
-}
+/**
+ * Message storage for Claude Code sessions
+ */
+export class ClaudeCodeMessageStorage extends BaseStorageString<ClaudeCodeMessage, ClaudeCodeMessagesStorage> {
+  private indexManager: IndexManager
+  private sessionId: string
 
-/** Writes data to a JSON file, ensuring the directory exists first. */
-async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
-  const dirPath = path.dirname(filePath)
-  await ensureDirExists(dirPath)
-
-  try {
-    const jsonContent = JSON.stringify(data, null, 2)
-    await fs.writeFile(filePath, jsonContent, 'utf8')
-  } catch (error: any) {
-    console.error(`Error writing to ${filePath}:`, error)
-    throw new Error(`Failed to write to ${filePath}`)
-  }
-}
-
-// --- Session Management Functions ---
-
-/** Initializes the storage by ensuring directories exist and creating empty index if needed. */
-export async function initializeClaudeCodeStorage(): Promise<void> {
-  await ensureDirExists(DATA_DIR)
-  await ensureDirExists(path.join(DATA_DIR, SESSION_DATA_SUBDIR))
-
-  const sessionsPath = getSessionsIndexPath()
-  const existingSessions = await readJsonFile(sessionsPath, ClaudeCodeSessionsStorageSchema)
-
-  if (!existingSessions) {
-    await writeJsonFile(sessionsPath, {} as ClaudeCodeSessionsStorage)
-  }
-}
-
-/** Gets all Claude Code sessions. */
-export async function getAllClaudeCodeSessions(): Promise<ClaudeCodeSession[]> {
-  const sessionsPath = getSessionsIndexPath()
-  const sessions = await readJsonFile(sessionsPath, ClaudeCodeSessionsStorageSchema)
-
-  if (!sessions) {
-    return []
+  constructor(sessionId: string, basePath: string, dataDir: string, options: StorageOptions = {}) {
+    const messageDataDir = path.join(dataDir, 'messages')
+    super(ClaudeCodeMessagesStorageSchema, ClaudeCodeMessageSchema, messageDataDir, { ...options, basePath })
+    
+    this.sessionId = sessionId
+    this.indexManager = new IndexManager(basePath, messageDataDir)
+    
+    // Initialize indexes
+    this.initializeIndexes()
   }
 
-  return Object.values(sessions).sort((a, b) => b.lastActivity - a.lastActivity)
-}
+  protected getIndexPath(): string {
+    return path.join(this.basePath, this.dataDir, `${this.sessionId}.json`)
+  }
 
-/** Gets a specific Claude Code session by ID. */
-export async function getClaudeCodeSession(sessionId: string): Promise<ClaudeCodeSession | null> {
-  const sessionsPath = getSessionsIndexPath()
-  const sessions = await readJsonFile(sessionsPath, ClaudeCodeSessionsStorageSchema)
-
-  if (!sessions || !sessions[sessionId]) {
+  protected getEntityPath(id: string): string | null {
+    // Messages don't have separate entity paths
     return null
   }
 
-  return sessions[sessionId]
-}
+  protected async initializeIndexes(): Promise<void> {
+    const indexes: IndexConfig[] = [
+      {
+        name: `messages_${this.sessionId}_by_type`,
+        type: 'hash',
+        fields: ['type']
+      },
+      {
+        name: `messages_${this.sessionId}_by_session_id`,
+        type: 'hash',
+        fields: ['session_id']
+      },
+      {
+        name: `messages_${this.sessionId}_by_created`,
+        type: 'btree',
+        fields: ['created']
+      },
+      {
+        name: `messages_${this.sessionId}_by_content`,
+        type: 'inverted',
+        fields: ['content']
+      }
+    ]
 
-/** Creates or updates a Claude Code session. */
-export async function saveClaudeCodeSession(session: ClaudeCodeSession): Promise<ClaudeCodeSession> {
-  const sessionsPath = getSessionsIndexPath()
-  const sessions = (await readJsonFile(sessionsPath, ClaudeCodeSessionsStorageSchema)) || {}
-
-  // Validate the session
-  const validatedSession = ClaudeCodeSessionSchema.parse(session)
-
-  // Update the sessions index
-  sessions[validatedSession.id] = validatedSession
-  await writeJsonFile(sessionsPath, sessions)
-
-  // Ensure session data directory exists
-  await ensureDirExists(getSessionDataDir(validatedSession.id))
-
-  return validatedSession
-}
-
-/** Deletes a Claude Code session and all its messages. */
-export async function deleteClaudeCodeSession(sessionId: string): Promise<boolean> {
-  const sessionsPath = getSessionsIndexPath()
-  const sessions = await readJsonFile(sessionsPath, ClaudeCodeSessionsStorageSchema)
-
-  if (!sessions || !sessions[sessionId]) {
-    return false
+    for (const indexConfig of indexes) {
+      try {
+        await this.indexManager.createIndex(indexConfig)
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.error(`Failed to create index ${indexConfig.name}:`, error)
+        }
+      }
+    }
   }
 
-  // Remove from index
-  delete sessions[sessionId]
-  await writeJsonFile(sessionsPath, sessions)
-
-  // Delete session data directory
-  const sessionDir = getSessionDataDir(sessionId)
-  try {
-    await fs.rm(sessionDir, { recursive: true, force: true })
-  } catch (error) {
-    console.error(`Error deleting session directory ${sessionDir}:`, error)
+  // Override create to handle indexes and timestamps
+  public async create(data: Omit<ClaudeCodeMessage, 'id' | 'created' | 'updated'>): Promise<ClaudeCodeMessage> {
+    const now = Date.now()
+    const message = await super.create({
+      ...data,
+      session_id: data.session_id || this.sessionId,
+      timestamp: data.timestamp || now
+    })
+    
+    // Update indexes
+    await this.updateMessageIndexes(message)
+    
+    return message
   }
 
-  return true
+  /**
+   * Search messages by content
+   */
+  public async search(query: string): Promise<ClaudeCodeMessage[]> {
+    const contentIds = await this.indexManager.searchText(`messages_${this.sessionId}_by_content`, query)
+    const messages: ClaudeCodeMessage[] = []
+    
+    for (const id of contentIds) {
+      const message = await this.getById(id)
+      if (message) messages.push(message)
+    }
+    
+    return messages.sort((a, b) => b.updated - a.updated)
+  }
+
+  /**
+   * Get messages by type
+   */
+  public async getByType(type: string): Promise<ClaudeCodeMessage[]> {
+    const ids = await this.indexManager.query(`messages_${this.sessionId}_by_type`, type)
+    const messages: ClaudeCodeMessage[] = []
+    
+    for (const id of ids) {
+      const message = await this.getById(id)
+      if (message) messages.push(message)
+    }
+    
+    return messages.sort((a, b) => a.updated - b.updated)
+  }
+
+  private async updateMessageIndexes(message: ClaudeCodeMessage): Promise<void> {
+    await this.indexManager.addToIndex(`messages_${this.sessionId}_by_type`, message.id, message)
+    await this.indexManager.addToIndex(`messages_${this.sessionId}_by_session_id`, message.id, message)
+    await this.indexManager.addToIndex(`messages_${this.sessionId}_by_created`, message.id, message)
+    await this.indexManager.addToIndex(`messages_${this.sessionId}_by_content`, message.id, message)
+  }
 }
 
-// --- Message Management Functions ---
+// Create singleton instance
+const claudeCodeStorageInstance = new ClaudeCodeStorage()
 
-/** Gets all messages for a specific session. */
-export async function getClaudeCodeSessionMessages(sessionId: string): Promise<ClaudeCodeMessage[]> {
-  const messagesPath = getSessionMessagesPath(sessionId)
-  const messages = await readJsonFile(messagesPath, ClaudeCodeMessagesStorageSchema)
-
-  return messages || []
+// Types for audit logging
+export interface ClaudeCodeAuditLog {
+  id: string
+  sessionId: string
+  projectId: number
+  timestamp: number
+  action: 'session_started' | 'session_completed' | 'file_created' | 'file_modified' | 'file_deleted' | 'command_executed'
+  details: Record<string, any>
+  created: number
 }
 
-/** Saves messages for a specific session. */
-export async function saveClaudeCodeSessionMessages(sessionId: string, messages: ClaudeCodeMessage[]): Promise<void> {
-  const messagesPath = getSessionMessagesPath(sessionId)
-
-  // Validate all messages
-  const validatedMessages = ClaudeCodeMessagesStorageSchema.parse(messages)
-
-  await writeJsonFile(messagesPath, validatedMessages)
+export interface GetAuditLogsQuery {
+  sessionId?: string
+  projectId?: number
+  startTime?: number
+  endTime?: number
+  action?: string
+  limit?: number
+  offset?: number
 }
 
-/** Appends a single message to a session. */
-export async function appendClaudeCodeSessionMessage(sessionId: string, message: ClaudeCodeMessage): Promise<void> {
-  const existingMessages = await getClaudeCodeSessionMessages(sessionId)
-  const validatedMessage = ClaudeCodeMessageSchema.parse(message)
-
-  existingMessages.push(validatedMessage)
-  await saveClaudeCodeSessionMessages(sessionId, existingMessages)
+export interface AuditLogSummary {
+  sessionId: string
+  projectId: number
+  totalActions: number
+  fileChanges: number
+  commandsExecuted: number
+  duration: number
+  startTime: number
+  endTime: number
 }
 
-// --- Cleanup Functions ---
+// Audit storage for Claude Code
+export const claudeCodeAuditStorage = {
+  auditLogs: new Map<string, ClaudeCodeAuditLog>(),
 
-/** Cleans up old sessions (older than specified days). */
+  async createAuditLog(data: Omit<ClaudeCodeAuditLog, 'id' | 'created'>): Promise<ClaudeCodeAuditLog> {
+    const id = `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const auditLog: ClaudeCodeAuditLog = {
+      ...data,
+      id,
+      created: Date.now()
+    }
+    this.auditLogs.set(id, auditLog)
+    return auditLog
+  },
+
+  async queryAuditLogs(query: GetAuditLogsQuery): Promise<ClaudeCodeAuditLog[]> {
+    let logs = Array.from(this.auditLogs.values())
+
+    if (query.sessionId) {
+      logs = logs.filter(log => log.sessionId === query.sessionId)
+    }
+    if (query.projectId) {
+      logs = logs.filter(log => log.projectId === query.projectId)
+    }
+    if (query.startTime) {
+      logs = logs.filter(log => log.timestamp >= query.startTime)
+    }
+    if (query.endTime) {
+      logs = logs.filter(log => log.timestamp <= query.endTime)
+    }
+    if (query.action) {
+      logs = logs.filter(log => log.action === query.action)
+    }
+
+    // Sort by timestamp descending
+    logs.sort((a, b) => b.timestamp - a.timestamp)
+
+    // Apply pagination
+    const offset = query.offset || 0
+    const limit = query.limit || 100
+    return logs.slice(offset, offset + limit)
+  },
+
+  async getAuditLogsBySession(sessionId: string): Promise<ClaudeCodeAuditLog[]> {
+    return this.queryAuditLogs({ sessionId })
+  },
+
+  async getAuditLogSummary(sessionId: string): Promise<Partial<AuditLogSummary>> {
+    const logs = await this.getAuditLogsBySession(sessionId)
+    
+    const summary: Partial<AuditLogSummary> = {
+      totalActions: logs.length,
+      fileChanges: 0,
+      commandsExecuted: 0,
+      startTime: 0,
+      endTime: 0
+    }
+
+    for (const log of logs) {
+      if (log.action === 'session_started') {
+        summary.startTime = log.timestamp
+      }
+      if (log.action === 'session_completed') {
+        summary.endTime = log.timestamp
+      }
+      if (log.action.startsWith('file_')) {
+        summary.fileChanges = (summary.fileChanges || 0) + 1
+      }
+      if (log.action === 'command_executed') {
+        summary.commandsExecuted = (summary.commandsExecuted || 0) + 1
+      }
+    }
+
+    return summary
+  },
+
+  async cleanupOldAuditLogs(daysToKeep: number): Promise<number> {
+    const cutoffTime = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000)
+    let deletedCount = 0
+
+    for (const [id, log] of this.auditLogs.entries()) {
+      if (log.timestamp < cutoffTime) {
+        this.auditLogs.delete(id)
+        deletedCount++
+      }
+    }
+
+    return deletedCount
+  }
+}
+
+/**
+ * Compatibility wrapper for the old claudeCodeStorage API using ClaudeCodeStorage
+ * This maintains backward compatibility while leveraging the enhanced storage
+ */
+export const claudeCodeStorage = {
+  // Session methods
+  async readSessions(): Promise<Record<string, ClaudeCodeSession>> {
+    const sessionsList = await claudeCodeStorageInstance.list()
+    const sessionsObject: Record<string, ClaudeCodeSession> = {}
+    
+    for (const session of sessionsList) {
+      sessionsObject[session.id] = session
+    }
+    
+    return sessionsObject
+  },
+
+  async writeSessions(sessions: Record<string, ClaudeCodeSession>): Promise<Record<string, ClaudeCodeSession>> {
+    // Convert object to Map for storage
+    const sessionsMap: Record<string, ClaudeCodeSession> = {}
+    
+    for (const [id, session] of Object.entries(sessions)) {
+      sessionsMap[id] = session
+    }
+    
+    await claudeCodeStorageInstance.writeAll(sessionsMap)
+    return sessions
+  },
+
+  async readSession(sessionId: string): Promise<ClaudeCodeSession | null> {
+    return claudeCodeStorageInstance.getById(sessionId)
+  },
+
+  async createSession(data: Omit<ClaudeCodeSession, 'id' | 'created' | 'updated'>): Promise<ClaudeCodeSession> {
+    return claudeCodeStorageInstance.create(data)
+  },
+
+  async updateSession(sessionId: string, data: Partial<Omit<ClaudeCodeSession, 'id' | 'created' | 'updated'>>): Promise<ClaudeCodeSession | null> {
+    return claudeCodeStorageInstance.update(sessionId, data)
+  },
+
+  async deleteSession(sessionId: string): Promise<boolean> {
+    return claudeCodeStorageInstance.delete(sessionId)
+  },
+
+  // Message methods
+  async readSessionMessages(sessionId: string): Promise<ClaudeCodeMessage[]> {
+    const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+    return messageStorage.list()
+  },
+
+  async writeSessionMessages(sessionId: string, messages: ClaudeCodeMessage[]): Promise<ClaudeCodeMessage[]> {
+    const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+    
+    // Clear existing messages and write new ones
+    await messageStorage.deleteAll()
+    
+    for (const message of messages) {
+      await messageStorage.create(message)
+    }
+    
+    return messages
+  },
+
+  async addSessionMessage(sessionId: string, message: Omit<ClaudeCodeMessage, 'id' | 'created'>): Promise<ClaudeCodeMessage> {
+    const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+    return messageStorage.create(message)
+  },
+
+  async getSessionMessage(sessionId: string, messageId: string): Promise<ClaudeCodeMessage | null> {
+    const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+    return messageStorage.getById(messageId)
+  },
+
+  async updateSessionMessage(sessionId: string, messageId: string, data: Partial<Omit<ClaudeCodeMessage, 'id' | 'created'>>): Promise<ClaudeCodeMessage | null> {
+    const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+    return messageStorage.update(messageId, data)
+  },
+
+  async deleteSessionMessage(sessionId: string, messageId: string): Promise<boolean> {
+    const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+    return messageStorage.delete(messageId)
+  },
+
+  async deleteSessionData(sessionId: string): Promise<void> {
+    // Delete all messages first
+    const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+    await messageStorage.deleteAll()
+    
+    // Then delete the session
+    await claudeCodeStorageInstance.delete(sessionId)
+  },
+
+  // Search methods
+  async searchSessions(query: string): Promise<ClaudeCodeSession[]> {
+    return claudeCodeStorageInstance.searchByTitle(query)
+  },
+
+  async getSessionsByProject(projectId: number): Promise<ClaudeCodeSession[]> {
+    return claudeCodeStorageInstance.getByProject(projectId)
+  },
+
+  async getRecentSessions(limit: number = 10): Promise<ClaudeCodeSession[]> {
+    return claudeCodeStorageInstance.getRecent(limit)
+  },
+
+  async getActiveSessions(): Promise<ClaudeCodeSession[]> {
+    return claudeCodeStorageInstance.getActive()
+  },
+
+  // Legacy API methods
+  async getAllClaudeCodeSessions(): Promise<ClaudeCodeSession[]> {
+    return claudeCodeStorageInstance.list()
+  },
+
+  async getClaudeCodeSessionMessages(sessionId: string): Promise<ClaudeCodeMessage[]> {
+    return claudeCodeStorageInstance.getMessages(sessionId)
+  },
+
+  async getClaudeCodeSession(sessionId: string): Promise<ClaudeCodeSession | null> {
+    return claudeCodeStorageInstance.getById(sessionId)
+  },
+
+  // Utility methods
+  generateId(): string {
+    // Generate a UUID-like string ID for compatibility
+    const timestamp = Date.now().toString(36)
+    const random = Math.random().toString(36).substr(2, 9)
+    return `claude_${timestamp}_${random}`
+  },
+
+  generateMessageId(): string {
+    // Generate a UUID-like string ID for messages
+    const timestamp = Date.now().toString(36)
+    const random = Math.random().toString(36).substr(2, 9)
+    return `msg_${timestamp}_${random}`
+  }
+}
+
+// Add the missing cleanup function
 export async function cleanupOldClaudeCodeSessions(daysToKeep: number = 30): Promise<number> {
-  const sessions = await getAllClaudeCodeSessions()
-  const cutoffTime = Date.now() - daysToKeep * 24 * 60 * 60 * 1000
+  const cutoffTime = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000)
+  const sessions = await claudeCodeStorageInstance.list()
   let deletedCount = 0
 
   for (const session of sessions) {
     if (session.lastActivity < cutoffTime) {
-      const deleted = await deleteClaudeCodeSession(session.id)
+      const deleted = await claudeCodeStorageInstance.delete(session.id)
       if (deleted) {
         deletedCount++
       }
@@ -216,23 +705,41 @@ export async function cleanupOldClaudeCodeSessions(daysToKeep: number = 30): Pro
   return deletedCount
 }
 
-// --- Search Functions ---
-
-/** Searches sessions by project path. */
-export async function getClaudeCodeSessionsByProject(projectPath: string): Promise<ClaudeCodeSession[]> {
-  const sessions = await getAllClaudeCodeSessions()
-  return sessions.filter((session) => session.projectPath === projectPath)
+// Add the missing getClaudeCodeSession standalone function
+export async function getClaudeCodeSession(sessionId: string): Promise<ClaudeCodeSession | null> {
+  return claudeCodeStorageInstance.getById(sessionId)
 }
 
-/** Gets sessions with a specific status. */
-export async function getClaudeCodeSessionsByStatus(
-  status: 'idle' | 'running' | 'error'
-): Promise<ClaudeCodeSession[]> {
-  const sessions = await getAllClaudeCodeSessions()
-  return sessions.filter((session) => session.status === status)
+// Add the missing saveClaudeCodeSessionMessages function
+export async function saveClaudeCodeSessionMessages(sessionId: string, messages: ClaudeCodeMessage[]): Promise<void> {
+  const messageStorage = claudeCodeStorageInstance.getMessageStorage(sessionId)
+  
+  // Clear existing messages and write new ones
+  await messageStorage.deleteAll()
+  
+  for (const message of messages) {
+    await messageStorage.create(message)
+  }
 }
 
-// Initialize storage on module load
-initializeClaudeCodeStorage().catch((error) => {
-  console.error('Failed to initialize Claude Code storage:', error)
-})
+// Add the missing saveClaudeCodeSession function
+export async function saveClaudeCodeSession(session: ClaudeCodeSession): Promise<ClaudeCodeSession> {
+  const existingSession = await claudeCodeStorageInstance.getById(session.id)
+  
+  if (existingSession) {
+    const updated = await claudeCodeStorageInstance.update(session.id, session)
+    return updated || session
+  } else {
+    return claudeCodeStorageInstance.create(session)
+  }
+}
+
+// Add the missing deleteClaudeCodeSession function
+export async function deleteClaudeCodeSession(sessionId: string): Promise<boolean> {
+  return claudeCodeStorageInstance.delete(sessionId)
+}
+
+// Add the missing getAllClaudeCodeSessions function
+export async function getAllClaudeCodeSessions(): Promise<ClaudeCodeSession[]> {
+  return claudeCodeStorageInstance.list()
+}

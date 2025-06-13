@@ -34,7 +34,11 @@ export const ProjectFileSchema = z
     prevId: unixTSSchemaSpec.nullable().default(null), // Points to previous version
     nextId: unixTSSchemaSpec.nullable().default(null), // Points to next version (null for latest)
     isLatest: z.boolean().default(true), // Flag to quickly identify latest version
-    originalFileId: unixTSSchemaSpec.nullable().default(null) // Points to the first version of this file
+    originalFileId: unixTSSchemaSpec.nullable().default(null), // Points to the first version of this file
+    
+    // Sync tracking fields
+    lastSyncedAt: unixTSSchemaSpec.nullable().default(null), // When file was last synced from filesystem
+    syncVersion: z.number().int().nonnegative().default(0) // Increments on each sync update (0 = never synced)
   })
   .openapi('ProjectFile')
 
@@ -95,30 +99,6 @@ export const UpdateProjectBodySchema = z
   })
   .openapi('UpdateProjectRequestBody')
 
-export const SummarizeFilesBodySchema = z
-  .object({
-    // file ids are unix timestamp in milliseconds
-    fileIds: unixTSArraySchemaSpec,
-    force: z
-      .boolean()
-      .optional()
-      .default(false)
-      .openapi({ example: false, description: 'Force re-summarization even if summary exists' })
-  })
-  .openapi('SummarizeFilesRequestBody')
-
-export const RemoveSummariesBodySchema = z
-  .object({
-    fileIds: unixTSArraySchemaSpec
-  })
-  .openapi('RemoveSummariesRequestBody')
-
-export const SuggestFilesBodySchema = z
-  .object({
-    userInput: z.string().min(1).openapi({ example: 'Implement authentication using JWT' })
-  })
-  .openapi('SuggestFilesRequestBody')
-
 // Request Query Schemas
 export const RefreshQuerySchema = z
   .object({
@@ -160,6 +140,27 @@ export const FileListResponseSchema = z
   })
   .openapi('FileListResponse')
 
+// Define ProjectFileWithoutContentSchema first (before using it in other schemas)
+export const ProjectFileWithoutContentSchema = ProjectFileSchema.omit({ content: true }).openapi(
+  'ProjectFileWithoutContent'
+)
+
+// Response schema for files without content
+export const ProjectFileWithoutContentListResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.array(ProjectFileWithoutContentSchema)
+  })
+  .openapi('ProjectFileWithoutContentListResponse')
+
+// Response schema for single file operations
+export const FileResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: ProjectFileSchema
+  })
+  .openapi('FileResponse')
+
 // Define ProjectSummaryResponseSchema for the project summary route
 export const ProjectSummaryResponseSchema = z
   .object({
@@ -173,10 +174,6 @@ export const ProjectFileMapSchema = z
   .map(z.number(), ProjectFileSchema)
   .describe('A map where keys are ProjectFile IDs and values are the corresponding ProjectFile objects.')
   .openapi('ProjectFileMap')
-
-export const ProjectFileWithoutContentSchema = ProjectFileSchema.omit({ content: true }).openapi(
-  'ProjectFileWithoutContent'
-)
 
 export const ProjectFileMapWithoutContentSchema = z
   .map(z.number(), ProjectFileWithoutContentSchema)
@@ -203,4 +200,6 @@ export type UpdateProjectRequestBody = z.infer<typeof UpdateProjectBodySchema>
 export type ProjectResponse = z.infer<typeof ProjectResponseSchema>
 export type ProjectListResponse = z.infer<typeof ProjectListResponseSchema>
 export type FileListResponse = z.infer<typeof FileListResponseSchema>
+export type ProjectFileWithoutContentListResponse = z.infer<typeof ProjectFileWithoutContentListResponseSchema>
+export type FileResponse = z.infer<typeof FileResponseSchema>
 export type ProjectSummaryResponse = z.infer<typeof ProjectSummaryResponseSchema>

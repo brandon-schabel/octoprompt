@@ -269,56 +269,6 @@ export const structuredDataSchemas = {
   // Add more structured tasks here...
 } satisfies Record<string, StructuredDataSchemaConfig<any>>
 
-export const FileSummaryListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z.array(ProjectFileSchema)
-  })
-  .openapi('FileSummaryListResponse')
-
-export const SummarizeFilesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    included: z.number().int().openapi({ example: 5 }),
-    skipped: z.number().int().openapi({ example: 2 }),
-    updatedFiles: z.array(ProjectFileSchema),
-    message: z.string().openapi({ example: 'Files summarized successfully.' })
-  })
-  .openapi('SummarizeFilesResponse')
-
-export const RemoveSummariesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    removedCount: z.number().int().openapi({ example: 3 }),
-    message: z.string().openapi({ example: 'Summaries removed.' })
-  })
-  .openapi('RemoveSummariesResponse')
-
-export const SuggestFilesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    recommendedFileIds: unixTSArraySchemaSpec
-  })
-  .openapi('SuggestFilesResponse')
-
-// Export internal schemas needed by routes
-export const FileSuggestionsZodSchema = z.object({
-  fileIds: z.array(z.string())
-})
-
-export const FileSuggestionsJsonSchema = {
-  type: 'object',
-  properties: {
-    fileIds: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'An array of file IDs relevant to the user input'
-    }
-  },
-  required: ['fileIds'],
-  additionalProperties: false
-}
-
 // --- Type Exports ---
 export type AiSdkOptions = z.infer<typeof AiSdkOptionsSchema>
 export type AiGenerateTextRequest = z.infer<typeof AiGenerateTextRequestSchema>

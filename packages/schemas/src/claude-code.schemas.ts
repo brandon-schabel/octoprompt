@@ -1,10 +1,11 @@
 import { z } from 'zod'
 
-export const ClaudeCodeSessionStatusEnum = z.enum(['idle', 'running', 'error'])
+export const ClaudeCodeSessionStatusEnum = z.enum(['idle', 'running', 'error', 'active'])
 
 export const ClaudeCodeSessionSchema = z.object({
   id: z.string(),
   created: z.number(),
+  updated: z.number(),
   projectPath: z.string().optional(),
   status: ClaudeCodeSessionStatusEnum,
   lastActivity: z.number()
@@ -27,9 +28,12 @@ export const ClaudeCodeContinueRequestSchema = z.object({
 })
 
 export const ClaudeCodeMessageSchema = z.object({
+  id: z.string(),
   type: z.enum(['user', 'assistant', 'system', 'result']),
   content: z.string().optional(),
-  timestamp: z.number(),
+  created: z.number(),
+  updated: z.number(),
+  timestamp: z.number(), // Keep for backward compatibility
   // Additional fields for different message types
   session_id: z.string().optional(),
   is_error: z.boolean().optional(),

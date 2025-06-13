@@ -16,33 +16,6 @@ import { syncProject } from './file-services/file-sync-service-unified'
 import { ApiError } from '@octoprompt/shared'
 import { promptsMap } from '@octoprompt/shared'
 import { buildProjectSummary } from '@octoprompt/shared'
-// Summarize function moved to Mastra - using mock for now
-const summarizeFiles = async (projectId: number, fileIds: number[]) => {
-  // TODO: Implement Mastra integration for file summarization
-  console.log(`Mock: summarizing ${fileIds.length} files for project ${projectId}`)
-
-  // Get all the files from storage
-  const projectFilesStorage = await projectStorage.readProjectFiles(projectId)
-
-  // For each file ID, generate a summary using the AI service
-  for (const fileId of fileIds) {
-    const file = projectFilesStorage[fileId]
-    if (file) {
-      try {
-        // TODO: Replace with Mastra summarization service when ready
-        const summary = `Summary for ${file.name || 'file'} (${file.extension || 'unknown'}) - ${Math.ceil(file.content.length / 100)} lines of code`
-
-        // Update the file with the new summary
-        await projectStorage.updateProjectFile(projectId, fileId, {
-          summary,
-          summaryLastUpdated: Date.now()
-        })
-      } catch (error) {
-        console.error(`Failed to summarize file ${fileId}:`, error)
-      }
-    }
-  }
-}
 import { resolvePath } from './utils/path-utils'
 
 // Existing project CRUD functions remain the same...
@@ -193,6 +166,18 @@ export async function deleteProject(projectId: number): Promise<boolean> {
       `Failed to delete project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
       'PROJECT_DELETE_FAILED'
     )
+  }
+}
+
+// Alias for getProjectById for backward compatibility
+export async function getProject(projectId: number): Promise<Project | null> {
+  try {
+    return await getProjectById(projectId)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null
+    }
+    throw error
   }
 }
 
@@ -363,92 +348,9 @@ export async function revertFileToVersion(
   }
 }
 
-export async function resummarizeAllFiles(projectId: number): Promise<void> {
-  const project = await getProjectById(projectId)
-  await syncProject(project)
 
-  const allFiles = await getProjectFiles(projectId, false) // Only latest versions
-  if (!allFiles || allFiles.length === 0) {
-    console.warn(`[ProjectService] No files found for project ${projectId} after sync during resummarize all.`)
-    return
-  }
 
-  try {
-    await summarizeFiles(
-      projectId,
-      allFiles.map((f) => f.id)
-    )
 
-    console.log(`[ProjectService] Completed resummarizeAllFiles and saved updates for project ${projectId}`)
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed during resummarization process for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'RESUMMARIZE_ALL_FAILED'
-    )
-  }
-}
-
-export async function removeSummariesFromFiles(
-  projectId: number,
-  fileIds: number[]
-): Promise<{ removedCount: number; message: string }> {
-  if (fileIds.length === 0) {
-    return { removedCount: 0, message: 'No file IDs provided' }
-  }
-  try {
-    await getProjectById(projectId)
-    const files = await projectStorage.readProjectFiles(projectId)
-    let removedCount = 0
-    const now = Date.now()
-    let changesMade = false
-
-    for (const fileId of fileIds) {
-      if (files[fileId]) {
-        const file = files[fileId]
-        if (file.summary !== null || file.summaryLastUpdated !== null) {
-          const updatedFileData: ProjectFile = {
-            ...file,
-            summary: null,
-            summaryLastUpdated: null,
-            updated: now
-          }
-          files[fileId] = ProjectFileSchema.parse(updatedFileData)
-          removedCount++
-          changesMade = true
-        }
-      } else {
-        console.warn(`[ProjectService] File ID ${fileId} not found in project ${projectId} for remove summary.`)
-      }
-    }
-
-    if (changesMade) {
-      const validatedMap = ProjectFilesStorageSchema.parse(files)
-      await projectStorage.writeProjectFiles(projectId, validatedMap)
-    }
-
-    return {
-      removedCount: removedCount,
-      message: `Removed summaries from ${removedCount} files.`
-    }
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed removing summaries for project ${projectId}: ${error.message}`,
-        'PROJECT_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
-    }
-    throw new ApiError(
-      500,
-      `Error removing summaries: ${error instanceof Error ? error.message : String(error)}`,
-      'REMOVE_SUMMARIES_FAILED'
-    )
-  }
-}
 
 export async function createProjectFileRecord(
   projectId: number,
@@ -491,7 +393,10 @@ export async function createProjectFileRecord(
     prevId: null,
     nextId: null,
     isLatest: true,
-    originalFileId: null // This is the original file
+    originalFileId: null, // This is the original file
+    // Sync tracking fields
+    lastSyncedAt: null,
+    syncVersion: 0
   }
 
   try {
@@ -596,7 +501,10 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         prevId: null,
         nextId: null,
         isLatest: true,
-        originalFileId: null
+        originalFileId: null,
+        // Sync tracking fields
+        lastSyncedAt: now, // Initial sync is now
+        syncVersion: 1 // First sync version
       }
 
       try {
@@ -671,6 +579,56 @@ export async function bulkUpdateProjectFiles(
       500,
       `Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`,
       'PROJECT_BULK_UPDATE_FAILED'
+    )
+  }
+}
+
+// NEW: Bulk update for sync operations without creating versions
+// Special sync function that updates files WITHOUT creating versions
+// This is used by file sync operations to keep the database in sync with the file system
+// Versioning is only used for explicit user edits through the API, not for filesystem sync
+export async function bulkUpdateProjectFilesForSync(
+  projectId: number,
+  updates: { fileId: number; data: FileSyncData }[]
+): Promise<ProjectFile[]> {
+  if (updates.length === 0) return []
+  await getProjectById(projectId)
+  const updatedFilesResult: ProjectFile[] = []
+
+  try {
+    for (const { fileId, data } of updates) {
+      try {
+        // Get current file to preserve sync version
+        const currentFile = await projectStorage.readProjectFile(projectId, fileId)
+        const currentSyncVersion = currentFile?.syncVersion || 0
+        
+        // Direct update without versioning - sync operations should not create versions
+        // as they represent the current state of the filesystem, not user edits
+        const updatedFile = await projectStorage.updateProjectFile(projectId, fileId, {
+          content: data.content,
+          extension: data.extension,
+          size: data.size,
+          checksum: data.checksum,
+          lastSyncedAt: Date.now(),
+          syncVersion: currentSyncVersion + 1
+        })
+        updatedFilesResult.push(updatedFile)
+      } catch (error) {
+        console.error(
+          `[ProjectService] Failed to update file ${fileId} during sync:`,
+          error instanceof Error ? error.message : String(error)
+        )
+        continue
+      }
+    }
+
+    return updatedFilesResult
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Bulk file sync update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_BULK_SYNC_UPDATE_FAILED'
     )
   }
 }

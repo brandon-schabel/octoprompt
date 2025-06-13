@@ -11,7 +11,6 @@ import {
   deleteProject,
   getProjectFiles,
   updateFileContent,
-  resummarizeAllFiles,
   createProjectFileRecord,
   bulkCreateProjectFiles,
   bulkUpdateProjectFiles,
@@ -733,23 +732,6 @@ describe('Project Service (File Storage with Versioning)', () => {
         'Mock summary for summarize-me.js'
       )
       expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].version).toBe(2) // No new version
-    })
-
-    test('resummarizeAllFiles processes only latest versions', async () => {
-      // Setup: fileToSummarize_v2 is latest. Add another file.
-      const anotherFile = await createProjectFileRecord(projectId, 'another.js', 'let x = 10;')
-
-      await resummarizeAllFiles(projectId)
-
-      // mockSyncProject is called once.
-      // summarizeFiles should be called with IDs of fileToSummarize_v2 and anotherFile.
-      expect(mockSyncProject).toHaveBeenCalledTimes(1)
-
-      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v2.id].summary).toContain('Summary for')
-      expect(mockProjectFilesDbPerProject[projectId][anotherFile.id].summary).toContain('Summary for')
-
-      // v1 should not have been summarized by resummarizeAllFiles
-      expect(mockProjectFilesDbPerProject[projectId][fileToSummarize_v1.id].summary).toBeNull()
     })
   })
 })

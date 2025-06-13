@@ -35,9 +35,6 @@ import {
   ProjectSummaryResponseSchema as ProjectSummaryResponseSchemaZ,
   CreateProjectBodySchema,
   UpdateProjectBodySchema,
-  SummarizeFilesBodySchema,
-  RemoveSummariesBodySchema,
-  SuggestFilesBodySchema,
   RefreshQuerySchema,
   FileVersionListResponseSchema,
   RevertToVersionBodySchema
@@ -62,12 +59,6 @@ import {
 import {
   OperationSuccessResponseSchema as OperationSuccessResponseSchemaZ,
   ApiErrorResponseSchema as ApiErrorResponseSchemaZ
-} from '@octoprompt/schemas'
-
-import {
-  SuggestFilesResponseSchema as SuggestFilesResponseSchemaZ,
-  SummarizeFilesResponseSchema as SummarizeFilesResponseSchemaZ,
-  RemoveSummariesResponseSchema as RemoveSummariesResponseSchemaZ
 } from '@octoprompt/schemas'
 
 import {
@@ -347,8 +338,6 @@ export class ChatService extends BaseApiClient {
   }
 }
 
-type SummarizeFilesResponse = z.infer<typeof SummarizeFilesResponseSchemaZ>
-
 // Project Service
 export class ProjectService extends BaseApiClient {
   async listProjects() {
@@ -464,33 +453,11 @@ export class ProjectService extends BaseApiClient {
     }
   }
 
-  async suggestFiles(projectId: number, data: z.infer<typeof SuggestFilesBodySchema>) {
-    const validatedData = this.validateBody(SuggestFilesBodySchema, data)
-    const result = await this.request('POST', `/projects/${projectId}/suggest-files`, {
-      body: validatedData,
-      responseSchema: SuggestFilesResponseSchemaZ
-    })
-    return result as {
-      recommendedFileIds: number[]
-      success: boolean
-    }
-  }
 
-  async summarizeFiles(projectId: number, data: z.infer<typeof SummarizeFilesBodySchema>) {
-    const validatedData = this.validateBody(SummarizeFilesBodySchema, data)
-    return await this.request('POST', `/projects/${projectId}/summarize`, {
-      body: validatedData,
-      responseSchema: SummarizeFilesResponseSchemaZ
-    })
-  }
 
-  async removeSummaries(projectId: number, data: z.infer<typeof RemoveSummariesBodySchema>) {
-    const validatedData = this.validateBody(RemoveSummariesBodySchema, data)
-    return await this.request('POST', `/projects/${projectId}/remove-summaries`, {
-      body: validatedData,
-      responseSchema: RemoveSummariesResponseSchemaZ
-    })
-  }
+
+
+
 
   async updateFileContent(projectId: number, fileId: number, content: string) {
     const result = await this.request('PUT', `/projects/${projectId}/files/${fileId}`, {

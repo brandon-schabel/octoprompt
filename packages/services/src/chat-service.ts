@@ -148,12 +148,14 @@ export function createChatService() {
     const messageId = message.id || chatStorage.generateId()
     const now = new Date().toISOString()
 
+    const createdTime = message.created || normalizeToUnixMs(now)
     const finalMessageData: ChatMessage = {
       id: messageId,
       chatId: message.chatId,
       role: message.role,
       content: message.content,
-      created: message.created || normalizeToUnixMs(now), // Use provided createdAt if exists (e.g. for imported messages), else new
+      created: createdTime, // Use provided createdAt if exists (e.g. for imported messages), else new
+      updated: normalizeToUnixMs(now), // Always set updated to current time
       attachments: message.attachments // Include attachments if provided
     }
 
