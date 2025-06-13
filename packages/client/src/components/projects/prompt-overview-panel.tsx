@@ -160,11 +160,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
           // Ensure newChat has an ID (adjust based on actual return type)
           const newChatId = newChat?.data.id // Type assertion might be needed
           if (newChatId) {
-            // Navigate to the new chat with the chatId in the URL
-            navigate({ 
-              to: '/chat/$chatId', 
-              params: { chatId: newChatId.toString() } 
-            })
+            setActiveChatId(newChatId)
+            // navigate to the chat, where the chat page will load the initial content from local storage
+            navigate({ to: '/chat' })
 
             toast.success('New chat created')
           } else {

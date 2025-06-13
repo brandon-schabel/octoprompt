@@ -1,6 +1,6 @@
 import { ChangeEvent, KeyboardEvent, ClipboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import React from 'react'
-import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import {
   MessageSquareIcon,
   PlusIcon,
@@ -743,8 +743,6 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const [editingChatId, setEditingChatId] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [visibleCount, setVisibleCount] = useState(50)
-  const navigate = useNavigate()
-  const params = useParams({ from: '/chat/$chatId' })
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const activeChatRef = useRef<HTMLDivElement>(null)
@@ -769,10 +767,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       })
       const newChatId = newChat?.data.id
       if (newChatId) {
-        navigate({ 
-          to: '/chat/$chatId', 
-          params: { chatId: newChatId.toString() } 
-        })
+        setActiveChatId(newChatId)
         toast.success('New chat created')
         setEditingTitle('')
         setEditingChatId(null)
@@ -794,8 +789,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         await deleteChatMutation.mutateAsync(chatId)
         toast.success('Chat deleted')
         if (activeChatId === chatId) {
-          // Navigate back to base chat route
-          navigate({ to: '/chat' })
+          setActiveChatId(null)
         }
         if (editingChatId === chatId) {
           setEditingChatId(null)
@@ -845,14 +839,11 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const handleSelectChat = useCallback(
     (chatId: number) => {
       if (!editingChatId) {
-        navigate({ 
-          to: '/chat/$chatId', 
-          params: { chatId: chatId.toString() } 
-        })
+        setActiveChatId(chatId)
         onClose()
       }
     },
-    [navigate, editingChatId, onClose]
+    [setActiveChatId, editingChatId, onClose]
   )
 
   useEffect(() => {
@@ -974,10 +965,11 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   )
 }
 
-export function ChatHeader({ onToggleSidebar, chatId }: { onToggleSidebar: () => void; chatId: number | null }) {
+export function ChatHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
+  const [activeChatId] = useActiveChatId()
   const { data: chatsData } = useGetChats()
 
-  const activeChat = useMemo(() => chatsData?.data?.find((c) => c.id === chatId), [chatsData, chatId])
+  const activeChat = useMemo(() => chatsData?.data?.find((c) => c.id === activeChatId), [chatsData, activeChatId])
 
   return (
     <div className='flex items-center justify-between gap-x-4 bg-background px-4 py-2 border-b h-14 w-full max-w-7xl xl:rounded-b xl:border-x'>
@@ -996,7 +988,7 @@ export function ChatHeader({ onToggleSidebar, chatId }: { onToggleSidebar: () =>
 
       {/* Middle: Chat Title (takes up remaining space, centered text, truncated) */}
       <div className='flex-1 min-w-0 text-center'>
-        {chatId ? (
+        {activeChatId ? (
           <span className='font-semibold text-lg truncate block' title={activeChat?.title || 'Loading...'}>
             {activeChat?.title || 'Loading Chat...'}
           </span>
@@ -1008,7 +1000,7 @@ export function ChatHeader({ onToggleSidebar, chatId }: { onToggleSidebar: () =>
       {/* Right: Model Settings or Placeholder */}
       <div className='flex-shrink-0 w-8'>
         {/* Ensure right side takes up same space as left button */}
-        {chatId && <ModelSettingsPopover />}
+        {activeChatId && <ModelSettingsPopover />}
       </div>
     </div>
   )
@@ -1018,17 +1010,11 @@ export const Route = createFileRoute('/chat')({
   component: ChatPage
 })
 
-export function ChatPage() {
+function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const navigate = useNavigate()
-  const params = useParams({ from: '/chat/$chatId' })
-  const pathname = window.location.pathname
 
-  const [activeChatId, setActiveChatId] = useActiveChatId()
+  const [activeChatId] = useActiveChatId()
   const { settings: modelSettings, setModel } = useChatModelParams()
-  
-  // Use URL param if available, otherwise use localStorage
-  const chatId = params?.chatId ? parseInt(params.chatId) : activeChatId
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
   const { data: modelsData } = useGetModels(provider)
@@ -1036,34 +1022,14 @@ export function ChatPage() {
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 
   const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null)
-  
-  // Sync URL param with localStorage
-  useEffect(() => {
-    if (params?.chatId && chatId !== activeChatId) {
-      setActiveChatId(chatId)
-    }
-  }, [params?.chatId, chatId, activeChatId, setActiveChatId])
-  
-  // Redirect from /chat to a specific chat if available
-  useEffect(() => {
-    if (pathname === '/chat' && !params?.chatId && activeChatId) {
-      navigate({ 
-        to: '/chat/$chatId', 
-        params: { chatId: activeChatId.toString() },
-        replace: true
-      })
-    }
-  }, [pathname, params, activeChatId, navigate])
 
   useEffect(() => {
-    if (chatId && !model) {
-      const newModelSelection = modelsData?.data[0]?.id ?? ''
-      if (newModelSelection) {
-        console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
-        setModel(newModelSelection)
-      }
+    if (activeChatId && !model) {
+      const newModelSelection = modelsData?.data[0].id ?? ''
+      console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
+      setModel(newModelSelection)
     }
-  }, [chatId, model, modelsData, setModel])
+  }, [activeChatId, setModel])
 
   const {
     messages,
@@ -1074,7 +1040,7 @@ export function ChatPage() {
     sendMessage
   } = useAIChat({
     // ai sdk uses strings for chatId
-    chatId: chatId ?? -1,
+    chatId: activeChatId ?? -1,
     provider,
     model: model ?? '',
     systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.'
@@ -1086,7 +1052,7 @@ export function ChatPage() {
 
   const handleFileSelect = useCallback(
     async (files: File[]) => {
-      if (!chatId) {
+      if (!activeChatId) {
         toast.error('Please select a chat first')
         return
       }
@@ -1094,7 +1060,7 @@ export function ChatPage() {
       for (const file of files) {
         try {
           const attachment = await uploadFileMutation.mutateAsync({
-            chatId: chatId,
+            chatId: activeChatId,
             file
           })
           setPendingAttachments((prev) => [...prev, attachment])
@@ -1131,7 +1097,7 @@ export function ChatPage() {
   const handleFormSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
-      if (!input?.trim() || isAiLoading || !chatId) {
+      if (!input?.trim() || isAiLoading || !activeChatId) {
         return
       }
       try {
@@ -1146,16 +1112,16 @@ export function ChatPage() {
         toast.error('Failed to send message.')
       }
     },
-    [input, isAiLoading, sendMessage, modelSettings, setInput, chatId, pendingAttachments]
+    [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId, pendingAttachments]
   )
 
-  const hasActiveChat = !!chatId
+  const hasActiveChat = !!activeChatId
 
   const toggleSidebar = useCallback(() => setIsSidebarOpen((prev) => !prev), [])
 
   useEffect(() => {
     if (
-      chatId &&
+      activeChatId &&
       initialChatContent &&
       setInput &&
       (input === '' || input === null) &&
@@ -1166,28 +1132,28 @@ export function ChatPage() {
       toast.success('Context loaded into input.')
       setInitialChatContent(null) // Clear from localStorage after setting input
     }
-  }, [chatId, initialChatContent, setInput, input, messages, isAiLoading, setInitialChatContent])
+  }, [activeChatId, initialChatContent, setInput, input, messages, isAiLoading, setInitialChatContent])
 
   // Cleanup effect to ensure ref is reset if chat changes or content is cleared
   useEffect(() => {
-    if (!chatId || !initialChatContent) {
+    if (!activeChatId || !initialChatContent) {
       // If chat ID changes or there's no initial content, ensure we're ready for a new load
     }
-  }, [chatId, initialChatContent])
+  }, [activeChatId, initialChatContent])
 
   return (
     <div className='flex flex-col md:flex-row overflow-hidden h-full'>
       <ChatSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className='flex-1 flex flex-col min-w-0 h-full items-center w-full'>
-        <ChatHeader onToggleSidebar={toggleSidebar} chatId={chatId} />
+        <ChatHeader onToggleSidebar={toggleSidebar} />
 
         {hasActiveChat && model ? (
           <>
             <ScrollArea className='flex-1 w-full min-h-0 overflow-y-auto'>
               <div className='mx-auto w-full max-w-[72rem] px-4 pb-4'>
                 <ChatMessages
-                  chatId={chatId}
+                  chatId={activeChatId}
                   messages={messages ?? []}
                   isLoading={isAiLoading}
                   excludedMessageIds={excludedMessageIds}
@@ -1234,7 +1200,7 @@ export function ChatPage() {
                     className='flex-grow rounded-lg'
                   />
                 </div>
-                <FileUploadButton onFileSelect={handleFileSelect} disabled={!chatId} />
+                <FileUploadButton onFileSelect={handleFileSelect} disabled={!activeChatId} />
                 <Button
                   type='submit'
                   disabled={input?.trim() === ''}
@@ -1257,15 +1223,15 @@ export function ChatPage() {
             <Card className='p-6 max-w-md text-center'>
               <MessageSquareIcon className='mx-auto h-12 w-12 text-muted-foreground mb-4' />
               <h2 className='text-xl font-semibold text-foreground mb-2'>
-                {chatId ? 'Loading Chat...' : 'Welcome!'}
+                {activeChatId ? 'Loading Chat...' : 'Welcome!'}
               </h2>
               <p className='text-sm text-muted-foreground mb-4'>
-                {chatId
+                {activeChatId
                   ? 'Loading model information and messages.'
                   : 'Select a chat from the sidebar or start a new conversation.'}
               </p>
-              {chatId && !model && <p className='text-sm text-muted-foreground'>Initializing model...</p>}
-              {!chatId && (
+              {activeChatId && !model && <p className='text-sm text-muted-foreground'>Initializing model...</p>}
+              {!activeChatId && (
                 <Button variant='outline' size='sm' onClick={toggleSidebar}>
                   <PlusIcon className='mr-2 h-4 w-4' /> Create or Select Chat
                 </Button>

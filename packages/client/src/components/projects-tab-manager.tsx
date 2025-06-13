@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
-import { useNavigate, useParams } from '@tanstack/react-router'
 import { Tabs, TabsList, TabsTrigger } from '@ui'
 import { Button } from '@ui'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
@@ -34,8 +33,6 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   const [tabs] = useGetProjectTabs()
   const { deleteTab } = useDeleteProjectTabById()
   const [activeProjectTabState] = useActiveProjectTab()
-  const navigate = useNavigate()
-  const params = useParams({ from: '/projects/$tabId/$projectId' })
 
   const [editingTabName, setEditingTabName] = useState<{ id: number; name: string } | null>(null)
   const [localOrder, setLocalOrder] = useState<number[] | null>(null)
@@ -98,21 +95,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
       `${hotkeyPrefix}+${i}`,
       () => {
         const targetTabId = finalTabOrder[i - 1]
-        if (targetTabId && tabs?.[targetTabId]) {
-          const tab = tabs[targetTabId]
-          if (tab.selectedProjectId) {
-            navigate({ 
-              to: '/projects/$tabId/$projectId', 
-              params: { 
-                tabId: targetTabId.toString(), 
-                projectId: tab.selectedProjectId.toString() 
-              } 
-            })
-          }
-        }
+        if (targetTabId) setActiveProjectTabId(targetTabId)
       },
       { preventDefault: true },
-      [finalTabOrder, tabs, navigate]
+      [finalTabOrder, setActiveProjectTabId]
     )
   }
 
@@ -124,20 +110,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
       const currentIndex = finalTabOrder.indexOf(activeTabId)
       if (currentIndex === -1) return
       const nextIndex = (currentIndex + 1) % finalTabOrder.length
-      const nextTabId = finalTabOrder[nextIndex]
-      const nextTab = tabs?.[nextTabId]
-      if (nextTab?.selectedProjectId) {
-        navigate({ 
-          to: '/projects/$tabId/$projectId', 
-          params: { 
-            tabId: nextTabId.toString(), 
-            projectId: nextTab.selectedProjectId.toString() 
-          } 
-        })
-      }
+      setActiveProjectTabId(finalTabOrder[nextIndex])
     },
     { preventDefault: true },
-    [activeTabId, finalTabOrder, tabs, navigate]
+    [activeTabId, finalTabOrder, setActiveProjectTabId]
   )
 
   useHotkeys(
@@ -148,20 +124,10 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
       const currentIndex = finalTabOrder.indexOf(activeTabId)
       if (currentIndex === -1) return
       const prevIndex = (currentIndex - 1 + finalTabOrder.length) % finalTabOrder.length
-      const prevTabId = finalTabOrder[prevIndex]
-      const prevTab = tabs?.[prevTabId]
-      if (prevTab?.selectedProjectId) {
-        navigate({ 
-          to: '/projects/$tabId/$projectId', 
-          params: { 
-            tabId: prevTabId.toString(), 
-            projectId: prevTab.selectedProjectId.toString() 
-          } 
-        })
-      }
+      setActiveProjectTabId(finalTabOrder[prevIndex])
     },
     { preventDefault: true },
-    [activeTabId, finalTabOrder, tabs, navigate]
+    [activeTabId, finalTabOrder, setActiveProjectTabId]
   )
 
   useEffect(() => {
@@ -190,16 +156,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
   }, [tabs, finalTabOrder]) // Re-check when tabs or their order changes
 
   const handleCreateTab = () => {
-    const newTabId = createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
-    if (projectId) {
-      navigate({ 
-        to: '/projects/$tabId/$projectId', 
-        params: { 
-          tabId: newTabId.toString(), 
-          projectId: projectId.toString() 
-        } 
-      })
-    }
+    createProjectTab({ selectedProjectId: projectId, selectedFiles: [] })
   }
 
   const handleRenameTab = (tabId: number, newName: string) => {
@@ -288,19 +245,7 @@ export function ProjectsTabManager({ className }: ProjectsTabManagerProps) {
         <Tabs
           value={activeTabId?.toString() ?? ''}
           onValueChange={(value) => {
-            const tabId = Number(value)
-            const tab = tabs?.[tabId]
-            if (tab?.selectedProjectId) {
-              navigate({ 
-                to: '/projects/$tabId/$projectId', 
-                params: { 
-                  tabId: tabId.toString(), 
-                  projectId: tab.selectedProjectId.toString() 
-                } 
-              })
-            } else {
-              setActiveProjectTabId(tabId)
-            }
+            setActiveProjectTabId(Number(value))
           }}
           className={cn('flex flex-col justify-start rounded-none border-b', className)}
         >
