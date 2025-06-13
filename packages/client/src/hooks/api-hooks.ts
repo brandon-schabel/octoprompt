@@ -908,7 +908,7 @@ export function useSmartCaching() {
         queryClient.prefetchQuery({
           queryKey: PROMPT_KEYS.projectPrompts(projectId),
           queryFn: () => octoClient.prompts.listProjectPrompts(projectId)
-        }),
+        })
       ])
     },
 

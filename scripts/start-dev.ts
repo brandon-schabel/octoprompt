@@ -19,7 +19,6 @@ async function startServices() {
     })
     processes.push(serverProcess)
 
-
     // Start client (Vite runs on 5173 by default)
     console.log('🚀 Starting client...')
     const clientProcess = Bun.spawn(['bun', 'run', 'dev'], {

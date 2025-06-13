@@ -15,7 +15,9 @@ Monaco Editor is the code editor that powers VS Code. Our integration provides:
 ## Components
 
 ### MonacoEditorWrapper
+
 The main Monaco Editor component with OctoPrompt-specific features:
+
 - Theme switching based on app settings
 - Keyboard shortcuts for save and format
 - Language detection from file extensions
@@ -25,41 +27,43 @@ The main Monaco Editor component with OctoPrompt-specific features:
 <MonacoEditorWrapper
   value={content}
   onChange={(value) => setContent(value || '')}
-  language="typescript"
-  height="400px"
+  language='typescript'
+  height='400px'
   onSave={handleSave}
 />
 ```
 
 ### MonacoDiffViewer
+
 Side-by-side diff viewer for comparing code changes:
+
 - Perfect for reviewing AI-generated modifications
 - Supports all Monaco languages
 - Respects theme settings
 
 ```tsx
-<MonacoDiffViewer
-  original={originalCode}
-  modified={modifiedCode}
-  language="javascript"
-  height="300px"
-/>
+<MonacoDiffViewer original={originalCode} modified={modifiedCode} language='javascript' height='300px' />
 ```
 
 ### LazyMonacoEditor
+
 Lazy-loaded wrapper with fallback to textarea:
+
 - Loads Monaco asynchronously to improve page load times
 - Falls back to basic textarea if Monaco fails to load
 - Provides loading skeleton while Monaco initializes
 
 ### LazyMonacoDiffViewer
+
 Lazy-loaded diff viewer with fallback:
+
 - Falls back to simple unified diff view if Monaco unavailable
 - Maintains functionality in all scenarios
 
 ## Language Support
 
 Automatic language detection for file extensions:
+
 - TypeScript/JavaScript: `.ts`, `.tsx`, `.js`, `.jsx`
 - Web: `.html`, `.css`, `.scss`, `.less`
 - Data: `.json`, `.yaml`, `.yml`, `.xml`
@@ -71,25 +75,27 @@ Automatic language detection for file extensions:
 ## Integration Points
 
 ### File Viewer Dialog
+
 - Uses LazyMonacoEditor for file editing mode
 - Maintains syntax highlighting in view mode with react-syntax-highlighter
 - Keyboard shortcuts work in edit mode
 
 ### AI File Changes Dialog
+
 - Uses LazyMonacoDiffViewer to show proposed changes
 - Provides clear visual diff of modifications
 - Language detection from file path
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| Ctrl+S (Cmd+S) | Save file |
-| Ctrl+Shift+F | Format document |
-| Ctrl+/ | Toggle line comment |
-| Ctrl+] | Indent line |
-| Ctrl+[ | Outdent line |
-| F1 | Open command palette |
+| Shortcut       | Action               |
+| -------------- | -------------------- |
+| Ctrl+S (Cmd+S) | Save file            |
+| Ctrl+Shift+F   | Format document      |
+| Ctrl+/         | Toggle line comment  |
+| Ctrl+]         | Indent line          |
+| Ctrl+[         | Outdent line         |
+| F1             | Open command palette |
 
 ## Configuration
 
@@ -131,6 +137,7 @@ The integration is designed to gracefully handle failures:
 ## Theme Integration
 
 Monaco Editor automatically switches themes based on OctoPrompt's theme setting:
+
 - **Dark Mode**: `vs-dark` theme
 - **Light Mode**: `light` theme
 
@@ -139,6 +146,7 @@ Theme switching is reactive and immediate when user changes theme preference.
 ## Testing
 
 Use the `MonacoTestComponent` to verify integration:
+
 - Tests language switching and syntax highlighting
 - Verifies keyboard shortcuts
 - Demonstrates diff viewer functionality
@@ -147,16 +155,19 @@ Use the `MonacoTestComponent` to verify integration:
 ## Troubleshooting
 
 ### Monaco Fails to Load
+
 - Check browser console for errors
 - Verify Monaco CDN is accessible
 - Fallback components should handle gracefully
 
 ### Syntax Highlighting Not Working
+
 - Verify file extension is in language map
 - Check if language is supported by Monaco
 - Add new extensions to `getLanguageByExtension` function
 
 ### Theme Not Switching
+
 - Verify `useSelectSetting('theme')` returns correct value
 - Check if theme setting is properly synchronized
 - Ensure Monaco component re-renders on theme change
@@ -164,6 +175,7 @@ Use the `MonacoTestComponent` to verify integration:
 ## Future Enhancements
 
 Potential improvements for the Monaco integration:
+
 - **TypeScript IntelliSense** with project context
 - **Custom Themes** matching OctoPrompt brand
 - **Collaborative Editing** for team features

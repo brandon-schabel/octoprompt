@@ -31,7 +31,10 @@ export const ProviderKeySchema = z
     key: z
       .string()
       .openapi({ example: 'sk-xxxxxxxxxxxxxxxxxxxx', description: 'The actual API Key (handle with care)' }),
-    isDefault: z.boolean().default(false).openapi({ example: false, description: 'Whether this key is the default for its provider' }),
+    isDefault: z
+      .boolean()
+      .default(false)
+      .openapi({ example: false, description: 'Whether this key is the default for its provider' }),
     created: z.number().openapi({ example: 1716537600000, description: 'Creation timestamp (ISO 8601)' }),
     updated: z.number().openapi({ example: 1716537600000, description: 'Last update timestamp (ISO 8601)' })
   })

@@ -2,9 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "lib": [
-      "ES2020"
-    ],
+    "lib": ["ES2020"],
     "declaration": false,
     "declarationMap": false,
     "sourceMap": true,
@@ -15,9 +13,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": [
-      "bun-types"
-    ],
+    "types": ["bun-types"],
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "emitDeclarationOnly": false,
@@ -26,10 +22,10 @@
   "include": [
     "*.ts",
     "src/**/*.ts",
-    "schema.ts"
-, "../services/src/utils/get-full-project-summary.ts", "../services/src/utils/path-utils.ts", "../services/src/utils/json-scribe.ts"  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+    "schema.ts",
+    "../services/src/utils/get-full-project-summary.ts",
+    "../services/src/utils/path-utils.ts",
+    "../services/src/utils/json-scribe.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
 }

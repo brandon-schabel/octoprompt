@@ -532,11 +532,7 @@ const ChatMessageItem = React.memo(
           {/* Display attachments if present */}
           {messageAttachments && messageAttachments.length > 0 && (
             <div className='mb-2'>
-              <FileAttachmentList
-                attachments={messageAttachments}
-                showRemove={false}
-                className='space-y-1'
-              />
+              <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
             </div>
           )}
           <pre className='whitespace-pre-wrap font-mono p-2 bg-background/50 rounded text-xs sm:text-sm overflow-x-auto'>
@@ -552,11 +548,7 @@ const ChatMessageItem = React.memo(
         {/* Display attachments if present */}
         {messageAttachments && messageAttachments.length > 0 && (
           <div className='mb-2'>
-            <FileAttachmentList
-              attachments={messageAttachments}
-              showRemove={false}
-              className='space-y-1'
-            />
+            <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
           </div>
         )}
         {hasThinkBlock ? (
@@ -1058,28 +1050,31 @@ function ChatPage() {
   const [pendingAttachments, setPendingAttachments] = useState<ChatMessageAttachment[]>([])
   const uploadFileMutation = useUploadFile()
 
-  const handleFileSelect = useCallback(async (files: File[]) => {
-    if (!activeChatId) {
-      toast.error('Please select a chat first')
-      return
-    }
-
-    for (const file of files) {
-      try {
-        const attachment = await uploadFileMutation.mutateAsync({
-          chatId: activeChatId,
-          file
-        })
-        setPendingAttachments(prev => [...prev, attachment])
-      } catch (error) {
-        console.error('File upload failed:', error)
-        // Error is already handled by the mutation
+  const handleFileSelect = useCallback(
+    async (files: File[]) => {
+      if (!activeChatId) {
+        toast.error('Please select a chat first')
+        return
       }
-    }
-  }, [activeChatId, uploadFileMutation])
+
+      for (const file of files) {
+        try {
+          const attachment = await uploadFileMutation.mutateAsync({
+            chatId: activeChatId,
+            file
+          })
+          setPendingAttachments((prev) => [...prev, attachment])
+        } catch (error) {
+          console.error('File upload failed:', error)
+          // Error is already handled by the mutation
+        }
+      }
+    },
+    [activeChatId, uploadFileMutation]
+  )
 
   const handleRemoveAttachment = useCallback((attachmentId: number) => {
-    setPendingAttachments(prev => prev.filter(att => att.id !== attachmentId))
+    setPendingAttachments((prev) => prev.filter((att) => att.id !== attachmentId))
   }, [])
 
   const selectedModelName = useMemo(() => {
@@ -1191,10 +1186,7 @@ function ChatPage() {
               {/* File attachments section */}
               {pendingAttachments.length > 0 && (
                 <div className='mx-auto w-full max-w-[72rem] px-4 pt-2'>
-                  <FileAttachmentList
-                    attachments={pendingAttachments}
-                    onRemove={handleRemoveAttachment}
-                  />
+                  <FileAttachmentList attachments={pendingAttachments} onRemove={handleRemoveAttachment} />
                 </div>
               )}
 

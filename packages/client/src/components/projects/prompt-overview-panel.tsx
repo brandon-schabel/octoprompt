@@ -69,8 +69,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // Read selected files
-    const { selectedFiles} = useSelectedFiles()
-    const projectFileMap = useProjectFileMap(activeProjectTabId??-1)
+    const { selectedFiles } = useSelectedFiles()
+    const projectFileMap = useProjectFileMap(activeProjectTabId ?? -1)
 
     // Calculate total tokens
     const totalTokens = useMemo(() => {
@@ -347,7 +347,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 resizerClassName='my-1'
               />
             </div>
-
           </div>
         </TooltipProvider>
       </ErrorBoundary>

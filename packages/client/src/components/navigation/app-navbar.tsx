@@ -7,14 +7,7 @@ import { ProjectDialog } from '@/components/projects/project-dialog'
 import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
 import { Link } from '@tanstack/react-router'
 import { useHotkeys } from 'react-hotkeys-hook'
-import {
-  FolderIcon,
-  MessageSquareIcon,
-  KeyIcon,
-  Settings,
-  HelpCircle,
-  Lightbulb
-} from 'lucide-react'
+import { FolderIcon, MessageSquareIcon, KeyIcon, Settings, HelpCircle, Lightbulb } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
 import { useActiveProjectTab, useSelectSetting } from '@/hooks/use-kv-local-storage'
@@ -29,9 +22,7 @@ export function AppNavbar() {
 
   const matches = useMatches()
   // We treat /project-summarization as part of "projects" route
-  const isOnProjectsRoute = matches.some((match) =>
-    ['/projects', '/project-summarization'].includes(match.routeId)
-  )
+  const isOnProjectsRoute = matches.some((match) => ['/projects', '/project-summarization'].includes(match.routeId))
   const isOnChatRoute = matches.some((match) => match.routeId === '/chat')
   const isOnKeysRoute = matches.some((match) => match.routeId === '/keys')
   const isOnPromptsRoute = matches.some((match) => match.routeId === '/prompts')
@@ -67,7 +58,7 @@ export function AppNavbar() {
   })
 
   const handleSelectProject = (id: number) => {
-    // 
+    //
     updateActiveProjectTab((prev) => ({
       ...prev,
       selectedProjectId: id,

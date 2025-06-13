@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
@@ -17,22 +15,12 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-    "types": [
-      "bun-types"
-    ],
+    "types": ["bun-types"],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@db": [
-        "../services/src/utils/database.ts"
-      ]
+      "@/*": ["./src/*"],
+      "@db": ["../services/src/utils/database.ts"]
     }
   },
-  "include": [
-    "src",
-    "server.ts",
-    "build.ts",
-  ]
+  "include": ["src", "server.ts", "build.ts"]
 }

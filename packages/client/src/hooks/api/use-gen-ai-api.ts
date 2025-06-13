@@ -1,9 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { octoClient } from '../api-hooks'
-import type {
-  AiGenerateTextRequest,
-  AiGenerateStructuredRequest
-} from '@octoprompt/schemas'
+import type { AiGenerateTextRequest, AiGenerateStructuredRequest } from '@octoprompt/schemas'
 import { toast } from 'sonner'
 
 // Query Keys

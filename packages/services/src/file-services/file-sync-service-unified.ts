@@ -500,10 +500,7 @@ export async function syncProject(
         }
       }
     } catch (dbError) {
-      console.error(
-        `[FileSync] Project ${project.id}: Error during DB file validation or deletion:`,
-        dbError
-      )
+      console.error(`[FileSync] Project ${project.id}: Error during DB file validation or deletion:`, dbError)
       // Depending on the severity, we might choose to re-throw or just log and continue
     }
 

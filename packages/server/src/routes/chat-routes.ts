@@ -602,7 +602,11 @@ export const chatRoutes = new OpenAPIHono()
       // Return a simple stream with the mock response
       return stream(c, async (streamInstance) => {
         const encoder = new TextEncoder()
-        await streamInstance.write(encoder.encode('data: {"type":"text","text":"This is a mock response until Mastra integration is complete."}\n\n'))
+        await streamInstance.write(
+          encoder.encode(
+            'data: {"type":"text","text":"This is a mock response until Mastra integration is complete."}\n\n'
+          )
+        )
         await streamInstance.write(encoder.encode('data: [DONE]\n\n'))
       })
     } catch (error: any) {

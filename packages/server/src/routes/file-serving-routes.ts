@@ -17,7 +17,7 @@ const GetChatAttachmentParamsSchema = z.object({
   // or the final messageId if paths are updated post-message creation.
   messageId: z.string().openapi({ param: { name: 'messageId', in: 'path' } }),
   attachmentId: unixTSSchemaSpec.openapi({ param: { name: 'attachmentId', in: 'path' } }),
-  fileName: z.string().openapi({ param: { name: 'fileName', in: 'path' } }),
+  fileName: z.string().openapi({ param: { name: 'fileName', in: 'path' } })
 })
 
 const getChatAttachmentRouteDef = createRoute({
@@ -30,26 +30,25 @@ const getChatAttachmentRouteDef = createRoute({
     200: { description: 'File content streamed successfully.' }, // Content-Type set dynamically
     404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Attachment not found.' },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  },
+  }
 })
 
-export const fileServingRoutes = new OpenAPIHono()
-  .openapi(getChatAttachmentRouteDef, async (c) => {
-    const { chatId, messageId, attachmentId, fileName } = c.req.valid('param')
+export const fileServingRoutes = new OpenAPIHono().openapi(getChatAttachmentRouteDef, async (c) => {
+  const { chatId, messageId, attachmentId, fileName } = c.req.valid('param')
 
-    const file = await attachmentStorage.getFile(chatId, parseInt(messageId,10), attachmentId, fileName)
-    if (!file) {
-      throw new ApiError(404, 'Attachment not found.', 'ATTACHMENT_NOT_FOUND')
-    }
+  const file = await attachmentStorage.getFile(chatId, parseInt(messageId, 10), attachmentId, fileName)
+  if (!file) {
+    throw new ApiError(404, 'Attachment not found.', 'ATTACHMENT_NOT_FOUND')
+  }
 
-    c.header('Content-Type', file.type || 'application/octet-stream')
-    c.header('Content-Length', file.size.toString())
-    // Forcing download:
-    // c.header('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`)
-    // For inline display (e.g. images in browser):
-    c.header('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`)
+  c.header('Content-Type', file.type || 'application/octet-stream')
+  c.header('Content-Length', file.size.toString())
+  // Forcing download:
+  // c.header('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`)
+  // For inline display (e.g. images in browser):
+  c.header('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`)
 
-    return stream(c, async (streamInstance) => {
-      await streamInstance.pipe(file.stream())
-    })
+  return stream(c, async (streamInstance) => {
+    await streamInstance.pipe(file.stream())
   })
+})

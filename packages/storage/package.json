@@ -3,7 +3,6 @@
   "version": "0.5.4",
   "module": "index.ts",
   "type": "module",
-
   "devDependencies": {
     "@types/bun": "latest"
   },

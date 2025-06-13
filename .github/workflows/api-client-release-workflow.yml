@@ -53,7 +53,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # Required for npm provenance
-    
+
     steps:
       - uses: actions/checkout@v4
 

@@ -221,18 +221,18 @@ describe('Prompt Service (Mocked Storage)', () => {
 
     const fromA = await listPromptsByProject(defaultProjectId)
     expect(fromA.length).toBe(2)
-    
+
     // Check that the returned prompts have the correct IDs and content
-    const returnedIds = fromA.map(p => p.id).sort()
+    const returnedIds = fromA.map((p) => p.id).sort()
     const expectedIds = [p1.id, p3.id].sort()
     expect(returnedIds).toEqual(expectedIds)
-    
+
     // Check that all prompts have the correct projectId populated
-    expect(fromA.every(p => p.projectId === defaultProjectId)).toBe(true)
-    
+    expect(fromA.every((p) => p.projectId === defaultProjectId)).toBe(true)
+
     // Check specific prompt content matches
-    const p1FromA = fromA.find(p => p.id === p1.id)
-    const p3FromA = fromA.find(p => p.id === p3.id)
+    const p1FromA = fromA.find((p) => p.id === p1.id)
+    const p3FromA = fromA.find((p) => p.id === p3.id)
     expect(p1FromA).toMatchObject({ name: p1.name, content: p1.content })
     expect(p3FromA).toMatchObject({ name: p3.name, content: p3.content })
 

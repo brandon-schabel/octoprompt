@@ -30,53 +30,37 @@ function formatFileSize(bytes: number): string {
 // Helper function to get file icon based on MIME type
 function getFileIcon(mimeType: string) {
   if (mimeType.startsWith('image/')) {
-    return <ImageIcon className="h-4 w-4" />
+    return <ImageIcon className='h-4 w-4' />
   }
-  return <FileIcon className="h-4 w-4" />
+  return <FileIcon className='h-4 w-4' />
 }
 
-export function FileAttachment({ 
-  attachment, 
-  onRemove, 
-  showRemove = true,
-  className 
-}: FileAttachmentProps) {
+export function FileAttachment({ attachment, onRemove, showRemove = true, className }: FileAttachmentProps) {
   const isImage = attachment.mimeType.startsWith('image/')
-  
+
   return (
-    <div className={cn(
-      "flex items-center gap-2 p-2 bg-muted/50 rounded-md border border-border",
-      className
-    )}>
+    <div className={cn('flex items-center gap-2 p-2 bg-muted/50 rounded-md border border-border', className)}>
       {isImage ? (
-        <img 
-          src={attachment.url} 
-          alt={attachment.fileName}
-          className="h-8 w-8 object-cover rounded"
-        />
+        <img src={attachment.url} alt={attachment.fileName} className='h-8 w-8 object-cover rounded' />
       ) : (
-        <div className="flex items-center justify-center h-8 w-8 bg-muted rounded">
+        <div className='flex items-center justify-center h-8 w-8 bg-muted rounded'>
           {getFileIcon(attachment.mimeType)}
         </div>
       )}
-      
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {attachment.fileName}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {formatFileSize(attachment.size)}
-        </p>
+
+      <div className='flex-1 min-w-0'>
+        <p className='text-sm font-medium truncate'>{attachment.fileName}</p>
+        <p className='text-xs text-muted-foreground'>{formatFileSize(attachment.size)}</p>
       </div>
-      
+
       {showRemove && onRemove && (
         <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+          variant='ghost'
+          size='icon'
+          className='h-6 w-6 text-muted-foreground hover:text-destructive'
           onClick={onRemove}
         >
-          <X className="h-3 w-3" />
+          <X className='h-3 w-3' />
         </Button>
       )}
     </div>
@@ -91,16 +75,11 @@ interface FileAttachmentListProps {
   className?: string
 }
 
-export function FileAttachmentList({ 
-  attachments, 
-  onRemove, 
-  showRemove = true,
-  className 
-}: FileAttachmentListProps) {
+export function FileAttachmentList({ attachments, onRemove, showRemove = true, className }: FileAttachmentListProps) {
   if (attachments.length === 0) return null
-  
+
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       {attachments.map((attachment) => (
         <FileAttachment
           key={attachment.id}

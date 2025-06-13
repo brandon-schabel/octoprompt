@@ -22,23 +22,23 @@ const CHAT_KEYS = {
 
 export function useUploadFile() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: async ({ chatId, file }: { chatId: number; file: File }): Promise<ChatMessageAttachment> => {
       const formData = new FormData()
       formData.append('file', file)
-      
+
       const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/upload`, {
         method: 'POST',
-        body: formData,
+        body: formData
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error?.message || `Upload failed: ${response.status}`)
       }
-      
-      const result = await response.json() as z.infer<typeof FileUploadResponseSchema>
+
+      const result = (await response.json()) as z.infer<typeof FileUploadResponseSchema>
       return result.data
     },
     onSuccess: (attachment, { chatId }) => {
@@ -49,30 +49,30 @@ export function useUploadFile() {
     onError: (error: Error) => {
       console.error('File upload error:', error)
       toast.error(`Upload failed: ${error.message}`)
-    },
+    }
   })
 }
 
 export function useDeleteAttachment() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: async ({ 
-      chatId, 
-      messageId, 
-      attachmentId 
-    }: { 
+    mutationFn: async ({
+      chatId,
+      messageId,
+      attachmentId
+    }: {
       chatId: number
       messageId: number
-      attachmentId: number 
+      attachmentId: number
     }): Promise<void> => {
       const response = await fetch(
-        `${API_BASE_URL}/api/chats/${chatId}/messages/${messageId}/attachments/${attachmentId}`, 
+        `${API_BASE_URL}/api/chats/${chatId}/messages/${messageId}/attachments/${attachmentId}`,
         {
-          method: 'DELETE',
+          method: 'DELETE'
         }
       )
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error?.message || `Delete failed: ${response.status}`)
@@ -86,6 +86,6 @@ export function useDeleteAttachment() {
     onError: (error: Error) => {
       console.error('Delete attachment error:', error)
       toast.error(`Delete failed: ${error.message}`)
-    },
+    }
   })
 }

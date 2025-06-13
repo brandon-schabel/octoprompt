@@ -153,7 +153,7 @@ export const writeProjectFileTool = createTool({
             }
           }
         }
-        
+
         return {
           success: false,
           fileId: null,
@@ -235,10 +235,14 @@ export const analyzeCodeTool = createTool({
 
       // Dependencies analysis
       if (analysisType === 'dependencies' || analysisType === 'all') {
-        const imports = [...content.matchAll(/import\s+[^;]+from\s+['"`]([^'"`]+)['"`]/g)].map((match) => match[1]).filter(Boolean)
+        const imports = [...content.matchAll(/import\s+[^;]+from\s+['"`]([^'"`]+)['"`]/g)]
+          .map((match) => match[1])
+          .filter(Boolean)
         const exports = [
           ...content.matchAll(/export\s+(?:default\s+)?(?:function|class|interface|type|const|let|var)\s+(\w+)/g)
-        ].map((match) => match[1]).filter(Boolean)
+        ]
+          .map((match) => match[1])
+          .filter(Boolean)
         const externalDeps = imports.filter((imp) => imp && !imp.startsWith('.') && !imp.startsWith('/'))
 
         analysis.dependencies = { imports, exports, externalDeps }
@@ -314,7 +318,7 @@ export const searchCodebaseTool = createTool({
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i]
           if (!line) continue
-          
+
           let isMatch = false
 
           switch (searchType) {

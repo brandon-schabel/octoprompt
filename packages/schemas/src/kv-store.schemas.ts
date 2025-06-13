@@ -1,6 +1,11 @@
 import { z } from '@hono/zod-openapi'
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from './common.schemas'
-import { appSettingsSchema, createInitialGlobalState, createSafeGlobalState, projectTabsStateRecordSchema } from './global-state-schema'
+import {
+  appSettingsSchema,
+  createInitialGlobalState,
+  createSafeGlobalState,
+  projectTabsStateRecordSchema
+} from './global-state-schema'
 import { idSchemaSpec } from './schema-utils'
 
 export const KVKeyEnum = {

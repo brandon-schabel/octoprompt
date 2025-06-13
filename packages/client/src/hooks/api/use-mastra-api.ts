@@ -6,12 +6,7 @@
 // 5. Added comprehensive documentation
 
 // Re-export Mastra hooks from main api-hooks file
-export {
-  useMastraCodeChange,
-  useMastraBatchSummarize,
-  useMastraSummarizeFile,
-  octoClient
-} from '../api-hooks'
+export { useMastraCodeChange, useMastraBatchSummarize, useMastraSummarizeFile, octoClient } from '../api-hooks'
 
 // Re-export Mastra types for convenience
 export type {

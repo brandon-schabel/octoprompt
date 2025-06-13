@@ -1,6 +1,6 @@
 /**
  * Monaco Editor Configuration and Integration Test
- * 
+ *
  * This file demonstrates and tests the Monaco Editor integration with OctoPrompt.
  * It includes:
  * 1. Language detection for various file types
@@ -27,14 +27,14 @@ const sampleCode = {
 export function greetUser(user: User): string {
   return \`Hello, \${user.name}!\`
 }`,
-  
+
   javascript: `function fibonacci(n) {
   if (n <= 1) return n
   return fibonacci(n - 1) + fibonacci(n - 2)
 }
 
 console.log(fibonacci(10))`,
-  
+
   python: `def quicksort(arr):
     if len(arr) <= 1:
         return arr
@@ -43,7 +43,7 @@ console.log(fibonacci(10))`,
     middle = [x for x in arr if x == pivot]
     right = [x for x in arr if x > pivot]
     return quicksort(left) + middle + quicksort(right)`,
-  
+
   json: `{
   "name": "octoprompt",
   "version": "0.5.3",
@@ -63,7 +63,7 @@ const diffSample = {
   }
   return total
 }`,
-  
+
   modified: `function calculateTotal(items) {
   return items.reduce((total, item) => total + item.price, 0)
 }`
@@ -85,19 +85,19 @@ export function MonacoTestComponent() {
   }
 
   return (
-    <div className="space-y-4 p-4">
+    <div className='space-y-4 p-4'>
       <Card>
         <CardHeader>
           <CardTitle>Monaco Editor Integration Test</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className='space-y-4'>
           {/* Language Selector */}
-          <div className="flex gap-2">
+          <div className='flex gap-2'>
             {Object.keys(sampleCode).map((lang) => (
               <Button
                 key={lang}
                 variant={selectedLanguage === lang ? 'default' : 'outline'}
-                size="sm"
+                size='sm'
                 onClick={() => handleLanguageChange(lang as keyof typeof sampleCode)}
               >
                 {lang}
@@ -106,23 +106,29 @@ export function MonacoTestComponent() {
           </div>
 
           {/* Monaco Editor */}
-          <div className="border rounded-md">
+          <div className='border rounded-md'>
             <LazyMonacoEditor
               value={code}
               onChange={(value) => setCode(value || '')}
               language={selectedLanguage}
-              height="300px"
+              height='300px'
               onSave={handleSave}
             />
           </div>
 
           {/* Instructions */}
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p><strong>Test Instructions:</strong></p>
-            <ul className="list-disc list-inside space-y-1">
+          <div className='text-sm text-muted-foreground space-y-1'>
+            <p>
+              <strong>Test Instructions:</strong>
+            </p>
+            <ul className='list-disc list-inside space-y-1'>
               <li>Try switching between different languages to test syntax highlighting</li>
-              <li>Press <kbd>Ctrl+S</kbd> (or <kbd>Cmd+S</kbd> on Mac) to test save functionality</li>
-              <li>Press <kbd>Ctrl+Shift+F</kbd> to test code formatting</li>
+              <li>
+                Press <kbd>Ctrl+S</kbd> (or <kbd>Cmd+S</kbd> on Mac) to test save functionality
+              </li>
+              <li>
+                Press <kbd>Ctrl+Shift+F</kbd> to test code formatting
+              </li>
               <li>Edit the code to test real-time syntax highlighting</li>
               <li>The editor should respect your app's dark/light theme setting</li>
             </ul>
@@ -135,28 +141,28 @@ export function MonacoTestComponent() {
         <CardHeader>
           <CardTitle>Monaco Diff Viewer Test</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            onClick={() => setShowDiff(!showDiff)}
-            variant="outline"
-          >
+        <CardContent className='space-y-4'>
+          <Button onClick={() => setShowDiff(!showDiff)} variant='outline'>
             {showDiff ? 'Hide' : 'Show'} Diff Viewer
           </Button>
 
           {showDiff && (
-            <div className="border rounded-md">
+            <div className='border rounded-md'>
               <LazyMonacoDiffViewer
                 original={diffSample.original}
                 modified={diffSample.modified}
-                language="javascript"
-                height="300px"
+                language='javascript'
+                height='300px'
               />
             </div>
           )}
 
           {showDiff && (
-            <div className="text-sm text-muted-foreground">
-              <p><strong>Diff Test:</strong> This shows a side-by-side comparison of code changes, useful for AI-generated file modifications.</p>
+            <div className='text-sm text-muted-foreground'>
+              <p>
+                <strong>Diff Test:</strong> This shows a side-by-side comparison of code changes, useful for
+                AI-generated file modifications.
+              </p>
             </div>
           )}
         </CardContent>

@@ -20,10 +20,10 @@ import { buildProjectSummary } from '@octoprompt/shared'
 const summarizeFiles = async (projectId: number, fileIds: number[]) => {
   // TODO: Implement Mastra integration for file summarization
   console.log(`Mock: summarizing ${fileIds.length} files for project ${projectId}`)
-  
+
   // Get all the files from storage
   const projectFilesStorage = await projectStorage.readProjectFiles(projectId)
-  
+
   // For each file ID, generate a summary using the AI service
   for (const fileId of fileIds) {
     const file = projectFilesStorage[fileId]
@@ -31,7 +31,7 @@ const summarizeFiles = async (projectId: number, fileIds: number[]) => {
       try {
         // TODO: Replace with Mastra summarization service when ready
         const summary = `Summary for ${file.name || 'file'} (${file.extension || 'unknown'}) - ${Math.ceil(file.content.length / 100)} lines of code`
-        
+
         // Update the file with the new summary
         await projectStorage.updateProjectFile(projectId, fileId, {
           summary,
@@ -236,7 +236,7 @@ export async function getProjectFilesWithoutContent(
     const fileList = Object.values(files)
 
     // Remove content from all files for performance
-    const filesWithoutContent = fileList.map(file => {
+    const filesWithoutContent = fileList.map((file) => {
       const { content, ...fileWithoutContent } = file
       return fileWithoutContent
     })
@@ -259,8 +259,6 @@ export async function getProjectFilesWithoutContent(
     )
   }
 }
-
-
 
 // UPDATED: Create new version instead of updating existing file
 export async function updateFileContent(
@@ -727,8 +725,8 @@ export async function bulkDeleteProjectFiles(
 }
 
 export async function getProjectFilesByIds(
-  projectId: number, 
-  fileIds: number[], 
+  projectId: number,
+  fileIds: number[],
   includeAllVersions: boolean = false
 ): Promise<ProjectFile[]> {
   if (!fileIds || fileIds.length === 0) {

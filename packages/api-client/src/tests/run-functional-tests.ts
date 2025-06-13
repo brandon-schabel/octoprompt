@@ -12,20 +12,20 @@ console.log(`📍 API URL: ${TEST_API_URL}`) // This is informational; API_URL i
 console.log('─'.repeat(50))
 
 const testFiles = [
-    'projects-api.test.ts',
-    'chat-api.test.ts',
-    'prompt-api.test.ts',
-    'provider-key-api.test.ts',
-    'ticket-api.test.ts'
+  'projects-api.test.ts',
+  'chat-api.test.ts',
+  'prompt-api.test.ts',
+  'provider-key-api.test.ts',
+  'ticket-api.test.ts'
 ]
 
 try {
-    // Run the tests. Bun test can take multiple file arguments.
-    // The timeout is applied to each file individually.
-    await $`bun test ${testFiles} --timeout 30000`
+  // Run the tests. Bun test can take multiple file arguments.
+  // The timeout is applied to each file individually.
+  await $`bun test ${testFiles} --timeout 30000`
 
-    console.log('\n✅ All API tests completed successfully!')
+  console.log('\n✅ All API tests completed successfully!')
 } catch (error) {
-    console.error('\n❌ API tests failed:', error)
-    process.exit(1)
+  console.error('\n❌ API tests failed:', error)
+  process.exit(1)
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { useChat, Message } from '@ai-sdk/react'
-import type { AiChatStreamRequest, } from '@octoprompt/schemas'
+import type { AiChatStreamRequest } from '@octoprompt/schemas'
 import type { AiSdkOptions } from '@octoprompt/schemas'
 import { useGetMessages } from './use-chat-api'
 import { APIProviders } from '@octoprompt/schemas'
@@ -104,7 +104,9 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
         tempId: userMessageId, // Optional: Useful for correlating requests/responses
         ...(systemMessage && { systemMessage: systemMessage }), // Include systemMessage from props if provided
         ...(sdkOptions ? { options: sdkOptions } : {}),
-        ...(modelSettings?.currentMessageAttachments && { currentMessageAttachments: modelSettings.currentMessageAttachments })
+        ...(modelSettings?.currentMessageAttachments && {
+          currentMessageAttachments: modelSettings.currentMessageAttachments
+        })
       }
 
       setInput('') // Clear input field immediately

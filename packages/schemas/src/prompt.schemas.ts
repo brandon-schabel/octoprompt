@@ -6,12 +6,10 @@ export const PromptSchema = z
   .object({
     id: unixTSSchemaSpec,
     name: z.string().openapi({ example: 'Code Refactoring Prompt', description: 'Prompt name' }),
-    content: z
-      .string()
-      .openapi({
-        example: 'Refactor the following code to be more efficient: {code}',
-        description: 'Prompt content template'
-      }),
+    content: z.string().openapi({
+      example: 'Refactor the following code to be more efficient: {code}',
+      description: 'Prompt content template'
+    }),
     projectId: unixTSOptionalSchemaSpec,
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
@@ -64,7 +62,6 @@ export const PromptListResponseSchema = z
     data: z.array(PromptSchema)
   })
   .openapi('PromptListResponse')
-
 
 // Export types if needed elsewhere
 export type CreatePromptBody = z.infer<typeof CreatePromptBodySchema>
