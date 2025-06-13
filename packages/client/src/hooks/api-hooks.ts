@@ -9,14 +9,6 @@ import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
 
-import type {
-  MastraCodeChangeRequest,
-  MastraCodeChangeResponse,
-  MastraSummarizeRequest,
-  MastraSummarizeResponse,
-  MastraSingleSummarizeRequest,
-  MastraSingleSummarizeResponse
-} from '@octoprompt/schemas'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -928,42 +920,5 @@ export function useSmartCaching() {
   }
 }
 
-// --- Mastra Hooks ---
-export function useMastraCodeChange() {
-  return useMutation<MastraCodeChangeResponse, Error, MastraCodeChangeRequest>({
-    mutationFn: (data: MastraCodeChangeRequest) => octoClient.mastra.codeChange(data),
-    onSuccess: () => {
-      toast.success('Code change generated successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra code change error:', error)
-      toast.error('Failed to generate code change')
-    }
-  })
-}
-
-export function useMastraBatchSummarize() {
-  return useMutation<MastraSummarizeResponse, Error, MastraSummarizeRequest>({
-    mutationFn: (data: MastraSummarizeRequest) => octoClient.mastra.batchSummarize(data),
-    onSuccess: () => {
-      toast.success('Batch summarization completed successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra batch summarize error:', error)
-      toast.error('Failed to complete batch summarization')
-    }
-  })
-}
-
-export function useMastraSummarizeFile() {
-  return useMutation<MastraSingleSummarizeResponse, Error, MastraSingleSummarizeRequest>({
-    mutationFn: (data: MastraSingleSummarizeRequest) => octoClient.mastra.summarizeFile(data),
-    onSuccess: () => {
-      toast.success('File summarization completed successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra file summarize error:', error)
-      toast.error('Failed to summarize file')
-    }
-  })
-}
+// --- Mastra Hooks Removed ---
+// Mastra agent functionality has been consolidated into Claude Code integration

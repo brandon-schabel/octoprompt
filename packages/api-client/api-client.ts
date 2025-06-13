@@ -80,20 +80,6 @@ import {
   type UnifiedModel
 } from '@octoprompt/schemas'
 
-import {
-  MastraCodeChangeRequestSchema,
-  MastraCodeChangeResponseSchema,
-  MastraSummarizeRequestSchema,
-  MastraSummarizeResponseSchema,
-  MastraSingleSummarizeRequestSchema,
-  MastraSingleSummarizeResponseSchema,
-  type MastraCodeChangeRequest,
-  type MastraCodeChangeResponse,
-  type MastraSummarizeRequest,
-  type MastraSummarizeResponse,
-  type MastraSingleSummarizeRequest,
-  type MastraSingleSummarizeResponse
-} from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
   success: boolean
@@ -732,36 +718,7 @@ export class GenAiService extends BaseApiClient {
   }
 }
 
-// Mastra Service
-export class MastraService extends BaseApiClient {
-  async codeChange(data: MastraCodeChangeRequest): Promise<MastraCodeChangeResponse> {
-    const validatedData = this.validateBody(MastraCodeChangeRequestSchema, data)
-    // The endpoint path matches what's in mastra-routes.ts
-    const result = await this.request('POST', '/mastra/code-change', {
-      body: validatedData,
-      responseSchema: MastraCodeChangeResponseSchema
-    })
-    return result as MastraCodeChangeResponse
-  }
-
-  async batchSummarize(data: MastraSummarizeRequest): Promise<MastraSummarizeResponse> {
-    const validatedData = this.validateBody(MastraSummarizeRequestSchema, data)
-    const result = await this.request('POST', '/mastra/summarize', {
-      body: validatedData,
-      responseSchema: MastraSummarizeResponseSchema
-    })
-    return result as MastraSummarizeResponse
-  }
-
-  async summarizeFile(data: MastraSingleSummarizeRequest): Promise<MastraSingleSummarizeResponse> {
-    const validatedData = this.validateBody(MastraSingleSummarizeRequestSchema, data)
-    const result = await this.request('POST', '/mastra/summarize/file', {
-      body: validatedData,
-      responseSchema: MastraSingleSummarizeResponseSchema
-    })
-    return result as MastraSingleSummarizeResponse
-  }
-}
+// Mastra Service removed - functionality consolidated into Claude Code
 
 // Main OctoPrompt Client
 export class OctoPromptClient {
@@ -770,7 +727,6 @@ export class OctoPromptClient {
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
-  public readonly mastra: MastraService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -778,7 +734,6 @@ export class OctoPromptClient {
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
-    this.mastra = new MastraService(config)
   }
 }
 

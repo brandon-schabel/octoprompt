@@ -2,7 +2,7 @@ export interface ClaudeCodeTemplate {
   id: string
   name: string
   description: string
-  category: 'refactoring' | 'documentation' | 'testing' | 'debugging' | 'feature' | 'optimization' | 'security'
+  category: 'refactoring' | 'documentation' | 'testing' | 'debugging' | 'feature' | 'optimization' | 'security' | 'planning' | 'architecture'
   prompt: string
   variables?: {
     name: string
@@ -237,6 +237,116 @@ export const CLAUDE_CODE_TEMPLATES: ClaudeCodeTemplate[] = [
     category: 'security',
     prompt:
       'Secure API endpoints by adding authentication, authorization, rate limiting, and input validation. Ensure proper CORS configuration and use HTTPS.'
+  },
+
+  // Planning Templates (replacing Mastra Planning Agent functionality)
+  {
+    id: 'task-breakdown',
+    name: 'Break Down Complex Task',
+    description: 'Analyze and break down a complex coding request into manageable tasks',
+    category: 'planning',
+    prompt:
+      'Analyze this complex coding request and break it down into specific, actionable tasks. For each task, provide: 1) A clear description 2) Target files that need to be modified 3) Dependencies between tasks 4) Estimated complexity (low/medium/high) 5) Potential risks or challenges. Order tasks by priority and dependencies.',
+    variables: [
+      {
+        name: 'userRequest',
+        description: 'The complex coding request to break down',
+        defaultValue: 'Implement user authentication with JWT tokens'
+      }
+    ]
+  },
+  {
+    id: 'implementation-plan',
+    name: 'Create Implementation Plan',
+    description: 'Create a detailed implementation plan for a feature',
+    category: 'planning',
+    prompt:
+      'Create a comprehensive implementation plan for this feature. Include: 1) Overall architecture approach 2) Required files and their purposes 3) Step-by-step implementation sequence 4) Testing strategy 5) Potential edge cases 6) Performance considerations 7) Security implications. Provide code structure suggestions.',
+    variables: [
+      {
+        name: 'featureDescription',
+        description: 'Description of the feature to implement',
+        defaultValue: 'Real-time chat system'
+      }
+    ]
+  },
+  {
+    id: 'refactoring-strategy',
+    name: 'Plan Refactoring Strategy',
+    description: 'Analyze code and create a refactoring strategy',
+    category: 'planning',
+    prompt:
+      'Analyze the selected code and create a comprehensive refactoring strategy. Identify: 1) Code smells and issues 2) Refactoring opportunities 3) Breaking changes and migration path 4) Testing requirements 5) Step-by-step refactoring plan 6) Risk assessment. Prioritize changes by impact and effort.',
+  },
+  {
+    id: 'dependency-analysis',
+    name: 'Analyze Dependencies',
+    description: 'Analyze task dependencies and optimal execution order',
+    category: 'planning',
+    prompt:
+      'Analyze the dependencies between different parts of this codebase or feature implementation. Create a dependency graph showing: 1) Which components depend on others 2) Critical path for implementation 3) Parallel work opportunities 4) Potential circular dependencies 5) Recommended execution order. Suggest how to minimize dependencies.',
+  },
+
+  // Architecture Templates (replacing Mastra Enhanced Planning)
+  {
+    id: 'system-architecture',
+    name: 'Design System Architecture',
+    description: 'Design overall system architecture and component structure',
+    category: 'architecture',
+    prompt:
+      'Design a comprehensive system architecture for this project. Include: 1) High-level component diagram 2) Data flow architecture 3) API design principles 4) Database schema considerations 5) Scalability patterns 6) Error handling strategy 7) Monitoring and logging approach. Focus on maintainability and extensibility.',
+    variables: [
+      {
+        name: 'systemRequirements',
+        description: 'High-level system requirements',
+        defaultValue: 'Scalable web application with user management'
+      }
+    ]
+  },
+  {
+    id: 'api-design',
+    name: 'Design API Architecture',
+    description: 'Design RESTful API structure and endpoints',
+    category: 'architecture',
+    prompt:
+      'Design a comprehensive API architecture including: 1) RESTful endpoint structure 2) Request/response schemas 3) Authentication and authorization flow 4) Error handling patterns 5) Rate limiting strategy 6) API versioning approach 7) Documentation structure. Follow REST best practices and OpenAPI standards.',
+    variables: [
+      {
+        name: 'apiDomain',
+        description: 'Domain or feature area for the API',
+        defaultValue: 'User management and authentication'
+      }
+    ]
+  },
+  {
+    id: 'database-design',
+    name: 'Design Database Schema',
+    description: 'Design database schema and relationships',
+    category: 'architecture',
+    prompt:
+      'Design a comprehensive database schema including: 1) Entity relationship diagram 2) Table structures with proper normalization 3) Indexes for performance 4) Data validation rules 5) Migration strategy 6) Backup and recovery considerations 7) Scalability patterns (sharding, read replicas). Consider both SQL and NoSQL options.',
+    variables: [
+      {
+        name: 'dataRequirements',
+        description: 'Data requirements and relationships',
+        defaultValue: 'User profiles, posts, comments, and likes'
+      }
+    ]
+  },
+  {
+    id: 'component-architecture',
+    name: 'Design Component Architecture',
+    description: 'Design frontend component structure and hierarchy',
+    category: 'architecture',
+    prompt:
+      'Design a scalable frontend component architecture including: 1) Component hierarchy and relationships 2) State management strategy 3) Props interface design 4) Reusable component patterns 5) Styling approach (CSS modules, styled-components, etc.) 6) Performance optimizations 7) Testing strategy for components. Focus on reusability and maintainability.',
+    variables: [
+      {
+        name: 'uiRequirements',
+        description: 'UI requirements and user interactions',
+        defaultValue: 'Dashboard with data visualization and user controls'
+      }
+    ]
   }
 ]
 

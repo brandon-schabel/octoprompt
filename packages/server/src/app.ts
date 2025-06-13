@@ -7,7 +7,6 @@ import { projectRoutes } from './routes/project-routes'
 import { providerKeyRoutes } from './routes/provider-key-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { fileServingRoutes } from './routes/file-serving-routes'
-import { mastraRoutes } from './routes/mastra-routes'
 import { claudeCodeRoutes } from './routes/claude-code-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
@@ -55,7 +54,6 @@ app.route('/', genAiRoutes)
 app.route('/', projectRoutes)
 app.route('/', providerKeyRoutes)
 app.route('/', promptRoutes)
-app.route('/', mastraRoutes)
 app.route('/', claudeCodeRoutes)
 // Global error handler
 app.onError((err, c) => {

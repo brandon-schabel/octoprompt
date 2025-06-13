@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileCode, FileText, TestTube, Bug, Sparkles, Zap, Shield, ChevronRight } from 'lucide-react'
+import { FileCode, FileText, TestTube, Bug, Sparkles, Zap, Shield, ChevronRight, Lightbulb, Building } from 'lucide-react'
 
 interface ClaudeCodeTemplatesProps {
   isOpen: boolean
@@ -30,7 +30,9 @@ const categoryIcons = {
   debugging: Bug,
   feature: Sparkles,
   optimization: Zap,
-  security: Shield
+  security: Shield,
+  planning: Lightbulb,
+  architecture: Building
 }
 
 const categoryColors = {
@@ -40,7 +42,9 @@ const categoryColors = {
   debugging: 'bg-red-500',
   feature: 'bg-yellow-500',
   optimization: 'bg-orange-500',
-  security: 'bg-pink-500'
+  security: 'bg-pink-500',
+  planning: 'bg-indigo-500',
+  architecture: 'bg-teal-500'
 }
 
 export function ClaudeCodeTemplates({ isOpen, onClose, onSelectTemplate }: ClaudeCodeTemplatesProps) {

@@ -6,10 +6,19 @@ export interface ClaudeCodeContext {
   projectSummary: string
   relevantFiles: ProjectFile[]
   suggestedFiles: string[]
+  taskComplexity: 'simple' | 'medium' | 'complex'
+  suggestedApproach: string
+  potentialRisks: string[]
+  requiredFiles: Array<{
+    path: string
+    action: 'create' | 'modify' | 'delete'
+    reason: string
+  }>
 }
 
 /**
  * Build an intelligent context for Claude Code based on the prompt and project files
+ * Enhanced with planning capabilities from former Mastra agents
  */
 export async function buildClaudeCodeContext(
   projectId: number,
@@ -25,10 +34,26 @@ export async function buildClaudeCodeContext(
   // Build a focused project summary
   const projectSummary = buildFocusedProjectSummary(relevantFiles, allFiles)
 
+  // Analyze task complexity (replaces Mastra planning agent analysis)
+  const taskComplexity = analyzeTaskComplexity(prompt, relevantFiles, allFiles)
+
+  // Generate suggested approach (replaces Mastra planning agent suggestions)
+  const suggestedApproach = generateSuggestedApproach(prompt, taskComplexity, relevantFiles)
+
+  // Identify potential risks (replaces Mastra risk analysis)
+  const potentialRisks = identifyPotentialRisks(prompt, taskComplexity, relevantFiles, allFiles)
+
+  // Suggest required files (replaces Mastra file targeting)
+  const requiredFiles = suggestRequiredFiles(prompt, relevantFiles, allFiles)
+
   return {
     projectSummary,
     relevantFiles,
-    suggestedFiles: relevantFiles.map((f) => f.name)
+    suggestedFiles: relevantFiles.map((f) => f.name),
+    taskComplexity,
+    suggestedApproach,
+    potentialRisks,
+    requiredFiles
   }
 }
 
@@ -282,4 +307,200 @@ function detectTechStack(files: ProjectFile[]): string[] {
   }
 
   return Array.from(stack).sort()
+}
+
+/**
+ * Analyze task complexity based on prompt content and file scope
+ * Replaces Mastra planning agent complexity analysis
+ */
+function analyzeTaskComplexity(prompt: string, relevantFiles: ProjectFile[], allFiles: ProjectFile[]): 'simple' | 'medium' | 'complex' {
+  let complexityScore = 0
+  const promptLower = prompt.toLowerCase()
+
+  // Simple task indicators (score += 1)
+  if (promptLower.includes('fix bug') || promptLower.includes('fix error')) complexityScore += 1
+  if (promptLower.includes('update text') || promptLower.includes('change text')) complexityScore += 1
+  if (promptLower.includes('add comment') || promptLower.includes('add documentation')) complexityScore += 1
+
+  // Medium task indicators (score += 2-3)
+  if (promptLower.includes('refactor') || promptLower.includes('optimize')) complexityScore += 2
+  if (promptLower.includes('add feature') || promptLower.includes('implement')) complexityScore += 2
+  if (promptLower.includes('test') || promptLower.includes('unit test')) complexityScore += 2
+  if (relevantFiles.length > 5) complexityScore += 2
+
+  // Complex task indicators (score += 3-5)
+  if (promptLower.includes('architecture') || promptLower.includes('redesign')) complexityScore += 4
+  if (promptLower.includes('migration') || promptLower.includes('upgrade')) complexityScore += 4
+  if (promptLower.includes('security') || promptLower.includes('authentication')) complexityScore += 3
+  if (promptLower.includes('database') || promptLower.includes('schema')) complexityScore += 3
+  if (relevantFiles.length > 10) complexityScore += 3
+  if (allFiles.length > 100) complexityScore += 2
+
+  // Multiple file types involved
+  const fileTypes = new Set(relevantFiles.map(f => f.extension))
+  if (fileTypes.size > 3) complexityScore += 2
+
+  if (complexityScore <= 3) return 'simple'
+  if (complexityScore <= 7) return 'medium'
+  return 'complex'
+}
+
+/**
+ * Generate suggested approach based on task analysis
+ * Replaces Mastra planning agent approach suggestions
+ */
+function generateSuggestedApproach(prompt: string, complexity: 'simple' | 'medium' | 'complex', relevantFiles: ProjectFile[]): string {
+  const promptLower = prompt.toLowerCase()
+  const approaches: string[] = []
+
+  // Base approach based on complexity
+  if (complexity === 'simple') {
+    approaches.push('This appears to be a straightforward task that can be completed in a single session.')
+  } else if (complexity === 'medium') {
+    approaches.push('This is a moderate complexity task that may require careful planning and testing.')
+  } else {
+    approaches.push('This is a complex task that should be broken down into smaller, manageable steps.')
+  }
+
+  // Specific approach suggestions based on prompt content
+  if (promptLower.includes('refactor')) {
+    approaches.push('Consider creating backup branches before refactoring. Start with the most critical files first.')
+  }
+  if (promptLower.includes('test')) {
+    approaches.push('Follow TDD principles: write tests first, then implement the functionality.')
+  }
+  if (promptLower.includes('api') || promptLower.includes('endpoint')) {
+    approaches.push('Design the API contract first, then implement the backend logic, followed by frontend integration.')
+  }
+  if (promptLower.includes('database') || promptLower.includes('schema')) {
+    approaches.push('Plan database migrations carefully. Consider backwards compatibility and data preservation.')
+  }
+  if (promptLower.includes('security')) {
+    approaches.push('Security changes require thorough testing. Consider penetration testing and code review.')
+  }
+
+  // File-based suggestions
+  if (relevantFiles.length > 5) {
+    approaches.push('Multiple files are involved - consider the order of changes to minimize breaking dependencies.')
+  }
+
+  return approaches.join(' ')
+}
+
+/**
+ * Identify potential risks based on task analysis
+ * Replaces Mastra planning agent risk assessment
+ */
+function identifyPotentialRisks(prompt: string, complexity: 'simple' | 'medium' | 'complex', relevantFiles: ProjectFile[], allFiles: ProjectFile[]): string[] {
+  const risks: string[] = []
+  const promptLower = prompt.toLowerCase()
+
+  // Complexity-based risks
+  if (complexity === 'complex') {
+    risks.push('High complexity task may introduce unexpected side effects')
+    risks.push('May require significant testing and validation')
+  }
+
+  // Content-based risks
+  if (promptLower.includes('database') || promptLower.includes('migration')) {
+    risks.push('Database changes can cause data loss if not handled carefully')
+    risks.push('May require downtime for production deployment')
+  }
+
+  if (promptLower.includes('security') || promptLower.includes('auth')) {
+    risks.push('Security changes can lock out users if implemented incorrectly')
+    risks.push('May introduce new vulnerabilities if not thoroughly tested')
+  }
+
+  if (promptLower.includes('refactor')) {
+    risks.push('Refactoring can break existing functionality')
+    risks.push('May affect dependent modules not immediately obvious')
+  }
+
+  if (promptLower.includes('api') || promptLower.includes('breaking')) {
+    risks.push('API changes may break existing integrations')
+    risks.push('Version compatibility issues with clients')
+  }
+
+  // File-based risks
+  if (relevantFiles.length > 10) {
+    risks.push('Large number of files increases chance of merge conflicts')
+  }
+
+  const coreFiles = relevantFiles.filter(f => 
+    f.name.includes('index') || 
+    f.name.includes('main') || 
+    f.name.includes('app') ||
+    f.name.includes('config')
+  )
+  if (coreFiles.length > 0) {
+    risks.push('Changes to core files may have widespread impact')
+  }
+
+  return risks.length > 0 ? risks : ['Low risk task with minimal side effects expected']
+}
+
+/**
+ * Suggest required files for the task
+ * Replaces Mastra file targeting functionality
+ */
+function suggestRequiredFiles(prompt: string, relevantFiles: ProjectFile[], allFiles: ProjectFile[]): Array<{path: string, action: 'create' | 'modify' | 'delete', reason: string}> {
+  const suggestions: Array<{path: string, action: 'create' | 'modify' | 'delete', reason: string}> = []
+  const promptLower = prompt.toLowerCase()
+
+  // Analyze existing relevant files
+  relevantFiles.forEach(file => {
+    if (promptLower.includes('delete') || promptLower.includes('remove')) {
+      suggestions.push({
+        path: file.path,
+        action: 'delete',
+        reason: 'File appears to be targeted for removal based on prompt'
+      })
+    } else {
+      suggestions.push({
+        path: file.path,
+        action: 'modify',
+        reason: 'File is relevant to the requested changes'
+      })
+    }
+  })
+
+  // Suggest new files based on prompt content
+  if (promptLower.includes('test') && !relevantFiles.some(f => f.name.includes('test') || f.name.includes('spec'))) {
+    suggestions.push({
+      path: 'tests/new-feature.test.ts',
+      action: 'create',
+      reason: 'Tests needed for new functionality'
+    })
+  }
+
+  if (promptLower.includes('component') && !relevantFiles.some(f => f.name.includes('component'))) {
+    suggestions.push({
+      path: 'components/NewComponent.tsx',
+      action: 'create',
+      reason: 'New component required based on prompt'
+    })
+  }
+
+  if (promptLower.includes('api') || promptLower.includes('endpoint')) {
+    if (!relevantFiles.some(f => f.name.includes('route') || f.name.includes('api'))) {
+      suggestions.push({
+        path: 'api/new-endpoint.ts',
+        action: 'create',
+        reason: 'New API endpoint required'
+      })
+    }
+  }
+
+  if (promptLower.includes('config') || promptLower.includes('environment')) {
+    if (!relevantFiles.some(f => f.name.includes('config') || f.name.includes('env'))) {
+      suggestions.push({
+        path: 'config/new-config.ts',
+        action: 'create',
+        reason: 'Configuration file needed'
+      })
+    }
+  }
+
+  return suggestions
 }
