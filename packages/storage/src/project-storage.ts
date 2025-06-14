@@ -1,337 +1,259 @@
-import { z, ZodError, type ZodTypeAny } from 'zod'
-import path from 'node:path'
-import fs from 'node:fs/promises'
-import { ProjectSchema, ProjectFileSchema, type ProjectFile } from '@octoprompt/schemas'
+import { z } from 'zod'
+import * as path from 'node:path'
+import { ProjectSchema, ProjectFileSchema, type Project, type ProjectFile } from '@octoprompt/schemas'
+import { BaseStorage, type StorageOptions } from './core/base-storage'
+import { STORAGE_CONFIG } from './config'
 import { unixTimestampSchema } from '@octoprompt/schemas'
 
-// Define the base directory for storing project data
-const DATA_DIR = path.resolve(process.cwd(), 'data', 'project_storage')
-
-// --- Schemas for Storage ---
+// Storage schemas
 export const ProjectsStorageSchema = z.record(z.string(), ProjectSchema)
-export type ProjectsStorage = z.infer<typeof ProjectsStorageSchema>
-
 export const ProjectFilesStorageSchema = z.record(z.string(), ProjectFileSchema)
+export type ProjectsStorage = z.infer<typeof ProjectsStorageSchema>
 export type ProjectFilesStorage = z.infer<typeof ProjectFilesStorageSchema>
 
-// --- Path Helpers ---
-function getProjectsIndexPath(): string {
-  return path.join(DATA_DIR, 'projects.json')
-}
+/**
+ * Enhanced project storage with file versioning, indexing, and project management
+ */
+export class ProjectStorage extends BaseStorage<Project, ProjectsStorage> {
+  private fileStorages: Map<number, ProjectFileStorage> = new Map()
 
-function getProjectDataDir(projectId: number): string {
-  return path.join(DATA_DIR, 'project_data', projectId.toString())
-}
-
-function getProjectFilesPath(projectId: number): string {
-  return path.join(getProjectDataDir(projectId), 'files.json')
-}
-
-// --- Core Read/Write Functions ---
-async function ensureDirExists(dirPath: string): Promise<void> {
-  try {
-    await fs.mkdir(dirPath, { recursive: true })
-  } catch (error: any) {
-    if (error.code !== 'EEXIST') {
-      console.error(`Error creating directory ${dirPath}:`, error)
-      throw new Error(`Failed to ensure directory exists: ${dirPath}`)
-    }
+  constructor(options: StorageOptions = {}) {
+    const dataDir = path.join('data', 'projects')
+    super(ProjectsStorageSchema, ProjectSchema, dataDir, options)
   }
-}
 
-async function readValidatedJson<T extends ZodTypeAny>(
-  filePath: string,
-  schema: T,
-  defaultValue: z.infer<T>
-): Promise<z.infer<T>> {
-  try {
-    await ensureDirExists(path.dirname(filePath))
-    const fileContent = await fs.readFile(filePath, 'utf-8')
+  protected getIndexPath(): string {
+    return path.join(this.basePath, this.dataDir, 'projects.json')
+  }
 
-    if (fileContent.trim() === '') {
-      console.warn(`File is empty or contains only whitespace: ${filePath}. Returning default value.`)
-      return defaultValue
-    }
+  protected getEntityPath(id: number): string | null {
+    return path.join(this.basePath, this.dataDir, id.toString(), 'project.json')
+  }
 
-    let jsonData = JSON.parse(fileContent)
+  // Override create to initialize file storage
+  public async create(data: Omit<Project, 'id' | 'created' | 'updated'>): Promise<Project> {
+    const project = await super.create(data)
 
-    if (schema instanceof z.ZodRecord && schema.keySchema instanceof z.ZodNumber) {
-      const transformedData: Record<number, unknown> = {}
-      for (const key in jsonData) {
-        if (Object.prototype.hasOwnProperty.call(jsonData, key)) {
-          const parseResult = unixTimestampSchema.safeParse(key)
-          if (parseResult.success) {
-            transformedData[parseResult.data] = jsonData[key]
-          } else {
-            console.warn(`Omitting non-numeric or invalid timestamp key "${key}" from object in ${filePath}`)
-          }
-        }
+    // Initialize file storage for this project
+    const fileStorage = this.getFileStorage(project.id)
+    await fileStorage.initialize()
+
+    return project
+  }
+
+  // Override delete to clean up files
+  public async delete(id: number): Promise<boolean> {
+    const result = await super.delete(id)
+    if (result) {
+      // Clean up file storage
+      const fileStorage = this.fileStorages.get(id)
+      if (fileStorage) {
+        await fileStorage.deleteAll()
+        this.fileStorages.delete(id)
       }
-      jsonData = transformedData
     }
-
-    const validationResult = await schema.safeParseAsync(jsonData)
-    if (!validationResult.success) {
-      console.error(`Zod validation failed reading ${filePath}:`, validationResult.error.errors)
-      console.warn(`Returning default value due to validation failure for ${filePath}.`)
-      return defaultValue
-    }
-    return validationResult.data
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
-      return defaultValue
-    }
-    if (error instanceof SyntaxError) {
-      console.error(`JSON Parse error in ${filePath}:`, error.message)
-      console.warn(`Returning default value due to JSON parsing error for ${filePath}.`)
-      return defaultValue
-    }
-    console.error(`Error reading or parsing JSON from ${filePath}:`, error)
-    throw new Error(`Failed to read/parse JSON file at ${filePath}. Reason: ${error.message}`)
+    return result
   }
-}
 
-async function writeValidatedJson<T extends ZodTypeAny>(
-  filePath: string,
-  data: unknown,
-  schema: T
-): Promise<z.infer<T>> {
-  try {
-    const validationResult = await schema.safeParseAsync(data)
-    if (!validationResult.success) {
-      console.error(`Zod validation failed before writing to ${filePath}:`, validationResult.error.errors)
-      throw new ZodError(validationResult.error.errors)
-    }
-    const validatedData = validationResult.data
+  // --- Project Management ---
 
-    await ensureDirExists(path.dirname(filePath))
-    const jsonString = JSON.stringify(validatedData, null, 2)
-    await fs.writeFile(filePath, jsonString, 'utf-8')
-
-    return validatedData
-  } catch (error: any) {
-    console.error(`Error writing JSON to ${filePath}:`, error)
-    if (error instanceof ZodError) {
-      throw error
-    }
-    throw new Error(`Failed to write JSON file at ${filePath}. Reason: ${error.message}`)
+  /**
+   * Search projects by name
+   */
+  public async search(query: string): Promise<Project[]> {
+    const all = await this.list()
+    const lowercaseQuery = query.toLowerCase()
+    return all
+      .filter(project => project.name.toLowerCase().includes(lowercaseQuery))
+      .sort((a, b) => b.updated - a.updated)
   }
-}
 
-export const projectStorage = {
-  // Existing methods remain the same
-  async readProjects(): Promise<ProjectsStorage> {
-    return readValidatedJson(getProjectsIndexPath(), ProjectsStorageSchema, {})
-  },
+  /**
+   * Get project by path
+   */
+  public async getByPath(projectPath: string): Promise<Project | null> {
+    const all = await this.list()
+    return all.find(project => project.path === projectPath) || null
+  }
 
-  async writeProjects(projects: ProjectsStorage): Promise<ProjectsStorage> {
-    return writeValidatedJson(getProjectsIndexPath(), projects, ProjectsStorageSchema)
-  },
+  // --- File Management ---
 
-  async readProjectFiles(projectId: number): Promise<ProjectFilesStorage> {
-    return readValidatedJson(getProjectFilesPath(projectId), ProjectFilesStorageSchema, {})
-  },
+  /**
+   * Get file storage for a project
+   */
+  public getFileStorage(projectId: number): ProjectFileStorage {
+    if (!this.fileStorages.has(projectId)) {
+      this.fileStorages.set(projectId, new ProjectFileStorage(projectId, this.basePath, this.dataDir, this.options))
+    }
+    return this.fileStorages.get(projectId)!
+  }
 
-  async writeProjectFiles(projectId: number, files: ProjectFilesStorage): Promise<ProjectFilesStorage> {
-    return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema)
-  },
-
-  // UPDATED: Enhanced updateProjectFile with versioning support
-  async updateProjectFile(
+  /**
+   * Add file to project
+   */
+  public async addFile(
     projectId: number,
-    fileId: number,
-    fileData: Partial<Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>>
+    fileData: Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>
   ): Promise<ProjectFile> {
-    const currentFiles = await this.readProjectFiles(projectId)
-    const currentFile = currentFiles[fileId]
-    if (!currentFile) {
-      throw new Error(`File not found: ${fileId} in project ${projectId}`)
-    }
-
-    const updatedFileObject = {
-      ...currentFile,
+    const fileStorage = this.getFileStorage(projectId)
+    const file = await fileStorage.create({
       ...fileData,
-      updated: Date.now()
-    }
-
-    const validationResult = await ProjectFileSchema.safeParseAsync(updatedFileObject)
-    if (!validationResult.success) {
-      console.error(`Zod validation failed for file ${fileId} in project ${projectId}:`, validationResult.error.errors)
-      throw new ZodError(validationResult.error.errors)
-    }
-    const validatedFileData = validationResult.data
-
-    currentFiles[fileId] = validatedFileData
-    await this.writeProjectFiles(projectId, currentFiles)
-    return validatedFileData
-  },
-
-  // NEW: Create a new version of a file instead of updating existing
-  async createFileVersion(
-    projectId: number,
-    currentFileId: number,
-    newContent: string,
-    additionalData?: Partial<
-      Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated' | 'version' | 'prevId' | 'nextId' | 'isLatest'>
-    >
-  ): Promise<ProjectFile> {
-    const currentFiles = await this.readProjectFiles(projectId)
-    const currentFile = currentFiles[currentFileId]
-
-    if (!currentFile) {
-      throw new Error(`File not found: ${currentFileId} in project ${projectId}`)
-    }
-
-    if (!currentFile.isLatest) {
-      throw new Error(`Cannot create version from non-latest file: ${currentFileId}`)
-    }
-
-    // Generate new ID for the new version
-    const newVersionId = this.generateId()
-    const now = Date.now()
-
-    // Create the new version
-    const newVersion: ProjectFile = {
-      ...currentFile,
-      ...additionalData,
-      id: newVersionId,
-      content: newContent,
-      version: currentFile.version + 1,
-      prevId: currentFileId,
-      nextId: null,
-      isLatest: true,
-      size: Buffer.byteLength(newContent, 'utf8'),
-      updated: now,
-      originalFileId: currentFile.originalFileId || currentFile.id // Set to first version ID
-    }
-
-    // Update the current file to no longer be latest and point to new version
-    const updatedCurrentFile: ProjectFile = {
-      ...currentFile,
-      nextId: newVersionId,
-      isLatest: false,
-      updated: now
-    }
-
-    // Validate both files
-    const newVersionValidation = await ProjectFileSchema.safeParseAsync(newVersion)
-    const currentFileValidation = await ProjectFileSchema.safeParseAsync(updatedCurrentFile)
-
-    if (!newVersionValidation.success) {
-      throw new ZodError(newVersionValidation.error.errors)
-    }
-    if (!currentFileValidation.success) {
-      throw new ZodError(currentFileValidation.error.errors)
-    }
-
-    // Save both files
-    currentFiles[currentFileId] = currentFileValidation.data
-    currentFiles[newVersionId] = newVersionValidation.data
-
-    await this.writeProjectFiles(projectId, currentFiles)
-    return newVersionValidation.data
-  },
-
-  // NEW: Get all versions of a file
-  async getFileVersions(projectId: number, originalFileId: number): Promise<ProjectFile[]> {
-    const files = await this.readProjectFiles(projectId)
-    const versions: ProjectFile[] = []
-
-    // Find all versions of this file
-    for (const file of Object.values(files)) {
-      if (file.originalFileId === originalFileId || file.id === originalFileId) {
-        versions.push(file)
-      }
-    }
-
-    // Sort by version number
-    return versions.sort((a, b) => a.version - b.version)
-  },
-
-  // NEW: Get specific version of a file
-  async getFileVersion(projectId: number, originalFileId: number, version: number): Promise<ProjectFile | null> {
-    const versions = await this.getFileVersions(projectId, originalFileId)
-    return versions.find((v) => v.version === version) || null
-  },
-
-  // NEW: Get latest version of a file
-  async getLatestFileVersion(projectId: number, originalFileId: number): Promise<ProjectFile | null> {
-    const files = await this.readProjectFiles(projectId)
-
-    // Find the latest version
-    for (const file of Object.values(files)) {
-      if ((file.originalFileId === originalFileId || file.id === originalFileId) && file.isLatest) {
-        return file
-      }
-    }
-
-    return null
-  },
-
-  // NEW: Revert to a specific version (creates new version with old content)
-  async revertToVersion(projectId: number, currentFileId: number, targetVersion: number): Promise<ProjectFile> {
-    const currentFiles = await this.readProjectFiles(projectId)
-    const currentFile = currentFiles[currentFileId]
-
-    if (!currentFile) {
-      throw new Error(`File not found: ${currentFileId} in project ${projectId}`)
-    }
-
-    const originalFileId = currentFile.originalFileId || currentFile.id
-    const targetVersionFile = await this.getFileVersion(projectId, originalFileId, targetVersion)
-
-    if (!targetVersionFile) {
-      throw new Error(`Version ${targetVersion} not found for file`)
-    }
-
-    // Create new version with content from target version
-    return this.createFileVersion(projectId, currentFileId, targetVersionFile.content, {
-      checksum: targetVersionFile.checksum,
-      meta: targetVersionFile.meta
+      projectId
     })
-  },
 
-  async readProjectFile(projectId: number, fileId: number): Promise<ProjectFile | undefined> {
-    const files = await this.readProjectFiles(projectId)
-    return files[fileId]
-  },
+    // Update project's updated timestamp
+    await this.update(projectId, { updated: Date.now() })
 
-  async deleteProjectData(projectId: number): Promise<void> {
-    const dirPath = getProjectDataDir(projectId)
-    try {
-      await fs.access(dirPath)
-      await fs.rm(dirPath, { recursive: true, force: true })
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        console.warn(`Project data directory not found, nothing to delete: ${dirPath}`)
-      } else {
-        console.error(`Error deleting project data directory ${dirPath}:`, error)
-        throw new Error(`Failed to delete project data directory: ${dirPath}. Reason: ${error.message}`)
-      }
-    }
-  },
+    return file
+  }
 
-  async getProjectFileArray(projectId: number) {
-    const filesMap = await this.readProjectFiles(projectId)
-    const filesArray: ProjectFile[] = []
-    for (const fileId in filesMap) {
-      if (Object.prototype.hasOwnProperty.call(filesMap, fileId)) {
-        const file = filesMap[fileId]
-        if (file) {
-          filesArray.push(file)
-        }
-      }
+  /**
+   * Get project files
+   */
+  public async getProjectFiles(projectId: number): Promise<ProjectFile[]> {
+    const fileStorage = this.getFileStorage(projectId)
+    return fileStorage.list()
+  }
 
-      return filesArray
-    }
-  },
-
-  generateId: (): number => {
-    try {
-      return unixTimestampSchema.parse(Date.now())
-    } catch (error) {
-      console.error(`CRITICAL: Date.now() produced invalid timestamp for ID generation: ${error}`)
-      throw new Error('Failed to generate a valid timestamp-based ID from the current time.')
-    }
+  /**
+   * Search files in project
+   */
+  public async searchFiles(projectId: number, query: string): Promise<ProjectFile[]> {
+    const fileStorage = this.getFileStorage(projectId)
+    return fileStorage.search(query)
   }
 }
+
+/**
+ * File storage for project files
+ */
+export class ProjectFileStorage extends BaseStorage<ProjectFile, ProjectFilesStorage> {
+  private projectId: number
+
+  constructor(projectId: number, basePath: string, dataDir: string, options: StorageOptions = {}) {
+    const fileDataDir = path.join(dataDir, projectId.toString(), 'files')
+    super(ProjectFilesStorageSchema, ProjectFileSchema, fileDataDir, { ...options, basePath })
+
+    this.projectId = projectId
+  }
+
+  protected getIndexPath(): string {
+    return path.join(this.basePath, this.dataDir, 'files.json')
+  }
+
+  protected getEntityPath(id: number): string | null {
+    // Files don't have separate entity paths
+    return null
+  }
+
+  public async initialize(): Promise<void> {
+    // Ensure the directory structure exists
+    try {
+      await this.readAll()
+    } catch (error) {
+      // If files don't exist, create empty storage
+      await this.writeAll({})
+    }
+  }
+
+  // Override create to ensure projectId
+  public async create(data: Omit<ProjectFile, 'id' | 'created' | 'updated'>): Promise<ProjectFile> {
+    return super.create({
+      ...data,
+      projectId: this.projectId
+    })
+  }
+
+  /**
+   * Search files by content or path
+   */
+  public async search(query: string): Promise<ProjectFile[]> {
+    const allFiles = await this.list()
+    const lowercaseQuery = query.toLowerCase()
+    return allFiles
+      .filter(
+        (f) => 
+          f.path.toLowerCase().includes(lowercaseQuery) ||
+          (f.content && f.content.toLowerCase().includes(lowercaseQuery))
+      )
+      .sort((a, b) => b.updated - a.updated)
+  }
+
+  /**
+   * Get files by extension
+   */
+  public async getByExtension(extension: string): Promise<ProjectFile[]> {
+    const all = await this.list()
+    return all
+      .filter(file => file.extension === extension)
+      .sort((a, b) => a.path.localeCompare(b.path))
+  }
+
+  /**
+   * Get file by path
+   */
+  public async getByPath(filePath: string): Promise<ProjectFile | null> {
+    const all = await this.list()
+    return all.find(file => file.path === filePath) || null
+  }
+
+  // Override update to handle content and checksum
+  public async update(
+    id: number,
+    data: Partial<Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>>
+  ): Promise<ProjectFile | null> {
+    // Calculate checksum if content is being updated
+    let updateData = { ...data }
+    if (data.content !== undefined) {
+      updateData.checksum = this.calculateChecksum(data.content)
+      updateData.size = Buffer.byteLength(data.content, 'utf8')
+    }
+
+    return super.update(id, updateData)
+  }
+
+  private calculateChecksum(content: string): string {
+    // Simple hash function for demonstration
+    let hash = 0
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i)
+      hash = (hash << 5) - hash + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    return hash.toString(16)
+  }
+
+  // Add version creation method
+  public async createVersion(
+    currentId: number,
+    newContent: string,
+    metadata?: { extension?: string; size?: number; checksum?: string }
+  ): Promise<ProjectFile> {
+    const current = await this.getById(currentId)
+    if (!current) {
+      throw new Error(`File ${currentId} not found for versioning`)
+    }
+
+    // Mark current as not latest
+    await this.update(currentId, { isLatest: false })
+
+    // Create new version
+    const newVersion = await this.create({
+      ...current,
+      content: newContent,
+      version: current.version + 1,
+      prevId: currentId,
+      isLatest: true,
+      originalFileId: current.originalFileId || current.id,
+      ...metadata
+    })
+
+    // Update current to point to new version
+    await this.update(currentId, { nextId: newVersion.id })
+
+    return newVersion
+  }
+}
+
+// Export singleton instance directly for V2 API access
+export const projectStorage = new ProjectStorage(STORAGE_CONFIG)

@@ -1,9 +1,2 @@
-// agents
-export * from './src/mastra/agents/enhanced-coder-agent'
-export * from './src/mastra/agents/mastra-coder-simplified-service'
-
-// Tools
-export * from './src/mastra/tools/file-tools'
-
-// Workflows
-export * from './src/mastra/workflows/simple-agent-orchestrator'
+// Note: Agent and tool exports removed due to consolidation with Claude Code
+// All agent functionality is now handled through Claude Code integration

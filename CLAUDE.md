@@ -1,80 +1,176 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+OctoPrompt guidance for Claude Code (claude.ai/code).
 
 ## Commands
 
 ### Development
-
-- `bun run dev` - Start both client and server in development mode
-- `bun run dev:client` - Start only client (port 5173)
-- `bun run dev:server` - Start only server (port 3147)
+- `bun run dev` - Start client and server
+- `bun run dev:client` - Client only (port 5173)
+- `bun run dev:server` - Server only (port 3147)
 
 ### Testing
+- `bun run test:all` - Run all tests
+- `bun run test:[package]` - Run specific package tests
+- `bun run e2e` - Run Playwright E2E tests
 
-- `bun run test:server` - Run server tests
-- `bun run test:shared` - Run shared package tests
-- `bun run test:schemas` - Run schema tests
-
-### Production Build
-
+### Build
 - `bun run build-binaries` - Build cross-platform binaries
-- `bun run format` - Format all code with Prettier
+- `bun run format` - Format with Prettier
 
-## Architecture
+## Code Principles
 
-OctoPrompt is a TypeScript monorepo using Bun with workspace packages for modular development. The codebase follows a layered architecture pattern:
+- Write self-explanatory, modular, functional code
+- Follow DRY, SRP, KISS principles
+- Make code unit-testable
+- Use descriptive naming, avoid magic numbers
+- Keep files concise
 
-### Core Structure
+## TypeScript Rules
 
-- **Client**: React 19 + Vite frontend with ShadCN UI components, TanStack Router/Query
-- **Server**: Bun + Hono backend with OpenAPI specs and file-based JSON storage
-- **Schemas**: Zod schemas shared between client/server for type safety
-- **Services**: Business logic layer orchestrating storage operations
-- **Storage**: JSON file persistence with atomic operations and validation
+1. **Strong Typing**: No `any`, use Zod schemas
+2. **Functional Style**: Pure functions, minimal side effects
+3. **Error Handling**: Throw typed errors or return error objects
+4. **Minimal Dependencies**: Prefer Bun/standard lib
+5. **Single Responsibility**: One concept per file
+6. **Clear Documentation**: Concise docstrings for complex logic
 
-### Data Flow
+## OctoPrompt Specifics
 
-1. **API Layer** (`packages/server/src/routes/`) - Hono routes with OpenAPI validation
-2. **Services Layer** (`packages/services/src/`) - Business logic and orchestration
-3. **Storage Layer** (`packages/storage/src/`) - JSON file operations with Zod validation
+- **IDs & Timestamps**: Unix timestamps in milliseconds, `-1` = null
+- **Maps**: Use `Map()` for numeric keys (not plain objects)
+- **File Structure**: Schema → Storage → Service → Routes
+- **Type Safety**: Zod + Hono validation
+- **Route Order**: Critical - specific routes before parameterized
 
-### Key Patterns
+## Project Structure
 
-- **Unix millisecond timestamps** for all IDs, created/updated fields
-- **Route ordering matters** in Hono - most specific routes first
-- **Schema-first development** - all types derived from Zod schemas via `z.infer<>`
-- **Monorepo workspace imports** using `@octoprompt/*` namespaces
+```
+packages/
+  ai/                    # Mastra AI integration
+  api-client/            # Type-safe API client
+  client/                # React frontend (Vite + TanStack)
+  schemas/               # Zod schemas and types
+  server/                # Hono backend
+  services/              # Business logic
+  shared/                # Utilities
+  storage/               # V2 storage with caching/indexing
 
-### AI Integration
+data/                    # Runtime storage
+scripts/                 # Build scripts
+docs/                    # Documentation
+```
 
-Multi-provider AI support via Vercel AI SDK with configurable model defaults in `packages/shared/src/constants/model-default-configs.ts`. File summarization, code generation, and chat functionality throughout the application.
+## Storage V2 Features
 
-### File Synchronization
+- **LRU Caching** with TTL
+- **Indexing**: Hash (O(1)) and B-tree for ranges
+- **Migrations**: Versioned schema evolution
+- **Adapters**: File-based (prod) and memory (test)
+- **Concurrency**: File locking, atomic operations
 
-Real-time project file watching and synchronization with Git-aware ignore patterns. Project files are indexed and summarized for AI context building.
+```typescript
+const storage = new StorageV2<Project>({
+  adapter: new FileAdapter('projects'),
+  indexes: [
+    { field: 'id', type: 'hash' },
+    { field: 'created', type: 'btree' }
+  ],
+  cache: { maxSize: 100, ttl: 300000 }
+})
+```
 
-## Development Guidelines
+## Frontend Stack
 
-### TypeScript Standards
+- React 19 with Compiler
+- TanStack Router/Query
+- ShadCN UI (Radix)
+- Monaco Editor
+- Tailwind CSS
 
-- Use strong typing, avoid `any`
-- Leverage Zod schemas for validation and type inference
-- Prefer functional programming patterns
-- Write testable, single-responsibility functions
+### Key Hooks Pattern
+```typescript
+export function useCreateChat() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
+    onSuccess: () => { /* invalidate queries */ }
+  })
+}
+```
 
-### Error Handling
+## Backend Architecture
 
-- Use custom `ApiError` class for consistent API responses
-- Global error handler in `app.ts` catches and formats errors
-- Validate data at storage and API boundaries
+### Layers
+1. **Storage**: Enhanced JSON storage with V2 features
+2. **Services**: Business logic orchestration
+3. **Routes**: Hono + OpenAPI specs
 
-### Testing
+### Core Patterns
+- **Error Handling**: `ApiError` class
+- **Validation**: Zod at storage and API layers
+- **ID Generation**: `Date.now()` with collision handling
 
-- Unit tests for services with mocked storage
-- Functional API tests against running server
-- Use `bun:test` framework throughout
+## AI Integration
 
-### ID Generation
+- **Multi-Provider**: OpenAI, Anthropic, Google, Groq
+- **Mastra Framework**: Agents and workflows
+- **Streaming**: Real-time responses
+- **Model Configs**: LOW, MEDIUM, HIGH presets
 
-Storage layers use `generateId()` which returns Unix milliseconds, with collision handling by incrementing until unique.
+## Testing
+
+- **Runner**: Bun test
+- **E2E**: Playwright
+- **API**: Type-safe functional tests
+- **Patterns**: Schema validation, mocking, cleanup
+
+## Hono Route Ordering
+
+Order routes from most to least specific:
+1. Exact literals (`/api/health`)
+2. Literal + param (`/api/users/me`)
+3. Single param (`/api/users/{id}`)
+4. Multi-param (`/api/projects/{pId}/files/{fId}`)
+5. Catch-alls (`*`)
+
+## Utilities
+
+**Schemas (`@octoprompt/schemas`)**
+- `unixTSSchemaSpec` - Unix timestamp validation
+- Model configs: `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`
+
+**Shared (`@octoprompt/shared`)**
+- `mergeDeep()` - Recursive object merge
+- `writeJson()` - Write with optional Zod validation
+- `readJson()` - Read and parse JSON
+- `normalizeToUnixMs()` - Convert to Unix ms
+- `ApiError` - Consistent error handling
+
+## Configuration
+
+**Prettier**
+```json
+{
+  "semi": false,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 100
+}
+```
+
+**TypeScript**
+- Strict mode enabled
+- Path aliases
+- ES2022 target
+
+## Important Reminders
+
+- NEVER create files unless necessary
+- ALWAYS prefer editing existing files
+- Use appropriate AI model configs
+- Write tests for new functionality
+- Use Storage V2 features for performance
+- Validate route ordering
+- Handle errors consistently

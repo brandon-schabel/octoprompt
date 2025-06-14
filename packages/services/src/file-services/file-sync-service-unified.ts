@@ -7,7 +7,7 @@ import ignorePackage, { type Ignore } from 'ignore'
 import {
   getProjectFiles,
   bulkCreateProjectFiles,
-  bulkUpdateProjectFiles,
+  bulkUpdateProjectFilesForSync,
   bulkDeleteProjectFiles,
   type FileSyncData, // Interface from project-service
   listProjects
@@ -446,7 +446,7 @@ export async function syncFileSet(
     }
     if (filesToUpdate.length > 0) {
       // console.log(`[FileSync] Updating ${filesToUpdate.length} existing file records...`);
-      const updatedResult = await bulkUpdateProjectFiles(project.id, filesToUpdate)
+      const updatedResult = await bulkUpdateProjectFilesForSync(project.id, filesToUpdate)
       updatedCount = updatedResult.length
     }
     if (fileIdsToDelete.length > 0) {

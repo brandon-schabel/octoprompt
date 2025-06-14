@@ -41,7 +41,7 @@ const mainNavItems = [
     title: 'Projects',
     to: '/projects',
     icon: FolderIcon,
-    routeIds: ['/projects', '/project-summarization']
+    routeIds: ['/projects']
   },
   { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
   { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },

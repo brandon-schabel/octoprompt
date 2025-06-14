@@ -11,9 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PromptsRouteImport } from './routes/prompts'
 import { Route as ProjectsRouteImport } from './routes/projects'
-import { Route as ProjectSummarizationRouteImport } from './routes/project-summarization'
 import { Route as KeysRouteImport } from './routes/keys'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as ClaudeCodeRouteImport } from './routes/claude-code'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -27,11 +27,6 @@ const ProjectsRoute = ProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjectSummarizationRoute = ProjectSummarizationRouteImport.update({
-  id: '/project-summarization',
-  path: '/project-summarization',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const KeysRoute = KeysRouteImport.update({
   id: '/keys',
   path: '/keys',
@@ -40,6 +35,11 @@ const KeysRoute = KeysRouteImport.update({
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClaudeCodeRoute = ClaudeCodeRouteImport.update({
+  id: '/claude-code',
+  path: '/claude-code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -56,18 +56,18 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
-  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
-  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
 }
@@ -75,9 +75,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
-  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
 }
@@ -86,27 +86,27 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/chat'
+    | '/claude-code'
     | '/health'
     | '/keys'
-    | '/project-summarization'
     | '/projects'
     | '/prompts'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/chat'
+    | '/claude-code'
     | '/health'
     | '/keys'
-    | '/project-summarization'
     | '/projects'
     | '/prompts'
   id:
     | '__root__'
     | '/'
     | '/chat'
+    | '/claude-code'
     | '/health'
     | '/keys'
-    | '/project-summarization'
     | '/projects'
     | '/prompts'
   fileRoutesById: FileRoutesById
@@ -114,9 +114,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
+  ClaudeCodeRoute: typeof ClaudeCodeRoute
   HealthRoute: typeof HealthRoute
   KeysRoute: typeof KeysRoute
-  ProjectSummarizationRoute: typeof ProjectSummarizationRoute
   ProjectsRoute: typeof ProjectsRoute
   PromptsRoute: typeof PromptsRoute
 }
@@ -137,13 +137,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/project-summarization': {
-      id: '/project-summarization'
-      path: '/project-summarization'
-      fullPath: '/project-summarization'
-      preLoaderRoute: typeof ProjectSummarizationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/keys': {
       id: '/keys'
       path: '/keys'
@@ -156,6 +149,13 @@ declare module '@tanstack/react-router' {
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/claude-code': {
+      id: '/claude-code'
+      path: '/claude-code'
+      fullPath: '/claude-code'
+      preLoaderRoute: typeof ClaudeCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat': {
@@ -178,9 +178,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
+  ClaudeCodeRoute: ClaudeCodeRoute,
   HealthRoute: HealthRoute,
   KeysRoute: KeysRoute,
-  ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
   PromptsRoute: PromptsRoute,
 }

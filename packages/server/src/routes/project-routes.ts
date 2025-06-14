@@ -8,16 +8,15 @@ import {
   ProjectResponseSchema,
   ProjectListResponseSchema,
   FileListResponseSchema,
+  ProjectFileWithoutContentListResponseSchema,
+  FileResponseSchema,
   ProjectResponseMultiStatusSchema,
   ProjectSummaryResponseSchema,
-  RemoveSummariesBodySchema,
-  SuggestFilesBodySchema,
-  SummarizeFilesBodySchema,
   ProjectFileSchema,
   ProjectFile,
+  FileVersionParamsSchema,
   FileVersionListResponseSchema,
-  RevertToVersionBodySchema,
-  GetFileVersionParams
+  GetFileVersionParamsSchema
 } from '@octoprompt/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
@@ -28,13 +27,6 @@ import { homedir as getHomedir } from 'node:os'
 
 import * as projectService from '@octoprompt/services'
 import { getFullProjectSummary } from '@octoprompt/services'
-import {
-  SuggestFilesResponseSchema,
-  FileSummaryListResponseSchema,
-  SummarizeFilesResponseSchema,
-  RemoveSummariesResponseSchema,
-  FileSuggestionsZodSchema
-} from '@octoprompt/schemas'
 import { optimizeUserInput, syncProject, syncProjectFolder, watchersManager } from '@octoprompt/services'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
 
@@ -42,11 +34,6 @@ import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@o
 const FileIdParamsSchema = z.object({
   projectId: z.coerce.number().int().positive(),
   fileId: z.coerce.number().int().positive()
-})
-
-const FileVersionParamsSchema = z.object({
-  projectId: z.coerce.number().int().positive(),
-  originalFileId: z.coerce.number().int().positive()
 })
 
 const UpdateFileContentBodySchema = z.object({
@@ -75,14 +62,24 @@ const BulkUpdateFilesBodySchema = z.object({
   )
 })
 
-const FileResponseSchema = z.object({
-  success: z.literal(true),
-  data: ProjectFileSchema
-})
-
 const BulkFilesResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(ProjectFileSchema)
+})
+
+const SuggestFilesBodySchema = z.object({
+  prompt: z.string().min(1).describe('The prompt to analyze for file suggestions'),
+  limit: z.number().int().positive().optional().default(10).describe('Maximum number of files to suggest')
+})
+
+const SuggestFilesResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.array(ProjectFileSchema)
+})
+
+// Revert to version schema
+const RevertToVersionBodySchema = z.object({
+  versionNumber: z.number().int().positive()
 })
 
 // Existing route definitions...
@@ -206,11 +203,9 @@ const getProjectFilesRoute = createRoute({
   summary: 'Get the list of files associated with a project',
   request: {
     params: ProjectIdParamsSchema,
-    query: z
-      .object({
-        includeAllVersions: z.coerce.boolean().optional().default(false)
-      })
-      .optional()
+    query: z.object({
+      includeAllVersions: z.coerce.boolean().optional().default(false)
+    })
   },
   responses: {
     200: {
@@ -230,15 +225,13 @@ const getProjectFilesWithoutContentRoute = createRoute({
   summary: 'Get the list of files associated with a project without content (for performance)',
   request: {
     params: ProjectIdParamsSchema,
-    query: z
-      .object({
-        includeAllVersions: z.coerce.boolean().optional().default(false)
-      })
-      .optional()
+    query: z.object({
+      includeAllVersions: z.coerce.boolean().optional().default(false)
+    })
   },
   responses: {
     200: {
-      content: { 'application/json': { schema: FileListResponseSchema } },
+      content: { 'application/json': { schema: ProjectFileWithoutContentListResponseSchema } },
       description: 'Successfully retrieved project files metadata'
     },
     404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
@@ -275,7 +268,7 @@ const getFileVersionRoute = createRoute({
   summary: 'Get a specific version of a file (or latest if no version specified)',
   request: {
     params: FileVersionParamsSchema,
-    query: GetFileVersionParams.optional()
+    query: GetFileVersionParamsSchema
   },
   responses: {
     200: {
@@ -421,7 +414,7 @@ const suggestFilesRoute = createRoute({
   method: 'post',
   path: '/api/projects/{projectId}/suggest-files',
   tags: ['Projects', 'Files', 'AI'],
-  summary: 'Suggest relevant files based on user input and project context',
+  summary: 'Suggest relevant files based on a prompt',
   request: {
     params: ProjectIdParamsSchema,
     body: { content: { 'application/json': { schema: SuggestFilesBodySchema } } }
@@ -432,58 +425,6 @@ const suggestFilesRoute = createRoute({
       description: 'Successfully suggested files'
     },
     404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error or AI processing error'
-    }
-  }
-})
-
-const summarizeFilesRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/summarize',
-  tags: ['Projects', 'Files', 'AI'],
-  summary: 'Summarize selected files in a project (or force re-summarize)',
-  request: {
-    params: ProjectIdParamsSchema,
-    body: { content: { 'application/json': { schema: SummarizeFilesBodySchema } } }
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: SummarizeFilesResponseSchema } },
-      description: 'File summarization process completed'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or some files not found'
-    },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Internal Server Error during summarization'
-    }
-  }
-})
-
-const removeSummariesRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/remove-summaries',
-  tags: ['Projects', 'Files'],
-  summary: 'Remove summaries from selected files',
-  request: {
-    params: ProjectIdParamsSchema,
-    body: { content: { 'application/json': { schema: RemoveSummariesBodySchema } } }
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: RemoveSummariesResponseSchema } },
-      description: 'Summaries removed successfully'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or some files not found'
-    },
     422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
@@ -651,7 +592,7 @@ export const projectRoutes = new OpenAPIHono()
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const files = await projectService.getProjectFiles(projectId, query?.includeAllVersions || false)
+    const files = await projectService.getProjectFiles(projectId, query.includeAllVersions || false)
     const payload = {
       success: true,
       data: files ?? []
@@ -666,11 +607,11 @@ export const projectRoutes = new OpenAPIHono()
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const files = await projectService.getProjectFilesWithoutContent(projectId, query?.includeAllVersions || false)
+    const files = await projectService.getProjectFilesWithoutContent(projectId, query.includeAllVersions || false)
     const payload = {
       success: true,
       data: files ?? []
-    } satisfies z.infer<typeof FileListResponseSchema>
+    } satisfies z.infer<typeof ProjectFileWithoutContentListResponseSchema>
     return c.json(payload, 200)
   })
 
@@ -688,7 +629,11 @@ export const projectRoutes = new OpenAPIHono()
   .openapi(getFileVersionRoute, async (c) => {
     const { projectId, originalFileId } = c.req.valid('param')
     const query = c.req.valid('query')
-    const fileVersion = await projectService.getFileVersion(projectId, originalFileId, Number(query?.version))
+    const fileVersion = await projectService.getFileVersion(
+      projectId,
+      originalFileId,
+      query.version ? Number(query.version) : undefined
+    )
 
     if (!fileVersion) {
       throw new ApiError(404, `File version not found`, 'FILE_VERSION_NOT_FOUND')
@@ -740,7 +685,7 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId } = c.req.valid('param')
     const { updates } = c.req.valid('json')
 
-    // Create new versions for each file instead of updating existing content
+    // Update file content directly
     const updatedFiles: ProjectFile[] = []
 
     console.log({ projectId, updates, updatedFiles })
@@ -798,103 +743,37 @@ export const projectRoutes = new OpenAPIHono()
   .openapi(getProjectSummaryRoute, async (c) => {
     const { projectId } = c.req.valid('param')
 
-    let summary = await getFullProjectSummary(projectId)
+    try {
+      const summary = await getFullProjectSummary(projectId)
 
-    if (typeof summary === 'object') {
-      throw new ApiError(500, summary.message, 'AI_SUMMARY_ERROR')
+      const payload: z.infer<typeof ProjectSummaryResponseSchema> = {
+        success: true,
+        summary: summary
+      }
+
+      return c.json(payload, 200)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError(
+        500,
+        `Failed to generate project summary: ${error instanceof Error ? error.message : String(error)}`,
+        'AI_SUMMARY_ERROR'
+      )
     }
-
-    const payload: z.infer<typeof ProjectSummaryResponseSchema> = {
-      success: true,
-      summary: summary as string
-    }
-
-    return c.json(payload, 200)
   })
   .openapi(suggestFilesRoute, async (c) => {
     const { projectId } = c.req.valid('param')
-    const { userInput } = c.req.valid('json')
+    const { prompt, limit } = c.req.valid('json')
 
-    const projectSummary = await getFullProjectSummary(projectId)
-    const systemPrompt = `
-<role>
-You are a code assistant that recommends relevant files based on user input.
-You have a list of file summaries and a user request.
-</role>
+    const suggestedFiles = await projectService.suggestFiles(projectId, prompt, limit)
 
-<response_format>
-    {"fileIds": ["9d679879sad7fdf324312", "9d679879sad7fdf324312"]}
-</response_format>
-
-<guidelines>
-- For simple tasks: return max 5 files
-- For complex tasks: return max 10 files
-- For very complex tasks: return max 20 files
-- Do not add comments in your response
-- Strictly follow the JSON schema, do not add any additional properties or comments
-- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
-</guidelines>
-        `
-
-    const userPrompt = `
-<project_summary>
-${projectSummary}
-</project_summary>
-
-<user_query>
-${userInput}
-</user_query>
-`
-    try {
-      // TODO: Replace with Mastra file suggestion service when ready
-      const projectFiles = await projectService.getProjectFiles(projectId)
-      const availableFileIds = projectFiles.map((f) => f.id)
-
-      // Mock implementation - return first few files as suggestions
-      const numericFileIds = availableFileIds.slice(0, Math.min(3, availableFileIds.length))
-
-      const payload = {
-        success: true,
-        recommendedFileIds: numericFileIds
-      } satisfies z.infer<typeof SuggestFilesResponseSchema>
-
-      return c.json(payload, 200)
-    } catch (error: any) {
-      console.error('[SuggestFiles Project] Error:', error)
-      if (error instanceof ApiError) throw error
-      throw new ApiError(500, `Failed to suggest files: ${error.message}`, 'AI_SUGGESTION_ERROR')
-    }
-  })
-
-  .openapi(summarizeFilesRoute, async (c) => {
-    const { projectId } = c.req.valid('param')
-    const { fileIds, force } = c.req.valid('json')
-
-    const result = await summarizeFiles(projectId, fileIds)
-
-    const payload: z.infer<typeof SummarizeFilesResponseSchema> = {
+    const payload = {
       success: true,
-      message: 'Summarization process completed.',
-      included: result.included,
-      skipped: result.skipped,
-      updatedFiles: result.updatedFiles
-    }
-    return c.json(payload, 200)
-  })
+      data: suggestedFiles
+    } satisfies z.infer<typeof SuggestFilesResponseSchema>
 
-  .openapi(removeSummariesRoute, async (c) => {
-    const { projectId } = c.req.valid('param')
-    const { fileIds } = c.req.valid('json')
-    const result = await projectService.removeSummariesFromFiles(projectId, fileIds)
-    if (typeof result.removedCount !== 'number') {
-      console.error('Removal of summaries reported failure from service:', result)
-      throw new ApiError(500, result.message || 'Failed to remove summaries')
-    }
-    const payload: z.infer<typeof RemoveSummariesResponseSchema> = {
-      success: true,
-      removedCount: result.removedCount,
-      message: result.message
-    }
     return c.json(payload, 200)
   })
   .openapi(optimizeUserInputRoute, async (c) => {

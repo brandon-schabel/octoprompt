@@ -1,14 +1,7 @@
 import { z } from 'zod'
 
 // Import only the actual types we need (not response schemas)
-import type {
-  CreateChatBody,
-  UpdateChatBody,
-  AiChatStreamRequest,
-  Chat,
-  ChatMessage,
-  FileVersion
-} from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@octoprompt/schemas'
 
 import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody } from '@octoprompt/schemas'
 
@@ -32,15 +25,11 @@ import {
   ProjectResponseSchema as ProjectResponseSchemaZ,
   ProjectListResponseSchema as ProjectListResponseSchemaZ,
   FileListResponseSchema as FileListResponseSchemaZ,
+  FileResponseSchema as FileResponseSchemaZ,
   ProjectSummaryResponseSchema as ProjectSummaryResponseSchemaZ,
   CreateProjectBodySchema,
   UpdateProjectBodySchema,
-  SummarizeFilesBodySchema,
-  RemoveSummariesBodySchema,
-  SuggestFilesBodySchema,
-  RefreshQuerySchema,
-  FileVersionListResponseSchema,
-  RevertToVersionBodySchema
+  RefreshQuerySchema
 } from '@octoprompt/schemas'
 
 import {
@@ -65,12 +54,6 @@ import {
 } from '@octoprompt/schemas'
 
 import {
-  SuggestFilesResponseSchema as SuggestFilesResponseSchemaZ,
-  SummarizeFilesResponseSchema as SummarizeFilesResponseSchemaZ,
-  RemoveSummariesResponseSchema as RemoveSummariesResponseSchemaZ
-} from '@octoprompt/schemas'
-
-import {
   AiGenerateTextRequestSchema,
   AiGenerateTextResponseSchema,
   AiGenerateStructuredRequestSchema,
@@ -80,19 +63,26 @@ import {
   type UnifiedModel
 } from '@octoprompt/schemas'
 
+// Claude Code imports
+import type {
+  ClaudeCodeRequest,
+  ClaudeCodeResult,
+  ClaudeCodeSession,
+  ClaudeCodeSessionList,
+  GetAuditLogsQuery,
+  ClaudeCodeAuditLog,
+  AuditLogSummary
+} from '@octoprompt/schemas'
+
 import {
-  MastraCodeChangeRequestSchema,
-  MastraCodeChangeResponseSchema,
-  MastraSummarizeRequestSchema,
-  MastraSummarizeResponseSchema,
-  MastraSingleSummarizeRequestSchema,
-  MastraSingleSummarizeResponseSchema,
-  type MastraCodeChangeRequest,
-  type MastraCodeChangeResponse,
-  type MastraSummarizeRequest,
-  type MastraSummarizeResponse,
-  type MastraSingleSummarizeRequest,
-  type MastraSingleSummarizeResponse
+  ClaudeCodeRequestSchema,
+  ClaudeCodeContinueRequestSchema,
+  ClaudeCodeResultSchema,
+  ClaudeCodeSessionSchema,
+  ClaudeCodeSessionListSchema,
+  GetAuditLogsQuerySchema,
+  ClaudeCodeAuditLogSchema,
+  AuditLogSummarySchema
 } from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
@@ -232,6 +222,18 @@ class BaseApiClient {
       throw e
     }
   }
+
+  // Build query string from object
+  protected buildQueryString(params: Record<string, any>): string {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value))
+      }
+    }
+    const queryString = searchParams.toString()
+    return queryString ? `?${queryString}` : ''
+  }
 }
 
 // Chat Service
@@ -361,8 +363,6 @@ export class ChatService extends BaseApiClient {
   }
 }
 
-type SummarizeFilesResponse = z.infer<typeof SummarizeFilesResponseSchemaZ>
-
 // Project Service
 export class ProjectService extends BaseApiClient {
   async listProjects() {
@@ -419,45 +419,12 @@ export class ProjectService extends BaseApiClient {
     return result as DataResponseSchema<ProjectFile[]>
   }
 
-  // NEW: Get project files without content for performance optimization
-  async getProjectFilesWithoutContent(projectId: number, includeAllVersions: boolean = false) {
+  // Get project files without content for performance optimization
+  async getProjectFilesWithoutContent(projectId: number) {
     const result = await this.request('GET', `/projects/${projectId}/files/metadata`, {
-      params: { includeAllVersions },
       responseSchema: FileListResponseSchemaZ
     })
     return result as DataResponseSchema<Omit<ProjectFile, 'content'>[]>
-  }
-
-  // NEW: File versioning methods
-  async getFileVersions(projectId: number, originalFileId: number) {
-    const result = await this.request('GET', `/projects/${projectId}/files/${originalFileId}/versions`, {
-      responseSchema: FileVersionListResponseSchema
-    })
-    return result as DataResponseSchema<FileVersion[]>
-  }
-
-  async getFileVersion(projectId: number, originalFileId: number, version?: number) {
-    const params = version ? { version } : undefined
-    const result = await this.request('GET', `/projects/${projectId}/files/${originalFileId}/version`, {
-      params,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.unknown()
-      })
-    })
-    return result as DataResponseSchema<ProjectFile>
-  }
-
-  async revertFileToVersion(projectId: number, fileId: number, targetVersion: number) {
-    const validatedData = this.validateBody(RevertToVersionBodySchema, { version: targetVersion })
-    const result = await this.request('POST', `/projects/${projectId}/files/${fileId}/revert`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.unknown()
-      })
-    })
-    return result as DataResponseSchema<ProjectFile>
   }
 
   async refreshProject(projectId: number, query?: z.infer<typeof RefreshQuerySchema>) {
@@ -478,34 +445,6 @@ export class ProjectService extends BaseApiClient {
     }
   }
 
-  async suggestFiles(projectId: number, data: z.infer<typeof SuggestFilesBodySchema>) {
-    const validatedData = this.validateBody(SuggestFilesBodySchema, data)
-    const result = await this.request('POST', `/projects/${projectId}/suggest-files`, {
-      body: validatedData,
-      responseSchema: SuggestFilesResponseSchemaZ
-    })
-    return result as {
-      recommendedFileIds: number[]
-      success: boolean
-    }
-  }
-
-  async summarizeFiles(projectId: number, data: z.infer<typeof SummarizeFilesBodySchema>) {
-    const validatedData = this.validateBody(SummarizeFilesBodySchema, data)
-    return await this.request('POST', `/projects/${projectId}/summarize`, {
-      body: validatedData,
-      responseSchema: SummarizeFilesResponseSchemaZ
-    })
-  }
-
-  async removeSummaries(projectId: number, data: z.infer<typeof RemoveSummariesBodySchema>) {
-    const validatedData = this.validateBody(RemoveSummariesBodySchema, data)
-    return await this.request('POST', `/projects/${projectId}/remove-summaries`, {
-      body: validatedData,
-      responseSchema: RemoveSummariesResponseSchemaZ
-    })
-  }
-
   async updateFileContent(projectId: number, fileId: number, content: string) {
     const result = await this.request('PUT', `/projects/${projectId}/files/${fileId}`, {
       body: { content },
@@ -514,7 +453,7 @@ export class ProjectService extends BaseApiClient {
         data: z.unknown()
       })
     })
-    return result
+    return result as DataResponseSchema<ProjectFile>
   }
   async bulkCreateFiles(
     projectId: number,
@@ -546,6 +485,17 @@ export class ProjectService extends BaseApiClient {
       })
     })
     return result.data
+  }
+
+  async suggestFiles(projectId: number, data: { prompt: string; limit?: number }) {
+    const result = await this.request('POST', `/projects/${projectId}/suggest-files`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.array(z.unknown())
+      })
+    })
+    return result as DataResponseSchema<ProjectFile[]>
   }
 }
 
@@ -732,34 +682,125 @@ export class GenAiService extends BaseApiClient {
   }
 }
 
-// Mastra Service
-export class MastraService extends BaseApiClient {
-  async codeChange(data: MastraCodeChangeRequest): Promise<MastraCodeChangeResponse> {
-    const validatedData = this.validateBody(MastraCodeChangeRequestSchema, data)
-    // The endpoint path matches what's in mastra-routes.ts
-    const result = await this.request('POST', '/mastra/code-change', {
-      body: validatedData,
-      responseSchema: MastraCodeChangeResponseSchema
-    })
-    return result as MastraCodeChangeResponse
+// Claude Code Service
+export class ClaudeCodeService extends BaseApiClient {
+  constructor(config: ApiConfig) {
+    super(config)
   }
 
-  async batchSummarize(data: MastraSummarizeRequest): Promise<MastraSummarizeResponse> {
-    const validatedData = this.validateBody(MastraSummarizeRequestSchema, data)
-    const result = await this.request('POST', '/mastra/summarize', {
+  async executeQuery(request: ClaudeCodeRequest) {
+    const validatedData = this.validateBody(ClaudeCodeRequestSchema, request)
+    const result = await this.request('POST', '/claude-code/execute', {
       body: validatedData,
-      responseSchema: MastraSummarizeResponseSchema
+      responseSchema: ClaudeCodeResultSchema
     })
-    return result as MastraSummarizeResponse
+    return result as ClaudeCodeResult
   }
 
-  async summarizeFile(data: MastraSingleSummarizeRequest): Promise<MastraSingleSummarizeResponse> {
-    const validatedData = this.validateBody(MastraSingleSummarizeRequestSchema, data)
-    const result = await this.request('POST', '/mastra/summarize/file', {
+  async streamQuery(request: ClaudeCodeRequest): Promise<ReadableStream> {
+    const validatedData = this.validateBody(ClaudeCodeRequestSchema, request)
+    const url = new URL(`${this.baseUrl}/api/claude-code/stream`)
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(validatedData),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
+      }
+
+      if (!response.body) {
+        throw new OctoPromptError('No response body for stream')
+      }
+
+      return response.body
+    } catch (e) {
+      if (e instanceof OctoPromptError) throw e
+      if (e instanceof Error) {
+        if (e.name === 'AbortError') {
+          throw new OctoPromptError('Stream request timeout', undefined, 'TIMEOUT')
+        }
+        throw new OctoPromptError(`Stream request failed: ${e.message}`)
+      }
+      throw new OctoPromptError('Unknown error occurred during stream request')
+    }
+  }
+
+  async continueSession(sessionId: string, prompt: string) {
+    const validatedData = this.validateBody(ClaudeCodeContinueRequestSchema, { prompt })
+    const result = await this.request('POST', `/claude-code/sessions/${sessionId}/continue`, {
       body: validatedData,
-      responseSchema: MastraSingleSummarizeResponseSchema
+      responseSchema: ClaudeCodeResultSchema
     })
-    return result as MastraSingleSummarizeResponse
+    return result as ClaudeCodeResult
+  }
+
+  async getSessions() {
+    const result = await this.request('GET', '/claude-code/sessions', {
+      responseSchema: ClaudeCodeSessionListSchema
+    })
+    return result as ClaudeCodeSessionList
+  }
+
+  async getSession(sessionId: string) {
+    const result = await this.request('GET', `/claude-code/sessions/${sessionId}`, {
+      responseSchema: ClaudeCodeSessionSchema
+    })
+    return result as ClaudeCodeSession
+  }
+
+  async deleteSession(sessionId: string): Promise<boolean> {
+    await this.request('DELETE', `/claude-code/sessions/${sessionId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async getSessionFileChanges(sessionId: string) {
+    const result = await this.request('GET', `/claude-code/sessions/${sessionId}/file-changes`, {
+      responseSchema: z.array(
+        z.object({
+          sessionId: z.string(),
+          timestamp: z.number(),
+          event: z.enum(['created', 'modified', 'deleted']),
+          filePath: z.string(),
+          projectId: z.number()
+        })
+      )
+    })
+    return result as Array<{
+      sessionId: string
+      timestamp: number
+      event: 'created' | 'modified' | 'deleted'
+      filePath: string
+      projectId: number
+    }>
+  }
+
+  async getAuditLogs(query?: GetAuditLogsQuery) {
+    const validatedQuery = query ? this.validateBody(GetAuditLogsQuerySchema, query) : undefined
+    const queryString = validatedQuery ? this.buildQueryString(validatedQuery) : ''
+    const result = await this.request('GET', `/claude-code/audit-logs${queryString}`, {
+      responseSchema: z.array(ClaudeCodeAuditLogSchema)
+    })
+    return result as ClaudeCodeAuditLog[]
+  }
+
+  async getSessionAuditSummary(sessionId: string) {
+    const result = await this.request('GET', `/claude-code/sessions/${sessionId}/audit-summary`, {
+      responseSchema: AuditLogSummarySchema
+    })
+    return result as AuditLogSummary
   }
 }
 
@@ -770,7 +811,7 @@ export class OctoPromptClient {
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
-  public readonly mastra: MastraService
+  public readonly claudeCode: ClaudeCodeService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -778,7 +819,7 @@ export class OctoPromptClient {
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
-    this.mastra = new MastraService(config)
+    this.claudeCode = new ClaudeCodeService(config)
   }
 }
 

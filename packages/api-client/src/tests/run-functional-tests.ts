@@ -16,7 +16,7 @@ const testFiles = [
   'chat-api.test.ts',
   'prompt-api.test.ts',
   'provider-key-api.test.ts',
-  'ticket-api.test.ts'
+  'claude-code-api.test.ts'
 ]
 
 try {

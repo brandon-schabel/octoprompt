@@ -9,15 +9,6 @@ import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
 
-import type {
-  MastraCodeChangeRequest,
-  MastraCodeChangeResponse,
-  MastraSummarizeRequest,
-  MastraSummarizeResponse,
-  MastraSingleSummarizeRequest,
-  MastraSingleSummarizeResponse
-} from '@octoprompt/schemas'
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -365,48 +356,6 @@ export function useRefreshProject() {
   })
 }
 
-export function useSuggestFiles() {
-  return useMutation({
-    mutationFn: ({ projectId, userInput }: { projectId: number; userInput: string }) =>
-      octoClient.projects.suggestFiles(projectId, { userInput }),
-    onError: (error) => {
-      toast.error(error.message || 'Failed to suggest files')
-    }
-  })
-}
-
-export function useSummarizeProjectFiles() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-
-  return useMutation({
-    mutationFn: ({ projectId, fileIds, force = false }: { projectId: number; fileIds: number[]; force?: boolean }) =>
-      octoClient.projects.summarizeFiles(projectId, { fileIds, force }),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      toast.success('Files summarized successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to summarize files')
-    }
-  })
-}
-
-export function useRemoveSummaries() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-
-  return useMutation({
-    mutationFn: ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) =>
-      octoClient.projects.removeSummaries(projectId, { fileIds }),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      toast.success('Summaries removed successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to remove summaries')
-    }
-  })
-}
-
 export function useUpdateFileContent() {
   const { invalidateProjectFiles } = useInvalidateProjects()
 
@@ -426,6 +375,18 @@ export function useUpdateFileContent() {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update file')
+    }
+  })
+}
+
+export function useSuggestFiles() {
+  return useMutation({
+    mutationFn: async ({ projectId, prompt, limit = 10 }: { projectId: number; prompt: string; limit?: number }) => {
+      const response = await octoClient.projects.suggestFiles(projectId, { prompt, limit })
+      return response.data
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to suggest files')
     }
   })
 }
@@ -928,42 +889,5 @@ export function useSmartCaching() {
   }
 }
 
-// --- Mastra Hooks ---
-export function useMastraCodeChange() {
-  return useMutation<MastraCodeChangeResponse, Error, MastraCodeChangeRequest>({
-    mutationFn: (data: MastraCodeChangeRequest) => octoClient.mastra.codeChange(data),
-    onSuccess: () => {
-      toast.success('Code change generated successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra code change error:', error)
-      toast.error('Failed to generate code change')
-    }
-  })
-}
-
-export function useMastraBatchSummarize() {
-  return useMutation<MastraSummarizeResponse, Error, MastraSummarizeRequest>({
-    mutationFn: (data: MastraSummarizeRequest) => octoClient.mastra.batchSummarize(data),
-    onSuccess: () => {
-      toast.success('Batch summarization completed successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra batch summarize error:', error)
-      toast.error('Failed to complete batch summarization')
-    }
-  })
-}
-
-export function useMastraSummarizeFile() {
-  return useMutation<MastraSingleSummarizeResponse, Error, MastraSingleSummarizeRequest>({
-    mutationFn: (data: MastraSingleSummarizeRequest) => octoClient.mastra.summarizeFile(data),
-    onSuccess: () => {
-      toast.success('File summarization completed successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra file summarize error:', error)
-      toast.error('Failed to summarize file')
-    }
-  })
-}
+// --- Mastra Hooks Removed ---
+// Mastra agent functionality has been consolidated into Claude Code integration

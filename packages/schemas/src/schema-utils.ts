@@ -8,18 +8,14 @@ export const unixTSSchemaSpec = unixTimestampSchema.openapi({
 export const unixTSOptionalSchemaSpec = unixTSSchemaSpec
   .optional()
   .openapi({ example: 1716537600000, description: 'Optional ID or Timestamp in unix timestamp (milliseconds)' })
-export const unixTSArraySchemaSpec = z
-  .array(unixTSSchemaSpec)
-  .openapi({
-    example: [1716537600000, 1716537600001],
-    description: 'Array of IDs or Timestamps in unix timestamp (milliseconds)'
-  })
-export const unixTSArrayOptionalSchemaSpec = z
-  .array(unixTSOptionalSchemaSpec)
-  .openapi({
-    example: [1716537600000, 1716537600001],
-    description: 'Array of Optional IDs or Timestamps in unix timestamp (milliseconds)'
-  })
+export const unixTSArraySchemaSpec = z.array(unixTSSchemaSpec).openapi({
+  example: [1716537600000, 1716537600001],
+  description: 'Array of IDs or Timestamps in unix timestamp (milliseconds)'
+})
+export const unixTSArrayOptionalSchemaSpec = z.array(unixTSOptionalSchemaSpec).openapi({
+  example: [1716537600000, 1716537600001],
+  description: 'Array of Optional IDs or Timestamps in unix timestamp (milliseconds)'
+})
 
 // Special schemas for ID fields that can accept -1 as "null" value
 export const idSchemaSpec = z

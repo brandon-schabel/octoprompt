@@ -28,6 +28,7 @@ export const ChatSchema = z
   .object({
     id: unixTSSchemaSpec,
     title: z.string(),
+    projectId: unixTSSchemaSpec.optional(),
     // unix timestamp in milliseconds
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
@@ -52,7 +53,9 @@ export const ChatMessageSchema = z
     chatId: unixTSSchemaSpec,
     role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
     content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
+    type: z.string().optional().openapi({ description: 'Message type for categorization' }),
     created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec,
     attachments: z
       .array(ChatMessageAttachmentSchema)
       .optional()
