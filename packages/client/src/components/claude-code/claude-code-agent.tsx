@@ -10,7 +10,9 @@ import {
   FileText,
   Loader2,
   Send,
-  Sparkles
+  Sparkles,
+  FileEdit,
+  FileCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -73,11 +75,12 @@ export function ClaudeCodeAgent({
 
   // Settings
   const [maxTurns, setMaxTurns] = useState(5)
-  const [allowedTools, setAllowedTools] = useState<string[]>([])
+  const [allowedTools, setAllowedTools] = useState<string[]>(['Read', 'Write', 'Edit', 'Bash', 'Grep', 'Glob', 'LS'])
   const [systemPrompt, setSystemPrompt] = useState('')
   const [outputFormat, setOutputFormat] = useState<'text' | 'json' | 'stream-json'>('stream-json')
   const [showSettings, setShowSettings] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [includeProjectContext, setIncludeProjectContext] = useState(true)
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -130,6 +133,7 @@ export function ClaudeCodeAgent({
       maxTurns,
       projectPath,
       projectId,
+      includeProjectContext: projectId ? includeProjectContext : false,
       allowedTools: allowedTools.length > 0 ? allowedTools : undefined,
       systemPrompt: systemPrompt || undefined,
       outputFormat: isStream ? 'stream-json' : 'json'
@@ -181,6 +185,17 @@ export function ClaudeCodeAgent({
       }
     ])
 
+    // Handle different message types for progress notifications
+    if (message.type === 'assistant' && message.message?.content) {
+      // Check for tool usage in assistant messages
+      const content = message.message.content
+      if (content.includes('Edit(') || content.includes('Write(')) {
+        toast.info('Claude Code is modifying files...', { duration: 2000 })
+      } else if (content.includes('Read(')) {
+        toast.info('Claude Code is analyzing files...', { duration: 2000 })
+      }
+    }
+
     // Update session info
     if (message.type === 'result') {
       const updatedSession: ClaudeCodeSession = {
@@ -192,8 +207,18 @@ export function ClaudeCodeAgent({
       }
       setCurrentSession(updatedSession)
 
-      if (message.total_cost_usd) {
-        toast.success(`Completed - Cost: $${message.total_cost_usd.toFixed(4)}`)
+      if (message.is_error) {
+        toast.error(`Claude Code encountered an error: ${message.error || 'Unknown error'}`)
+      } else {
+        const successMessage = message.total_cost_usd
+          ? `Completed successfully! Cost: $${message.total_cost_usd.toFixed(4)}`
+          : 'Completed successfully!'
+        toast.success(successMessage)
+
+        // If project files were modified, show a special notification
+        if (projectId) {
+          toast.info('Project files have been updated. Refreshing file list...', { duration: 3000 })
+        }
       }
     }
 
@@ -206,6 +231,7 @@ export function ClaudeCodeAgent({
         lastActivity: timestamp
       }
       setCurrentSession(updatedSession)
+      toast.info('Claude Code is starting...', { duration: 2000 })
     }
   }
 
@@ -266,23 +292,36 @@ export function ClaudeCodeAgent({
 
   const formatMessage = (message: ClaudeCodeMessage) => {
     if (message.type === 'user') {
-      return { role: 'user', content: message.content || '', timestamp: message.timestamp }
+      return { role: 'user', content: message.content || '', timestamp: message.timestamp, isFileOperation: false }
     }
     if (message.type === 'assistant') {
+      const content = message.content || message.message?.content || ''
+      const isFileOperation = content.includes('Edit(') || content.includes('Write(') || content.includes('Read(')
       return {
         role: 'assistant',
-        content: message.content || message.message?.content || '',
-        timestamp: message.timestamp
+        content: content,
+        timestamp: message.timestamp,
+        isFileOperation
       }
     }
     if (message.type === 'result') {
+      const summary = []
+      if (message.num_turns) summary.push(`${message.num_turns} turns`)
+      if (message.total_cost_usd) summary.push(`$${message.total_cost_usd.toFixed(4)}`)
+
       return {
         role: 'system',
-        content: `Result: ${message.result || 'Completed'} (${message.num_turns} turns, $${message.total_cost_usd?.toFixed(4) || '0.0000'})`,
-        timestamp: message.timestamp
+        content: `✓ ${message.result || 'Completed'} ${summary.length > 0 ? `(${summary.join(', ')})` : ''}`,
+        timestamp: message.timestamp,
+        isFileOperation: false
       }
     }
-    return { role: 'system', content: JSON.stringify(message, null, 2), timestamp: message.timestamp }
+    return {
+      role: 'system',
+      content: JSON.stringify(message, null, 2),
+      timestamp: message.timestamp,
+      isFileOperation: false
+    }
   }
 
   return (
@@ -428,9 +467,18 @@ export function ClaudeCodeAgent({
                               : 'bg-yellow-50 border border-yellow-200'
                         }`}
                       >
+                        {formatted.isFileOperation && (
+                          <div className='flex items-center gap-1 mb-2 text-xs'>
+                            <FileEdit className='h-3 w-3' />
+                            <span className='font-medium'>File Operation</span>
+                          </div>
+                        )}
                         <div className='text-sm'>
                           {formatted.role === 'system' ? (
-                            <code className='whitespace-pre-wrap'>{formatted.content}</code>
+                            <div className='flex items-center gap-2'>
+                              {formatted.content.startsWith('✓') && <FileCheck className='h-4 w-4 text-green-600' />}
+                              <code className='whitespace-pre-wrap'>{formatted.content}</code>
+                            </div>
                           ) : (
                             <div className='whitespace-pre-wrap'>{formatted.content}</div>
                           )}

@@ -31,8 +31,9 @@ export function ClaudeCodeModal({ isOpen, onClose, projectId: propProjectId, ini
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className={`${isMaximized ? 'max-w-full w-full h-screen m-0 rounded-none' : 'max-w-4xl w-[90vw] max-h-[80vh]'
-          } p-0 overflow-hidden transition-all duration-200`}
+        className={`${
+          isMaximized ? 'max-w-full w-full h-screen m-0 rounded-none' : 'max-w-4xl w-[90vw] max-h-[80vh]'
+        } p-0 overflow-hidden transition-all duration-200`}
       >
         <DialogHeader className='px-6 py-4 border-b flex flex-row items-center justify-between'>
           <DialogTitle className='text-lg font-semibold'>
@@ -58,7 +59,7 @@ export function ClaudeCodeModal({ isOpen, onClose, projectId: propProjectId, ini
           <ClaudeCodeAgent
             projectId={projectId}
             projectName={projectData?.name}
-            projectPath={projectData?.folderPath}
+            projectPath={projectData?.path}
             initialPrompt={initialPrompt}
             className='h-full'
           />

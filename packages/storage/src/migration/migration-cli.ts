@@ -53,7 +53,7 @@ function parseArgs(): CLIOptions {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
-    
+
     switch (arg) {
       case '--storage':
         options.storage = args[++i]
@@ -131,15 +131,15 @@ async function runMigration() {
 
   console.log('🚀 OctoPrompt Storage V2 Migration')
   console.log('=====================================')
-  
+
   if (options.dryRun) {
     console.log('⚠️  DRY RUN MODE - No changes will be made')
   }
-  
+
   if (options.backup) {
     console.log('💾 Backup enabled - Original data will be preserved')
   }
-  
+
   if (options.validate) {
     console.log('✅ Validation enabled - Data will be verified after migration')
   }
@@ -151,24 +151,24 @@ async function runMigration() {
       // Migrate all storage types
       console.log('🔄 Migrating all storage types...\n')
       const results = await StorageV2Migrator.migrateAll(migrationOptions)
-      
+
       // Print detailed results
       let hasErrors = false
       console.log('\n📊 Migration Results:')
       console.log('====================')
-      
+
       Object.entries(results).forEach(([storageType, result]) => {
         const status = result.success ? '✅' : '❌'
         const duration = (result.duration / 1000).toFixed(2)
-        
+
         console.log(`${status} ${storageType}: ${result.migrated} migrated in ${duration}s`)
-        
+
         if (result.errors.length > 0) {
           hasErrors = true
           console.log(`   Errors: ${result.errors.length}`)
-          result.errors.forEach(error => console.log(`   - ${error}`))
+          result.errors.forEach((error) => console.log(`   - ${error}`))
         }
-        
+
         if (result.backupPath) {
           console.log(`   Backup: ${result.backupPath}`)
         }
@@ -180,11 +180,10 @@ async function runMigration() {
       } else {
         console.log('\n🎉 All migrations completed successfully!')
       }
-      
     } else if (options.storage) {
       // Migrate specific storage type
       console.log(`🔄 Migrating ${options.storage} storage...\n`)
-      
+
       let result
       switch (options.storage) {
         case 'chats':
@@ -209,17 +208,17 @@ async function runMigration() {
       // Print results
       console.log('\n📊 Migration Results:')
       console.log('====================')
-      
+
       const status = result.success ? '✅' : '❌'
       const duration = (result.duration / 1000).toFixed(2)
-      
+
       console.log(`${status} ${options.storage}: ${result.migrated} migrated in ${duration}s`)
-      
+
       if (result.errors.length > 0) {
         console.log(`Errors: ${result.errors.length}`)
-        result.errors.forEach(error => console.log(`- ${error}`))
+        result.errors.forEach((error) => console.log(`- ${error}`))
       }
-      
+
       if (result.backupPath) {
         console.log(`Backup: ${result.backupPath}`)
       }
@@ -235,23 +234,22 @@ async function runMigration() {
     // Run validation if requested
     if (options.validate && !options.dryRun) {
       console.log('\n🔍 Validating migrated data...')
-      
-      const storageTypes = options.all 
+
+      const storageTypes = options.all
         ? ['chats', 'prompts', 'provider-keys', 'claude-code', 'projects']
         : [options.storage!]
-      
+
       for (const storageType of storageTypes) {
         const validation = await StorageV2Migrator.validateMigration(storageType)
-        
+
         if (validation.valid) {
           console.log(`✅ ${storageType}: Validation passed`)
         } else {
           console.log(`❌ ${storageType}: Validation failed`)
-          validation.issues.forEach(issue => console.log(`   - ${issue}`))
+          validation.issues.forEach((issue) => console.log(`   - ${issue}`))
         }
       }
     }
-
   } catch (error: any) {
     console.error('\n💥 Migration failed:', error.message)
     console.error(error.stack)
@@ -261,7 +259,7 @@ async function runMigration() {
 
 // Run the migration
 if (import.meta.main) {
-  runMigration().catch(error => {
+  runMigration().catch((error) => {
     console.error('Fatal error:', error)
     process.exit(1)
   })

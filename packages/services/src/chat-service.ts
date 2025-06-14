@@ -48,19 +48,16 @@ export function createChatService() {
             }
             // Remove id and timestamps so they get regenerated
             const { id, created, updated, ...messageData } = copiedMsg
-            
+
             try {
               await chatStorage.addMessage(newChat.id, messageData)
             } catch (error) {
-              console.error(
-                `Failed to copy message ${msg.id} to new chat ${newChat.id}:`,
-                error
-              )
+              console.error(`Failed to copy message ${msg.id} to new chat ${newChat.id}:`, error)
               // Continue with next message on error
             }
           }
         }
-        
+
         return newChat
       },
       {
@@ -76,7 +73,7 @@ export function createChatService() {
     if (!chat) {
       throwNotFound('Chat', chatId)
     }
-    
+
     // The updateChat method will automatically update the timestamp
     const updated = await chatStorage.update(chatId, {})
     if (!updated) {
@@ -112,7 +109,7 @@ export function createChatService() {
             // For now, delete and recreate since we don't have an updateMessage method
             // This is not ideal but maintains current behavior
             const messages = await chatStorage.getChatMessages(message.chatId)
-            const messageToUpdate = messages.find(m => m.id === message.id)
+            const messageToUpdate = messages.find((m) => m.id === message.id)
             if (messageToUpdate) {
               // Preserve creation time when updating
               const updatedMessageData = {
@@ -162,8 +159,8 @@ export function createChatService() {
         // For now, we'll read all messages, update the one we want, and write them back
         // This is not ideal and should be fixed when we add updateMessage to storage
         const messages = await chatStorage.getChatMessages(chatId)
-        const messageIndex = messages.findIndex(m => m.id === messageId)
-        
+        const messageIndex = messages.findIndex((m) => m.id === messageId)
+
         if (messageIndex === -1) {
           throw new ApiError(500, `Message found but not in messages list`, 'MESSAGE_INCONSISTENCY')
         }
@@ -178,11 +175,11 @@ export function createChatService() {
         // Write back all messages - this is temporary until we have updateMessage
         const messageStorage = chatStorage.getMessageStorage(chatId)
         const messagesObj: ChatMessagesStorage = {}
-        messages.forEach(msg => {
+        messages.forEach((msg) => {
           messagesObj[msg.id] = msg
         })
         await messageStorage.writeAll(messagesObj)
-        
+
         await updateChatTimestamp(chatId)
       },
       {
@@ -239,7 +236,7 @@ export function createChatService() {
     if (!chat) {
       throwNotFound('Chat', chatId)
     }
-    
+
     // Get message to verify it exists
     const message = await chatStorage.getMessageById(chatId, messageId)
     if (!message) {
@@ -253,15 +250,15 @@ export function createChatService() {
     // Since we don't have a deleteMessage method in storage, we need to work around
     // Get all messages, filter out the one to delete, and write back
     const messages = await chatStorage.getChatMessages(chatId)
-    const filteredMessages = messages.filter(m => m.id !== messageId)
-    
+    const filteredMessages = messages.filter((m) => m.id !== messageId)
+
     const messageStorage = chatStorage.getMessageStorage(chatId)
     const messagesObj: ChatMessagesStorage = {}
-    filteredMessages.forEach(msg => {
+    filteredMessages.forEach((msg) => {
       messagesObj[msg.id] = msg
     })
     await messageStorage.writeAll(messagesObj)
-    
+
     await updateChatTimestamp(chatId)
   }
 
@@ -272,18 +269,18 @@ export function createChatService() {
     }
 
     const newTitle = `Fork of ${sourceChat.title} (${new Date().toLocaleTimeString()})`
-    
+
     // Create the new chat
     const newChat = await chatStorage.createChat({ title: newTitle })
 
     // Copy messages
     const sourceMessages = await chatStorage.getChatMessages(sourceChatId)
-    
+
     for (const msg of sourceMessages) {
       if (!excludedMessageIds.includes(msg.id)) {
         // Copy the message to the new chat
         const { id, created, updated, chatId, ...messageData } = msg
-        
+
         try {
           await chatStorage.addMessage(newChat.id, {
             ...messageData,
@@ -310,7 +307,7 @@ export function createChatService() {
     }
 
     const sourceMessages = await chatStorage.getChatMessages(sourceChatId)
-    const startMessage = sourceMessages.find(m => m.id === messageId)
+    const startMessage = sourceMessages.find((m) => m.id === messageId)
     if (!startMessage) {
       throw new ApiError(
         404,
@@ -320,7 +317,7 @@ export function createChatService() {
     }
 
     const newTitle = `Fork from ${sourceChat.title} at message (${messageId})`
-    
+
     // Create the new chat
     const newChat = await chatStorage.createChat({ title: newTitle })
 
@@ -343,7 +340,7 @@ export function createChatService() {
       if (!excludedMessageIds.includes(msg.id)) {
         // Copy the message to the new chat
         const { id, created, updated, chatId, ...messageData } = msg
-        
+
         try {
           await chatStorage.addMessage(newChat.id, {
             ...messageData,

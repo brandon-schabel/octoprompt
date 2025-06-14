@@ -11,13 +11,15 @@ export interface MigrationConfig {
 
 const MigrationStateSchema = z.object({
   currentVersion: z.string(),
-  migrations: z.array(z.object({
-    version: z.string(),
-    description: z.string(),
-    appliedAt: z.number(),
-    success: z.boolean(),
-    error: z.string().optional()
-  }))
+  migrations: z.array(
+    z.object({
+      version: z.string(),
+      description: z.string(),
+      appliedAt: z.number(),
+      success: z.boolean(),
+      error: z.string().optional()
+    })
+  )
 })
 
 type MigrationState = z.infer<typeof MigrationStateSchema>
@@ -75,9 +77,9 @@ export class MigrationManager {
   async migrate(targetVersion?: string): Promise<void> {
     const state = await this.getState()
     const sortedMigrations = this.getSortedMigrations()
-    
+
     console.log(`Current version: ${state.currentVersion}`)
-    
+
     for (const migration of sortedMigrations) {
       // Skip if already applied
       if (this.compareVersions(migration.version, state.currentVersion) <= 0) {
@@ -90,11 +92,11 @@ export class MigrationManager {
       }
 
       console.log(`Running migration ${migration.version}: ${migration.description}`)
-      
+
       const startTime = Date.now()
       try {
         await migration.up()
-        
+
         state.migrations.push({
           version: migration.version,
           description: migration.description,
@@ -102,14 +104,14 @@ export class MigrationManager {
           success: true
         })
         state.currentVersion = migration.version
-        
+
         await this.saveState(state)
-        
+
         const duration = Date.now() - startTime
         console.log(`✓ Migration ${migration.version} completed in ${duration}ms`)
       } catch (error: any) {
         console.error(`✗ Migration ${migration.version} failed: ${error.message}`)
-        
+
         state.migrations.push({
           version: migration.version,
           description: migration.description,
@@ -117,12 +119,12 @@ export class MigrationManager {
           success: false,
           error: error.message
         })
-        
+
         await this.saveState(state)
         throw error
       }
     }
-    
+
     console.log(`Migrations complete. Current version: ${state.currentVersion}`)
   }
 
@@ -131,14 +133,14 @@ export class MigrationManager {
    */
   async rollback(targetVersion: string): Promise<void> {
     const state = await this.getState()
-    
+
     if (this.compareVersions(targetVersion, state.currentVersion) >= 0) {
       console.log(`Already at or below version ${targetVersion}`)
       return
     }
 
     const appliedMigrations = state.migrations
-      .filter(m => m.success)
+      .filter((m) => m.success)
       .sort((a, b) => this.compareVersions(b.version, a.version))
 
     for (const applied of appliedMigrations) {
@@ -152,28 +154,26 @@ export class MigrationManager {
       }
 
       console.log(`Rolling back migration ${applied.version}: ${applied.description}`)
-      
+
       try {
         await migration.down()
-        
+
         // Remove from applied migrations
-        state.migrations = state.migrations.filter(m => m.version !== applied.version)
-        
+        state.migrations = state.migrations.filter((m) => m.version !== applied.version)
+
         // Update current version
-        const remaining = state.migrations.filter(m => m.success)
-        state.currentVersion = remaining.length > 0 
-          ? remaining[remaining.length - 1].version 
-          : '0.0.0'
-        
+        const remaining = state.migrations.filter((m) => m.success)
+        state.currentVersion = remaining.length > 0 ? remaining[remaining.length - 1].version : '0.0.0'
+
         await this.saveState(state)
-        
+
         console.log(`✓ Rolled back migration ${applied.version}`)
       } catch (error: any) {
         console.error(`✗ Rollback of ${applied.version} failed: ${error.message}`)
         throw error
       }
     }
-    
+
     console.log(`Rollback complete. Current version: ${state.currentVersion}`)
   }
 
@@ -183,13 +183,13 @@ export class MigrationManager {
   async status(): Promise<void> {
     const state = await this.getState()
     const allMigrations = this.getSortedMigrations()
-    
+
     console.log(`\nMigration Status`)
     console.log(`Current Version: ${state.currentVersion}\n`)
-    
+
     for (const migration of allMigrations) {
-      const applied = state.migrations.find(m => m.version === migration.version)
-      
+      const applied = state.migrations.find((m) => m.version === migration.version)
+
       if (applied) {
         const status = applied.success ? '✓' : '✗'
         const date = new Date(applied.appliedAt).toLocaleString()
@@ -209,8 +209,7 @@ export class MigrationManager {
    * Get sorted migrations
    */
   private getSortedMigrations(): MigrationConfig[] {
-    return Array.from(this.migrations.values())
-      .sort((a, b) => this.compareVersions(a.version, b.version))
+    return Array.from(this.migrations.values()).sort((a, b) => this.compareVersions(a.version, b.version))
   }
 
   /**
@@ -218,7 +217,7 @@ export class MigrationManager {
    */
   private compareVersions(a: string, b: string): number {
     const parseVersion = (v: string) => {
-      const parts = v.split('.').map(p => parseInt(p, 10))
+      const parts = v.split('.').map((p) => parseInt(p, 10))
       return {
         major: parts[0] || 0,
         minor: parts[1] || 0,
@@ -257,7 +256,7 @@ export class MigrationManager {
    */
   async restore(backupPath: string): Promise<void> {
     const dataDir = path.join(this.basePath, 'data')
-    
+
     // Verify backup exists
     try {
       await fs.access(backupPath)
@@ -277,7 +276,7 @@ export class MigrationManager {
       await this.copyDirectory(backupPath, dataDir)
 
       console.log(`Restored from backup: ${backupPath}`)
-      
+
       // Clean up temp backup
       await fs.rm(tempBackup, { recursive: true, force: true })
     } catch (error) {
@@ -293,13 +292,13 @@ export class MigrationManager {
    */
   private async copyDirectory(src: string, dest: string): Promise<void> {
     await fs.mkdir(dest, { recursive: true })
-    
+
     const entries = await fs.readdir(src, { withFileTypes: true })
-    
+
     for (const entry of entries) {
       const srcPath = path.join(src, entry.name)
       const destPath = path.join(dest, entry.name)
-      
+
       if (entry.isDirectory()) {
         await this.copyDirectory(srcPath, destPath)
       } else {

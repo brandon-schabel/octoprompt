@@ -74,10 +74,10 @@ describe('BaseStorage', () => {
 
     test('update should modify entity', async () => {
       const created = await storage.create({ name: 'Original', value: 1 })
-      
+
       // Add small delay to ensure different timestamps
-      await new Promise(resolve => setTimeout(resolve, 5))
-      
+      await new Promise((resolve) => setTimeout(resolve, 5))
+
       const updated = await storage.update(created.id, { name: 'Updated', value: 2 })
 
       expect(updated).not.toBeNull()
@@ -102,7 +102,7 @@ describe('BaseStorage', () => {
 
       const list = await storage.list()
       expect(list).toHaveLength(3)
-      expect(list.map(e => e.name).sort()).toEqual(['Item1', 'Item2', 'Item3'])
+      expect(list.map((e) => e.name).sort()).toEqual(['Item1', 'Item2', 'Item3'])
     })
   })
 
@@ -113,46 +113,46 @@ describe('BaseStorage', () => {
     })
 
     test.skip('should respect cache TTL', async () => {
-      const cacheStorage = new TestStorageImpl(tempDir, { 
-        cacheEnabled: true, 
+      const cacheStorage = new TestStorageImpl(tempDir, {
+        cacheEnabled: true,
         cacheTTL: 100 // 100ms TTL
       })
-      
+
       const created = await cacheStorage.create({ name: 'TTL Test', value: 1 })
-      
+
       // Read to populate cache
       await cacheStorage.getById(created.id)
-      
+
       // Wait for TTL to expire
-      await new Promise(resolve => setTimeout(resolve, 150))
-      
+      await new Promise((resolve) => setTimeout(resolve, 150))
+
       // Modify file
       const all = await cacheStorage.readAll()
       all[created.id].value = 2
       const indexPath = path.join(tempDir, 'test_storage', 'test.json')
       await fs.writeFile(indexPath, JSON.stringify(all, null, 2))
-      
+
       // Should read fresh value after TTL
       const read = await cacheStorage.getById(created.id)
       expect(read?.value).toBe(2)
     })
 
     test.skip('should enforce max cache size', async () => {
-      const cacheStorage = new TestStorageImpl(tempDir, { 
-        cacheEnabled: true, 
-        maxCacheSize: 2 
+      const cacheStorage = new TestStorageImpl(tempDir, {
+        cacheEnabled: true,
+        maxCacheSize: 2
       })
-      
+
       // Create 3 entities
       const e1 = await cacheStorage.create({ name: 'E1', value: 1 })
       const e2 = await cacheStorage.create({ name: 'E2', value: 2 })
       const e3 = await cacheStorage.create({ name: 'E3', value: 3 })
-      
+
       // Read all three (cache size is 2)
       await cacheStorage.getById(e1.id)
       await cacheStorage.getById(e2.id)
       await cacheStorage.getById(e3.id)
-      
+
       const stats = cacheStorage.getCacheStats()
       expect(stats.size).toBeLessThanOrEqual(2)
     })
@@ -174,13 +174,13 @@ describe('BaseStorage', () => {
   describe('ID Generation', () => {
     test('should generate unique IDs', async () => {
       const ids = new Set<number>()
-      
+
       for (let i = 0; i < 50; i++) {
         const id = await storage.generateId()
         expect(ids.has(id)).toBe(false)
         ids.add(id)
       }
-      
+
       expect(ids.size).toBe(50)
     })
 
@@ -188,7 +188,7 @@ describe('BaseStorage', () => {
       const before = Date.now()
       const id = await storage.generateId()
       const after = Date.now() + 100000 // Add large buffer for random suffix
-      
+
       expect(id).toBeGreaterThanOrEqual(before)
       expect(id).toBeLessThanOrEqual(after)
     })
@@ -198,16 +198,16 @@ describe('BaseStorage', () => {
     test('should validate on create', async () => {
       // @ts-ignore - Intentionally passing invalid data
       const promise = storage.create({ name: 123, value: 'not a number' })
-      
+
       await expect(promise).rejects.toThrow()
     })
 
     test('should validate on update', async () => {
       const created = await storage.create({ name: 'Valid', value: 1 })
-      
+
       // @ts-ignore - Intentionally passing invalid data
       const promise = storage.update(created.id, { value: 'invalid' })
-      
+
       await expect(promise).rejects.toThrow()
     })
   })
@@ -215,7 +215,7 @@ describe('BaseStorage', () => {
   describe('File Operations', () => {
     test('should create directory structure', async () => {
       await storage.create({ name: 'Test', value: 1 })
-      
+
       const storageDir = path.join(tempDir, 'test_storage')
       const stats = await fs.stat(storageDir)
       expect(stats.isDirectory()).toBe(true)
@@ -225,7 +225,7 @@ describe('BaseStorage', () => {
       const indexPath = path.join(tempDir, 'test_storage', 'test.json')
       await fs.mkdir(path.dirname(indexPath), { recursive: true })
       await fs.writeFile(indexPath, 'invalid json content')
-      
+
       // Should return empty default
       const all = await storage.readAll()
       expect(all).toEqual({})
@@ -234,11 +234,11 @@ describe('BaseStorage', () => {
     test('should use atomic writes', async () => {
       // Create initial data
       await storage.create({ name: 'Atomic', value: 1 })
-      
+
       // During write, temp file should be created
       let tempFileExists = false
       const originalWriteFile = fs.writeFile
-      
+
       // @ts-ignore - Monkey patch to check temp file
       fs.writeFile = async (path: string, ...args: any[]) => {
         if (path.endsWith('.tmp')) {
@@ -246,11 +246,11 @@ describe('BaseStorage', () => {
         }
         return originalWriteFile.call(fs, path, ...args)
       }
-      
+
       await storage.create({ name: 'Atomic2', value: 2 })
-      
+
       expect(tempFileExists).toBe(true)
-      
+
       // Restore original
       // @ts-ignore
       fs.writeFile = originalWriteFile

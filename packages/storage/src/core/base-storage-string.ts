@@ -81,7 +81,7 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
 
       const jsonData = JSON.parse(fileContent)
       const validationResult = await schema.safeParseAsync(jsonData)
-      
+
       if (!validationResult.success) {
         console.error(`Zod validation failed reading ${filePath}:`, validationResult.error.errors)
         console.warn(`Returning default value due to validation failure for ${filePath}.`)
@@ -125,12 +125,12 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
       const validatedData = validationResult.data
 
       await this.ensureDirExists(path.dirname(filePath))
-      
+
       // Write to temp file first for atomicity
       const tempPath = `${filePath}.tmp`
       const jsonString = JSON.stringify(validatedData, null, 2)
       await fs.writeFile(tempPath, jsonString, 'utf-8')
-      
+
       // Atomic rename
       await fs.rename(tempPath, filePath)
 
@@ -173,15 +173,15 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
       // Remove least recently used (oldest timestamp, lowest hits)
       let lruKey = ''
       let lruScore = Infinity
-      
+
       for (const [k, entry] of this.cache.entries()) {
-        const score = entry.timestamp + (entry.hits * 1000) // Weight by recency and hits
+        const score = entry.timestamp + entry.hits * 1000 // Weight by recency and hits
         if (score < lruScore) {
           lruScore = score
           lruKey = k
         }
       }
-      
+
       if (lruKey) {
         this.cache.delete(lruKey)
       }
@@ -229,7 +229,7 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
   private releaseLock(key: string): void {
     const lock = this.locks.get(key)
     if (lock && (lock as any)._cleanup) {
-      (lock as any)._cleanup()
+      ;(lock as any)._cleanup()
     }
     this.locks.delete(key)
   }
@@ -288,10 +288,10 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
    */
   public async create(data: Omit<TEntity, 'id' | 'created' | 'updated'>): Promise<TEntity> {
     const storage = await this.readAll()
-    
+
     const id = this.generateId()
     const now = normalizeToUnixMs(Date.now())
-    
+
     const entity = {
       ...data,
       id,
@@ -307,7 +307,7 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
 
     storage[id] = validationResult.data
     await this.writeAll(storage)
-    
+
     return validationResult.data
   }
 
@@ -317,7 +317,7 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
   public async update(id: string, data: Partial<Omit<TEntity, 'id' | 'created' | 'updated'>>): Promise<TEntity | null> {
     const storage = await this.readAll()
     const existing = storage[id]
-    
+
     if (!existing) {
       return null
     }
@@ -336,7 +336,7 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
 
     storage[id] = validationResult.data
     await this.writeAll(storage)
-    
+
     return validationResult.data
   }
 
@@ -345,14 +345,14 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
    */
   public async delete(id: string): Promise<boolean> {
     const storage = await this.readAll()
-    
+
     if (!storage[id]) {
       return false
     }
 
     delete storage[id]
     await this.writeAll(storage)
-    
+
     return true
   }
 
@@ -377,10 +377,10 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
    */
   public async deleteAll(): Promise<void> {
     await this.writeAll({} as TStorage)
-    
+
     // Also clean up any entity-specific directories
     const indexPath = this.getIndexPath()
-    
+
     try {
       // Get all entity directories and remove them
       const entities = await this.list()
@@ -410,7 +410,7 @@ export abstract class BaseStorageString<TEntity extends BaseEntityString, TStora
   public getCacheStats(): { size: number; maxSize: number; hitRate: number } {
     let totalHits = 0
     let totalAccesses = 0
-    
+
     for (const entry of this.cache.values()) {
       totalHits += entry.hits
       totalAccesses += entry.hits + 1 // +1 for initial access

@@ -15,7 +15,18 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileCode, FileText, TestTube, Bug, Sparkles, Zap, Shield, ChevronRight, Lightbulb, Building } from 'lucide-react'
+import {
+  FileCode,
+  FileText,
+  TestTube,
+  Bug,
+  Sparkles,
+  Zap,
+  Shield,
+  ChevronRight,
+  Lightbulb,
+  Building
+} from 'lucide-react'
 
 interface ClaudeCodeTemplatesProps {
   isOpen: boolean

@@ -28,7 +28,7 @@ export const ProjectFileSchema = z
     checksum: z.string().nullable(),
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec,
-    
+
     // Sync tracking fields
     lastSyncedAt: unixTSSchemaSpec.nullable().default(null), // When file was last synced from filesystem
     syncVersion: z.number().int().nonnegative().default(0) // Increments on each sync update (0 = never synced)
@@ -71,11 +71,16 @@ export const FileVersionParamsSchema = z
 // File version query schema
 export const GetFileVersionParamsSchema = z
   .object({
-    version: z.number().int().positive().optional().openapi({
-      param: { name: 'version', in: 'query' },
-      example: 1,
-      description: 'Specific version number to retrieve (omit for latest version)'
-    })
+    version: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .openapi({
+        param: { name: 'version', in: 'query' },
+        example: 1,
+        description: 'Specific version number to retrieve (omit for latest version)'
+      })
   })
   .openapi('GetFileVersionParams')
 

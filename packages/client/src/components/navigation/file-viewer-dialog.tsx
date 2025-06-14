@@ -1,16 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@ui'
 import { Button } from '@ui'
-import {
-  Edit,
-  Save,
-  XCircle,
-  Copy,
-  FileText,
-  FileCode,
-  Expand,
-  Minimize2
-} from 'lucide-react'
+import { Edit, Save, XCircle, Copy, FileText, FileCode, Expand, Minimize2 } from 'lucide-react'
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { Textarea } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
@@ -20,9 +11,7 @@ import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { ProjectFile } from '@octoprompt/schemas'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
-import {
-  useUpdateFileContent
-} from '@/hooks/api/use-projects-api'
+import { useUpdateFileContent } from '@/hooks/api/use-projects-api'
 
 type FileViewerDialogProps = {
   open: boolean
@@ -142,7 +131,6 @@ export function FileViewerDialog({
     }
   }
 
-
   const copyContent = async () => {
     const content = viewedFile?.content || markdownText || ''
     copyToClipboard(content, {
@@ -159,7 +147,6 @@ export function FileViewerDialog({
       errorMessage: 'Failed to copy path'
     })
   }
-
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)

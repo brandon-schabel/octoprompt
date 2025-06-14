@@ -9,7 +9,6 @@ import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
 
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -391,7 +390,6 @@ export function useSuggestFiles() {
     }
   })
 }
-
 
 const PROMPT_KEYS = {
   all: ['prompts'] as const,

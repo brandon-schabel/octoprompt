@@ -11,16 +11,7 @@ import React, {
 } from 'react'
 import { Button } from '@ui'
 import { Checkbox } from '@ui'
-import {
-  Folder,
-  File as FileIcon,
-  ChevronRight,
-  Eye,
-  Code,
-  Copy,
-  RefreshCw,
-  ClipboardList
-} from 'lucide-react'
+import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy, RefreshCw, ClipboardList } from 'lucide-react'
 import clsx from 'clsx'
 import { toast } from 'sonner'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@ui'
@@ -282,8 +273,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                     title='No summary'
                   ></div>
                 )}
-
-
 
                 {onViewFile && (
                   <Button

@@ -78,18 +78,16 @@ describe('File Versioning with Sync Tracking', () => {
     )
 
     // Mock readProjectFile
-    ;(projectStorage.readProjectFile as any).mockImplementation(
-      async (projectId: number, fileId: number) => {
-        return mockFilesDb[projectId]?.[fileId]
-      }
-    )
+    ;(projectStorage.readProjectFile as any).mockImplementation(async (projectId: number, fileId: number) => {
+      return mockFilesDb[projectId]?.[fileId]
+    })
 
     // Mock updateProjectFile
     ;(projectStorage.updateProjectFile as any).mockImplementation(
       async (projectId: number, fileId: number, updates: Partial<ProjectFile>) => {
         const currentFile = mockFilesDb[projectId]?.[fileId]
         if (!currentFile) throw new Error(`File ${fileId} not found`)
-        
+
         const updatedFile = { ...currentFile, ...updates, updated: currentTime }
         mockFilesDb[projectId][fileId] = updatedFile
         return updatedFile
@@ -101,7 +99,7 @@ describe('File Versioning with Sync Tracking', () => {
       async (projectId: number, fileId: number, content: string) => {
         const currentFile = mockFilesDb[projectId]?.[fileId]
         if (!currentFile) throw new Error(`File ${fileId} not found`)
-        
+
         const newVersionId = projectStorage.generateId()
         const newVersion: ProjectFile = {
           ...currentFile,
@@ -117,7 +115,7 @@ describe('File Versioning with Sync Tracking', () => {
           lastSyncedAt: currentFile.lastSyncedAt,
           syncVersion: currentFile.syncVersion
         }
-        
+
         // Update current file to not be latest
         mockFilesDb[projectId][fileId] = {
           ...currentFile,
@@ -125,7 +123,7 @@ describe('File Versioning with Sync Tracking', () => {
           nextId: newVersionId,
           updated: currentTime
         }
-        
+
         mockFilesDb[projectId][newVersionId] = newVersion
         return newVersion
       }
@@ -176,17 +174,19 @@ describe('File Versioning with Sync Tracking', () => {
     currentTime += 1000
 
     // Perform sync update
-    const updates = [{
-      fileId,
-      data: {
-        name: 'test.ts',
-        path: 'src/test.ts',
-        extension: '.ts',
-        content: 'console.log("synced")',
-        size: 120,
-        checksum: 'def456'
+    const updates = [
+      {
+        fileId,
+        data: {
+          name: 'test.ts',
+          path: 'src/test.ts',
+          extension: '.ts',
+          content: 'console.log("synced")',
+          size: 120,
+          checksum: 'def456'
+        }
       }
-    }]
+    ]
 
     await bulkUpdateProjectFilesForSync(project.id, updates)
 
@@ -247,7 +247,7 @@ describe('File Versioning with Sync Tracking', () => {
     expect(newVersion.prevId).toBe(fileId)
     expect(newVersion.isLatest).toBe(true)
     expect(newVersion.content).toBe('console.log("user edit")')
-    
+
     // Verify sync fields were preserved
     expect(newVersion.lastSyncedAt).toBe(syncTime)
     expect(newVersion.syncVersion).toBe(3)
@@ -342,12 +342,12 @@ describe('File Versioning with Sync Tracking', () => {
     }
 
     const files = await getProjectFiles(project.id)
-    
+
     // Should only return latest versions
     expect(files?.length).toBe(2)
-    expect(files?.find(f => f.id === fileId1)).toBeUndefined() // v1 not included
-    expect(files?.find(f => f.id === fileId2)).toBeDefined() // v2 included
-    expect(files?.find(f => f.id === fileId3)).toBeDefined() // other file included
+    expect(files?.find((f) => f.id === fileId1)).toBeUndefined() // v1 not included
+    expect(files?.find((f) => f.id === fileId2)).toBeDefined() // v2 included
+    expect(files?.find((f) => f.id === fileId3)).toBeDefined() // other file included
 
     // Test with includeAllVersions
     const allFiles = await getProjectFiles(project.id, true)
@@ -395,17 +395,19 @@ describe('File Versioning with Sync Tracking', () => {
 
     // Sync happens after user edit
     currentTime += 1000
-    const syncUpdates = [{
-      fileId: userEditVersion.id, // Sync the latest version
-      data: {
-        name: 'test.ts',
-        path: 'src/test.ts',
-        extension: '.ts',
-        content: 'user edit', // Same content, just updating sync metadata
-        size: 100,
-        checksum: 'user-edit-checksum'
+    const syncUpdates = [
+      {
+        fileId: userEditVersion.id, // Sync the latest version
+        data: {
+          name: 'test.ts',
+          path: 'src/test.ts',
+          extension: '.ts',
+          content: 'user edit', // Same content, just updating sync metadata
+          size: 100,
+          checksum: 'user-edit-checksum'
+        }
       }
-    }]
+    ]
 
     await bulkUpdateProjectFilesForSync(project.id, syncUpdates)
 

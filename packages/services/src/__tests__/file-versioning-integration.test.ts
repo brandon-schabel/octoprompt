@@ -1,5 +1,12 @@
 import { describe, test, expect } from 'bun:test'
-import { createProject, updateFileContent, bulkUpdateProjectFilesForSync, getProjectFiles, bulkCreateProjectFiles, deleteProject } from '../project-service'
+import {
+  createProject,
+  updateFileContent,
+  bulkUpdateProjectFilesForSync,
+  getProjectFiles,
+  bulkCreateProjectFiles,
+  deleteProject
+} from '../project-service'
 import type { CreateProjectBody, FileSyncData } from '@octoprompt/schemas'
 
 describe('File Versioning Integration Tests', () => {
@@ -34,41 +41,45 @@ describe('File Versioning Integration Tests', () => {
     projectId = await createTestProject()
 
     // Create initial files
-    const filesToCreate: FileSyncData[] = [{
-      name: 'test.ts',
-      path: 'src/test.ts',
-      extension: '.ts',
-      content: 'console.log("initial")',
-      size: 23,
-      checksum: 'initial-checksum'
-    }]
+    const filesToCreate: FileSyncData[] = [
+      {
+        name: 'test.ts',
+        path: 'src/test.ts',
+        extension: '.ts',
+        content: 'console.log("initial")',
+        size: 23,
+        checksum: 'initial-checksum'
+      }
+    ]
 
     const createdFiles = await bulkCreateProjectFiles(projectId, filesToCreate)
     expect(createdFiles.length).toBe(1)
-    
+
     const initialFile = createdFiles[0]
     expect(initialFile.syncVersion).toBe(1) // Initial sync version
     expect(initialFile.lastSyncedAt).toBeGreaterThan(0)
 
     // Wait a bit to ensure timestamp difference
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
 
     // Perform sync update
-    const updates = [{
-      fileId: initialFile.id,
-      data: {
-        name: 'test.ts',
-        path: 'src/test.ts',
-        extension: '.ts',
-        content: 'console.log("synced")',
-        size: 22,
-        checksum: 'synced-checksum'
+    const updates = [
+      {
+        fileId: initialFile.id,
+        data: {
+          name: 'test.ts',
+          path: 'src/test.ts',
+          extension: '.ts',
+          content: 'console.log("synced")',
+          size: 22,
+          checksum: 'synced-checksum'
+        }
       }
-    }]
+    ]
 
     const updatedFiles = await bulkUpdateProjectFilesForSync(projectId, updates)
     expect(updatedFiles.length).toBe(1)
-    
+
     const syncedFile = updatedFiles[0]
     expect(syncedFile.id).toBe(initialFile.id) // Same file ID
     expect(syncedFile.content).toBe('console.log("synced")')
@@ -84,14 +95,16 @@ describe('File Versioning Integration Tests', () => {
     projectId = await createTestProject()
 
     // Create initial file with sync data
-    const filesToCreate: FileSyncData[] = [{
-      name: 'test.ts',
-      path: 'src/test.ts',
-      extension: '.ts',
-      content: 'console.log("initial")',
-      size: 23,
-      checksum: 'initial-checksum'
-    }]
+    const filesToCreate: FileSyncData[] = [
+      {
+        name: 'test.ts',
+        path: 'src/test.ts',
+        extension: '.ts',
+        content: 'console.log("initial")',
+        size: 23,
+        checksum: 'initial-checksum'
+      }
+    ]
 
     const createdFiles = await bulkCreateProjectFiles(projectId, filesToCreate)
     const initialFile = createdFiles[0]
@@ -99,7 +112,7 @@ describe('File Versioning Integration Tests', () => {
     const initialSyncTime = initialFile.lastSyncedAt
 
     // Wait to ensure different timestamp
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
 
     // User edit creates new version
     const newVersion = await updateFileContent(projectId, initialFile.id, 'console.log("user edit")')
@@ -109,7 +122,7 @@ describe('File Versioning Integration Tests', () => {
     expect(newVersion.prevId).toBe(initialFile.id)
     expect(newVersion.isLatest).toBe(true)
     expect(newVersion.content).toBe('console.log("user edit")')
-    
+
     // Sync fields should be preserved
     expect(newVersion.syncVersion).toBe(initialSyncVersion)
     expect(newVersion.lastSyncedAt).toBe(initialSyncTime)
@@ -152,16 +165,16 @@ describe('File Versioning Integration Tests', () => {
 
     // Create versions of the old file
     const oldFileV2 = await updateFileContent(projectId, oldFile.id, 'old file v2')
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
     const oldFileV3 = await updateFileContent(projectId, oldFile.id, 'old file v3')
 
     // Get only latest versions
     const latestFiles = await getProjectFiles(projectId)
     expect(latestFiles?.length).toBe(2) // Only 2 files (latest versions)
-    
-    const latestOldFile = latestFiles?.find(f => f.path === 'src/old.ts')
-    const latestNewerFile = latestFiles?.find(f => f.path === 'src/newer.ts')
-    
+
+    const latestOldFile = latestFiles?.find((f) => f.path === 'src/old.ts')
+    const latestNewerFile = latestFiles?.find((f) => f.path === 'src/newer.ts')
+
     expect(latestOldFile?.version).toBe(3)
     expect(latestOldFile?.content).toBe('old file v3')
     expect(latestNewerFile?.version).toBe(1)
@@ -177,14 +190,16 @@ describe('File Versioning Integration Tests', () => {
     projectId = await createTestProject()
 
     // Create initial file
-    const filesToCreate: FileSyncData[] = [{
-      name: 'test.ts',
-      path: 'src/test.ts',
-      extension: '.ts',
-      content: 'initial',
-      size: 7,
-      checksum: 'initial'
-    }]
+    const filesToCreate: FileSyncData[] = [
+      {
+        name: 'test.ts',
+        path: 'src/test.ts',
+        extension: '.ts',
+        content: 'initial',
+        size: 7,
+        checksum: 'initial'
+      }
+    ]
 
     const createdFiles = await bulkCreateProjectFiles(projectId, filesToCreate)
     const initialFile = createdFiles[0]
@@ -193,17 +208,19 @@ describe('File Versioning Integration Tests', () => {
     const userVersion = await updateFileContent(projectId, initialFile.id, 'user edit')
 
     // Sync the latest version
-    const syncUpdates = [{
-      fileId: userVersion.id,
-      data: {
-        name: 'test.ts',
-        path: 'src/test.ts',
-        extension: '.ts',
-        content: 'user edit synced',
-        size: 16,
-        checksum: 'synced'
+    const syncUpdates = [
+      {
+        fileId: userVersion.id,
+        data: {
+          name: 'test.ts',
+          path: 'src/test.ts',
+          extension: '.ts',
+          content: 'user edit synced',
+          size: 16,
+          checksum: 'synced'
+        }
       }
-    }]
+    ]
 
     const syncedFiles = await bulkUpdateProjectFilesForSync(projectId, syncUpdates)
     const syncedFile = syncedFiles[0]

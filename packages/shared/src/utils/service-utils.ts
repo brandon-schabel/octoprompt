@@ -51,12 +51,10 @@ export async function ensureSingleDefault<T extends { isDefault?: boolean }>(
   getIdFn: (entity: T) => number | string = (entity: any) => entity.id
 ): Promise<void> {
   const newDefaultId = getIdFn(newDefault)
-  
+
   // Find other entities that are currently default
-  const currentDefaults = entities.filter(
-    entity => entity.isDefault && getIdFn(entity) !== newDefaultId
-  )
-  
+  const currentDefaults = entities.filter((entity) => entity.isDefault && getIdFn(entity) !== newDefaultId)
+
   // Unset default on all other entities
   for (const entity of currentDefaults) {
     await updateFn(entity, false)
@@ -78,16 +76,16 @@ export function validateOwnership<T>(
   resourceName: string = 'Resource'
 ): void {
   const resourceUserId = getUserIdFn(resource)
-  
+
   if (resourceUserId !== userId) {
     throw new ApiError(
       403,
       `Access denied. You don't have permission to access this ${resourceName.toLowerCase()}.`,
       'ACCESS_DENIED',
-      { 
-        resourceUserId, 
-        requestUserId: userId, 
-        resourceType: resourceName 
+      {
+        resourceUserId,
+        requestUserId: userId,
+        resourceType: resourceName
       }
     )
   }
@@ -144,42 +142,42 @@ export function applySearchQuery<T>(
 ): T[] {
   const normalizedQuery = buildSearchQuery(query)
   let filtered = [...entities]
-  
+
   // Apply search term filter
   if (normalizedQuery.search) {
     const searchTerm = normalizedQuery.search.toLowerCase()
-    filtered = filtered.filter(entity => {
-      return normalizedQuery.searchFields.some(field => {
+    filtered = filtered.filter((entity) => {
+      return normalizedQuery.searchFields.some((field) => {
         const value = getFieldValue(entity, field)
         return value && String(value).toLowerCase().includes(searchTerm)
       })
     })
   }
-  
+
   // Apply additional filters
   if (Object.keys(normalizedQuery.filters).length > 0) {
-    filtered = filtered.filter(entity => {
+    filtered = filtered.filter((entity) => {
       return Object.entries(normalizedQuery.filters).every(([field, expectedValue]) => {
         const actualValue = getFieldValue(entity, field)
         return actualValue === expectedValue
       })
     })
   }
-  
+
   // Apply sorting
   filtered.sort((a, b) => {
     const aValue = getFieldValue(a, normalizedQuery.sortBy)
     const bValue = getFieldValue(b, normalizedQuery.sortBy)
-    
+
     if (aValue < bValue) return normalizedQuery.sortOrder === 'asc' ? -1 : 1
     if (aValue > bValue) return normalizedQuery.sortOrder === 'asc' ? 1 : -1
     return 0
   })
-  
+
   // Apply pagination
   const start = normalizedQuery.offset
   const end = start + normalizedQuery.limit
-  
+
   return filtered.slice(start, end)
 }
 
@@ -227,24 +225,20 @@ export const ErrorFactories = {
    * Creates a forbidden error
    */
   forbidden: (action: string, entityName: string): ApiError => {
-    return new ApiError(
-      403,
-      `You don't have permission to ${action} this ${entityName.toLowerCase()}.`,
-      'FORBIDDEN',
-      { action, entityType: entityName }
-    )
+    return new ApiError(403, `You don't have permission to ${action} this ${entityName.toLowerCase()}.`, 'FORBIDDEN', {
+      action,
+      entityType: entityName
+    })
   },
 
   /**
    * Creates a rate limit error
    */
   rateLimit: (resource: string, resetTime?: number): ApiError => {
-    return new ApiError(
-      429,
-      `Rate limit exceeded for ${resource}. Please try again later.`,
-      'RATE_LIMIT_EXCEEDED',
-      { resource, resetTime }
-    )
+    return new ApiError(429, `Rate limit exceeded for ${resource}. Please try again later.`, 'RATE_LIMIT_EXCEEDED', {
+      resource,
+      resetTime
+    })
   },
 
   /**
@@ -283,12 +277,12 @@ export async function withServiceContext<T>(
     if (error instanceof ApiError) {
       throw error
     }
-    
+
     // Wrap other errors in a consistent format
     const message = `Failed to ${context.action} ${context.entityName}${
       context.identifier ? ` (ID: ${context.identifier})` : ''
     }: ${error instanceof Error ? error.message : String(error)}`
-    
+
     throw new ApiError(
       500,
       message,

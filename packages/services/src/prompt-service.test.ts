@@ -59,7 +59,7 @@ const mockPromptStorage = {
     if (!mockPromptsDb[id]) return false
     delete mockPromptsDb[id]
     // Remove associations
-    mockPromptProjectsDb = mockPromptProjectsDb.filter(link => link.promptId !== id)
+    mockPromptProjectsDb = mockPromptProjectsDb.filter((link) => link.promptId !== id)
     return true
   },
   getById: async (id: number): Promise<Prompt | null> => {
@@ -69,10 +69,8 @@ const mockPromptStorage = {
     return Object.values(mockPromptsDb)
   },
   getProjectPrompts: async (projectId: number): Promise<Prompt[]> => {
-    const promptIds = mockPromptProjectsDb
-      .filter(link => link.projectId === projectId)
-      .map(link => link.promptId)
-    return promptIds.map(id => mockPromptsDb[id]).filter(Boolean)
+    const promptIds = mockPromptProjectsDb.filter((link) => link.projectId === projectId).map((link) => link.promptId)
+    return promptIds.map((id) => mockPromptsDb[id]).filter(Boolean)
   },
   addToProject: async (promptId: number, projectId: number): Promise<PromptProject> => {
     const linkId = generateTestId()
@@ -87,29 +85,30 @@ const mockPromptStorage = {
   removeFromProject: async (promptId: number, projectId: number): Promise<boolean> => {
     const initialLength = mockPromptProjectsDb.length
     mockPromptProjectsDb = mockPromptProjectsDb.filter(
-      link => !(link.promptId === promptId && link.projectId === projectId)
+      (link) => !(link.promptId === promptId && link.projectId === projectId)
     )
     return mockPromptProjectsDb.length < initialLength
   },
   getPromptProjects: async (promptId: number): Promise<number[]> => {
-    return mockPromptProjectsDb
-      .filter(link => link.promptId === promptId)
-      .map(link => link.projectId)
+    return mockPromptProjectsDb.filter((link) => link.promptId === promptId).map((link) => link.projectId)
   },
   // Legacy compatibility methods (for backward compatibility in tests)
-  createPrompt: async function(data: Omit<Prompt, 'id' | 'created' | 'updated'>): Promise<Prompt> {
+  createPrompt: async function (data: Omit<Prompt, 'id' | 'created' | 'updated'>): Promise<Prompt> {
     return this.create(data)
   },
-  updatePrompt: async function(id: number, data: Partial<Omit<Prompt, 'id' | 'created' | 'updated'>>): Promise<Prompt | null> {
+  updatePrompt: async function (
+    id: number,
+    data: Partial<Omit<Prompt, 'id' | 'created' | 'updated'>>
+  ): Promise<Prompt | null> {
     return this.update(id, data)
   },
-  deletePrompt: async function(id: number): Promise<boolean> {
+  deletePrompt: async function (id: number): Promise<boolean> {
     return this.delete(id)
   },
-  getPrompt: async function(id: number): Promise<Prompt | null> {
+  getPrompt: async function (id: number): Promise<Prompt | null> {
     return this.getById(id)
   },
-  getAllPrompts: async function(): Promise<Prompt[]> {
+  getAllPrompts: async function (): Promise<Prompt[]> {
     return this.list()
   },
   getPromptProjectAssociations: async (): Promise<PromptProject[]> => {

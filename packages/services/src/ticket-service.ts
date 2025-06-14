@@ -1,10 +1,5 @@
 import { ticketStorage } from '@octoprompt/storage'
-import {
-  type CreateTicketBody,
-  type UpdateTicketBody,
-  type Ticket,
-  TicketSchema
-} from '@octoprompt/schemas'
+import { type CreateTicketBody, type UpdateTicketBody, type Ticket, TicketSchema } from '@octoprompt/schemas'
 import { BaseService } from './core/base-service'
 import { safeAsync } from './utils/error-handlers'
 import { bulkUpdate } from './utils/bulk-operations'
@@ -27,41 +22,32 @@ class TicketService extends BaseService<Ticket, CreateTicketBody, UpdateTicketBo
    * Get tickets by project
    */
   async getProjectTickets(projectId: number): Promise<Ticket[]> {
-    return safeAsync(
-      () => ticketStorage.getByProject(projectId),
-      {
-        entityName: 'tickets',
-        action: 'fetching by project',
-        details: { projectId }
-      }
-    )
+    return safeAsync(() => ticketStorage.getByProject(projectId), {
+      entityName: 'tickets',
+      action: 'fetching by project',
+      details: { projectId }
+    })
   }
 
   /**
    * Get tickets by assignee
    */
   async getAssignedTickets(assignee: string): Promise<Ticket[]> {
-    return safeAsync(
-      () => ticketStorage.getByAssignee(assignee),
-      {
-        entityName: 'tickets',
-        action: 'fetching by assignee',
-        details: { assignee }
-      }
-    )
+    return safeAsync(() => ticketStorage.getByAssignee(assignee), {
+      entityName: 'tickets',
+      action: 'fetching by assignee',
+      details: { assignee }
+    })
   }
 
   /**
    * Get overdue tickets
    */
   async getOverdueTickets(): Promise<Ticket[]> {
-    return safeAsync(
-      () => ticketStorage.getOverdue(),
-      {
-        entityName: 'tickets',
-        action: 'fetching overdue'
-      }
-    )
+    return safeAsync(() => ticketStorage.getOverdue(), {
+      entityName: 'tickets',
+      action: 'fetching overdue'
+    })
   }
 
   /**
@@ -70,11 +56,8 @@ class TicketService extends BaseService<Ticket, CreateTicketBody, UpdateTicketBo
   async bulkUpdateStatus(ticketIds: number[], status: string): Promise<Ticket[]> {
     return safeAsync(
       async () => {
-        const updates = ticketIds.map(id => ({ id, data: { status } }))
-        const result = await bulkUpdate(
-          updates,
-          (id, data) => this.update(id, data)
-        )
+        const updates = ticketIds.map((id) => ({ id, data: { status } }))
+        const result = await bulkUpdate(updates, (id, data) => this.update(id, data))
         return result.succeeded
       },
       {
@@ -91,11 +74,8 @@ class TicketService extends BaseService<Ticket, CreateTicketBody, UpdateTicketBo
   async bulkReassign(ticketIds: number[], assignee: string): Promise<Ticket[]> {
     return safeAsync(
       async () => {
-        const updates = ticketIds.map(id => ({ id, data: { assignee } }))
-        const result = await bulkUpdate(
-          updates,
-          (id, data) => this.update(id, data)
-        )
+        const updates = ticketIds.map((id) => ({ id, data: { assignee } }))
+        const result = await bulkUpdate(updates, (id, data) => this.update(id, data))
         return result.succeeded
       },
       {
@@ -110,27 +90,21 @@ class TicketService extends BaseService<Ticket, CreateTicketBody, UpdateTicketBo
    * Search tickets by title
    */
   async searchTickets(query: string): Promise<Ticket[]> {
-    return safeAsync(
-      () => ticketStorage.searchByTitle(query),
-      {
-        entityName: 'tickets',
-        action: 'searching',
-        details: { query }
-      }
-    )
+    return safeAsync(() => ticketStorage.searchByTitle(query), {
+      entityName: 'tickets',
+      action: 'searching',
+      details: { query }
+    })
   }
 
   /**
    * Get ticket statistics
    */
   async getTicketStats() {
-    return safeAsync(
-      () => ticketStorage.getStats(),
-      {
-        entityName: 'ticket statistics',
-        action: 'calculating'
-      }
-    )
+    return safeAsync(() => ticketStorage.getStats(), {
+      entityName: 'ticket statistics',
+      action: 'calculating'
+    })
   }
 
   /**

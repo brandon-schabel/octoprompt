@@ -30,7 +30,9 @@ export function ClaudeCodeFab({ projectId }: ClaudeCodeFabProps) {
         </Tooltip>
       </TooltipProvider>
 
-      {(projectId ?? 0) > 0 && <ClaudeCodeModal isOpen={isOpen} onClose={() => setIsOpen(false)} projectId={projectId} />}
+      {(projectId ?? 0) > 0 && (
+        <ClaudeCodeModal isOpen={isOpen} onClose={() => setIsOpen(false)} projectId={projectId} />
+      )}
     </>
   )
 }

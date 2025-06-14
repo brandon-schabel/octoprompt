@@ -83,7 +83,7 @@ export class VersioningMixin<T extends VersionedEntity> {
 
     const originalId = entity.originalId || entity.id
     const versions: T[] = []
-    
+
     // Walk the version chain
     let currentId: number | null = originalId
     while (currentId !== null) {
@@ -110,15 +110,15 @@ export class VersioningMixin<T extends VersionedEntity> {
 
     // Find current latest
     const history = await this.getVersionHistory(version.originalId || version.id)
-    const latest = history.find(v => v.isLatest)
-    
+    const latest = history.find((v) => v.isLatest)
+
     if (!latest) {
       throw new Error('No latest version found')
     }
 
     // Create new version with content from the restored version
     const { id, created, updated, version: _, prevId, nextId, isLatest, ...content } = version
-    
+
     return this.createVersion(latest.id, content, {
       reason: `Restored from version ${version.version}`,
       author: 'system'
@@ -161,7 +161,7 @@ export class SoftDeleteMixin<T extends SoftDeletableEntity> {
    */
   async listActive(): Promise<T[]> {
     const all = await this.list()
-    return all.filter(entity => entity.deletedAt === null)
+    return all.filter((entity) => entity.deletedAt === null)
   }
 
   /**
@@ -169,16 +169,16 @@ export class SoftDeleteMixin<T extends SoftDeletableEntity> {
    */
   async listDeleted(): Promise<T[]> {
     const all = await this.list()
-    return all.filter(entity => entity.deletedAt !== null)
+    return all.filter((entity) => entity.deletedAt !== null)
   }
 
   /**
    * Permanently delete soft-deleted entities older than specified days
    */
   async cleanupDeleted(daysOld: number = 30): Promise<number> {
-    const cutoffTime = Date.now() - (daysOld * 24 * 60 * 60 * 1000)
+    const cutoffTime = Date.now() - daysOld * 24 * 60 * 60 * 1000
     const deleted = await this.listDeleted()
-    
+
     let count = 0
     for (const entity of deleted) {
       if (entity.deletedAt && entity.deletedAt < cutoffTime) {
@@ -186,7 +186,7 @@ export class SoftDeleteMixin<T extends SoftDeletableEntity> {
         count++
       }
     }
-    
+
     return count
   }
 }
@@ -229,26 +229,24 @@ export class AssociationManager<TAssociation extends { id?: number; created: num
    */
   async create(data: Omit<TAssociation, 'id' | 'created'>): Promise<TAssociation> {
     const associations = await this.readAssociations()
-    
+
     // Check if association already exists
-    const existing = associations.find(a => 
-      this.options.keyFields.every(field => 
-        (a as any)[field] === (data as any)[field]
-      )
+    const existing = associations.find((a) =>
+      this.options.keyFields.every((field) => (a as any)[field] === (data as any)[field])
     )
-    
+
     if (existing) {
       return existing
     }
-    
+
     const newAssociation: TAssociation = {
       ...data,
       created: Date.now()
     } as TAssociation
-    
+
     associations.push(newAssociation)
     await this.writeAssociations(associations)
-    
+
     return newAssociation
   }
 
@@ -257,19 +255,17 @@ export class AssociationManager<TAssociation extends { id?: number; created: num
    */
   async remove(criteria: Partial<TAssociation>): Promise<boolean> {
     const associations = await this.readAssociations()
-    const index = associations.findIndex(a =>
-      Object.entries(criteria).every(([key, value]) =>
-        (a as any)[key] === value
-      )
+    const index = associations.findIndex((a) =>
+      Object.entries(criteria).every(([key, value]) => (a as any)[key] === value)
     )
-    
+
     if (index === -1) {
       return false
     }
-    
+
     associations.splice(index, 1)
     await this.writeAssociations(associations)
-    
+
     return true
   }
 
@@ -278,11 +274,7 @@ export class AssociationManager<TAssociation extends { id?: number; created: num
    */
   async find(criteria: Partial<TAssociation>): Promise<TAssociation[]> {
     const associations = await this.readAssociations()
-    return associations.filter(a =>
-      Object.entries(criteria).every(([key, value]) =>
-        (a as any)[key] === value
-      )
-    )
+    return associations.filter((a) => Object.entries(criteria).every(([key, value]) => (a as any)[key] === value))
   }
 
   /**
@@ -291,15 +283,13 @@ export class AssociationManager<TAssociation extends { id?: number; created: num
   async removeAll(criteria: Partial<TAssociation>): Promise<number> {
     const associations = await this.readAssociations()
     const initialLength = associations.length
-    
-    const filtered = associations.filter(a =>
-      !Object.entries(criteria).every(([key, value]) =>
-        (a as any)[key] === value
-      )
+
+    const filtered = associations.filter(
+      (a) => !Object.entries(criteria).every(([key, value]) => (a as any)[key] === value)
     )
-    
+
     await this.writeAssociations(filtered)
-    
+
     return initialLength - filtered.length
   }
 
@@ -356,17 +346,20 @@ export class AuditLogger {
   ): Promise<any[]> {
     try {
       const content = await fs.readFile(this.logPath, 'utf-8')
-      const lines = content.trim().split('\n').filter(line => line.length > 0)
-      
+      const lines = content
+        .trim()
+        .split('\n')
+        .filter((line) => line.length > 0)
+
       const events = lines
-        .map(line => {
+        .map((line) => {
           try {
             return JSON.parse(line)
           } catch {
             return null
           }
         })
-        .filter(event => {
+        .filter((event) => {
           if (!event) return false
           if (criteria.entityId && event.entityId !== criteria.entityId) return false
           if (criteria.action && event.action !== criteria.action) return false
@@ -377,7 +370,7 @@ export class AuditLogger {
         })
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, limit)
-      
+
       return events
     } catch (error: any) {
       if (error.code === 'ENOENT') return []

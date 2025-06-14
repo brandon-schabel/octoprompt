@@ -1,9 +1,5 @@
 import { type ProjectFile } from '@octoprompt/schemas'
-import {
-  syncProject,
-  type FileChangeEvent,
-  type FileChangeListener
-} from '../file-services/file-sync-service-unified'
+import { syncProject, type FileChangeEvent, type FileChangeListener } from '../file-services/file-sync-service-unified'
 import { getProject } from '../project-service'
 
 export interface FileChangeRecord {

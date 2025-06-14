@@ -29,10 +29,8 @@ async function populatePromptsProjectIds(prompts: Prompt[]): Promise<Prompt[]> {
       projectIds: await promptStorage.getPromptProjects(prompt.id)
     }))
   )
-  
-  const associationMap = new Map(
-    associations.map(({ promptId, projectIds }) => [promptId, projectIds[0]])
-  )
+
+  const associationMap = new Map(associations.map(({ promptId, projectIds }) => [promptId, projectIds[0]]))
 
   return prompts.map((prompt) => ({
     ...prompt,
@@ -174,7 +172,7 @@ export async function deletePrompt(promptId: number): Promise<boolean> {
 export async function getPromptProjects(promptId: number): Promise<PromptProject[]> {
   const projectIds = await promptStorage.getPromptProjects(promptId)
   // Convert project IDs to PromptProject format
-  return projectIds.map(projectId => ({
+  return projectIds.map((projectId) => ({
     promptId,
     projectId,
     created: Date.now() // This is a limitation of the V2 API - we don't store creation time

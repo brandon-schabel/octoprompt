@@ -53,12 +53,12 @@ class AttachmentStorage {
     await this.ensureDir(attachmentDir)
 
     const filePath = this.getAttachmentPath(chatId, attachmentId, file.name)
-    
+
     // Convert File to Node.js stream and write to disk
     const buffer = await file.arrayBuffer()
     const nodeStream = Readable.from(Buffer.from(buffer))
     const writeStream = createWriteStream(filePath)
-    
+
     await pipeline(nodeStream, writeStream)
 
     const metadata: AttachmentMetadata = {
@@ -73,37 +73,37 @@ class AttachmentStorage {
   }
 
   async getFile(
-    chatId: number, 
-    messageId: number, 
-    attachmentId: number, 
+    chatId: number,
+    messageId: number,
+    attachmentId: number,
     fileName: string
   ): Promise<FileWithStream | null> {
     const filePath = this.getAttachmentPath(chatId, attachmentId, fileName)
-    
+
     if (!existsSync(filePath)) {
       return null
     }
 
     // Get file stats for size
-    const { size } = await import('fs/promises').then(fs => fs.stat(filePath))
-    
+    const { size } = await import('fs/promises').then((fs) => fs.stat(filePath))
+
     // Determine MIME type from file extension
     const ext = fileName.split('.').pop()?.toLowerCase() || ''
     const mimeTypes: Record<string, string> = {
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif',
-      'pdf': 'application/pdf',
-      'txt': 'text/plain',
-      'json': 'application/json',
-      'js': 'text/javascript',
-      'ts': 'text/typescript',
-      'html': 'text/html',
-      'css': 'text/css',
-      'md': 'text/markdown'
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      pdf: 'application/pdf',
+      txt: 'text/plain',
+      json: 'application/json',
+      js: 'text/javascript',
+      ts: 'text/typescript',
+      html: 'text/html',
+      css: 'text/css',
+      md: 'text/markdown'
     }
-    
+
     const type = mimeTypes[ext] || 'application/octet-stream'
 
     return {
@@ -117,21 +117,17 @@ class AttachmentStorage {
     }
   }
 
-  async deleteFileById(
-    chatId: number, 
-    messageId: number, 
-    attachmentId: number
-  ): Promise<boolean> {
+  async deleteFileById(chatId: number, messageId: number, attachmentId: number): Promise<boolean> {
     const attachmentDir = this.getAttachmentDir(chatId)
-    
+
     if (!existsSync(attachmentDir)) {
       return false
     }
 
     // Find files matching the attachmentId pattern
     const files = await readdir(attachmentDir)
-    const matchingFiles = files.filter(file => file.startsWith(`${attachmentId}_`))
-    
+    const matchingFiles = files.filter((file) => file.startsWith(`${attachmentId}_`))
+
     if (matchingFiles.length === 0) {
       return false
     }
@@ -147,14 +143,14 @@ class AttachmentStorage {
 
   async deleteAllChatAttachments(chatId: number): Promise<void> {
     const attachmentDir = this.getAttachmentDir(chatId)
-    
+
     if (existsSync(attachmentDir)) {
       const files = await readdir(attachmentDir)
       for (const file of files) {
         await unlink(join(attachmentDir, file))
       }
       // Optionally remove the empty directory
-      await import('fs/promises').then(fs => fs.rmdir(attachmentDir))
+      await import('fs/promises').then((fs) => fs.rmdir(attachmentDir))
     }
   }
 }

@@ -1,3 +1,7 @@
+// Export core base classes
+export { BaseStorage, type BaseEntity, type StorageOptions } from './src/core/base-storage'
+export { BaseStorageString } from './src/core/base-storage-string'
+
 // Export existing storage
 export * from './src/project-storage'
 export * from './src/chat-storage'
@@ -7,9 +11,6 @@ export * from './src/provider-key-storage'
 export * from './src/attachment-storage'
 
 // Export new core utilities
-export * from './src/core/indexed-storage'
-export * from './src/core/index-builder'
-export * from './src/core/storage-query-utils'
 export * from './src/core/storage-patterns'
 
 // Export new enhanced storage system
@@ -42,53 +43,18 @@ export type {
   StorageMetrics
 } from './src/core/storage-adapter'
 
-export type {
-  IndexDefinition
-} from './src/core/indexed-storage'
 
-export type {
-  IndexBuilderOptions
-} from './src/core/index-builder'
+export type { VersionedEntity, SoftDeletableEntity, AuditableEntity } from './src/core/storage-patterns'
 
-export {
-  IndexBuilder,
-  createIndexBuilder,
-  IndexBuilders
-} from './src/core/index-builder'
+export type { ReadWriteLock, Lock, LockManager } from './src/core/locks'
 
-export type {
-  VersionedEntity,
-  SoftDeletableEntity,
-  AuditableEntity
-} from './src/core/storage-patterns'
+export type { MultiLevelCache, MultiLevelCacheConfig, CacheLevel, CacheStats } from './src/core/multi-level-cache'
 
-export type {
-  ReadWriteLock,
-  Lock,
-  LockManager
-} from './src/core/locks'
+export type { CachedStorageAdapter, StorageRegistry } from './src/core/storage-factory'
 
-export type {
-  MultiLevelCache,
-  MultiLevelCacheConfig,
-  CacheLevel,
-  CacheStats
-} from './src/core/multi-level-cache'
+export { globalStorageRegistry, createProjectStorage, createTestStorage } from './src/core/storage-factory'
 
-export type {
-  CachedStorageAdapter,
-  StorageRegistry
-} from './src/core/storage-factory'
-
-export {
-  globalStorageRegistry,
-  createProjectStorage,
-  createTestStorage
-} from './src/core/storage-factory'
-
-export {
-  globalLockManager
-} from './src/core/locks'
+export { globalLockManager } from './src/core/locks'
 
 export type {
   MigrationStep,

@@ -43,7 +43,7 @@ export class StorageV2Migrator {
 
     try {
       console.log('Starting chat storage migration...')
-      
+
       // Initialize V2 storage
       const v2Storage = new ChatStorage({
         cacheEnabled: false // Disable cache during migration
@@ -72,7 +72,7 @@ export class StorageV2Migrator {
       // Migrate each chat
       for (let i = 0; i < v1Chats.length; i++) {
         const chat = v1Chats[i]
-        
+
         try {
           // Create chat in V2 storage
           const v2Chat = await v2Storage.create({
@@ -94,7 +94,7 @@ export class StorageV2Migrator {
           }
 
           migrated++
-          
+
           if (options.onProgress) {
             options.onProgress({ current: i + 1, total: v1Chats.length, entity: 'chats' })
           }
@@ -133,7 +133,7 @@ export class StorageV2Migrator {
 
     try {
       console.log('Starting prompt storage migration...')
-      
+
       // Initialize V2 storage
       const v2Storage = new PromptStorage({
         cacheEnabled: false // Disable cache during migration
@@ -162,7 +162,7 @@ export class StorageV2Migrator {
       // Migrate each prompt
       for (let i = 0; i < v1Prompts.length; i++) {
         const prompt = v1Prompts[i]
-        
+
         try {
           // Create prompt in V2 storage
           await v2Storage.create({
@@ -177,7 +177,7 @@ export class StorageV2Migrator {
           })
 
           migrated++
-          
+
           if (options.onProgress) {
             options.onProgress({ current: i + 1, total: v1Prompts.length, entity: 'prompts' })
           }
@@ -216,7 +216,7 @@ export class StorageV2Migrator {
 
     try {
       console.log('Starting provider key storage migration...')
-      
+
       // Initialize V2 storage with encryption
       const v2Storage = new ProviderKeyStorage({
         cacheEnabled: false, // Disable cache during migration
@@ -249,7 +249,7 @@ export class StorageV2Migrator {
       // Migrate each provider key
       for (let i = 0; i < v1Keys.length; i++) {
         const key = v1Keys[i]
-        
+
         try {
           // Create provider key in V2 storage
           await v2Storage.create({
@@ -263,7 +263,7 @@ export class StorageV2Migrator {
           })
 
           migrated++
-          
+
           if (options.onProgress) {
             options.onProgress({ current: i + 1, total: v1Keys.length, entity: 'provider keys' })
           }
@@ -302,7 +302,7 @@ export class StorageV2Migrator {
 
     try {
       console.log('Starting Claude Code storage migration...')
-      
+
       // Initialize V2 storage
       const v2Storage = new ClaudeCodeStorage({
         cacheEnabled: false // Disable cache during migration
@@ -331,7 +331,7 @@ export class StorageV2Migrator {
       // Migrate each session
       for (let i = 0; i < v1Sessions.length; i++) {
         const session = v1Sessions[i]
-        
+
         try {
           // Create session in V2 storage
           const v2Session = await v2Storage.createSession({
@@ -358,7 +358,7 @@ export class StorageV2Migrator {
           }
 
           migrated++
-          
+
           if (options.onProgress) {
             options.onProgress({ current: i + 1, total: v1Sessions.length, entity: 'Claude Code sessions' })
           }
@@ -397,7 +397,7 @@ export class StorageV2Migrator {
 
     try {
       console.log('Starting project storage migration...')
-      
+
       // Initialize V2 storage
       const v2Storage = new ProjectStorage({
         cacheEnabled: false // Disable cache during migration
@@ -426,7 +426,7 @@ export class StorageV2Migrator {
       // Migrate each project
       for (let i = 0; i < v1Projects.length; i++) {
         const project = v1Projects[i]
-        
+
         try {
           // Create project in V2 storage
           const v2Project = await v2Storage.create({
@@ -443,7 +443,7 @@ export class StorageV2Migrator {
           // Migrate project files
           const v1Files = await projectStorage.getProjectFiles(project.id)
           const fileStorage = v2Storage.getFileStorage(v2Project.id)
-          
+
           for (const file of v1Files) {
             await fileStorage.create({
               path: file.path,
@@ -457,7 +457,7 @@ export class StorageV2Migrator {
           }
 
           migrated++
-          
+
           if (options.onProgress) {
             options.onProgress({ current: i + 1, total: v1Projects.length, entity: 'projects' })
           }
@@ -491,7 +491,7 @@ export class StorageV2Migrator {
    */
   static async migrateAll(options: MigrationOptions = {}): Promise<Record<string, MigrationResult>> {
     console.log('Starting full migration from V1 to V2 storage...')
-    
+
     const results: Record<string, MigrationResult> = {}
 
     // Migrate in order of dependencies (least dependent first)
@@ -506,7 +506,7 @@ export class StorageV2Migrator {
     for (const migration of migrations) {
       console.log(`\n--- Starting ${migration.name} migration ---`)
       results[migration.name] = await migration.fn()
-      
+
       if (!results[migration.name].success && !options.dryRun) {
         console.error(`${migration.name} migration failed, stopping full migration`)
         break
@@ -522,7 +522,7 @@ export class StorageV2Migrator {
     console.log(`Total migrated: ${totalMigrated}`)
     console.log(`Total errors: ${totalErrors}`)
     console.log(`Total duration: ${(totalDuration / 1000).toFixed(2)}s`)
-    
+
     Object.entries(results).forEach(([name, result]) => {
       console.log(`${name}: ${result.migrated} migrated, ${result.errors.length} errors`)
     })
@@ -538,13 +538,13 @@ export class StorageV2Migrator {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const backupDir = path.resolve(process.cwd(), 'data', 'backups', `v1-backup-${timestamp}`)
     const sourceDir = path.resolve(process.cwd(), 'data', storageType)
-    
+
     await fs.mkdir(backupDir, { recursive: true })
-    
+
     // Copy entire storage directory
     const backupPath = path.join(backupDir, storageType)
     await fs.cp(sourceDir, backupPath, { recursive: true, force: true })
-    
+
     console.log(`Backed up ${storageType} to ${backupPath}`)
     return backupPath
   }
@@ -554,7 +554,7 @@ export class StorageV2Migrator {
    */
   static async validateMigration(storageType: string): Promise<{ valid: boolean; issues: string[] }> {
     const issues: string[] = []
-    
+
     try {
       switch (storageType) {
         case 'chats':
@@ -562,38 +562,38 @@ export class StorageV2Migrator {
           const chats = await chatStorage.list()
           console.log(`Validated ${chats.length} chats`)
           break
-          
+
         case 'prompts':
           const promptStorage = new PromptStorage()
           const prompts = await promptStorage.list()
           console.log(`Validated ${prompts.length} prompts`)
           break
-          
+
         case 'provider-keys':
           const keyStorage = new ProviderKeyStorage()
           const keys = await keyStorage.list()
           console.log(`Validated ${keys.length} provider keys`)
           break
-          
+
         case 'claude-code':
           const ccStorage = new ClaudeCodeStorage()
           const sessions = await ccStorage.getAllSessions()
           console.log(`Validated ${sessions.length} Claude Code sessions`)
           break
-          
+
         case 'projects':
           const projectStorage = new ProjectStorage()
           const projects = await projectStorage.list()
           console.log(`Validated ${projects.length} projects`)
           break
-          
+
         default:
           issues.push(`Unknown storage type: ${storageType}`)
       }
     } catch (error: any) {
       issues.push(`Validation failed for ${storageType}: ${error.message}`)
     }
-    
+
     return {
       valid: issues.length === 0,
       issues

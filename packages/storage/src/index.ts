@@ -1,3 +1,7 @@
+// Export core base classes
+export { BaseStorage, type BaseEntity, type StorageOptions } from './core/base-storage'
+export { BaseStorageString } from './core/base-storage-string'
+
 // Export existing storage
 export * from './project-storage'
 export * from './chat-storage'
@@ -32,44 +36,16 @@ export type {
   StorageMetrics
 } from './core/storage-adapter'
 
-export type {
-  ReadWriteLock,
-  Lock,
-  LockManager
-} from './core/locks'
+export type { ReadWriteLock, Lock, LockManager } from './core/locks'
 
-export type {
-  MultiLevelCache,
-  MultiLevelCacheConfig,
-  CacheLevel,
-  CacheStats
-} from './core/multi-level-cache'
+export type { MultiLevelCache, MultiLevelCacheConfig, CacheLevel, CacheStats } from './core/multi-level-cache'
 
-export type {
-  CachedStorageAdapter,
-  StorageRegistry
-} from './core/storage-factory'
+export type { CachedStorageAdapter, StorageRegistry } from './core/storage-factory'
 
-export {
-  globalStorageRegistry,
-  createProjectStorage,
-  createTestStorage
-} from './core/storage-factory'
+export { globalStorageRegistry, createProjectStorage, createTestStorage } from './core/storage-factory'
 
-export {
-  globalLockManager
-} from './core/locks'
+export { globalLockManager } from './core/locks'
 
-export type {
-  MigrationStep,
-  MigrationContext,
-  MigrationOptions,
-  MigrationResult
-} from './migration/storage-migrator'
+export type { MigrationStep, MigrationContext, MigrationOptions, MigrationResult } from './migration/storage-migrator'
 
-export {
-  StorageMigrator,
-  MigrationSteps,
-  StorageMigrationUtils,
-  migrateStorage
-} from './migration/storage-migrator'
+export { StorageMigrator, MigrationSteps, StorageMigrationUtils, migrateStorage } from './migration/storage-migrator'

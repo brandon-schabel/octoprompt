@@ -1,34 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-
-export interface ClaudeCodeRequest {
-  prompt: string
-  sessionId?: string
-  maxTurns?: number
-  projectPath?: string
-  projectId?: number
-  includeProjectContext?: boolean
-  allowedTools?: string[]
-  systemPrompt?: string
-  outputFormat?: 'text' | 'json' | 'stream-json'
-}
-
-export interface ClaudeCodeSession {
-  id: string
-  created: number
-  projectPath?: string
-  status: 'idle' | 'running' | 'error'
-  lastActivity: number
-}
-
-export interface ClaudeCodeResult {
-  sessionId: string
-  messages: any[]
-  totalCostUsd: number
-  isError: boolean
-  durationMs: number
-  numTurns: number
-}
+import { octoClient } from '../api-hooks'
+import type {
+  ClaudeCodeRequest,
+  ClaudeCodeResult,
+  ClaudeCodeSession,
+  ClaudeCodeSessionList,
+  GetAuditLogsQuery,
+  ClaudeCodeAuditLog,
+  AuditLogSummary
+} from '@octoprompt/schemas'
 
 // Query Keys
 const CLAUDE_CODE_KEYS = {
@@ -42,12 +23,8 @@ export function useGetClaudeCodeSessions() {
   return useQuery({
     queryKey: CLAUDE_CODE_KEYS.sessions(),
     queryFn: async () => {
-      const response = await fetch('/api/claude-code/sessions')
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      const data = await response.json()
-      return data.sessions as ClaudeCodeSession[]
+      const response = await octoClient.claudeCode.getSessions()
+      return response.sessions
     },
     staleTime: 30 * 1000 // 30 seconds
   })
@@ -57,14 +34,14 @@ export function useGetClaudeCodeSession(sessionId: string) {
   return useQuery({
     queryKey: CLAUDE_CODE_KEYS.session(sessionId),
     queryFn: async () => {
-      const response = await fetch(`/api/claude-code/sessions/${sessionId}`)
-      if (!response.ok) {
-        if (response.status === 404) {
+      try {
+        return await octoClient.claudeCode.getSession(sessionId)
+      } catch (error: any) {
+        if (error.statusCode === 404) {
           return null
         }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        throw error
       }
-      return response.json() as Promise<ClaudeCodeSession>
     },
     enabled: !!sessionId,
     staleTime: 30 * 1000 // 30 seconds
@@ -76,18 +53,7 @@ export function useExecuteClaudeCode() {
 
   return useMutation({
     mutationFn: async (request: ClaudeCodeRequest): Promise<ClaudeCodeResult> => {
-      const response = await fetch('/api/claude-code/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request)
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      return response.json()
+      return await octoClient.claudeCode.executeQuery(request)
     },
     onSuccess: (data) => {
       // Invalidate sessions to refresh the list
@@ -112,18 +78,7 @@ export function useContinueClaudeCodeSession() {
 
   return useMutation({
     mutationFn: async ({ sessionId, prompt }: { sessionId: string; prompt: string }): Promise<ClaudeCodeResult> => {
-      const response = await fetch(`/api/claude-code/sessions/${sessionId}/continue`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      return response.json()
+      return await octoClient.claudeCode.continueSession(sessionId, prompt)
     },
     onSuccess: (data, variables) => {
       // Invalidate sessions to refresh the list
@@ -146,14 +101,7 @@ export function useDeleteClaudeCodeSession() {
 
   return useMutation({
     mutationFn: async (sessionId: string): Promise<void> => {
-      const response = await fetch(`/api/claude-code/sessions/${sessionId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
+      await octoClient.claudeCode.deleteSession(sessionId)
     },
     onSuccess: (_, sessionId) => {
       // Remove the session from the cache
@@ -178,21 +126,9 @@ export function useClaudeCodeStream() {
       request: ClaudeCodeRequest,
       onMessage?: (message: any) => void
     ): AsyncGenerator<any, void, unknown> {
-      const response = await fetch('/api/claude-code/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request)
-      })
+      const stream = await octoClient.claudeCode.streamQuery(request)
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('No response body reader')
-      }
-
+      const reader = stream.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
 
@@ -230,4 +166,33 @@ export function useInvalidateClaudeCodeSessions() {
   return () => {
     queryClient.invalidateQueries({ queryKey: CLAUDE_CODE_KEYS.sessions() })
   }
+}
+
+// Hook for getting file changes
+export function useGetSessionFileChanges(sessionId: string) {
+  return useQuery({
+    queryKey: [...CLAUDE_CODE_KEYS.all, 'file-changes', sessionId],
+    queryFn: () => octoClient.claudeCode.getSessionFileChanges(sessionId),
+    enabled: !!sessionId,
+    staleTime: 30 * 1000
+  })
+}
+
+// Hook for getting audit logs
+export function useGetClaudeCodeAuditLogs(query?: GetAuditLogsQuery) {
+  return useQuery({
+    queryKey: [...CLAUDE_CODE_KEYS.all, 'audit-logs', query],
+    queryFn: () => octoClient.claudeCode.getAuditLogs(query),
+    staleTime: 60 * 1000 // 1 minute
+  })
+}
+
+// Hook for getting session audit summary
+export function useGetSessionAuditSummary(sessionId: string) {
+  return useQuery({
+    queryKey: [...CLAUDE_CODE_KEYS.all, 'audit-summary', sessionId],
+    queryFn: () => octoClient.claudeCode.getSessionAuditSummary(sessionId),
+    enabled: !!sessionId,
+    staleTime: 60 * 1000
+  })
 }

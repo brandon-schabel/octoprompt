@@ -61,24 +61,24 @@ export class MemoryCache<T> implements CacheLevel<T> {
     totalAccessTime: 0,
     accessCount: 0
   }
-  
+
   constructor(
     private maxSize: number,
     private ttl: number,
     private evictionStrategy: 'lru' | 'lfu' | 'fifo' | 'clock' = 'lru'
   ) {}
-  
+
   async get(key: string): Promise<CacheEntry<T> | null> {
     const start = Date.now()
-    
+
     try {
       const entry = this.cache.get(key)
-      
+
       if (!entry) {
         this.stats.misses++
         return null
       }
-      
+
       // Check TTL
       if (Date.now() - entry.timestamp > this.ttl) {
         this.cache.delete(key)
@@ -86,44 +86,44 @@ export class MemoryCache<T> implements CacheLevel<T> {
         this.stats.misses++
         return null
       }
-      
+
       // Update access stats
       entry.accessed = Date.now()
       entry.hits++
       this.updateAccessOrder(key)
       this.stats.hits++
-      
+
       return entry
     } finally {
       this.stats.totalAccessTime += Date.now() - start
       this.stats.accessCount++
     }
   }
-  
+
   async set(key: string, entry: CacheEntry<T>): Promise<void> {
     // Check if we need to evict
     if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
       this.evict()
     }
-    
+
     this.cache.set(key, { ...entry })
     this.updateAccessOrder(key)
   }
-  
+
   async delete(key: string): Promise<void> {
     this.cache.delete(key)
     this.removeFromAccessOrder(key)
   }
-  
+
   async clear(): Promise<void> {
     this.cache.clear()
     this.accessOrder = []
   }
-  
+
   async size(): Promise<number> {
     return this.cache.size
   }
-  
+
   async stats(): Promise<CacheStats> {
     const total = this.stats.hits + this.stats.misses
     return {
@@ -135,10 +135,10 @@ export class MemoryCache<T> implements CacheLevel<T> {
       avgAccessTime: this.stats.accessCount > 0 ? this.stats.totalAccessTime / this.stats.accessCount : 0
     }
   }
-  
+
   private evict(): void {
     let keyToEvict: string | null = null
-    
+
     switch (this.evictionStrategy) {
       case 'lru':
         keyToEvict = this.accessOrder[0] || null
@@ -153,44 +153,44 @@ export class MemoryCache<T> implements CacheLevel<T> {
         keyToEvict = this.clockEvict()
         break
     }
-    
+
     if (keyToEvict) {
       this.cache.delete(keyToEvict)
       this.removeFromAccessOrder(keyToEvict)
     }
   }
-  
+
   private updateAccessOrder(key: string): void {
     this.removeFromAccessOrder(key)
     this.accessOrder.push(key)
   }
-  
+
   private removeFromAccessOrder(key: string): void {
     const index = this.accessOrder.indexOf(key)
     if (index >= 0) {
       this.accessOrder.splice(index, 1)
     }
   }
-  
+
   private findLeastFrequentlyUsed(): string | null {
     let leastUsedKey: string | null = null
     let leastHits = Infinity
-    
+
     for (const [key, entry] of this.cache.entries()) {
       if (entry.hits < leastHits) {
         leastHits = entry.hits
         leastUsedKey = key
       }
     }
-    
+
     return leastUsedKey
   }
-  
+
   private clockEvict(): string | null {
     // Simple clock algorithm implementation
     return this.accessOrder[0] || null
   }
-  
+
   private estimateMemoryUsage(): number {
     let size = 0
     for (const [key, entry] of this.cache.entries()) {
@@ -200,7 +200,7 @@ export class MemoryCache<T> implements CacheLevel<T> {
     }
     return size
   }
-  
+
   private estimateEntrySize(data: T): number {
     try {
       return JSON.stringify(data).length * 2 // UTF-16
@@ -224,7 +224,7 @@ export class DiskCache<T> implements CacheLevel<T> {
     totalAccessTime: 0,
     accessCount: 0
   }
-  
+
   constructor(
     private cachePath: string,
     private maxSize: number, // Max files
@@ -233,52 +233,52 @@ export class DiskCache<T> implements CacheLevel<T> {
   ) {
     this.indexPath = path.join(cachePath, '.index.json')
   }
-  
+
   async initialize(): Promise<void> {
     // Ensure cache directory exists
     await fs.mkdir(this.cachePath, { recursive: true })
-    
+
     // Load index
     await this.loadIndex()
-    
+
     // Clean expired entries
     await this.cleanExpired()
   }
-  
+
   async get(key: string): Promise<CacheEntry<T> | null> {
     const start = Date.now()
-    
+
     try {
       const indexEntry = this.index.get(key)
-      
+
       if (!indexEntry) {
         this.stats.misses++
         return null
       }
-      
+
       // Check TTL
       if (Date.now() - indexEntry.timestamp > this.ttl) {
         await this.delete(key)
         this.stats.misses++
         return null
       }
-      
+
       // Read from disk
       const filePath = path.join(this.cachePath, indexEntry.file)
-      
+
       return this.lockManager.withReadLock(filePath, async () => {
         try {
           const content = await fs.readFile(filePath, 'utf-8')
           const data = JSON.parse(content) as T
-          
+
           // Update access stats
           indexEntry.accessed = Date.now()
           indexEntry.hits++
           this.stats.hits++
-          
+
           // Save index changes
           await this.saveIndex()
-          
+
           return {
             data,
             timestamp: indexEntry.timestamp,
@@ -298,21 +298,21 @@ export class DiskCache<T> implements CacheLevel<T> {
       this.stats.accessCount++
     }
   }
-  
+
   async set(key: string, entry: CacheEntry<T>): Promise<void> {
     // Check if we need to evict
     if (this.index.size >= this.maxSize && !this.index.has(key)) {
       await this.evict()
     }
-    
+
     const fileName = this.getFileName(key)
     const filePath = path.join(this.cachePath, fileName)
-    
+
     await this.lockManager.withWriteLock(filePath, async () => {
       // Write data to file
       const content = JSON.stringify(entry.data, null, 2)
       await fs.writeFile(filePath, content, 'utf-8')
-      
+
       // Update index
       this.index.set(key, {
         file: fileName,
@@ -321,32 +321,32 @@ export class DiskCache<T> implements CacheLevel<T> {
         hits: entry.hits,
         size: content.length
       })
-      
+
       await this.saveIndex()
     })
   }
-  
+
   async delete(key: string): Promise<void> {
     const indexEntry = this.index.get(key)
-    
+
     if (indexEntry) {
       const filePath = path.join(this.cachePath, indexEntry.file)
-      
+
       try {
         await fs.unlink(filePath)
       } catch (error) {
         // File might already be deleted, ignore
       }
-      
+
       this.index.delete(key)
       await this.saveIndex()
     }
   }
-  
+
   async clear(): Promise<void> {
     // Delete all cache files
     const entries = Array.from(this.index.values())
-    
+
     await Promise.all(
       entries.map(async (entry) => {
         try {
@@ -356,19 +356,19 @@ export class DiskCache<T> implements CacheLevel<T> {
         }
       })
     )
-    
+
     this.index.clear()
     await this.saveIndex()
   }
-  
+
   async size(): Promise<number> {
     return this.index.size
   }
-  
+
   async stats(): Promise<CacheStats> {
     const total = this.stats.hits + this.stats.misses
     const totalSize = Array.from(this.index.values()).reduce((sum, entry) => sum + entry.size, 0)
-    
+
     return {
       hits: this.stats.hits,
       misses: this.stats.misses,
@@ -378,7 +378,7 @@ export class DiskCache<T> implements CacheLevel<T> {
       avgAccessTime: this.stats.accessCount > 0 ? this.stats.totalAccessTime / this.stats.accessCount : 0
     }
   }
-  
+
   private async loadIndex(): Promise<void> {
     try {
       if (existsSync(this.indexPath)) {
@@ -391,7 +391,7 @@ export class DiskCache<T> implements CacheLevel<T> {
       this.index.clear()
     }
   }
-  
+
   private async saveIndex(): Promise<void> {
     try {
       const data = Object.fromEntries(this.index.entries())
@@ -401,25 +401,25 @@ export class DiskCache<T> implements CacheLevel<T> {
       console.error(`Failed to save disk cache index: ${error}`)
     }
   }
-  
+
   private async cleanExpired(): Promise<void> {
     const now = Date.now()
     const expiredKeys: string[] = []
-    
+
     for (const [key, entry] of this.index.entries()) {
       if (now - entry.timestamp > this.ttl) {
         expiredKeys.push(key)
       }
     }
-    
+
     for (const key of expiredKeys) {
       await this.delete(key)
     }
   }
-  
+
   private async evict(): Promise<void> {
     let keyToEvict: string | null = null
-    
+
     switch (this.evictionStrategy) {
       case 'lru':
         keyToEvict = this.findLeastRecentlyUsed()
@@ -431,66 +431,66 @@ export class DiskCache<T> implements CacheLevel<T> {
         keyToEvict = this.findOldest()
         break
     }
-    
+
     if (keyToEvict) {
       await this.delete(keyToEvict)
     }
   }
-  
+
   private findLeastRecentlyUsed(): string | null {
     let oldestKey: string | null = null
     let oldestTime = Infinity
-    
+
     for (const [key, entry] of this.index.entries()) {
       if (entry.accessed < oldestTime) {
         oldestTime = entry.accessed
         oldestKey = key
       }
     }
-    
+
     return oldestKey
   }
-  
+
   private findLeastFrequentlyUsed(): string | null {
     let leastUsedKey: string | null = null
     let leastHits = Infinity
-    
+
     for (const [key, entry] of this.index.entries()) {
       if (entry.hits < leastHits) {
         leastHits = entry.hits
         leastUsedKey = key
       }
     }
-    
+
     return leastUsedKey
   }
-  
+
   private findOldest(): string | null {
     let oldestKey: string | null = null
     let oldestTime = Infinity
-    
+
     for (const [key, entry] of this.index.entries()) {
       if (entry.timestamp < oldestTime) {
         oldestTime = entry.timestamp
         oldestKey = key
       }
     }
-    
+
     return oldestKey
   }
-  
+
   private getFileName(key: string): string {
     // Create safe filename from key
     const safeKey = key.replace(/[^a-zA-Z0-9-_]/g, '_')
     const hash = this.simpleHash(key)
     return `${safeKey}_${hash}.json`
   }
-  
+
   private simpleHash(str: string): string {
     let hash = 0
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
+      hash = (hash << 5) - hash + char
       hash = hash & hash // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(36)
@@ -509,21 +509,17 @@ export class MultiLevelCache<T> {
     l3Hits: 0,
     misses: 0
   }
-  
+
   constructor(private config: MultiLevelCacheConfig) {}
-  
+
   async initialize(): Promise<void> {
     // Initialize cache levels based on config
     for (const levelConfig of this.config.levels) {
       let level: CacheLevel<T>
-      
+
       switch (levelConfig.type) {
         case 'memory':
-          level = new MemoryCache<T>(
-            levelConfig.maxSize,
-            levelConfig.ttl,
-            levelConfig.evictionStrategy as any
-          )
+          level = new MemoryCache<T>(levelConfig.maxSize, levelConfig.ttl, levelConfig.evictionStrategy as any)
           break
         case 'disk':
           const diskCache = new DiskCache<T>(
@@ -538,40 +534,46 @@ export class MultiLevelCache<T> {
         default:
           throw new Error(`Unsupported cache type: ${levelConfig.type}`)
       }
-      
+
       this.levels.push(level)
     }
   }
-  
+
   async get(key: string): Promise<T | null> {
     this.stats.totalRequests++
-    
+
     // Try each level in order
     for (let i = 0; i < this.levels.length; i++) {
       const level = this.levels[i]
       const entry = await level.get(key)
-      
+
       if (entry) {
         // Found in this level, update stats
         switch (i) {
-          case 0: this.stats.l1Hits++; break
-          case 1: this.stats.l2Hits++; break
-          case 2: this.stats.l3Hits++; break
+          case 0:
+            this.stats.l1Hits++
+            break
+          case 1:
+            this.stats.l2Hits++
+            break
+          case 2:
+            this.stats.l3Hits++
+            break
         }
-        
+
         // Promote to higher levels if configured
         if (i > 0 && this.shouldPromote(entry)) {
           await this.promoteToHigherLevels(key, entry, i - 1)
         }
-        
+
         return entry.data
       }
     }
-    
+
     this.stats.misses++
     return null
   }
-  
+
   async set(key: string, data: T): Promise<void> {
     const now = Date.now()
     const entry: CacheEntry<T> = {
@@ -581,17 +583,15 @@ export class MultiLevelCache<T> {
       hits: 0,
       size: this.estimateSize(data)
     }
-    
+
     if (this.config.writeThrough) {
       // Write to all levels
-      await Promise.all(
-        this.levels.map(level => level.set(key, entry))
-      )
+      await Promise.all(this.levels.map((level) => level.set(key, entry)))
     } else {
       // Write to first level only
       if (this.levels.length > 0) {
         await this.levels[0].set(key, entry)
-        
+
         // Optionally write back to lower levels asynchronously
         if (this.config.writeBack && this.levels.length > 1) {
           setImmediate(async () => {
@@ -607,30 +607,24 @@ export class MultiLevelCache<T> {
       }
     }
   }
-  
+
   async delete(key: string): Promise<void> {
     // Delete from all levels
-    await Promise.all(
-      this.levels.map(level => level.delete(key))
-    )
+    await Promise.all(this.levels.map((level) => level.delete(key)))
   }
-  
+
   async clear(): Promise<void> {
-    await Promise.all(
-      this.levels.map(level => level.clear())
-    )
+    await Promise.all(this.levels.map((level) => level.clear()))
   }
-  
+
   async getStats(): Promise<{
     overall: any
     levels: CacheStats[]
   }> {
-    const levelStats = await Promise.all(
-      this.levels.map(level => level.stats())
-    )
-    
+    const levelStats = await Promise.all(this.levels.map((level) => level.stats()))
+
     const totalHits = this.stats.l1Hits + this.stats.l2Hits + this.stats.l3Hits
-    
+
     return {
       overall: {
         totalRequests: this.stats.totalRequests,
@@ -644,7 +638,7 @@ export class MultiLevelCache<T> {
       levels: levelStats
     }
   }
-  
+
   private shouldPromote(entry: CacheEntry<T>): boolean {
     switch (this.config.promotionStrategy) {
       case 'frequency':
@@ -656,7 +650,7 @@ export class MultiLevelCache<T> {
         return entry.hits >= 1 && Date.now() - entry.accessed < 300000 // Hits + recent access
     }
   }
-  
+
   private async promoteToHigherLevels(key: string, entry: CacheEntry<T>, targetLevel: number): Promise<void> {
     // Promote to all levels from targetLevel up to 0
     for (let i = targetLevel; i >= 0; i--) {
@@ -667,7 +661,7 @@ export class MultiLevelCache<T> {
       }
     }
   }
-  
+
   private estimateSize(data: T): number {
     try {
       return JSON.stringify(data).length * 2 // UTF-16 estimation

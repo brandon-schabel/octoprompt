@@ -10,19 +10,19 @@ export interface StorageAdapter {
   write<T>(key: string, data: T): Promise<void>
   delete(key: string): Promise<void>
   exists(key: string): Promise<boolean>
-  
+
   // Bulk operations
   readMany<T>(keys: string[]): Promise<Map<string, T>>
   writeMany<T>(entries: Map<string, T>): Promise<void>
   deleteMany(keys: string[]): Promise<void>
-  
+
   // Query operations
   list(prefix?: string, options?: ListOptions): Promise<string[]>
   count(prefix?: string): Promise<number>
-  
+
   // Transaction support
   transaction<T>(operations: TransactionOperation[]): Promise<T>
-  
+
   // Lifecycle
   connect(): Promise<void>
   disconnect(): Promise<void>
@@ -57,23 +57,23 @@ export interface StorageConfig {
   namespace?: string // Prefix for all keys
   compression?: boolean // Enable compression
   encryption?: boolean // Enable encryption
-  
+
   // Performance options
   batchSize?: number // Max items per batch operation
   connectionPoolSize?: number // For database adapters
   timeout?: number // Operation timeout in ms
-  
+
   // Caching options
   cacheEnabled?: boolean
   cacheTTL?: number // Cache time-to-live in ms
   maxCacheSize?: number // Max cache entries
   cacheStrategy?: 'lru' | 'lfu' | 'fifo'
-  
+
   // Concurrency options
   maxConcurrentReads?: number
   maxConcurrentWrites?: number
   lockTimeout?: number // Lock acquisition timeout
-  
+
   // Persistence options
   persistInterval?: number // For memory adapter persistence
   backupEnabled?: boolean
@@ -87,7 +87,7 @@ export interface StorageConfig {
 export abstract class BaseStorageAdapter implements StorageAdapter {
   protected config: Required<StorageConfig>
   protected namespace: string
-  
+
   constructor(config: StorageConfig = {}) {
     this.config = {
       namespace: config.namespace || '',
@@ -110,24 +110,24 @@ export abstract class BaseStorageAdapter implements StorageAdapter {
     }
     this.namespace = this.config.namespace
   }
-  
+
   // Helper method to add namespace to keys
   protected getNamespacedKey(key: string): string {
     return this.namespace ? `${this.namespace}:${key}` : key
   }
-  
+
   // Helper method to remove namespace from keys
   protected removeNamespace(key: string): string {
     if (!this.namespace) return key
     const prefix = `${this.namespace}:`
     return key.startsWith(prefix) ? key.slice(prefix.length) : key
   }
-  
+
   // Default batch implementations (can be overridden for optimization)
   async readMany<T>(keys: string[]): Promise<Map<string, T>> {
     const results = new Map<string, T>()
     const batches = this.createBatches(keys, this.config.batchSize)
-    
+
     for (const batch of batches) {
       await Promise.all(
         batch.map(async (key) => {
@@ -138,31 +138,27 @@ export abstract class BaseStorageAdapter implements StorageAdapter {
         })
       )
     }
-    
+
     return results
   }
-  
+
   async writeMany<T>(entries: Map<string, T>): Promise<void> {
     const entriesArray = Array.from(entries.entries())
     const batches = this.createBatches(entriesArray, this.config.batchSize)
-    
+
     for (const batch of batches) {
-      await Promise.all(
-        batch.map(([key, value]) => this.write(key, value))
-      )
+      await Promise.all(batch.map(([key, value]) => this.write(key, value)))
     }
   }
-  
+
   async deleteMany(keys: string[]): Promise<void> {
     const batches = this.createBatches(keys, this.config.batchSize)
-    
+
     for (const batch of batches) {
-      await Promise.all(
-        batch.map(key => this.delete(key))
-      )
+      await Promise.all(batch.map((key) => this.delete(key)))
     }
   }
-  
+
   // Helper to create batches
   private createBatches<T>(items: T[], batchSize: number): T[][] {
     const batches: T[][] = []
@@ -171,7 +167,7 @@ export abstract class BaseStorageAdapter implements StorageAdapter {
     }
     return batches
   }
-  
+
   // Abstract methods that must be implemented
   abstract read<T>(key: string): Promise<T | null>
   abstract write<T>(key: string, data: T): Promise<void>

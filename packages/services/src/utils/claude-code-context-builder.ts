@@ -313,7 +313,11 @@ function detectTechStack(files: ProjectFile[]): string[] {
  * Analyze task complexity based on prompt content and file scope
  * Replaces Mastra planning agent complexity analysis
  */
-function analyzeTaskComplexity(prompt: string, relevantFiles: ProjectFile[], allFiles: ProjectFile[]): 'simple' | 'medium' | 'complex' {
+function analyzeTaskComplexity(
+  prompt: string,
+  relevantFiles: ProjectFile[],
+  allFiles: ProjectFile[]
+): 'simple' | 'medium' | 'complex' {
   let complexityScore = 0
   const promptLower = prompt.toLowerCase()
 
@@ -337,7 +341,7 @@ function analyzeTaskComplexity(prompt: string, relevantFiles: ProjectFile[], all
   if (allFiles.length > 100) complexityScore += 2
 
   // Multiple file types involved
-  const fileTypes = new Set(relevantFiles.map(f => f.extension))
+  const fileTypes = new Set(relevantFiles.map((f) => f.extension))
   if (fileTypes.size > 3) complexityScore += 2
 
   if (complexityScore <= 3) return 'simple'
@@ -349,7 +353,11 @@ function analyzeTaskComplexity(prompt: string, relevantFiles: ProjectFile[], all
  * Generate suggested approach based on task analysis
  * Replaces Mastra planning agent approach suggestions
  */
-function generateSuggestedApproach(prompt: string, complexity: 'simple' | 'medium' | 'complex', relevantFiles: ProjectFile[]): string {
+function generateSuggestedApproach(
+  prompt: string,
+  complexity: 'simple' | 'medium' | 'complex',
+  relevantFiles: ProjectFile[]
+): string {
   const promptLower = prompt.toLowerCase()
   const approaches: string[] = []
 
@@ -370,7 +378,9 @@ function generateSuggestedApproach(prompt: string, complexity: 'simple' | 'mediu
     approaches.push('Follow TDD principles: write tests first, then implement the functionality.')
   }
   if (promptLower.includes('api') || promptLower.includes('endpoint')) {
-    approaches.push('Design the API contract first, then implement the backend logic, followed by frontend integration.')
+    approaches.push(
+      'Design the API contract first, then implement the backend logic, followed by frontend integration.'
+    )
   }
   if (promptLower.includes('database') || promptLower.includes('schema')) {
     approaches.push('Plan database migrations carefully. Consider backwards compatibility and data preservation.')
@@ -391,7 +401,12 @@ function generateSuggestedApproach(prompt: string, complexity: 'simple' | 'mediu
  * Identify potential risks based on task analysis
  * Replaces Mastra planning agent risk assessment
  */
-function identifyPotentialRisks(prompt: string, complexity: 'simple' | 'medium' | 'complex', relevantFiles: ProjectFile[], allFiles: ProjectFile[]): string[] {
+function identifyPotentialRisks(
+  prompt: string,
+  complexity: 'simple' | 'medium' | 'complex',
+  relevantFiles: ProjectFile[],
+  allFiles: ProjectFile[]
+): string[] {
   const risks: string[] = []
   const promptLower = prompt.toLowerCase()
 
@@ -427,11 +442,8 @@ function identifyPotentialRisks(prompt: string, complexity: 'simple' | 'medium' 
     risks.push('Large number of files increases chance of merge conflicts')
   }
 
-  const coreFiles = relevantFiles.filter(f => 
-    f.name.includes('index') || 
-    f.name.includes('main') || 
-    f.name.includes('app') ||
-    f.name.includes('config')
+  const coreFiles = relevantFiles.filter(
+    (f) => f.name.includes('index') || f.name.includes('main') || f.name.includes('app') || f.name.includes('config')
   )
   if (coreFiles.length > 0) {
     risks.push('Changes to core files may have widespread impact')
@@ -444,12 +456,16 @@ function identifyPotentialRisks(prompt: string, complexity: 'simple' | 'medium' 
  * Suggest required files for the task
  * Replaces Mastra file targeting functionality
  */
-function suggestRequiredFiles(prompt: string, relevantFiles: ProjectFile[], allFiles: ProjectFile[]): Array<{path: string, action: 'create' | 'modify' | 'delete', reason: string}> {
-  const suggestions: Array<{path: string, action: 'create' | 'modify' | 'delete', reason: string}> = []
+function suggestRequiredFiles(
+  prompt: string,
+  relevantFiles: ProjectFile[],
+  allFiles: ProjectFile[]
+): Array<{ path: string; action: 'create' | 'modify' | 'delete'; reason: string }> {
+  const suggestions: Array<{ path: string; action: 'create' | 'modify' | 'delete'; reason: string }> = []
   const promptLower = prompt.toLowerCase()
 
   // Analyze existing relevant files
-  relevantFiles.forEach(file => {
+  relevantFiles.forEach((file) => {
     if (promptLower.includes('delete') || promptLower.includes('remove')) {
       suggestions.push({
         path: file.path,
@@ -466,7 +482,7 @@ function suggestRequiredFiles(prompt: string, relevantFiles: ProjectFile[], allF
   })
 
   // Suggest new files based on prompt content
-  if (promptLower.includes('test') && !relevantFiles.some(f => f.name.includes('test') || f.name.includes('spec'))) {
+  if (promptLower.includes('test') && !relevantFiles.some((f) => f.name.includes('test') || f.name.includes('spec'))) {
     suggestions.push({
       path: 'tests/new-feature.test.ts',
       action: 'create',
@@ -474,7 +490,7 @@ function suggestRequiredFiles(prompt: string, relevantFiles: ProjectFile[], allF
     })
   }
 
-  if (promptLower.includes('component') && !relevantFiles.some(f => f.name.includes('component'))) {
+  if (promptLower.includes('component') && !relevantFiles.some((f) => f.name.includes('component'))) {
     suggestions.push({
       path: 'components/NewComponent.tsx',
       action: 'create',
@@ -483,7 +499,7 @@ function suggestRequiredFiles(prompt: string, relevantFiles: ProjectFile[], allF
   }
 
   if (promptLower.includes('api') || promptLower.includes('endpoint')) {
-    if (!relevantFiles.some(f => f.name.includes('route') || f.name.includes('api'))) {
+    if (!relevantFiles.some((f) => f.name.includes('route') || f.name.includes('api'))) {
       suggestions.push({
         path: 'api/new-endpoint.ts',
         action: 'create',
@@ -493,7 +509,7 @@ function suggestRequiredFiles(prompt: string, relevantFiles: ProjectFile[], allF
   }
 
   if (promptLower.includes('config') || promptLower.includes('environment')) {
-    if (!relevantFiles.some(f => f.name.includes('config') || f.name.includes('env'))) {
+    if (!relevantFiles.some((f) => f.name.includes('config') || f.name.includes('env'))) {
       suggestions.push({
         path: 'config/new-config.ts',
         action: 'create',

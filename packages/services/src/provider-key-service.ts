@@ -5,12 +5,7 @@ import {
   ProviderKeySchema,
   type UpdateProviderKeyInput
 } from '@octoprompt/schemas'
-import { 
-  ApiError,
-  normalizeToUnixMs,
-  requireEntity,
-  ensureSingleDefault
-} from '@octoprompt/shared'
+import { ApiError, normalizeToUnixMs, requireEntity, ensureSingleDefault } from '@octoprompt/shared'
 import { z } from '@hono/zod-openapi'
 import { safeAsync, throwNotFound, handleValidationError } from './utils/error-handlers'
 
@@ -39,7 +34,7 @@ export function createProviderKeyService() {
         // If this new key is set to default, ensure only one default per provider
         if (newKeyData.isDefault) {
           const allKeys = await providerKeyStorage.list()
-          const providerKeys = allKeys.filter(k => k.provider === data.provider)
+          const providerKeys = allKeys.filter((k) => k.provider === data.provider)
           // For new entities, pass -1 as the ID to indicate it doesn't exist yet
           await ensureSingleDefault(providerKeys, -1, {
             updateFn: async (keyId, updates) => {
@@ -82,7 +77,7 @@ export function createProviderKeyService() {
 
   async function listKeysUncensored(): Promise<ProviderKey[]> {
     const allKeys = await providerKeyStorage.getAllProviderKeys()
-    
+
     // Sort by provider, then by created descending (as in original SQL)
     allKeys.sort((a, b) => {
       if (a.provider < b.provider) return -1
@@ -102,17 +97,13 @@ export function createProviderKeyService() {
   async function updateKey(id: number, data: UpdateProviderKeyInput): Promise<ProviderKey> {
     return safeAsync(
       async () => {
-        const existingKey = await requireEntity(
-          await providerKeyStorage.getById(id),
-          'Provider key',
-          id
-        )
+        const existingKey = await requireEntity(await providerKeyStorage.getById(id), 'Provider key', id)
 
         // If this key is being set to default, ensure only one default per provider
         if (data.isDefault === true) {
           const provider = data.provider ?? existingKey.provider
           const allKeys = await providerKeyStorage.list()
-          const providerKeys = allKeys.filter(k => k.provider === provider)
+          const providerKeys = allKeys.filter((k) => k.provider === provider)
           await ensureSingleDefault(providerKeys, id, {
             updateFn: async (keyId, updates) => {
               await providerKeyStorage.update(keyId, updates)

@@ -28,6 +28,7 @@ import { ProjectFile } from '@octoprompt/schemas'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
 import { Binoculars, Bot, Copy, FileText, MessageCircleCode, Search } from 'lucide-react'
+import { ClaudeCodeModal } from '@/components/claude-code/claude-code-modal'
 import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-api'
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
@@ -62,6 +63,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const promptInputRef = useRef<HTMLTextAreaElement>(null)
     const findSuggestedFilesMutation = useSuggestFiles()
     const [showSuggestions, setShowSuggestions] = useState(false)
+    const [showClaudeCode, setShowClaudeCode] = useState(false)
+    const [claudeCodeInitialPrompt, setClaudeCodeInitialPrompt] = useState('')
 
     // Load the project's prompts
     const { data: promptDataRes } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
@@ -212,6 +215,55 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       })
     }
 
+    const handleClaudeCode = () => {
+      const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
+      if (!finalUserPrompt && selectedFiles.length === 0 && selectedPrompts.length === 0) {
+        toast.error('Please provide user input, select files, or select prompts to use Claude Code')
+        return
+      }
+
+      // Build context for Claude Code
+      const contextLines = []
+
+      // Add user input
+      if (finalUserPrompt) {
+        contextLines.push('## User Request')
+        contextLines.push(finalUserPrompt)
+        contextLines.push('')
+      }
+
+      // Add selected prompts
+      if (selectedPrompts.length > 0) {
+        contextLines.push('## Selected Prompts')
+        selectedPrompts.forEach((promptName) => {
+          const prompt = promptData.find((p) => p.name === promptName)
+          if (prompt) {
+            contextLines.push(`### ${prompt.name}`)
+            contextLines.push(prompt.content)
+            contextLines.push('')
+          }
+        })
+      }
+
+      // Add file context summary (not full content for initial prompt)
+      if (selectedFiles.length > 0) {
+        contextLines.push('## Selected Files')
+        contextLines.push(`The following ${selectedFiles.length} files have been selected:`)
+        selectedFiles.forEach((fileId) => {
+          const file = projectFileMap[fileId]
+          if (file) {
+            contextLines.push(`- ${file.path}`)
+          }
+        })
+        contextLines.push('')
+        contextLines.push('Please analyze and work with these files as needed.')
+      }
+
+      const initialPrompt = contextLines.join('\n').trim()
+      setClaudeCodeInitialPrompt(initialPrompt)
+      setShowClaudeCode(true)
+    }
+
     return (
       <ErrorBoundary>
         <TooltipProvider>
@@ -221,6 +273,15 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               onClose={() => setShowSuggestions(false)}
               suggestedFiles={suggestedFiles}
             />
+
+            {activeProjectTabState?.selectedProjectId && (
+              <ClaudeCodeModal
+                isOpen={showClaudeCode}
+                onClose={() => setShowClaudeCode(false)}
+                projectId={activeProjectTabState.selectedProjectId}
+                initialPrompt={claudeCodeInitialPrompt}
+              />
+            )}
 
             <div className='flex-1 flex flex-col min-h-0 p-4 overflow-hidden min-w-0'>
               {/* 1) Token usage */}
@@ -313,6 +374,20 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             <p>
                               Start a new chat session with the current context. This includes user input, selected
                               prompts, and selected files.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={handleClaudeCode} size='sm' variant='default'>
+                              <Bot className='h-3.5 w-3.5 mr-1' /> Claude Code
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Use Claude Code to make changes to your project files. Claude Code can read, write, and
+                              edit files based on your instructions.
                             </p>
                           </TooltipContent>
                         </Tooltip>

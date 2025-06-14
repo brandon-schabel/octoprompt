@@ -15,7 +15,8 @@ const testFiles = [
   'projects-api.test.ts',
   'chat-api.test.ts',
   'prompt-api.test.ts',
-  'provider-key-api.test.ts'
+  'provider-key-api.test.ts',
+  'claude-code-api.test.ts'
 ]
 
 try {

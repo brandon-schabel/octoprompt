@@ -51,7 +51,7 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
       maxCacheSize: options.maxCacheSize ?? 100,
       lockTimeout: options.lockTimeout ?? 30 * 1000 // 30 seconds default
     }
-    
+
     // Set up file watcher for cache invalidation
     this.setupFileWatcher()
   }
@@ -86,7 +86,7 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
 
       const jsonData = JSON.parse(fileContent)
       const validationResult = await schema.safeParseAsync(jsonData)
-      
+
       if (!validationResult.success) {
         console.error(`Zod validation failed reading ${filePath}:`, validationResult.error.errors)
         console.warn(`Returning default value due to validation failure for ${filePath}.`)
@@ -127,14 +127,42 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
       const validatedData = validationResult.data
 
       await this.ensureDirExists(path.dirname(filePath))
-      
+
       // Write to temp file first for atomicity
       const tempPath = `${filePath}.tmp`
       const jsonString = JSON.stringify(validatedData, null, 2)
       await fs.writeFile(tempPath, jsonString, 'utf-8')
-      
-      // Atomic rename
-      await fs.rename(tempPath, filePath)
+
+      // Atomic rename with error handling
+      try {
+        await fs.rename(tempPath, filePath)
+      } catch (renameError: any) {
+        // If rename fails, ensure directory exists and retry
+        if (renameError.code === 'ENOENT') {
+          await this.ensureDirExists(path.dirname(filePath))
+          try {
+            await fs.rename(tempPath, filePath)
+          } catch (retryError) {
+            // If still fails, use direct write as fallback
+            try {
+              await fs.writeFile(filePath, jsonString, 'utf-8')
+              await fs.unlink(tempPath) // Clean up temp file
+            } catch (fallbackError) {
+              // Last resort: try to clean up temp file
+              try {
+                await fs.unlink(tempPath)
+              } catch {} // Ignore cleanup errors
+              throw fallbackError
+            }
+          }
+        } else {
+          // Clean up temp file on other errors
+          try {
+            await fs.unlink(tempPath)
+          } catch {} // Ignore cleanup errors
+          throw renameError
+        }
+      }
 
       // Invalidate cache
       if (this.options.cacheEnabled) {
@@ -253,7 +281,8 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
   protected async idExists(id: number): Promise<boolean> {
     try {
       const all = await this.readAll()
-      return id in all
+      // Check both number and string keys
+      return id in all || String(id) in all
     } catch (error) {
       return false
     }
@@ -271,16 +300,17 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
 
   public async getById(id: number): Promise<TEntity | null> {
     const all = await this.readAll()
-    return (all[id] as TEntity) || null
+    // Handle both number and string keys
+    return (all[id] as TEntity) || (all[String(id)] as TEntity) || null
   }
 
   public async create(data: Omit<TEntity, 'id' | 'created' | 'updated'>): Promise<TEntity> {
     const indexPath = this.getIndexPath()
-    
+
     return this.withLock(indexPath, async () => {
       const id = await this.generateId()
       const now = Date.now()
-      
+
       const entity = {
         ...data,
         id,
@@ -289,21 +319,22 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
       } as TEntity
 
       const validated = await this.entitySchema.parseAsync(entity)
-      
+
       const all = await this.readAll()
-      all[id] = validated
+      // Use string key for consistency
+      ;(all as any)[String(id)] = validated
       await this.writeAll(all)
-      
+
       // Invalidate cache
       this.invalidateCache()
-      
+
       return validated
     })
   }
 
   public async update(id: number, data: Partial<Omit<TEntity, 'id' | 'created' | 'updated'>>): Promise<TEntity | null> {
     const indexPath = this.getIndexPath()
-    
+
     return this.withLock(indexPath, async () => {
       const existing = await this.getById(id)
       if (!existing) return null
@@ -315,37 +346,44 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
       } as TEntity
 
       const validated = await this.entitySchema.parseAsync(updated)
-      
+
       const all = await this.readAll()
-      all[id] = validated
+      // Use string key for consistency
+      ;(all as any)[String(id)] = validated
       await this.writeAll(all)
-      
+
       // Invalidate cache
       this.invalidateCache()
-      
+
       return validated
     })
   }
 
   public async delete(id: number): Promise<boolean> {
     const indexPath = this.getIndexPath()
-    
+
     return this.withLock(indexPath, async () => {
       const all = await this.readAll()
-      if (!all[id]) return false
-
-      delete all[id]
-      await this.writeAll(all)
+      // Check both number and string keys
+      const hasNumKey = id in all
+      const hasStrKey = String(id) in all
       
+      if (!hasNumKey && !hasStrKey) return false
+
+      // Delete both forms if they exist
+      delete all[id]
+      delete (all as any)[String(id)]
+      await this.writeAll(all)
+
       // Delete entity-specific data if path exists
       const entityPath = this.getEntityPath(id)
       if (entityPath && existsSync(entityPath)) {
         await fs.rm(entityPath, { recursive: true, force: true })
       }
-      
+
       // Invalidate cache
       this.invalidateCache()
-      
+
       return true
     })
   }
@@ -357,11 +395,11 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
 
   public async deleteAll(): Promise<void> {
     await this.writeAll({} as TStorage)
-    
+
     // Also clean up any entity-specific directories
     const indexPath = this.getIndexPath()
     const baseDir = path.dirname(indexPath)
-    
+
     try {
       // Get all entity directories and remove them
       const entities = await this.list()
@@ -403,7 +441,7 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
         this.invalidateCache()
       }
     })
-    
+
     // Start watching the index file
     globalFileWatcher.watchFile(indexPath)
   }
@@ -413,11 +451,11 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
    */
   public invalidateCacheForId(id: number): void {
     if (!this.options.cacheEnabled) return
-    
+
     // Remove from cache any entries that might contain this ID
     const indexPath = this.getIndexPath()
     this.cache.delete(indexPath)
-    
+
     // Also remove entity-specific cache if applicable
     const entityPath = this.getEntityPath(id)
     if (entityPath) {

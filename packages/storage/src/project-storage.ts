@@ -1,10 +1,7 @@
 import { z } from 'zod'
 import * as path from 'node:path'
 import { ProjectSchema, ProjectFileSchema, type Project, type ProjectFile } from '@octoprompt/schemas'
-import { IndexedStorage, type IndexDefinition } from './core/indexed-storage'
-import { type StorageOptions } from './core/base-storage'
-import { commonSorters } from './core/storage-query-utils'
-import { IndexBuilder } from './core/index-builder'
+import { BaseStorage, type StorageOptions } from './core/base-storage'
 import { STORAGE_CONFIG } from './config'
 import { unixTimestampSchema } from '@octoprompt/schemas'
 
@@ -17,24 +14,12 @@ export type ProjectFilesStorage = z.infer<typeof ProjectFilesStorageSchema>
 /**
  * Enhanced project storage with file versioning, indexing, and project management
  */
-export class ProjectStorage extends IndexedStorage<Project, ProjectsStorage> {
+export class ProjectStorage extends BaseStorage<Project, ProjectsStorage> {
   private fileStorages: Map<number, ProjectFileStorage> = new Map()
 
   constructor(options: StorageOptions = {}) {
     const dataDir = path.join('data', 'projects')
     super(ProjectsStorageSchema, ProjectSchema, dataDir, options)
-    
-    // Define indexes using IndexBuilder
-    this.indexDefinitions = new IndexBuilder()
-      .setPrefix('projects')
-      .addTextIndex('name')
-      .addHashIndex('path')
-      .addDateIndex('created')
-      .addDateIndex('updated')
-      .build()
-    
-    // Initialize indexes
-    this.initializeIndexes()
   }
 
   protected getIndexPath(): string {
@@ -45,15 +30,14 @@ export class ProjectStorage extends IndexedStorage<Project, ProjectsStorage> {
     return path.join(this.basePath, this.dataDir, id.toString(), 'project.json')
   }
 
-
   // Override create to initialize file storage
   public async create(data: Omit<Project, 'id' | 'created' | 'updated'>): Promise<Project> {
     const project = await super.create(data)
-    
+
     // Initialize file storage for this project
     const fileStorage = this.getFileStorage(project.id)
     await fileStorage.initialize()
-    
+
     return project
   }
 
@@ -77,15 +61,19 @@ export class ProjectStorage extends IndexedStorage<Project, ProjectsStorage> {
    * Search projects by name
    */
   public async search(query: string): Promise<Project[]> {
-    return this.searchByIndex('projects_by_name', query, commonSorters.byUpdatedDesc)
+    const all = await this.list()
+    const lowercaseQuery = query.toLowerCase()
+    return all
+      .filter(project => project.name.toLowerCase().includes(lowercaseQuery))
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Get project by path
    */
   public async getByPath(projectPath: string): Promise<Project | null> {
-    const projects = await this.queryByIndex('projects_by_path', projectPath)
-    return projects[0] || null
+    const all = await this.list()
+    return all.find(project => project.path === projectPath) || null
   }
 
   // --- File Management ---
@@ -103,16 +91,19 @@ export class ProjectStorage extends IndexedStorage<Project, ProjectsStorage> {
   /**
    * Add file to project
    */
-  public async addFile(projectId: number, fileData: Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>): Promise<ProjectFile> {
+  public async addFile(
+    projectId: number,
+    fileData: Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>
+  ): Promise<ProjectFile> {
     const fileStorage = this.getFileStorage(projectId)
     const file = await fileStorage.create({
       ...fileData,
       projectId
     })
-    
+
     // Update project's updated timestamp
     await this.update(projectId, { updated: Date.now() })
-    
+
     return file
   }
 
@@ -131,32 +122,19 @@ export class ProjectStorage extends IndexedStorage<Project, ProjectsStorage> {
     const fileStorage = this.getFileStorage(projectId)
     return fileStorage.search(query)
   }
-
 }
 
 /**
  * File storage for project files
  */
-export class ProjectFileStorage extends IndexedStorage<ProjectFile, ProjectFilesStorage> {
+export class ProjectFileStorage extends BaseStorage<ProjectFile, ProjectFilesStorage> {
   private projectId: number
 
   constructor(projectId: number, basePath: string, dataDir: string, options: StorageOptions = {}) {
     const fileDataDir = path.join(dataDir, projectId.toString(), 'files')
     super(ProjectFilesStorageSchema, ProjectFileSchema, fileDataDir, { ...options, basePath })
-    
+
     this.projectId = projectId
-    
-    // Define indexes using IndexBuilder with dynamic prefix
-    this.indexDefinitions = new IndexBuilder()
-      .setPrefix(`files_${this.projectId}`)
-      .addHashIndex('path')
-      .addHashIndex('extension')
-      .addTextIndex('content')
-      .addSparseIndex('lastSyncedAt', 'btree')
-      .build()
-    
-    // Initialize indexes
-    this.initializeIndexes()
   }
 
   protected getIndexPath(): string {
@@ -167,7 +145,6 @@ export class ProjectFileStorage extends IndexedStorage<ProjectFile, ProjectFiles
     // Files don't have separate entity paths
     return null
   }
-
 
   public async initialize(): Promise<void> {
     // Ensure the directory structure exists
@@ -191,45 +168,47 @@ export class ProjectFileStorage extends IndexedStorage<ProjectFile, ProjectFiles
    * Search files by content or path
    */
   public async search(query: string): Promise<ProjectFile[]> {
-    const contentMatches = await this.searchByIndex(`files_${this.projectId}_by_content`, query)
-    const files = [...contentMatches]
-    
-    // Also search by path
     const allFiles = await this.list()
-    const pathMatches = allFiles.filter(f => 
-      f.path.toLowerCase().includes(query.toLowerCase()) &&
-      !files.some(existing => existing.id === f.id)
-    )
-    
-    files.push(...pathMatches)
-    
-    return files.sort(commonSorters.byUpdatedDesc)
+    const lowercaseQuery = query.toLowerCase()
+    return allFiles
+      .filter(
+        (f) => 
+          f.path.toLowerCase().includes(lowercaseQuery) ||
+          (f.content && f.content.toLowerCase().includes(lowercaseQuery))
+      )
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Get files by extension
    */
   public async getByExtension(extension: string): Promise<ProjectFile[]> {
-    return this.queryByIndex(`files_${this.projectId}_by_extension`, extension, commonSorters.byPath)
+    const all = await this.list()
+    return all
+      .filter(file => file.extension === extension)
+      .sort((a, b) => a.path.localeCompare(b.path))
   }
 
   /**
    * Get file by path
    */
   public async getByPath(filePath: string): Promise<ProjectFile | null> {
-    const files = await this.queryByIndex(`files_${this.projectId}_by_path`, filePath)
-    return files[0] || null
+    const all = await this.list()
+    return all.find(file => file.path === filePath) || null
   }
 
   // Override update to handle content and checksum
-  public async update(id: number, data: Partial<Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>>): Promise<ProjectFile | null> {
+  public async update(
+    id: number,
+    data: Partial<Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>>
+  ): Promise<ProjectFile | null> {
     // Calculate checksum if content is being updated
     let updateData = { ...data }
     if (data.content !== undefined) {
       updateData.checksum = this.calculateChecksum(data.content)
       updateData.size = Buffer.byteLength(data.content, 'utf8')
     }
-    
+
     return super.update(id, updateData)
   }
 
@@ -238,7 +217,7 @@ export class ProjectFileStorage extends IndexedStorage<ProjectFile, ProjectFiles
     let hash = 0
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
+      hash = (hash << 5) - hash + char
       hash = hash & hash // Convert to 32-bit integer
     }
     return hash.toString(16)

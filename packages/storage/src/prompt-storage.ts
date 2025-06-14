@@ -1,11 +1,8 @@
 import { z } from 'zod'
 import path from 'node:path'
 import { PromptSchema, PromptProjectSchema, type Prompt, type PromptProject } from '@octoprompt/schemas'
-import { IndexedStorage, type IndexDefinition } from './core/indexed-storage'
-import { type StorageOptions } from './core/base-storage'
-import { searchByFields, getUniqueFieldValues, commonSorters } from './core/storage-query-utils'
+import { BaseStorage, type StorageOptions } from './core/base-storage'
 import { AssociationManager } from './core/storage-patterns'
-import { IndexBuilder } from './core/index-builder'
 import { STORAGE_CONFIG } from './config'
 
 // Storage schemas
@@ -18,35 +15,19 @@ export type PromptProjectsStorage = z.infer<typeof PromptProjectsStorageSchema>
 /**
  * Enhanced prompt storage with full-text search, categorization, and project associations
  */
-export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
+export class PromptStorage extends BaseStorage<Prompt, PromptsStorage> {
   private projectAssociations: AssociationManager<PromptProject>
 
   constructor(options: StorageOptions = {}) {
     const dataDir = path.join('data', 'prompt_storage')
     super(PromptsStorageSchema, PromptSchema, dataDir, options)
-    
-    // Define indexes using IndexBuilder
-    this.indexDefinitions = new IndexBuilder()
-      .setPrefix('prompts')
-      .addTextIndex('name')
-      .addTextIndex('content')
-      .addSparseIndex('category', 'hash')
-      .addTextIndex('tags')
-      .addDateIndex('created')
-      .addDateIndex('updated')
-      .addHashIndex('isGlobal')
-      .addHashIndex('visibility')
-      .build()
-    
+
     // Initialize project associations
     this.projectAssociations = new AssociationManager<PromptProject>(
       path.join(this.basePath, this.dataDir, 'prompt-projects.json'),
       PromptProjectSchema,
       { keyFields: ['promptId', 'projectId'], basePath: this.basePath }
     )
-    
-    // Initialize indexes
-    this.initializeIndexes()
   }
 
   protected getIndexPath(): string {
@@ -57,8 +38,6 @@ export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
     // Prompts don't have separate entity paths
     return null
   }
-
-
 
   // Override delete to handle associations
   public async delete(id: number): Promise<boolean> {
@@ -76,92 +55,113 @@ export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
    * Full-text search across name and content
    */
   public async search(query: string): Promise<Prompt[]> {
-    return searchByFields(
-      this.indexManager,
-      query,
-      ['prompts_by_name', 'prompts_by_content'],
-      (id) => this.getById(id),
-      {
-        preferredIndex: 'prompts_by_name',
-        sorter: commonSorters.byUpdatedDesc
-      }
-    )
+    const all = await this.list()
+    const lowercaseQuery = query.toLowerCase()
+    return all
+      .filter(prompt => 
+        prompt.name.toLowerCase().includes(lowercaseQuery) ||
+        prompt.content.toLowerCase().includes(lowercaseQuery)
+      )
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Search by name only
    */
   public async searchByName(query: string): Promise<Prompt[]> {
-    return this.searchByIndex('prompts_by_name', query, commonSorters.byUpdatedDesc)
+    const all = await this.list()
+    const lowercaseQuery = query.toLowerCase()
+    return all
+      .filter(prompt => prompt.name.toLowerCase().includes(lowercaseQuery))
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Search by content
    */
   public async searchByContent(query: string): Promise<Prompt[]> {
-    return this.searchByIndex('prompts_by_content', query, commonSorters.byUpdatedDesc)
+    const all = await this.list()
+    const lowercaseQuery = query.toLowerCase()
+    return all
+      .filter(prompt => prompt.content.toLowerCase().includes(lowercaseQuery))
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Get prompts by category
    */
   public async getByCategory(category: string): Promise<Prompt[]> {
-    return this.queryByIndex('prompts_by_category', category, commonSorters.byUpdatedDesc)
+    const all = await this.list()
+    return all
+      .filter(prompt => prompt.category === category)
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Search by tags
    */
   public async searchByTags(tags: string[]): Promise<Prompt[]> {
-    const allIds = new Set<number>()
-    
-    for (const tag of tags) {
-      const ids = await this.indexManager.searchText('prompts_by_tags', tag)
-      ids.forEach(id => allIds.add(id))
-    }
-    
-    const prompts: Prompt[] = []
-    for (const id of allIds) {
-      const prompt = await this.getById(id)
-      if (prompt) prompts.push(prompt)
-    }
-    
-    return prompts.sort((a, b) => b.updated - a.updated)
+    const all = await this.list()
+    const lowerTags = tags.map(t => t.toLowerCase())
+    return all
+      .filter(prompt => {
+        if (!prompt.tags) return false
+        const promptTagsLower = prompt.tags.map(t => t.toLowerCase())
+        return lowerTags.some(tag => promptTagsLower.includes(tag))
+      })
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Get global prompts
    */
   public async getGlobalPrompts(): Promise<Prompt[]> {
-    return this.queryByIndex('prompts_by_isGlobal', true, commonSorters.byName)
+    const all = await this.list()
+    return all
+      .filter(prompt => prompt.isGlobal === true)
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
 
   /**
    * Get prompts by visibility
    */
   public async getByVisibility(visibility: 'public' | 'private' | 'shared'): Promise<Prompt[]> {
-    return this.queryByIndex('prompts_by_visibility', visibility, commonSorters.byUpdatedDesc)
+    const all = await this.list()
+    return all
+      .filter(prompt => prompt.visibility === visibility)
+      .sort((a, b) => b.updated - a.updated)
   }
 
   /**
    * Get recently created prompts
    */
   public async getRecentlyCreated(limit: number = 20): Promise<Prompt[]> {
-    return this.getRecent(limit, 'created')
+    const all = await this.list()
+    return all
+      .sort((a, b) => b.created - a.created)
+      .slice(0, limit)
   }
 
   /**
    * Get recently updated prompts
    */
   public async getRecentlyUpdated(limit: number = 20): Promise<Prompt[]> {
-    return this.getRecent(limit, 'updated')
+    const all = await this.list()
+    return all
+      .sort((a, b) => b.updated - a.updated)
+      .slice(0, limit)
   }
 
   /**
    * Get prompts within date range
    */
   public async getByDateRange(start: Date, end: Date): Promise<Prompt[]> {
-    return this.queryByDateRange('prompts_by_created', start, end, commonSorters.byCreatedDesc)
+    const all = await this.list()
+    const startMs = start.getTime()
+    const endMs = end.getTime()
+    return all
+      .filter(prompt => prompt.created >= startMs && prompt.created <= endMs)
+      .sort((a, b) => b.created - a.created)
   }
 
   /**
@@ -169,8 +169,11 @@ export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
    */
   public async getCategories(): Promise<string[]> {
     const prompts = await this.list()
-    const categories = getUniqueFieldValues(prompts, 'category')
-    return Array.from(categories).filter((c): c is string => c !== null && c !== undefined).sort()
+    const categories = new Set<string | null>()
+    prompts.forEach(p => categories.add(p.category))
+    return Array.from(categories)
+      .filter((c): c is string => c !== null && c !== undefined)
+      .sort()
   }
 
   /**
@@ -179,13 +182,13 @@ export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
   public async getTags(): Promise<string[]> {
     const prompts = await this.list()
     const tags = new Set<string>()
-    
+
     for (const prompt of prompts) {
       if (prompt.tags) {
-        prompt.tags.forEach(tag => tags.add(tag))
+        prompt.tags.forEach((tag) => tags.add(tag))
       }
     }
-    
+
     return Array.from(tags).sort()
   }
 
@@ -211,12 +214,12 @@ export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
   public async getProjectPrompts(projectId: number): Promise<Prompt[]> {
     const associations = await this.projectAssociations.find({ projectId })
     const prompts: Prompt[] = []
-    
+
     for (const assoc of associations) {
       const prompt = await this.getById(assoc.promptId)
       if (prompt) prompts.push(prompt)
     }
-    
+
     return prompts.sort(commonSorters.byName)
   }
 
@@ -225,9 +228,8 @@ export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
    */
   public async getPromptProjects(promptId: number): Promise<number[]> {
     const associations = await this.projectAssociations.find({ promptId })
-    return associations.map(assoc => assoc.projectId)
+    return associations.map((assoc) => assoc.projectId)
   }
-
 
   // --- Statistics and Analytics ---
 
@@ -238,29 +240,26 @@ export class PromptStorage extends IndexedStorage<Prompt, PromptsStorage> {
     const prompts = await this.list()
     const categories = await this.getCategories()
     const tags = await this.getTags()
-    
+
     const stats = {
       totalPrompts: prompts.length,
-      globalPrompts: prompts.filter(p => p.isGlobal).length,
-      categorized: prompts.filter(p => p.category).length,
-      tagged: prompts.filter(p => p.tags && p.tags.length > 0).length,
+      globalPrompts: prompts.filter((p) => p.isGlobal).length,
+      categorized: prompts.filter((p) => p.category).length,
+      tagged: prompts.filter((p) => p.tags && p.tags.length > 0).length,
       categories: categories.length,
       tags: tags.length,
       byVisibility: {
-        public: prompts.filter(p => p.visibility === 'public').length,
-        private: prompts.filter(p => p.visibility === 'private').length,
-        shared: prompts.filter(p => p.visibility === 'shared').length
+        public: prompts.filter((p) => p.visibility === 'public').length,
+        private: prompts.filter((p) => p.visibility === 'private').length,
+        shared: prompts.filter((p) => p.visibility === 'shared').length
       }
     }
-    
+
     return stats
   }
 
   // --- Index Management ---
-
-
 }
-
 
 // Export singleton instance for backward compatibility
 export const promptStorage = new PromptStorage({

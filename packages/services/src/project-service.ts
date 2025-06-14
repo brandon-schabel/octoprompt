@@ -12,7 +12,7 @@ import { z, ZodError } from 'zod'
 
 // TODO: Replace with Mastra hooks when ready
 import { syncProject } from './file-services/file-sync-service-unified'
-import { 
+import {
   ApiError,
   requireEntity,
   buildSearchQuery,
@@ -29,11 +29,12 @@ import { bulkCreate, bulkUpdate, bulkDelete } from './utils/bulk-operations'
 // Existing project CRUD functions remain the same...
 export async function createProject(data: CreateProjectBody): Promise<Project> {
   return withServiceContext(
-    () => projectStorage.create({
-      name: data.name,
-      path: data.path,
-      description: data.description || ''
-    }),
+    () =>
+      projectStorage.create({
+        name: data.name,
+        path: data.path,
+        description: data.description || ''
+      }),
     {
       entityName: 'project',
       action: 'create'
@@ -59,12 +60,12 @@ export async function listProjects(searchOptions?: SearchQueryOptions): Promise<
   return withServiceContext(
     async () => {
       const projects = await projectStorage.list()
-      
+
       // Apply search/filtering if provided
       if (searchOptions) {
         return applySearchQuery(projects, searchOptions)
       }
-      
+
       // Default sorting by updated timestamp
       projects.sort((a, b) => b.updated - a.updated)
       return projects
@@ -84,7 +85,7 @@ export async function updateProject(projectId: number, data: UpdateProjectBody):
         path: data.path,
         description: data.description
       })
-      
+
       return requireEntity(updated, 'Project', projectId)
     },
     {
@@ -99,7 +100,7 @@ export async function deleteProject(projectId: number): Promise<boolean> {
   return withServiceContext(
     async () => {
       const deleted = await projectStorage.delete(projectId)
-      
+
       if (!deleted) {
         throw ErrorFactories.dependency('Project', 'files or chats')
       }
@@ -141,21 +142,26 @@ export async function getProjectFiles(
         // Only return latest versions
         files = files.filter((file) => file.isLatest)
       }
-      
+
       // Apply search/filtering if provided
       if (searchOptions) {
         return applySearchQuery(files, searchOptions, (file, field) => {
           // Custom field accessor for project files
           switch (field) {
-            case 'name': return file.name
-            case 'path': return file.path
-            case 'extension': return file.extension
-            case 'content': return file.content
-            default: return (file as any)[field]
+            case 'name':
+              return file.name
+            case 'path':
+              return file.path
+            case 'extension':
+              return file.extension
+            case 'content':
+              return file.content
+            default:
+              return (file as any)[field]
           }
         })
       }
-      
+
       return files.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
     },
     {
@@ -163,7 +169,7 @@ export async function getProjectFiles(
       action: 'retrieve',
       identifier: projectId
     }
-  ).catch(error => {
+  ).catch((error) => {
     if (error instanceof ApiError && error.status === 404) {
       return null
     }
@@ -195,15 +201,19 @@ export async function getProjectFilesWithoutContent(
       } else {
         fileList = filesWithoutContent
       }
-      
+
       // Apply search/filtering if provided
       if (searchOptions) {
         return applySearchQuery(fileList, searchOptions, (file, field) => {
           switch (field) {
-            case 'name': return file.name
-            case 'path': return file.path
-            case 'extension': return file.extension
-            default: return (file as any)[field]
+            case 'name':
+              return file.name
+            case 'path':
+              return file.path
+            case 'extension':
+              return file.extension
+            default:
+              return (file as any)[field]
           }
         })
       }
@@ -215,7 +225,7 @@ export async function getProjectFilesWithoutContent(
       action: 'retrieve',
       identifier: projectId
     }
-  ).catch(error => {
+  ).catch((error) => {
     if (error instanceof ApiError && error.status === 404) {
       return null
     }
@@ -237,7 +247,7 @@ export async function updateFileContent(
       // Update the file directly
       const fileStorage = projectStorage.getFileStorage(projectId)
       const updatedFile = await fileStorage.update(fileId, { content })
-      
+
       const result = requireEntity(updatedFile, 'File', fileId)
 
       console.log(`Updated file ${fileId} in project ${projectId}`)
@@ -250,11 +260,6 @@ export async function updateFileContent(
     }
   )
 }
-
-
-
-
-
 
 export async function createProjectFileRecord(
   projectId: number,
@@ -326,7 +331,7 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
       const existingFiles = await projectStorage.getProjectFiles(projectId)
 
       // Filter out duplicates
-      const uniqueFilesToCreate = filesToCreate.filter(fileData => {
+      const uniqueFilesToCreate = filesToCreate.filter((fileData) => {
         const existingByPath = existingFiles.find((f) => f.path === fileData.path && f.isLatest)
         if (existingByPath) {
           console.warn(
@@ -337,9 +342,8 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         return true
       })
 
-      const result = await bulkCreate(
-        uniqueFilesToCreate,
-        (fileData) => projectStorage.addFile(projectId, {
+      const result = await bulkCreate(uniqueFilesToCreate, (fileData) =>
+        projectStorage.addFile(projectId, {
           name: fileData.name,
           path: fileData.path,
           extension: fileData.extension,
@@ -382,10 +386,9 @@ export async function bulkUpdateProjectFiles(
   return withServiceContext(
     async () => {
       const fileStorage = projectStorage.getFileStorage(projectId)
-      
-      const result = await bulkUpdate(
-        updates,
-        (fileId, data) => fileStorage.createVersion(fileId, data.content, {
+
+      const result = await bulkUpdate(updates, (fileId, data) =>
+        fileStorage.createVersion(fileId, data.content, {
           extension: data.extension,
           size: data.size,
           checksum: data.checksum
@@ -416,7 +419,7 @@ export async function bulkUpdateProjectFilesForSync(
   return withServiceContext(
     async () => {
       const fileStorage = projectStorage.getFileStorage(projectId)
-      
+
       const result = await bulkUpdate(
         updates,
         async (fileId, data) => {
@@ -427,7 +430,7 @@ export async function bulkUpdateProjectFilesForSync(
             return null
           }
           const currentSyncVersion = currentFile.syncVersion || 0
-          
+
           // Direct update without versioning - sync operations should not create versions
           // as they represent the current state of the filesystem, not user edits
           return fileStorage.update(fileId, {
@@ -440,7 +443,7 @@ export async function bulkUpdateProjectFilesForSync(
           })
         },
         {
-          validateExists: (fileId) => fileStorage.getById(fileId).then(f => f !== null)
+          validateExists: (fileId) => fileStorage.getById(fileId).then((f) => f !== null)
         }
       )
 
@@ -469,7 +472,25 @@ export async function bulkDeleteProjectFiles(
 
       const result = await bulkDelete(
         fileIdsToDelete,
-        (fileId) => fileStorage.delete(fileId)
+        async (fileId) => {
+          try {
+            return await fileStorage.delete(fileId)
+          } catch (error: any) {
+            // If it's a file system error (like ENOENT), consider it as already deleted
+            if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+              console.warn(`File ${fileId} already deleted or missing, continuing...`)
+              return true
+            }
+            throw error
+          }
+        },
+        {
+          continueOnError: true,
+          validateExists: async (fileId) => {
+            const file = await fileStorage.getById(fileId)
+            return file !== null
+          }
+        }
       )
 
       return { deletedCount: result.deletedCount }
@@ -490,7 +511,7 @@ export async function getProjectFilesByIds(
   if (!fileIds || fileIds.length === 0) {
     return []
   }
-  
+
   return withServiceContext(
     async () => {
       await getProjectById(projectId)
@@ -581,17 +602,22 @@ export async function suggestFiles(projectId: number, prompt: string, limit: num
         sortBy: 'updated',
         sortOrder: 'desc'
       })
-      
+
       const suggestedFiles = applySearchQuery(allFiles, searchQuery, (file, field) => {
         switch (field) {
-          case 'name': return file.name
-          case 'path': return file.path
-          case 'content': return file.content
-          case 'extension': return file.extension
-          default: return (file as any)[field]
+          case 'name':
+            return file.name
+          case 'path':
+            return file.path
+          case 'content':
+            return file.content
+          case 'extension':
+            return file.extension
+          default:
+            return (file as any)[field]
         }
       })
-      
+
       return suggestedFiles
     },
     {

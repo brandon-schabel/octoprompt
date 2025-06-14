@@ -21,10 +21,10 @@ export async function bulkOperation<TInput, TResult>(
   }
 ): Promise<BulkOperationResult<TResult>> {
   const { onError, continueOnError = true, concurrency = 1 } = options || {}
-  
+
   const succeeded: TResult[] = []
   const failed: Array<{ item: TInput; error: Error }> = []
-  
+
   // Process items with concurrency control
   const processItem = async (item: TInput): Promise<void> => {
     try {
@@ -33,19 +33,19 @@ export async function bulkOperation<TInput, TResult>(
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error))
       failed.push({ item, error: errorObj })
-      
+
       if (onError) {
         onError(item, error)
       } else {
         console.error('Bulk operation failed for item:', item, error)
       }
-      
+
       if (!continueOnError) {
         throw error
       }
     }
   }
-  
+
   if (concurrency === 1) {
     // Sequential processing
     for (const item of items) {
@@ -57,12 +57,12 @@ export async function bulkOperation<TInput, TResult>(
     for (let i = 0; i < items.length; i += concurrency) {
       chunks.push(items.slice(i, i + concurrency))
     }
-    
+
     for (const chunk of chunks) {
       await Promise.all(chunk.map(processItem))
     }
   }
-  
+
   return { succeeded, failed }
 }
 
@@ -79,7 +79,7 @@ export async function bulkCreate<TInput, TResult>(
   }
 ): Promise<BulkOperationResult<TResult>> {
   const itemsToCreate: TInput[] = []
-  
+
   // Check for duplicates if validator provided
   if (options?.validateDuplicates) {
     for (const item of items) {
@@ -96,7 +96,7 @@ export async function bulkCreate<TInput, TResult>(
   } else {
     itemsToCreate.push(...items)
   }
-  
+
   return bulkOperation(itemsToCreate, createFn, {
     continueOnError: options?.continueOnError ?? true
   })
@@ -122,7 +122,7 @@ export async function bulkUpdate<TId, TUpdate, TResult>(
     }
     return updateFn(update.id, update.data)
   }
-  
+
   return bulkOperation(updates, operation, {
     continueOnError: options?.continueOnError ?? true
   })
@@ -141,7 +141,7 @@ export async function bulkDelete<TId>(
 ): Promise<{ deletedCount: number; failed: TId[] }> {
   let deletedCount = 0
   const failed: TId[] = []
-  
+
   for (const id of ids) {
     try {
       if (options?.validateExists) {
@@ -152,7 +152,7 @@ export async function bulkDelete<TId>(
           continue
         }
       }
-      
+
       const deleted = await deleteFn(id)
       if (deleted) {
         deletedCount++
@@ -162,13 +162,13 @@ export async function bulkDelete<TId>(
     } catch (error) {
       console.error(`Failed to delete entity with ID ${id}:`, error)
       failed.push(id)
-      
+
       if (!options?.continueOnError) {
         throw error
       }
     }
   }
-  
+
   return { deletedCount, failed }
 }
 
@@ -181,13 +181,13 @@ export async function processBatch<T, R>(
   processor: (batch: T[]) => Promise<R[]>
 ): Promise<R[]> {
   const results: R[] = []
-  
+
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize)
     const batchResults = await processor(batch)
     results.push(...batchResults)
   }
-  
+
   return results
 }
 
@@ -204,33 +204,27 @@ export async function retryOperation<T>(
     shouldRetry?: (error: unknown) => boolean
   } = {}
 ): Promise<T> {
-  const {
-    maxRetries = 3,
-    initialDelay = 1000,
-    maxDelay = 10000,
-    backoffFactor = 2,
-    shouldRetry = () => true
-  } = options
-  
+  const { maxRetries = 3, initialDelay = 1000, maxDelay = 10000, backoffFactor = 2, shouldRetry = () => true } = options
+
   let lastError: unknown
   let delay = initialDelay
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await operation()
     } catch (error) {
       lastError = error
-      
+
       if (attempt === maxRetries || !shouldRetry(error)) {
         throw error
       }
-      
+
       console.warn(`Operation failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`)
-      await new Promise(resolve => setTimeout(resolve, delay))
-      
+      await new Promise((resolve) => setTimeout(resolve, delay))
+
       delay = Math.min(delay * backoffFactor, maxDelay)
     }
   }
-  
+
   throw lastError
 }

@@ -145,14 +145,14 @@ const mockProjectStorage = {
       if (!mockProjectFilesDbPerProject[projectId]?.[fileId]) return false
       delete mockProjectFilesDbPerProject[projectId][fileId]
       return true
-    },
+    }
   }),
   // V2 list method
   list: async (): Promise<Project[]> => {
     return Object.values(mockProjectsDb)
   },
   // Legacy compatibility methods (map to V2)
-  getAllProjects: async function(): Promise<Project[]> {
+  getAllProjects: async function (): Promise<Project[]> {
     return this.list()
   },
   // V1 compatibility methods
@@ -191,8 +191,7 @@ const mockProjectStorage = {
     }
     mockProjectFilesDbPerProject[projectId][fileId] = updatedFile
     return JSON.parse(JSON.stringify(updatedFile))
-  },
-
+  }
 }
 
 mock.module('@octoprompt/storage', () => ({
@@ -384,10 +383,10 @@ describe('Project Service', () => {
       test('supports limit option', async () => {
         // Add another file
         await createProjectFileRecord(projectId, 'test/search.ts', 'search content')
-        
+
         const allFiles = await getProjectFiles(projectId)
         expect(allFiles).toBeArrayOfSize(3)
-        
+
         const limitedFiles = await getProjectFiles(projectId, false, { limit: 1 })
         expect(limitedFiles).toBeArrayOfSize(1)
       })

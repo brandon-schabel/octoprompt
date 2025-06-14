@@ -2,7 +2,16 @@ export interface ClaudeCodeTemplate {
   id: string
   name: string
   description: string
-  category: 'refactoring' | 'documentation' | 'testing' | 'debugging' | 'feature' | 'optimization' | 'security' | 'planning' | 'architecture'
+  category:
+    | 'refactoring'
+    | 'documentation'
+    | 'testing'
+    | 'debugging'
+    | 'feature'
+    | 'optimization'
+    | 'security'
+    | 'planning'
+    | 'architecture'
   prompt: string
   variables?: {
     name: string
@@ -276,7 +285,7 @@ export const CLAUDE_CODE_TEMPLATES: ClaudeCodeTemplate[] = [
     description: 'Analyze code and create a refactoring strategy',
     category: 'planning',
     prompt:
-      'Analyze the selected code and create a comprehensive refactoring strategy. Identify: 1) Code smells and issues 2) Refactoring opportunities 3) Breaking changes and migration path 4) Testing requirements 5) Step-by-step refactoring plan 6) Risk assessment. Prioritize changes by impact and effort.',
+      'Analyze the selected code and create a comprehensive refactoring strategy. Identify: 1) Code smells and issues 2) Refactoring opportunities 3) Breaking changes and migration path 4) Testing requirements 5) Step-by-step refactoring plan 6) Risk assessment. Prioritize changes by impact and effort.'
   },
   {
     id: 'dependency-analysis',
@@ -284,7 +293,7 @@ export const CLAUDE_CODE_TEMPLATES: ClaudeCodeTemplate[] = [
     description: 'Analyze task dependencies and optimal execution order',
     category: 'planning',
     prompt:
-      'Analyze the dependencies between different parts of this codebase or feature implementation. Create a dependency graph showing: 1) Which components depend on others 2) Critical path for implementation 3) Parallel work opportunities 4) Potential circular dependencies 5) Recommended execution order. Suggest how to minimize dependencies.',
+      'Analyze the dependencies between different parts of this codebase or feature implementation. Create a dependency graph showing: 1) Which components depend on others 2) Critical path for implementation 3) Parallel work opportunities 4) Potential circular dependencies 5) Recommended execution order. Suggest how to minimize dependencies.'
   },
 
   // Architecture Templates (replacing Mastra Enhanced Planning)

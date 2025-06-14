@@ -62,32 +62,23 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
  */
 export function createCrudErrorHandlers(entityName: string) {
   return {
-    handleCreate: (error: unknown, data?: any) => 
-      handleValidationError(error, entityName, 'creating', { data }),
-    
-    handleUpdate: (error: unknown, id: number | string, data?: any) => 
+    handleCreate: (error: unknown, data?: any) => handleValidationError(error, entityName, 'creating', { data }),
+
+    handleUpdate: (error: unknown, id: number | string, data?: any) =>
       handleValidationError(error, entityName, 'updating', { id, data }),
-    
-    handleDelete: (error: unknown, id: number | string) => 
-      handleValidationError(error, entityName, 'deleting', { id }),
-    
-    handleGet: (error: unknown, id: number | string) => 
-      handleValidationError(error, entityName, 'retrieving', { id }),
-    
-    notFound: (id: number | string) => 
-      throwNotFound(entityName, id)
+
+    handleDelete: (error: unknown, id: number | string) => handleValidationError(error, entityName, 'deleting', { id }),
+
+    handleGet: (error: unknown, id: number | string) => handleValidationError(error, entityName, 'retrieving', { id }),
+
+    notFound: (id: number | string) => throwNotFound(entityName, id)
   }
 }
 
 /**
  * Handle API errors with context
  */
-export function throwApiError(
-  status: number,
-  message: string,
-  code: string,
-  details?: unknown
-): never {
+export function throwApiError(status: number, message: string, code: string, details?: unknown): never {
   throw new ApiError(status, message, code, details)
 }
 
@@ -109,14 +100,15 @@ export async function safeAsync<T>(
     if (error instanceof ApiError) {
       throw error
     }
-    
+
     if (error instanceof ZodError) {
       handleValidationError(error, errorContext.entityName, errorContext.action, errorContext.details)
     }
-    
-    const message = errorContext.fallbackMessage || 
+
+    const message =
+      errorContext.fallbackMessage ||
       `Failed to ${errorContext.action} ${errorContext.entityName}: ${error instanceof Error ? error.message : String(error)}`
-    
+
     throw new ApiError(
       500,
       message,

@@ -90,25 +90,25 @@ const mockChatStorage = {
     }
   }),
   // Legacy compatibility methods (these map to V2 methods)
-  createChat: async function(data: { title: string }) {
+  createChat: async function (data: { title: string }) {
     return this.create(data)
   },
-  updateChat: async function(id: number, data: { title?: string }) {
+  updateChat: async function (id: number, data: { title?: string }) {
     return this.update(id, data)
   },
-  deleteChat: async function(id: number) {
+  deleteChat: async function (id: number) {
     return this.delete(id)
   },
-  getChat: async function(id: number) {
+  getChat: async function (id: number) {
     return this.getById(id)
   },
-  getAllChats: async function() {
+  getAllChats: async function () {
     return this.list()
   },
-  getChatMessages: async function(chatId: number) {
+  getChatMessages: async function (chatId: number) {
     return this.getMessages(chatId)
   },
-  addChatMessage: async function(chatId: number, data: any) {
+  addChatMessage: async function (chatId: number, data: any) {
     return this.addMessage(chatId, data)
   },
   // Keep V1 compatibility methods for any code that might still use them

@@ -1,13 +1,7 @@
 import { z } from 'zod'
 
 // Import only the actual types we need (not response schemas)
-import type {
-  CreateChatBody,
-  UpdateChatBody,
-  AiChatStreamRequest,
-  Chat,
-  ChatMessage
-} from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@octoprompt/schemas'
 
 import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody } from '@octoprompt/schemas'
 
@@ -69,6 +63,27 @@ import {
   type UnifiedModel
 } from '@octoprompt/schemas'
 
+// Claude Code imports
+import type {
+  ClaudeCodeRequest,
+  ClaudeCodeResult,
+  ClaudeCodeSession,
+  ClaudeCodeSessionList,
+  GetAuditLogsQuery,
+  ClaudeCodeAuditLog,
+  AuditLogSummary
+} from '@octoprompt/schemas'
+
+import {
+  ClaudeCodeRequestSchema,
+  ClaudeCodeContinueRequestSchema,
+  ClaudeCodeResultSchema,
+  ClaudeCodeSessionSchema,
+  ClaudeCodeSessionListSchema,
+  GetAuditLogsQuerySchema,
+  ClaudeCodeAuditLogSchema,
+  AuditLogSummarySchema
+} from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
   success: boolean
@@ -206,6 +221,18 @@ class BaseApiClient {
       }
       throw e
     }
+  }
+
+  // Build query string from object
+  protected buildQueryString(params: Record<string, any>): string {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value))
+      }
+    }
+    const queryString = searchParams.toString()
+    return queryString ? `?${queryString}` : ''
   }
 }
 
@@ -417,12 +444,6 @@ export class ProjectService extends BaseApiClient {
       success: boolean
     }
   }
-
-
-
-
-
-
 
   async updateFileContent(projectId: number, fileId: number, content: string) {
     const result = await this.request('PUT', `/projects/${projectId}/files/${fileId}`, {
@@ -661,7 +682,127 @@ export class GenAiService extends BaseApiClient {
   }
 }
 
-// Mastra Service removed - functionality consolidated into Claude Code
+// Claude Code Service
+export class ClaudeCodeService extends BaseApiClient {
+  constructor(config: ApiConfig) {
+    super(config)
+  }
+
+  async executeQuery(request: ClaudeCodeRequest) {
+    const validatedData = this.validateBody(ClaudeCodeRequestSchema, request)
+    const result = await this.request('POST', '/claude-code/execute', {
+      body: validatedData,
+      responseSchema: ClaudeCodeResultSchema
+    })
+    return result as ClaudeCodeResult
+  }
+
+  async streamQuery(request: ClaudeCodeRequest): Promise<ReadableStream> {
+    const validatedData = this.validateBody(ClaudeCodeRequestSchema, request)
+    const url = new URL(`${this.baseUrl}/api/claude-code/stream`)
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(validatedData),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
+      }
+
+      if (!response.body) {
+        throw new OctoPromptError('No response body for stream')
+      }
+
+      return response.body
+    } catch (e) {
+      if (e instanceof OctoPromptError) throw e
+      if (e instanceof Error) {
+        if (e.name === 'AbortError') {
+          throw new OctoPromptError('Stream request timeout', undefined, 'TIMEOUT')
+        }
+        throw new OctoPromptError(`Stream request failed: ${e.message}`)
+      }
+      throw new OctoPromptError('Unknown error occurred during stream request')
+    }
+  }
+
+  async continueSession(sessionId: string, prompt: string) {
+    const validatedData = this.validateBody(ClaudeCodeContinueRequestSchema, { prompt })
+    const result = await this.request('POST', `/claude-code/sessions/${sessionId}/continue`, {
+      body: validatedData,
+      responseSchema: ClaudeCodeResultSchema
+    })
+    return result as ClaudeCodeResult
+  }
+
+  async getSessions() {
+    const result = await this.request('GET', '/claude-code/sessions', {
+      responseSchema: ClaudeCodeSessionListSchema
+    })
+    return result as ClaudeCodeSessionList
+  }
+
+  async getSession(sessionId: string) {
+    const result = await this.request('GET', `/claude-code/sessions/${sessionId}`, {
+      responseSchema: ClaudeCodeSessionSchema
+    })
+    return result as ClaudeCodeSession
+  }
+
+  async deleteSession(sessionId: string): Promise<boolean> {
+    await this.request('DELETE', `/claude-code/sessions/${sessionId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async getSessionFileChanges(sessionId: string) {
+    const result = await this.request('GET', `/claude-code/sessions/${sessionId}/file-changes`, {
+      responseSchema: z.array(
+        z.object({
+          sessionId: z.string(),
+          timestamp: z.number(),
+          event: z.enum(['created', 'modified', 'deleted']),
+          filePath: z.string(),
+          projectId: z.number()
+        })
+      )
+    })
+    return result as Array<{
+      sessionId: string
+      timestamp: number
+      event: 'created' | 'modified' | 'deleted'
+      filePath: string
+      projectId: number
+    }>
+  }
+
+  async getAuditLogs(query?: GetAuditLogsQuery) {
+    const validatedQuery = query ? this.validateBody(GetAuditLogsQuerySchema, query) : undefined
+    const queryString = validatedQuery ? this.buildQueryString(validatedQuery) : ''
+    const result = await this.request('GET', `/claude-code/audit-logs${queryString}`, {
+      responseSchema: z.array(ClaudeCodeAuditLogSchema)
+    })
+    return result as ClaudeCodeAuditLog[]
+  }
+
+  async getSessionAuditSummary(sessionId: string) {
+    const result = await this.request('GET', `/claude-code/sessions/${sessionId}/audit-summary`, {
+      responseSchema: AuditLogSummarySchema
+    })
+    return result as AuditLogSummary
+  }
+}
 
 // Main OctoPrompt Client
 export class OctoPromptClient {
@@ -670,6 +811,7 @@ export class OctoPromptClient {
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
+  public readonly claudeCode: ClaudeCodeService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -677,6 +819,7 @@ export class OctoPromptClient {
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
+    this.claudeCode = new ClaudeCodeService(config)
   }
 }
 

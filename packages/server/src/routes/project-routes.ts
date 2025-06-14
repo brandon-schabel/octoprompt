@@ -36,7 +36,6 @@ const FileIdParamsSchema = z.object({
   fileId: z.coerce.number().int().positive()
 })
 
-
 const UpdateFileContentBodySchema = z.object({
   content: z.string()
 })
@@ -459,7 +458,6 @@ const optimizeUserInputRoute = createRoute({
   }
 })
 
-
 // --- Hono App Instance ---
 export const projectRoutes = new OpenAPIHono()
   .openapi(createProjectRoute, async (c) => {
@@ -632,8 +630,8 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId, originalFileId } = c.req.valid('param')
     const query = c.req.valid('query')
     const fileVersion = await projectService.getFileVersion(
-      projectId, 
-      originalFileId, 
+      projectId,
+      originalFileId,
       query.version ? Number(query.version) : undefined
     )
 
@@ -758,7 +756,11 @@ export const projectRoutes = new OpenAPIHono()
       if (error instanceof ApiError) {
         throw error
       }
-      throw new ApiError(500, `Failed to generate project summary: ${error instanceof Error ? error.message : String(error)}`, 'AI_SUMMARY_ERROR')
+      throw new ApiError(
+        500,
+        `Failed to generate project summary: ${error instanceof Error ? error.message : String(error)}`,
+        'AI_SUMMARY_ERROR'
+      )
     }
   })
   .openapi(suggestFilesRoute, async (c) => {
@@ -766,12 +768,12 @@ export const projectRoutes = new OpenAPIHono()
     const { prompt, limit } = c.req.valid('json')
 
     const suggestedFiles = await projectService.suggestFiles(projectId, prompt, limit)
-    
+
     const payload = {
       success: true,
       data: suggestedFiles
     } satisfies z.infer<typeof SuggestFilesResponseSchema>
-    
+
     return c.json(payload, 200)
   })
   .openapi(optimizeUserInputRoute, async (c) => {

@@ -26,11 +26,11 @@ class MyStorage extends BaseStorage<MyEntity, MyStorageType> {
   constructor(options?: StorageOptions) {
     super(storageSchema, entitySchema, 'my_data', options)
   }
-  
+
   protected getIndexPath(): string {
     return path.join(this.basePath, this.dataDir, 'index.json')
   }
-  
+
   protected getEntityPath(id: number): string | null {
     // Return path for entity-specific data, or null if not needed
     return null
@@ -42,11 +42,11 @@ class MyStorage extends BaseStorage<MyEntity, MyStorageType> {
 
 ```typescript
 interface StorageOptions {
-  basePath?: string        // Base directory (default: process.cwd())
-  cacheEnabled?: boolean   // Enable caching (default: true)
-  cacheTTL?: number       // Cache TTL in ms (default: 5 minutes)
-  maxCacheSize?: number   // Max cache entries (default: 100)
-  lockTimeout?: number    // Lock timeout in ms (default: 30 seconds)
+  basePath?: string // Base directory (default: process.cwd())
+  cacheEnabled?: boolean // Enable caching (default: true)
+  cacheTTL?: number // Cache TTL in ms (default: 5 minutes)
+  maxCacheSize?: number // Max cache entries (default: 100)
+  lockTimeout?: number // Lock timeout in ms (default: 30 seconds)
 }
 ```
 
@@ -71,11 +71,7 @@ await indexManager.createIndex({
 const userIds = await indexManager.query('users_by_email', 'user@example.com')
 
 // Range query
-const recentUsers = await indexManager.queryRange(
-  'users_by_created',
-  startDate.getTime(),
-  endDate.getTime()
-)
+const recentUsers = await indexManager.queryRange('users_by_created', startDate.getTime(), endDate.getTime())
 ```
 
 ### Migration Manager
@@ -131,10 +127,7 @@ const project = await projectStorage.create({
 const projects = await projectStorage.findByName('My Project')
 
 // Query by date range (uses index)
-const recentProjects = await projectStorage.listByDateRange(
-  new Date('2024-01-01'),
-  new Date()
-)
+const recentProjects = await projectStorage.listByDateRange(new Date('2024-01-01'), new Date())
 
 // File management with versioning
 const fileStorage = projectStorage.getFileStorage(project.id)
@@ -143,15 +136,12 @@ const fileStorage = projectStorage.getFileStorage(project.id)
 const file = await fileStorage.create({
   name: 'index.ts',
   path: 'src/index.ts',
-  content: 'console.log("Hello")',
+  content: 'console.log("Hello")'
   // ... other fields
 })
 
 // Create new version
-const newVersion = await fileStorage.createVersion(
-  file.id,
-  'console.log("Hello, World!")'
-)
+const newVersion = await fileStorage.createVersion(file.id, 'console.log("Hello, World!")')
 
 // Get file history
 const versions = await fileStorage.getVersions(file.id)
@@ -161,20 +151,20 @@ const versions = await fileStorage.getVersions(file.id)
 
 ### Query Performance
 
-| Operation | Old Storage | New Storage (Cold) | New Storage (Cached) |
-|-----------|-------------|-------------------|---------------------|
-| Get by ID | O(n) | O(1) + disk read | O(1) memory |
-| Find by field | O(n) | O(1) with index | O(1) with index |
-| List all | O(n) | O(n) | O(1) if cached |
-| Range query | O(n) | O(log n) with B-tree | O(log n) |
+| Operation     | Old Storage | New Storage (Cold)   | New Storage (Cached) |
+| ------------- | ----------- | -------------------- | -------------------- |
+| Get by ID     | O(n)        | O(1) + disk read     | O(1) memory          |
+| Find by field | O(n)        | O(1) with index      | O(1) with index      |
+| List all      | O(n)        | O(n)                 | O(1) if cached       |
+| Range query   | O(n)        | O(log n) with B-tree | O(log n)             |
 
 ### Concurrency
 
-| Scenario | Old Storage | New Storage |
-|----------|-------------|-------------|
+| Scenario          | Old Storage     | New Storage       |
+| ----------------- | --------------- | ----------------- |
 | Concurrent writes | Race conditions | Queued with locks |
-| ID collisions | Basic increment | Locked generation |
-| File corruption | Possible | Atomic writes |
+| ID collisions     | Basic increment | Locked generation |
+| File corruption   | Possible        | Atomic writes     |
 
 ## Migration Guide
 
@@ -247,21 +237,25 @@ bun test
 ## Troubleshooting
 
 ### Cache Issues
+
 - Clear cache: `storage.clearCache()`
 - Check stats: `storage.getCacheStats()`
 - Disable temporarily: `new Storage({ cacheEnabled: false })`
 
 ### Index Issues
+
 - Rebuild indexes: `await storage.rebuildIndexes()`
 - Check index stats: `await indexManager.getIndexStats('index_name')`
 - List all indexes: `await indexManager.listIndexes()`
 
 ### Lock Timeouts
+
 - Increase timeout: `new Storage({ lockTimeout: 60000 })`
 - Check for stuck processes
 - Manually clear locks (restart application)
 
 ### Migration Failures
+
 - Check migration status: `await migrationManager.status()`
 - Restore from backup: `await migrationManager.restore(backupPath)`
 - Run specific version: `await migrationManager.migrate('1.0.0')`

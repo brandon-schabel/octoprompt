@@ -45,23 +45,23 @@ interface ProviderKey {
 // Example storage layer (would be imported from @octoprompt/storage)
 class MockStorage {
   private keys: ProviderKey[] = []
-  
+
   async getById(id: number): Promise<ProviderKey | null> {
-    return this.keys.find(k => k.id === id) || null
+    return this.keys.find((k) => k.id === id) || null
   }
-  
+
   async getByUserId(userId: number): Promise<ProviderKey[]> {
-    return this.keys.filter(k => k.userId === userId)
+    return this.keys.filter((k) => k.userId === userId)
   }
-  
+
   async update(id: number, data: Partial<ProviderKey>): Promise<ProviderKey> {
-    const index = this.keys.findIndex(k => k.id === id)
+    const index = this.keys.findIndex((k) => k.id === id)
     if (index === -1) throw new Error('Not found')
-    
+
     this.keys[index] = { ...this.keys[index], ...data, updated: Date.now() }
     return this.keys[index]
   }
-  
+
   async create(data: Omit<ProviderKey, 'id' | 'created' | 'updated'>): Promise<ProviderKey> {
     const now = Date.now()
     const newKey: ProviderKey = {
@@ -86,15 +86,11 @@ class ExampleProviderKeyService {
     return withServiceContext(
       async () => {
         // Use requireEntity to throw 404 if not found
-        const key = requireEntity(
-          await this.storage.getById(keyId),
-          'Provider Key',
-          keyId
-        )
-        
+        const key = requireEntity(await this.storage.getById(keyId), 'Provider Key', keyId)
+
         // Use validateOwnership to ensure user owns the resource
         validateOwnership(key, userId, (k) => k.userId, 'Provider Key')
-        
+
         return key
       },
       {
@@ -109,41 +105,36 @@ class ExampleProviderKeyService {
   /**
    * Create a new provider key, handling default logic
    */
-  async createKey(
-    data: Omit<ProviderKey, 'id' | 'created' | 'updated'>,
-    userId: number
-  ): Promise<ProviderKey> {
+  async createKey(data: Omit<ProviderKey, 'id' | 'created' | 'updated'>, userId: number): Promise<ProviderKey> {
     return withServiceContext(
       async () => {
         // Validate ownership (if creating for another user)
         if (data.userId !== userId) {
           throw ErrorFactories.forbidden('create', 'Provider Key')
         }
-        
+
         // Check for duplicates
         const existingKeys = await this.storage.getByUserId(userId)
-        const duplicate = existingKeys.find(k => 
-          k.provider === data.provider && k.name === data.name
-        )
-        
+        const duplicate = existingKeys.find((k) => k.provider === data.provider && k.name === data.name)
+
         if (duplicate) {
           throw ErrorFactories.duplicate('Provider Key', 'name', data.name)
         }
-        
+
         // Create the key
         const newKey = await this.storage.create(data)
-        
+
         // Handle default logic if this key is set as default
         if (data.isDefault) {
           await ensureSingleDefault(
-            existingKeys.filter(k => k.provider === data.provider),
+            existingKeys.filter((k) => k.provider === data.provider),
             newKey,
             async (key, isDefault) => {
               await this.storage.update(key.id, { isDefault })
             }
           )
         }
-        
+
         return newKey
       },
       {
@@ -169,14 +160,14 @@ class ExampleProviderKeyService {
       async () => {
         // Get all keys for the user
         const allKeys = await this.storage.getByUserId(userId)
-        
+
         // Build normalized search query
         const query = buildSearchQuery({
           ...searchOptions,
           // Add provider-specific search fields
           searchFields: ['name', 'provider', 'environment']
         })
-        
+
         // Apply search and pagination
         const filteredKeys = applySearchQuery(
           allKeys,
@@ -189,7 +180,7 @@ class ExampleProviderKeyService {
             return (key as any)[field]
           }
         )
-        
+
         return {
           keys: filteredKeys,
           total: allKeys.length,
@@ -212,23 +203,19 @@ class ExampleProviderKeyService {
       async () => {
         // Get and validate ownership
         const key = await this.getKey(keyId, userId)
-        
+
         // Get all keys for this provider
         const allKeys = await this.storage.getByUserId(userId)
-        const providerKeys = allKeys.filter(k => k.provider === key.provider)
-        
+        const providerKeys = allKeys.filter((k) => k.provider === key.provider)
+
         // Update this key as default
         const updatedKey = await this.storage.update(keyId, { isDefault: true })
-        
+
         // Ensure single default
-        await ensureSingleDefault(
-          providerKeys,
-          updatedKey,
-          async (k, isDefault) => {
-            await this.storage.update(k.id, { isDefault })
-          }
-        )
-        
+        await ensureSingleDefault(providerKeys, updatedKey, async (k, isDefault) => {
+          await this.storage.update(k.id, { isDefault })
+        })
+
         return updatedKey
       },
       {
@@ -248,19 +235,17 @@ class ExampleProviderKeyService {
       async () => {
         // Get and validate ownership
         const key = await this.getKey(keyId, userId)
-        
+
         // Check if this key is being used (example dependency check)
         if (key.isDefault) {
           const allKeys = await this.storage.getByUserId(userId)
-          const otherKeys = allKeys.filter(k => 
-            k.provider === key.provider && k.id !== keyId
-          )
-          
+          const otherKeys = allKeys.filter((k) => k.provider === key.provider && k.id !== keyId)
+
           if (otherKeys.length === 0) {
             throw ErrorFactories.dependency('Provider Key', 'active configurations')
           }
         }
-        
+
         // Delete logic would go here
         // await this.storage.delete(keyId)
       },
@@ -279,7 +264,7 @@ async function exampleRouteHandler(request: any) {
   try {
     const service = new ExampleProviderKeyService(new MockStorage())
     const userId = 123 // from auth
-    
+
     // Search with pagination
     const results = await service.searchKeys(userId, {
       search: 'openai',
@@ -289,13 +274,13 @@ async function exampleRouteHandler(request: any) {
       sortOrder: 'desc',
       filters: { provider: 'openai' }
     })
-    
+
     return { success: true, data: results }
   } catch (error) {
     // The utilities will throw properly formatted ApiErrors
     if (error instanceof Error) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: {
           message: error.message,
           code: (error as any).code || 'UNKNOWN_ERROR',
