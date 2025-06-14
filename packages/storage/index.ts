@@ -4,6 +4,13 @@ export * from './src/chat-storage'
 export * from './src/prompt-storage'
 export * from './src/claude-code-storage'
 export * from './src/provider-key-storage'
+export * from './src/attachment-storage'
+
+// Export new core utilities
+export * from './src/core/indexed-storage'
+export * from './src/core/index-builder'
+export * from './src/core/storage-query-utils'
+export * from './src/core/storage-patterns'
 
 // Export new enhanced storage system
 export * from './src/core/storage-adapter'
@@ -22,6 +29,9 @@ export * from './src/migration/v2-migrations'
 // Export enhanced storage implementations
 export * from './src/project-storage'
 
+// Export file watcher for cache invalidation
+export * from './src/core/file-watcher'
+
 // Re-export core types and utilities
 export type {
   StorageAdapter,
@@ -31,6 +41,26 @@ export type {
   StorageErrorCode,
   StorageMetrics
 } from './src/core/storage-adapter'
+
+export type {
+  IndexDefinition
+} from './src/core/indexed-storage'
+
+export type {
+  IndexBuilderOptions
+} from './src/core/index-builder'
+
+export {
+  IndexBuilder,
+  createIndexBuilder,
+  IndexBuilders
+} from './src/core/index-builder'
+
+export type {
+  VersionedEntity,
+  SoftDeletableEntity,
+  AuditableEntity
+} from './src/core/storage-patterns'
 
 export type {
   ReadWriteLock,

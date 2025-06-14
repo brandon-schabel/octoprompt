@@ -235,6 +235,10 @@ describe('Project API Tests', () => {
 
     // With versioning, the file ID might change (new version created)
     // So we'll check that a file was returned with the new content
+    console.log('Expected content:', newContent)
+    console.log('Actual content:', resultData.content)
+    console.log('Expected size:', Buffer.byteLength(newContent, 'utf8'))
+    console.log('Actual size:', resultData.size)
     expect(resultData.content).toBe(newContent)
     expect(resultData.size).toBe(Buffer.byteLength(newContent, 'utf8'))
     expect(resultData.updated).toBeTypeOf('number')

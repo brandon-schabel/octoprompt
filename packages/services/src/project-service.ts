@@ -5,168 +5,113 @@ import {
   type ProjectFile,
   ProjectFileSchema,
   ProjectSchema,
-  type UpdateProjectBody,
-  type FileVersion
+  type UpdateProjectBody
 } from '@octoprompt/schemas'
 import path from 'path'
 import { z, ZodError } from 'zod'
 
 // TODO: Replace with Mastra hooks when ready
 import { syncProject } from './file-services/file-sync-service-unified'
-import { ApiError } from '@octoprompt/shared'
+import { 
+  ApiError,
+  requireEntity,
+  buildSearchQuery,
+  applySearchQuery,
+  withServiceContext,
+  ErrorFactories,
+  type SearchQueryOptions
+} from '@octoprompt/shared'
 import { promptsMap } from '@octoprompt/shared'
 import { buildProjectSummary } from '@octoprompt/shared'
 import { resolvePath } from './utils/path-utils'
+import { bulkCreate, bulkUpdate, bulkDelete } from './utils/bulk-operations'
 
 // Existing project CRUD functions remain the same...
 export async function createProject(data: CreateProjectBody): Promise<Project> {
-  let projectId = projectStorage.generateId()
-  const initialProjectId = projectId
-  let incrementCount = 0
-  const now = Date.now()
-
-  const newProjectData: Project = {
-    id: projectId,
-    name: data.name,
-    path: data.path,
-    description: data.description || '',
-    created: now,
-    updated: now
-  }
-
-  try {
-    const existingProjectsObject = await projectStorage.readProjects()
-    const projectsMap = new Map<number, Project>(
-      Object.entries(existingProjectsObject).map(([id, proj]) => [Number(id), proj as Project])
-    )
-
-    while (projectsMap.has(projectId)) {
-      projectId++
-      incrementCount++
+  return withServiceContext(
+    () => projectStorage.create({
+      name: data.name,
+      path: data.path,
+      description: data.description || ''
+    }),
+    {
+      entityName: 'project',
+      action: 'create'
     }
-
-    if (incrementCount > 0) {
-      newProjectData.id = projectId
-      console.log(
-        `Project ID ${initialProjectId} was taken. Found available ID ${projectId} after ${incrementCount} increment(s).`
-      )
-    }
-
-    const validatedProject = ProjectSchema.parse(newProjectData)
-    projectsMap.set(validatedProject.id, validatedProject)
-
-    await projectStorage.writeProjects(Object.fromEntries(projectsMap))
-    await projectStorage.writeProjectFiles(validatedProject.id, {})
-
-    return validatedProject
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed creating project: ${error.message}`,
-        'PROJECT_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
-    }
-    throw new ApiError(
-      500,
-      `Failed to create project ${data.name}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_CREATION_FAILED'
-    )
-  }
+  )
 }
 
 export async function getProjectById(projectId: number): Promise<Project> {
-  try {
-    const projects = await projectStorage.readProjects()
-    const project = projects[projectId]
-    if (!project) {
-      throw new ApiError(404, `Project not found with ID ${projectId}.`, 'PROJECT_NOT_FOUND')
+  return withServiceContext(
+    async () => {
+      const project = await projectStorage.getById(projectId)
+      return requireEntity(project, 'Project', projectId)
+    },
+    {
+      entityName: 'project',
+      action: 'retrieve',
+      identifier: projectId
     }
-    return project
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Error getting project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_GET_FAILED_STORAGE'
-    )
-  }
+  )
 }
 
-export async function listProjects(): Promise<Project[]> {
-  try {
-    const projects = await projectStorage.readProjects()
-    const projectList = Object.values(projects)
-    projectList.sort((a, b) => b.updated - a.updated)
-    return projectList
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to list projects. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_LIST_FAILED'
-    )
-  }
+export async function listProjects(searchOptions?: SearchQueryOptions): Promise<Project[]> {
+  return withServiceContext(
+    async () => {
+      const projects = await projectStorage.list()
+      
+      // Apply search/filtering if provided
+      if (searchOptions) {
+        return applySearchQuery(projects, searchOptions)
+      }
+      
+      // Default sorting by updated timestamp
+      projects.sort((a, b) => b.updated - a.updated)
+      return projects
+    },
+    {
+      entityName: 'projects',
+      action: 'list'
+    }
+  )
 }
 
 export async function updateProject(projectId: number, data: UpdateProjectBody): Promise<Project | null> {
-  try {
-    const existingProject = await getProjectById(projectId)
-    const projects = await projectStorage.readProjects()
-
-    const updatedProjectData: Project = {
-      ...existingProject,
-      name: data.name ?? existingProject.name,
-      path: data.path ?? existingProject.path,
-      description: data.description ?? existingProject.description,
-      updated: Date.now()
+  return withServiceContext(
+    async () => {
+      const updated = await projectStorage.update(projectId, {
+        name: data.name,
+        path: data.path,
+        description: data.description
+      })
+      
+      return requireEntity(updated, 'Project', projectId)
+    },
+    {
+      entityName: 'project',
+      action: 'update',
+      identifier: projectId
     }
-
-    const validatedProject = ProjectSchema.parse(updatedProjectData)
-    projects[projectId] = validatedProject
-    await projectStorage.writeProjects(projects)
-
-    return validatedProject
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed updating project ${projectId}: ${error.message}`,
-        'PROJECT_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
-    }
-    throw new ApiError(
-      500,
-      `Failed to update project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_UPDATE_FAILED'
-    )
-  }
+  )
 }
 
 export async function deleteProject(projectId: number): Promise<boolean> {
-  try {
-    const projects = await projectStorage.readProjects()
-    if (!projects[projectId]) {
-      throw new ApiError(404, `Project not found with ID ${projectId} for deletion.`, 'PROJECT_NOT_FOUND')
+  return withServiceContext(
+    async () => {
+      const deleted = await projectStorage.delete(projectId)
+      
+      if (!deleted) {
+        throw ErrorFactories.dependency('Project', 'files or chats')
+      }
+
+      return true
+    },
+    {
+      entityName: 'project',
+      action: 'delete',
+      identifier: projectId
     }
-
-    delete projects[projectId]
-    await projectStorage.writeProjects(projects)
-    await projectStorage.deleteProjectData(projectId)
-
-    return true
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to delete project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_DELETE_FAILED'
-    )
-  }
+  )
 }
 
 // Alias for getProjectById for backward compatibility
@@ -184,169 +129,128 @@ export async function getProject(projectId: number): Promise<Project | null> {
 // UPDATED: Only return latest versions by default
 export async function getProjectFiles(
   projectId: number,
-  includeAllVersions: boolean = false
+  includeAllVersions: boolean = false,
+  searchOptions?: SearchQueryOptions
 ): Promise<ProjectFile[] | null> {
-  try {
-    await getProjectById(projectId)
-    const files = await projectStorage.readProjectFiles(projectId)
-    const fileList = Object.values(files)
+  return withServiceContext(
+    async () => {
+      await getProjectById(projectId)
+      let files = await projectStorage.getProjectFiles(projectId)
 
-    if (includeAllVersions) {
-      return fileList.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
-    } else {
-      // Only return latest versions
-      return fileList.filter((file) => file.isLatest).sort((a, b) => a.path.localeCompare(b.path))
+      if (!includeAllVersions) {
+        // Only return latest versions
+        files = files.filter((file) => file.isLatest)
+      }
+      
+      // Apply search/filtering if provided
+      if (searchOptions) {
+        return applySearchQuery(files, searchOptions, (file, field) => {
+          // Custom field accessor for project files
+          switch (field) {
+            case 'name': return file.name
+            case 'path': return file.path
+            case 'extension': return file.extension
+            case 'content': return file.content
+            default: return (file as any)[field]
+          }
+        })
+      }
+      
+      return files.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
+    },
+    {
+      entityName: 'project files',
+      action: 'retrieve',
+      identifier: projectId
     }
-  } catch (error) {
+  ).catch(error => {
     if (error instanceof ApiError && error.status === 404) {
       return null
     }
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILES_GET_FAILED'
-    )
-  }
+    throw error
+  })
 }
 
 // NEW: Get project files without content for performance optimization
 export async function getProjectFilesWithoutContent(
   projectId: number,
-  includeAllVersions: boolean = false
+  includeAllVersions: boolean = false,
+  searchOptions?: SearchQueryOptions
 ): Promise<Omit<ProjectFile, 'content'>[] | null> {
-  try {
-    await getProjectById(projectId)
-    const files = await projectStorage.readProjectFiles(projectId)
-    const fileList = Object.values(files)
+  return withServiceContext(
+    async () => {
+      await getProjectById(projectId)
+      const files = await projectStorage.readProjectFiles(projectId)
+      let fileList = Object.values(files)
 
-    // Remove content from all files for performance
-    const filesWithoutContent = fileList.map((file) => {
-      const { content, ...fileWithoutContent } = file
-      return fileWithoutContent
-    })
+      // Remove content from all files for performance
+      const filesWithoutContent = fileList.map((file) => {
+        const { content, ...fileWithoutContent } = file
+        return fileWithoutContent
+      })
 
-    if (includeAllVersions) {
-      return filesWithoutContent.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
-    } else {
-      // Only return latest versions
-      return filesWithoutContent.filter((file) => file.isLatest).sort((a, b) => a.path.localeCompare(b.path))
+      if (!includeAllVersions) {
+        // Only return latest versions
+        fileList = filesWithoutContent.filter((file) => file.isLatest)
+      } else {
+        fileList = filesWithoutContent
+      }
+      
+      // Apply search/filtering if provided
+      if (searchOptions) {
+        return applySearchQuery(fileList, searchOptions, (file, field) => {
+          switch (field) {
+            case 'name': return file.name
+            case 'path': return file.path
+            case 'extension': return file.extension
+            default: return (file as any)[field]
+          }
+        })
+      }
+
+      return fileList.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
+    },
+    {
+      entityName: 'project files without content',
+      action: 'retrieve',
+      identifier: projectId
     }
-  } catch (error) {
+  ).catch(error => {
     if (error instanceof ApiError && error.status === 404) {
       return null
     }
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILES_GET_FAILED'
-    )
-  }
+    throw error
+  })
 }
 
-// UPDATED: Create new version instead of updating existing file
+// Update file content directly
 export async function updateFileContent(
   projectId: number,
   fileId: number,
   content: string,
   options?: { updated?: Date }
 ): Promise<ProjectFile> {
-  try {
-    await getProjectById(projectId)
+  return withServiceContext(
+    async () => {
+      await getProjectById(projectId)
 
-    // Create a new version instead of updating the existing file
-    const newVersion = await projectStorage.createFileVersion(projectId, fileId, content)
+      // Update the file directly
+      const fileStorage = projectStorage.getFileStorage(projectId)
+      const updatedFile = await fileStorage.update(fileId, { content })
+      
+      const result = requireEntity(updatedFile, 'File', fileId)
 
-    console.log(`Created new version ${newVersion.version} for file ${fileId} in project ${projectId}`)
-    return newVersion
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed for file content ${fileId}: ${error.message}`,
-        'FILE_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
+      console.log(`Updated file ${fileId} in project ${projectId}`)
+      return result
+    },
+    {
+      entityName: 'file content',
+      action: 'update',
+      identifier: `${projectId}/${fileId}`
     }
-    throw new ApiError(
-      500,
-      `Failed to update file content for ${fileId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_CONTENT_UPDATE_FAILED'
-    )
-  }
+  )
 }
 
-// NEW: Get all versions of a file
-export async function getFileVersions(projectId: number, originalFileId: number): Promise<FileVersion[]> {
-  try {
-    await getProjectById(projectId)
-    const versions = await projectStorage.getFileVersions(projectId, originalFileId)
-
-    return versions.map((file) => ({
-      fileId: file.id,
-      version: file.version,
-      created: file.created,
-      updated: file.updated,
-      isLatest: file.isLatest
-    }))
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get file versions for ${originalFileId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_VERSIONS_GET_FAILED'
-    )
-  }
-}
-
-// NEW: Get specific version of a file
-export async function getFileVersion(
-  projectId: number,
-  originalFileId: number,
-  version?: number
-): Promise<ProjectFile | null> {
-  try {
-    await getProjectById(projectId)
-
-    if (version) {
-      return await projectStorage.getFileVersion(projectId, originalFileId, version)
-    } else {
-      return await projectStorage.getLatestFileVersion(projectId, originalFileId)
-    }
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get file version. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_VERSION_GET_FAILED'
-    )
-  }
-}
-
-// NEW: Revert file to a specific version
-export async function revertFileToVersion(
-  projectId: number,
-  fileId: number,
-  targetVersion: number
-): Promise<ProjectFile> {
-  try {
-    await getProjectById(projectId)
-
-    const revertedFile = await projectStorage.revertToVersion(projectId, fileId, targetVersion)
-    console.log(`Reverted file ${fileId} to version ${targetVersion}, created new version ${revertedFile.version}`)
-
-    return revertedFile
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to revert file to version ${targetVersion}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_REVERT_FAILED'
-    )
-  }
-}
 
 
 
@@ -357,86 +261,50 @@ export async function createProjectFileRecord(
   filePath: string,
   initialContent: string = ''
 ): Promise<ProjectFile> {
-  const project = await getProjectById(projectId)
-  const absoluteProjectPath = resolvePath(project.path)
-  const absoluteFilePath = resolvePath(
-    filePath.startsWith('/') || filePath.startsWith('~') || path.isAbsolute(filePath)
-      ? filePath
-      : path.join(absoluteProjectPath, filePath)
+  return withServiceContext(
+    async () => {
+      const project = await getProjectById(projectId)
+      const absoluteProjectPath = resolvePath(project.path)
+      const absoluteFilePath = resolvePath(
+        filePath.startsWith('/') || filePath.startsWith('~') || path.isAbsolute(filePath)
+          ? filePath
+          : path.join(absoluteProjectPath, filePath)
+      )
+      const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath)
+
+      const fileName = path.basename(normalizedRelativePath)
+      const fileExtension = path.extname(normalizedRelativePath)
+      const size = Buffer.byteLength(initialContent, 'utf8')
+
+      const newFile = await projectStorage.addFile(projectId, {
+        name: fileName,
+        path: normalizedRelativePath,
+        extension: fileExtension,
+        size: size,
+        content: initialContent,
+        summary: null,
+        summaryLastUpdated: null,
+        meta: '{}',
+        checksum: null,
+        // New versioning fields
+        version: 1,
+        prevId: null,
+        nextId: null,
+        isLatest: true,
+        originalFileId: null, // This is the original file
+        // Sync tracking fields
+        lastSyncedAt: null,
+        syncVersion: 0
+      })
+
+      return newFile
+    },
+    {
+      entityName: 'project file record',
+      action: 'create',
+      identifier: projectId
+    }
   )
-  const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath)
-
-  let fileId = projectStorage.generateId()
-  const initialFileId = fileId
-  let incrementCount = 0
-  const now = Date.now()
-  const fileName = path.basename(normalizedRelativePath)
-  const fileExtension = path.extname(normalizedRelativePath)
-  const size = Buffer.byteLength(initialContent, 'utf8')
-
-  const newFileData: ProjectFile = {
-    id: fileId,
-    projectId: projectId,
-    name: fileName,
-    path: normalizedRelativePath,
-    extension: fileExtension,
-    size: size,
-    content: initialContent,
-    summary: null,
-    summaryLastUpdated: null,
-    meta: '{}',
-    checksum: null,
-    created: now,
-    updated: now,
-    // New versioning fields
-    version: 1,
-    prevId: null,
-    nextId: null,
-    isLatest: true,
-    originalFileId: null, // This is the original file
-    // Sync tracking fields
-    lastSyncedAt: null,
-    syncVersion: 0
-  }
-
-  try {
-    const validatedFile = ProjectFileSchema.parse(newFileData)
-    const files = await projectStorage.readProjectFiles(projectId)
-
-    while (files[newFileData.id]) {
-      newFileData.id++
-      incrementCount++
-    }
-    fileId = newFileData.id
-
-    if (incrementCount > 0) {
-      console.log(
-        `File ID ${initialFileId} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`
-      )
-    }
-
-    files[fileId] = validatedFile
-
-    const validatedMap = ProjectFilesStorageSchema.parse(files)
-    await projectStorage.writeProjectFiles(projectId, validatedMap)
-
-    return validatedFile
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation failed creating file record for ${filePath}: ${error.message}`,
-        'FILE_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
-      )
-    }
-    throw new ApiError(
-      500,
-      `Failed to create file record for ${filePath}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILE_CREATE_FAILED'
-    )
-  }
 }
 
 export interface FileSyncData {
@@ -451,97 +319,56 @@ export interface FileSyncData {
 export async function bulkCreateProjectFiles(projectId: number, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
   if (filesToCreate.length === 0) return []
   await getProjectById(projectId)
-  const createdFiles: ProjectFile[] = []
   const now = Date.now()
-  let filesMap: ProjectFilesStorage
 
-  try {
-    filesMap = await projectStorage.readProjectFiles(projectId)
+  return withServiceContext(
+    async () => {
+      const existingFiles = await projectStorage.getProjectFiles(projectId)
 
-    for (const fileData of filesToCreate) {
-      let fileId = projectStorage.generateId()
-      const initialFileId = fileId
-      let incrementCount = 0
+      // Filter out duplicates
+      const uniqueFilesToCreate = filesToCreate.filter(fileData => {
+        const existingByPath = existingFiles.find((f) => f.path === fileData.path && f.isLatest)
+        if (existingByPath) {
+          console.warn(
+            `[ProjectService] Skipping duplicate path in bulk create: ${fileData.path} in project ${projectId}`
+          )
+          return false
+        }
+        return true
+      })
 
-      const existingInMapByPath = Object.values(filesMap).find((f) => f.path === fileData.path && f.isLatest)
-
-      if (existingInMapByPath) {
-        console.warn(
-          `[ProjectService] Skipping duplicate path in bulk create: ${fileData.path} in project ${projectId}`
-        )
-        continue
-      }
-
-      while (filesMap[fileId]) {
-        fileId++
-        incrementCount++
-      }
-      if (incrementCount > 0) {
-        console.log(
-          `[ProjectService] Bulk create: File ID ${initialFileId} for path ${fileData.path} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`
-        )
-      }
-
-      const newFileData: ProjectFile = {
-        id: fileId,
-        projectId: projectId,
-        name: fileData.name,
-        path: fileData.path,
-        extension: fileData.extension,
-        size: fileData.size,
-        content: fileData.content,
-        summary: null,
-        summaryLastUpdated: null,
-        meta: '{}',
-        checksum: fileData.checksum,
-        created: now,
-        updated: now,
-        // New versioning fields
-        version: 1,
-        prevId: null,
-        nextId: null,
-        isLatest: true,
-        originalFileId: null,
-        // Sync tracking fields
-        lastSyncedAt: now, // Initial sync is now
-        syncVersion: 1 // First sync version
-      }
-
-      try {
-        const validatedFile = ProjectFileSchema.parse(newFileData)
-        filesMap[validatedFile.id] = validatedFile
-        createdFiles.push(validatedFile)
-      } catch (validationError) {
-        console.error(
-          `[ProjectService] Validation failed for file ${fileData.path} during bulk create:`,
-          validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError
-        )
-        continue
-      }
-    }
-
-    if (createdFiles.length > 0) {
-      const validatedMap = ProjectFilesStorageSchema.parse(filesMap)
-      await projectStorage.writeProjectFiles(projectId, validatedMap)
-    }
-
-    return createdFiles
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation of project files map failed during bulk create for project ${projectId}: ${error.message}`,
-        'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
+      const result = await bulkCreate(
+        uniqueFilesToCreate,
+        (fileData) => projectStorage.addFile(projectId, {
+          name: fileData.name,
+          path: fileData.path,
+          extension: fileData.extension,
+          size: fileData.size,
+          content: fileData.content,
+          summary: null,
+          summaryLastUpdated: null,
+          meta: '{}',
+          checksum: fileData.checksum,
+          // New versioning fields
+          version: 1,
+          prevId: null,
+          nextId: null,
+          isLatest: true,
+          originalFileId: null,
+          // Sync tracking fields
+          lastSyncedAt: now, // Initial sync is now
+          syncVersion: 1 // First sync version
+        })
       )
+
+      return result.succeeded
+    },
+    {
+      entityName: 'project files',
+      action: 'bulk create',
+      identifier: projectId
     }
-    throw new ApiError(
-      500,
-      `Bulk file creation failed for project ${projectId}. Some files might be created. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_BULK_CREATE_FAILED'
-    )
-  }
+  )
 }
 
 // UPDATED: Bulk update now creates new versions for each file
@@ -551,36 +378,28 @@ export async function bulkUpdateProjectFiles(
 ): Promise<ProjectFile[]> {
   if (updates.length === 0) return []
   await getProjectById(projectId)
-  const updatedFilesResult: ProjectFile[] = []
 
-  try {
-    for (const { fileId, data } of updates) {
-      try {
-        // Create new version instead of updating existing file
-        const newVersion = await projectStorage.createFileVersion(projectId, fileId, data.content, {
+  return withServiceContext(
+    async () => {
+      const fileStorage = projectStorage.getFileStorage(projectId)
+      
+      const result = await bulkUpdate(
+        updates,
+        (fileId, data) => fileStorage.createVersion(fileId, data.content, {
           extension: data.extension,
           size: data.size,
           checksum: data.checksum
         })
-        updatedFilesResult.push(newVersion)
-      } catch (error) {
-        console.error(
-          `[ProjectService] Failed to create new version for file ${fileId} during bulk update:`,
-          error instanceof Error ? error.message : String(error)
-        )
-        continue
-      }
-    }
+      )
 
-    return updatedFilesResult
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_BULK_UPDATE_FAILED'
-    )
-  }
+      return result.succeeded
+    },
+    {
+      entityName: 'project files',
+      action: 'bulk update',
+      identifier: projectId
+    }
+  )
 }
 
 // NEW: Bulk update for sync operations without creating versions
@@ -593,44 +412,46 @@ export async function bulkUpdateProjectFilesForSync(
 ): Promise<ProjectFile[]> {
   if (updates.length === 0) return []
   await getProjectById(projectId)
-  const updatedFilesResult: ProjectFile[] = []
 
-  try {
-    for (const { fileId, data } of updates) {
-      try {
-        // Get current file to preserve sync version
-        const currentFile = await projectStorage.readProjectFile(projectId, fileId)
-        const currentSyncVersion = currentFile?.syncVersion || 0
-        
-        // Direct update without versioning - sync operations should not create versions
-        // as they represent the current state of the filesystem, not user edits
-        const updatedFile = await projectStorage.updateProjectFile(projectId, fileId, {
-          content: data.content,
-          extension: data.extension,
-          size: data.size,
-          checksum: data.checksum,
-          lastSyncedAt: Date.now(),
-          syncVersion: currentSyncVersion + 1
-        })
-        updatedFilesResult.push(updatedFile)
-      } catch (error) {
-        console.error(
-          `[ProjectService] Failed to update file ${fileId} during sync:`,
-          error instanceof Error ? error.message : String(error)
-        )
-        continue
-      }
+  return withServiceContext(
+    async () => {
+      const fileStorage = projectStorage.getFileStorage(projectId)
+      
+      const result = await bulkUpdate(
+        updates,
+        async (fileId, data) => {
+          // Get current file to preserve sync version
+          const currentFile = await fileStorage.getById(fileId)
+          if (!currentFile) {
+            console.warn(`[ProjectService] File ${fileId} not found during sync update`)
+            return null
+          }
+          const currentSyncVersion = currentFile.syncVersion || 0
+          
+          // Direct update without versioning - sync operations should not create versions
+          // as they represent the current state of the filesystem, not user edits
+          return fileStorage.update(fileId, {
+            content: data.content,
+            extension: data.extension,
+            size: data.size,
+            checksum: data.checksum,
+            lastSyncedAt: Date.now(),
+            syncVersion: currentSyncVersion + 1
+          })
+        },
+        {
+          validateExists: (fileId) => fileStorage.getById(fileId).then(f => f !== null)
+        }
+      )
+
+      return result.succeeded.filter((f): f is ProjectFile => f !== null)
+    },
+    {
+      entityName: 'project files',
+      action: 'bulk sync update',
+      identifier: projectId
     }
-
-    return updatedFilesResult
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Bulk file sync update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_BULK_SYNC_UPDATE_FAILED'
-    )
-  }
+  )
 }
 
 export async function bulkDeleteProjectFiles(
@@ -641,45 +462,24 @@ export async function bulkDeleteProjectFiles(
     return { deletedCount: 0 }
   }
   await getProjectById(projectId)
-  let files: ProjectFilesStorage
-  let deletedCount = 0
-  let changesMade = false
 
-  try {
-    files = await projectStorage.readProjectFiles(projectId)
+  return withServiceContext(
+    async () => {
+      const fileStorage = projectStorage.getFileStorage(projectId)
 
-    for (const fileId of fileIdsToDelete) {
-      if (files[fileId]) {
-        delete files[fileId]
-        deletedCount++
-        changesMade = true
-      } else {
-        console.warn(`[ProjectService] File ID ${fileId} not found during bulk delete for project ${projectId}.`)
-      }
-    }
-
-    if (changesMade) {
-      const validatedMap = ProjectFilesStorageSchema.parse(files)
-      await projectStorage.writeProjectFiles(projectId, validatedMap)
-    }
-
-    return { deletedCount }
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    if (error instanceof ZodError) {
-      throw new ApiError(
-        500,
-        `Internal validation of project files map failed during bulk delete for project ${projectId}: ${error.message}`,
-        'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL',
-        error.flatten().fieldErrors
+      const result = await bulkDelete(
+        fileIdsToDelete,
+        (fileId) => fileStorage.delete(fileId)
       )
+
+      return { deletedCount: result.deletedCount }
+    },
+    {
+      entityName: 'project files',
+      action: 'bulk delete',
+      identifier: projectId
     }
-    throw new ApiError(
-      500,
-      `Bulk file deletion failed for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_BULK_DELETE_FAILED'
-    )
-  }
+  )
 }
 
 export async function getProjectFilesByIds(
@@ -690,41 +490,43 @@ export async function getProjectFilesByIds(
   if (!fileIds || fileIds.length === 0) {
     return []
   }
-  await getProjectById(projectId)
-  const uniqueFileIds = [...new Set(fileIds)]
+  
+  return withServiceContext(
+    async () => {
+      await getProjectById(projectId)
+      const uniqueFileIds = [...new Set(fileIds)]
+      const fileStorage = projectStorage.getFileStorage(projectId)
+      const resultFiles: ProjectFile[] = []
 
-  try {
-    const filesMap = await projectStorage.readProjectFiles(projectId)
-    const resultFiles: ProjectFile[] = []
-
-    for (const id of uniqueFileIds) {
-      const file = filesMap[id]
-      if (file) {
-        // If not including all versions, only add files that are latest versions
-        if (includeAllVersions || file.isLatest !== false) {
-          resultFiles.push(file)
-        } else {
-          console.warn(
-            `[getProjectFilesByIds] Skipping non-latest version file: ${file.path} (ID: ${id}, version: ${file.version}) in project ${projectId}`
-          )
+      for (const id of uniqueFileIds) {
+        const file = await fileStorage.getById(id)
+        if (file) {
+          // If not including all versions, only add files that are latest versions
+          if (includeAllVersions || file.isLatest !== false) {
+            resultFiles.push(file)
+          } else {
+            console.warn(
+              `[getProjectFilesByIds] Skipping non-latest version file: ${file.path} (ID: ${id}, version: ${file.version}) in project ${projectId}`
+            )
+          }
         }
       }
+      return resultFiles
+    },
+    {
+      entityName: 'project files',
+      action: 'fetch by IDs',
+      identifier: projectId
     }
-    return resultFiles
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to fetch files by IDs for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILES_GET_BY_IDS_FAILED'
-    )
-  }
+  )
 }
 
 export async function optimizeUserInput(projectId: number, userContext: string): Promise<string> {
-  const projectSummary = await buildProjectSummary((await projectStorage.getProjectFileArray(projectId)) ?? [])
+  return withServiceContext(
+    async () => {
+      const projectSummary = await buildProjectSummary((await projectStorage.getProjectFileArray(projectId)) ?? [])
 
-  const systemMessage = `
+      const systemMessage = `
 <SystemPrompt>
 You are the Promptimizer, a specialized assistant that refines or rewrites user queries into
 more effective prompts based on the project context. Given the user's context or goal, output ONLY the single optimized prompt.
@@ -741,26 +543,61 @@ ${promptsMap.contemplativePrompt}
 </Reasoning>
 `
 
-  const userMessage = userContext.trim()
-  if (!userMessage) {
-    return ''
-  }
+      const userMessage = userContext.trim()
+      if (!userMessage) {
+        return ''
+      }
 
-  try {
-    // TODO: Replace with Mastra prompt optimization service when ready
-    const optimizedPrompt = `Optimized: ${userMessage}`
+      // TODO: Replace with Mastra prompt optimization service when ready
+      const optimizedPrompt = `Optimized: ${userMessage}`
 
-    return optimizedPrompt.trim()
-  } catch (error: any) {
-    console.error('[PromptimizerService] Failed to optimize prompt:', error)
-    if (error instanceof ApiError) {
-      throw error
+      return optimizedPrompt.trim()
+    },
+    {
+      entityName: 'user input',
+      action: 'optimize',
+      identifier: projectId
     }
-    throw new ApiError(
-      500,
-      `Failed to optimize prompt: ${error.message || 'AI provider error'}`,
-      'PROMPT_OPTIMIZE_ERROR',
-      { originalError: error }
-    )
-  }
+  )
+}
+
+export async function suggestFiles(projectId: number, prompt: string, limit: number = 10): Promise<ProjectFile[]> {
+  return withServiceContext(
+    async () => {
+      // Get project and validate it exists
+      await getProjectById(projectId)
+
+      // Get all project files
+      const allFiles = await getProjectFiles(projectId)
+      if (!allFiles || allFiles.length === 0) {
+        return []
+      }
+
+      // Use search functionality to find relevant files
+      const searchQuery = buildSearchQuery({
+        search: prompt,
+        searchFields: ['name', 'path', 'content'],
+        limit: limit,
+        sortBy: 'updated',
+        sortOrder: 'desc'
+      })
+      
+      const suggestedFiles = applySearchQuery(allFiles, searchQuery, (file, field) => {
+        switch (field) {
+          case 'name': return file.name
+          case 'path': return file.path
+          case 'content': return file.content
+          case 'extension': return file.extension
+          default: return (file as any)[field]
+        }
+      })
+      
+      return suggestedFiles
+    },
+    {
+      entityName: 'file suggestions',
+      action: 'generate',
+      identifier: projectId
+    }
+  )
 }

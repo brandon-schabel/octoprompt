@@ -17,8 +17,101 @@ const generateTestId = () => {
 let mockChatsDb: ChatsStorage = {}
 let mockChatMessagesDb: Record<number, ChatMessagesStorage> = {} // ChatId -> Messages
 
-// Mock the chatStorage utility
+// Mock the chatStorage utility with V2 API
 const mockChatStorage = {
+  // V2 API methods
+  create: async (data: { title: string }) => {
+    const id = generateTestId()
+    const now = normalizeToUnixMs(new Date())
+    const newChat = {
+      id,
+      title: data.title,
+      created: now,
+      updated: now
+    }
+    mockChatsDb[id] = newChat
+    mockChatMessagesDb[id] = {} // Initialize empty messages
+    return newChat
+  },
+  update: async (id: number, data: { title?: string }) => {
+    const existing = mockChatsDb[id]
+    if (!existing) return null
+    const updated = {
+      ...existing,
+      ...data,
+      updated: normalizeToUnixMs(new Date())
+    }
+    mockChatsDb[id] = updated
+    return updated
+  },
+  delete: async (id: number) => {
+    if (!mockChatsDb[id]) return false
+    delete mockChatsDb[id]
+    delete mockChatMessagesDb[id]
+    return true
+  },
+  getById: async (id: number) => {
+    return mockChatsDb[id] || null
+  },
+  list: async () => {
+    return Object.values(mockChatsDb)
+  },
+  getMessages: async (chatId: number) => {
+    const messages = mockChatMessagesDb[chatId] || {}
+    return Object.values(messages)
+  },
+  addMessage: async (chatId: number, data: any) => {
+    if (!mockChatsDb[chatId]) {
+      throw new Error(`Chat ${chatId} not found`)
+    }
+    const messageId = generateTestId()
+    const now = normalizeToUnixMs(new Date())
+    const message = {
+      ...data,
+      id: messageId,
+      chatId,
+      created: data.created || now,
+      updated: now
+    }
+    if (!mockChatMessagesDb[chatId]) {
+      mockChatMessagesDb[chatId] = {}
+    }
+    mockChatMessagesDb[chatId][messageId] = message
+    return message
+  },
+  getMessageById: async (chatId: number, messageId: number) => {
+    const messages = mockChatMessagesDb[chatId] || {}
+    return messages[messageId] || null
+  },
+  getMessageStorage: (chatId: number) => ({
+    writeAll: async (messages: ChatMessagesStorage) => {
+      mockChatMessagesDb[chatId] = JSON.parse(JSON.stringify(messages))
+      return messages
+    }
+  }),
+  // Legacy compatibility methods (these map to V2 methods)
+  createChat: async function(data: { title: string }) {
+    return this.create(data)
+  },
+  updateChat: async function(id: number, data: { title?: string }) {
+    return this.update(id, data)
+  },
+  deleteChat: async function(id: number) {
+    return this.delete(id)
+  },
+  getChat: async function(id: number) {
+    return this.getById(id)
+  },
+  getAllChats: async function() {
+    return this.list()
+  },
+  getChatMessages: async function(chatId: number) {
+    return this.getMessages(chatId)
+  },
+  addChatMessage: async function(chatId: number, data: any) {
+    return this.addMessage(chatId, data)
+  },
+  // Keep V1 compatibility methods for any code that might still use them
   readChats: async () => JSON.parse(JSON.stringify(mockChatsDb)),
   writeChats: async (data: ChatsStorage) => {
     mockChatsDb = JSON.parse(JSON.stringify(data))
@@ -34,7 +127,10 @@ const mockChatStorage = {
   deleteChatData: async (chatId: number) => {
     delete mockChatMessagesDb[chatId]
   },
-  generateId: () => generateTestId()
+  generateId: () => generateTestId(),
+  getChatById: async (chatId: number) => {
+    return mockChatsDb[chatId] || null
+  }
 }
 
 mock.module('@octoprompt/storage', () => ({

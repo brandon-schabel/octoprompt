@@ -122,25 +122,17 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       }
       findSuggestedFilesMutation.mutate(
         {
-          userInput: `Please find the relevant files for the following prompt: ${localUserPrompt}`,
-          projectId: activeProjectTabState?.selectedProjectId ?? -1
+          projectId: activeProjectTabState?.selectedProjectId ?? -1,
+          prompt: localUserPrompt,
+          limit: 10
         },
         {
-          onSuccess: (resp) => {
-            if (resp?.success && resp?.recommendedFileIds) {
-              const files = resp.recommendedFileIds
-                .map((id) => {
-                  const file = projectFileMap.get(id)
-                  if (file) {
-                    return file
-                  }
-
-                  return null
-                })
-                .filter(Boolean) as ProjectFile[]
-
-              setSuggestedFiles(files)
+          onSuccess: (suggestedFilesData) => {
+            if (suggestedFilesData && suggestedFilesData.length > 0) {
+              setSuggestedFiles(suggestedFilesData)
               setShowSuggestions(true)
+            } else {
+              toast.info('No files were suggested for this prompt')
             }
           }
         }

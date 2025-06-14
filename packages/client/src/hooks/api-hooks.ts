@@ -380,6 +380,19 @@ export function useUpdateFileContent() {
   })
 }
 
+export function useSuggestFiles() {
+  return useMutation({
+    mutationFn: async ({ projectId, prompt, limit = 10 }: { projectId: number; prompt: string; limit?: number }) => {
+      const response = await octoClient.projects.suggestFiles(projectId, { prompt, limit })
+      return response.data
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to suggest files')
+    }
+  })
+}
+
+
 const PROMPT_KEYS = {
   all: ['prompts'] as const,
   list: () => [...PROMPT_KEYS.all, 'list'] as const,

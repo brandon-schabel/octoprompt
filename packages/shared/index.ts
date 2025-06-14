@@ -17,5 +17,8 @@ export * from './src/utils/pattern-matcher'
 export * from './src/utils/parse-timestamp'
 export * from './src/utils/prompts-map'
 
+// service utilities
+export * from './src/utils/service-utils'
+
 // constants
 export * from './src/constants/claude-code-templates'

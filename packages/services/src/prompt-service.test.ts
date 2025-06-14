@@ -28,8 +28,94 @@ const generateTestId = () => {
   return mockIdCounter
 }
 
-// Mock the promptStorage utility
+// Mock the promptStorage utility with V2 API methods
 const mockPromptStorage = {
+  // V2 API methods
+  // V2 API methods
+  create: async (data: Omit<Prompt, 'id' | 'created' | 'updated'>): Promise<Prompt> => {
+    const id = generateTestId()
+    const now = Date.now()
+    const newPrompt: Prompt = {
+      ...data,
+      id,
+      created: now,
+      updated: now
+    }
+    mockPromptsDb[id] = newPrompt
+    return newPrompt
+  },
+  update: async (id: number, data: Partial<Omit<Prompt, 'id' | 'created' | 'updated'>>): Promise<Prompt | null> => {
+    const existing = mockPromptsDb[id]
+    if (!existing) return null
+    const updated = {
+      ...existing,
+      ...data,
+      updated: Date.now()
+    }
+    mockPromptsDb[id] = updated
+    return updated
+  },
+  delete: async (id: number): Promise<boolean> => {
+    if (!mockPromptsDb[id]) return false
+    delete mockPromptsDb[id]
+    // Remove associations
+    mockPromptProjectsDb = mockPromptProjectsDb.filter(link => link.promptId !== id)
+    return true
+  },
+  getById: async (id: number): Promise<Prompt | null> => {
+    return mockPromptsDb[id] || null
+  },
+  list: async (): Promise<Prompt[]> => {
+    return Object.values(mockPromptsDb)
+  },
+  getProjectPrompts: async (projectId: number): Promise<Prompt[]> => {
+    const promptIds = mockPromptProjectsDb
+      .filter(link => link.projectId === projectId)
+      .map(link => link.promptId)
+    return promptIds.map(id => mockPromptsDb[id]).filter(Boolean)
+  },
+  addToProject: async (promptId: number, projectId: number): Promise<PromptProject> => {
+    const linkId = generateTestId()
+    const newLink: PromptProject = {
+      id: linkId,
+      promptId,
+      projectId
+    }
+    mockPromptProjectsDb.push(newLink)
+    return newLink
+  },
+  removeFromProject: async (promptId: number, projectId: number): Promise<boolean> => {
+    const initialLength = mockPromptProjectsDb.length
+    mockPromptProjectsDb = mockPromptProjectsDb.filter(
+      link => !(link.promptId === promptId && link.projectId === projectId)
+    )
+    return mockPromptProjectsDb.length < initialLength
+  },
+  getPromptProjects: async (promptId: number): Promise<number[]> => {
+    return mockPromptProjectsDb
+      .filter(link => link.promptId === promptId)
+      .map(link => link.projectId)
+  },
+  // Legacy compatibility methods (for backward compatibility in tests)
+  createPrompt: async function(data: Omit<Prompt, 'id' | 'created' | 'updated'>): Promise<Prompt> {
+    return this.create(data)
+  },
+  updatePrompt: async function(id: number, data: Partial<Omit<Prompt, 'id' | 'created' | 'updated'>>): Promise<Prompt | null> {
+    return this.update(id, data)
+  },
+  deletePrompt: async function(id: number): Promise<boolean> {
+    return this.delete(id)
+  },
+  getPrompt: async function(id: number): Promise<Prompt | null> {
+    return this.getById(id)
+  },
+  getAllPrompts: async function(): Promise<Prompt[]> {
+    return this.list()
+  },
+  getPromptProjectAssociations: async (): Promise<PromptProject[]> => {
+    return JSON.parse(JSON.stringify(mockPromptProjectsDb))
+  },
+  // Keep V1 compatibility methods for any tests that might still use them
   readPrompts: async () => JSON.parse(JSON.stringify(mockPromptsDb)),
   writePrompts: async (data: PromptsStorage) => {
     mockPromptsDb = JSON.parse(JSON.stringify(data))
@@ -79,7 +165,12 @@ describe('Prompt Service (Mocked Storage)', () => {
     expect(created.id).toBeDefined()
     expect(created.name).toBe(input.name)
     expect(created.content).toBe(input.content)
-    expect(mockPromptsDb[created.id]).toEqual(created)
+    expect(created.projectId).toBe(input.projectId)
+    // The stored prompt shouldn't have projectId, only the returned one
+    const storedPrompt = mockPromptsDb[created.id]
+    expect(storedPrompt).toBeDefined()
+    expect(storedPrompt.name).toBe(input.name)
+    expect(storedPrompt.content).toBe(input.content)
 
     // Check if linked to project
     const links = mockPromptProjectsDb.filter((link) => link.promptId === created.id)
@@ -262,7 +353,7 @@ describe('Prompt Service (Mocked Storage)', () => {
   test('updatePrompt throws ApiError if prompt does not exist', async () => {
     const fakeId = generateTestId()
     await expect(updatePrompt(fakeId, { name: 'X' })).rejects.toThrow(
-      new ApiError(404, `Prompt with ID ${fakeId} not found for update.`, 'PROMPT_NOT_FOUND')
+      new ApiError(404, `Prompt with ID ${fakeId} not found.`, 'PROMPT_NOT_FOUND')
     )
   })
 

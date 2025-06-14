@@ -6,8 +6,7 @@ import type {
   UpdateChatBody,
   AiChatStreamRequest,
   Chat,
-  ChatMessage,
-  FileVersion
+  ChatMessage
 } from '@octoprompt/schemas'
 
 import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody } from '@octoprompt/schemas'
@@ -32,12 +31,11 @@ import {
   ProjectResponseSchema as ProjectResponseSchemaZ,
   ProjectListResponseSchema as ProjectListResponseSchemaZ,
   FileListResponseSchema as FileListResponseSchemaZ,
+  FileResponseSchema as FileResponseSchemaZ,
   ProjectSummaryResponseSchema as ProjectSummaryResponseSchemaZ,
   CreateProjectBodySchema,
   UpdateProjectBodySchema,
-  RefreshQuerySchema,
-  FileVersionListResponseSchema,
-  RevertToVersionBodySchema
+  RefreshQuerySchema
 } from '@octoprompt/schemas'
 
 import {
@@ -394,45 +392,12 @@ export class ProjectService extends BaseApiClient {
     return result as DataResponseSchema<ProjectFile[]>
   }
 
-  // NEW: Get project files without content for performance optimization
-  async getProjectFilesWithoutContent(projectId: number, includeAllVersions: boolean = false) {
+  // Get project files without content for performance optimization
+  async getProjectFilesWithoutContent(projectId: number) {
     const result = await this.request('GET', `/projects/${projectId}/files/metadata`, {
-      params: { includeAllVersions },
       responseSchema: FileListResponseSchemaZ
     })
     return result as DataResponseSchema<Omit<ProjectFile, 'content'>[]>
-  }
-
-  // NEW: File versioning methods
-  async getFileVersions(projectId: number, originalFileId: number) {
-    const result = await this.request('GET', `/projects/${projectId}/files/${originalFileId}/versions`, {
-      responseSchema: FileVersionListResponseSchema
-    })
-    return result as DataResponseSchema<FileVersion[]>
-  }
-
-  async getFileVersion(projectId: number, originalFileId: number, version?: number) {
-    const params = version ? { version } : undefined
-    const result = await this.request('GET', `/projects/${projectId}/files/${originalFileId}/version`, {
-      params,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.unknown()
-      })
-    })
-    return result as DataResponseSchema<ProjectFile>
-  }
-
-  async revertFileToVersion(projectId: number, fileId: number, targetVersion: number) {
-    const validatedData = this.validateBody(RevertToVersionBodySchema, { version: targetVersion })
-    const result = await this.request('POST', `/projects/${projectId}/files/${fileId}/revert`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.unknown()
-      })
-    })
-    return result as DataResponseSchema<ProjectFile>
   }
 
   async refreshProject(projectId: number, query?: z.infer<typeof RefreshQuerySchema>) {
@@ -467,7 +432,7 @@ export class ProjectService extends BaseApiClient {
         data: z.unknown()
       })
     })
-    return result
+    return result as DataResponseSchema<ProjectFile>
   }
   async bulkCreateFiles(
     projectId: number,
@@ -499,6 +464,17 @@ export class ProjectService extends BaseApiClient {
       })
     })
     return result.data
+  }
+
+  async suggestFiles(projectId: number, data: { prompt: string; limit?: number }) {
+    const result = await this.request('POST', `/projects/${projectId}/suggest-files`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.array(z.unknown())
+      })
+    })
+    return result as DataResponseSchema<ProjectFile[]>
   }
 }
 

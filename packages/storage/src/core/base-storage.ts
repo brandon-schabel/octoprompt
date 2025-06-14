@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { normalizeToUnixMs } from '@octoprompt/shared/src/utils/parse-timestamp'
+import { globalFileWatcher } from './file-watcher'
 
 // Simple in-memory cache with TTL support
 interface CacheEntry<T> {
@@ -50,6 +51,9 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
       maxCacheSize: options.maxCacheSize ?? 100,
       lockTimeout: options.lockTimeout ?? 30 * 1000 // 30 seconds default
     }
+    
+    // Set up file watcher for cache invalidation
+    this.setupFileWatcher()
   }
 
   // Abstract methods that must be implemented by subclasses
@@ -383,6 +387,41 @@ export abstract class BaseStorage<TEntity extends BaseEntity, TStorage extends R
       maxSize: this.options.maxCacheSize,
       ttl: this.options.cacheTTL,
       enabled: this.options.cacheEnabled
+    }
+  }
+
+  // --- File Watching for Cache Invalidation ---
+
+  private setupFileWatcher(): void {
+    if (!this.options.cacheEnabled) return
+
+    // Watch the index file for changes
+    const indexPath = this.getIndexPath()
+    globalFileWatcher.on('change', (filePath) => {
+      if (filePath === indexPath) {
+        // Invalidate the entire cache when the index file changes
+        this.invalidateCache()
+      }
+    })
+    
+    // Start watching the index file
+    globalFileWatcher.watchFile(indexPath)
+  }
+
+  /**
+   * Invalidate cache for a specific ID
+   */
+  public invalidateCacheForId(id: number): void {
+    if (!this.options.cacheEnabled) return
+    
+    // Remove from cache any entries that might contain this ID
+    const indexPath = this.getIndexPath()
+    this.cache.delete(indexPath)
+    
+    // Also remove entity-specific cache if applicable
+    const entityPath = this.getEntityPath(id)
+    if (entityPath) {
+      this.cache.delete(entityPath)
     }
   }
 }

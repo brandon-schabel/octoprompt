@@ -14,9 +14,9 @@ import {
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
   ProjectFile,
+  FileVersionParamsSchema,
   FileVersionListResponseSchema,
-  RevertToVersionBodySchema,
-  GetFileVersionParams
+  GetFileVersionParamsSchema
 } from '@octoprompt/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
@@ -36,10 +36,6 @@ const FileIdParamsSchema = z.object({
   fileId: z.coerce.number().int().positive()
 })
 
-const FileVersionParamsSchema = z.object({
-  projectId: z.coerce.number().int().positive(),
-  originalFileId: z.coerce.number().int().positive()
-})
 
 const UpdateFileContentBodySchema = z.object({
   content: z.string()
@@ -70,6 +66,21 @@ const BulkUpdateFilesBodySchema = z.object({
 const BulkFilesResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(ProjectFileSchema)
+})
+
+const SuggestFilesBodySchema = z.object({
+  prompt: z.string().min(1).describe('The prompt to analyze for file suggestions'),
+  limit: z.number().int().positive().optional().default(10).describe('Maximum number of files to suggest')
+})
+
+const SuggestFilesResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.array(ProjectFileSchema)
+})
+
+// Revert to version schema
+const RevertToVersionBodySchema = z.object({
+  versionNumber: z.number().int().positive()
 })
 
 // Existing route definitions...
@@ -258,7 +269,7 @@ const getFileVersionRoute = createRoute({
   summary: 'Get a specific version of a file (or latest if no version specified)',
   request: {
     params: FileVersionParamsSchema,
-    query: GetFileVersionParams
+    query: GetFileVersionParamsSchema
   },
   responses: {
     200: {
@@ -400,6 +411,26 @@ const getProjectSummaryRoute = createRoute({
   }
 })
 
+const suggestFilesRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/suggest-files',
+  tags: ['Projects', 'Files', 'AI'],
+  summary: 'Suggest relevant files based on a prompt',
+  request: {
+    params: ProjectIdParamsSchema,
+    body: { content: { 'application/json': { schema: SuggestFilesBodySchema } } }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: SuggestFilesResponseSchema } },
+      description: 'Successfully suggested files'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
 const optimizeUserInputRoute = createRoute({
   method: 'post',
   path: '/api/prompt/optimize',
@@ -427,6 +458,7 @@ const optimizeUserInputRoute = createRoute({
     }
   }
 })
+
 
 // --- Hono App Instance ---
 export const projectRoutes = new OpenAPIHono()
@@ -655,7 +687,7 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId } = c.req.valid('param')
     const { updates } = c.req.valid('json')
 
-    // Create new versions for each file instead of updating existing content
+    // Update file content directly
     const updatedFiles: ProjectFile[] = []
 
     console.log({ projectId, updates, updatedFiles })
@@ -728,6 +760,19 @@ export const projectRoutes = new OpenAPIHono()
       }
       throw new ApiError(500, `Failed to generate project summary: ${error instanceof Error ? error.message : String(error)}`, 'AI_SUMMARY_ERROR')
     }
+  })
+  .openapi(suggestFilesRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { prompt, limit } = c.req.valid('json')
+
+    const suggestedFiles = await projectService.suggestFiles(projectId, prompt, limit)
+    
+    const payload = {
+      success: true,
+      data: suggestedFiles
+    } satisfies z.infer<typeof SuggestFilesResponseSchema>
+    
+    return c.json(payload, 200)
   })
   .openapi(optimizeUserInputRoute, async (c) => {
     const { userContext, projectId } = c.req.valid('json')

@@ -11,6 +11,11 @@ export * from './src/model-providers/provider-defaults'
 export * from './src/constants/server-config'
 export * from './src/gen-ai-services'
 
+// Export new utilities
+export * from './src/utils/error-handlers'
+export * from './src/utils/bulk-operations'
+export * from './src/core/base-service'
+
 // server side utils
 export * from './src/utils/get-full-project-summary'
 export * from './src/utils/json-scribe'

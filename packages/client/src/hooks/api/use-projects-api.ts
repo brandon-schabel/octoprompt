@@ -11,10 +11,8 @@ export {
   useRefreshProject,
   useOptimizeUserInput,
   useInvalidateProjects,
-  useGetFileVersions,
-  useGetFileVersion,
-  useRevertFileToVersion,
-  useUpdateFileContent
+  useUpdateFileContent,
+  useSuggestFiles
 } from '../api-hooks'
 
 // Type re-exports for backward compatibility

@@ -2,8 +2,11 @@ import { z } from 'zod'
 import * as path from 'node:path'
 import { createHash, createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { ProviderKeySchema, type ProviderKey } from '@octoprompt/schemas'
-import { BaseStorage, type StorageOptions } from './core/base-storage'
-import { IndexManager, type IndexConfig } from './core/index-manager'
+import { IndexedStorage, type IndexDefinition } from './core/indexed-storage'
+import { type StorageOptions } from './core/base-storage'
+import { commonSorters } from './core/storage-query-utils'
+import { AuditLogger } from './core/storage-patterns'
+import { STORAGE_CONFIG } from './config'
 
 // Storage schemas
 export const ProviderKeysStorageSchema = z.record(z.string(), ProviderKeySchema)
@@ -31,11 +34,10 @@ interface EncryptionConfig {
 /**
  * Enhanced provider key storage with encryption, indexing, and audit logging
  */
-export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysStorage> {
-  private indexManager: IndexManager
+export class ProviderKeyStorage extends IndexedStorage<ProviderKey, ProviderKeysStorage> {
   private encryptionConfig: EncryptionConfig
   private masterKey?: string
-  private auditLog: KeyAuditLog
+  private auditLog: AuditLogger
 
   constructor(options: StorageOptions & { 
     encryption?: EncryptionConfig
@@ -44,7 +46,16 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
     const dataDir = path.join('data', 'provider_key_storage')
     super(ProviderKeysStorageSchema, ProviderKeySchema, dataDir, options)
     
-    this.indexManager = new IndexManager(this.basePath, this.dataDir)
+    // Define indexes
+    this.indexDefinitions = [
+      { name: 'keys_by_provider', type: 'hash', fields: ['provider'] },
+      { name: 'keys_by_environment', type: 'hash', fields: ['environment'] },
+      { name: 'keys_by_isActive', type: 'hash', fields: ['isActive'] },
+      { name: 'keys_by_created', type: 'btree', fields: ['created'] },
+      { name: 'keys_by_lastUsed', type: 'btree', fields: ['lastUsed'], sparse: true },
+      { name: 'keys_by_expiresAt', type: 'btree', fields: ['expiresAt'], sparse: true }
+    ]
+    
     this.encryptionConfig = {
       enabled: true,
       algorithm: 'aes-256-cbc',
@@ -56,7 +67,10 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
       ...options.encryption
     }
     this.masterKey = options.masterKey || process.env.PROVIDER_KEYS_MASTER_KEY
-    this.auditLog = new KeyAuditLog(this.basePath, this.dataDir, options)
+    this.auditLog = new AuditLogger(
+      path.join(this.basePath, this.dataDir, 'audit.log'),
+      'ProviderKey'
+    )
     
     // Initialize indexes
     this.initializeIndexes()
@@ -71,54 +85,8 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
     return null
   }
 
-  protected async initializeIndexes(): Promise<void> {
-    const indexes: IndexConfig[] = [
-      {
-        name: 'keys_by_provider',
-        type: 'hash',
-        fields: ['provider']
-      },
-      {
-        name: 'keys_by_environment',
-        type: 'hash',
-        fields: ['environment']
-      },
-      {
-        name: 'keys_by_isActive',
-        type: 'hash',
-        fields: ['isActive']
-      },
-      {
-        name: 'keys_by_created',
-        type: 'btree',
-        fields: ['created']
-      },
-      {
-        name: 'keys_by_lastUsed',
-        type: 'btree',
-        fields: ['lastUsed'],
-        sparse: true
-      },
-      {
-        name: 'keys_by_expiresAt',
-        type: 'btree',
-        fields: ['expiresAt'],
-        sparse: true
-      }
-    ]
 
-    for (const indexConfig of indexes) {
-      try {
-        await this.indexManager.createIndex(indexConfig)
-      } catch (error: any) {
-        if (!error.message.includes('already exists')) {
-          console.error(`Failed to create index ${indexConfig.name}:`, error)
-        }
-      }
-    }
-  }
-
-  // Override create to handle encryption and indexing
+  // Override create to handle encryption and audit
   public async create(data: Omit<ProviderKey, 'id' | 'created' | 'updated'>): Promise<ProviderKey> {
     // Validate key before encryption
     if (!data.key || data.key.length < 10) {
@@ -129,25 +97,23 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
     const keyData = await this.prepareKeyForStorage(data)
     const providerKey = await super.create(keyData)
     
-    // Update indexes (using unencrypted data for indexing)
-    await this.updateKeyIndexes(providerKey)
-    
     // Log creation
-    await this.auditLog.logKeyEvent(providerKey.id, 'created', {
-      provider: providerKey.provider,
-      environment: providerKey.environment
+    await this.auditLog.log({
+      entityId: providerKey.id,
+      action: 'created',
+      details: {
+        provider: providerKey.provider,
+        environment: providerKey.environment
+      }
     })
     
     return providerKey
   }
 
-  // Override update to maintain encryption and indexes
+  // Override update to handle encryption and audit
   public async update(id: number, data: Partial<Omit<ProviderKey, 'id' | 'created' | 'updated'>>): Promise<ProviderKey | null> {
     const existing = await this.getById(id)
     if (!existing) return null
-
-    // Remove from indexes before update
-    await this.removeKeyFromIndexes(id)
 
     // Handle key re-encryption if key is being updated
     let updateData = data
@@ -158,36 +124,36 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
 
     const updated = await super.update(id, updateData)
     if (!updated) return null
-
-    // Re-add to indexes
-    await this.updateKeyIndexes(updated)
     
     // Log update
-    await this.auditLog.logKeyEvent(updated.id, 'updated', {
-      provider: updated.provider,
-      environment: updated.environment,
-      fields: Object.keys(data)
+    await this.auditLog.log({
+      entityId: updated.id,
+      action: 'updated',
+      details: {
+        provider: updated.provider,
+        environment: updated.environment,
+        fields: Object.keys(data)
+      }
     })
 
     return updated
   }
 
-  // Override delete to maintain indexes and audit
+  // Override delete to handle audit
   public async delete(id: number): Promise<boolean> {
     const existing = await this.getById(id)
     
     const result = await super.delete(id)
-    if (result) {
-      // Remove from indexes
-      await this.removeKeyFromIndexes(id)
-      
+    if (result && existing) {
       // Log deletion
-      if (existing) {
-        await this.auditLog.logKeyEvent(id, 'deleted', {
+      await this.auditLog.log({
+        entityId: id,
+        action: 'deleted',
+        details: {
           provider: existing.provider,
           environment: existing.environment
-        })
-      }
+        }
+      })
     }
     return result
   }
@@ -224,47 +190,22 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
    * Get keys by provider
    */
   public async getByProvider(provider: string): Promise<ProviderKey[]> {
-    const ids = await this.indexManager.query('keys_by_provider', provider)
-    const keys: ProviderKey[] = []
-    
-    for (const id of ids) {
-      const key = await this.getById(id)
-      if (key) keys.push(key)
-    }
-    
-    return keys.sort((a, b) => b.created - a.created)
+    return this.queryByIndex('keys_by_provider', provider, commonSorters.byCreatedDesc)
   }
 
   /**
    * Get keys by environment
    */
   public async getByEnvironment(environment: string): Promise<ProviderKey[]> {
-    const ids = await this.indexManager.query('keys_by_environment', environment)
-    const keys: ProviderKey[] = []
-    
-    for (const id of ids) {
-      const key = await this.getById(id)
-      if (key) keys.push(key)
-    }
-    
-    return keys.sort((a, b) => b.created - a.created)
+    return this.queryByIndex('keys_by_environment', environment, commonSorters.byCreatedDesc)
   }
 
   /**
    * Get active keys
    */
   public async getActiveKeys(): Promise<ProviderKey[]> {
-    const ids = await this.indexManager.query('keys_by_isActive', true)
-    const keys: ProviderKey[] = []
-    
-    for (const id of ids) {
-      const key = await this.getById(id)
-      if (key && !this.isExpired(key)) {
-        keys.push(key)
-      }
-    }
-    
-    return keys.sort((a, b) => b.created - a.created)
+    const keys = await this.queryByIndex('keys_by_isActive', true, commonSorters.byCreatedDesc)
+    return keys.filter(key => !this.isExpired(key))
   }
 
   /**
@@ -290,15 +231,12 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
    */
   public async getExpiringKeys(daysAhead: number = 30): Promise<ProviderKey[]> {
     const futureTime = Date.now() + (daysAhead * 24 * 60 * 60 * 1000)
-    const ids = await this.indexManager.queryRange('keys_by_expiresAt', Date.now(), futureTime)
-    const keys: ProviderKey[] = []
-    
-    for (const id of ids) {
-      const key = await this.getById(id)
-      if (key && key.expiresAt) keys.push(key)
-    }
-    
-    return keys.sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0))
+    const keys = await this.queryByDateRange(
+      'keys_by_expiresAt',
+      new Date(),
+      new Date(futureTime)
+    )
+    return keys.filter(key => key.expiresAt).sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0))
   }
 
   /**
@@ -306,15 +244,12 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
    */
   public async getExpiredKeys(): Promise<ProviderKey[]> {
     const now = Date.now()
-    const ids = await this.indexManager.queryRange('keys_by_expiresAt', 0, now)
-    const keys: ProviderKey[] = []
-    
-    for (const id of ids) {
-      const key = await this.getById(id)
-      if (key && this.isExpired(key)) keys.push(key)
-    }
-    
-    return keys.sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0))
+    const keys = await this.queryByDateRange(
+      'keys_by_expiresAt',
+      new Date(0),
+      new Date(now)
+    )
+    return keys.filter(key => this.isExpired(key)).sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0))
   }
 
   // --- Key Management ---
@@ -339,10 +274,14 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
     await this.update(oldKeyId, { isActive: false })
 
     // Log rotation
-    await this.auditLog.logKeyEvent(oldKeyId, 'rotated', {
-      newKeyId: newKey.id,
-      provider: oldKey.provider,
-      environment: oldKey.environment
+    await this.auditLog.log({
+      entityId: oldKeyId,
+      action: 'rotated',
+      details: {
+        newKeyId: newKey.id,
+        provider: oldKey.provider,
+        environment: oldKey.environment
+      }
     })
 
     return newKey
@@ -354,8 +293,12 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
   public async markAsUsed(keyId: number): Promise<void> {
     await this.update(keyId, { lastUsed: Date.now() })
     
-    await this.auditLog.logKeyEvent(keyId, 'used', {
-      timestamp: Date.now()
+    await this.auditLog.log({
+      entityId: keyId,
+      action: 'used',
+      details: {
+        timestamp: Date.now()
+      }
     })
   }
 
@@ -404,79 +347,6 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
     return deletedCount
   }
 
-  // --- Legacy API Compatibility ---
-
-  /**
-   * Get all provider keys (legacy API)
-   */
-  public async getAllProviderKeys(): Promise<ProviderKey[]> {
-    return this.list()
-  }
-
-  /**
-   * Get provider key (legacy API)
-   */
-  public async getProviderKey(id: number): Promise<ProviderKey | null> {
-    return this.getById(id)
-  }
-
-  /**
-   * Create provider key (legacy API)
-   */
-  public async createProviderKey(data: Omit<ProviderKey, 'id' | 'created' | 'updated'>): Promise<ProviderKey> {
-    return this.create(data)
-  }
-
-  /**
-   * Update provider key (legacy API)
-   */
-  public async updateProviderKey(id: number, data: Partial<Omit<ProviderKey, 'id' | 'created' | 'updated'>>): Promise<ProviderKey | null> {
-    return this.update(id, data)
-  }
-
-  /**
-   * Delete provider key (legacy API)
-   */
-  public async deleteProviderKey(id: number): Promise<boolean> {
-    return this.delete(id)
-  }
-
-  /**
-   * Get keys by provider (legacy API)
-   */
-  public async getKeysByProvider(provider: string): Promise<ProviderKey[]> {
-    return this.getByProvider(provider)
-  }
-
-  // --- V1 Storage API Compatibility ---
-
-  /**
-   * Read provider keys (V1 storage API)
-   */
-  public async readProviderKeys(): Promise<ProviderKeysStorage> {
-    const keys = await this.list()
-    const storage: ProviderKeysStorage = {}
-    for (const key of keys) {
-      storage[key.id.toString()] = key
-    }
-    return storage
-  }
-
-  /**
-   * Write provider keys (V1 storage API)
-   */
-  public async writeProviderKeys(keys: ProviderKeysStorage): Promise<ProviderKeysStorage> {
-    // This is a complex migration operation - for now, return the input
-    // In a real migration, we'd need to carefully handle this
-    return keys
-  }
-
-  /**
-   * Generate ID (V1 storage API)
-   */
-  public generateId(): number {
-    return Date.now()
-  }
 
   // --- Audit and Security ---
 
@@ -484,14 +354,14 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
    * Get audit log for a key
    */
   public async getKeyAuditLog(keyId: number): Promise<any[]> {
-    return this.auditLog.getKeyEvents(keyId)
+    return this.auditLog.getEvents({ entityId: keyId })
   }
 
   /**
    * Get security events
    */
   public async getSecurityEvents(limit: number = 100): Promise<any[]> {
-    return this.auditLog.getRecentEvents(limit)
+    return this.auditLog.getEvents({}, limit)
   }
 
   // --- Statistics ---
@@ -593,122 +463,12 @@ export class ProviderKeyStorage extends BaseStorage<ProviderKey, ProviderKeysSto
     return groups
   }
 
-  // --- Index Management ---
-
-  public async rebuildIndexes(): Promise<void> {
-    const keys = await this.list()
-    
-    const indexNames = [
-      'keys_by_provider',
-      'keys_by_environment',
-      'keys_by_isActive',
-      'keys_by_created',
-      'keys_by_lastUsed',
-      'keys_by_expiresAt'
-    ]
-    
-    for (const indexName of indexNames) {
-      await this.indexManager.rebuildIndex(indexName, keys)
-    }
-  }
-
-  private async updateKeyIndexes(key: ProviderKey): Promise<void> {
-    await this.indexManager.addToIndex('keys_by_provider', key.id, key)
-    await this.indexManager.addToIndex('keys_by_environment', key.id, key)
-    await this.indexManager.addToIndex('keys_by_isActive', key.id, key)
-    await this.indexManager.addToIndex('keys_by_created', key.id, key)
-    
-    if (key.lastUsed) {
-      await this.indexManager.addToIndex('keys_by_lastUsed', key.id, key)
-    }
-    
-    if (key.expiresAt) {
-      await this.indexManager.addToIndex('keys_by_expiresAt', key.id, key)
-    }
-  }
-
-  private async removeKeyFromIndexes(keyId: number): Promise<void> {
-    const indexNames = [
-      'keys_by_provider',
-      'keys_by_environment', 
-      'keys_by_isActive',
-      'keys_by_created',
-      'keys_by_lastUsed',
-      'keys_by_expiresAt'
-    ]
-    
-    for (const indexName of indexNames) {
-      await this.indexManager.removeFromIndex(indexName, keyId)
-    }
-  }
 }
 
-/**
- * Audit log for key operations
- */
-class KeyAuditLog {
-  private logPath: string
-
-  constructor(basePath: string, dataDir: string, options: StorageOptions) {
-    this.logPath = path.join(basePath, dataDir, 'audit.log')
-  }
-
-  public async logKeyEvent(keyId: number, event: string, details: any = {}): Promise<void> {
-    const logEntry = {
-      timestamp: Date.now(),
-      keyId,
-      event,
-      details,
-      ip: details.ip || 'unknown',
-      userAgent: details.userAgent || 'unknown'
-    }
-
-    try {
-      const fs = await import('node:fs/promises')
-      await fs.mkdir(path.dirname(this.logPath), { recursive: true })
-      await fs.appendFile(this.logPath, JSON.stringify(logEntry) + '\n', 'utf-8')
-    } catch (error) {
-      console.error('Failed to write audit log:', error)
-    }
-  }
-
-  public async getKeyEvents(keyId: number): Promise<any[]> {
-    try {
-      const fs = await import('node:fs/promises')
-      const content = await fs.readFile(this.logPath, 'utf-8')
-      const lines = content.trim().split('\n').filter(line => line.length > 0)
-      
-      return lines
-        .map(line => JSON.parse(line))
-        .filter(entry => entry.keyId === keyId)
-        .sort((a, b) => b.timestamp - a.timestamp)
-    } catch (error: any) {
-      if (error.code === 'ENOENT') return []
-      console.error('Failed to read audit log:', error)
-      return []
-    }
-  }
-
-  public async getRecentEvents(limit: number = 100): Promise<any[]> {
-    try {
-      const fs = await import('node:fs/promises')
-      const content = await fs.readFile(this.logPath, 'utf-8')
-      const lines = content.trim().split('\n').filter(line => line.length > 0)
-      
-      return lines
-        .map(line => JSON.parse(line))
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, limit)
-    } catch (error: any) {
-      if (error.code === 'ENOENT') return []
-      console.error('Failed to read audit log:', error)
-      return []
-    }
-  }
-}
 
 // Export singleton instance for backward compatibility
 export const providerKeyStorage = new ProviderKeyStorage({
+  ...STORAGE_CONFIG,
   cacheEnabled: false, // Disable caching for sensitive data
   encryption: {
     enabled: true,
