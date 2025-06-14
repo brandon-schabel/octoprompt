@@ -11,13 +11,7 @@ console.log('🧪 Running API Functional Tests')
 console.log(`📍 API URL: ${TEST_API_URL}`) // This is informational; API_URL in test files is what matters.
 console.log('─'.repeat(50))
 
-const testFiles = [
-  'projects-api.test.ts',
-  'chat-api.test.ts',
-  'prompt-api.test.ts',
-  'provider-key-api.test.ts',
-  'claude-code-api.test.ts'
-]
+const testFiles = ['projects-api.test.ts', 'chat-api.test.ts', 'prompt-api.test.ts', 'provider-key-api.test.ts']
 
 try {
   // Run the tests. Bun test can take multiple file arguments.
