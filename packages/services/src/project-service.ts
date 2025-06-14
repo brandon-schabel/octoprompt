@@ -95,6 +95,13 @@ export async function getProjectById(projectId: number): Promise<Project> {
   }
 }
 
+/**
+ * Alias for getProjectById for backward compatibility
+ */
+export async function getProject(projectId: number): Promise<Project> {
+  return getProjectById(projectId)
+}
+
 export async function listProjects(): Promise<Project[]> {
   try {
     const projects = await projectStorage.readProjects()
@@ -362,6 +369,8 @@ export async function createProjectFileRecord(
     summaryLastUpdated: null,
     meta: '{}',
     checksum: null,
+    lastSyncedAt: null,
+    syncVersion: 0,
     created: now,
     updated: now
   }
@@ -468,6 +477,8 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         summaryLastUpdated: null,
         meta: '{}',
         checksum: fileData.checksum,
+        lastSyncedAt: null,
+        syncVersion: 0,
         created: now,
         updated: now
       }
@@ -831,3 +842,4 @@ ${promptsMap.contemplativePrompt}
     )
   }
 }
+

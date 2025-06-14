@@ -18,17 +18,17 @@ import {
     summarizeSingleFile,
     summarizeFiles,
     type FileSyncData
-} from '@/services/project-service'
+} from './project-service'
 import type {
     Project,
     ProjectFile,
     CreateProjectBody,
     UpdateProjectBody,
-} from 'shared/src/schemas/project.schemas'
+} from '@octoprompt/schemas'
 import type { ProjectsStorage, ProjectFilesStorage } from '@/utils/storage/project-storage' // Assuming these types are exported or reconstructable
 import { ApiError, LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from 'shared'
 import { z } from 'zod'
-import { normalizeToUnixMs } from '@/utils/parse-timestamp'
+import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // In-memory stores for our mocks
 let mockProjectsDb: ProjectsStorage = {}
