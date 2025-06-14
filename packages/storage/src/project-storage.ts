@@ -1,259 +1,272 @@
-import { z } from 'zod'
-import * as path from 'node:path'
-import { ProjectSchema, ProjectFileSchema, type Project, type ProjectFile } from '@octoprompt/schemas'
-import { BaseStorage, type StorageOptions } from './core/base-storage'
-import { STORAGE_CONFIG } from './config'
+// src/utils/project-storage.ts
+import { z, ZodError, type ZodTypeAny } from 'zod'
+import path from 'node:path'
+import fs from 'node:fs/promises' // Using Node's fs promises
+import { ProjectSchema, ProjectFileSchema, type ProjectFile } from '@octoprompt/schemas'
 import { unixTimestampSchema } from '@octoprompt/schemas'
 
-// Storage schemas
+// Define the base directory for storing project data
+// Adjust this path as needed, e.g., use an environment variable
+const DATA_DIR = path.resolve(process.cwd(), 'data', 'project_storage')
+
+// --- Schemas for Storage ---
+// Store projects as a map (Record) keyed by projectId
 export const ProjectsStorageSchema = z.record(z.string(), ProjectSchema)
-export const ProjectFilesStorageSchema = z.record(z.string(), ProjectFileSchema)
 export type ProjectsStorage = z.infer<typeof ProjectsStorageSchema>
+
+// even though the keys are numbers, they are saved as string because that is default javascript behavior
+export const ProjectFilesStorageSchema = z.record(z.string(), ProjectFileSchema)
 export type ProjectFilesStorage = z.infer<typeof ProjectFilesStorageSchema>
 
+// --- Path Helpers ---
+
+/** Gets the absolute path to the main projects index file. */
+function getProjectsIndexPath(): string {
+  return path.join(DATA_DIR, 'projects.json')
+}
+
+/** Gets the absolute path to a specific project's directory. */
+function getProjectDataDir(projectId: number): string {
+  return path.join(DATA_DIR, 'project_data', projectId.toString())
+}
+
+/** Gets the absolute path to a specific project's files index file. */
+function getProjectFilesPath(projectId: number): string {
+  return path.join(getProjectDataDir(projectId), 'files.json')
+}
+
+/** Gets the absolute path to a specific project's AI file changes index file. */
+function getProjectAIFileChangesPath(projectId: number): string {
+  return path.join(getProjectDataDir(projectId), 'ai-file-changes.json')
+}
+
+// --- Core Read/Write Functions ---
+
+/** Ensures the base data directory and project-specific directories exist. */
+async function ensureDirExists(dirPath: string): Promise<void> {
+  try {
+    await fs.mkdir(dirPath, { recursive: true })
+  } catch (error: any) {
+    // Ignore EEXIST error (directory already exists), re-throw others
+    if (error.code !== 'EEXIST') {
+      console.error(`Error creating directory ${dirPath}:`, error)
+      throw new Error(`Failed to ensure directory exists: ${dirPath}`)
+    }
+  }
+}
+
 /**
- * Enhanced project storage with file versioning, indexing, and project management
+ * Reads and validates JSON data from a file.
+ * @param filePath The absolute path to the JSON file.
+ * @param schema The Zod schema to validate against.
+ * @param defaultValue The value to return if the file doesn't exist.
+ * @returns Validated data or the default value.
  */
-export class ProjectStorage extends BaseStorage<Project, ProjectsStorage> {
-  private fileStorages: Map<number, ProjectFileStorage> = new Map()
+async function readValidatedJson<T extends ZodTypeAny>(
+  filePath: string,
+  schema: T,
+  defaultValue: z.infer<T>
+): Promise<z.infer<T>> {
+  try {
+    await ensureDirExists(path.dirname(filePath)) // Ensure parent dir exists
+    const fileContent = await fs.readFile(filePath, 'utf-8')
 
-  constructor(options: StorageOptions = {}) {
-    const dataDir = path.join('data', 'projects')
-    super(ProjectsStorageSchema, ProjectSchema, dataDir, options)
+    // Handle cases where fileContent might be empty or only whitespace
+    if (fileContent.trim() === '') {
+      console.warn(`File is empty or contains only whitespace: ${filePath}. Returning default value.`)
+      return defaultValue
+    }
+
+    let jsonData = JSON.parse(fileContent)
+
+    // If the schema is a ZodRecord with numeric keys, transform string keys to numbers
+    if (schema instanceof z.ZodRecord && schema.keySchema instanceof z.ZodNumber) {
+      const transformedData: Record<number, unknown> = {}
+      for (const key in jsonData) {
+        if (Object.prototype.hasOwnProperty.call(jsonData, key)) {
+          const parseResult = unixTimestampSchema.safeParse(key)
+          if (parseResult.success) {
+            transformedData[parseResult.data] = jsonData[key]
+          } else {
+            // If the key is not a valid number for a schema expecting numeric keys,
+            // log a warning and omit this key-value pair from the transformed data.
+            // This ensures that 'transformedData' only contains numeric keys,
+            // allowing Zod validation for z.record(z.number(), ...) to pass if values are correct.
+            console.warn(
+              `Omitting non-numeric or invalid timestamp key "${key}" from object in ${filePath} as schema expects valid numeric timestamp keys. Zod issues: ${parseResult.error.issues.map((i) => i.message).join('; ')}`
+            )
+          }
+        }
+      }
+      jsonData = transformedData
+    }
+
+    const validationResult = await schema.safeParseAsync(jsonData)
+
+    if (!validationResult.success) {
+      console.error(`Zod validation failed reading ${filePath}:`, validationResult.error.errors)
+      console.warn(`Returning default value due to validation failure for ${filePath}.`)
+      return defaultValue
+    }
+    return validationResult.data
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      return defaultValue
+    }
+    // Specifically catch JSON parsing errors
+    if (error instanceof SyntaxError) {
+      console.error(`JSON Parse error in ${filePath}:`, error.message)
+      console.warn(`Returning default value due to JSON parsing error for ${filePath}.`)
+      return defaultValue
+    }
+    console.error(`Error reading or parsing JSON from ${filePath}:`, error)
+    throw new Error(`Failed to read/parse JSON file at ${filePath}. Reason: ${error.message}`)
   }
+}
 
-  protected getIndexPath(): string {
-    return path.join(this.basePath, this.dataDir, 'projects.json')
+/**
+ * Validates data and writes it to a JSON file.
+ * @param filePath The absolute path to the JSON file.
+ * @param data The data to write.
+ * @param schema The Zod schema to validate against.
+ * @returns The validated data that was written.
+ */
+async function writeValidatedJson<T extends ZodTypeAny>(
+  filePath: string,
+  data: unknown, // Accept unknown initially for validation
+  schema: T
+): Promise<z.infer<T>> {
+  try {
+    // 1. Validate data first
+    const validationResult = await schema.safeParseAsync(data)
+    if (!validationResult.success) {
+      console.error(`Zod validation failed before writing to ${filePath}:`, validationResult.error.errors)
+      throw new ZodError(validationResult.error.errors)
+    }
+    const validatedData = validationResult.data
+
+    // 2. Ensure directory exists
+    await ensureDirExists(path.dirname(filePath))
+
+    // 3. Stringify and write
+    const jsonString = JSON.stringify(validatedData, null, 2) // Pretty print
+    await fs.writeFile(filePath, jsonString, 'utf-8')
+
+    return validatedData
+  } catch (error: any) {
+    console.error(`Error writing JSON to ${filePath}:`, error)
+    if (error instanceof ZodError) {
+      throw error // Re-throw Zod errors
+    }
+    throw new Error(`Failed to write JSON file at ${filePath}. Reason: ${error.message}`)
   }
+}
 
-  protected getEntityPath(id: number): string | null {
-    return path.join(this.basePath, this.dataDir, id.toString(), 'project.json')
-  }
+// --- Specific Data Accessors ---
 
-  // Override create to initialize file storage
-  public async create(data: Omit<Project, 'id' | 'created' | 'updated'>): Promise<Project> {
-    const project = await super.create(data)
+export const projectStorage = {
+  /** Reads the main projects data file. */
+  async readProjects(): Promise<ProjectsStorage> {
+    return readValidatedJson(getProjectsIndexPath(), ProjectsStorageSchema, {})
+  },
 
-    // Initialize file storage for this project
-    const fileStorage = this.getFileStorage(project.id)
-    await fileStorage.initialize()
+  /** Writes the main projects data file. */
+  async writeProjects(projects: ProjectsStorage): Promise<ProjectsStorage> {
+    return writeValidatedJson(getProjectsIndexPath(), projects, ProjectsStorageSchema)
+  },
 
-    return project
-  }
+  /** Reads a specific project's file data. */
+  async readProjectFiles(projectId: number): Promise<ProjectFilesStorage> {
+    return readValidatedJson(getProjectFilesPath(projectId), ProjectFilesStorageSchema, {})
+  },
 
-  // Override delete to clean up files
-  public async delete(id: number): Promise<boolean> {
-    const result = await super.delete(id)
-    if (result) {
-      // Clean up file storage
-      const fileStorage = this.fileStorages.get(id)
-      if (fileStorage) {
-        await fileStorage.deleteAll()
-        this.fileStorages.delete(id)
+  /** Writes a specific project's file data. */
+  async writeProjectFiles(projectId: number, files: ProjectFilesStorage): Promise<ProjectFilesStorage> {
+    return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema)
+  },
+  /**
+   * Updates a specific file within a project.
+   * Reads the project's files, merges the new data, sets the `updated` timestamp,
+   * validates the complete object, and writes the entire file map back.
+   * @param projectId The ID of the project containing the file.
+   * @param fileId The ID of the file to update.
+   * @param fileData A partial object of file properties to update. Fields like id, projectId, created, and updated are ignored.
+   * @returns The validated and saved ProjectFile data.
+   * @throws ZodError if validation fails.
+   * @throws Error if the file is not found or if reading/writing fails.
+   */
+  async updateProjectFile(
+    projectId: number,
+    fileId: number,
+    fileData: Partial<Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>>
+  ): Promise<ProjectFile> {
+    const currentFiles = await this.readProjectFiles(projectId)
+    const currentFile = currentFiles[fileId]
+    if (!currentFile) {
+      throw new Error(`File not found: ${fileId} in project ${projectId}`)
+    }
+
+    const updatedFileObject = {
+      ...currentFile,
+      ...fileData,
+      updated: Date.now() // Always set a new update timestamp in milliseconds
+    }
+
+    // ProjectFileSchema is expected to be updated to match Python's schema
+    // with `created` and `updated` as number fields.
+    const validationResult = await ProjectFileSchema.safeParseAsync(updatedFileObject)
+
+    if (!validationResult.success) {
+      console.error(`Zod validation failed for file ${fileId} in project ${projectId}:`, validationResult.error.errors)
+      throw new ZodError(validationResult.error.errors)
+    }
+    const validatedFileData = validationResult.data
+
+    currentFiles[fileId] = validatedFileData
+    await this.writeProjectFiles(projectId, currentFiles)
+    return validatedFileData
+  },
+
+  async readProjectFile(projectId: number, fileId: number): Promise<ProjectFile | undefined> {
+    const files = await this.readProjectFiles(projectId)
+    return files[fileId]
+  },
+
+  /** Deletes a project's data directory. */
+  async deleteProjectData(projectId: number): Promise<void> {
+    const dirPath = getProjectDataDir(projectId)
+    try {
+      // Check if directory exists before attempting removal
+      await fs.access(dirPath) // Throws if doesn't exist
+      await fs.rm(dirPath, { recursive: true, force: true }) // Remove dir and contents
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        console.warn(`Project data directory not found, nothing to delete: ${dirPath}`)
+        // Not an error condition if we're just ensuring it's gone
+      } else {
+        console.error(`Error deleting project data directory ${dirPath}:`, error)
+        throw new Error(`Failed to delete project data directory: ${dirPath}. Reason: ${error.message}`)
       }
     }
-    return result
-  }
+  },
 
-  // --- Project Management ---
-
-  /**
-   * Search projects by name
-   */
-  public async search(query: string): Promise<Project[]> {
-    const all = await this.list()
-    const lowercaseQuery = query.toLowerCase()
-    return all
-      .filter(project => project.name.toLowerCase().includes(lowercaseQuery))
-      .sort((a, b) => b.updated - a.updated)
-  }
-
-  /**
-   * Get project by path
-   */
-  public async getByPath(projectPath: string): Promise<Project | null> {
-    const all = await this.list()
-    return all.find(project => project.path === projectPath) || null
-  }
-
-  // --- File Management ---
-
-  /**
-   * Get file storage for a project
-   */
-  public getFileStorage(projectId: number): ProjectFileStorage {
-    if (!this.fileStorages.has(projectId)) {
-      this.fileStorages.set(projectId, new ProjectFileStorage(projectId, this.basePath, this.dataDir, this.options))
-    }
-    return this.fileStorages.get(projectId)!
-  }
-
-  /**
-   * Add file to project
-   */
-  public async addFile(
-    projectId: number,
-    fileData: Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>
-  ): Promise<ProjectFile> {
-    const fileStorage = this.getFileStorage(projectId)
-    const file = await fileStorage.create({
-      ...fileData,
-      projectId
-    })
-
-    // Update project's updated timestamp
-    await this.update(projectId, { updated: Date.now() })
-
-    return file
-  }
-
-  /**
-   * Get project files
-   */
-  public async getProjectFiles(projectId: number): Promise<ProjectFile[]> {
-    const fileStorage = this.getFileStorage(projectId)
-    return fileStorage.list()
-  }
-
-  /**
-   * Search files in project
-   */
-  public async searchFiles(projectId: number, query: string): Promise<ProjectFile[]> {
-    const fileStorage = this.getFileStorage(projectId)
-    return fileStorage.search(query)
-  }
-}
-
-/**
- * File storage for project files
- */
-export class ProjectFileStorage extends BaseStorage<ProjectFile, ProjectFilesStorage> {
-  private projectId: number
-
-  constructor(projectId: number, basePath: string, dataDir: string, options: StorageOptions = {}) {
-    const fileDataDir = path.join(dataDir, projectId.toString(), 'files')
-    super(ProjectFilesStorageSchema, ProjectFileSchema, fileDataDir, { ...options, basePath })
-
-    this.projectId = projectId
-  }
-
-  protected getIndexPath(): string {
-    return path.join(this.basePath, this.dataDir, 'files.json')
-  }
-
-  protected getEntityPath(id: number): string | null {
-    // Files don't have separate entity paths
-    return null
-  }
-
-  public async initialize(): Promise<void> {
-    // Ensure the directory structure exists
+  /** Generates a simple unique ID (replace with more robust method if needed) */
+  generateId: (): number => {
     try {
-      await this.readAll()
+      // Date.now() should always produce a valid timestamp within reasonable bounds.
+      // The unixTimestampSchema will validate its range (e.g., 1970-2050).
+      return unixTimestampSchema.parse(Date.now())
     } catch (error) {
-      // If files don't exist, create empty storage
-      await this.writeAll({})
-    }
-  }
-
-  // Override create to ensure projectId
-  public async create(data: Omit<ProjectFile, 'id' | 'created' | 'updated'>): Promise<ProjectFile> {
-    return super.create({
-      ...data,
-      projectId: this.projectId
-    })
-  }
-
-  /**
-   * Search files by content or path
-   */
-  public async search(query: string): Promise<ProjectFile[]> {
-    const allFiles = await this.list()
-    const lowercaseQuery = query.toLowerCase()
-    return allFiles
-      .filter(
-        (f) => 
-          f.path.toLowerCase().includes(lowercaseQuery) ||
-          (f.content && f.content.toLowerCase().includes(lowercaseQuery))
+      // This case is highly unlikely if Date.now() is within the unixTimestampSchema's valid range
+      // and the system clock is correct.
+      console.error(
+        `CRITICAL: Date.now() produced a value (${Date.now()}) that could not be parsed by unixTimestampSchema for ID generation. Error: ${error instanceof Error ? error.message : String(error)}`
       )
-      .sort((a, b) => b.updated - a.updated)
-  }
-
-  /**
-   * Get files by extension
-   */
-  public async getByExtension(extension: string): Promise<ProjectFile[]> {
-    const all = await this.list()
-    return all
-      .filter(file => file.extension === extension)
-      .sort((a, b) => a.path.localeCompare(b.path))
-  }
-
-  /**
-   * Get file by path
-   */
-  public async getByPath(filePath: string): Promise<ProjectFile | null> {
-    const all = await this.list()
-    return all.find(file => file.path === filePath) || null
-  }
-
-  // Override update to handle content and checksum
-  public async update(
-    id: number,
-    data: Partial<Omit<ProjectFile, 'id' | 'projectId' | 'created' | 'updated'>>
-  ): Promise<ProjectFile | null> {
-    // Calculate checksum if content is being updated
-    let updateData = { ...data }
-    if (data.content !== undefined) {
-      updateData.checksum = this.calculateChecksum(data.content)
-      updateData.size = Buffer.byteLength(data.content, 'utf8')
+      // Throwing an error is important here as it might indicate a system clock issue
+      // or a misconfiguration of the valid timestamp range in unix-ts-utils.
+      throw new Error(
+        'Failed to generate a valid timestamp-based ID from the current time. The current time is outside the configured valid range or could not be parsed.'
+      )
     }
-
-    return super.update(id, updateData)
-  }
-
-  private calculateChecksum(content: string): string {
-    // Simple hash function for demonstration
-    let hash = 0
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i)
-      hash = (hash << 5) - hash + char
-      hash = hash & hash // Convert to 32-bit integer
-    }
-    return hash.toString(16)
-  }
-
-  // Add version creation method
-  public async createVersion(
-    currentId: number,
-    newContent: string,
-    metadata?: { extension?: string; size?: number; checksum?: string }
-  ): Promise<ProjectFile> {
-    const current = await this.getById(currentId)
-    if (!current) {
-      throw new Error(`File ${currentId} not found for versioning`)
-    }
-
-    // Mark current as not latest
-    await this.update(currentId, { isLatest: false })
-
-    // Create new version
-    const newVersion = await this.create({
-      ...current,
-      content: newContent,
-      version: current.version + 1,
-      prevId: currentId,
-      isLatest: true,
-      originalFileId: current.originalFileId || current.id,
-      ...metadata
-    })
-
-    // Update current to point to new version
-    await this.update(currentId, { nextId: newVersion.id })
-
-    return newVersion
   }
 }
-
-// Export singleton instance directly for V2 API access
-export const projectStorage = new ProjectStorage(STORAGE_CONFIG)

@@ -7,17 +7,13 @@ import ignorePackage, { type Ignore } from 'ignore'
 import {
   getProjectFiles,
   bulkCreateProjectFiles,
-  bulkUpdateProjectFilesForSync,
+  bulkUpdateProjectFiles,
   bulkDeleteProjectFiles,
   type FileSyncData, // Interface from project-service
   listProjects
 } from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
-// Summarize function moved to Mastra - using mock for now
-const summarizeSingleFile = async (file: any) => {
-  console.log(`Mock: summarizing file ${file.path}`)
-  return file
-}
+import { summarizeSingleFile } from '@octoprompt/services'
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
@@ -446,7 +442,7 @@ export async function syncFileSet(
     }
     if (filesToUpdate.length > 0) {
       // console.log(`[FileSync] Updating ${filesToUpdate.length} existing file records...`);
-      const updatedResult = await bulkUpdateProjectFilesForSync(project.id, filesToUpdate)
+      const updatedResult = await bulkUpdateProjectFiles(project.id, filesToUpdate)
       updatedCount = updatedResult.length
     }
     if (fileIdsToDelete.length > 0) {
@@ -477,31 +473,6 @@ export async function syncProject(
     if (!nodeFsExistsSync(absoluteProjectPath) || !statSync(absoluteProjectPath).isDirectory()) {
       console.error(`[FileSync] Project path is not a valid directory: ${absoluteProjectPath}`)
       throw new Error(`Project path is not a valid directory: ${project.path}`)
-    }
-
-    // Step 1: Retrieve DB files & Step 2: Path Validation (with error handling)
-    try {
-      const dbFiles = await getProjectFiles(project.id, true) // true for includeContent which is not used here but good for consistency
-      if (dbFiles && dbFiles.length > 0) {
-        const fileIdsToDelete: number[] = []
-        for (const dbFile of dbFiles) {
-          const fullPath = pathResolve(absoluteProjectPath, dbFile.path)
-          if (!nodeFsExistsSync(fullPath)) {
-            fileIdsToDelete.push(dbFile.id)
-          }
-        }
-
-        // Step 3: Perform Deletion
-        if (fileIdsToDelete.length > 0) {
-          console.log(
-            `[FileSync] Project ${project.id}: Found ${fileIdsToDelete.length} invalid file paths in DB. Deleting them.`
-          )
-          await bulkDeleteProjectFiles(project.id, fileIdsToDelete)
-        }
-      }
-    } catch (dbError) {
-      console.error(`[FileSync] Project ${project.id}: Error during DB file validation or deletion:`, dbError)
-      // Depending on the severity, we might choose to re-throw or just log and continue
     }
 
     const ignoreFilter = await loadIgnoreRules(absoluteProjectPath)
@@ -623,7 +594,7 @@ export function createFileChangePlugin() {
 
       // Re-summarize the (created or modified) file
       // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
-      await summarizeSingleFile(updatedFile)
+      await summarizeSingleFile(updatedFile) // From summarize-files-agent
       // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
     } catch (err) {
       console.error('[FileChangePlugin] Error handling file change:', err)

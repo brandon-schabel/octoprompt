@@ -13,77 +13,6 @@ let mockProviderKeysDb: ProviderKeysStorage = {}
 // If provider-key-storage.ts is in '@octoprompt/storage/', this path should be correct.
 mock.module('@octoprompt/storage', () => ({
   providerKeyStorage: {
-    // V2 API methods (which the legacy methods use internally)
-    create: async (data: any) => {
-      const id = normalizeToUnixMs(new Date())
-      const now = Date.now()
-      const newKey = {
-        id,
-        ...data,
-        created: now,
-        updated: now
-      }
-      mockProviderKeysDb[id] = newKey
-      return newKey
-    },
-    getById: async (id: number) => {
-      return mockProviderKeysDb[id] || null
-    },
-    update: async (id: number, data: any) => {
-      const existing = mockProviderKeysDb[id]
-      if (!existing) return null
-      const updated = {
-        ...existing,
-        ...data,
-        updated: Date.now()
-      }
-      mockProviderKeysDb[id] = updated
-      return updated
-    },
-    delete: async (id: number) => {
-      if (!mockProviderKeysDb[id]) return false
-      delete mockProviderKeysDb[id]
-      return true
-    },
-    list: async () => {
-      return Object.values(mockProviderKeysDb)
-    },
-    // Legacy API compatibility methods that the service uses
-    getAllProviderKeys: async () => {
-      return Object.values(mockProviderKeysDb)
-    },
-    createProviderKey: async (data: any) => {
-      const id = normalizeToUnixMs(new Date())
-      const now = Date.now()
-      const newKey = {
-        id,
-        ...data,
-        created: now,
-        updated: now
-      }
-      mockProviderKeysDb[id] = newKey
-      return newKey
-    },
-    getProviderKey: async (id: number) => {
-      return mockProviderKeysDb[id] || null
-    },
-    updateProviderKey: async (id: number, data: any) => {
-      const existing = mockProviderKeysDb[id]
-      if (!existing) return null
-      const updated = {
-        ...existing,
-        ...data,
-        updated: Date.now()
-      }
-      mockProviderKeysDb[id] = updated
-      return updated
-    },
-    deleteProviderKey: async (id: number) => {
-      if (!mockProviderKeysDb[id]) return false
-      delete mockProviderKeysDb[id]
-      return true
-    },
-    // V1 compatibility methods
     readProviderKeys: async () => JSON.parse(JSON.stringify(mockProviderKeysDb)),
     writeProviderKeys: async (data: ProviderKeysStorage) => {
       mockProviderKeysDb = JSON.parse(JSON.stringify(data))
@@ -322,7 +251,7 @@ describe('provider-key-service (File Storage)', () => {
 
   test('updateKey throws ApiError if key not found', async () => {
     await expect(svc.updateKey(9999, { key: 'some_key' })).rejects.toThrow(
-      new ApiError(404, `Provider key with ID 9999 not found.`, 'PROVIDER_KEY_NOT_FOUND')
+      new ApiError(404, `Provider key with ID 9999 not found for update.`, 'PROVIDER_KEY_NOT_FOUND_FOR_UPDATE')
     )
   })
 

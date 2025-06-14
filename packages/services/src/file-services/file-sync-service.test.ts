@@ -5,7 +5,7 @@ import * as fs from 'node:fs'
 import { join } from 'node:path'
 import ignore, { type Ignore } from 'ignore'
 import { DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
-import type { Project, ProjectFile } from '@octoprompt/schemas'
+import type { Project } from '@octoprompt/schemas'
 import type { PathLike, Dirent, Stats } from 'node:fs'
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import { createCleanupService } from './file-sync-service-unified'
@@ -104,7 +104,6 @@ describe('FileSync Service - Utility Functions', () => {
   })
 
   afterEach(() => {
-    // Restore all spies to prevent interference between tests
     getProjectFilesSpy?.mockRestore()
     bulkCreateSpy?.mockRestore()
     bulkUpdateSpy?.mockRestore()
@@ -588,97 +587,6 @@ describe('file-change-watcher utilities', () => {
       expect(inferChangeType('rename', '/path/exists.ts')).toBe('created')
       expect(inferChangeType('rename', '/path/missing.ts')).toBe('deleted')
     })
-  })
-})
-
-// --- Tests for syncProject with pre-emptive deletion ---
-describe('syncProject with pre-emptive deletion', () => {
-  const mockProject: Project = {
-    id: 1,
-    path: '/fake/project',
-    name: 'TestProject',
-    created: 0,
-    updated: 0,
-    description: ''
-  }
-  const absoluteProjectPath = '/fake/project'
-
-  // Use different variable names to avoid conflicts with other test suites
-  let getProjectFilesSpySync: Mock<typeof projectService.getProjectFiles>
-  let bulkDeleteProjectFilesSpySync: Mock<typeof projectService.bulkDeleteProjectFiles>
-  let existsSyncSpySync: Mock<typeof fs.existsSync>
-  let statSyncSpySync: Mock<typeof fs.statSync>
-  let consoleErrorSpySync: Mock<typeof console.error>
-
-  // Spies for functions within file-sync-service-unified that syncProject calls
-  let syncFileSetSpySync: Mock<typeof fileSyncService.syncFileSet>
-  let getTextFilesSpySync: Mock<typeof fileSyncService.getTextFiles>
-  let loadIgnoreRulesSpySync: Mock<typeof fileSyncService.loadIgnoreRules>
-
-  beforeEach(() => {
-    // REMOVED: mock.restore() - Rely on afterEach for cleanup.
-
-    // Spy on external services
-    getProjectFilesSpySync = spyOn(projectService, 'getProjectFiles')
-    bulkDeleteProjectFilesSpySync = spyOn(projectService, 'bulkDeleteProjectFiles')
-
-    // Spy on fs module functions
-    existsSyncSpySync = spyOn(fs, 'existsSync')
-    statSyncSpySync = spyOn(fs, 'statSync')
-
-    // Spy on console.error
-    consoleErrorSpySync = spyOn(console, 'error').mockImplementation(() => {})
-
-    // Spy on other functions from fileSyncService that are called by syncProject
-    syncFileSetSpySync = spyOn(fileSyncService, 'syncFileSet').mockResolvedValue({
-      created: 0,
-      updated: 0,
-      deleted: 0,
-      skipped: 0
-    })
-    getTextFilesSpySync = spyOn(fileSyncService, 'getTextFiles').mockReturnValue([])
-    loadIgnoreRulesSpySync = spyOn(fileSyncService, 'loadIgnoreRules').mockResolvedValue({
-      ignores: () => false
-    } as unknown as Ignore)
-
-    // ADD Default mock implementations for primary async service spies
-    getProjectFilesSpySync.mockResolvedValue([]) // Default to resolving with empty array
-    bulkDeleteProjectFilesSpySync.mockResolvedValue({ deletedCount: 0 }) // Default to successful deletion
-
-    // Default fs.existsSync mock for project path (called at the start of syncProject)
-    existsSyncSpySync.mockImplementation((p: PathLike) => {
-      const pathStr = p.toString() // Use .toString() for PathLike
-      if (pathStr === absoluteProjectPath) return true
-      // For other paths, specific tests should provide mocks if fs.existsSync is called for them.
-      // Defaulting to false for unmocked paths is usually safer in tests.
-      return false
-    })
-    // Default fs.statSync mock for project path
-    statSyncSpySync.mockImplementation((p: PathLike) => {
-      const pathStr = p.toString() // Use .toString() for PathLike
-      if (pathStr === absoluteProjectPath) {
-        // Ensure the mock fs.Stats object is complete enough for isDirectory()
-        return { isDirectory: () => true, isFile: () => false, size: BigInt(0) } as fs.Stats
-      }
-      // For other paths, like files within the project, default to being a file.
-      // Specific tests might need to refine this if statSync is used more extensively.
-      return { isDirectory: () => false, isFile: () => true, size: BigInt(0) } as fs.Stats
-    })
-  })
-
-  afterEach(() => {
-    // Restore all spies to prevent interference between tests
-    getProjectFilesSpySync?.mockRestore()
-    bulkDeleteProjectFilesSpySync?.mockRestore()
-    existsSyncSpySync?.mockRestore()
-    statSyncSpySync?.mockRestore()
-    consoleErrorSpySync?.mockRestore()
-    syncFileSetSpySync?.mockRestore()
-    getTextFilesSpySync?.mockRestore()
-    loadIgnoreRulesSpySync?.mockRestore()
-
-    // Full mock restore to ensure clean state for the next test or suite
-    mock.restore()
   })
 })
 

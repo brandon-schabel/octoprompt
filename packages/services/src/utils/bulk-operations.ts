@@ -147,7 +147,7 @@ export async function bulkDelete<TId>(
       if (options?.validateExists) {
         const exists = await options.validateExists(id)
         if (!exists) {
-          console.warn(`Entity with ID ${id} not found during bulk delete`)
+          // Don't warn for expected "not found" cases during cleanup
           failed.push(id)
           continue
         }

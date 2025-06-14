@@ -19,41 +19,13 @@ const DEFAULT_LMSTUDIO_BASE_URL = process.env.LMSTUDIO_BASE_URL || 'http://local
 
 let providerKeysCache: ProviderKey[] | null = null
 
-// Helper function to check if a model supports multimodal content (images, files)
-function isMultimodalModel(provider: string, model?: string): boolean {
-  const multimodalModels = {
-    openai: ['gpt-4-vision-preview', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
-    anthropic: [
-      'claude-3-opus-20240229',
-      'claude-3-sonnet-20240229',
-      'claude-3-haiku-20240307',
-      'claude-3-5-sonnet-20241022'
-    ],
-    google: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro-vision', 'gemini-2.0-flash-exp'],
-    openrouter: [
-      'openai/gpt-4o',
-      'openai/gpt-4o-mini',
-      'anthropic/claude-3-opus',
-      'anthropic/claude-3-sonnet',
-      'anthropic/claude-3-haiku',
-      'google/gemini-pro-vision'
-    ]
-  }
-
-  if (!model) return false
-
-  const providerModels = multimodalModels[provider as keyof typeof multimodalModels]
-  return providerModels ? providerModels.some((m) => model.includes(m)) : false
-}
-
 export async function handleChatMessage({
   chatId,
   userMessage,
   options = {},
   systemMessage,
   tempId,
-  debug = false,
-  currentMessageAttachments
+  debug = false
 }: AiChatStreamRequest): Promise<ReturnType<typeof streamText>> {
   let finalAssistantMessageId: number | undefined
   const finalOptions = { ...LOW_MODEL_CONFIG, ...options }
@@ -66,79 +38,20 @@ export async function handleChatMessage({
     messagesToProcess.push({ role: 'system', content: systemMessage })
   }
 
-  // Process existing messages, including their attachments
-  const dbMessages = (await chatService.getChatMessages(chatId)).map((msg) => {
-    const coreMessage: CoreMessage = {
-      role: msg.role as 'user' | 'assistant' | 'system',
-      content: msg.content
-    }
-
-    // Add attachments if they exist and the model supports multimodal content
-    if (msg.attachments && msg.attachments.length > 0 && isMultimodalModel(finalOptions.provider, finalOptions.model)) {
-      const content: any[] = [{ type: 'text', text: msg.content }]
-
-      msg.attachments.forEach((attachment) => {
-        if (attachment.mimeType.startsWith('image/')) {
-          content.push({
-            type: 'image',
-            image: attachment.url
-          })
-        }
-      })
-
-      coreMessage.content = content
-    }
-
-    return coreMessage
-  })
+  const dbMessages = (await chatService.getChatMessages(chatId)).map((msg) => ({
+    role: msg.role as 'user' | 'assistant' | 'system',
+    content: msg.content
+  }))
   messagesToProcess.push(...dbMessages)
 
   const savedUserMessage = await chatService.saveMessage({
     chatId,
     role: 'user',
     content: userMessage,
-    tempId: tempId ? `${tempId}-user` : undefined,
-    attachments: currentMessageAttachments
+    tempId: tempId ? `${tempId}-user` : undefined
   } as any)
 
-  // Add the current user message with attachments if supported
-  const userCoreMessage: CoreMessage = {
-    role: 'user',
-    content: userMessage
-  }
-
-  // Add attachments to the current message if model supports multimodal content
-  if (
-    currentMessageAttachments &&
-    currentMessageAttachments.length > 0 &&
-    isMultimodalModel(finalOptions.provider, finalOptions.model)
-  ) {
-    const content: any[] = [{ type: 'text', text: userMessage }]
-
-    currentMessageAttachments.forEach((attachment) => {
-      if (attachment.mimeType.startsWith('image/')) {
-        content.push({
-          type: 'image',
-          image: attachment.url
-        })
-      }
-    })
-
-    userCoreMessage.content = content
-  } else if (currentMessageAttachments && currentMessageAttachments.length > 0) {
-    // Log a warning if attachments were provided but model doesn't support them
-    console.warn(
-      `Model ${finalOptions.model} from provider ${finalOptions.provider} does not support multimodal content. Attachments will be ignored.`
-    )
-    if (debug) {
-      console.debug(
-        'Skipped attachments:',
-        currentMessageAttachments.map((a) => a.fileName || a.id)
-      )
-    }
-  }
-
-  messagesToProcess.push(userCoreMessage)
+  messagesToProcess.push({ role: 'user', content: userMessage })
 
   await chatService.updateChatTimestamp(chatId)
 
@@ -276,6 +189,7 @@ async function getProviderLanguageModelInterface(
     }
     case 'openrouter': {
       const apiKey = await getKey('openrouter', debug)
+      console.log({ apiKey })
       if (!apiKey && !process.env.OPENROUTER_API_KEY)
         throw new ApiError(400, 'OpenRouter API Key not found in DB or environment.', 'OPENROUTER_KEY_MISSING')
       return createOpenRouter({ apiKey })(modelId)
@@ -450,13 +364,6 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
 
     return result
   } catch (error: any) {
-    console.error('[UnifiedProviderService - generateStructuredData] failing with the following data:', {
-      prompt,
-      schema,
-      systemMessage,
-      finalOptions,
-      provider
-    })
     if (error instanceof ApiError) throw error
     console.error(`[UnifiedProviderService - generateStructuredData] Error for ${provider}:`, error)
     throw new ApiError(
