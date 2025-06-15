@@ -18,7 +18,6 @@ export interface ClaudeCodeContext {
 
 /**
  * Build an intelligent context for Claude Code based on the prompt and project files
- * Enhanced with planning capabilities from former Mastra agents
  */
 export async function buildClaudeCodeContext(
   projectId: number,
@@ -34,16 +33,12 @@ export async function buildClaudeCodeContext(
   // Build a focused project summary
   const projectSummary = buildFocusedProjectSummary(relevantFiles, allFiles)
 
-  // Analyze task complexity (replaces Mastra planning agent analysis)
   const taskComplexity = analyzeTaskComplexity(prompt, relevantFiles, allFiles)
 
-  // Generate suggested approach (replaces Mastra planning agent suggestions)
   const suggestedApproach = generateSuggestedApproach(prompt, taskComplexity, relevantFiles)
 
-  // Identify potential risks (replaces Mastra risk analysis)
   const potentialRisks = identifyPotentialRisks(prompt, taskComplexity, relevantFiles, allFiles)
 
-  // Suggest required files (replaces Mastra file targeting)
   const requiredFiles = suggestRequiredFiles(prompt, relevantFiles, allFiles)
 
   return {
@@ -311,7 +306,6 @@ function detectTechStack(files: ProjectFile[]): string[] {
 
 /**
  * Analyze task complexity based on prompt content and file scope
- * Replaces Mastra planning agent complexity analysis
  */
 function analyzeTaskComplexity(
   prompt: string,
@@ -351,7 +345,6 @@ function analyzeTaskComplexity(
 
 /**
  * Generate suggested approach based on task analysis
- * Replaces Mastra planning agent approach suggestions
  */
 function generateSuggestedApproach(
   prompt: string,
@@ -399,7 +392,6 @@ function generateSuggestedApproach(
 
 /**
  * Identify potential risks based on task analysis
- * Replaces Mastra planning agent risk assessment
  */
 function identifyPotentialRisks(
   prompt: string,
@@ -454,7 +446,6 @@ function identifyPotentialRisks(
 
 /**
  * Suggest required files for the task
- * Replaces Mastra file targeting functionality
  */
 function suggestRequiredFiles(
   prompt: string,

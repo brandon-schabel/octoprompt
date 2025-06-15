@@ -2,9 +2,6 @@ import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 
-import { ProjectFileSchema } from './project.schemas'
-import { unixTSArraySchemaSpec } from './schema-utils'
-
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z
   .object({

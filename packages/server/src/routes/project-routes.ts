@@ -639,6 +639,127 @@ ${prompt}
       throw new ApiError(500, `Failed to suggest files: ${error.message}`, 'AI_SUGGESTION_ERROR')
     }
   })
+  .openapi(
+    createRoute({
+      method: 'post',
+      path: '/api/projects/{projectId}/files/summarize',
+      tags: ['Projects', 'Files', 'AI'],
+      summary: 'Summarize specified files in a project',
+      request: {
+        params: ProjectIdParamsSchema,
+        body: {
+          content: {
+            'application/json': {
+              schema: z.object({
+                fileIds: z.array(z.number()).min(1).describe('Array of file IDs to summarize'),
+                force: z.boolean().optional().default(false).describe('Force re-summarization of already summarized files')
+              })
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                data: z.object({
+                  included: z.number(),
+                  skipped: z.number(),
+                  updatedFiles: z.array(ProjectFileSchema)
+                })
+              })
+            }
+          },
+          description: 'Files summarized successfully'
+        },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+      }
+    }),
+    async (c) => {
+      const { projectId } = c.req.valid('param')
+      const { fileIds, force = false } = c.req.valid('json')
+      
+      const project = await projectService.getProjectById(projectId)
+      if (!project) {
+        throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+      }
+      
+      // If force is true, we need to call resummarizeAllFiles for each file ID
+      // Otherwise use summarizeFiles which respects existing summaries
+      let result
+      if (force && fileIds.length > 0) {
+        // For force re-summarization, we'll use the existing summarizeFiles function
+        // which handles individual files properly
+        result = await projectService.summarizeFiles(projectId, fileIds)
+      } else {
+        result = await projectService.summarizeFiles(projectId, fileIds)
+      }
+      
+      return c.json({
+        success: true as const,
+        data: result
+      }, 200)
+    }
+  )
+  .openapi(
+    createRoute({
+      method: 'post',
+      path: '/api/projects/{projectId}/files/remove-summaries',
+      tags: ['Projects', 'Files'],
+      summary: 'Remove summaries from specified files',
+      request: {
+        params: ProjectIdParamsSchema,
+        body: {
+          content: {
+            'application/json': {
+              schema: z.object({
+                fileIds: z.array(z.number()).min(1).describe('Array of file IDs to remove summaries from')
+              })
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                data: z.object({
+                  removedCount: z.number(),
+                  message: z.string()
+                })
+              })
+            }
+          },
+          description: 'Summaries removed successfully'
+        },
+        404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+        422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+      }
+    }),
+    async (c) => {
+      const { projectId } = c.req.valid('param')
+      const { fileIds } = c.req.valid('json')
+      
+      const project = await projectService.getProjectById(projectId)
+      if (!project) {
+        throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+      }
+      
+      const result = await projectService.removeSummariesFromFiles(projectId, fileIds)
+      
+      return c.json({
+        success: true as const,
+        data: result
+      }, 200)
+    }
+  )
 
 
 export type ProjectRouteTypes = typeof projectRoutes

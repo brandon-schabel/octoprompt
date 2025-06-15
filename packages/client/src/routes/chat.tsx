@@ -13,8 +13,7 @@ import {
   GitFork,
   Trash,
   SendIcon,
-  MessageSquareText,
-  Paperclip
+  MessageSquareText
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Message } from '@ai-sdk/react'
@@ -30,11 +29,8 @@ import {
   useDeleteMessage,
   useForkChatFromMessage
 } from '@/hooks/api/use-chat-api'
-import { useUploadFile } from '@/hooks/api/use-file-upload-api'
 import { Chat, ChatMessage, ChatMessageAttachment } from '@octoprompt/schemas'
 import { cn } from '@/lib/utils'
-import { FileUploadButton } from '@/components/file-upload-input'
-import { FileAttachmentList } from '@/components/file-attachment'
 import {
   ScrollArea,
   Select,
@@ -219,7 +215,7 @@ export function ProviderModelSector({
   onModelChange,
   className
 }: ModelSelectorProps) {
-  const { data: modelsData, isPending: isLoadingModels } = useGetModels(provider)
+  const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider)
 
   const comboboxOptions = useMemo(
     () =>
@@ -427,7 +423,7 @@ function parseThinkBlock(content: string) {
 
 const ChatMessageItem = React.memo(
   (props: {
-    msg: Message | ChatMessage
+    msg: Message
     excluded: boolean
     rawView: boolean
     onCopyMessage: (content: string) => void
@@ -441,28 +437,22 @@ const ChatMessageItem = React.memo(
 
     const { copyToClipboard } = useCopyClipboard()
 
-    // Handle both Message and ChatMessage types
-    const messageId = typeof msg.id === 'string' ? parseInt(msg.id) : msg.id
-    const messageRole = msg.role
-    const messageContent = msg.content
-    const messageAttachments = 'attachments' in msg ? msg.attachments : undefined
-
-    if (!messageId) {
+    if (!msg.id) {
       console.warn('ChatMessageItem: Message missing ID', msg)
       return null
     }
 
-    const isUser = messageRole === 'user'
-    const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(messageContent)
+    const isUser = msg.role === 'user'
+    const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(msg.content)
 
     const handleCopy = useCallback(
-      () => onCopyMessage(mainContent || messageContent),
-      [mainContent, messageContent, onCopyMessage]
+      () => onCopyMessage(mainContent || msg.content),
+      [mainContent, msg.content, onCopyMessage]
     )
-    const handleFork = useCallback(() => onForkMessage(messageId), [messageId, onForkMessage])
-    const handleDelete = useCallback(() => onDeleteMessage(messageId), [messageId, onDeleteMessage])
-    const handleToggleExclude = useCallback(() => onToggleExclude(messageId), [messageId, onToggleExclude])
-    const handleToggleRaw = useCallback(() => onToggleRawView(messageId), [messageId, onToggleRawView])
+    const handleFork = useCallback(() => onForkMessage(Number(msg.id)), [msg.id, onForkMessage])
+    const handleDelete = useCallback(() => onDeleteMessage(Number(msg.id)), [msg.id, onDeleteMessage])
+    const handleToggleExclude = useCallback(() => onToggleExclude(Number(msg.id)), [msg.id, onToggleExclude])
+    const handleToggleRaw = useCallback(() => onToggleRawView(Number(msg.id)), [msg.id, onToggleRawView])
     const handleCopyThinkText = useCallback(() => copyToClipboard(thinkContent), [copyToClipboard, thinkContent])
 
     const MessageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -500,18 +490,18 @@ const ChatMessageItem = React.memo(
                 </Button>
               </div>
               <div className='flex items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground'>
-                <Label htmlFor={`exclude-${messageId}`} className='flex items-center gap-1 cursor-pointer'>
+                <Label htmlFor={`exclude-${msg.id}`} className='flex items-center gap-1 cursor-pointer'>
                   <Switch
-                    id={`exclude-${messageId}`}
+                    id={`exclude-${msg.id}`}
                     checked={excluded}
                     onCheckedChange={handleToggleExclude}
                     className='scale-75'
                   />
                   Exclude
                 </Label>
-                <Label htmlFor={`raw-${messageId}`} className='flex items-center gap-1 cursor-pointer'>
+                <Label htmlFor={`raw-${msg.id}`} className='flex items-center gap-1 cursor-pointer'>
                   <Switch
-                    id={`raw-${messageId}`}
+                    id={`raw-${msg.id}`}
                     checked={rawView}
                     onCheckedChange={handleToggleRaw}
                     className='scale-75'
@@ -529,12 +519,6 @@ const ChatMessageItem = React.memo(
       return (
         <MessageWrapper>
           <MessageHeader />
-          {/* Display attachments if present */}
-          {messageAttachments && messageAttachments.length > 0 && (
-            <div className='mb-2'>
-              <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
-            </div>
-          )}
           <pre className='whitespace-pre-wrap font-mono p-2 bg-background/50 rounded text-xs sm:text-sm overflow-x-auto'>
             {msg.content}
           </pre>
@@ -545,12 +529,6 @@ const ChatMessageItem = React.memo(
     return (
       <MessageWrapper>
         <MessageHeader />
-        {/* Display attachments if present */}
-        {messageAttachments && messageAttachments.length > 0 && (
-          <div className='mb-2'>
-            <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
-          </div>
-        )}
         {hasThinkBlock ? (
           <div className='text-sm space-y-2'>
             {isThinking ? (
@@ -1017,7 +995,7 @@ function ChatPage() {
   const { settings: modelSettings, setModel } = useChatModelParams()
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
-  const { data: modelsData } = useGetModels(provider)
+  const { data: modelsData } = useGetModels(provider as APIProviders)
   const { copyToClipboard } = useCopyClipboard()
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 
@@ -1046,37 +1024,6 @@ function ChatPage() {
     systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.'
   })
 
-  // File attachment state and functionality
-  const [pendingAttachments, setPendingAttachments] = useState<ChatMessageAttachment[]>([])
-  const uploadFileMutation = useUploadFile()
-
-  const handleFileSelect = useCallback(
-    async (files: File[]) => {
-      if (!activeChatId) {
-        toast.error('Please select a chat first')
-        return
-      }
-
-      for (const file of files) {
-        try {
-          const attachment = await uploadFileMutation.mutateAsync({
-            chatId: activeChatId,
-            file
-          })
-          setPendingAttachments((prev) => [...prev, attachment])
-        } catch (error) {
-          console.error('File upload failed:', error)
-          // Error is already handled by the mutation
-        }
-      }
-    },
-    [activeChatId, uploadFileMutation]
-  )
-
-  const handleRemoveAttachment = useCallback((attachmentId: number) => {
-    setPendingAttachments((prev) => prev.filter((att) => att.id !== attachmentId))
-  }, [])
-
   const selectedModelName = useMemo(() => {
     return modelsData?.data?.find((m) => m.id === model)?.name ?? model ?? '...'
   }, [modelsData, model])
@@ -1101,18 +1048,14 @@ function ChatPage() {
         return
       }
       try {
-        await sendMessage(input, {
-          ...modelSettings,
-          currentMessageAttachments: pendingAttachments.length > 0 ? pendingAttachments : undefined
-        })
+        await sendMessage(input, { ...modelSettings })
         setInput('') // Clear input after sending
-        setPendingAttachments([]) // Clear attachments after sending
       } catch (err) {
         console.error('Error sending message:', err)
         toast.error('Failed to send message.')
       }
     },
-    [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId, pendingAttachments]
+    [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId]
   )
 
   const hasActiveChat = !!activeChatId
@@ -1183,24 +1126,14 @@ function ChatPage() {
                   )}
                 </span>
               </div>
-              {/* File attachments section */}
-              {pendingAttachments.length > 0 && (
-                <div className='mx-auto w-full max-w-[72rem] px-4 pt-2'>
-                  <FileAttachmentList attachments={pendingAttachments} onRemove={handleRemoveAttachment} />
-                </div>
-              )}
-
               <div className='mx-auto flex w-full max-w-[72rem] items-end gap-2 px-4 py-3'>
-                <div className='flex flex-col flex-grow gap-2'>
-                  <AdaptiveChatInput
-                    value={input ?? ''}
-                    onChange={handleChatInputChange}
-                    placeholder='Type your message...'
-                    preserveFormatting
-                    className='flex-grow rounded-lg'
-                  />
-                </div>
-                <FileUploadButton onFileSelect={handleFileSelect} disabled={!activeChatId} />
+                <AdaptiveChatInput
+                  value={input ?? ''}
+                  onChange={handleChatInputChange}
+                  placeholder='Type your message...'
+                  preserveFormatting
+                  className='flex-grow rounded-lg'
+                />
                 <Button
                   type='submit'
                   disabled={input?.trim() === ''}

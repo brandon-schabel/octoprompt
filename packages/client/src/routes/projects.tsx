@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectStatsDisplay } from '@/components/projects/project-stats-display'
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { ProjectSummarizationSettingsPage } from './project-summarization'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -78,23 +79,12 @@ export function ProjectsPage() {
   ])
 
   const handleSelectProject = (id: number) => {
-    // If there are no tabs, create one for the selected project
-    if (noTabsYet) {
-      const selectedProject = projects.find((p) => p.id === id)
-      const newTabId = createProjectTabFromHook({
-        displayName: selectedProject?.name || `Tab for ${id.toString().substring(0, 6)}`,
-        selectedProjectId: id
-      })
-      setActiveProjectTabId(newTabId)
-    } else {
-      // Update the existing active tab
-      updateActiveProjectTab((prev) => ({
-        ...(prev || {}),
-        selectedProjectId: id,
-        selectedFiles: [],
-        selectedPrompts: []
-      }))
-    }
+    updateActiveProjectTab((prev) => ({
+      ...(prev || {}),
+      selectedProjectId: id,
+      selectedFiles: [],
+      selectedPrompts: []
+    }))
     setProjectModalOpen(false)
   }
 
@@ -185,13 +175,11 @@ export function ProjectsPage() {
                 {projectData.name}
               </h2>
             )}
-
-            <div className='flex w-full justify-center items-center'>
-              <TabsList>
-                <TabsTrigger value='context'>Context</TabsTrigger>
-                <TabsTrigger value='stats'>Statistics</TabsTrigger>
-              </TabsList>
-            </div>
+            <TabsList>
+              <TabsTrigger value='context'>Context</TabsTrigger>
+              <TabsTrigger value='stats'>Statistics</TabsTrigger>
+              <TabsTrigger value='summarization'>Summarization</TabsTrigger>
+            </TabsList>
             <div className='ml-auto'>
               <ProjectSettingsDialog />
             </div>
@@ -210,6 +198,16 @@ export function ProjectsPage() {
               <ProjectStatsDisplay projectId={selectedProjectId} />
             ) : (
               <p>No project selected for stats.</p>
+            )}
+          </TabsContent>
+          <TabsContent
+            value='summarization'
+            className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'
+          >
+            {selectedProjectId ? (
+              <ProjectSummarizationSettingsPage />
+            ) : (
+              <p>No project selected for summarization settings.</p>
             )}
           </TabsContent>
         </Tabs>

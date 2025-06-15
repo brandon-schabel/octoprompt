@@ -47,7 +47,6 @@ OctoPrompt guidance for Claude Code (claude.ai/code).
 
 ```
 packages/
-  ai/                    # Mastra AI integration
   api-client/            # Type-safe API client
   client/                # React frontend (Vite + TanStack)
   schemas/               # Zod schemas and types
@@ -114,7 +113,6 @@ export function useCreateChat() {
 ## AI Integration
 
 - **Multi-Provider**: OpenAI, Anthropic, Google, Groq
-- **Mastra Framework**: Agents and workflows
 - **Streaming**: Real-time responses
 - **Model Configs**: LOW, MEDIUM, HIGH presets
 

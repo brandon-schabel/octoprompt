@@ -94,9 +94,6 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 ```
 OctoPrompt
 	packages
-		ai
-			src
-				mastra
 
 		api-client
 			index.ts // contains the entire octoprompt client

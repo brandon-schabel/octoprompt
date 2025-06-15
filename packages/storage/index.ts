@@ -1,4 +1,3 @@
-export * from './src/attachment-storage'
 export * from './src/chat-storage'
 export * from './src/project-storage'
 export * from './src/prompt-storage'

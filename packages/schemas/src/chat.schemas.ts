@@ -1,7 +1,4 @@
 import { z } from '@hono/zod-openapi'
-// TODO: Replace with Mastra schemas when ready
-// Temporary minimal schemas until Mastra integration is complete
-
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 

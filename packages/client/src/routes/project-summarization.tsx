@@ -85,11 +85,12 @@ export function ProjectSummarizationSettingsPage() {
   const [minTokensFilter, setMinTokensFilter] = useState<number | null>(null)
   const [maxTokensFilter, setMaxTokensFilter] = useState<number | null>(null)
   const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false)
-  const {
-    data: summaryData,
-    isLoading: summaryLoading,
-    isError: summaryError
-  } = useGetProjectSummary(selectedProjectId ?? -1)
+  // TODO: Remove if not needed
+  // const {
+  //   data: summaryData,
+  //   isLoading: summaryLoading,
+  //   isError: summaryError
+  // } = useGetProjectSummary(selectedProjectId ?? -1)
 
   const { data, isLoading, isError } = useGetProjectFiles(selectedProjectId ?? -1)
 

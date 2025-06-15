@@ -248,7 +248,7 @@ export const CLAUDE_CODE_TEMPLATES: ClaudeCodeTemplate[] = [
       'Secure API endpoints by adding authentication, authorization, rate limiting, and input validation. Ensure proper CORS configuration and use HTTPS.'
   },
 
-  // Planning Templates (replacing Mastra Planning Agent functionality)
+  // Planning Templates 
   {
     id: 'task-breakdown',
     name: 'Break Down Complex Task',
@@ -296,7 +296,7 @@ export const CLAUDE_CODE_TEMPLATES: ClaudeCodeTemplate[] = [
       'Analyze the dependencies between different parts of this codebase or feature implementation. Create a dependency graph showing: 1) Which components depend on others 2) Critical path for implementation 3) Parallel work opportunities 4) Potential circular dependencies 5) Recommended execution order. Suggest how to minimize dependencies.'
   },
 
-  // Architecture Templates (replacing Mastra Enhanced Planning)
+  // Architecture Templates (replacing Enhanced Planning)
   {
     id: 'system-architecture',
     name: 'Design System Architecture',

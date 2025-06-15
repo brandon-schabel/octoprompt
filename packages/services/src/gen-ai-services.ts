@@ -189,7 +189,6 @@ async function getProviderLanguageModelInterface(
     }
     case 'openrouter': {
       const apiKey = await getKey('openrouter', debug)
-      console.log({ apiKey })
       if (!apiKey && !process.env.OPENROUTER_API_KEY)
         throw new ApiError(400, 'OpenRouter API Key not found in DB or environment.', 'OPENROUTER_KEY_MISSING')
       return createOpenRouter({ apiKey })(modelId)

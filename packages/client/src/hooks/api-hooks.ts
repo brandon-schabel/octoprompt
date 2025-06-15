@@ -391,6 +391,42 @@ export function useSuggestFiles() {
   })
 }
 
+export function useSummarizeProjectFiles() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, fileIds, force = false }: { projectId: number; fileIds: number[]; force?: boolean }) => {
+      const response = await octoClient.projects.summarizeFiles(projectId, { fileIds, force })
+      return response.data
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate project files to refresh summaries
+      queryClient.invalidateQueries({ queryKey: projectKeys.files(variables.projectId) })
+      toast.success(`Summarized ${data.included} files`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to summarize files')
+    }
+  })
+}
+
+export function useRemoveSummariesFromFiles() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) => {
+      const response = await octoClient.projects.removeSummariesFromFiles(projectId, { fileIds })
+      return response.data
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate project files to refresh summaries
+      queryClient.invalidateQueries({ queryKey: projectKeys.files(variables.projectId) })
+      toast.success(`Removed summaries from ${data.removedCount} files`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to remove summaries')
+    }
+  })
+}
+
 const PROMPT_KEYS = {
   all: ['prompts'] as const,
   list: () => [...PROMPT_KEYS.all, 'list'] as const,
@@ -888,6 +924,3 @@ export function useSmartCaching() {
     }
   }
 }
-
-// --- Mastra Hooks Removed ---
-// Mastra agent functionality has been consolidated into Claude Code integration

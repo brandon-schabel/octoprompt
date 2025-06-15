@@ -497,6 +497,42 @@ export class ProjectService extends BaseApiClient {
     })
     return result as DataResponseSchema<ProjectFile[]>
   }
+
+  async summarizeFiles(projectId: number, data: { fileIds: number[]; force?: boolean }) {
+    const result = await this.request('POST', `/projects/${projectId}/files/summarize`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          included: z.number(),
+          skipped: z.number(),
+          updatedFiles: z.array(z.unknown())
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      included: number
+      skipped: number
+      updatedFiles: ProjectFile[]
+    }>
+  }
+
+  async removeSummariesFromFiles(projectId: number, data: { fileIds: number[] }) {
+    const result = await this.request('POST', `/projects/${projectId}/files/remove-summaries`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          removedCount: z.number(),
+          message: z.string()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      removedCount: number
+      message: string
+    }>
+  }
 }
 
 // Prompt Service

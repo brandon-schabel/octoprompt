@@ -15,7 +15,9 @@ export {
   useGetFileVersions,
   useGetFileVersion,
   useRevertFileToVersion,
-  useUpdateFileContent
+  useUpdateFileContent,
+  useSummarizeProjectFiles,
+  useRemoveSummariesFromFiles
 } from '../api-hooks'
 
 // Type re-exports for backward compatibility
