@@ -63,26 +63,27 @@ import {
   type UnifiedModel
 } from '@octoprompt/schemas'
 
-// Claude Code imports
+// Agent Coder imports
 import type {
-  ClaudeCodeRequest,
-  ClaudeCodeResult,
-  ClaudeCodeSession,
-  ClaudeCodeSessionList,
-  GetAuditLogsQuery,
-  ClaudeCodeAuditLog,
-  AuditLogSummary
+  RunAgentCoderBody,
+  RunAgentCoderResponseData,
+  ListAgentCoderRunsResponseData,
+  GetAgentCoderLogsResponseData,
+  GetAgentCoderDataResponseData,
+  ConfirmAgentCoderChangesResponseData,
+  DeleteAgentCoderRunResponseData,
+  AgentCoderRun,
+  AgentCoderLog
 } from '@octoprompt/schemas'
 
 import {
-  ClaudeCodeRequestSchema,
-  ClaudeCodeContinueRequestSchema,
-  ClaudeCodeResultSchema,
-  ClaudeCodeSessionSchema,
-  ClaudeCodeSessionListSchema,
-  GetAuditLogsQuerySchema,
-  ClaudeCodeAuditLogSchema,
-  AuditLogSummarySchema
+  AgentCoderRunRequestSchema as RunAgentCoderBodySchema,
+  AgentCoderRunResponseSchema as RunAgentCoderResponseDataSchema,
+  ListAgentCoderRunsResponseSchema as ListAgentCoderRunsResponseDataSchema,
+  GetAgentCoderLogsResponseSchema as GetAgentCoderLogsResponseDataSchema,
+  GetAgentCoderDataResponseSchema as GetAgentCoderDataResponseDataSchema,
+  ConfirmAgentCoderChangesResponseSchema as ConfirmAgentCoderChangesResponseDataSchema,
+  DeleteAgentCoderRunResponseSchema as DeleteAgentCoderRunResponseDataSchema
 } from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
@@ -718,125 +719,50 @@ export class GenAiService extends BaseApiClient {
   }
 }
 
-// Claude Code Service
-export class ClaudeCodeService extends BaseApiClient {
-  constructor(config: ApiConfig) {
-    super(config)
-  }
-
-  async executeQuery(request: ClaudeCodeRequest) {
-    const validatedData = this.validateBody(ClaudeCodeRequestSchema, request)
-    const result = await this.request('POST', '/claude-code/execute', {
+// Agent Coder Service
+export class AgentCoderService extends BaseApiClient {
+  async runAgentCoder(projectId: number, body: RunAgentCoderBody) {
+    const validatedData = this.validateBody(RunAgentCoderBodySchema, body)
+    const result = await this.request('POST', `/projects/${projectId}/agent-coder`, {
       body: validatedData,
-      responseSchema: ClaudeCodeResultSchema
+      responseSchema: RunAgentCoderResponseDataSchema
     })
-    return result as ClaudeCodeResult
+    return result as RunAgentCoderResponseData
   }
 
-  async streamQuery(request: ClaudeCodeRequest): Promise<ReadableStream> {
-    const validatedData = this.validateBody(ClaudeCodeRequestSchema, request)
-    const url = new URL(`${this.baseUrl}/api/claude-code/stream`)
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
-
-    try {
-      const response = await fetch(url.toString(), {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify(validatedData),
-        signal: controller.signal
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new OctoPromptError(`Stream request failed: ${response.status}`, response.status)
-      }
-
-      if (!response.body) {
-        throw new OctoPromptError('No response body for stream')
-      }
-
-      return response.body
-    } catch (e) {
-      if (e instanceof OctoPromptError) throw e
-      if (e instanceof Error) {
-        if (e.name === 'AbortError') {
-          throw new OctoPromptError('Stream request timeout', undefined, 'TIMEOUT')
-        }
-        throw new OctoPromptError(`Stream request failed: ${e.message}`)
-      }
-      throw new OctoPromptError('Unknown error occurred during stream request')
-    }
+  async listRuns(projectId: number) {
+    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs`, {
+      responseSchema: ListAgentCoderRunsResponseDataSchema
+    })
+    return result as ListAgentCoderRunsResponseData
   }
 
-  async continueSession(sessionId: string, prompt: string) {
-    const validatedData = this.validateBody(ClaudeCodeContinueRequestSchema, { prompt })
-    const result = await this.request('POST', `/claude-code/sessions/${sessionId}/continue`, {
-      body: validatedData,
-      responseSchema: ClaudeCodeResultSchema
+  async getLogs(projectId: number, agentJobId: number) {
+    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/logs`, {
+      responseSchema: GetAgentCoderLogsResponseDataSchema
     })
-    return result as ClaudeCodeResult
+    return result as GetAgentCoderLogsResponseData
   }
 
-  async getSessions() {
-    const result = await this.request('GET', '/claude-code/sessions', {
-      responseSchema: ClaudeCodeSessionListSchema
+  async getData(projectId: number, agentJobId: number) {
+    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/data`, {
+      responseSchema: GetAgentCoderDataResponseDataSchema
     })
-    return result as ClaudeCodeSessionList
+    return result as GetAgentCoderDataResponseData
   }
 
-  async getSession(sessionId: string) {
-    const result = await this.request('GET', `/claude-code/sessions/${sessionId}`, {
-      responseSchema: ClaudeCodeSessionSchema
+  async confirmChanges(projectId: number, agentJobId: number) {
+    const result = await this.request('POST', `/agent-coder/project/${projectId}/runs/${agentJobId}/confirm`, {
+      responseSchema: ConfirmAgentCoderChangesResponseDataSchema
     })
-    return result as ClaudeCodeSession
+    return result as ConfirmAgentCoderChangesResponseData
   }
 
-  async deleteSession(sessionId: string): Promise<boolean> {
-    await this.request('DELETE', `/claude-code/sessions/${sessionId}`, {
-      responseSchema: OperationSuccessResponseSchemaZ
+  async deleteRun(agentJobId: number) {
+    const result = await this.request('DELETE', `/agent-coder/runs/${agentJobId}`, {
+      responseSchema: DeleteAgentCoderRunResponseDataSchema
     })
-    return true
-  }
-
-  async getSessionFileChanges(sessionId: string) {
-    const result = await this.request('GET', `/claude-code/sessions/${sessionId}/file-changes`, {
-      responseSchema: z.array(
-        z.object({
-          sessionId: z.string(),
-          timestamp: z.number(),
-          event: z.enum(['created', 'modified', 'deleted']),
-          filePath: z.string(),
-          projectId: z.number()
-        })
-      )
-    })
-    return result as Array<{
-      sessionId: string
-      timestamp: number
-      event: 'created' | 'modified' | 'deleted'
-      filePath: string
-      projectId: number
-    }>
-  }
-
-  async getAuditLogs(query?: GetAuditLogsQuery) {
-    const validatedQuery = query ? this.validateBody(GetAuditLogsQuerySchema, query) : undefined
-    const queryString = validatedQuery ? this.buildQueryString(validatedQuery) : ''
-    const result = await this.request('GET', `/claude-code/audit-logs${queryString}`, {
-      responseSchema: z.array(ClaudeCodeAuditLogSchema)
-    })
-    return result as ClaudeCodeAuditLog[]
-  }
-
-  async getSessionAuditSummary(sessionId: string) {
-    const result = await this.request('GET', `/claude-code/sessions/${sessionId}/audit-summary`, {
-      responseSchema: AuditLogSummarySchema
-    })
-    return result as AuditLogSummary
+    return result as DeleteAgentCoderRunResponseData
   }
 }
 
@@ -847,7 +773,7 @@ export class OctoPromptClient {
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
-  public readonly claudeCode: ClaudeCodeService
+  public readonly agentCoder: AgentCoderService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -855,7 +781,7 @@ export class OctoPromptClient {
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
-    this.claudeCode = new ClaudeCodeService(config)
+    this.agentCoder = new AgentCoderService(config)
   }
 }
 

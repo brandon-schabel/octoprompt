@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useGetProjects, useDeleteProject, useGetProject } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
@@ -24,6 +24,8 @@ import { ProjectStatsDisplay } from '@/components/projects/project-stats-display
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
+import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
+import { Bot, Code2 } from 'lucide-react'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -179,6 +181,10 @@ export function ProjectsPage() {
               <TabsTrigger value='context'>Context</TabsTrigger>
               <TabsTrigger value='stats'>Statistics</TabsTrigger>
               <TabsTrigger value='summarization'>Summarization</TabsTrigger>
+              <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
+                <Code2 className='h-3.5 w-3.5' />
+                Agent Coder
+              </TabsTrigger>
             </TabsList>
             <div className='ml-auto'>
               <ProjectSettingsDialog />
@@ -187,7 +193,6 @@ export function ProjectsPage() {
 
           <TabsContent value='context' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             <MainProjectsLayout
-              projectData={projectData}
               filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
               promptPanelRef={promptPanelRef as React.RefObject<PromptOverviewPanelRef>}
             />
@@ -208,6 +213,16 @@ export function ProjectsPage() {
               <ProjectSummarizationSettingsPage />
             ) : (
               <p>No project selected for summarization settings.</p>
+            )}
+          </TabsContent>
+          <TabsContent
+            value='agent-coder'
+            className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'
+          >
+            {selectedProjectId && projectData && allProjectsData ? (
+              <AgentCoderTabView project={projectData} projectId={selectedProjectId} allProjects={allProjectsData.data || []} />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Agent Coder.</p>
             )}
           </TabsContent>
         </Tabs>
@@ -246,12 +261,11 @@ export function ProjectsPage() {
 export const Route = createFileRoute('/projects')({ component: ProjectsPage })
 
 type MainProjectsLayoutProps = {
-  projectData: ProjectResponse['data'] | undefined
   filePanelRef: React.RefObject<FilePanelRef>
   promptPanelRef: React.RefObject<PromptOverviewPanelRef>
 }
 
-function MainProjectsLayout({ projectData, filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
+function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
   return (
     <ErrorBoundary>
       <div className='flex-1 min-h-0 overflow-hidden h-full flex flex-col'>

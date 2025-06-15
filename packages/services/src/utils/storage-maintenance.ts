@@ -62,7 +62,6 @@ async function performInitialCleanup(options: { verbose?: boolean }): Promise<vo
     { name: 'prompts', storage: promptStorage, basePath: 'data/prompt_storage' },
     { name: 'tickets', basePath: 'data/ticket_storage' },
     { name: 'provider keys', storage: providerKeyStorage, basePath: 'data/provider_key_storage' },
-    { name: 'claude code', storage: claudeCodeStorage, basePath: 'data/claude_code_storage' }
   ]
 
   for (const { name, storage, basePath } of storages) {

@@ -93,12 +93,6 @@ export function ProjectList({
                       <Pencil className='mr-2 h-4 w-4' />
                       <span>Edit Project</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => navigate({ to: '/claude-code', search: { projectId: project.id.toString() } })}
-                    >
-                      <Bot className='mr-2 h-4 w-4' />
-                      <span>Open in Claude Code</span>
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

@@ -9,7 +9,14 @@ const AGENT_DATA_FILENAME = 'agent-data.json'
 export async function getOrchestratorLogFilePaths(projectId: number, agentJobId: number) {
   const jobLogDir = join(AGENT_LOGS_DIR, 'projects', projectId.toString(), 'jobs', agentJobId.toString())
   console.log({
-    ORCHESTRATOR_LOG_PATH: join(AGENT_LOGS_DIR, 'projects', projectId.toString(), 'jobs', agentJobId.toString(), ORCHESTRATOR_LOG_FILENAME)
+    ORCHESTRATOR_LOG_PATH: join(
+      AGENT_LOGS_DIR,
+      'projects',
+      projectId.toString(),
+      'jobs',
+      agentJobId.toString(),
+      ORCHESTRATOR_LOG_FILENAME
+    )
   })
   await ensureLogDirExists(jobLogDir)
   const filePath = join(jobLogDir, ORCHESTRATOR_LOG_FILENAME)
@@ -19,7 +26,14 @@ export async function getOrchestratorLogFilePaths(projectId: number, agentJobId:
 export async function getAgentDataLogFilePath(projectId: number, agentJobId: number): Promise<string> {
   const jobLogDir = join(AGENT_LOGS_DIR, 'projects', projectId.toString(), 'jobs', agentJobId.toString())
   console.log({
-    DATA_LOG_PATH: join(AGENT_LOGS_DIR, 'projects', projectId.toString(), 'jobs', agentJobId.toString(), AGENT_DATA_FILENAME)
+    DATA_LOG_PATH: join(
+      AGENT_LOGS_DIR,
+      'projects',
+      projectId.toString(),
+      'jobs',
+      agentJobId.toString(),
+      AGENT_DATA_FILENAME
+    )
   })
   await ensureLogDirExists(jobLogDir)
   return join(jobLogDir, AGENT_DATA_FILENAME)
@@ -171,4 +185,17 @@ export async function listAgentJobs(projectId: number): Promise<number[]> {
     console.error(`[Agent Logger] Error listing agent job directories in ${AGENT_LOGS_DIR}:`, error)
     throw new Error('Failed to list agent job IDs.') // Re-throw for handling in the route
   }
+}
+
+export const agentLogger = {
+  initializeLogger,
+  log,
+  writeAgentDataLog,
+  closeLogger,
+  getOrchestratorLogFilePaths,
+  getAgentDataLogFilePath,
+  listAgentJobs,
+  AGENT_LOGS_DIR,
+  ORCHESTRATOR_LOG_FILENAME,
+  AGENT_DATA_FILENAME
 }
