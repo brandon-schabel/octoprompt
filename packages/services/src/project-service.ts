@@ -369,8 +369,6 @@ export async function createProjectFileRecord(
     summaryLastUpdated: null,
     meta: '{}',
     checksum: null,
-    lastSyncedAt: null,
-    syncVersion: 0,
     created: now,
     updated: now
   }
@@ -477,8 +475,6 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         summaryLastUpdated: null,
         meta: '{}',
         checksum: fileData.checksum,
-        lastSyncedAt: null,
-        syncVersion: 0,
         created: now,
         updated: now
       }
@@ -777,11 +773,11 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
-      `Successfully summarized: ${summarizedCount}, ` +
-      `Skipped (empty): ${skippedByEmptyCount}, ` +
-      `Skipped (errors): ${errorCount}, ` +
-      `Total not summarized: ${finalSkippedCount}`
+    `Total to process: ${totalProcessed}, ` +
+    `Successfully summarized: ${summarizedCount}, ` +
+    `Skipped (empty): ${skippedByEmptyCount}, ` +
+    `Skipped (errors): ${errorCount}, ` +
+    `Total not summarized: ${finalSkippedCount}`
   )
 
   return {

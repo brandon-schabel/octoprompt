@@ -14,9 +14,7 @@ import {
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
   ProjectFile,
-  FileVersionParamsSchema,
-  FileVersionListResponseSchema,
-  GetFileVersionParamsSchema
+  FileSuggestionsZodSchema,
 } from '@octoprompt/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
@@ -218,95 +216,6 @@ const getProjectFilesRoute = createRoute({
   }
 })
 
-const getProjectFilesWithoutContentRoute = createRoute({
-  method: 'get',
-  path: '/api/projects/{projectId}/files/metadata',
-  tags: ['Projects', 'Files'],
-  summary: 'Get the list of files associated with a project without content (for performance)',
-  request: {
-    params: ProjectIdParamsSchema,
-    query: z.object({
-      includeAllVersions: z.coerce.boolean().optional().default(false)
-    })
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: ProjectFileWithoutContentListResponseSchema } },
-      description: 'Successfully retrieved project files metadata'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
-})
-
-// NEW: File versioning routes
-const getFileVersionsRoute = createRoute({
-  method: 'get',
-  path: '/api/projects/{projectId}/files/{originalFileId}/versions',
-  tags: ['Projects', 'Files', 'Versioning'],
-  summary: 'Get all versions of a specific file',
-  request: { params: FileVersionParamsSchema },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileVersionListResponseSchema } },
-      description: 'Successfully retrieved file versions'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project or file not found'
-    },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
-})
-
-const getFileVersionRoute = createRoute({
-  method: 'get',
-  path: '/api/projects/{projectId}/files/{originalFileId}/version',
-  tags: ['Projects', 'Files', 'Versioning'],
-  summary: 'Get a specific version of a file (or latest if no version specified)',
-  request: {
-    params: FileVersionParamsSchema,
-    query: GetFileVersionParamsSchema
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileResponseSchema } },
-      description: 'Successfully retrieved file version'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project, file, or version not found'
-    },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
-})
-
-const revertFileToVersionRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/files/{fileId}/revert',
-  tags: ['Projects', 'Files', 'Versioning'],
-  summary: 'Revert a file to a specific version (creates a new version with old content)',
-  request: {
-    params: FileIdParamsSchema,
-    body: { content: { 'application/json': { schema: RevertToVersionBodySchema } } }
-  },
-  responses: {
-    200: {
-      content: { 'application/json': { schema: FileResponseSchema } },
-      description: 'File successfully reverted to specified version'
-    },
-    404: {
-      content: { 'application/json': { schema: ApiErrorResponseSchema } },
-      description: 'Project, file, or version not found'
-    },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
-})
-
 const updateFileContentRoute = createRoute({
   method: 'put',
   path: '/api/projects/{projectId}/files/{fileId}',
@@ -325,26 +234,6 @@ const updateFileContentRoute = createRoute({
       content: { 'application/json': { schema: ApiErrorResponseSchema } },
       description: 'Project or file not found'
     },
-    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
-  }
-})
-
-const bulkCreateFilesRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/files/bulk',
-  tags: ['Projects', 'Files'],
-  summary: 'Create multiple files in a project',
-  request: {
-    params: ProjectIdParamsSchema,
-    body: { content: { 'application/json': { schema: BulkCreateFilesBodySchema } } }
-  },
-  responses: {
-    201: {
-      content: { 'application/json': { schema: BulkFilesResponseSchema } },
-      description: 'Files created successfully'
-    },
-    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
     422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
@@ -410,11 +299,12 @@ const getProjectSummaryRoute = createRoute({
   }
 })
 
+
 const suggestFilesRoute = createRoute({
   method: 'post',
   path: '/api/projects/{projectId}/suggest-files',
   tags: ['Projects', 'Files', 'AI'],
-  summary: 'Suggest relevant files based on a prompt',
+  summary: 'Suggest relevant files based on user input and project context',
   request: {
     params: ProjectIdParamsSchema,
     body: { content: { 'application/json': { schema: SuggestFilesBodySchema } } }
@@ -426,7 +316,10 @@ const suggestFilesRoute = createRoute({
     },
     404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
     422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error or AI processing error'
+    }
   }
 })
 
@@ -592,95 +485,13 @@ export const projectRoutes = new OpenAPIHono()
     if (!project) {
       throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
     }
-    const files = await projectService.getProjectFiles(projectId, query.includeAllVersions || false)
+    const files = await projectService.getProjectFiles(projectId)
     const payload = {
       success: true,
       data: files ?? []
     } satisfies z.infer<typeof FileListResponseSchema>
     return c.json(payload, 200)
   })
-
-  .openapi(getProjectFilesWithoutContentRoute, async (c) => {
-    const { projectId } = c.req.valid('param')
-    const query = c.req.valid('query')
-    const project = await projectService.getProjectById(projectId)
-    if (!project) {
-      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
-    }
-    const files = await projectService.getProjectFilesWithoutContent(projectId, query.includeAllVersions || false)
-    const payload = {
-      success: true,
-      data: files ?? []
-    } satisfies z.infer<typeof ProjectFileWithoutContentListResponseSchema>
-    return c.json(payload, 200)
-  })
-
-  // NEW: File versioning route handlers
-  .openapi(getFileVersionsRoute, async (c) => {
-    const { projectId, originalFileId } = c.req.valid('param')
-    const versions = await projectService.getFileVersions(projectId, originalFileId)
-    const payload = {
-      success: true,
-      data: versions
-    } satisfies z.infer<typeof FileVersionListResponseSchema>
-    return c.json(payload, 200)
-  })
-
-  .openapi(getFileVersionRoute, async (c) => {
-    const { projectId, originalFileId } = c.req.valid('param')
-    const query = c.req.valid('query')
-    const fileVersion = await projectService.getFileVersion(
-      projectId,
-      originalFileId,
-      query.version ? Number(query.version) : undefined
-    )
-
-    if (!fileVersion) {
-      throw new ApiError(404, `File version not found`, 'FILE_VERSION_NOT_FOUND')
-    }
-
-    const payload = {
-      success: true,
-      data: fileVersion
-    } satisfies z.infer<typeof FileResponseSchema>
-    return c.json(payload, 200)
-  })
-
-  .openapi(revertFileToVersionRoute, async (c) => {
-    const { projectId, fileId } = c.req.valid('param')
-    const { version } = c.req.valid('json')
-
-    const revertedFile = await projectService.revertFileToVersion(projectId, fileId, version)
-
-    const payload = {
-      success: true,
-      data: revertedFile
-    } satisfies z.infer<typeof FileResponseSchema>
-    return c.json(payload, 200)
-  })
-
-  .openapi(bulkCreateFilesRoute, async (c) => {
-    const { projectId } = c.req.valid('param')
-    const { files } = c.req.valid('json')
-
-    const fileSyncData = files.map((file) => ({
-      path: file.path,
-      name: file.name,
-      extension: file.extension,
-      content: file.content,
-      size: file.size,
-      checksum: file.checksum || ''
-    }))
-
-    const createdFiles = await projectService.bulkCreateProjectFiles(projectId, fileSyncData)
-
-    const payload = {
-      success: true,
-      data: createdFiles
-    } satisfies z.infer<typeof BulkFilesResponseSchema>
-    return c.json(payload, 201)
-  })
-
   .openapi(bulkUpdateFilesRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { updates } = c.req.valid('json')
@@ -763,24 +574,71 @@ export const projectRoutes = new OpenAPIHono()
       )
     }
   })
-  .openapi(suggestFilesRoute, async (c) => {
-    const { projectId } = c.req.valid('param')
-    const { prompt, limit } = c.req.valid('json')
-
-    const suggestedFiles = await projectService.suggestFiles(projectId, prompt, limit)
-
-    const payload = {
-      success: true,
-      data: suggestedFiles
-    } satisfies z.infer<typeof SuggestFilesResponseSchema>
-
-    return c.json(payload, 200)
-  })
   .openapi(optimizeUserInputRoute, async (c) => {
     const { userContext, projectId } = c.req.valid('json')
     const optimized = await optimizeUserInput(projectId, userContext)
     const responseData = { optimizedPrompt: optimized }
     return c.json({ success: true, data: responseData } satisfies z.infer<typeof OptimizePromptResponseSchema>, 200)
   })
+  .openapi(suggestFilesRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { prompt, limit = 10 } = c.req.valid('json')
+
+    const projectSummary = await getFullProjectSummary(projectId)
+    const systemPrompt = `
+<role>
+You are a code assistant that recommends relevant files based on user input.
+You have a list of file summaries and a user request.
+</role>
+
+<response_format>
+    {"fileIds": [1234567890123, 1234567890124]}
+</response_format>
+
+<guidelines>
+- Return file IDs as numbers (unix timestamps in milliseconds)
+- For simple tasks: return max 5 files
+- For complex tasks: return max ${Math.min(limit, 10)} files
+- For very complex tasks: return max ${Math.min(limit, 20)} files
+- Do not add comments in your response
+- Strictly follow the JSON schema, do not add any additional properties or comments
+- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
+</guidelines>
+        `
+
+    const userPrompt = `
+<project_summary>
+${projectSummary}
+</project_summary>
+
+<user_query>
+${prompt}
+</user_query>
+`
+    try {
+      const result = await projectService.generateStructuredData({
+        prompt: userPrompt,
+        schema: FileSuggestionsZodSchema,
+        systemMessage: systemPrompt
+      })
+
+      // Fetch the actual file objects based on the recommended file IDs
+      const fileIds = result.object.fileIds
+      const allFiles = await projectService.getProjectFiles(projectId)
+      const recommendedFiles = allFiles?.filter(file => fileIds.includes(file.id)) || []
+
+      const payload = {
+        success: true,
+        data: recommendedFiles
+      } satisfies z.infer<typeof SuggestFilesResponseSchema>
+
+      return c.json(payload, 200)
+    } catch (error: any) {
+      console.error('[SuggestFiles Project] Error:', error)
+      if (error instanceof ApiError) throw error
+      throw new ApiError(500, `Failed to suggest files: ${error.message}`, 'AI_SUGGESTION_ERROR')
+    }
+  })
+
 
 export type ProjectRouteTypes = typeof projectRoutes

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PromptsRouteImport } from './routes/prompts'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as ProjectSummarizationRouteImport } from './routes/project-summarization'
 import { Route as KeysRouteImport } from './routes/keys'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as ClaudeCodeRouteImport } from './routes/claude-code'
@@ -25,6 +26,11 @@ const PromptsRoute = PromptsRouteImport.update({
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectSummarizationRoute = ProjectSummarizationRouteImport.update({
+  id: '/project-summarization',
+  path: '/project-summarization',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KeysRoute = KeysRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
+  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
+  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/claude-code': typeof ClaudeCodeRoute
   '/health': typeof HealthRoute
   '/keys': typeof KeysRoute
+  '/project-summarization': typeof ProjectSummarizationRoute
   '/projects': typeof ProjectsRoute
   '/prompts': typeof PromptsRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/claude-code'
     | '/health'
     | '/keys'
+    | '/project-summarization'
     | '/projects'
     | '/prompts'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/claude-code'
     | '/health'
     | '/keys'
+    | '/project-summarization'
     | '/projects'
     | '/prompts'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/claude-code'
     | '/health'
     | '/keys'
+    | '/project-summarization'
     | '/projects'
     | '/prompts'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   ClaudeCodeRoute: typeof ClaudeCodeRoute
   HealthRoute: typeof HealthRoute
   KeysRoute: typeof KeysRoute
+  ProjectSummarizationRoute: typeof ProjectSummarizationRoute
   ProjectsRoute: typeof ProjectsRoute
   PromptsRoute: typeof PromptsRoute
 }
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project-summarization': {
+      id: '/project-summarization'
+      path: '/project-summarization'
+      fullPath: '/project-summarization'
+      preLoaderRoute: typeof ProjectSummarizationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/keys': {
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClaudeCodeRoute: ClaudeCodeRoute,
   HealthRoute: HealthRoute,
   KeysRoute: KeysRoute,
+  ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
   PromptsRoute: PromptsRoute,
 }

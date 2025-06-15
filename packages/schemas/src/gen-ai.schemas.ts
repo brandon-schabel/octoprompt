@@ -230,6 +230,12 @@ export const FilenameSuggestionSchema = z
   })
   .openapi('FilenameSuggestionOutput')
 
+
+// Export internal schemas needed by routes
+export const FileSuggestionsZodSchema = z.object({
+  fileIds: z.array(z.number())
+})
+
 // Define other schemas as needed...
 // const CodeReviewSchema = z.object({ ... });
 
