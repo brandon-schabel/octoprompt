@@ -72,6 +72,8 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const { selectedFiles } = useSelectedFiles()
     const projectFileMap = useProjectFileMap(activeProjectTabId ?? -1)
 
+    console.log({projectFileMap})
+
     // Calculate total tokens
     const totalTokens = useMemo(() => {
       return calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap)
@@ -98,6 +100,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     const buildFullProjectContext = () => {
       const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
+      console.log({selectedFiles})
 
       return buildPromptContent({
         promptData,

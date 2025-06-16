@@ -19,6 +19,3 @@ export * from './src/utils/prompts-map'
 
 // service utilities
 export * from './src/utils/service-utils'
-
-// constants
-export * from './src/constants/claude-code-templates'

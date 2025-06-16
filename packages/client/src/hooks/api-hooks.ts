@@ -249,7 +249,7 @@ export function useGetProjectFiles(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.files(projectId),
     queryFn: () => octoClient.projects.getProjectFiles(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 2 * 60 * 1000, // 2 minutes for files
     refetchOnWindowFocus: true
   })
@@ -259,7 +259,7 @@ export function useGetProjectFilesWithoutContent(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.filesWithoutContent(projectId),
     queryFn: () => octoClient.projects.getProjectFilesWithoutContent(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId  && projectId !== -1,
     staleTime: 5 * 60 * 1000, // 5 minutes for file metadata
     refetchOnWindowFocus: true
   })
