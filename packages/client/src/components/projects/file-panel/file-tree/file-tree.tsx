@@ -50,6 +50,7 @@ export type VisibleItem = {
 export type FileTreeProps = {
   root: Record<string, FileNode>
   onViewFile?: (file: ProjectFile | null) => void
+  onViewFileInEditMode?: (file: ProjectFile | null) => void
   projectRoot: string
   resolveImports?: boolean
   preferredEditor: EditorType
@@ -91,6 +92,7 @@ interface FileTreeNodeRowProps {
   onFocus: () => void
   onToggleOpen: () => void
   onViewFile?: (file: ProjectFile) => void
+  onViewFileInEditMode?: (file: ProjectFile) => void
   projectRoot: string
 }
 
@@ -99,7 +101,7 @@ interface FileTreeNodeRowProps {
  * ForwardRef so we can focus DOM nodes from parent.
  */
 const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(function FileTreeNodeRow(
-  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, projectRoot },
+  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, onViewFileInEditMode, projectRoot },
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
@@ -190,9 +192,15 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
           }}
           tabIndex={0}
           onClick={onFocus}
+          onDoubleClick={(e) => {
+            e.stopPropagation()
+            if (!isFolder && item.node.file && onViewFileInEditMode) {
+              onViewFileInEditMode(item.node.file)
+            }
+          }}
           onKeyDown={handleKeyDown}
         >
-          <div className='flex items-center hover:bg-muted/50 rounded-sm gap-1 group'>
+          <div className='flex items-center hover:bg-muted/50 rounded-sm gap-1 group select-none'>
             {isFolder ? (
               <Button
                 variant='ghost'
@@ -441,7 +449,7 @@ export type FileTreeRef = {
 }
 
 export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree(
-  { root, onViewFile, projectRoot, resolveImports, onNavigateRight, onNavigateToSearch },
+  { root, onViewFile, onViewFileInEditMode, projectRoot, resolveImports, onNavigateRight, onNavigateToSearch },
   ref
 ) {
   const totalFiles = countTotalFiles(root)
@@ -689,6 +697,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
               onFocus={() => setFocusedIndex(idx)}
               onToggleOpen={() => toggleOpen(item.path)}
               onViewFile={onViewFile}
+              onViewFileInEditMode={onViewFileInEditMode}
               projectRoot={projectRoot}
             />
           ))}

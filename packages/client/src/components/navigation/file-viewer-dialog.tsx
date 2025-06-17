@@ -21,6 +21,7 @@ type FileViewerDialogProps = {
   onSave?: (content: string) => Promise<void> | void
   filePath?: string
   projectId?: number
+  startInEditMode?: boolean
 }
 
 function getLanguageByExtension(extension?: string): string {
@@ -68,7 +69,8 @@ export function FileViewerDialog({
   onClose,
   onSave,
   filePath,
-  projectId
+  projectId,
+  startInEditMode = false
 }: FileViewerDialogProps) {
   const [isEditingFile, setIsEditingFile] = useState(false)
   const [editedContent, setEditedContent] = useState<string>('')
@@ -90,11 +92,11 @@ export function FileViewerDialog({
 
   useEffect(() => {
     if (open) {
-      setIsEditingFile(false)
+      setIsEditingFile(startInEditMode && !!viewedFile && !!projectId)
       setEditedContent(viewedFile?.content || markdownText || '')
       setIsFullscreen(false)
     }
-  }, [viewedFile, markdownText, open])
+  }, [viewedFile, markdownText, open, startInEditMode, projectId])
 
   // Handle F11 key for fullscreen toggle
   useEffect(() => {

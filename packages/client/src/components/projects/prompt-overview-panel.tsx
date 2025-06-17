@@ -9,7 +9,7 @@ import { Progress } from '@ui'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
 import { PromptsList, type PromptsListRef } from '@/components/projects/prompts-list'
 import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
-import { buildPromptContent, calculateTotalTokens } from '@octoprompt/shared'
+import { buildPromptContent, calculateTotalTokens } from 'shared/src/utils/projects-utils'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { OctoTooltip } from '@/components/octo/octo-tooltip'
@@ -20,18 +20,19 @@ import {
   useProjectTabField,
   useActiveChatId
 } from '@/hooks/use-kv-local-storage'
-import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
+import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 
 import { SuggestedFilesDialog } from '../suggest-files-dialog'
 import { VerticalResizablePanel } from '@ui'
-import { ProjectFile } from '@octoprompt/schemas'
 import { useCreateChat } from '@/hooks/api/use-chat-api'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Binoculars, Copy, FileText, MessageCircleCode, Search } from 'lucide-react'
+import { Binoculars, Bot, Copy, FileText, MessageCircleCode, Search } from 'lucide-react'
 import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-api'
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { ProjectFile } from '@octoprompt/schemas'
+import { AgentCoderControlDialog } from './agent-coder-dialog'
 
 export type PromptOverviewPanelRef = {
   focusPrompt: () => void
@@ -45,6 +46,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
   function PromptOverviewPanel({ className }, ref) {
     const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
     const updateActiveProjectTab = useUpdateActiveProjectTab()
+    const [isLogDialogOpen, setIsLogDialogOpen] = useState(false)
 
     const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId ?? -1)
     const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId ?? -1)
@@ -64,19 +66,18 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const [showSuggestions, setShowSuggestions] = useState(false)
 
     // Load the project's prompts
-    const { data: promptDataRes } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
-    const promptData = promptDataRes?.data ?? []
+    const { data: promptData } = useGetProjectPrompts(activeProjectTabState?.selectedProjectId ?? -1)
     const { data: projectSummaryRes } = useGetProjectSummary(activeProjectTabState?.selectedProjectId ?? -1)
 
     // Read selected files
-    const { selectedFiles } = useSelectedFiles()
-    const projectFileMap = useProjectFileMap(activeProjectTabId ?? -1)
+    const { selectedFiles, projectFileMap } = useSelectedFiles()
 
-    console.log({projectFileMap})
+
+
 
     // Calculate total tokens
     const totalTokens = useMemo(() => {
-      return calculateTotalTokens(promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap)
+      return calculateTotalTokens(promptData?.data, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap)
     }, [promptData, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap])
 
     const usagePercentage = contextLimit > 0 ? (totalTokens / contextLimit) * 100 : 0
@@ -100,10 +101,16 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     const buildFullProjectContext = () => {
       const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
-      console.log({selectedFiles})
+
+
+
+      if (!promptData?.data) {
+
+        return
+      }
 
       return buildPromptContent({
-        promptData,
+        promptData: promptData?.data,
         selectedPrompts,
         userPrompt: finalUserPrompt,
         selectedFiles,
@@ -111,7 +118,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       })
     }
     const handleCopyAll = () => {
-      copyToClipboard(buildFullProjectContext(), {
+      copyToClipboard(buildFullProjectContext() ?? '', {
         successMessage: 'All content copied',
         errorMessage: 'Copy failed'
       })
@@ -126,16 +133,24 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       findSuggestedFilesMutation.mutate(
         {
           projectId: activeProjectTabState?.selectedProjectId ?? -1,
-          prompt: localUserPrompt,
-          limit: 10
+          prompt: `Please find the relevant files for the following prompt: ${localUserPrompt}`,
         },
         {
-          onSuccess: (suggestedFilesData) => {
-            if (suggestedFilesData && suggestedFilesData.length > 0) {
-              setSuggestedFiles(suggestedFilesData)
+          onSuccess: (recommendedFiles) => {
+            if (recommendedFiles && recommendedFiles) {
+              const files = recommendedFiles
+                .map((id) => {
+                  const file = projectFileMap.get(id)
+                  if (file) {
+                    return file
+                  }
+
+                  return null
+                })
+                .filter(Boolean) as ProjectFile[]
+
+              setSuggestedFiles(files)
               setShowSuggestions(true)
-            } else {
-              toast.info('No files were suggested for this prompt')
             }
           }
         }
@@ -144,7 +159,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
 
     async function handleChatWithContext() {
       const defaultTitle = `New Chat ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-      setInitialChatContent(buildFullProjectContext())
+      setInitialChatContent(buildFullProjectContext() ?? '')
 
       // without the timeout, the intial content doesn't get set before the navigation to the chat page
       setTimeout(async () => {
@@ -184,6 +199,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       }
     }))
 
+    // --- NEW: Handler to view the currently running agent's logs ---
+    const handleViewAgentDialog = () => {
+      setIsLogDialogOpen(true) // Open the dialog
+    }
     const fileTree = useProjectFileTree()
 
     const tree = useMemo(() => {
@@ -215,7 +234,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       })
     }
 
-
     return (
       <ErrorBoundary>
         <TooltipProvider>
@@ -225,7 +243,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               onClose={() => setShowSuggestions(false)}
               suggestedFiles={suggestedFiles}
             />
-
 
             <div className='flex-1 flex flex-col min-h-0 p-4 overflow-hidden min-w-0'>
               {/* 1) Token usage */}
@@ -332,6 +349,26 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             <p>Copy the project summary and file tree to clipboard.</p>
                           </TooltipContent>
                         </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={handleViewAgentDialog}
+                              variant={'outline'}
+                              size='sm'
+                              disabled={!activeProjectTabState?.selectedProjectId || activeProjectTabState?.selectedProjectId === -1}
+                              className={cn(
+                                'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50'
+                              )}
+                            >
+                              <Bot className='h-3.5 w-3.5 mr-1' /> Agent
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{!activeProjectTabState?.selectedProjectId || activeProjectTabState?.selectedProjectId === -1 
+                              ? 'Select a project to use Agent Coder' 
+                              : 'Open the Agent Coder control panel to run AI tasks.'}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>
@@ -344,6 +381,18 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 resizerClassName='my-1'
               />
             </div>
+
+            <AgentCoderControlDialog
+              open={isLogDialogOpen}
+              onOpenChange={setIsLogDialogOpen}
+              userInput={localUserPrompt}
+              selectedFiles={selectedFiles}
+              projectId={activeProjectTabState?.selectedProjectId || -1}
+              selectedPrompts={selectedPrompts}
+              promptData={promptData?.data}
+              totalTokens={totalTokens}
+              projectFileMap={projectFileMap}
+            />
           </div>
         </TooltipProvider>
       </ErrorBoundary>

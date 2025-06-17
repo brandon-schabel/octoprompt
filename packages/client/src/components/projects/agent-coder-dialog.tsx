@@ -243,7 +243,7 @@ export function AgentCoderControlDialog({
         // unix timestamp in milliseconds
         const newAgentJobId = new Date().getTime()
 
-        if (!projectId) {
+        if (!projectId || projectId === -1) {
             toast.error('No project selected.')
             return
         }
@@ -284,6 +284,10 @@ export function AgentCoderControlDialog({
         if (!selectedJobId || selectedJobId === -1) {
             // check selectedJobId directly
             toast.error('Agent Job ID is missing.')
+            return
+        }
+        if (!projectId || projectId === -1) {
+            toast.error('Invalid project ID.')
             return
         }
         confirmChangesMutation.mutate({ agentJobId: selectedJobId, projectId })

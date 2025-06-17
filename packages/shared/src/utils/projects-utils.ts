@@ -9,7 +9,7 @@ export function buildPromptContent({
   selectedPrompts,
   userPrompt
 }: {
-  promptData: Prompt[] | null | undefined
+  promptData: Prompt[] 
   selectedPrompts: number[]
   userPrompt: string
   selectedFiles: number[]

@@ -34,6 +34,7 @@ export function useGetAgentCoderRuns(projectId: number) {
   return useQuery({
     queryKey: ['agent-coder-runs', projectId],
     queryFn: () => octoClient.agentCoder.listRuns(projectId),
+    enabled: projectId > 0, // Only enable if valid projectId
     select: (data) => data.data || []
   })
 }
@@ -45,7 +46,7 @@ export function useGetAgentCoderLogs(projectId: number, agentJobId: number | nul
       if (!agentJobId) throw new Error('No agent job ID')
       return octoClient.agentCoder.getLogs(projectId, agentJobId)
     },
-    enabled: !!agentJobId,
+    enabled: projectId > 0 && !!agentJobId, // Check both projectId and agentJobId
     select: (data) => data.data || []
   })
 }
@@ -57,7 +58,7 @@ export function useGetAgentCoderData(projectId: number, agentJobId: number | nul
       if (!agentJobId) throw new Error('No agent job ID')
       return octoClient.agentCoder.getData(projectId, agentJobId)
     },
-    enabled: !!agentJobId,
+    enabled: projectId > 0 && !!agentJobId, // Check both projectId and agentJobId
     select: (data) => data.data as AgentCoderRunSuccessData | null
   })
 }
