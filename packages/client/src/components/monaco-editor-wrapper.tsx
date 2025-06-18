@@ -15,6 +15,7 @@ interface MonacoEditorWrapperProps {
   readOnly?: boolean
   onMount?: (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => void
   onSave?: () => void
+  className?: string
 }
 
 export function MonacoEditorWrapper({
@@ -24,7 +25,8 @@ export function MonacoEditorWrapper({
   height = '100%',
   readOnly = false,
   onMount,
-  onSave
+  onSave,
+  className
 }: MonacoEditorWrapperProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const [monaco, setMonaco] = useState<Monaco | null>(null)
@@ -50,14 +52,15 @@ export function MonacoEditorWrapper({
   }
 
   return (
-    <Editor
-      height={height}
-      language={language}
-      value={value}
-      onChange={onChange}
-      onMount={handleEditorDidMount}
-      theme={isDarkMode ? 'vs-dark' : 'light'}
-      options={{
+    <div className={className}>
+      <Editor
+        height={height}
+        language={language}
+        value={value}
+        onChange={onChange}
+        onMount={handleEditorDidMount}
+        theme={isDarkMode ? 'vs-dark' : 'light'}
+        options={{
         readOnly,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
@@ -73,6 +76,7 @@ export function MonacoEditorWrapper({
         tabSize: 2,
         insertSpaces: true
       }}
-    />
+      />
+    </div>
   )
 }

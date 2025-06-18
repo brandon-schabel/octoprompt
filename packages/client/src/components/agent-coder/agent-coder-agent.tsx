@@ -14,7 +14,7 @@ import {
   useGetAgentCoderLogs,
   useGetAgentCoderData,
   useConfirmAgentCoderChanges,
-  useDeleteAgentCoderRun,
+  useDeleteAgentCoderRun
 } from '@/hooks/api/use-agent-coder-api'
 import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
@@ -50,7 +50,7 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
 
   const handleConfirmChanges = async () => {
     if (!selectedRunId) return
-    
+
     try {
       await confirmChanges.mutateAsync({ projectId, agentJobId: selectedRunId })
       toast.success('Changes confirmed and applied')
@@ -76,53 +76,47 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
   const hasChanges = runData?.fileChanges && Object.keys(runData.fileChanges).length > 0
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold">Agent Coder</h2>
-        <Button
-          onClick={handleRunAgentCoder}
-          disabled={runAgentCoder.isPending}
-          size="sm"
-        >
+    <div className='h-full flex flex-col'>
+      <div className='flex items-center justify-between p-4 border-b'>
+        <h2 className='text-lg font-semibold'>Agent Coder</h2>
+        <Button onClick={handleRunAgentCoder} disabled={runAgentCoder.isPending} size='sm'>
           {runAgentCoder.isPending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
               Running...
             </>
           ) : (
             <>
-              <Play className="mr-2 h-4 w-4" />
+              <Play className='mr-2 h-4 w-4' />
               Run Agent
             </>
           )}
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
-        <TabsList className="w-full justify-start rounded-none border-b">
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-          <TabsTrigger value="logs" disabled={!selectedRunId}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className='flex-1 flex flex-col'>
+        <TabsList className='w-full justify-start rounded-none border-b'>
+          <TabsTrigger value='runs'>Runs</TabsTrigger>
+          <TabsTrigger value='logs' disabled={!selectedRunId}>
             Logs
           </TabsTrigger>
-          <TabsTrigger value="confirm" disabled={!selectedRunId || !hasChanges}>
+          <TabsTrigger value='confirm' disabled={!selectedRunId || !hasChanges}>
             Confirm Changes
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="runs" className="flex-1 p-4">
-          <ScrollArea className="h-full">
+        <TabsContent value='runs' className='flex-1 p-4'>
+          <ScrollArea className='h-full'>
             {isLoadingRuns ? (
-              <div className="flex items-center justify-center p-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
+              <div className='flex items-center justify-center p-8'>
+                <Loader2 className='h-6 w-6 animate-spin' />
               </div>
             ) : runs.length === 0 ? (
               <Alert>
-                <AlertDescription>
-                  No agent runs yet. Click "Run Agent" to start.
-                </AlertDescription>
+                <AlertDescription>No agent runs yet. Click "Run Agent" to start.</AlertDescription>
               </Alert>
             ) : (
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 {runs.map((run) => (
                   <Card
                     key={run.jobId}
@@ -131,27 +125,25 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
                     }`}
                     onClick={() => setSelectedRunId(run.jobId)}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className='flex items-center justify-between'>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Run #{run.jobId}</span>
-                          <Badge variant={run.status === 'completed' ? 'default' : 'secondary'}>
-                            {run.status}
-                          </Badge>
+                        <div className='flex items-center gap-2'>
+                          <span className='font-medium'>Run #{run.jobId}</span>
+                          <Badge variant={run.status === 'completed' ? 'default' : 'secondary'}>{run.status}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className='text-sm text-muted-foreground'>
                           {formatDistanceToNow(new Date(run.startTime), { addSuffix: true })}
                         </p>
                       </div>
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant='ghost'
+                        size='sm'
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteRun(run.jobId)
                         }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className='h-4 w-4' />
                       </Button>
                     </div>
                   </Card>
@@ -161,37 +153,32 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="logs" className="flex-1 flex flex-col p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium">Execution Logs</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowRawData(!showRawData)}
-            >
+        <TabsContent value='logs' className='flex-1 flex flex-col p-4'>
+          <div className='flex items-center justify-between mb-4'>
+            <h3 className='font-medium'>Execution Logs</h3>
+            <Button variant='outline' size='sm' onClick={() => setShowRawData(!showRawData)}>
               {showRawData ? 'Show Logs' : 'Show Raw Data'}
             </Button>
           </div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className='flex-1'>
             {showRawData && runData ? (
               <LazyMonacoEditor
                 value={JSON.stringify(runData, null, 2)}
                 onChange={() => {}}
-                language="json"
+                language='json'
                 readOnly
-                height="100%"
+                height='100%'
               />
             ) : (
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 {logs.map((log, index) => (
-                  <div key={index} className="font-mono text-sm">
-                    <span className="text-muted-foreground">
-                      [{new Date(log.timestamp).toLocaleTimeString()}]
-                    </span>{' '}
-                    <span className={`${
-                      log.level === 'error' ? 'text-red-500' : 
-                      log.level === 'warning' ? 'text-yellow-500' : ''
-                    }`}>
+                  <div key={index} className='font-mono text-sm'>
+                    <span className='text-muted-foreground'>[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
+                    <span
+                      className={`${
+                        log.level === 'error' ? 'text-red-500' : log.level === 'warning' ? 'text-yellow-500' : ''
+                      }`}
+                    >
                       {log.message}
                     </span>
                   </div>
@@ -201,39 +188,36 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="confirm" className="flex-1 flex flex-col p-4">
+        <TabsContent value='confirm' className='flex-1 flex flex-col p-4'>
           {runData?.fileChanges && (
             <>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium">Proposed Changes</h3>
-                <Button
-                  onClick={handleConfirmChanges}
-                  disabled={confirmChanges.isPending}
-                >
+              <div className='flex items-center justify-between mb-4'>
+                <h3 className='font-medium'>Proposed Changes</h3>
+                <Button onClick={handleConfirmChanges} disabled={confirmChanges.isPending}>
                   {confirmChanges.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                       Applying...
                     </>
                   ) : (
                     <>
-                      <Check className="mr-2 h-4 w-4" />
+                      <Check className='mr-2 h-4 w-4' />
                       Confirm Changes
                     </>
                   )}
                 </Button>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="space-y-4">
+              <ScrollArea className='flex-1'>
+                <div className='space-y-4'>
                   {Object.entries(runData.fileChanges).map(([path, change]) => (
-                    <Card key={path} className="p-4">
-                      <h4 className="font-medium mb-2">{path}</h4>
+                    <Card key={path} className='p-4'>
+                      <h4 className='font-medium mb-2'>{path}</h4>
                       <LazyMonacoEditor
                         value={change.content}
                         onChange={() => {}}
                         language={path.split('.').pop() || 'plaintext'}
                         readOnly
-                        height="300px"
+                        height='300px'
                       />
                     </Card>
                   ))}

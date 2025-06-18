@@ -140,8 +140,6 @@ export const projectStorage = {
     return writeValidatedJson(getProjectFilesPath(projectId), files, ProjectFilesStorageSchema)
   },
 
-
-
   async updateProjectFile(
     projectId: number,
     fileId: number,

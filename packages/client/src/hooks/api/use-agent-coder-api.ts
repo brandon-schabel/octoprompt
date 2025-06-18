@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { octoClient } from '@/hooks/api-hooks'
 import { toast } from 'sonner'
-import type {
-  RunAgentCoderBody,
-  AgentCoderRunSuccessData
-} from '@octoprompt/schemas'
+import type { RunAgentCoderBody, AgentCoderRunSuccessData } from '@octoprompt/schemas'
 
 export function useRunAgentCoder() {
   const queryClient = useQueryClient()
@@ -73,7 +70,7 @@ export function useConfirmAgentCoderChanges() {
     onSuccess: (data, variables) => {
       if (data.success) {
         toast.success(data.message || 'Changes confirmed and applied!')
-        
+
         // Invalidate related queries
         queryClient.invalidateQueries({ queryKey: ['project-files', variables.projectId] })
         queryClient.invalidateQueries({ queryKey: ['agent-coder-data', variables.projectId, variables.agentJobId] })
@@ -98,7 +95,7 @@ export function useDeleteAgentCoderRun() {
     onSuccess: (data, variables) => {
       if (data.success) {
         toast.success(data.message || 'Agent run deleted successfully!')
-        
+
         // Invalidate and remove related queries
         queryClient.invalidateQueries({ queryKey: ['agent-coder-runs'] })
         queryClient.removeQueries({ queryKey: ['agent-coder-data', variables.agentJobId] })

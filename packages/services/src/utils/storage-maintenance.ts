@@ -1,7 +1,7 @@
-import { 
-  projectStorage, 
-  chatStorage, 
-  promptStorage, 
+import {
+  projectStorage,
+  chatStorage,
+  promptStorage,
   providerKeyStorage,
   claudeCodeStorage,
   createCleanupScheduler,
@@ -21,9 +21,7 @@ let cleanupSchedulers: Array<{ stop: () => void }> = []
 /**
  * Initialize storage maintenance routines
  */
-export async function initializeStorageMaintenance(
-  options: MaintenanceOptions = {}
-): Promise<void> {
+export async function initializeStorageMaintenance(options: MaintenanceOptions = {}): Promise<void> {
   const {
     enableScheduledCleanup = true,
     cleanupIntervalMs = 3600000, // 1 hour
@@ -61,7 +59,7 @@ async function performInitialCleanup(options: { verbose?: boolean }): Promise<vo
     { name: 'chats', storage: chatStorage, basePath: 'data/chat_storage' },
     { name: 'prompts', storage: promptStorage, basePath: 'data/prompt_storage' },
     { name: 'tickets', basePath: 'data/ticket_storage' },
-    { name: 'provider keys', storage: providerKeyStorage, basePath: 'data/provider_key_storage' },
+    { name: 'provider keys', storage: providerKeyStorage, basePath: 'data/provider_key_storage' }
   ]
 
   for (const { name, storage, basePath } of storages) {
@@ -77,7 +75,7 @@ async function performInitialCleanup(options: { verbose?: boolean }): Promise<vo
       // Uncomment the following to enable full cleanup:
       // const cleanup = new StorageCleanup(storage as any, basePath)
       // const result = await cleanup.cleanup(cleanupOptions)
-      // 
+      //
       // if (options.verbose || result.errors.length > 0) {
       //   console.log(`[StorageMaintenance] ${name} cleanup result:`, {
       //     orphanedFiles: result.orphanedFiles.length,
@@ -97,10 +95,7 @@ async function performInitialCleanup(options: { verbose?: boolean }): Promise<vo
 /**
  * Clean temporary files in a directory
  */
-async function cleanTempFiles(
-  basePath: string,
-  options: CleanupOptions
-): Promise<void> {
+async function cleanTempFiles(basePath: string, options: CleanupOptions): Promise<void> {
   const fs = await import('node:fs/promises')
   const { existsSync } = await import('node:fs')
 
@@ -184,11 +179,11 @@ function setupScheduledCleanup(intervalMs: number, verbose: boolean): void {
  */
 export function stopStorageMaintenance(): void {
   console.log('[StorageMaintenance] Stopping all cleanup schedulers...')
-  
+
   for (const scheduler of cleanupSchedulers) {
     scheduler.stop()
   }
-  
+
   cleanupSchedulers = []
 }
 

@@ -155,13 +155,10 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     )
   }
 
-  const handleViewFile = useCallback(
-    (file: ProjectFile, editMode: boolean = false) => {
-      setOpenInEditMode(editMode)
-      setViewedFile(file)
-    },
-    []
-  )
+  const handleViewFile = useCallback((file: ProjectFile, editMode: boolean = false) => {
+    setOpenInEditMode(editMode)
+    setViewedFile(file)
+  }, [])
 
   const handleSaveFileContent = useCallback(
     async (content: string) => {

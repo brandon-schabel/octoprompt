@@ -5,16 +5,19 @@ OctoPrompt guidance for Claude Code (claude.ai/code).
 ## Commands
 
 ### Development
+
 - `bun run dev` - Start client and server
 - `bun run dev:client` - Client only (port 5173)
 - `bun run dev:server` - Server only (port 3147)
 
 ### Testing
+
 - `bun run test:all` - Run all tests
 - `bun run test:[package]` - Run specific package tests
 - `bun run e2e` - Run Playwright E2E tests
 
 ### Build
+
 - `bun run build-binaries` - Build cross-platform binaries
 - `bun run format` - Format with Prettier
 
@@ -88,12 +91,15 @@ const storage = new StorageV2<Project>({
 - Tailwind CSS
 
 ### Key Hooks Pattern
+
 ```typescript
 export function useCreateChat() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
-    onSuccess: () => { /* invalidate queries */ }
+    onSuccess: () => {
+      /* invalidate queries */
+    }
   })
 }
 ```
@@ -101,11 +107,13 @@ export function useCreateChat() {
 ## Backend Architecture
 
 ### Layers
+
 1. **Storage**: Enhanced JSON storage with V2 features
 2. **Services**: Business logic orchestration
 3. **Routes**: Hono + OpenAPI specs
 
 ### Core Patterns
+
 - **Error Handling**: `ApiError` class
 - **Validation**: Zod at storage and API layers
 - **ID Generation**: `Date.now()` with collision handling
@@ -126,6 +134,7 @@ export function useCreateChat() {
 ## Hono Route Ordering
 
 Order routes from most to least specific:
+
 1. Exact literals (`/api/health`)
 2. Literal + param (`/api/users/me`)
 3. Single param (`/api/users/{id}`)
@@ -135,10 +144,12 @@ Order routes from most to least specific:
 ## Utilities
 
 **Schemas (`@octoprompt/schemas`)**
+
 - `unixTSSchemaSpec` - Unix timestamp validation
 - Model configs: `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`
 
 **Shared (`@octoprompt/shared`)**
+
 - `mergeDeep()` - Recursive object merge
 - `writeJson()` - Write with optional Zod validation
 - `readJson()` - Read and parse JSON
@@ -148,6 +159,7 @@ Order routes from most to least specific:
 ## Configuration
 
 **Prettier**
+
 ```json
 {
   "semi": false,
@@ -159,6 +171,7 @@ Order routes from most to least specific:
 ```
 
 **TypeScript**
+
 - Strict mode enabled
 - Path aliases
 - ES2022 target

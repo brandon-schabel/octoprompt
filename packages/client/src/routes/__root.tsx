@@ -42,6 +42,12 @@ function GlobalCommandPalette() {
     setOpen((o) => !o)
   })
 
+  // Add hotkey for asset generator
+  useHotkeys('mod+g', (evt) => {
+    evt.preventDefault()
+    navigate({ to: '/assets' })
+  })
+
   const filteredProjects = (projectsData?.data ?? [])
     .filter((project) => {
       const searchLower = debouncedSearch.toLowerCase()
@@ -110,6 +116,15 @@ function GlobalCommandPalette() {
             }}
           >
             Manage Prompts
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
+              navigate({ to: '/assets' })
+              setOpen(false)
+            }}
+          >
+            Generate Assets
+            <CommandShortcut>⌘ G</CommandShortcut>
           </CommandItem>
         </CommandGroup>
         <CommandGroup heading='File Navigation'>

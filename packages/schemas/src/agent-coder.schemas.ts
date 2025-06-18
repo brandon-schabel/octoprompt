@@ -177,34 +177,46 @@ export const AgentDataLogSchema = z
   .openapi('AgentDataLog') // Give it a unique OpenAPI name
 
 // --- Response Schemas for API ---
-export const ListAgentCoderRunsResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.array(z.number()).openapi({ description: 'List of available agent run job IDs' })
-}).openapi('ListAgentCoderRunsResponse')
-
-export const GetAgentCoderLogsResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.array(z.record(z.unknown())).openapi({ description: 'Agent orchestrator log content as an array of JSON objects' })
-}).openapi('GetAgentCoderLogsResponse')
-
-export const GetAgentCoderDataResponseSchema = z.object({
-  success: z.boolean(),
-  data: AgentDataLogSchema.nullable()
-}).openapi('GetAgentCoderDataResponse')
-
-export const ConfirmAgentCoderChangesResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string().openapi({ example: 'Agent run changes successfully written to filesystem.' }),
-  writtenFiles: z.array(z.string()).openapi({
-    description: 'Relative paths of files proposed for writing (actual writes depend on checksums).',
-    example: ['src/new-feature.ts', 'test/new-feature.test.ts']
+export const ListAgentCoderRunsResponseSchema = z
+  .object({
+    success: z.boolean(),
+    data: z.array(z.number()).openapi({ description: 'List of available agent run job IDs' })
   })
-}).openapi('ConfirmAgentCoderChangesResponse')
+  .openapi('ListAgentCoderRunsResponse')
 
-export const DeleteAgentCoderRunResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string().openapi({ example: 'Agent run job-xyz-123 deleted successfully.' })
-}).openapi('DeleteAgentCoderRunResponse')
+export const GetAgentCoderLogsResponseSchema = z
+  .object({
+    success: z.boolean(),
+    data: z
+      .array(z.record(z.unknown()))
+      .openapi({ description: 'Agent orchestrator log content as an array of JSON objects' })
+  })
+  .openapi('GetAgentCoderLogsResponse')
+
+export const GetAgentCoderDataResponseSchema = z
+  .object({
+    success: z.boolean(),
+    data: AgentDataLogSchema.nullable()
+  })
+  .openapi('GetAgentCoderDataResponse')
+
+export const ConfirmAgentCoderChangesResponseSchema = z
+  .object({
+    success: z.literal(true),
+    message: z.string().openapi({ example: 'Agent run changes successfully written to filesystem.' }),
+    writtenFiles: z.array(z.string()).openapi({
+      description: 'Relative paths of files proposed for writing (actual writes depend on checksums).',
+      example: ['src/new-feature.ts', 'test/new-feature.test.ts']
+    })
+  })
+  .openapi('ConfirmAgentCoderChangesResponse')
+
+export const DeleteAgentCoderRunResponseSchema = z
+  .object({
+    success: z.literal(true),
+    message: z.string().openapi({ example: 'Agent run job-xyz-123 deleted successfully.' })
+  })
+  .openapi('DeleteAgentCoderRunResponse')
 
 // --- Type Exports ---
 export type Task = z.infer<typeof AgentTaskSchema>

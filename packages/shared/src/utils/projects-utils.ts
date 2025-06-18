@@ -9,7 +9,7 @@ export function buildPromptContent({
   selectedPrompts,
   userPrompt
 }: {
-  promptData: Prompt[] 
+  promptData: Prompt[]
   selectedPrompts: number[]
   userPrompt: string
   selectedFiles: number[]
@@ -28,7 +28,6 @@ export function buildPromptContent({
   const filesWithContent = selectedFiles
     .map((fileId) => fileMap.get(fileId))
     .filter((file): file is ProjectFile => !!file?.content)
-
 
   if (filesWithContent.length > 0) {
     contentToCopy += `<file_context>\n`

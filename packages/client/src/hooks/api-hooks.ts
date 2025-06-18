@@ -259,7 +259,7 @@ export function useGetProjectFilesWithoutContent(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.filesWithoutContent(projectId),
     queryFn: () => octoClient.projects.getProjectFilesWithoutContent(projectId),
-    enabled: !!projectId  && projectId !== -1,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 5 * 60 * 1000, // 5 minutes for file metadata
     refetchOnWindowFocus: true
   })
@@ -394,7 +394,15 @@ export function useSuggestFiles() {
 export function useSummarizeProjectFiles() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ projectId, fileIds, force = false }: { projectId: number; fileIds: number[]; force?: boolean }) => {
+    mutationFn: async ({
+      projectId,
+      fileIds,
+      force = false
+    }: {
+      projectId: number
+      fileIds: number[]
+      force?: boolean
+    }) => {
       const response = await octoClient.projects.summarizeFiles(projectId, { fileIds, force })
       return response.data
     },

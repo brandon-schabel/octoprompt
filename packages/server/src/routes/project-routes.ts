@@ -14,7 +14,7 @@ import {
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
   ProjectFile,
-  FileSuggestionsZodSchema,
+  FileSuggestionsZodSchema
 } from '@octoprompt/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
@@ -298,7 +298,6 @@ const getProjectSummaryRoute = createRoute({
     500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
 })
-
 
 const suggestFilesRoute = createRoute({
   method: 'post',
@@ -625,7 +624,7 @@ ${prompt}
       // Fetch the actual file objects based on the recommended file IDs
       const fileIds = result.object.fileIds
       const allFiles = await projectService.getProjectFiles(projectId)
-      const recommendedFiles = allFiles?.filter(file => fileIds.includes(file.id)) || []
+      const recommendedFiles = allFiles?.filter((file) => fileIds.includes(file.id)) || []
 
       const payload = {
         success: true,
@@ -652,7 +651,11 @@ ${prompt}
             'application/json': {
               schema: z.object({
                 fileIds: z.array(z.number()).min(1).describe('Array of file IDs to summarize'),
-                force: z.boolean().optional().default(false).describe('Force re-summarization of already summarized files')
+                force: z
+                  .boolean()
+                  .optional()
+                  .default(false)
+                  .describe('Force re-summarization of already summarized files')
               })
             }
           }
@@ -676,18 +679,21 @@ ${prompt}
         },
         404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
         422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+        500: {
+          content: { 'application/json': { schema: ApiErrorResponseSchema } },
+          description: 'Internal Server Error'
+        }
       }
     }),
     async (c) => {
       const { projectId } = c.req.valid('param')
       const { fileIds, force = false } = c.req.valid('json')
-      
+
       const project = await projectService.getProjectById(projectId)
       if (!project) {
         throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
       }
-      
+
       // If force is true, we need to call resummarizeAllFiles for each file ID
       // Otherwise use summarizeFiles which respects existing summaries
       let result
@@ -698,11 +704,14 @@ ${prompt}
       } else {
         result = await projectService.summarizeFiles(projectId, fileIds)
       }
-      
-      return c.json({
-        success: true as const,
-        data: result
-      }, 200)
+
+      return c.json(
+        {
+          success: true as const,
+          data: result
+        },
+        200
+      )
     }
   )
   .openapi(
@@ -740,26 +749,31 @@ ${prompt}
         },
         404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
         422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
-        500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+        500: {
+          content: { 'application/json': { schema: ApiErrorResponseSchema } },
+          description: 'Internal Server Error'
+        }
       }
     }),
     async (c) => {
       const { projectId } = c.req.valid('param')
       const { fileIds } = c.req.valid('json')
-      
+
       const project = await projectService.getProjectById(projectId)
       if (!project) {
         throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
       }
-      
+
       const result = await projectService.removeSummariesFromFiles(projectId, fileIds)
-      
-      return c.json({
-        success: true as const,
-        data: result
-      }, 200)
+
+      return c.json(
+        {
+          success: true as const,
+          data: result
+        },
+        200
+      )
     }
   )
-
 
 export type ProjectRouteTypes = typeof projectRoutes

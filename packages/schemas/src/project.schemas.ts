@@ -1,7 +1,6 @@
 import { z } from '@hono/zod-openapi'
 import { unixTSArraySchemaSpec, unixTSSchemaSpec } from './schema-utils'
 
-
 // Base schema - Represents the API structure
 export const ProjectSchema = z
   .object({
@@ -73,7 +72,7 @@ export const SummarizeFilesBodySchema = z
 
 export const RemoveSummariesBodySchema = z
   .object({
-    fileIds: unixTSArraySchemaSpec,
+    fileIds: unixTSArraySchemaSpec
   })
   .openapi('RemoveSummariesRequestBody')
 

@@ -25,7 +25,8 @@ import { ProjectSettingsDialog } from '@/components/projects/project-settings-di
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
 import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
-import { Bot, Code2 } from 'lucide-react'
+import { ProjectAssetsView } from '@/components/projects/project-assets-view'
+import { Bot, Code2, Sparkles } from 'lucide-react'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -185,6 +186,10 @@ export function ProjectsPage() {
                 <Code2 className='h-3.5 w-3.5' />
                 Agent Coder
               </TabsTrigger>
+              <TabsTrigger value='assets' className='flex items-center gap-1'>
+                <Sparkles className='h-3.5 w-3.5' />
+                Assets
+              </TabsTrigger>
             </TabsList>
             <div className='ml-auto'>
               <ProjectSettingsDialog />
@@ -215,14 +220,25 @@ export function ProjectsPage() {
               <p>No project selected for summarization settings.</p>
             )}
           </TabsContent>
-          <TabsContent
-            value='agent-coder'
-            className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'
-          >
+          <TabsContent value='agent-coder' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData && allProjectsData ? (
-              <AgentCoderTabView project={projectData} projectId={selectedProjectId} allProjects={allProjectsData.data || []} />
+              <AgentCoderTabView
+                project={projectData}
+                projectId={selectedProjectId}
+                allProjects={allProjectsData.data || []}
+              />
             ) : (
               <p className='p-4 md:p-6'>No project selected for Agent Coder.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId && projectData ? (
+              <ProjectAssetsView
+                project={projectData}
+                projectId={selectedProjectId}
+              />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Assets.</p>
             )}
           </TabsContent>
         </Tabs>

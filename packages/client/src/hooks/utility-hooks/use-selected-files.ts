@@ -30,7 +30,7 @@ export const useProjectFileMapWithoutContent = (projectId: number) => {
 export const useProjectFileMap = (projectId: number) => {
   // Add validation to prevent calling with invalid project IDs
   const isValidProjectId = projectId && projectId !== -1 && projectId > 0
-  
+
   if (!isValidProjectId) {
     console.warn(`useProjectFileMap: Invalid projectId ${projectId}, returning empty map`)
     console.trace('Stack trace for invalid projectId call:')
@@ -38,30 +38,30 @@ export const useProjectFileMap = (projectId: number) => {
   }
 
   const { data: fileData, isLoading, error } = useGetProjectFiles(projectId)
-  
+
   if (error) {
     console.error('useProjectFileMap error:', error)
     console.trace('Stack trace for error:')
   }
-  
-  console.log('useProjectFileMap debug:', { 
-    projectId, 
-    fileData: fileData?.data, 
+
+  console.log('useProjectFileMap debug:', {
+    projectId,
+    fileData: fileData?.data,
     fileDataLength: fileData?.data?.length,
-    isLoading, 
-    error 
+    isLoading,
+    error
   })
-  
+
   return useMemo(() => {
     const files = fileData?.data ?? []
-    
+
     if (files.length > 0) {
       console.log('Building project file map with', files.length, 'files')
       console.log('First file sample:', files[0])
     } else {
       console.log('No files to build map with')
     }
-    
+
     const map = buildProjectFileMap(files)
     console.log('Generated project file map size:', map.size)
     return map
@@ -88,10 +88,10 @@ export function useSelectedFiles({
 
   // Get all project files and build the file map
   const projectId = activeProjectTabState?.selectedProjectId ?? -1
-  console.log('useSelectedFiles debug:', { 
-    projectId, 
+  console.log('useSelectedFiles debug:', {
+    projectId,
     activeProjectTabState: activeProjectTabState?.selectedProjectId,
-    effectiveTabId 
+    effectiveTabId
   })
   const projectFileMap = useProjectFileMap(projectId)
 

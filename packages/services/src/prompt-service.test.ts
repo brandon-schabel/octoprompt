@@ -25,7 +25,6 @@ import { ApiError } from '@octoprompt/shared'
 import { z } from 'zod'
 import { normalizeToUnixMs } from '@octoprompt/shared'
 
-
 // In-memory stores for our mocks
 let mockProjectsDb: ProjectsStorage = {}
 let mockProjectFilesDbPerProject: Record<number, ProjectFilesStorage> = {} // ProjectId is number

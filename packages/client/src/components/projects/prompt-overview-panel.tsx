@@ -72,9 +72,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     // Read selected files
     const { selectedFiles, projectFileMap } = useSelectedFiles()
 
-
-
-
     // Calculate total tokens
     const totalTokens = useMemo(() => {
       return calculateTotalTokens(promptData?.data, selectedPrompts, localUserPrompt, selectedFiles, projectFileMap)
@@ -102,10 +99,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
     const buildFullProjectContext = () => {
       const finalUserPrompt = promptInputRef.current?.value ?? localUserPrompt
 
-
-
       if (!promptData?.data) {
-
         return
       }
 
@@ -133,7 +127,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
       findSuggestedFilesMutation.mutate(
         {
           projectId: activeProjectTabState?.selectedProjectId ?? -1,
-          prompt: `Please find the relevant files for the following prompt: ${localUserPrompt}`,
+          prompt: `Please find the relevant files for the following prompt: ${localUserPrompt}`
         },
         {
           onSuccess: (recommendedFiles) => {
@@ -355,7 +349,10 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                               onClick={handleViewAgentDialog}
                               variant={'outline'}
                               size='sm'
-                              disabled={!activeProjectTabState?.selectedProjectId || activeProjectTabState?.selectedProjectId === -1}
+                              disabled={
+                                !activeProjectTabState?.selectedProjectId ||
+                                activeProjectTabState?.selectedProjectId === -1
+                              }
                               className={cn(
                                 'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50'
                               )}
@@ -364,9 +361,12 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{!activeProjectTabState?.selectedProjectId || activeProjectTabState?.selectedProjectId === -1 
-                              ? 'Select a project to use Agent Coder' 
-                              : 'Open the Agent Coder control panel to run AI tasks.'}</p>
+                            <p>
+                              {!activeProjectTabState?.selectedProjectId ||
+                              activeProjectTabState?.selectedProjectId === -1
+                                ? 'Select a project to use Agent Coder'
+                                : 'Open the Agent Coder control panel to run AI tasks.'}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       </div>

@@ -773,11 +773,11 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-    `Total to process: ${totalProcessed}, ` +
-    `Successfully summarized: ${summarizedCount}, ` +
-    `Skipped (empty): ${skippedByEmptyCount}, ` +
-    `Skipped (errors): ${errorCount}, ` +
-    `Total not summarized: ${finalSkippedCount}`
+      `Total to process: ${totalProcessed}, ` +
+      `Successfully summarized: ${summarizedCount}, ` +
+      `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (errors): ${errorCount}, ` +
+      `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
@@ -838,4 +838,3 @@ ${promptsMap.contemplativePrompt}
     )
   }
 }
-

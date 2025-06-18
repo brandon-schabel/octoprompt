@@ -16,7 +16,8 @@ import {
   MenuIcon, // Icon for SidebarTrigger if needed, or use default
   FolderCogIcon,
   FolderTreeIcon,
-  Bot
+  Bot,
+  Sparkles
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
@@ -43,8 +44,9 @@ const mainNavItems = [
     routeIds: ['/projects']
   },
   { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
+  { id: 'assets', title: 'Assets', to: '/assets', icon: Sparkles, routeIds: ['/assets'] },
   { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },
-  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] },
+  { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] }
 ]
 
 export function AppSidebar() {

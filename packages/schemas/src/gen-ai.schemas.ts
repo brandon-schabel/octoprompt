@@ -227,6 +227,112 @@ export const FilenameSuggestionSchema = z
   })
   .openapi('FilenameSuggestionOutput')
 
+// Asset Generation Schemas
+export const ReadmeGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated README content in markdown format',
+      example: '# Project Name\n\nDescription...'
+    }),
+    sections: z.array(z.string()).openapi({
+      description: 'List of sections included in the README',
+      example: ['Introduction', 'Installation', 'Usage', 'API', 'Contributing', 'License']
+    })
+  })
+  .openapi('ReadmeGeneratorOutput')
+
+export const ReactComponentGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated React component code',
+      example: 'import React from "react"...'
+    }),
+    componentName: z.string().openapi({
+      description: 'The name of the generated component',
+      example: 'UserProfile'
+    }),
+    props: z
+      .array(z.string())
+      .optional()
+      .openapi({
+        description: 'List of props used in the component',
+        example: ['id', 'name', 'avatar', 'bio']
+      }),
+    imports: z.array(z.string()).openapi({
+      description: 'List of imports used in the component',
+      example: ['react', '@/lib/utils', '@/components/ui/card']
+    })
+  })
+  .openapi('ReactComponentGeneratorOutput')
+
+export const TestSuiteGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated test suite code',
+      example: 'import { describe, it, expect } from "bun:test"...'
+    }),
+    testCases: z.array(z.string()).openapi({
+      description: 'List of test cases included',
+      example: ['should render correctly', 'should handle click events', 'should validate inputs']
+    })
+  })
+  .openapi('TestSuiteGeneratorOutput')
+
+export const ConfigFileGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated configuration file content',
+      example: '{\n  "compilerOptions": {...}\n}'
+    }),
+    fileType: z.string().openapi({
+      description: 'The type of configuration file',
+      example: 'tsconfig'
+    })
+  })
+  .openapi('ConfigFileGeneratorOutput')
+
+export const ApiRouteGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated API route code',
+      example: 'import { createRoute } from "@hono/zod-openapi"...'
+    }),
+    routePath: z.string().openapi({
+      description: 'The API route path',
+      example: '/api/users/:id'
+    }),
+    methods: z.array(z.string()).openapi({
+      description: 'HTTP methods implemented',
+      example: ['GET', 'POST', 'PUT', 'DELETE']
+    })
+  })
+  .openapi('ApiRouteGeneratorOutput')
+
+export const ZodSchemaGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated Zod schema code',
+      example: 'import { z } from "zod"...'
+    }),
+    schemaName: z.string().openapi({
+      description: 'The name of the generated schema',
+      example: 'UserSchema'
+    }),
+    fields: z.array(z.string()).openapi({
+      description: 'List of fields in the schema',
+      example: ['id', 'name', 'email', 'createdAt']
+    })
+  })
+  .openapi('ZodSchemaGeneratorOutput')
+
+export const SvgGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The complete SVG code starting with <svg and ending with </svg>',
+      example: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    })
+  })
+  .openapi('SvgGeneratorOutput')
 
 // Export internal schemas needed by routes
 export const FileSuggestionsZodSchema = z.object({
@@ -268,6 +374,115 @@ export const structuredDataSchemas = {
         summary: z.string().openapi({ description: 'The generated summary.' })
       })
       .openapi('BasicSummaryOutput')
+  },
+  // Asset generators
+  readmeGenerator: {
+    name: 'README Generator',
+    description: 'Generates comprehensive README files for projects',
+    promptTemplate: `Create a professional README.md file for the following project: {userInput}
+Include appropriate sections such as: Overview, Features, Installation, Usage, Configuration, API Reference (if applicable), Contributing, and License.
+Use clear markdown formatting with proper headings, code blocks, and lists.`,
+    systemPrompt:
+      'You are an expert technical writer specializing in creating clear, comprehensive, and well-structured README files for software projects.',
+    schema: ReadmeGeneratorSchema
+  },
+  componentGenerator: {
+    name: 'React Component Generator',
+    description: 'Creates React components with TypeScript and best practices',
+    promptTemplate: `Create a React component with TypeScript based on the following requirements: {userInput}
+Follow these guidelines:
+- Use functional components with proper TypeScript interfaces
+- Include appropriate imports
+- Follow React best practices and conventions
+- Add helpful comments where necessary
+- Use proper prop validation`,
+    systemPrompt:
+      'You are an expert React developer specializing in creating clean, reusable, and well-typed components.',
+    schema: ReactComponentGeneratorSchema
+  },
+  testGenerator: {
+    name: 'Test Suite Generator',
+    description: 'Generates test files using Bun test framework',
+    promptTemplate: `Create a comprehensive test suite using Bun test framework for: {userInput}
+Include:
+- Proper test structure with describe blocks
+- Multiple test cases covering different scenarios
+- Edge cases and error handling
+- Mock data where appropriate`,
+    systemPrompt: 'You are an expert in test-driven development, specializing in writing comprehensive test suites.',
+    schema: TestSuiteGeneratorSchema
+  },
+  configGenerator: {
+    name: 'Config File Generator',
+    description: 'Creates configuration files for various tools',
+    promptTemplate: `Generate a configuration file based on: {userInput}
+Ensure the configuration is:
+- Well-commented with explanations
+- Following best practices for the specific tool
+- Production-ready with sensible defaults`,
+    systemPrompt: 'You are an expert in development tooling and configuration management.',
+    schema: ConfigFileGeneratorSchema
+  },
+  apiRouteGenerator: {
+    name: 'API Route Generator',
+    description: 'Generates Hono API routes with validation',
+    promptTemplate: `Create a Hono API route with Zod validation based on: {userInput}
+Include:
+- Proper route definition with OpenAPI specs
+- Request/response validation schemas
+- Error handling
+- TypeScript types
+- Follow RESTful conventions`,
+    systemPrompt: 'You are an expert backend developer specializing in creating type-safe, well-documented APIs.',
+    schema: ApiRouteGeneratorSchema
+  },
+  schemaGenerator: {
+    name: 'Zod Schema Generator',
+    description: 'Creates Zod schemas with TypeScript types',
+    promptTemplate: `Generate a Zod schema with TypeScript types for: {userInput}
+Include:
+- Proper validation rules
+- Helpful error messages
+- TypeScript type inference
+- OpenAPI documentation where appropriate`,
+    systemPrompt: 'You are an expert in data validation and TypeScript, specializing in creating robust Zod schemas.',
+    schema: ZodSchemaGeneratorSchema
+  },
+  svgGenerator: {
+    name: 'SVG Generator',
+    description: 'Creates optimized SVG graphics',
+    promptTemplate: `{userInput}
+
+CRITICAL: You MUST generate valid SVG XML code. The output must be a complete SVG element that can be rendered in a browser.`,
+    systemPrompt: `You are an expert SVG designer who creates clean, optimized, and scalable vector graphics.
+
+CRITICAL INSTRUCTIONS:
+1. You MUST generate ONLY valid SVG XML code
+2. Your response MUST start with <svg and end with </svg>
+3. Do NOT include any text, explanations, or markdown - ONLY the SVG code
+4. The SVG must be complete and renderable
+
+Example of expected output format:
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"/>
+</svg>
+
+Follow these SVG best practices:
+- Include proper xmlns attribute
+- Use viewBox for scalability
+- Optimize paths and shapes
+- Use the specified dimensions
+- Apply the requested style (modern, minimalist, detailed, etc.)
+- Use the specified colors
+- Keep the code clean and optimized
+
+Remember: Output ONLY the SVG code, nothing else.`,
+    modelSettings: {
+      model: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 2000
+    },
+    schema: SvgGeneratorSchema
   }
   // Add more structured tasks here...
 } satisfies Record<string, StructuredDataSchemaConfig<any>>
