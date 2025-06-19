@@ -216,6 +216,25 @@ const getProjectFilesRoute = createRoute({
   }
 })
 
+const getProjectFilesMetadataRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/files/metadata',
+  tags: ['Projects', 'Files'],
+  summary: 'Get project files metadata without content (for performance)',
+  request: {
+    params: ProjectIdParamsSchema
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: ProjectFileWithoutContentListResponseSchema } },
+      description: 'Successfully retrieved project files metadata'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    422: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Validation Error' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
+  }
+})
+
 const updateFileContentRoute = createRoute({
   method: 'put',
   path: '/api/projects/{projectId}/files/{fileId}',
@@ -491,6 +510,23 @@ export const projectRoutes = new OpenAPIHono()
     } satisfies z.infer<typeof FileListResponseSchema>
     return c.json(payload, 200)
   })
+
+  .openapi(getProjectFilesMetadataRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const project = await projectService.getProjectById(projectId)
+    if (!project) {
+      throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
+    }
+    const files = await projectService.getProjectFiles(projectId)
+    // Remove content from files for performance
+    const filesWithoutContent = files?.map(({ content, ...fileMetadata }) => fileMetadata) ?? []
+    const payload = {
+      success: true,
+      data: filesWithoutContent
+    } satisfies z.infer<typeof ProjectFileWithoutContentListResponseSchema>
+    return c.json(payload, 200)
+  })
+
   .openapi(bulkUpdateFilesRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const { updates } = c.req.valid('json')

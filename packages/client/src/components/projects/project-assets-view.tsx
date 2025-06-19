@@ -88,9 +88,8 @@ export function ProjectAssetsView({ project, projectId }: ProjectAssetsViewProps
   const { copyToClipboard } = useCopyClipboard()
 
   // Filter recent generations for this project
-  const projectGenerations = recentGenerations.filter(gen => 
-    gen.name.toLowerCase().includes(project.name.toLowerCase()) ||
-    gen.content.includes(project.name)
+  const projectGenerations = recentGenerations.filter(
+    (gen) => gen.name.toLowerCase().includes(project.name.toLowerCase()) || gen.content.includes(project.name)
   )
 
   const handleGenerateAsset = (assetId: string) => {
@@ -112,9 +111,9 @@ export function ProjectAssetsView({ project, projectId }: ProjectAssetsViewProps
   const copyAsReactComponent = async (svgContent: string, name: string) => {
     const componentName = name
       .split(/[-_\s]/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join('')
-    
+
     const reactComponent = `import React from 'react'
 
 interface ${componentName}Props {
@@ -125,7 +124,10 @@ interface ${componentName}Props {
 
 export function ${componentName}({ className, width = 24, height = 24, ...props }: ${componentName}Props) {
   return (
-    ${svgContent.replace(/width="[\d]+"/, 'width={width}').replace(/height="[\d]+"/, 'height={height}').replace(/<svg/, '<svg className={className} {...props}')}
+    ${svgContent
+      .replace(/width="[\d]+"/, 'width={width}')
+      .replace(/height="[\d]+"/, 'height={height}')
+      .replace(/<svg/, '<svg className={className} {...props}')}
   )
 }`
 
@@ -233,9 +235,11 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
                               variant='ghost'
                               size='icon'
                               className='h-8 w-8'
-                              onClick={() => copyToClipboard(generation.content, {
-                                successMessage: 'SVG copied to clipboard'
-                              })}
+                              onClick={() =>
+                                copyToClipboard(generation.content, {
+                                  successMessage: 'SVG copied to clipboard'
+                                })
+                              }
                             >
                               <Copy className='h-4 w-4' />
                             </Button>

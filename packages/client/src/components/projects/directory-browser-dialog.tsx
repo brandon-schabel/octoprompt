@@ -1,15 +1,6 @@
 import * as React from 'react'
 import { useState, useEffect } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  Button,
-  ScrollArea,
-  Separator
-} from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, ScrollArea, Separator } from '@ui'
 import { ChevronRight, Folder, FolderOpen, Home, ChevronUp } from 'lucide-react'
 import { useBrowseDirectory } from '@/hooks/api/use-browse-directory'
 import type { DirectoryEntry } from '@octoprompt/schemas'
@@ -22,17 +13,12 @@ interface DirectoryBrowserDialogProps {
   initialPath?: string
 }
 
-export function DirectoryBrowserDialog({
-  open,
-  onOpenChange,
-  onSelectPath,
-  initialPath
-}: DirectoryBrowserDialogProps) {
+export function DirectoryBrowserDialog({ open, onOpenChange, onSelectPath, initialPath }: DirectoryBrowserDialogProps) {
   const [currentPath, setCurrentPath] = useState<string>('')
   const [selectedPath, setSelectedPath] = useState<string>('')
   const [entries, setEntries] = useState<DirectoryEntry[]>([])
   const [parentPath, setParentPath] = useState<string | null>(null)
-  
+
   const { mutate: browseDirectory, isPending } = useBrowseDirectory()
 
   // Load initial directory when dialog opens
@@ -103,34 +89,29 @@ export function DirectoryBrowserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className='w-[90vw] max-w-3xl h-[90vh] max-h-[600px] sm:h-[80vh] overflow-hidden'>
         <DialogHeader>
           <DialogTitle>Select Project Directory</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className='space-y-2 sm:space-y-4 flex flex-col h-full overflow-hidden'>
           {/* Breadcrumb navigation */}
-          <div className="flex items-center gap-1 text-sm text-muted-foreground overflow-x-auto">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleGoHome}
-              className="h-7 px-2"
-            >
-              <Home className="h-4 w-4" />
+          <div className='flex items-center gap-1 text-sm text-muted-foreground overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700'>
+            <Button variant='ghost' size='sm' onClick={handleGoHome} className='h-7 px-1 sm:px-2 flex-shrink-0'>
+              <Home className='h-3 w-3 sm:h-4 sm:w-4' />
             </Button>
             {pathParts.map((part, index) => {
               const fullPath = homePath + pathParts.slice(0, index + 1).join('/')
               return (
                 <React.Fragment key={index}>
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className='h-4 w-4' />
                   <Button
-                    variant="ghost"
-                    size="sm"
+                    variant='ghost'
+                    size='sm'
                     onClick={() => navigateToDirectory(fullPath)}
-                    className="h-7 px-2"
+                    className='h-7 px-1 sm:px-2 min-w-0 max-w-[120px] sm:max-w-none'
                   >
-                    {part}
+                    <span className='truncate'>{part}</span>
                   </Button>
                 </React.Fragment>
               )
@@ -140,52 +121,50 @@ export function DirectoryBrowserDialog({
           <Separator />
 
           {/* Navigation buttons */}
-          <div className="flex gap-2">
+          <div className='flex gap-1 sm:gap-2'>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
               onClick={handleGoUp}
               disabled={!parentPath || isPending}
+              className='text-xs sm:text-sm'
             >
-              <ChevronUp className="h-4 w-4 mr-1" />
-              Up
+              <ChevronUp className='h-3 w-3 sm:h-4 sm:w-4 mr-0.5 sm:mr-1' />
+              <span className='hidden sm:inline'>Up</span>
             </Button>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
               onClick={handleGoHome}
               disabled={isPending}
+              className='text-xs sm:text-sm'
             >
-              <Home className="h-4 w-4 mr-1" />
-              Home
+              <Home className='h-3 w-3 sm:h-4 sm:w-4 mr-0.5 sm:mr-1' />
+              <span className='hidden sm:inline'>Home</span>
             </Button>
           </div>
 
           {/* Directory listing */}
-          <ScrollArea className="h-[400px] border rounded-md p-2">
+          <ScrollArea className='flex-1 min-h-[200px] sm:min-h-[300px] border rounded-md p-2'>
             {isPending ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                Loading...
-              </div>
+              <div className='flex items-center justify-center h-full text-muted-foreground'>Loading...</div>
             ) : entries.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                No folders found
-              </div>
+              <div className='flex items-center justify-center h-full text-muted-foreground'>No folders found</div>
             ) : (
-              <div className="space-y-1">
+              <div className='space-y-1'>
                 {entries
-                  .filter(entry => entry.isDirectory && !entry.isHidden)
+                  .filter((entry) => entry.isDirectory && !entry.isHidden)
                   .map((entry) => (
                     <button
                       key={entry.path}
                       onClick={() => handleSelectDirectory(entry)}
                       className={cn(
-                        "w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left",
-                        selectedPath === entry.path && "bg-accent"
+                        'w-full flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md hover:bg-accent transition-colors text-left text-sm',
+                        selectedPath === entry.path && 'bg-accent'
                       )}
                     >
-                      <Folder className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{entry.name}</span>
+                      <Folder className='h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0' />
+                      <span className='truncate text-xs sm:text-sm'>{entry.name}</span>
                     </button>
                   ))}
               </div>
@@ -193,16 +172,16 @@ export function DirectoryBrowserDialog({
           </ScrollArea>
 
           {/* Selected path display */}
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Selected Path:</div>
-            <div className="bg-muted px-3 py-2 rounded-md text-sm font-mono truncate">
+          <div className='space-y-1 sm:space-y-2'>
+            <div className='text-xs sm:text-sm font-medium'>Selected Path:</div>
+            <div className='bg-muted px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-mono overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 whitespace-nowrap'>
               {selectedPath || 'No directory selected'}
             </div>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant='outline' onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedPath}>

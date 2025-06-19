@@ -61,21 +61,21 @@ export function MonacoEditorWrapper({
         onMount={handleEditorDidMount}
         theme={isDarkMode ? 'vs-dark' : 'light'}
         options={{
-        readOnly,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        fontSize: 14,
-        lineNumbers: 'on',
-        glyphMargin: false,
-        folding: true,
-        lineDecorationsWidth: 0,
-        lineNumbersMinChars: 3,
-        renderValidationDecorations: 'on',
-        wordWrap: 'on',
-        automaticLayout: true,
-        tabSize: 2,
-        insertSpaces: true
-      }}
+          readOnly,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          fontSize: 14,
+          lineNumbers: 'on',
+          glyphMargin: false,
+          folding: true,
+          lineDecorationsWidth: 0,
+          lineNumbersMinChars: 3,
+          renderValidationDecorations: 'on',
+          wordWrap: 'on',
+          automaticLayout: true,
+          tabSize: 2,
+          insertSpaces: true
+        }}
       />
     </div>
   )

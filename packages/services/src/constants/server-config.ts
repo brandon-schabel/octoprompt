@@ -4,7 +4,7 @@ export const isProdEnv = !isDevEnv && !isTestEnv
 
 const DEV_PORT = 3147
 const PROD_PORT = 3579
-const CLIENT_PORT = 5173
+const CLIENT_PORT = 1420
 
 export const SERVER_PORT = isDevEnv ? DEV_PORT : PROD_PORT
 

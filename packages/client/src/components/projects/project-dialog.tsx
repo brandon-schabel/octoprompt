@@ -110,66 +110,70 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{projectId ? 'Edit Project' : 'New Project'}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className='grid gap-4 py-4'>
-            <div className='grid gap-2'>
-              <Label htmlFor='name'>Name</Label>
-              <Input
-                id='name'
-                value={formData.name}
-                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='path'>Path</Label>
-              <div className='flex gap-2'>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{projectId ? 'Edit Project' : 'New Project'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='name'>Name</Label>
                 <Input
-                  id='path'
-                  value={formData.path}
-                  onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: e.target.value }))}
+                  id='name'
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, name: e.target.value }))}
                   required
-                  placeholder='Enter path or browse...'
                 />
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='icon'
-                  onClick={() => setShowDirectoryBrowser(true)}
-                  title='Browse for folder'
-                >
-                  <FolderOpen className='h-4 w-4' />
-                </Button>
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='path'>Path</Label>
+                <div className='flex gap-2'>
+                  <Input
+                    id='path'
+                    value={formData.path}
+                    onChange={(e) =>
+                      setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: e.target.value }))
+                    }
+                    required
+                    placeholder='Enter path or browse...'
+                  />
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='icon'
+                    onClick={() => setShowDirectoryBrowser(true)}
+                    title='Browse for folder'
+                  >
+                    <FolderOpen className='h-4 w-4' />
+                  </Button>
+                </div>
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='description'>Description</Label>
+                <Input
+                  id='description'
+                  value={formData.description || ''}
+                  onChange={(e) =>
+                    setFormData((prev: CreateProjectRequestBody) => ({ ...prev, description: e.target.value }))
+                  }
+                />
               </div>
             </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='description'>Description</Label>
-              <Input 
-                id='description' 
-                value={formData.description || ''} 
-                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, description: e.target.value }))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type='submit' disabled={isCreating || isUpdating}>
-              {projectId ? 'Save Changes' : 'Create Project'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <Button type='submit' disabled={isCreating || isUpdating}>
+                {projectId ? 'Save Changes' : 'Create Project'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-    <DirectoryBrowserDialog
-      open={showDirectoryBrowser}
-      onOpenChange={setShowDirectoryBrowser}
-      onSelectPath={handleSelectPath}
-      initialPath={formData.path || undefined}
-    />
+      <DirectoryBrowserDialog
+        open={showDirectoryBrowser}
+        onOpenChange={setShowDirectoryBrowser}
+        onSelectPath={handleSelectPath}
+        initialPath={formData.path || undefined}
+      />
     </>
   )
 }

@@ -27,6 +27,7 @@ import {
   FileListResponseSchema as FileListResponseSchemaZ,
   FileResponseSchema as FileResponseSchemaZ,
   ProjectSummaryResponseSchema as ProjectSummaryResponseSchemaZ,
+  ProjectFileWithoutContentListResponseSchema as ProjectFileWithoutContentListResponseSchemaZ,
   CreateProjectBodySchema,
   UpdateProjectBodySchema,
   RefreshQuerySchema
@@ -427,7 +428,7 @@ export class ProjectService extends BaseApiClient {
   // Get project files without content for performance optimization
   async getProjectFilesWithoutContent(projectId: number) {
     const result = await this.request('GET', `/projects/${projectId}/files/metadata`, {
-      responseSchema: FileListResponseSchemaZ
+      responseSchema: ProjectFileWithoutContentListResponseSchemaZ
     })
     return result as DataResponseSchema<Omit<ProjectFile, 'content'>[]>
   }

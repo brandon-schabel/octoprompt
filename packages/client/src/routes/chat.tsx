@@ -51,7 +51,7 @@ import {
 } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { APIProviders } from '@octoprompt/schemas'
+import { APIProviders, AiSdkOptions } from '@octoprompt/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
@@ -59,9 +59,12 @@ import { useActiveChatId, useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { OctoCombobox } from '@/components/octo/octo-combobox'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
+import {
+  ProviderModelSelector,
+  ModelSettingsPopover as ReusableModelSettingsPopover
+} from '@/components/model-selection'
 
 export function ModelSettingsPopover() {
-  const [open, setOpen] = useState(false)
   const {
     settings,
     setTemperature,
@@ -82,194 +85,59 @@ export function ModelSettingsPopover() {
   const [provider, updateProvider] = useLocalStorage('MODEL_PROVIDER', settings.provider ?? 'openrouter')
   const [currentModel, updateCurrentModel] = useLocalStorage('MODEL_CURRENT_MODEL', 'gpt-4o')
 
-  const handleUpdateTemperature = (value: number) => {
-    setTemperature(value)
-    updateTemperature(value)
+  const handleSettingsChange = (newSettings: Partial<AiSdkOptions>) => {
+    if (newSettings.temperature !== undefined) {
+      setTemperature(newSettings.temperature)
+      updateTemperature(newSettings.temperature)
+    }
+    if (newSettings.maxTokens !== undefined) {
+      setMaxTokens(newSettings.maxTokens)
+      updateMaxTokens(newSettings.maxTokens)
+    }
+    if (newSettings.topP !== undefined) {
+      setTopP(newSettings.topP)
+      updateTopP(newSettings.topP)
+    }
+    if (newSettings.frequencyPenalty !== undefined) {
+      setFreqPenalty(newSettings.frequencyPenalty)
+      updateFreqPenalty(newSettings.frequencyPenalty)
+    }
+    if (newSettings.presencePenalty !== undefined) {
+      setPresPenalty(newSettings.presencePenalty)
+      updatePresPenalty(newSettings.presencePenalty)
+    }
   }
 
-  const handleUpdateMaxTokens = (value: number) => {
-    setMaxTokens(value)
-    updateMaxTokens(value)
-  }
-
-  const handleUpdateTopP = (value: number) => {
-    setTopP(value)
-    updateTopP(value)
-  }
-
-  const handleUpdateFreqPenalty = (value: number) => {
-    setFreqPenalty(value)
-    updateFreqPenalty(value)
-  }
-
-  const handleUpdatePresPenalty = (value: number) => {
-    setPresPenalty(value)
-    updatePresPenalty(value)
-  }
-
-  const handleUpdateProvider = (value: APIProviders) => {
+  const handleProviderChange = (value: APIProviders) => {
     setProvider(value)
     updateProvider(value)
   }
 
-  const handleUpdateCurrentModel = (value: string) => {
+  const handleModelChange = (value: string) => {
     setModel(value)
     updateCurrentModel(value)
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant='outline' size='icon' className='h-8 w-8'>
-          <Settings2Icon className='h-4 w-4' />
-          <span className='sr-only'>Model Settings</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className='w-80'>
-        <div className='space-y-4'>
-          <h4 className='font-medium leading-none mb-3'>Model Settings</h4>
-          <ErrorBoundary>
-            <ProviderModelSector
-              provider={provider as APIProviders}
-              currentModel={currentModel}
-              onProviderChange={handleUpdateProvider}
-              onModelChange={handleUpdateCurrentModel}
-              className='flex-col !gap-2'
-            />
-          </ErrorBoundary>
-          <hr />
-          <div className='space-y-2'>
-            <Label htmlFor='temperature'>Temperature: {temperature.toFixed(2)}</Label>
-            <Slider
-              id='temperature'
-              disabled={isTempDisabled}
-              min={0}
-              max={1}
-              step={0.01}
-              value={[temperature]}
-              onValueChange={(temps) => handleUpdateTemperature(temps[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='maxTokens'>Max Tokens: {maxTokens}</Label>
-            <Slider
-              id='maxTokens'
-              min={1000}
-              max={1000000}
-              step={1000}
-              value={[maxTokens]}
-              onValueChange={(maxTokens) => handleUpdateMaxTokens(maxTokens[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='topP'>Top P: {topP.toFixed(2)}</Label>
-            <Slider
-              id='topP'
-              min={0}
-              max={1}
-              step={0.01}
-              value={[topP]}
-              onValueChange={(topP) => handleUpdateTopP(topP[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='frequencyPenalty'>Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
-            <Slider
-              id='frequencyPenalty'
-              min={-2}
-              max={2}
-              step={0.01}
-              value={[freqPenalty]}
-              onValueChange={(freqPenalty) => handleUpdateFreqPenalty(freqPenalty[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='presencePenalty'>Presence Penalty: {presPenalty.toFixed(2)}</Label>
-            <Slider
-              id='presencePenalty'
-              min={-2}
-              max={2}
-              step={0.01}
-              value={[presPenalty]}
-              onValueChange={(presPenalty) => handleUpdatePresPenalty(presPenalty[0])}
-            />
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <ReusableModelSettingsPopover
+      provider={provider as APIProviders}
+      model={currentModel}
+      settings={{
+        temperature,
+        maxTokens,
+        topP,
+        frequencyPenalty: freqPenalty,
+        presencePenalty: presPenalty
+      }}
+      onProviderChange={handleProviderChange}
+      onModelChange={handleModelChange}
+      onSettingsChange={handleSettingsChange}
+      isTempDisabled={isTempDisabled}
+    />
   )
 }
 
-type ModelSelectorProps = {
-  provider: APIProviders
-  currentModel: string
-  onProviderChange: (provider: APIProviders) => void
-  onModelChange: (modelId: string) => void
-  className?: string
-}
-
-export function ProviderModelSector({
-  provider,
-  currentModel,
-  onProviderChange,
-  onModelChange,
-  className
-}: ModelSelectorProps) {
-  const { data: modelsData, isLoading: isLoadingModels } = useGetModels(provider)
-
-  const comboboxOptions = useMemo(
-    () =>
-      modelsData?.data.map((m) => ({
-        value: m.id,
-        label: m.name
-      })) ?? [],
-    [modelsData]
-  )
-
-  useEffect(() => {
-    const isCurrentModelValid = comboboxOptions.some((model) => model.value === currentModel)
-    if ((!currentModel || !isCurrentModelValid) && comboboxOptions.length > 0) {
-      onModelChange(comboboxOptions[0].value)
-    }
-  }, [comboboxOptions, currentModel, onModelChange])
-
-  const handleModelChange = useCallback(
-    (value: string | null) => {
-      if (value !== null) {
-        onModelChange(value)
-      }
-    },
-    [onModelChange]
-  )
-
-  return (
-    <div className={cn('flex gap-4', className)}>
-      <Select value={provider} onValueChange={(val) => onProviderChange(val as APIProviders)}>
-        <SelectTrigger className='w-full'>
-          <SelectValue placeholder='Select provider' />
-        </SelectTrigger>
-        <SelectContent>
-          {PROVIDER_SELECT_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <OctoCombobox
-        options={comboboxOptions}
-        value={currentModel}
-        onValueChange={handleModelChange}
-        placeholder={isLoadingModels ? 'Loading...' : comboboxOptions.length === 0 ? 'No models' : 'Select model'}
-        searchPlaceholder='Search models...'
-        className='w-full min-w-[150px]'
-        popoverClassName='w-[300px]'
-        disabled={isLoadingModels || comboboxOptions.length === 0}
-      />
-    </div>
-  )
-}
+// ProviderModelSector is now imported from the reusable components
 
 type AdaptiveChatInputProps = {
   value: string
@@ -597,12 +465,13 @@ export function ChatMessages({
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
       }
-      
+
       // Debounce scrolling to prevent excessive calls during streaming
       scrollTimeoutRef.current = setTimeout(() => {
         const scrollViewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]')
         if (scrollViewport) {
-          const isScrolledUp = scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150
+          const isScrolledUp =
+            scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150
           if (!isScrolledUp || messages.length <= 2) {
             bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
           }
@@ -610,10 +479,10 @@ export function ChatMessages({
           bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
         }
       }, 100) // 100ms debounce
-      
+
       lastMessageCountRef.current = messages.length
     }
-    
+
     // Cleanup timeout on unmount
     return () => {
       if (scrollTimeoutRef.current) {

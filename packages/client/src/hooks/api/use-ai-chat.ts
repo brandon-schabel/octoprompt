@@ -17,7 +17,7 @@ interface UseAIChatProps {
 export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatProps) {
   // Track if initial messages have been loaded to prevent infinite loops
   const initialMessagesLoadedRef = useRef(false)
-  
+
   // Initialize Vercel AI SDK's useChat hook
   const {
     messages,
@@ -54,8 +54,8 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
   useEffect(() => {
     // Only load initial messages once per chat
     if (
-      initialMessagesData?.data && 
-      !initialMessagesLoadedRef.current && 
+      initialMessagesData?.data &&
+      !initialMessagesLoadedRef.current &&
       !isFetchingInitialMessages &&
       !isLoading // Don't set messages while streaming
     ) {

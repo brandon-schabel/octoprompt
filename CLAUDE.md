@@ -7,7 +7,7 @@ OctoPrompt guidance for Claude Code (claude.ai/code).
 ### Development
 
 - `bun run dev` - Start client and server
-- `bun run dev:client` - Client only (port 5173)
+- `bun run dev:client` - Client only (port 1420)
 - `bun run dev:server` - Server only (port 3147)
 
 ### Testing

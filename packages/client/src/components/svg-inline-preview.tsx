@@ -2,12 +2,7 @@ import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface SvgInlinePreviewProps {
   svgContent: string
@@ -25,7 +20,7 @@ export function SvgInlinePreview({
   background = 'checkerboard'
 }: SvgInlinePreviewProps) {
   const [isHovered, setIsHovered] = useState(false)
-  
+
   const sizeClasses = {
     sm: 'h-16 w-16',
     md: 'h-24 w-24',
@@ -59,7 +54,7 @@ export function SvgInlinePreview({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div 
+      <div
         className='w-full h-full flex items-center justify-center p-2'
         dangerouslySetInnerHTML={{ __html: svgContent }}
       />
@@ -73,9 +68,7 @@ export function SvgInlinePreview({
   return (
     <TooltipProvider>
       <Tooltip open={isHovered}>
-        <TooltipTrigger asChild>
-          {preview}
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{preview}</TooltipTrigger>
         <TooltipContent side='right' className='p-0 w-64 h-64'>
           <div
             className='w-full h-full flex items-center justify-center p-4'
@@ -104,36 +97,17 @@ interface SvgGridPreviewProps {
   columns?: number
 }
 
-export function SvgGridPreview({
-  svgContents,
-  onSelect,
-  className,
-  columns = 4
-}: SvgGridPreviewProps) {
+export function SvgGridPreview({ svgContents, onSelect, className, columns = 4 }: SvgGridPreviewProps) {
   return (
-    <div 
-      className={cn(
-        'grid gap-4',
-        `grid-cols-${columns}`,
-        className
-      )}
-    >
+    <div className={cn('grid gap-4', `grid-cols-${columns}`, className)}>
       {svgContents.map((item) => (
-        <div
-          key={item.id}
-          className='group cursor-pointer'
-          onClick={() => onSelect?.(item.id)}
-        >
+        <div key={item.id} className='group cursor-pointer' onClick={() => onSelect?.(item.id)}>
           <SvgInlinePreview
             svgContent={item.content}
             size='md'
             className='group-hover:ring-2 group-hover:ring-primary transition-all'
           />
-          {item.name && (
-            <p className='text-xs text-center mt-1 text-muted-foreground truncate'>
-              {item.name}
-            </p>
-          )}
+          {item.name && <p className='text-xs text-center mt-1 text-muted-foreground truncate'>{item.name}</p>}
         </div>
       ))}
     </div>

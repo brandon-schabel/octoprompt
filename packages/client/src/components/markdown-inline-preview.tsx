@@ -9,8 +9,8 @@ interface MarkdownInlinePreviewProps {
   showHoverPreview?: boolean
 }
 
-export function MarkdownInlinePreview({ 
-  markdownContent, 
+export function MarkdownInlinePreview({
+  markdownContent,
   className,
   size = 'md',
   showHoverPreview = true
@@ -27,15 +27,10 @@ export function MarkdownInlinePreview({
 
   return (
     <div className={cn('relative group', className)}>
-      <ScrollArea className={cn(
-        'border rounded-md bg-muted/20 p-2 overflow-hidden',
-        sizeClasses[size]
-      )}>
+      <ScrollArea className={cn('border rounded-md bg-muted/20 p-2 overflow-hidden', sizeClasses[size])}>
         <div className='prose prose-sm dark:prose-invert max-w-none text-xs'>
           <MarkdownRenderer content={previewLines} />
-          {hasMore && (
-            <p className='text-muted-foreground italic mt-2'>...</p>
-          )}
+          {hasMore && <p className='text-muted-foreground italic mt-2'>...</p>}
         </div>
       </ScrollArea>
 

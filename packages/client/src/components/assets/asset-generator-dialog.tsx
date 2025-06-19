@@ -25,6 +25,8 @@ import { Copy, Download, Loader2, Sparkles, Code } from 'lucide-react'
 import { estimateTokenCount, formatTokenCount } from '@octoprompt/shared'
 import { SvgPreview } from '@/components/svg-preview'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
+import { ProviderModelSelector, useModelSelection } from '@/components/model-selection'
+import { Separator } from '@/components/ui/separator'
 
 interface AssetGeneratorDialogProps {
   open: boolean
@@ -71,21 +73,21 @@ const schemaKeyMap: Record<string, string> = {
 
 export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess }: AssetGeneratorDialogProps) {
   const [activeTab, setActiveTab] = useState('input')
-  
+
   // Common form data for all asset types
   const [commonFormData, setCommonFormData] = useState({
     name: '',
     description: '',
     additionalContext: ''
   })
-  
+
   // SVG-specific form data
   const [svgFormData, setSvgFormData] = useState({
     style: 'modern',
     colors: '#000000',
     dimensions: '24x24'
   })
-  
+
   // Markdown-specific form data
   const [markdownFormData, setMarkdownFormData] = useState({
     documentFormat: 'standard',
@@ -95,9 +97,16 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
     includeExamples: true,
     sections: [] as string[]
   })
-  
+
   const [generatedContent, setGeneratedContent] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // Model selection state
+  const { provider, model, setProvider, setModel } = useModelSelection({
+    persistenceKey: 'asset-generator-model',
+    defaultProvider: 'openai',
+    defaultModel: 'gpt-4o'
+  })
 
   const { copyToClipboard } = useCopyClipboard()
   const generateMutation = useGenerateStructuredData()
@@ -117,7 +126,7 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
 
   const tokenCount = useMemo(() => {
     const isMarkdown = ['architecture-doc', 'mermaid-diagram'].includes(assetType || '')
-    
+
     if (isMarkdown) {
       const markdownContext = `${commonFormData.name} ${commonFormData.description} ${commonFormData.additionalContext} ${markdownFormData.documentFormat} ${markdownFormData.targetAudience}`
       return estimateTokenCount(markdownContext)
@@ -138,7 +147,7 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
     }
     return false
   }
-  
+
   const getAssetFormat = (assetType: string): string => {
     if (['icon', 'illustration', 'logo', 'pattern', 'ui-element', 'chart'].includes(assetType)) {
       return 'svg'
@@ -156,10 +165,8 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
     try {
       // Merge form data based on asset type
       const isMarkdown = ['architecture-doc', 'mermaid-diagram'].includes(assetType || '')
-      const formData = isMarkdown 
-        ? { ...commonFormData, ...markdownFormData }
-        : { ...commonFormData, ...svgFormData }
-      
+      const formData = isMarkdown ? { ...commonFormData, ...markdownFormData } : { ...commonFormData, ...svgFormData }
+
       // Prepare user input based on asset type
       const userInput = prepareUserInput(assetType || '', formData)
       const schemaKey = schemaKeyMap[assetType || '']
@@ -171,6 +178,10 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
       const response = await generateMutation.mutateAsync({
         schemaKey,
         userInput,
+        options: {
+          model,
+          provider
+        }
       })
 
       let generatedContent = ''
@@ -252,7 +263,7 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
   const copyAsReactComponent = async () => {
     const componentName = commonFormData.name
       .split(/[-_\s]/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join('')
 
     const reactComponent = `import React from 'react'
@@ -265,7 +276,10 @@ interface ${componentName}Props {
 
 export function ${componentName}({ className, width = 24, height = 24, ...props }: ${componentName}Props) {
   return (
-    ${generatedContent.replace(/width="[\d]+"/, 'width={width}').replace(/height="[\d]+"/, 'height={height}').replace(/<svg/, '<svg className={className} {...props}')}
+    ${generatedContent
+      .replace(/width="[\d]+"/, 'width={width}')
+      .replace(/height="[\d]+"/, 'height={height}')
+      .replace(/<svg/, '<svg className={className} {...props}')}
   )
 }`
 
@@ -296,6 +310,7 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
     })
     setGeneratedContent('')
     setActiveTab('input')
+    // Note: Model selection persists due to localStorage
   }
 
   return (
@@ -327,14 +342,33 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
           <ScrollArea className='h-[calc(80vh-200px)] mt-4'>
             <TabsContent value='input' className='space-y-4'>
               {renderInputForm(
-                assetType || '', 
-                commonFormData, 
+                assetType || '',
+                commonFormData,
                 setCommonFormData,
                 svgFormData,
                 setSvgFormData,
                 markdownFormData,
                 setMarkdownFormData
               )}
+
+              <Separator className='my-4' />
+
+              <div className='space-y-4'>
+                <div>
+                  <Label>AI Model Selection</Label>
+                  <p className='text-sm text-muted-foreground mb-3'>
+                    Choose the AI provider and model for generating your asset
+                  </p>
+                  <ProviderModelSelector
+                    provider={provider}
+                    currentModel={model}
+                    onProviderChange={setProvider}
+                    onModelChange={setModel}
+                    layout='compact'
+                    showLabels={false}
+                  />
+                </div>
+              </div>
 
               <div className='flex justify-between items-center pt-4'>
                 <span className='text-sm text-muted-foreground'>Estimated tokens: {formatTokenCount(tokenCount)}</span>
@@ -351,11 +385,7 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
                         Copy {getAssetFormat(assetType || '') === 'svg' ? 'SVG' : 'Markdown'}
                       </Button>
                       {getAssetFormat(assetType || '') === 'svg' && (
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => copyAsReactComponent()}
-                        >
+                        <Button variant='outline' size='sm' onClick={() => copyAsReactComponent()}>
                           <Code className='h-4 w-4 mr-2' />
                           Copy as React
                         </Button>
@@ -371,17 +401,10 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
                   <div className='space-y-2'>
                     <div className='text-sm text-muted-foreground'>Preview</div>
                     {getAssetFormat(assetType || '') === 'svg' ? (
-                      <SvgPreview
-                        svgContent={generatedContent}
-                        className='h-[400px]'
-                        showControls={true}
-                      />
+                      <SvgPreview svgContent={generatedContent} className='h-[400px]' showControls={true} />
                     ) : (
                       <div className='border rounded-lg p-4 h-[400px] overflow-y-auto bg-background'>
-                        <MarkdownRenderer 
-                          content={generatedContent} 
-                          copyToClipboard={copyToClipboard}
-                        />
+                        <MarkdownRenderer content={generatedContent} copyToClipboard={copyToClipboard} />
                       </div>
                     )}
                   </div>
@@ -430,8 +453,8 @@ export function ${componentName}({ className, width = 24, height = 24, ...props 
 
 // Helper function to render input form based on asset type
 function renderInputForm(
-  assetType: string, 
-  commonFormData: any, 
+  assetType: string,
+  commonFormData: any,
   setCommonFormData: (data: any) => void,
   svgFormData: any,
   setSvgFormData: (data: any) => void,
@@ -441,18 +464,18 @@ function renderInputForm(
   const updateCommonField = (field: string, value: string) => {
     setCommonFormData((prev: any) => ({ ...prev, [field]: value }))
   }
-  
+
   const updateSvgField = (field: string, value: string) => {
     setSvgFormData((prev: any) => ({ ...prev, [field]: value }))
   }
-  
+
   const updateMarkdownField = (field: string, value: any) => {
     setMarkdownFormData((prev: any) => ({ ...prev, [field]: value }))
   }
 
   // Check if it's a markdown asset type
   const isMarkdown = ['architecture-doc', 'mermaid-diagram'].includes(assetType)
-  
+
   // Markdown-specific inputs
   if (isMarkdown) {
     return (
@@ -476,7 +499,7 @@ function renderInputForm(
             value={commonFormData.description}
             onChange={(e) => updateCommonField('description', e.target.value)}
             placeholder={
-              assetType === 'architecture-doc' 
+              assetType === 'architecture-doc'
                 ? 'Describe your project: what it does, key features, tech stack, and any specific areas you want documented...'
                 : 'Describe what you want to visualize: system components, data flow, user journey, class relationships...'
             }
@@ -489,7 +512,10 @@ function renderInputForm(
             <div className='grid grid-cols-2 gap-4'>
               <div>
                 <Label htmlFor='format'>Document Format</Label>
-                <Select value={markdownFormData.documentFormat} onValueChange={(value) => updateMarkdownField('documentFormat', value)}>
+                <Select
+                  value={markdownFormData.documentFormat}
+                  onValueChange={(value) => updateMarkdownField('documentFormat', value)}
+                >
                   <SelectTrigger id='format'>
                     <SelectValue />
                   </SelectTrigger>
@@ -503,7 +529,10 @@ function renderInputForm(
 
               <div>
                 <Label htmlFor='audience'>Target Audience</Label>
-                <Select value={markdownFormData.targetAudience} onValueChange={(value) => updateMarkdownField('targetAudience', value)}>
+                <Select
+                  value={markdownFormData.targetAudience}
+                  onValueChange={(value) => updateMarkdownField('targetAudience', value)}
+                >
                   <SelectTrigger id='audience'>
                     <SelectValue />
                   </SelectTrigger>
@@ -541,9 +570,12 @@ function renderInputForm(
         {assetType === 'mermaid-diagram' && (
           <div>
             <Label htmlFor='diagramType'>Diagram Type (Optional)</Label>
-            <Select value={markdownFormData.diagramType} onValueChange={(value) => updateMarkdownField('diagramType', value)}>
+            <Select
+              value={markdownFormData.diagramType}
+              onValueChange={(value) => updateMarkdownField('diagramType', value)}
+            >
               <SelectTrigger id='diagramType'>
-                <SelectValue placeholder="Auto-detect" />
+                <SelectValue placeholder='Auto-detect' />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='auto'>Auto-detect</SelectItem>
@@ -597,12 +629,17 @@ function renderInputForm(
           value={commonFormData.description}
           onChange={(e) => updateCommonField('description', e.target.value)}
           placeholder={
-            assetType === 'icon' ? 'A hamburger menu icon with three horizontal lines' :
-              assetType === 'illustration' ? 'An illustration showing a person working on a laptop' :
-                assetType === 'logo' ? 'A modern, minimalist logo for a tech startup' :
-                  assetType === 'pattern' ? 'A geometric pattern with triangles and hexagons' :
-                    assetType === 'ui-element' ? 'A rounded button with gradient background' :
-                      'A bar chart showing monthly revenue'
+            assetType === 'icon'
+              ? 'A hamburger menu icon with three horizontal lines'
+              : assetType === 'illustration'
+                ? 'An illustration showing a person working on a laptop'
+                : assetType === 'logo'
+                  ? 'A modern, minimalist logo for a tech startup'
+                  : assetType === 'pattern'
+                    ? 'A geometric pattern with triangles and hexagons'
+                    : assetType === 'ui-element'
+                      ? 'A rounded button with gradient background'
+                      : 'A bar chart showing monthly revenue'
           }
           rows={3}
         />
@@ -687,17 +724,20 @@ function prepareUserInput(assetType: string, formData: any): string {
     const formatNote = formData.documentFormat ? `\n\nDocument format: ${formData.documentFormat}` : ''
     const audienceNote = formData.targetAudience ? `\nTarget audience: ${formData.targetAudience}` : ''
     const optionsNote = []
-    
+
     if (formData.includeTableOfContents) optionsNote.push('Include a table of contents')
     if (formData.includeExamples) optionsNote.push('Include code examples and practical usage')
-    
+
     const options = optionsNote.length > 0 ? `\n\n${optionsNote.join('. ')}.` : ''
-    
+
     return `${formData.description}${formatNote}${audienceNote}${options}${formData.additionalContext ? `\n\nAdditional requirements: ${formData.additionalContext}` : ''}`
   }
-  
+
   if (assetType === 'mermaid-diagram') {
-    const diagramType = formData.diagramType && formData.diagramType !== 'auto' ? `\n\nPreferred diagram type: ${formData.diagramType}` : ''
+    const diagramType =
+      formData.diagramType && formData.diagramType !== 'auto'
+        ? `\n\nPreferred diagram type: ${formData.diagramType}`
+        : ''
     return `${formData.description}${diagramType}${formData.additionalContext ? `\n\nAdditional requirements: ${formData.additionalContext}` : ''}`
   }
 
@@ -746,4 +786,3 @@ The SVG must:
 
 Generate the complete SVG code now:`
 }
-

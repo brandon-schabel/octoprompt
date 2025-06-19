@@ -68,7 +68,7 @@ bun i
 bun run dev
 ```
 
-View the [Dev UI here](http://localhost:5173)
+View the [Dev UI here](http://localhost:1420)
 
 > If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file or your `.gitignore`
 
@@ -318,13 +318,13 @@ Selected the wrong folder? Undo your select with `control/cmd + z` and redo with
 bun run dev:server
 ```
 
-- **Client Only** from the root (runs on port 5173):
+- **Client Only** from the root (runs on port 1420):
 
 ```bash
 bun run dev:client
 ```
 
-The client is available at [http://localhost:5173](http://localhost:5173)  
+The client is available at [http://localhost:1420](http://localhost:1420)  
 The server is available at [http://localhost:3147](http://localhost:3147)
 
 ---
@@ -359,7 +359,7 @@ You can always install local models with software like:
 
 ### 1. Simple Local Chat
 
-- **Open** your web client at [localhost:5173](http://localhost:5173).
+- **Open** your web client at [localhost:1420](http://localhost:1420).
 - Click "Chat" in the Navbar.
 - Click the chat icon and **New Chat** in the top-left.
 - **Type** a question — OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.

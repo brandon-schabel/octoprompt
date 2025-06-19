@@ -19,7 +19,7 @@ async function startServices() {
     })
     processes.push(serverProcess)
 
-    // Start client (Vite runs on 5173 by default)
+    // Start client (Vite runs on 1420 by default)
     console.log('🚀 Starting client...')
     const clientProcess = Bun.spawn(['bun', 'run', 'dev'], {
       cwd: join(rootDir, 'packages', 'client'),

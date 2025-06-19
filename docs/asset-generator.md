@@ -25,6 +25,7 @@ The Asset Generator provides templates and AI-powered generation for common deve
 
 1. Select the type of asset you want to generate
 2. Fill in the required information:
+
    - **Name** - The name of your asset (e.g., component name, project name)
    - **Description** - What the asset should do or contain
    - **Additional Context** - Tech stack, props, or other specific requirements
@@ -36,6 +37,7 @@ The Asset Generator provides templates and AI-powered generation for common deve
 ### Recent Generations
 
 The Asset Generator keeps track of your recent generations for easy access:
+
 - View up to 10 recent generations
 - Copy content to clipboard
 - Download as files
@@ -44,7 +46,9 @@ The Asset Generator keeps track of your recent generations for easy access:
 ## Asset Types
 
 ### README Generator
+
 Creates comprehensive README files with:
+
 - Project overview
 - Installation instructions
 - Usage examples
@@ -53,7 +57,9 @@ Creates comprehensive README files with:
 - License information
 
 ### React Component Generator
+
 Generates React components with:
+
 - TypeScript interfaces
 - Proper imports
 - React best practices
@@ -61,7 +67,9 @@ Generates React components with:
 - Clean, reusable code
 
 ### Test Suite Generator
+
 Creates test files with:
+
 - Bun test framework syntax
 - Describe blocks
 - Multiple test cases
@@ -69,7 +77,9 @@ Creates test files with:
 - Mock data setup
 
 ### Configuration File Generator
+
 Generates config files for:
+
 - TypeScript (tsconfig.json)
 - Prettier
 - ESLint
@@ -77,7 +87,9 @@ Generates config files for:
 - And more...
 
 ### API Route Generator
+
 Creates Hono API routes with:
+
 - OpenAPI specifications
 - Zod validation schemas
 - Error handling
@@ -85,7 +97,9 @@ Creates Hono API routes with:
 - RESTful conventions
 
 ### Zod Schema Generator
+
 Generates validation schemas with:
+
 - Proper validation rules
 - Error messages
 - TypeScript type inference
@@ -101,6 +115,7 @@ Generates validation schemas with:
 ## Technical Details
 
 The Asset Generator uses:
+
 - AI models for intelligent code generation
 - Structured output schemas for consistent results
 - Monaco Editor for syntax highlighting and editing

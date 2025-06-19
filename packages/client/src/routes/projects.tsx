@@ -233,10 +233,7 @@ export function ProjectsPage() {
           </TabsContent>
           <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId && projectData ? (
-              <ProjectAssetsView
-                project={projectData}
-                projectId={selectedProjectId}
-              />
+              <ProjectAssetsView project={projectData} projectId={selectedProjectId} />
             ) : (
               <p className='p-4 md:p-6'>No project selected for Assets.</p>
             )}

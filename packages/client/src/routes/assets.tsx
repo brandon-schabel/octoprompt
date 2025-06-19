@@ -179,7 +179,9 @@ export function AssetsPage() {
             <Sparkles className='h-8 w-8 text-primary' />
             Asset Generator
           </h1>
-          <p className='text-muted-foreground mt-1'>Generate high-quality SVG graphics and documentation with AI assistance</p>
+          <p className='text-muted-foreground mt-1'>
+            Generate high-quality SVG graphics and documentation with AI assistance
+          </p>
         </div>
         <div className='flex gap-2'>
           <Button variant='outline' size='sm' onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}>
@@ -282,7 +284,7 @@ export function AssetsPage() {
               {recentGenerations.map((generation) => {
                 const assetType = assetTypes.find((t) => t.id === generation.assetType)
                 const assetFormat = assetType?.assetFormat || 'svg'
-                
+
                 return (
                   <Card key={generation.id} className='group cursor-pointer overflow-hidden'>
                     <CardContent className='p-2'>
@@ -358,89 +360,85 @@ export function AssetsPage() {
             </div>
           ) : (
             <div className='grid gap-4'>
-            {recentGenerations.map((generation) => {
-              const assetType = assetTypes.find((t) => t.id === generation.assetType)
-              const Icon = assetType?.icon || FileText
+              {recentGenerations.map((generation) => {
+                const assetType = assetTypes.find((t) => t.id === generation.assetType)
+                const Icon = assetType?.icon || FileText
 
-              return (
-                <Card key={generation.id} className='group'>
-                  <CardHeader className='pb-3'>
-                    <div className='flex items-start justify-between'>
-                      <div className='flex items-center gap-3'>
-                        <Icon className='h-5 w-5 text-primary' />
-                        <div>
-                          <CardTitle className='text-base'>{generation.name}</CardTitle>
-                          <CardDescription className='text-xs'>
-                            {assetType?.name} • {formatDistanceToNow(generation.timestamp, { addSuffix: true })}
-                          </CardDescription>
+                return (
+                  <Card key={generation.id} className='group'>
+                    <CardHeader className='pb-3'>
+                      <div className='flex items-start justify-between'>
+                        <div className='flex items-center gap-3'>
+                          <Icon className='h-5 w-5 text-primary' />
+                          <div>
+                            <CardTitle className='text-base'>{generation.name}</CardTitle>
+                            <CardDescription className='text-xs'>
+                              {assetType?.name} • {formatDistanceToNow(generation.timestamp, { addSuffix: true })}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8'
+                            onClick={async () => {
+                              await copyToClipboard(generation.content, {
+                                successMessage: 'Content copied to clipboard'
+                              })
+                            }}
+                          >
+                            <Copy className='h-4 w-4' />
+                          </Button>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8'
+                            onClick={() => {
+                              const blob = new Blob([generation.content], { type: 'text/plain' })
+                              const url = window.URL.createObjectURL(blob)
+                              const a = document.createElement('a')
+                              a.href = url
+                              a.download = `${generation.name}${extensionMap[generation.assetType] || '.txt'}`
+                              document.body.appendChild(a)
+                              a.click()
+                              document.body.removeChild(a)
+                              window.URL.revokeObjectURL(url)
+                              toast.success('File downloaded')
+                            }}
+                          >
+                            <Download className='h-4 w-4' />
+                          </Button>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8 text-destructive'
+                            onClick={() => removeGeneration(generation.id)}
+                          >
+                            <Trash className='h-4 w-4' />
+                          </Button>
                         </div>
                       </div>
-                      <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8'
-                          onClick={async () => {
-                            await copyToClipboard(generation.content, {
-                              successMessage: 'Content copied to clipboard'
-                            })
-                          }}
-                        >
-                          <Copy className='h-4 w-4' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8'
-                          onClick={() => {
-                            const blob = new Blob([generation.content], { type: 'text/plain' })
-                            const url = window.URL.createObjectURL(blob)
-                            const a = document.createElement('a')
-                            a.href = url
-                            a.download = `${generation.name}${extensionMap[generation.assetType] || '.txt'}`
-                            document.body.appendChild(a)
-                            a.click()
-                            document.body.removeChild(a)
-                            window.URL.revokeObjectURL(url)
-                            toast.success('File downloaded')
-                          }}
-                        >
-                          <Download className='h-4 w-4' />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 text-destructive'
-                          onClick={() => removeGeneration(generation.id)}
-                        >
-                          <Trash className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  {showPreview && (
-                    <CardContent>
-                      <div className='flex items-center justify-center'>
-                        {assetType?.assetFormat === 'markdown' ? (
-                          <MarkdownPreview
-                            markdownContent={generation.content}
-                            size='lg'
-                            className='w-full'
-                          />
-                        ) : (
-                          <SvgInlinePreview
-                            svgContent={generation.content}
-                            size='lg'
-                            background='checkerboard'
-                            className='mx-auto'
-                          />
-                        )}
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              )
-            })}
+                    </CardHeader>
+                    {showPreview && (
+                      <CardContent>
+                        <div className='flex items-center justify-center'>
+                          {assetType?.assetFormat === 'markdown' ? (
+                            <MarkdownPreview markdownContent={generation.content} size='lg' className='w-full' />
+                          ) : (
+                            <SvgInlinePreview
+                              svgContent={generation.content}
+                              size='lg'
+                              background='checkerboard'
+                              className='mx-auto'
+                            />
+                          )}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                )
+              })}
             </div>
           )
         ) : (

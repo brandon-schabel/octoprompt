@@ -329,7 +329,8 @@ export const SvgGeneratorSchema = z
   .object({
     content: z.string().openapi({
       description: 'The complete SVG code starting with <svg and ending with </svg>',
-      example: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      example:
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     })
   })
   .openapi('SvgGeneratorOutput')
@@ -340,17 +341,26 @@ export const ArchitectureDocGeneratorSchema = z
       description: 'The generated architecture documentation in markdown format',
       example: '# Project Architecture\n\n## Overview\n...'
     }),
-    sections: z.array(z.object({
-      title: z.string(),
-      level: z.number().min(1).max(6)
-    })).openapi({
-      description: 'Table of contents with section titles and heading levels',
-      example: [{ title: 'Overview', level: 2 }, { title: 'Core Components', level: 2 }]
-    }),
-    metadata: z.object({
-      wordCount: z.number(),
-      estimatedReadTime: z.string()
-    }).optional()
+    sections: z
+      .array(
+        z.object({
+          title: z.string(),
+          level: z.number().min(1).max(6)
+        })
+      )
+      .openapi({
+        description: 'Table of contents with section titles and heading levels',
+        example: [
+          { title: 'Overview', level: 2 },
+          { title: 'Core Components', level: 2 }
+        ]
+      }),
+    metadata: z
+      .object({
+        wordCount: z.number(),
+        estimatedReadTime: z.string()
+      })
+      .optional()
   })
   .openapi('ArchitectureDocGeneratorOutput')
 
