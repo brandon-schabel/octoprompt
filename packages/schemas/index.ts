@@ -9,8 +9,9 @@ export * from './src/schema-utils'
 export * from './src/unix-ts-utils'
 export * from './src/gen-ai.schemas'
 export * from './src/agent-coder.schemas'
+export * from './src/browse-directory.schemas'
 
-// export constan ts
+// export constants
 export * from './src/constants/file-sync-options'
 export * from './src/constants/models-temp-not-allowed'
 export * from './src/constants/model-default-configs'

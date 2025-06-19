@@ -86,6 +86,10 @@ import {
   DeleteAgentCoderRunResponseSchema as DeleteAgentCoderRunResponseDataSchema
 } from '@octoprompt/schemas'
 
+// Browse Directory imports
+import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@octoprompt/schemas'
+import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@octoprompt/schemas'
+
 export type DataResponseSchema<T> = {
   success: boolean
   data: T
@@ -766,6 +770,18 @@ export class AgentCoderService extends BaseApiClient {
   }
 }
 
+// System Service (for browsing directories, etc.)
+export class SystemService extends BaseApiClient {
+  async browseDirectory(data?: BrowseDirectoryRequest) {
+    const validatedData = data ? this.validateBody(BrowseDirectoryRequestSchema, data) : {}
+    const result = await this.request('POST', '/browse-directory', {
+      body: validatedData,
+      responseSchema: BrowseDirectoryResponseSchema
+    })
+    return result as BrowseDirectoryResponse
+  }
+}
+
 // Main OctoPrompt Client
 export class OctoPromptClient {
   public readonly chats: ChatService
@@ -774,6 +790,7 @@ export class OctoPromptClient {
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
   public readonly agentCoder: AgentCoderService
+  public readonly system: SystemService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -782,6 +799,7 @@ export class OctoPromptClient {
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
     this.agentCoder = new AgentCoderService(config)
+    this.system = new SystemService(config)
   }
 }
 

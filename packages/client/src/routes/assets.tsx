@@ -24,7 +24,9 @@ import {
   Layout,
   BarChart3,
   List,
-  Grid
+  Grid,
+  FileTextIcon,
+  GitBranch
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -33,15 +35,19 @@ import { useRecentGenerations } from '@/hooks/use-recent-generations'
 import { formatDistanceToNow } from 'date-fns'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { SvgInlinePreview } from '@/components/svg-inline-preview'
+import { MarkdownInlinePreview } from '@/components/markdown-inline-preview'
+import { MarkdownPreview } from '@/components/markdown-preview'
 
-// SVG Asset type definitions
+// Asset type definitions
 const assetTypes = [
+  // SVG Assets
   {
     id: 'icon',
     name: 'Icon',
     description: 'Generate clean, scalable icons for UI elements',
     icon: Square,
-    category: 'icons',
+    category: 'svg',
+    assetFormat: 'svg',
     comingSoon: false,
     examples: 'menu, arrow, close, user, settings'
   },
@@ -50,7 +56,8 @@ const assetTypes = [
     name: 'Illustration',
     description: 'Create detailed illustrations and graphics',
     icon: Image,
-    category: 'graphics',
+    category: 'svg',
+    assetFormat: 'svg',
     comingSoon: false,
     examples: 'hero images, feature graphics, decorative elements'
   },
@@ -59,7 +66,8 @@ const assetTypes = [
     name: 'Logo',
     description: 'Design logos and brand marks',
     icon: Hexagon,
-    category: 'branding',
+    category: 'svg',
+    assetFormat: 'svg',
     comingSoon: false,
     examples: 'company logos, app icons, brand symbols'
   },
@@ -68,7 +76,8 @@ const assetTypes = [
     name: 'Pattern',
     description: 'Generate repeating patterns and backgrounds',
     icon: Grid3x3,
-    category: 'backgrounds',
+    category: 'svg',
+    assetFormat: 'svg',
     comingSoon: false,
     examples: 'geometric patterns, textures, decorative backgrounds'
   },
@@ -77,7 +86,8 @@ const assetTypes = [
     name: 'UI Element',
     description: 'Create UI components like buttons, cards, badges',
     icon: Layout,
-    category: 'interface',
+    category: 'svg',
+    assetFormat: 'svg',
     comingSoon: false,
     examples: 'buttons, toggles, progress bars, badges'
   },
@@ -86,20 +96,38 @@ const assetTypes = [
     name: 'Chart/Graph',
     description: 'Generate data visualization elements',
     icon: BarChart3,
-    category: 'data-viz',
+    category: 'svg',
+    assetFormat: 'svg',
     comingSoon: false,
     examples: 'bar charts, pie charts, line graphs, gauges'
+  },
+  // Markdown Assets
+  {
+    id: 'architecture-doc',
+    name: 'Architecture Doc',
+    description: 'Generate comprehensive project architecture documentation',
+    icon: FileTextIcon,
+    category: 'documentation',
+    assetFormat: 'markdown',
+    comingSoon: false,
+    examples: 'project structure, development guidelines, API conventions'
+  },
+  {
+    id: 'mermaid-diagram',
+    name: 'Mermaid Diagram',
+    description: 'Create diagrams for visualizing flows and relationships',
+    icon: GitBranch,
+    category: 'documentation',
+    assetFormat: 'markdown',
+    comingSoon: false,
+    examples: 'flowcharts, sequence diagrams, class diagrams, state machines'
   }
 ]
 
 const categories = [
-  { id: 'all', name: 'All SVGs' },
-  { id: 'icons', name: 'Icons' },
-  { id: 'graphics', name: 'Graphics' },
-  { id: 'branding', name: 'Branding' },
-  { id: 'backgrounds', name: 'Backgrounds' },
-  { id: 'interface', name: 'UI Elements' },
-  { id: 'data-viz', name: 'Data Visualization' }
+  { id: 'all', name: 'All Assets' },
+  { id: 'svg', name: 'SVG Graphics' },
+  { id: 'documentation', name: 'Documentation' }
 ]
 
 // File extension map for downloads
@@ -109,7 +137,9 @@ const extensionMap: Record<string, string> = {
   logo: '.svg',
   pattern: '.svg',
   'ui-element': '.svg',
-  chart: '.svg'
+  chart: '.svg',
+  'architecture-doc': '.md',
+  'mermaid-diagram': '.md'
 }
 
 export function AssetsPage() {
@@ -147,9 +177,9 @@ export function AssetsPage() {
         <div>
           <h1 className='text-3xl font-bold flex items-center gap-2'>
             <Sparkles className='h-8 w-8 text-primary' />
-            SVG Asset Generator
+            Asset Generator
           </h1>
-          <p className='text-muted-foreground mt-1'>Generate high-quality SVG graphics with AI assistance</p>
+          <p className='text-muted-foreground mt-1'>Generate high-quality SVG graphics and documentation with AI assistance</p>
         </div>
         <div className='flex gap-2'>
           <Button variant='outline' size='sm' onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}>
@@ -251,17 +281,27 @@ export function AssetsPage() {
             <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4'>
               {recentGenerations.map((generation) => {
                 const assetType = assetTypes.find((t) => t.id === generation.assetType)
+                const assetFormat = assetType?.assetFormat || 'svg'
                 
                 return (
                   <Card key={generation.id} className='group cursor-pointer overflow-hidden'>
                     <CardContent className='p-2'>
-                      <SvgInlinePreview
-                        svgContent={generation.content}
-                        size='md'
-                        background='checkerboard'
-                        className='w-full'
-                        showHoverPreview={false}
-                      />
+                      {assetFormat === 'svg' ? (
+                        <SvgInlinePreview
+                          svgContent={generation.content}
+                          size='md'
+                          background='checkerboard'
+                          className='w-full'
+                          showHoverPreview={false}
+                        />
+                      ) : (
+                        <MarkdownInlinePreview
+                          markdownContent={generation.content}
+                          size='md'
+                          className='w-full'
+                          showHoverPreview={false}
+                        />
+                      )}
                       <div className='mt-2 space-y-1'>
                         <p className='text-xs font-medium truncate'>{generation.name}</p>
                         <p className='text-xs text-muted-foreground'>
@@ -381,12 +421,20 @@ export function AssetsPage() {
                   {showPreview && (
                     <CardContent>
                       <div className='flex items-center justify-center'>
-                        <SvgInlinePreview
-                          svgContent={generation.content}
-                          size='lg'
-                          background='checkerboard'
-                          className='mx-auto'
-                        />
+                        {assetType?.assetFormat === 'markdown' ? (
+                          <MarkdownPreview
+                            markdownContent={generation.content}
+                            size='lg'
+                            className='w-full'
+                          />
+                        ) : (
+                          <SvgInlinePreview
+                            svgContent={generation.content}
+                            size='lg'
+                            background='checkerboard'
+                            className='mx-auto'
+                          />
+                        )}
                       </div>
                     </CardContent>
                   )}

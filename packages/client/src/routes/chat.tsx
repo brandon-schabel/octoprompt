@@ -293,17 +293,16 @@ export function AdaptiveChatInput({
 }: AdaptiveChatInputProps) {
   const [localValue, setLocalValue] = useLocalStorage('CHAT_INPUT_VALUE', value)
   const [isMultiline, setIsMultiline] = useState(false)
+  const isInitializedRef = useRef(false)
 
   const debouncedOnChange = useDebounceCallback(onChange, 200)
 
+  // Initialize only once on mount
   useEffect(() => {
-    // call onChange to set the local value
-    onChange(localValue)
-  }, [])
-
-  // update using onChange when localValue changes
-  useEffect(() => {
-    onChange(localValue)
+    if (!isInitializedRef.current) {
+      onChange(localValue)
+      isInitializedRef.current = true
+    }
   }, [localValue, onChange])
 
   useEffect(() => {
@@ -311,14 +310,15 @@ export function AdaptiveChatInput({
     if (shouldBeMultilineInitially !== isMultiline) {
       setIsMultiline(shouldBeMultilineInitially)
     }
-  }, [value])
+  }, [value, isMultiline])
 
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const newValue = e.target.value
       setLocalValue(newValue)
+      debouncedOnChange(newValue)
     },
-    [debouncedOnChange]
+    [debouncedOnChange, setLocalValue]
   )
 
   const handlePaste = useCallback(
@@ -587,20 +587,40 @@ export function ChatMessages({
   const autoScrollEnabled = useSelectSetting('autoScrollEnabled')
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const lastMessageCountRef = useRef(0)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    if (autoScrollEnabled && bottomRef.current) {
-      const scrollViewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]')
-      if (scrollViewport) {
-        const isScrolledUp = scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150
-        if (!isScrolledUp || messages.length <= 2) {
-          bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    // Only scroll if messages have actually changed (new message added)
+    if (autoScrollEnabled && bottomRef.current && messages.length !== lastMessageCountRef.current) {
+      // Clear any pending scroll
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+      
+      // Debounce scrolling to prevent excessive calls during streaming
+      scrollTimeoutRef.current = setTimeout(() => {
+        const scrollViewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]')
+        if (scrollViewport) {
+          const isScrolledUp = scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150
+          if (!isScrolledUp || messages.length <= 2) {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+          }
+        } else {
+          bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
         }
-      } else {
-        bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }, 100) // 100ms debounce
+      
+      lastMessageCountRef.current = messages.length
+    }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
       }
     }
-  }, [messages, autoScrollEnabled])
+  }, [messages.length, autoScrollEnabled]) // Only depend on message count, not entire array
 
   const handleCopyMessage = useCallback(
     (content: string) => {
@@ -1002,12 +1022,12 @@ function ChatPage() {
   const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null)
 
   useEffect(() => {
-    if (activeChatId && !model) {
-      const newModelSelection = modelsData?.data[0].id ?? ''
+    if (activeChatId && !model && modelsData?.data?.[0]) {
+      const newModelSelection = modelsData.data[0].id
       console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
       setModel(newModelSelection)
     }
-  }, [activeChatId, setModel])
+  }, [activeChatId, model, modelsData, setModel])
 
   const {
     messages,
@@ -1075,7 +1095,7 @@ function ChatPage() {
       toast.success('Context loaded into input.')
       setInitialChatContent(null) // Clear from localStorage after setting input
     }
-  }, [activeChatId, initialChatContent, setInput, input, messages, isAiLoading, setInitialChatContent])
+  }, [activeChatId, initialChatContent, setInput, input, messages.length, isAiLoading, setInitialChatContent]) // Use messages.length instead of messages array
 
   // Cleanup effect to ensure ref is reset if chat changes or content is cleared
   useEffect(() => {

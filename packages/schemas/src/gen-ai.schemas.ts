@@ -334,6 +334,43 @@ export const SvgGeneratorSchema = z
   })
   .openapi('SvgGeneratorOutput')
 
+export const ArchitectureDocGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated architecture documentation in markdown format',
+      example: '# Project Architecture\n\n## Overview\n...'
+    }),
+    sections: z.array(z.object({
+      title: z.string(),
+      level: z.number().min(1).max(6)
+    })).openapi({
+      description: 'Table of contents with section titles and heading levels',
+      example: [{ title: 'Overview', level: 2 }, { title: 'Core Components', level: 2 }]
+    }),
+    metadata: z.object({
+      wordCount: z.number(),
+      estimatedReadTime: z.string()
+    }).optional()
+  })
+  .openapi('ArchitectureDocGeneratorOutput')
+
+export const MermaidDiagramGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The complete mermaid diagram code in markdown format',
+      example: '```mermaid\ngraph TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Do this]\n  B -->|No| D[Do that]\n```'
+    }),
+    diagramType: z.enum(['flowchart', 'sequence', 'class', 'state', 'er', 'gantt', 'pie']).openapi({
+      description: 'The type of mermaid diagram generated',
+      example: 'flowchart'
+    }),
+    rawMermaidCode: z.string().openapi({
+      description: 'The raw mermaid code without markdown wrapper',
+      example: 'graph TD\n  A[Start] --> B{Decision}'
+    })
+  })
+  .openapi('MermaidDiagramGeneratorOutput')
+
 // Export internal schemas needed by routes
 export const FileSuggestionsZodSchema = z.object({
   fileIds: z.array(z.number())
@@ -483,6 +520,55 @@ Remember: Output ONLY the SVG code, nothing else.`,
       maxTokens: 2000
     },
     schema: SvgGeneratorSchema
+  },
+  architectureDocGenerator: {
+    name: 'Architecture Documentation Generator',
+    description: 'Creates comprehensive project architecture documentation and development guidelines',
+    promptTemplate: `Generate a comprehensive architecture documentation based on the following project description and requirements: {userInput}
+
+The documentation should include:
+1. Project Overview - High-level description of what the project does
+2. Architecture Overview - Core architectural patterns and principles
+3. Project Structure - Directory organization and key components
+4. Technology Stack - Languages, frameworks, and tools used
+5. Core Concepts - Key abstractions and design patterns
+6. Development Guidelines - Coding standards, conventions, and best practices
+7. API Design Principles - How APIs should be structured
+8. State Management - How data flows through the application
+9. Testing Strategy - Approach to testing and quality assurance
+10. Performance Considerations - Optimization strategies
+11. Security Guidelines - Security best practices
+12. Deployment & Operations - How the project is built and deployed
+
+Make it practical and actionable, similar to a cursor rules file that helps developers understand how to work with and extend the codebase.`,
+    systemPrompt: `You are an expert software architect and technical writer. Create clear, comprehensive, and practical architecture documentation that serves as a guide for developers working on the project. Focus on explaining the "why" behind architectural decisions and provide concrete examples where helpful. Write in a clear, concise manner that is easy to understand.`,
+    modelSettings: {
+      model: 'gpt-4o',
+      temperature: 0.5,
+      maxTokens: 4000
+    },
+    schema: ArchitectureDocGeneratorSchema
+  },
+  mermaidDiagramGenerator: {
+    name: 'Mermaid Diagram Generator',
+    description: 'Creates mermaid diagrams for visualizing architecture, flows, and relationships',
+    promptTemplate: `Generate a mermaid diagram based on the following requirements: {userInput}
+
+CRITICAL INSTRUCTIONS:
+1. Generate a complete, valid mermaid diagram
+2. Choose the most appropriate diagram type (flowchart, sequence, class, state, er, etc.)
+3. Use clear, descriptive labels
+4. Follow mermaid syntax precisely
+5. Include the diagram in a markdown code block with \`\`\`mermaid
+
+The output should be a markdown code block containing the mermaid diagram that can be rendered in any markdown viewer that supports mermaid.`,
+    systemPrompt: `You are an expert in creating clear, informative mermaid diagrams. Generate diagrams that effectively communicate system architecture, data flows, relationships, and processes. Use appropriate diagram types and follow mermaid best practices for clarity and readability.`,
+    modelSettings: {
+      model: 'gpt-4o',
+      temperature: 0.3,
+      maxTokens: 2000
+    },
+    schema: MermaidDiagramGeneratorSchema
   }
   // Add more structured tasks here...
 } satisfies Record<string, StructuredDataSchemaConfig<any>>

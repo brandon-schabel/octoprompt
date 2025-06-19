@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useChat, Message } from '@ai-sdk/react'
 import type { AiChatStreamRequest } from '@octoprompt/schemas'
 import type { AiSdkOptions } from '@octoprompt/schemas'
@@ -15,6 +15,9 @@ interface UseAIChatProps {
 }
 
 export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatProps) {
+  // Track if initial messages have been loaded to prevent infinite loops
+  const initialMessagesLoadedRef = useRef(false)
+  
   // Initialize Vercel AI SDK's useChat hook
   const {
     messages,
@@ -47,9 +50,15 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
     isError: isErrorFetchingInitial
   } = useGetMessages(chatId)
 
-  // Effect to load initial messages into useChat state (seems correct)
+  // Effect to load initial messages into useChat state with proper loop prevention
   useEffect(() => {
-    if (initialMessagesData?.data && messages.length === 0 && !isFetchingInitialMessages) {
+    // Only load initial messages once per chat
+    if (
+      initialMessagesData?.data && 
+      !initialMessagesLoadedRef.current && 
+      !isFetchingInitialMessages &&
+      !isLoading // Don't set messages while streaming
+    ) {
       const formattedMessages: Message[] = initialMessagesData.data.map((msg) => ({
         id: msg.id.toString(),
         // Ensure role mapping handles potential future roles if schema changes
@@ -57,11 +66,15 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
         content: msg.content,
         created: msg.created ? new Date(msg.created) : new Date() // Handle potential date parsing issues
       }))
-      // Prevent infinite loops by checking if messages are truly different if needed
       setMessages(formattedMessages)
+      initialMessagesLoadedRef.current = true
     }
-    // Add isFetchingInitialMessages to dependencies to avoid setting messages while fetching
-  }, [initialMessagesData, setMessages, messages.length, isFetchingInitialMessages])
+  }, [initialMessagesData, setMessages, isFetchingInitialMessages, isLoading])
+
+  // Reset the loaded flag when chatId changes
+  useEffect(() => {
+    initialMessagesLoadedRef.current = false
+  }, [chatId])
 
   // Enhanced `sendMessage` function using `append`
   const sendMessage = useCallback(
