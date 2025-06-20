@@ -308,8 +308,13 @@ export class FileAdapter<T> implements StorageAdapter<T> {
     
     // Atomic write with temp file
     const tempPath = `${this.filePath}.tmp`
-    await fs.writeFile(tempPath, JSON.stringify(obj, null, 2), 'utf-8')
-    await fs.rename(tempPath, this.filePath)
+    try {
+      await fs.writeFile(tempPath, JSON.stringify(obj, null, 2), 'utf-8')
+      await fs.rename(tempPath, this.filePath)
+    } catch (error) {
+      // If rename fails, try direct write as fallback
+      await fs.writeFile(this.filePath, JSON.stringify(obj, null, 2), 'utf-8')
+    }
   }
 
   private async ensureDir(): Promise<void> {
@@ -420,7 +425,15 @@ export class StorageV2<T extends Record<string, any>> {
   }
 
   async create(data: Omit<T, 'id' | 'created' | 'updated'>): Promise<T> {
-    const id = await this.generateId()
+    // Check if the schema expects a string ID by testing with a sample
+    const sampleId = 12345
+    const testData = { ...data, id: sampleId, created: 1, updated: 1 }
+    const testResult = await this.schema.safeParse(testData)
+    
+    const expectsStringId = !testResult.success && 
+      testResult.error.errors.some(e => e.path[0] === 'id' && e.code === 'invalid_type' && e.expected === 'string')
+    
+    const id = expectsStringId ? await this.generateStringId() : await this.generateId()
     const now = Date.now()
     
     const newData = {
@@ -433,7 +446,7 @@ export class StorageV2<T extends Record<string, any>> {
     // Validate
     const validated = await this.validate(newData)
     if (!validated) {
-      throw new ApiError('Validation failed', 400)
+      throw new ApiError(400, 'Validation failed')
     }
     
     // Write to adapter
@@ -465,7 +478,7 @@ export class StorageV2<T extends Record<string, any>> {
     // Validate
     const validated = await this.validate(updated)
     if (!validated) {
-      throw new ApiError('Validation failed', 400)
+      throw new ApiError(400, 'Validation failed')
     }
     
     // Write to adapter
@@ -551,10 +564,43 @@ export class StorageV2<T extends Record<string, any>> {
 
   private async generateId(): Promise<number> {
     let id = Date.now()
-    // Handle collisions
+    let attempts = 0
+    const maxAttempts = 1000
+    
+    // Handle collisions with a safety limit
     while (await this.adapter.exists(id)) {
       id++
+      attempts++
+      
+      if (attempts >= maxAttempts) {
+        // If we've tried too many times, use a random component
+        id = Date.now() + Math.floor(Math.random() * 10000)
+        break
+      }
     }
+    
+    return id
+  }
+
+  private async generateStringId(): Promise<string> {
+    const timestamp = Date.now()
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+    let id = `${timestamp}_${random}`
+    
+    // Handle collisions
+    let attempts = 0
+    while (await this.adapter.exists(id)) {
+      const newRandom = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+      id = `${timestamp}_${newRandom}_${attempts}`
+      attempts++
+      
+      if (attempts > 100) {
+        // Use a more unique ID
+        id = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+        break
+      }
+    }
+    
     return id
   }
 
@@ -568,6 +614,10 @@ export class StorageV2<T extends Record<string, any>> {
       
       // Validate with schema
       const result = await this.schema.safeParseAsync(migrated)
+      if (!result.success) {
+        console.error('StorageV2 validation failed:', result.error.errors)
+        console.error('Data being validated:', migrated)
+      }
       return result.success ? result.data : null
     } catch (error) {
       console.error('Validation error:', error)

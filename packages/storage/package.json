@@ -3,6 +3,11 @@
   "version": "0.5.4",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "benchmark": "bun run src/benchmarks/sqlite-performance.ts",
+    "test": "NODE_ENV=test bun test",
+    "test:debug": "NODE_ENV=test bun test --timeout 30000"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

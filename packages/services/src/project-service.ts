@@ -19,40 +19,26 @@ import { resolvePath } from './utils/path-utils'
 import path from 'node:path'
 
 export async function createProject(data: CreateProjectBody): Promise<Project> {
-  let projectId = projectStorage.generateId()
-  const initialProjectId = projectId // Store initial ID for logging
-  let incrementCount = 0 // Counter for increments
   const now = Date.now()
 
-  const newProjectData: Project = {
-    id: projectId,
-    name: data.name,
-    path: data.path,
-    description: data.description || '',
-    created: now,
-    updated: now
-  }
-
   try {
+    const projectId = projectStorage.generateId()
+
+    const newProjectData: Project = {
+      id: projectId,
+      name: data.name,
+      path: data.path,
+      description: data.description || '',
+      created: now,
+      updated: now
+    }
+
+    const validatedProject = ProjectSchema.parse(newProjectData)
+
     const existingProjectsObject = await projectStorage.readProjects()
     const projectsMap = new Map<number, Project>(
       Object.entries(existingProjectsObject).map(([id, proj]) => [Number(id), proj as Project])
     )
-
-    while (projectsMap.has(projectId)) {
-      // console.warn(`Project ID conflict for ${projectId}. Incrementing.`); // Original warning can be kept or removed
-      projectId++
-      incrementCount++
-    }
-
-    if (incrementCount > 0) {
-      newProjectData.id = projectId // Update the ID in the data object if it was changed
-      console.log(
-        `Project ID ${initialProjectId} was taken. Found available ID ${projectId} after ${incrementCount} increment(s).`
-      )
-    }
-
-    const validatedProject = ProjectSchema.parse(newProjectData)
 
     projectsMap.set(validatedProject.id, validatedProject)
 
@@ -354,49 +340,33 @@ export async function createProjectFileRecord(
   )
   const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath)
 
-  let fileId = projectStorage.generateId()
-  const initialFileId = fileId // Store initial ID for logging
-  let incrementCount = 0 // Counter for increments
   const now = Date.now()
   const fileName = path.basename(normalizedRelativePath)
   const fileExtension = path.extname(normalizedRelativePath)
   const size = Buffer.byteLength(initialContent, 'utf8')
 
-  const newFileData: ProjectFile = {
-    id: fileId,
-    projectId: projectId,
-    name: fileName,
-    path: normalizedRelativePath,
-    extension: fileExtension,
-    size: size,
-    content: initialContent,
-    summary: null,
-    summaryLastUpdated: null,
-    meta: '{}',
-    checksum: null,
-    created: now,
-    updated: now
-  }
-
   try {
+    const fileId = projectStorage.generateFileId()
+
+    const newFileData: ProjectFile = {
+      id: fileId,
+      projectId: projectId,
+      name: fileName,
+      path: normalizedRelativePath,
+      extension: fileExtension,
+      size: size,
+      content: initialContent,
+      summary: null,
+      summaryLastUpdated: null,
+      meta: '{}',
+      checksum: null,
+      created: now,
+      updated: now
+    }
+
     const validatedFile = ProjectFileSchema.parse(newFileData)
 
     const files = await projectStorage.readProjectFiles(projectId)
-    // Handle potential file ID conflicts by incrementing
-    while (files[newFileData.id]) {
-      // console.warn(`File ID conflict for ${newFileData.id} in project ${projectId}. Incrementing.`);
-      newFileData.id++
-      incrementCount++
-    }
-    // Update fileId if it was changed due to conflict resolution
-    fileId = newFileData.id
-
-    if (incrementCount > 0) {
-      console.log(
-        `File ID ${initialFileId} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`
-      )
-    }
-
     files[fileId] = validatedFile
 
     // even though the keys are numbers, they are saved as string because that is default javascript behavior
@@ -443,11 +413,13 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
   try {
     filesMap = await projectStorage.readProjectFiles(projectId)
 
-    for (const fileData of filesToCreate) {
-      let fileId = projectStorage.generateId()
-      const initialFileId = fileId
-      let incrementCount = 0
+    // Generate bulk IDs to avoid conflicts
+    const { getDb } = await import('@octoprompt/storage')
+    const db = getDb()
+    const fileIds = db.generateBulkIds('project_files', filesToCreate.length)
+    let idIndex = 0
 
+    for (const fileData of filesToCreate) {
       const existingInMapByPath = Object.values(filesMap).find((f) => f.path === fileData.path)
 
       if (existingInMapByPath) {
@@ -457,19 +429,14 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         continue
       }
 
-      // Handle potential file ID conflicts by incrementing for this specific file
-      while (filesMap[fileId]) {
-        fileId++
-        incrementCount++
-      }
-      if (incrementCount > 0) {
-        console.log(
-          `[ProjectService] Bulk create: File ID ${initialFileId} for path ${fileData.path} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`
-        )
+      const fileId = fileIds[idIndex++]
+      if (!fileId) {
+        console.error(`[ProjectService] No file ID available for ${fileData.path}`)
+        continue
       }
 
       const newFileData: ProjectFile = {
-        id: fileId, // Use the conflict-resolved fileId
+        id: fileId,
         projectId: projectId,
         name: fileData.name,
         path: fileData.path,

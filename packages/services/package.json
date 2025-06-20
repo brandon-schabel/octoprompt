@@ -4,7 +4,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "test": "bun test src/"
+    "test": "bun test src/ --timeout 5000"
   },
   "devDependencies": {
     "@types/bun": "latest"

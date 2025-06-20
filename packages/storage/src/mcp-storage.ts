@@ -10,7 +10,8 @@ import {
   type MCPResource,
   type MCPToolExecutionResult
 } from '@octoprompt/schemas'
-import { StorageV2, FileAdapter, MemoryAdapter } from './storage-v2'
+import { StorageV2, MemoryAdapter } from './storage-v2'
+import { SQLiteDbManagerAdapter } from './sqlite-db-manager-adapter'
 import { ApiError } from '@octoprompt/shared'
 
 // Initialize StorageV2 instances for MCP data
@@ -18,9 +19,7 @@ const isTest = process.env.NODE_ENV === 'test'
 
 // MCP Server Configurations Storage
 export const mcpServerConfigStorage = new StorageV2<MCPServerConfig>({
-  adapter: isTest 
-    ? new MemoryAdapter<MCPServerConfig>()
-    : new FileAdapter<MCPServerConfig>('mcp_server_configs', 'data/mcp_storage', MCPServerConfigSchema),
+  adapter: new SQLiteDbManagerAdapter<MCPServerConfig>('mcp_server_configs'),
   schema: MCPServerConfigSchema,
   indexes: [
     { field: 'id', type: 'hash' },
@@ -33,11 +32,10 @@ export const mcpServerConfigStorage = new StorageV2<MCPServerConfig>({
   }
 })
 
-// MCP Server States Storage
+// MCP Server States Storage - Using MemoryAdapter since this is runtime state
+// and uses serverId as the primary key
 export const mcpServerStateStorage = new StorageV2<MCPServerState>({
-  adapter: isTest
-    ? new MemoryAdapter<MCPServerState>()
-    : new FileAdapter<MCPServerState>('mcp_server_states', 'data/mcp_storage', MCPServerStateSchema),
+  adapter: new MemoryAdapter<MCPServerState>(),
   schema: MCPServerStateSchema,
   indexes: [
     { field: 'serverId', type: 'hash' },
@@ -49,11 +47,9 @@ export const mcpServerStateStorage = new StorageV2<MCPServerState>({
   }
 })
 
-// MCP Tools Storage (per project)
+// MCP Tools Storage - Using MemoryAdapter since tools have string IDs
 export const mcpToolStorage = new StorageV2<MCPTool>({
-  adapter: isTest
-    ? new MemoryAdapter<MCPTool>()
-    : new FileAdapter<MCPTool>('mcp_tools', 'data/mcp_storage', MCPToolSchema),
+  adapter: new MemoryAdapter<MCPTool>(),
   schema: MCPToolSchema,
   indexes: [
     { field: 'id', type: 'hash' },
@@ -66,11 +62,9 @@ export const mcpToolStorage = new StorageV2<MCPTool>({
   }
 })
 
-// MCP Resources Storage (per project)
+// MCP Resources Storage - Using MemoryAdapter since resources use URI as ID
 export const mcpResourceStorage = new StorageV2<MCPResource>({
-  adapter: isTest
-    ? new MemoryAdapter<MCPResource>()
-    : new FileAdapter<MCPResource>('mcp_resources', 'data/mcp_storage', MCPResourceSchema),
+  adapter: new MemoryAdapter<MCPResource>(),
   schema: MCPResourceSchema,
   indexes: [
     { field: 'uri', type: 'hash' },
@@ -85,9 +79,7 @@ export const mcpResourceStorage = new StorageV2<MCPResource>({
 
 // MCP Tool Execution Results Storage
 export const mcpToolExecutionStorage = new StorageV2<MCPToolExecutionResult>({
-  adapter: isTest
-    ? new MemoryAdapter<MCPToolExecutionResult>()
-    : new FileAdapter<MCPToolExecutionResult>('mcp_tool_executions', 'data/mcp_storage', MCPToolExecutionResultSchema),
+  adapter: new SQLiteDbManagerAdapter<MCPToolExecutionResult>('mcp_tool_executions'),
   schema: MCPToolExecutionResultSchema,
   indexes: [
     { field: 'id', type: 'hash' },
