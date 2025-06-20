@@ -2,6 +2,7 @@ export * from './src/chat-service'
 export * from './src/project-service'
 export * from './src/prompt-service'
 export * from './src/provider-key-service'
+export * from './src/mcp-service'
 export * from './src/agents/agent-logger'
 
 export * from './src/file-services/file-sync-service-unified'

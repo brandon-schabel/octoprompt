@@ -8,7 +8,11 @@
     "start": "bun server.ts",
     "dev": "DEV=true bun server.ts",
     "dev:watch": "DEV=true bun --watch server.ts",
-    "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh"
+    "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh",
+    "mcp:stdio": "bun server.ts --mcp-stdio"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  }
 }

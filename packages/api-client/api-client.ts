@@ -91,6 +91,29 @@ import {
 import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@octoprompt/schemas'
 import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@octoprompt/schemas'
 
+// MCP imports
+import type {
+  CreateMCPServerConfigBody,
+  UpdateMCPServerConfigBody,
+  MCPServerConfig,
+  MCPServerState,
+  MCPTool,
+  MCPResource,
+  MCPToolExecutionRequest,
+  MCPToolExecutionResult
+} from '@octoprompt/schemas'
+import {
+  CreateMCPServerConfigBodySchema,
+  UpdateMCPServerConfigBodySchema,
+  MCPServerConfigResponseSchema,
+  MCPServerConfigListResponseSchema,
+  MCPToolListResponseSchema,
+  MCPResourceListResponseSchema,
+  MCPToolExecutionRequestSchema,
+  MCPToolExecutionResultResponseSchema,
+  MCPServerStateSchema
+} from '@octoprompt/schemas'
+
 export type DataResponseSchema<T> = {
   success: boolean
   data: T
@@ -137,8 +160,10 @@ class BaseApiClient {
       this.customFetch = config.customFetch
     } else {
       // Bind default fetch to window context
-      this.customFetch = typeof window !== 'undefined' && window.fetch 
-        ? window.fetch.bind(window) 
+      // @ts-ignore
+      this.customFetch = typeof window !== 'undefined' && window.fetch
+        // @ts-ignore
+        ? window.fetch.bind(window)
         : fetch
     }
   }
@@ -795,6 +820,116 @@ export class SystemService extends BaseApiClient {
   }
 }
 
+// MCP Service
+export class MCPService extends BaseApiClient {
+  // MCP Server Config operations
+  async createServerConfig(projectId: number, data: CreateMCPServerConfigBody) {
+    const validatedData = this.validateBody(CreateMCPServerConfigBodySchema, data)
+    const result = await this.request('POST', `/projects/${projectId}/mcp-servers`, {
+      body: validatedData,
+      responseSchema: MCPServerConfigResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig>
+  }
+
+  async listServerConfigs(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-servers`, {
+      responseSchema: MCPServerConfigListResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig[]>
+  }
+
+  async getServerConfig(projectId: number, configId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-servers/${configId}`, {
+      responseSchema: MCPServerConfigResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig>
+  }
+
+  async updateServerConfig(projectId: number, configId: number, data: UpdateMCPServerConfigBody) {
+    const validatedData = this.validateBody(UpdateMCPServerConfigBodySchema, data)
+    const result = await this.request('PATCH', `/projects/${projectId}/mcp-servers/${configId}`, {
+      body: validatedData,
+      responseSchema: MCPServerConfigResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig>
+  }
+
+  async deleteServerConfig(projectId: number, configId: number): Promise<boolean> {
+    await this.request('DELETE', `/projects/${projectId}/mcp-servers/${configId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  // MCP Server Management operations
+  async startServer(projectId: number, configId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp-servers/${configId}/start`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: MCPServerStateSchema
+      })
+    })
+    return result as DataResponseSchema<MCPServerState>
+  }
+
+  async stopServer(projectId: number, configId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp-servers/${configId}/stop`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: MCPServerStateSchema
+      })
+    })
+    return result as DataResponseSchema<MCPServerState>
+  }
+
+  async getServerState(projectId: number, configId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-servers/${configId}/state`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: MCPServerStateSchema
+      })
+    })
+    return result as DataResponseSchema<MCPServerState>
+  }
+
+  // MCP Tool operations
+  async listTools(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-tools`, {
+      responseSchema: MCPToolListResponseSchema
+    })
+    return result as DataResponseSchema<MCPTool[]>
+  }
+
+  async executeTool(projectId: number, request: MCPToolExecutionRequest) {
+    const validatedData = this.validateBody(MCPToolExecutionRequestSchema, request)
+    const result = await this.request('POST', `/projects/${projectId}/mcp-tools/execute`, {
+      body: validatedData,
+      responseSchema: MCPToolExecutionResultResponseSchema
+    })
+    return result as DataResponseSchema<MCPToolExecutionResult>
+  }
+
+  // MCP Resource operations
+  async listResources(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-resources`, {
+      responseSchema: MCPResourceListResponseSchema
+    })
+    return result as DataResponseSchema<MCPResource[]>
+  }
+
+  async readResource(projectId: number, serverId: number, uri: string) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-resources/${serverId}`, {
+      params: { uri },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.any()
+      })
+    })
+    return result as DataResponseSchema<any>
+  }
+}
+
 // Main OctoPrompt Client
 export class OctoPromptClient {
   public readonly chats: ChatService
@@ -804,6 +939,7 @@ export class OctoPromptClient {
   public readonly genAi: GenAiService
   public readonly agentCoder: AgentCoderService
   public readonly system: SystemService
+  public readonly mcp: MCPService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -813,6 +949,7 @@ export class OctoPromptClient {
     this.genAi = new GenAiService(config)
     this.agentCoder = new AgentCoderService(config)
     this.system = new SystemService(config)
+    this.mcp = new MCPService(config)
   }
 }
 

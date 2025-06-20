@@ -6,7 +6,8 @@ import {
   type ProjectFile,
   ProjectFileSchema,
   LOW_MODEL_CONFIG,
-  type APIProviders
+  type APIProviders,
+  FileSuggestionsZodSchema
 } from '@octoprompt/schemas'
 import { ApiError, promptsMap } from '@octoprompt/shared'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
@@ -166,6 +167,10 @@ export async function deleteProject(projectId: number): Promise<boolean> {
     await projectStorage.writeProjects(projects)
 
     await projectStorage.deleteProjectData(projectId)
+
+    // Clean up MCP servers for this project
+    const { cleanupProjectMCPServers } = await import('./mcp-service')
+    await cleanupProjectMCPServers(projectId)
 
     return true
   } catch (error) {
@@ -773,11 +778,11 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
-      `Successfully summarized: ${summarizedCount}, ` +
-      `Skipped (empty): ${skippedByEmptyCount}, ` +
-      `Skipped (errors): ${errorCount}, ` +
-      `Total not summarized: ${finalSkippedCount}`
+    `Total to process: ${totalProcessed}, ` +
+    `Successfully summarized: ${summarizedCount}, ` +
+    `Skipped (empty): ${skippedByEmptyCount}, ` +
+    `Skipped (errors): ${errorCount}, ` +
+    `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
@@ -835,6 +840,71 @@ ${promptsMap.contemplativePrompt}
       `Failed to optimize prompt: ${error.message || 'AI provider error'}`,
       'PROMPT_OPTIMIZE_ERROR',
       { originalError: error }
+    )
+  }
+}
+
+/**
+ * Suggests relevant files based on user input and project context using AI
+ */
+export async function suggestFiles(
+  projectId: number,
+  prompt: string,
+  limit: number = 10
+): Promise<ProjectFile[]> {
+  try {
+    await getProjectById(projectId) // Validate project exists
+
+    const projectSummary = await getFullProjectSummary(projectId)
+    const systemPrompt = `
+<role>
+You are a code assistant that recommends relevant files based on user input.
+You have a list of file summaries and a user request.
+</role>
+
+<response_format>
+    {"fileIds": [1234567890123, 1234567890124]}
+</response_format>
+
+<guidelines>
+- Return file IDs as numbers (unix timestamps in milliseconds)
+- For simple tasks: return max 5 files
+- For complex tasks: return max ${Math.min(limit, 10)} files
+- For very complex tasks: return max ${Math.min(limit, 20)} files
+- Do not add comments in your response
+- Strictly follow the JSON schema, do not add any additional properties or comments
+- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
+</guidelines>
+`
+
+    const userPrompt = `
+<project_summary>
+${projectSummary}
+</project_summary>
+
+<user_query>
+${prompt}
+</user_query>
+`
+
+    const result = await generateStructuredData({
+      prompt: userPrompt,
+      schema: FileSuggestionsZodSchema,
+      systemMessage: systemPrompt
+    })
+
+    // Fetch the actual file objects based on the recommended file IDs
+    const fileIds = result.object.fileIds
+    const allFiles = await getProjectFiles(projectId)
+    const recommendedFiles = allFiles?.filter((file) => fileIds.includes(file.id)) || []
+
+    return recommendedFiles
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to suggest files for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
+      'AI_SUGGESTION_ERROR'
     )
   }
 }

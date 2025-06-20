@@ -8,6 +8,7 @@ import { providerKeyRoutes } from './routes/provider-key-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { agentCoderRoutes } from './routes/agent-coder-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
+import { mcpRoutes } from './routes/mcp-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { corsConfig } from '@octoprompt/services/src/constants/server-config'
@@ -55,6 +56,7 @@ app.route('/', promptRoutes)
 app.route('/', genAiRoutes)
 app.route('/', agentCoderRoutes)
 app.route('/', browseDirectoryRoutes)
+app.route('/', mcpRoutes)
 
 // Global error handler
 app.onError((err, c) => {

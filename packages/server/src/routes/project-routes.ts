@@ -13,8 +13,7 @@ import {
   ProjectResponseMultiStatusSchema,
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
-  ProjectFile,
-  FileSuggestionsZodSchema
+  ProjectFile
 } from '@octoprompt/schemas'
 
 import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
@@ -24,8 +23,7 @@ import { resolve as resolvePath } from 'node:path'
 import { homedir as getHomedir } from 'node:os'
 
 import * as projectService from '@octoprompt/services'
-import { getFullProjectSummary } from '@octoprompt/services'
-import { optimizeUserInput, syncProject, syncProjectFolder, watchersManager } from '@octoprompt/services'
+import { getFullProjectSummary, optimizeUserInput, syncProject, syncProjectFolder, watchersManager } from '@octoprompt/services'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
 
 // File operation schemas
@@ -619,48 +617,8 @@ export const projectRoutes = new OpenAPIHono()
     const { projectId } = c.req.valid('param')
     const { prompt, limit = 10 } = c.req.valid('json')
 
-    const projectSummary = await getFullProjectSummary(projectId)
-    const systemPrompt = `
-<role>
-You are a code assistant that recommends relevant files based on user input.
-You have a list of file summaries and a user request.
-</role>
-
-<response_format>
-    {"fileIds": [1234567890123, 1234567890124]}
-</response_format>
-
-<guidelines>
-- Return file IDs as numbers (unix timestamps in milliseconds)
-- For simple tasks: return max 5 files
-- For complex tasks: return max ${Math.min(limit, 10)} files
-- For very complex tasks: return max ${Math.min(limit, 20)} files
-- Do not add comments in your response
-- Strictly follow the JSON schema, do not add any additional properties or comments
-- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
-</guidelines>
-        `
-
-    const userPrompt = `
-<project_summary>
-${projectSummary}
-</project_summary>
-
-<user_query>
-${prompt}
-</user_query>
-`
     try {
-      const result = await projectService.generateStructuredData({
-        prompt: userPrompt,
-        schema: FileSuggestionsZodSchema,
-        systemMessage: systemPrompt
-      })
-
-      // Fetch the actual file objects based on the recommended file IDs
-      const fileIds = result.object.fileIds
-      const allFiles = await projectService.getProjectFiles(projectId)
-      const recommendedFiles = allFiles?.filter((file) => fileIds.includes(file.id)) || []
+      const recommendedFiles = await projectService.suggestFiles(projectId, prompt, limit)
 
       const payload = {
         success: true,

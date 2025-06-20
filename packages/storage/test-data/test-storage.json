@@ -1,0 +1,10 @@
+{
+  "1": {
+    "id": 1,
+    "name": "Test",
+    "category": "test",
+    "value": 100,
+    "created": 1750393026056,
+    "updated": 1750393026056
+  }
+}

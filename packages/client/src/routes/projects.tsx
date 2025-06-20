@@ -26,7 +26,8 @@ import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
 import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
 import { ProjectAssetsView } from '@/components/projects/project-assets-view'
-import { Bot, Code2, Sparkles } from 'lucide-react'
+import { Bot, Code2, Sparkles, Plug } from 'lucide-react'
+import { MCPTabView } from '@/components/mcp/mcp-tab-view'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -190,6 +191,10 @@ export function ProjectsPage() {
                 <Sparkles className='h-3.5 w-3.5' />
                 Assets
               </TabsTrigger>
+              <TabsTrigger value='mcp' className='flex items-center gap-1'>
+                <Plug className='h-3.5 w-3.5' />
+                MCP
+              </TabsTrigger>
             </TabsList>
             <div className='ml-auto'>
               <ProjectSettingsDialog />
@@ -236,6 +241,13 @@ export function ProjectsPage() {
               <ProjectAssetsView project={projectData} projectId={selectedProjectId} />
             ) : (
               <p className='p-4 md:p-6'>No project selected for Assets.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='mcp' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? (
+              <MCPTabView projectId={selectedProjectId} />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for MCP.</p>
             )}
           </TabsContent>
         </Tabs>

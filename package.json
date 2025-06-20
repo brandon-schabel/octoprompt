@@ -46,6 +46,7 @@
     "@hono/swagger-ui": "^0.5.1",
     "@hono/zod-openapi": "^0.19.8",
     "@hono/zod-validator": "^0.4.3",
+    "@modelcontextprotocol/sdk": "^1.13.0",
     "@octoprompt/api-client": "workspace:*",
     "@octoprompt/schemas": "workspace:*",
     "@octoprompt/services": "workspace:*",

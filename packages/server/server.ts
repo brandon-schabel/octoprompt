@@ -6,6 +6,7 @@ import { app } from './src/app'
 import { listProjects } from '@octoprompt/services'
 import { isDevEnv, SERVER_PORT } from '@octoprompt/services'
 import { watchersManager, createCleanupService } from '@octoprompt/services'
+import { startStdioTransport } from './src/mcp/transport'
 
 // Use the imported watchersManager, remove the local creation
 // export const watchersManager = createWatchersManager();
@@ -111,11 +112,11 @@ function serveStatic(path: string): Response {
 }
 
 if (import.meta.main) {
-  console.log('Starting server...')
   ;(async () => {
     // Parse command line arguments
     const args = process.argv.slice(2)
     let port = SERVER_PORT
+    let mcpStdio = false
     
     // Look for --port argument
     const portIndex = args.indexOf('--port')
@@ -126,14 +127,26 @@ if (import.meta.main) {
       }
     }
     
-    const server = await instantiateServer({ port })
-    function handleShutdown() {
-      console.log('Received kill signal. Shutting down gracefully...')
-      watchersManager.stopAllWatchers?.()
-      server.stop()
-      process.exit(0)
+    // Look for --mcp-stdio flag
+    if (args.includes('--mcp-stdio')) {
+      mcpStdio = true
     }
-    process.on('SIGINT', handleShutdown)
-    process.on('SIGTERM', handleShutdown)
+    
+    if (mcpStdio) {
+      // Start in MCP stdio mode for Claude Desktop
+      await startStdioTransport()
+    } else {
+      // Start normal HTTP server
+      console.log('Starting server...')
+      const server = await instantiateServer({ port })
+      function handleShutdown() {
+        console.log('Received kill signal. Shutting down gracefully...')
+        watchersManager.stopAllWatchers?.()
+        server.stop()
+        process.exit(0)
+      }
+      process.on('SIGINT', handleShutdown)
+      process.on('SIGTERM', handleShutdown)
+    }
   })()
 }
