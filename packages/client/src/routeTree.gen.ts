@@ -21,42 +21,42 @@ import { Route as IndexRouteImport } from './routes/index'
 const PromptsRoute = PromptsRouteImport.update({
   id: '/prompts',
   path: '/prompts',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectSummarizationRoute = ProjectSummarizationRouteImport.update({
   id: '/project-summarization',
   path: '/project-summarization',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const KeysRoute = KeysRouteImport.update({
   id: '/keys',
   path: '/keys',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AssetsRoute = AssetsRouteImport.update({
   id: '/assets',
   path: '/assets',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -92,10 +92,35 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/assets' | '/chat' | '/health' | '/keys' | '/project-summarization' | '/projects' | '/prompts'
+  fullPaths:
+    | '/'
+    | '/assets'
+    | '/chat'
+    | '/health'
+    | '/keys'
+    | '/project-summarization'
+    | '/projects'
+    | '/prompts'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/assets' | '/chat' | '/health' | '/keys' | '/project-summarization' | '/projects' | '/prompts'
-  id: '__root__' | '/' | '/assets' | '/chat' | '/health' | '/keys' | '/project-summarization' | '/projects' | '/prompts'
+  to:
+    | '/'
+    | '/assets'
+    | '/chat'
+    | '/health'
+    | '/keys'
+    | '/project-summarization'
+    | '/projects'
+    | '/prompts'
+  id:
+    | '__root__'
+    | '/'
+    | '/assets'
+    | '/chat'
+    | '/health'
+    | '/keys'
+    | '/project-summarization'
+    | '/projects'
+    | '/prompts'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -178,6 +203,8 @@ const rootRouteChildren: RootRouteChildren = {
   KeysRoute: KeysRoute,
   ProjectSummarizationRoute: ProjectSummarizationRoute,
   ProjectsRoute: ProjectsRoute,
-  PromptsRoute: PromptsRoute
+  PromptsRoute: PromptsRoute,
 }
-export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)._addFileTypes<FileRouteTypes>()
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()

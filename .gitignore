@@ -205,3 +205,4 @@ openapi.json
 __pycache__
 **/data/*
 packages/storage/var
+packages/client/src-tauri/binaries/*

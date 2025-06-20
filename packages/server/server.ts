@@ -113,7 +113,20 @@ function serveStatic(path: string): Response {
 if (import.meta.main) {
   console.log('Starting server...')
   ;(async () => {
-    const server = await instantiateServer()
+    // Parse command line arguments
+    const args = process.argv.slice(2)
+    let port = SERVER_PORT
+    
+    // Look for --port argument
+    const portIndex = args.indexOf('--port')
+    if (portIndex !== -1 && args[portIndex + 1]) {
+      const parsedPort = parseInt(args[portIndex + 1], 10)
+      if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort < 65536) {
+        port = parsedPort
+      }
+    }
+    
+    const server = await instantiateServer({ port })
     function handleShutdown() {
       console.log('Received kill signal. Shutting down gracefully...')
       watchersManager.stopAllWatchers?.()
