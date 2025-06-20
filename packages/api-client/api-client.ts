@@ -114,6 +114,7 @@ interface ApiConfig {
   baseUrl: string
   timeout?: number
   headers?: Record<string, string>
+  customFetch?: typeof fetch
 }
 
 // Base API client with common functionality
@@ -121,6 +122,7 @@ class BaseApiClient {
   protected baseUrl: string
   protected timeout: number
   protected headers: Record<string, string>
+  protected customFetch: typeof fetch
 
   constructor(config: ApiConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, '')
@@ -128,6 +130,16 @@ class BaseApiClient {
     this.headers = {
       'Content-Type': 'application/json',
       ...config.headers
+    }
+    // Ensure fetch maintains its context
+    if (config.customFetch) {
+      // Wrap the custom fetch to ensure it maintains context
+      this.customFetch = config.customFetch
+    } else {
+      // Bind default fetch to window context
+      this.customFetch = typeof window !== 'undefined' && window.fetch 
+        ? window.fetch.bind(window) 
+        : fetch
     }
   }
 
@@ -156,7 +168,7 @@ class BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await this.customFetch(url.toString(), {
         method,
         headers: this.headers,
         body: options?.body ? JSON.stringify(options.body) : undefined,
@@ -322,7 +334,7 @@ export class ChatService extends BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await this.customFetch(url.toString(), {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify(validatedData),
@@ -692,7 +704,7 @@ export class GenAiService extends BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await this.customFetch(url.toString(), {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify(validatedData),

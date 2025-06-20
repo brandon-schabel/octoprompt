@@ -51,6 +51,11 @@ async function buildProject() {
   // console.log('Copying built client files to server dist...')
   // await $`cp -r ${join(clientDir, 'dist')}/* ${join(distDir, 'client-dist')}/`
 
+  // Build a simple binary for the current platform (for development)
+  console.log('Building binary for current platform...')
+  const currentPlatformExt = process.platform === 'win32' ? '.exe' : ''
+  await $`cd ${serverDir} && bun build --compile ./server.ts --outfile ${join(distDir, `${pkg.name}-bundle${currentPlatformExt}`)}`
+  
   // Define targets with proper executable extensions
   const bundleNamePrefix = `${pkg.name}-${pkg.version}`
 
@@ -116,6 +121,11 @@ async function buildProject() {
       chmodSync(join(platformDir, executableName), 0o755)
     }
 
+    // Also copy the standalone binary to the dist root for Tauri sidecar preparation
+    const simplePlatformName = target.replace('bun-', '')
+    const standaloneExecName = `${pkg.name}-${simplePlatformName}${executableExt}`
+    await $`cp ${join(platformDir, executableName)} ${join(distDir, standaloneExecName)}`
+
     // Create a zip archive with the versioned name
     console.log(`Creating zip archive for ${outputDirName}...`)
     try {
@@ -127,6 +137,16 @@ async function buildProject() {
   }
 
   console.log('Platform-specific bundles created successfully!')
+
+  // Prepare Tauri sidecars
+  console.log('\nPreparing Tauri sidecars...')
+  try {
+    await $`bun run ${join(rootDir, 'scripts', 'prepare-tauri-sidecars.ts')}`
+    console.log('Tauri sidecars prepared successfully!')
+  } catch (error) {
+    console.warn('Failed to prepare Tauri sidecars:', error)
+    console.warn('You can run "bun run prepare-tauri-sidecars" manually if needed.')
+  }
 
   const endTime = performance.now()
   const totalSeconds = ((endTime - startTime) / 1000).toFixed(2)

@@ -9,7 +9,12 @@ const CLIENT_PORT = 1420
 export const SERVER_PORT = isDevEnv ? DEV_PORT : PROD_PORT
 
 export const corsConfig = {
-  origin: [`http://localhost:${CLIENT_PORT}`, `https://${process.env.DOMAIN}`],
+  origin: [
+    `http://localhost:${CLIENT_PORT}`,
+    `https://${process.env.DOMAIN}`,
+    'tauri://localhost',
+    'https://tauri.localhost'
+  ],
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
   allowHeaders: ['Content-Type', 'Authorization', 'Cookie']

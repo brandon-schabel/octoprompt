@@ -181,7 +181,7 @@ export function AppNavbar() {
 
       {/* Dialog: Open Project */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className='sm:max-w-[425px]'>
+        <DialogContent className='sm:max-w-[600px] max-h-[80vh] overflow-hidden'>
           <DialogHeader>
             <DialogTitle>Open Project</DialogTitle>
           </DialogHeader>

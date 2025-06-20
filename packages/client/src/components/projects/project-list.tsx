@@ -27,6 +27,23 @@ interface ProjectListProps {
   onCreateProject: () => void
 }
 
+function truncatePath(path: string, maxLength: number = 50): string {
+  if (path.length <= maxLength) return path
+  
+  const parts = path.split('/')
+  if (parts.length <= 2) return `...${path.slice(-(maxLength - 3))}`
+  
+  const firstPart = parts[0]
+  const lastPart = parts[parts.length - 1]
+  const middleLength = maxLength - firstPart.length - lastPart.length - 6
+  
+  if (middleLength > 0) {
+    return `${firstPart}/.../${lastPart}`
+  }
+  
+  return `.../${lastPart}`.slice(0, maxLength)
+}
+
 export function ProjectList({
   loading,
   projects,
@@ -66,7 +83,7 @@ export function ProjectList({
             <Plus className='h-4 w-4' /> Project
           </Button>
         </div>
-        <div className='space-y-1'>
+        <div className='space-y-1 max-h-[60vh] overflow-y-auto pr-2'>
           {projects && projects.length > 0 ? (
             projects.map((project) => (
               <div key={project.id} className='group flex items-center'>
@@ -78,7 +95,9 @@ export function ProjectList({
                   <Folder className='mr-2 h-4 w-4 shrink-0' />
                   <div className='flex-1 overflow-hidden text-left'>
                     <div className='truncate'>{project.name}</div>
-                    <div className='truncate text-xs text-muted-foreground'>{project.path}</div>
+                    <div className='truncate text-xs text-muted-foreground' title={project.path}>
+                      {truncatePath(project.path, 45)}
+                    </div>
                   </div>
                 </Button>
                 <DropdownMenu>
