@@ -18,6 +18,7 @@ import {
     suggestFiles,
     listProjects
 } from '@octoprompt/services'
+import { BUILTIN_TOOLS, getToolByName } from './mcp/tools-registry'
 
 // Create MCP server
 const server = new Server(
@@ -69,74 +70,11 @@ async function ensureProject(): Promise<number> {
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-        tools: [
-            {
-                name: 'file_read',
-                description: 'Read the contents of a file in the project',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        path: {
-                            type: 'string',
-                            description: 'The file path to read (relative to project root)',
-                        },
-                    },
-                    required: ['path'],
-                },
-            },
-            {
-                name: 'file_list',
-                description: 'List files in the project directory',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        path: {
-                            type: 'string',
-                            description: 'Directory path to list (relative to project root, defaults to root)',
-                            default: '.',
-                        },
-                        recursive: {
-                            type: 'boolean',
-                            description: 'Whether to list files recursively',
-                            default: false,
-                        },
-                    },
-                },
-            },
-            {
-                name: 'suggest_files',
-                description: 'Get AI-suggested files based on a prompt or task description',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        prompt: {
-                            type: 'string',
-                            description: 'The prompt or task description to suggest files for',
-                        },
-                        limit: {
-                            type: 'number',
-                            description: 'Maximum number of files to suggest',
-                            default: 10,
-                        },
-                    },
-                    required: ['prompt'],
-                },
-            },
-            {
-                name: 'project_summary',
-                description: 'Get a summary of the project structure and contents',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        include_files: {
-                            type: 'boolean',
-                            description: 'Whether to include file summaries',
-                            default: true,
-                        },
-                    },
-                },
-            },
-        ],
+        tools: BUILTIN_TOOLS.map(tool => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema
+        }))
     }
 })
 
@@ -146,92 +84,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     try {
         const projectId = await ensureProject()
+        const tool = getToolByName(name)
 
-        switch (name) {
-            case 'file_read': {
-                if (!args?.path) {
-                    throw new Error('File path is required')
-                }
+        if (!tool) {
+            throw new Error(`Unknown tool: ${name}`)
+        }
 
-                const files = await getProjectFiles(projectId)
-                const file = files?.find(f => f.path === args.path)
-
-                if (!file) {
-                    return {
-                        content: [
-                            {
-                                type: 'text',
-                                text: `File not found: ${args.path}`,
-                            },
-                        ],
-                        isError: true,
-                    }
-                }
-
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: file.content,
-                        },
-                    ],
-                }
-            }
-
-            case 'file_list': {
-                const files = await getProjectFiles(projectId)
-                const fileList = (files || [])
-                    .map(f => `${f.path} (${f.size} bytes)`)
-                    .join('\n')
-
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: fileList || 'No files found in project',
-                        },
-                    ],
-                }
-            }
-
-            case 'suggest_files': {
-                if (!args?.prompt) {
-                    throw new Error('Prompt is required for file suggestions')
-                }
-
-                const suggestions = await suggestFiles(projectId, args.prompt, args.limit || 10)
-                const suggestionText = suggestions
-                    .map(f => `${f.path} - ${f.summary || 'No summary'}`)
-                    .join('\n')
-
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: suggestionText || 'No file suggestions found',
-                        },
-                    ],
-                }
-            }
-
-            case 'project_summary': {
-                const project = await getProjectById(projectId)
-                const files = await getProjectFiles(projectId)
-                const fileCount = files?.length || 0
-                const summary = `Project: ${project.name}\nPath: ${project.path}\nFiles: ${fileCount}\nCreated: ${new Date(project.created).toLocaleString()}`
-
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: summary,
-                        },
-                    ],
-                }
-            }
-
-            default:
-                throw new Error(`Unknown tool: ${name}`)
+        const result = await tool.handler(args || {}, projectId)
+        return {
+            content: result.content,
+            isError: result.isError
         }
     } catch (error) {
         return {

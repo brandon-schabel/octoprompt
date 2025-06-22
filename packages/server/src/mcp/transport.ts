@@ -15,6 +15,7 @@ import {
   getProjectById,
   suggestFiles
 } from '@octoprompt/services'
+import { BUILTIN_TOOLS, getToolByName } from './tools-registry'
 
 // JSON-RPC 2.0 message types
 interface JSONRPCRequest {
@@ -269,93 +270,12 @@ async function handleToolsList(
   sessionId?: string
 ): Promise<JSONRPCResponse> {
   try {
-    // Return OctoPrompt's built-in MCP tools
-    const mcpTools = [
-      {
-        name: 'file_read',
-        description: 'Read the contents of a file in the project',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'The file path to read (relative to project root)'
-            }
-          },
-          required: ['path']
-        }
-      },
-      {
-        name: 'file_write',
-        description: 'Write content to a file in the project',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'The file path to write to (relative to project root)'
-            },
-            content: {
-              type: 'string',
-              description: 'The content to write to the file'
-            }
-          },
-          required: ['path', 'content']
-        }
-      },
-      {
-        name: 'file_list',
-        description: 'List files in the project directory',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'Directory path to list (relative to project root, defaults to root)',
-              default: '.'
-            },
-            recursive: {
-              type: 'boolean',
-              description: 'Whether to list files recursively',
-              default: false
-            }
-          }
-        }
-      },
-      {
-        name: 'suggest_files',
-        description: 'Get AI-suggested files based on a prompt or task description',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The prompt or task description to suggest files for'
-            },
-            limit: {
-              type: 'number',
-              description: 'Maximum number of files to suggest',
-              default: 10
-            }
-          },
-          required: ['prompt']
-        }
-      },
-      {
-        name: 'project_summary',
-        description: 'Get a summary of the project structure and contents',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            include_files: {
-              type: 'boolean',
-              description: 'Whether to include file summaries',
-              default: true
-            }
-          }
-        }
-      }
-    ]
+    // Return OctoPrompt's built-in MCP tools from shared registry
+    const mcpTools = BUILTIN_TOOLS.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema
+    }))
 
     // If projectId is provided, add project-specific tools
     if (projectId) {
@@ -470,136 +390,29 @@ async function handleToolsCall(
       }
     }
 
-    // Handle built-in tools
+    // Handle built-in tools using shared registry
+    const tool = getToolByName(name)
+
+    if (!tool) {
+      return {
+        jsonrpc: '2.0',
+        id,
+        error: {
+          ...JSON_RPC_ERRORS.INVALID_PARAMS,
+          message: `Unknown tool: ${name}`
+        }
+      }
+    }
+
     let result: any = null
-
-    switch (name) {
-      case 'file_read':
-        if (!args?.path) {
-          return {
-            jsonrpc: '2.0',
-            id,
-            error: {
-              ...JSON_RPC_ERRORS.INVALID_PARAMS,
-              message: 'File path is required'
-            }
-          }
-        }
-        try {
-          if (projectId) {
-            const files = await getProjectFiles(parseInt(projectId))
-            const file = files?.find(f => f.path === args.path)
-            result = [
-              {
-                type: 'text',
-                text: file ? file.content : `File not found: ${args.path}`
-              }
-            ]
-          } else {
-            result = [{ type: 'text', text: 'Project ID is required for file operations' }]
-          }
-        } catch (error) {
-          result = [{ type: 'text', text: `Error reading file: ${error instanceof Error ? error.message : 'Unknown error'}` }]
-        }
-        break
-
-      case 'file_list':
-        try {
-          if (projectId) {
-            const files = await getProjectFiles(parseInt(projectId))
-            const fileList = (files || []).map(f => `${f.path} (${f.size} bytes)`).join('\n')
-            result = [
-              {
-                type: 'text',
-                text: fileList || 'No files found in project'
-              }
-            ]
-          } else {
-            result = [{ type: 'text', text: 'Project ID is required for file operations' }]
-          }
-        } catch (error) {
-          result = [{ type: 'text', text: `Error listing files: ${error instanceof Error ? error.message : 'Unknown error'}` }]
-        }
-        break
-
-      case 'suggest_files':
-        if (!args?.prompt) {
-          return {
-            jsonrpc: '2.0',
-            id,
-            error: {
-              ...JSON_RPC_ERRORS.INVALID_PARAMS,
-              message: 'Prompt is required for file suggestions'
-            }
-          }
-        }
-        try {
-          if (projectId) {
-            const suggestions = await suggestFiles(parseInt(projectId), args.prompt, args.limit || 10)
-            const suggestionText = suggestions.map(f => `${f.path} - ${f.summary || 'No summary'}`).join('\n')
-            result = [
-              {
-                type: 'text',
-                text: suggestionText || 'No file suggestions found'
-              }
-            ]
-          } else {
-            result = [{ type: 'text', text: 'Project ID is required for file suggestions' }]
-          }
-        } catch (error) {
-          result = [{ type: 'text', text: `Error suggesting files: ${error instanceof Error ? error.message : 'Unknown error'}` }]
-        }
-        break
-
-      case 'project_summary':
-        try {
-          if (projectId) {
-            const project = await getProjectById(parseInt(projectId))
-            const files = await getProjectFiles(parseInt(projectId))
-            const fileCount = files?.length || 0
-            const summary = `Project: ${project.name}\nPath: ${project.path}\nFiles: ${fileCount}\nCreated: ${new Date(project.created).toLocaleString()}`
-            result = [
-              {
-                type: 'text',
-                text: summary
-              }
-            ]
-          } else {
-            result = [{ type: 'text', text: 'Project ID is required for project summary' }]
-          }
-        } catch (error) {
-          result = [{ type: 'text', text: `Error getting project summary: ${error instanceof Error ? error.message : 'Unknown error'}` }]
-        }
-        break
-
-      case 'file_write':
-        if (!args?.path || args?.content === undefined) {
-          return {
-            jsonrpc: '2.0',
-            id,
-            error: {
-              ...JSON_RPC_ERRORS.INVALID_PARAMS,
-              message: 'File path and content are required'
-            }
-          }
-        }
-        result = [
-          {
-            type: 'text',
-            text: 'File write operations are not implemented in this demo for security reasons'
-          }
-        ]
-        break
-
-      default:
-        return {
-          jsonrpc: '2.0',
-          id,
-          error: {
-            ...JSON_RPC_ERRORS.INVALID_PARAMS,
-            message: `Unknown tool: ${name}`
-          }
-        }
+    try {
+      const toolResult = await tool.handler(args || {}, projectId ? parseInt(projectId) : undefined)
+      result = toolResult.content
+    } catch (error) {
+      result = [{
+        type: 'text',
+        text: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }]
     }
 
     return {

@@ -30,6 +30,7 @@ import {
 import { handleHTTPTransport, getActiveSessions, closeSession } from '../mcp/transport'
 import * as projectService from '@octoprompt/services'
 import { ApiError } from '@octoprompt/shared'
+import { BUILTIN_TOOLS, getAllToolNames } from '../mcp/tools-registry'
 
 export const mcpRoutes = new OpenAPIHono()
 
@@ -585,6 +586,62 @@ mcpRoutes.openapi(readMCPResourceRoute, async (c) => {
     const { uri } = c.req.valid('query')
     const content = await readMCPResource(projectId, serverId, uri)
     return c.json({ success: true, data: content })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+// ====================
+// MCP BUILTIN TOOLS REGISTRY
+// ====================
+
+/**
+ * Get all built-in MCP tools from the registry
+ */
+const getBuiltinToolsRoute = createRoute({
+  method: 'get',
+  path: '/api/mcp/builtin-tools',
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              tools: z.array(z.object({
+                name: z.string(),
+                description: z.string(),
+                inputSchema: z.any()
+              })),
+              toolNames: z.array(z.string()),
+              totalCount: z.number()
+            })
+          })
+        }
+      },
+      description: 'List of all built-in MCP tools'
+    }
+  }
+})
+
+mcpRoutes.openapi(getBuiltinToolsRoute, async (c) => {
+  try {
+    const tools = BUILTIN_TOOLS.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema
+    }))
+
+    const toolNames = getAllToolNames()
+
+    return c.json({
+      success: true,
+      data: {
+        tools,
+        toolNames,
+        totalCount: tools.length
+      }
+    })
   } catch (error) {
     return handleApiError(error, c)
   }
