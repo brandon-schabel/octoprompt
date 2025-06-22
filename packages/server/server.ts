@@ -6,7 +6,6 @@ import { app } from './src/app'
 import { listProjects } from '@octoprompt/services'
 import { isDevEnv, SERVER_PORT } from '@octoprompt/services'
 import { watchersManager, createCleanupService } from '@octoprompt/services'
-import { startStdioTransport } from './src/mcp/transport'
 
 // Use the imported watchersManager, remove the local creation
 // export const watchersManager = createWatchersManager();
@@ -67,10 +66,10 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
 
     websocket: {
       async open(ws) {
-        console.debug('New WS connection', { clientId: ws.data.clientId })
+        console.debug('New WS connection', { clientId: (ws.data as any).clientId })
       },
       close(ws) {
-        console.debug('WS closed', { clientId: ws.data.clientId })
+        console.debug('WS closed', { clientId: (ws.data as any).clientId })
       },
       async message(ws, rawMessage) {
         try {
@@ -81,16 +80,16 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
     }
   })
 
-  // Start watchers for existing projects
-  ;(async () => {
-    const allProjects = await listProjects()
-    for (const project of allProjects) {
-      // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
-      watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
-    }
+    // Start watchers for existing projects
+    ; (async () => {
+      const allProjects = await listProjects()
+      for (const project of allProjects) {
+        // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
+        watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+      }
 
-    cleanupService.start()
-  })()
+      cleanupService.start()
+    })()
 
   console.log(`Server running at http://localhost:${server.port}`)
   console.log(`Server swagger at http://localhost:${server.port}/swagger`)
@@ -112,12 +111,20 @@ function serveStatic(path: string): Response {
 }
 
 if (import.meta.main) {
-  ;(async () => {
+  ; (async () => {
     // Parse command line arguments
     const args = process.argv.slice(2)
+
+    // Check if we should start in MCP stdio mode
+    if (args.includes('--mcp-stdio')) {
+      // Import and start MCP stdio server directly
+      console.error('Starting OctoPrompt MCP server in stdio mode...')
+      await import('./src/mcp-stdio-server.js')
+      return
+    }
+
     let port = SERVER_PORT
-    let mcpStdio = false
-    
+
     // Look for --port argument
     const portIndex = args.indexOf('--port')
     if (portIndex !== -1 && args[portIndex + 1]) {
@@ -126,27 +133,17 @@ if (import.meta.main) {
         port = parsedPort
       }
     }
-    
-    // Look for --mcp-stdio flag
-    if (args.includes('--mcp-stdio')) {
-      mcpStdio = true
+
+    // Start normal HTTP server
+    console.log('Starting server...')
+    const server = await instantiateServer({ port })
+    function handleShutdown() {
+      console.log('Received kill signal. Shutting down gracefully...')
+      watchersManager.stopAllWatchers?.()
+      server.stop()
+      process.exit(0)
     }
-    
-    if (mcpStdio) {
-      // Start in MCP stdio mode for Claude Desktop
-      await startStdioTransport()
-    } else {
-      // Start normal HTTP server
-      console.log('Starting server...')
-      const server = await instantiateServer({ port })
-      function handleShutdown() {
-        console.log('Received kill signal. Shutting down gracefully...')
-        watchersManager.stopAllWatchers?.()
-        server.stop()
-        process.exit(0)
-      }
-      process.on('SIGINT', handleShutdown)
-      process.on('SIGTERM', handleShutdown)
-    }
+    process.on('SIGINT', handleShutdown)
+    process.on('SIGTERM', handleShutdown)
   })()
 }

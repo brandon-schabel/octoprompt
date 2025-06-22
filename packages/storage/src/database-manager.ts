@@ -1,10 +1,29 @@
 import { Database } from 'bun:sqlite'
 import path from 'node:path'
 import fs from 'node:fs'
+import os from 'node:os'
 
 export interface TableSchema {
   name: string
   indexes?: string[]
+}
+
+// Get platform-appropriate data directory
+function getDataDirectory(): string {
+  const platform = os.platform()
+  const homeDir = os.homedir()
+
+  switch (platform) {
+    case 'darwin': // macOS
+      return path.join(homeDir, 'Library', 'Application Support', 'OctoPrompt')
+    case 'win32': // Windows
+      return path.join(process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming'), 'OctoPrompt')
+    case 'linux': // Linux
+      return path.join(process.env.XDG_DATA_HOME || path.join(homeDir, '.local', 'share'), 'octoprompt')
+    default:
+      // Fallback to home directory
+      return path.join(homeDir, '.octoprompt')
+  }
 }
 
 export class DatabaseManager {
@@ -69,14 +88,57 @@ export class DatabaseManager {
     if (isTest) {
       // Use in-memory database for tests
       this.db = new Database(':memory:')
+      console.error('OctoPrompt database initialized in memory for testing')
     } else {
-      // Use file-based database for production
-      const dbPath = path.resolve(process.cwd(), 'data', 'octoprompt.db')
-      this.ensureDataDirectory(dbPath)
-      this.db = new Database(dbPath)
+      // Use platform-appropriate data directory for production
+      this.db = this.createProductionDatabase()
     }
 
     this.initializeDatabase()
+  }
+
+  private createProductionDatabase(): Database {
+    const dataDir = getDataDirectory()
+    const dbPath = path.join(dataDir, 'octoprompt.db')
+
+    try {
+      this.ensureDataDirectory(dbPath)
+      const db = new Database(dbPath)
+      console.error(`OctoPrompt database initialized at: ${dbPath}`)
+      return db
+    } catch (error) {
+      console.error(`Failed to create database at ${dbPath}:`, error)
+
+      // Fallback to current working directory
+      const fallbackDir = path.join(process.cwd(), 'data')
+      const fallbackDbPath = path.join(fallbackDir, 'octoprompt.db')
+
+      try {
+        this.ensureDataDirectory(fallbackDbPath)
+        const db = new Database(fallbackDbPath)
+        console.error(`Using fallback database path: ${fallbackDbPath}`)
+        return db
+      } catch (fallbackError) {
+        console.error('Failed to create fallback database:', fallbackError)
+
+        // Last resort: use temp directory
+        const tempDir = os.tmpdir()
+        const tempDbPath = path.join(tempDir, 'octoprompt', 'octoprompt.db')
+        const tempDbDir = path.dirname(tempDbPath)
+
+        try {
+          if (!fs.existsSync(tempDbDir)) {
+            fs.mkdirSync(tempDbDir, { recursive: true })
+          }
+          const db = new Database(tempDbPath)
+          console.error(`Using temporary database path: ${tempDbPath}`)
+          return db
+        } catch (tempError) {
+          console.error('Failed to create temp database:', tempError)
+          throw new Error('Unable to create database in any location')
+        }
+      }
+    }
   }
 
   static getInstance(): DatabaseManager {
@@ -90,6 +152,21 @@ export class DatabaseManager {
     const dir = path.dirname(dbPath)
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true })
+    }
+  }
+
+  // Get the current database path for debugging
+  getDatabasePath(): string {
+    if (process.env.NODE_ENV === 'test') {
+      return ':memory:'
+    }
+
+    // Try to get the filename from the database if possible
+    try {
+      const result = this.db.prepare('PRAGMA database_list').get() as { file: string } | undefined
+      return result?.file || 'unknown'
+    } catch {
+      return 'unknown'
     }
   }
 
@@ -167,27 +244,27 @@ export class DatabaseManager {
       `)
       const result = maxIdQuery.get() as { maxId: number | null } | undefined
       const maxId = result?.maxId || 0
-      
+
       // Generate new ID based on timestamp and max existing ID
       const timestamp = Date.now()
       let newId = Math.max(timestamp, maxId + 1, this.lastGeneratedId + 1)
-      
+
       // Quick uniqueness check
       const checkQuery = this.db.prepare(`SELECT 1 FROM ${tableName} WHERE id = ? LIMIT 1`)
       let attempts = 0
       const maxAttempts = 100
-      
+
       while (attempts < maxAttempts && checkQuery.get(newId.toString())) {
         // Increment by 1-10 ms to avoid collisions but stay within valid range
         newId += Math.floor(Math.random() * 10) + 1
         attempts++
       }
-      
+
       if (attempts >= maxAttempts) {
         // Fall back to adding random milliseconds
         newId = Date.now() + Math.floor(Math.random() * 1000)
       }
-      
+
       this.lastGeneratedId = newId
       return newId
     } catch (error) {
@@ -204,7 +281,7 @@ export class DatabaseManager {
 
     try {
       const ids: number[] = []
-      
+
       // Get the maximum ID from the table
       const maxIdQuery = this.db.prepare(`
         SELECT MAX(CAST(id AS INTEGER)) as maxId 
@@ -213,32 +290,32 @@ export class DatabaseManager {
       `)
       const result = maxIdQuery.get() as { maxId: number | null } | undefined
       const maxId = result?.maxId || 0
-      
+
       // Start from a safe point
       const timestamp = Date.now()
       let currentId = Math.max(timestamp, maxId + 1, this.lastGeneratedId + 1)
-      
+
       const checkQuery = this.db.prepare(`SELECT 1 FROM ${tableName} WHERE id = ? LIMIT 1`)
-      
+
       for (let i = 0; i < count; i++) {
         // Add small increments to avoid collisions
         currentId += Math.floor(Math.random() * 10) + 1
-        
+
         // Quick check for uniqueness
         let attempts = 0
         while (attempts < 50 && (checkQuery.get(currentId.toString()) || ids.includes(currentId))) {
           currentId += Math.floor(Math.random() * 5) + 1
           attempts++
         }
-        
+
         if (attempts >= 50) {
           // Use a new base with offset
           currentId = Date.now() + (i * 10) + Math.floor(Math.random() * 10)
         }
-        
+
         ids.push(currentId)
       }
-      
+
       this.lastGeneratedId = Math.max(...ids)
       return ids
     } catch (error) {
@@ -277,12 +354,12 @@ export class DatabaseManager {
   async create<T>(tableName: string, id: string, data: T): Promise<void> {
     this.ensureTable(tableName)
     const now = Date.now()
-    
+
     // Extract timestamps from data if available
     const dataObj = data as any
     const createdAt = dataObj.created || now
     const updatedAt = dataObj.updated || dataObj.created || now
-    
+
     const query = this.db.prepare(`
       INSERT INTO ${tableName} (id, data, created_at, updated_at)
       VALUES (?, ?, ?, ?)
@@ -293,11 +370,11 @@ export class DatabaseManager {
   async update<T>(tableName: string, id: string, data: T): Promise<boolean> {
     this.ensureTable(tableName)
     const now = Date.now()
-    
+
     // Extract updated timestamp from data if available
     const dataObj = data as any
     const updatedAt = dataObj.updated || now
-    
+
     const query = this.db.prepare(`
       UPDATE ${tableName}
       SET data = ?, updated_at = ?

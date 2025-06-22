@@ -29,8 +29,23 @@ import {
 } from '@octoprompt/services'
 import { handleHTTPTransport, getActiveSessions, closeSession } from '../mcp/transport'
 import * as projectService from '@octoprompt/services'
+import { ApiError } from '@octoprompt/shared'
 
 export const mcpRoutes = new OpenAPIHono()
+
+// Helper function to handle ApiError responses consistently
+const handleApiError = (error: unknown, c: any) => {
+  if (error instanceof ApiError) {
+    return c.json(
+      { success: false, error: { message: error.message, code: error.code, details: error.details } },
+      error.status
+    )
+  }
+  return c.json(
+    { success: false, error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } },
+    500
+  )
+}
 
 // MCP Server Config Routes
 
@@ -78,10 +93,14 @@ const createMCPServerConfigRoute = createRoute({
 })
 
 mcpRoutes.openapi(createMCPServerConfigRoute, async (c) => {
-  const { projectId } = c.req.valid('param')
-  const body = c.req.valid('json')
-  const config = await createMCPServerConfig(projectId, body)
-  return c.json({ success: true, data: config })
+  try {
+    const { projectId } = c.req.valid('param')
+    const body = c.req.valid('json')
+    const config = await createMCPServerConfig(projectId, body)
+    return c.json({ success: true, data: config })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const listMCPServerConfigsRoute = createRoute({
@@ -113,9 +132,13 @@ const listMCPServerConfigsRoute = createRoute({
 })
 
 mcpRoutes.openapi(listMCPServerConfigsRoute, async (c) => {
-  const { projectId } = c.req.valid('param')
-  const configs = await listMCPServerConfigs(projectId)
-  return c.json({ success: true, data: configs })
+  try {
+    const { projectId } = c.req.valid('param')
+    const configs = await listMCPServerConfigs(projectId)
+    return c.json({ success: true, data: configs })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const getMCPServerConfigRoute = createRoute({
@@ -148,9 +171,13 @@ const getMCPServerConfigRoute = createRoute({
 })
 
 mcpRoutes.openapi(getMCPServerConfigRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-  const config = await getMCPServerConfigById(configId)
-  return c.json({ success: true, data: config })
+  try {
+    const { configId } = c.req.valid('param')
+    const config = await getMCPServerConfigById(configId)
+    return c.json({ success: true, data: config })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const updateMCPServerConfigRoute = createRoute({
@@ -190,10 +217,14 @@ const updateMCPServerConfigRoute = createRoute({
 })
 
 mcpRoutes.openapi(updateMCPServerConfigRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-  const body = c.req.valid('json')
-  const config = await updateMCPServerConfig(configId, body)
-  return c.json({ success: true, data: config })
+  try {
+    const { configId } = c.req.valid('param')
+    const body = c.req.valid('json')
+    const config = await updateMCPServerConfig(configId, body)
+    return c.json({ success: true, data: config })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const deleteMCPServerConfigRoute = createRoute({
@@ -226,9 +257,13 @@ const deleteMCPServerConfigRoute = createRoute({
 })
 
 mcpRoutes.openapi(deleteMCPServerConfigRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-  const deleted = await deleteMCPServerConfig(configId)
-  return c.json({ success: deleted })
+  try {
+    const { configId } = c.req.valid('param')
+    const deleted = await deleteMCPServerConfig(configId)
+    return c.json({ success: deleted })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 // MCP Server Management Routes
@@ -274,9 +309,13 @@ const startMCPServerRoute = createRoute({
 })
 
 mcpRoutes.openapi(startMCPServerRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-  const state = await startMCPServer(configId)
-  return c.json({ success: true, data: state })
+  try {
+    const { configId } = c.req.valid('param')
+    const state = await startMCPServer(configId)
+    return c.json({ success: true, data: state })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const stopMCPServerRoute = createRoute({
@@ -312,9 +351,13 @@ const stopMCPServerRoute = createRoute({
 })
 
 mcpRoutes.openapi(stopMCPServerRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-  const state = await stopMCPServer(configId)
-  return c.json({ success: true, data: state })
+  try {
+    const { configId } = c.req.valid('param')
+    const state = await stopMCPServer(configId)
+    return c.json({ success: true, data: state })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const getMCPServerStateRoute = createRoute({
@@ -342,9 +385,13 @@ const getMCPServerStateRoute = createRoute({
 })
 
 mcpRoutes.openapi(getMCPServerStateRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-  const state = await getMCPServerState(configId)
-  return c.json({ success: true, data: state })
+  try {
+    const { configId } = c.req.valid('param')
+    const state = await getMCPServerState(configId)
+    return c.json({ success: true, data: state })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 // MCP Tool Routes
@@ -378,9 +425,13 @@ const listMCPToolsRoute = createRoute({
 })
 
 mcpRoutes.openapi(listMCPToolsRoute, async (c) => {
-  const { projectId } = c.req.valid('param')
-  const tools = await listMCPTools(projectId)
-  return c.json({ success: true, data: tools })
+  try {
+    const { projectId } = c.req.valid('param')
+    const tools = await listMCPTools(projectId)
+    return c.json({ success: true, data: tools })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const executeMCPToolRoute = createRoute({
@@ -435,10 +486,14 @@ const executeMCPToolRoute = createRoute({
 })
 
 mcpRoutes.openapi(executeMCPToolRoute, async (c) => {
-  const { projectId } = c.req.valid('param')
-  const request = c.req.valid('json')
-  const result = await executeMCPTool(projectId, request)
-  return c.json({ success: true, data: result })
+  try {
+    const { projectId } = c.req.valid('param')
+    const request = c.req.valid('json')
+    const result = await executeMCPTool(projectId, request)
+    return c.json({ success: true, data: result })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 // MCP Resource Routes
@@ -472,9 +527,13 @@ const listMCPResourcesRoute = createRoute({
 })
 
 mcpRoutes.openapi(listMCPResourcesRoute, async (c) => {
-  const { projectId } = c.req.valid('param')
-  const resources = await listMCPResources(projectId)
-  return c.json({ success: true, data: resources })
+  try {
+    const { projectId } = c.req.valid('param')
+    const resources = await listMCPResources(projectId)
+    return c.json({ success: true, data: resources })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
 const readMCPResourceRoute = createRoute({
@@ -521,43 +580,39 @@ const readMCPResourceRoute = createRoute({
 })
 
 mcpRoutes.openapi(readMCPResourceRoute, async (c) => {
-  const { projectId, serverId } = c.req.valid('param')
-  const { uri } = c.req.valid('query')
-  const content = await readMCPResource(projectId, serverId, uri)
-  return c.json({ success: true, data: content })
+  try {
+    const { projectId, serverId } = c.req.valid('param')
+    const { uri } = c.req.valid('query')
+    const content = await readMCPResource(projectId, serverId, uri)
+    return c.json({ success: true, data: content })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
 })
 
-// MCP Server Transport Routes (for direct MCP protocol access)
+// ====================
+// MCP PROTOCOL ENDPOINTS (Streamable HTTP Transport)
+// ====================
 
 /**
- * MCP Server endpoint for HTTP transport (SSE)
- * This is used by Cursor and other HTTP-based MCP clients
+ * Main MCP endpoint implementing Streamable HTTP transport
+ * This is the primary endpoint that Claude Code and other MCP clients connect to
  */
-mcpRoutes.get('/api/mcp', async (c) => {
+mcpRoutes.all('/api/mcp', async (c) => {
   return await handleHTTPTransport(c)
 })
 
 /**
- * MCP Server endpoint with project context
+ * Project-specific MCP endpoint
+ * Provides MCP access with project context
  */
-mcpRoutes.get('/api/projects/:projectId/mcp', async (c) => {
+mcpRoutes.all('/api/projects/:projectId/mcp', async (c) => {
   return await handleHTTPTransport(c)
 })
 
-/**
- * Handle MCP message POST requests
- * This endpoint would be used for SSE transport message handling
- */
-mcpRoutes.post('/api/mcp/messages', async (c) => {
-  // Placeholder for SSE message handling
-  return c.json({
-    success: false,
-    error: {
-      message: 'SSE transport not yet implemented',
-      code: 'NOT_IMPLEMENTED'
-    }
-  }, 501)
-})
+// ====================
+// MCP SESSION MANAGEMENT
+// ====================
 
 /**
  * Get active MCP sessions
@@ -622,252 +677,23 @@ const closeMCPSessionRoute = createRoute({
 })
 
 mcpRoutes.openapi(closeMCPSessionRoute, async (c) => {
-  const { sessionId } = c.req.valid('param')
-  const closed = closeSession(sessionId)
+  try {
+    const { sessionId } = c.req.valid('param')
+    const closed = closeSession(sessionId)
 
-  if (!closed) {
-    return c.json(
-      {
-        success: false,
-        error: {
-          message: 'Session not found',
-          code: 'SESSION_NOT_FOUND'
-        }
-      },
-      404
-    )
-  }
-
-  return c.json({ success: true })
-})
-
-// Additional MCP Management Routes
-
-/**
- * Get connection info for an MCP server
- */
-const getMCPConnectionInfoRoute = createRoute({
-  method: 'get',
-  path: '/api/projects/{projectId}/mcp-servers/{configId}/connection',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10)),
-      configId: z.string().transform((val) => parseInt(val, 10))
-    })
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              serverId: z.number(),
-              transport: z.enum(['stdio', 'websocket', 'http']),
-              endpoint: z.string().optional(),
-              capabilities: z.object({
-                tools: z.boolean(),
-                resources: z.boolean(),
-                prompts: z.boolean(),
-                sampling: z.boolean()
-              }).optional()
-            })
-          })
-        }
-      },
-      description: 'MCP server connection information'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      },
-      description: 'MCP server config not found'
+    if (!closed) {
+      throw new ApiError(404, 'Session not found', 'SESSION_NOT_FOUND')
     }
+
+    return c.json({ success: true })
+  } catch (error) {
+    return handleApiError(error, c)
   }
 })
 
-mcpRoutes.openapi(getMCPConnectionInfoRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-  const config = await getMCPServerConfigById(configId)
-  const state = await getMCPServerState(configId)
-
-  return c.json({
-    success: true,
-    data: {
-      serverId: config.id,
-      transport: 'stdio' as const,
-      capabilities: {
-        tools: true,
-        resources: true,
-        prompts: false, // Not yet implemented
-        sampling: false // Not yet implemented
-      }
-    }
-  })
-})
-
-/**
- * List all active MCP servers across all projects
- */
-const listAllActiveMCPServersRoute = createRoute({
-  method: 'get',
-  path: '/api/mcp-servers/active',
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(z.object({
-              config: MCPServerConfigSchema,
-              state: MCPServerStateSchema
-            }))
-          })
-        }
-      },
-      description: 'List of all active MCP servers'
-    }
-  }
-})
-
-mcpRoutes.openapi(listAllActiveMCPServersRoute, async (c) => {
-  const manager = getMCPClientManager()
-  const activeServers = await manager.getActiveServers()
-
-  const serversWithState = await Promise.all(
-    activeServers.map(async (config) => {
-      const state = await getMCPServerState(config.id)
-      return { config, state }
-    })
-  )
-
-  return c.json({ success: true, data: serversWithState })
-})
-
-/**
- * Restart an MCP server
- */
-const restartMCPServerRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/mcp-servers/{configId}/restart',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10)),
-      configId: z.string().transform((val) => parseInt(val, 10))
-    })
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: MCPServerStateSchema
-          })
-        }
-      },
-      description: 'MCP server restarted successfully'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: ApiErrorResponseSchema
-        }
-      },
-      description: 'MCP server config not found'
-    }
-  }
-})
-
-mcpRoutes.openapi(restartMCPServerRoute, async (c) => {
-  const { configId } = c.req.valid('param')
-
-  // Stop the server first
-  await stopMCPServer(configId)
-
-  // Wait a moment for cleanup
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
-  // Start it again
-  const state = await startMCPServer(configId)
-
-  return c.json({ success: true, data: state })
-})
-
-/**
- * Get health/status of all MCP servers for a project
- */
-const getMCPHealthRoute = createRoute({
-  method: 'get',
-  path: '/api/projects/{projectId}/mcp-servers/health',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    })
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              total: z.number(),
-              running: z.number(),
-              stopped: z.number(),
-              error: z.number(),
-              servers: z.array(z.object({
-                id: z.number(),
-                name: z.string(),
-                status: z.enum(['stopped', 'starting', 'running', 'error']),
-                lastHeartbeat: z.number().nullable()
-              }))
-            })
-          })
-        }
-      },
-      description: 'Health status of all MCP servers'
-    }
-  }
-})
-
-mcpRoutes.openapi(getMCPHealthRoute, async (c) => {
-  const { projectId } = c.req.valid('param')
-  const configs = await listMCPServerConfigs(projectId)
-
-  const serversHealth = await Promise.all(
-    configs.map(async (config) => {
-      const state = await getMCPServerState(config.id)
-      return {
-        id: config.id,
-        name: config.name,
-        status: state.status,
-        lastHeartbeat: state.lastHeartbeat
-      }
-    })
-  )
-
-  const statusCounts = serversHealth.reduce(
-    (acc, server) => {
-      acc[server.status]++
-      return acc
-    },
-    { running: 0, stopped: 0, error: 0, starting: 0 }
-  )
-
-  return c.json({
-    success: true,
-    data: {
-      total: serversHealth.length,
-      running: statusCounts.running,
-      stopped: statusCounts.stopped,
-      error: statusCounts.error,
-      servers: serversHealth
-    }
-  })
-})
+// ====================
+// ADDITIONAL MCP UTILITIES
+// ====================
 
 /**
  * Suggest files as an MCP resource
@@ -921,10 +747,10 @@ const suggestFilesResourceRoute = createRoute({
 })
 
 mcpRoutes.openapi(suggestFilesResourceRoute, async (c) => {
-  const { projectId } = c.req.valid('param')
-  const { prompt, limit = 10 } = c.req.valid('json')
-
   try {
+    const { projectId } = c.req.valid('param')
+    const { prompt, limit = 10 } = c.req.valid('json')
+
     const suggestedFiles = await projectService.suggestFiles(projectId, prompt, limit)
 
     const resourceContent = {
@@ -947,9 +773,509 @@ mcpRoutes.openapi(suggestFilesResourceRoute, async (c) => {
     }
 
     return c.json({ success: true, data: resourceContent })
-  } catch (error: any) {
+  } catch (error) {
     console.error('[MCP SuggestFiles] Error:', error)
-    if (error instanceof ApiError) throw error
-    throw new ApiError(500, `Failed to suggest files: ${error.message}`, 'MCP_SUGGEST_FILES_ERROR')
+    return handleApiError(error, c)
+  }
+})
+
+// ====================
+// MCP TESTING ENDPOINTS
+// ====================
+
+/**
+ * Test MCP connection
+ */
+const testMCPConnectionRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/test-connection',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            url: z.string().url().describe('MCP server URL to test')
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              connected: z.boolean(),
+              responseTime: z.number(),
+              error: z.string().optional(),
+              serverInfo: z.any().optional()
+            })
+          })
+        }
+      },
+      description: 'Connection test result'
+    }
+  }
+})
+
+mcpRoutes.openapi(testMCPConnectionRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { url } = c.req.valid('json')
+
+    const startTime = Date.now()
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/event-stream',
+          'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
+        },
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      })
+
+      const responseTime = Date.now() - startTime
+
+      if (response.ok) {
+        // Try to read a bit of the response to see if it's valid SSE
+        const reader = response.body?.getReader()
+        let serverInfo = null
+
+        if (reader) {
+          try {
+            const { value } = await reader.read()
+            if (value) {
+              const text = new TextDecoder().decode(value)
+              // Try to parse SSE data
+              const dataMatch = text.match(/data: (.+)/)
+              if (dataMatch) {
+                serverInfo = JSON.parse(dataMatch[1])
+              }
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          } finally {
+            reader.releaseLock()
+          }
+        }
+
+        return c.json({
+          success: true,
+          data: {
+            connected: true,
+            responseTime,
+            serverInfo
+          }
+        })
+      } else {
+        return c.json({
+          success: true,
+          data: {
+            connected: false,
+            responseTime,
+            error: `HTTP ${response.status}: ${response.statusText}`
+          }
+        })
+      }
+    } catch (error) {
+      const responseTime = Date.now() - startTime
+      return c.json({
+        success: true,
+        data: {
+          connected: false,
+          responseTime,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      })
+    }
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Test MCP initialize handshake
+ */
+const testMCPInitializeRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/test-initialize',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            url: z.string().url().describe('MCP server URL to test')
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              initialized: z.boolean(),
+              sessionId: z.string().optional(),
+              capabilities: z.any().optional(),
+              serverInfo: z.any().optional(),
+              error: z.string().optional()
+            })
+          })
+        }
+      },
+      description: 'Initialize test result'
+    }
+  }
+})
+
+mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { url } = c.req.valid('json')
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: true,
+              resources: true,
+              prompts: false
+            },
+            clientInfo: {
+              name: 'octoprompt-tester',
+              version: '0.5.4'
+            }
+          }
+        }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      })
+
+      if (response.ok) {
+        const result = await response.json() as any
+        const sessionId = response.headers.get('Mcp-Session-Id')
+
+        if (result.error) {
+          return c.json({
+            success: true,
+            data: {
+              initialized: false,
+              error: `JSON-RPC Error: ${result.error.message} (Code: ${result.error.code})`
+            }
+          })
+        }
+
+        return c.json({
+          success: true,
+          data: {
+            initialized: true,
+            sessionId: sessionId || undefined,
+            capabilities: result.result?.capabilities,
+            serverInfo: result.result?.serverInfo
+          }
+        })
+      } else {
+        return c.json({
+          success: true,
+          data: {
+            initialized: false,
+            error: `HTTP ${response.status}: ${response.statusText}`
+          }
+        })
+      }
+    } catch (error) {
+      return c.json({
+        success: true,
+        data: {
+          initialized: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      })
+    }
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Test MCP method
+ */
+const testMCPMethodRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/mcp/test-method',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            url: z.string().url().describe('MCP server URL'),
+            method: z.string().describe('JSON-RPC method name'),
+            params: z.any().optional().describe('Method parameters'),
+            sessionId: z.string().optional().describe('MCP session ID')
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              request: z.any(),
+              response: z.any(),
+              responseTime: z.number(),
+              error: z.string().optional()
+            })
+          })
+        }
+      },
+      description: 'Method test result'
+    }
+  }
+})
+
+mcpRoutes.openapi(testMCPMethodRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { url, method, params, sessionId } = c.req.valid('json')
+
+    const request = {
+      jsonrpc: '2.0',
+      id: Date.now(),
+      method,
+      params: params || {}
+    }
+
+    const startTime = Date.now()
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
+      }
+
+      if (sessionId) {
+        headers['Mcp-Session-Id'] = sessionId
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(15000) // 15 second timeout
+      })
+
+      const responseTime = Date.now() - startTime
+      const responseData = await response.json()
+
+      return c.json({
+        success: true,
+        data: {
+          request,
+          response: responseData,
+          responseTime,
+          error: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`
+        }
+      })
+    } catch (error) {
+      const responseTime = Date.now() - startTime
+      return c.json({
+        success: true,
+        data: {
+          request,
+          response: null,
+          responseTime,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      })
+    }
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Get MCP test data for project
+ */
+const getMCPTestDataRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/test-data',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              projectId: z.number(),
+              projectName: z.string(),
+              mcpEndpoints: z.object({
+                main: z.string(),
+                projectSpecific: z.string()
+              }),
+              sampleMethods: z.array(z.object({
+                method: z.string(),
+                description: z.string(),
+                params: z.any(),
+                example: z.any()
+              })),
+              sampleFiles: z.array(z.object({
+                path: z.string(),
+                name: z.string(),
+                id: z.number()
+              })).optional()
+            })
+          })
+        }
+      },
+      description: 'MCP test data for project'
+    }
+  }
+})
+
+mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+
+    // Get project info
+    const project = await projectService.getProjectById(projectId)
+
+    // Get some sample files from the project
+    const projectFiles = await projectService.getProjectFiles(projectId)
+    const sampleFiles = (projectFiles || []).slice(0, 5).map(file => ({
+      path: file.path,
+      name: file.name,
+      id: file.id
+    }))
+
+    const baseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:3147' : 'http://localhost:3147'
+
+    const testData = {
+      projectId,
+      projectName: project.name,
+      mcpEndpoints: {
+        main: `${baseUrl}/api/mcp`,
+        projectSpecific: `${baseUrl}/api/projects/${projectId}/mcp`
+      },
+      sampleMethods: [
+        {
+          method: 'initialize',
+          description: 'Initialize MCP session and negotiate capabilities',
+          params: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: true,
+              resources: true,
+              prompts: false
+            },
+            clientInfo: {
+              name: 'octoprompt-tester',
+              version: '0.5.4'
+            }
+          },
+          example: {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'initialize',
+            params: {
+              protocolVersion: '2024-11-05',
+              capabilities: { tools: true, resources: true },
+              clientInfo: { name: 'octoprompt-tester', version: '0.5.4' }
+            }
+          }
+        },
+        {
+          method: 'tools/list',
+          description: 'List all available tools',
+          params: {},
+          example: {
+            jsonrpc: '2.0',
+            id: 2,
+            method: 'tools/list',
+            params: {}
+          }
+        },
+        {
+          method: 'resources/list',
+          description: 'List all available resources',
+          params: {},
+          example: {
+            jsonrpc: '2.0',
+            id: 3,
+            method: 'resources/list',
+            params: {}
+          }
+        },
+        {
+          method: 'tools/call',
+          description: 'Execute a tool',
+          params: {
+            name: 'file_read',
+            arguments: {
+              path: sampleFiles[0]?.path || '/README.md'
+            }
+          },
+          example: {
+            jsonrpc: '2.0',
+            id: 4,
+            method: 'tools/call',
+            params: {
+              name: 'file_read',
+              arguments: { path: sampleFiles[0]?.path || '/README.md' }
+            }
+          }
+        },
+        {
+          method: 'ping',
+          description: 'Health check endpoint',
+          params: {},
+          example: {
+            jsonrpc: '2.0',
+            id: 5,
+            method: 'ping',
+            params: {}
+          }
+        }
+      ],
+      sampleFiles
+    }
+
+    return c.json({ success: true, data: testData })
+  } catch (error) {
+    return handleApiError(error, c)
   }
 })

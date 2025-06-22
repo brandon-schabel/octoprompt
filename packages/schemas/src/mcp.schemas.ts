@@ -211,9 +211,9 @@ export type MCPServerCapabilities = z.infer<typeof MCPServerCapabilitiesSchema>
 export const MCPConnectionInfoSchema = z
   .object({
     serverId: z.number().int().positive(),
-    transport: z.enum(['stdio', 'websocket', 'http']).default('stdio').openapi({
+    transport: z.enum(['websocket', 'http']).default('http').openapi({
       description: 'Transport protocol used for communication',
-      example: 'stdio'
+      example: 'http'
     }),
     endpoint: z.string().optional().openapi({
       description: 'Connection endpoint (for websocket/http transports)',

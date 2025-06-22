@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../octo-client'
-import type { 
+import type {
   CreateMCPServerConfigBody,
   UpdateMCPServerConfigBody,
   MCPToolExecutionRequest
@@ -45,9 +45,9 @@ export function useGetMCPServerState(projectId: number, configId: number) {
 // Server Config Mutations
 export function useCreateMCPServerConfig(projectId: number) {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (data: CreateMCPServerConfigBody) => 
+    mutationFn: (data: CreateMCPServerConfigBody) =>
       apiClient.mcp.createServerConfig(projectId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mcpKeys.serverConfigs(projectId) })
@@ -57,9 +57,9 @@ export function useCreateMCPServerConfig(projectId: number) {
 
 export function useUpdateMCPServerConfig(projectId: number, configId: number) {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (data: UpdateMCPServerConfigBody) => 
+    mutationFn: (data: UpdateMCPServerConfigBody) =>
       apiClient.mcp.updateServerConfig(projectId, configId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mcpKeys.serverConfig(projectId, configId) })
@@ -70,9 +70,9 @@ export function useUpdateMCPServerConfig(projectId: number, configId: number) {
 
 export function useDeleteMCPServerConfig(projectId: number) {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (configId: number) => 
+    mutationFn: (configId: number) =>
       apiClient.mcp.deleteServerConfig(projectId, configId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mcpKeys.serverConfigs(projectId) })
@@ -83,9 +83,9 @@ export function useDeleteMCPServerConfig(projectId: number) {
 // Server Management Mutations
 export function useStartMCPServer(projectId: number) {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (configId: number) => 
+    mutationFn: (configId: number) =>
       apiClient.mcp.startServer(projectId, configId),
     onSuccess: (_, configId) => {
       queryClient.invalidateQueries({ queryKey: mcpKeys.serverState(projectId, configId) })
@@ -97,9 +97,9 @@ export function useStartMCPServer(projectId: number) {
 
 export function useStopMCPServer(projectId: number) {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: (configId: number) => 
+    mutationFn: (configId: number) =>
       apiClient.mcp.stopServer(projectId, configId),
     onSuccess: (_, configId) => {
       queryClient.invalidateQueries({ queryKey: mcpKeys.serverState(projectId, configId) })
@@ -120,7 +120,7 @@ export function useGetMCPTools(projectId: number) {
 
 export function useExecuteMCPTool(projectId: number) {
   return useMutation({
-    mutationFn: (request: MCPToolExecutionRequest) => 
+    mutationFn: (request: MCPToolExecutionRequest) =>
       apiClient.mcp.executeTool(projectId, request)
   })
 }
@@ -136,7 +136,63 @@ export function useGetMCPResources(projectId: number) {
 
 export function useReadMCPResource(projectId: number) {
   return useMutation({
-    mutationFn: ({ serverId, uri }: { serverId: number; uri: string }) => 
+    mutationFn: ({ serverId, uri }: { serverId: number; uri: string }) =>
       apiClient.mcp.readResource(projectId, serverId, uri)
+  })
+}
+
+// MCP Testing Hooks
+export function useTestMCPConnection(projectId: number) {
+  return useMutation({
+    mutationFn: (url: string) =>
+      apiClient.mcp.testConnection(projectId, url)
+  })
+}
+
+export function useTestMCPInitialize(projectId: number) {
+  return useMutation({
+    mutationFn: (url: string) =>
+      apiClient.mcp.testInitialize(projectId, url)
+  })
+}
+
+export function useTestMCPMethod(projectId: number) {
+  return useMutation({
+    mutationFn: ({ url, method, params, sessionId }: {
+      url: string;
+      method: string;
+      params?: any;
+      sessionId?: string
+    }) =>
+      apiClient.mcp.testMethod(projectId, url, method, params, sessionId)
+  })
+}
+
+export function useGetMCPTestData(projectId: number) {
+  return useQuery({
+    queryKey: [...mcpKeys.all, 'testData', projectId],
+    queryFn: () => apiClient.mcp.getTestData(projectId),
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000 // 5 minutes
+  })
+}
+
+export function useGetMCPSessions() {
+  return useQuery({
+    queryKey: [...mcpKeys.all, 'sessions'],
+    queryFn: () => apiClient.mcp.getMCPSessions(),
+    refetchInterval: 5000 // Poll every 5 seconds
+  })
+}
+
+export function useCloseMCPSession() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (sessionId: string) =>
+      apiClient.mcp.closeMCPSession(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...mcpKeys.all, 'sessions'] })
+    }
   })
 }

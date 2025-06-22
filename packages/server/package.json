@@ -9,7 +9,7 @@
     "dev": "DEV=true bun server.ts",
     "dev:watch": "DEV=true bun --watch server.ts",
     "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh",
-    "mcp:stdio": "bun server.ts --mcp-stdio"
+    "mcp": "bun mcp-server.ts"
   },
   "type": "module",
   "dependencies": {

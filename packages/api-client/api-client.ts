@@ -928,6 +928,147 @@ export class MCPService extends BaseApiClient {
     })
     return result as DataResponseSchema<any>
   }
+
+  // MCP Testing operations
+  async testConnection(projectId: number, url: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/test-connection`, {
+      body: { url },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          connected: z.boolean(),
+          responseTime: z.number(),
+          error: z.string().optional(),
+          serverInfo: z.any().optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      connected: boolean
+      responseTime: number
+      error?: string
+      serverInfo?: any
+    }>
+  }
+
+  async testInitialize(projectId: number, url: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/test-initialize`, {
+      body: { url },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          initialized: z.boolean(),
+          sessionId: z.string().optional(),
+          capabilities: z.any().optional(),
+          serverInfo: z.any().optional(),
+          error: z.string().optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      initialized: boolean
+      sessionId?: string
+      capabilities?: any
+      serverInfo?: any
+      error?: string
+    }>
+  }
+
+  async testMethod(projectId: number, url: string, method: string, params: any, sessionId?: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/test-method`, {
+      body: { url, method, params, sessionId },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          request: z.any(),
+          response: z.any(),
+          responseTime: z.number(),
+          error: z.string().optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      request: any
+      response: any
+      responseTime: number
+      error?: string
+    }>
+  }
+
+  async getTestData(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/test-data`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          projectId: z.number(),
+          projectName: z.string(),
+          mcpEndpoints: z.object({
+            main: z.string(),
+            projectSpecific: z.string()
+          }),
+          sampleMethods: z.array(z.object({
+            method: z.string(),
+            description: z.string(),
+            params: z.any(),
+            example: z.any()
+          })),
+          sampleFiles: z.array(z.object({
+            path: z.string(),
+            name: z.string(),
+            id: z.number()
+          })).optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      projectId: number
+      projectName: string
+      mcpEndpoints: {
+        main: string
+        projectSpecific: string
+      }
+      sampleMethods: Array<{
+        method: string
+        description: string
+        params: any
+        example: any
+      }>
+      sampleFiles?: Array<{
+        path: string
+        name: string
+        id: number
+      }>
+    }>
+  }
+
+  async getMCPSessions() {
+    const result = await this.request('GET', '/mcp/sessions', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(z.object({
+          id: z.string(),
+          projectId: z.number().optional(),
+          createdAt: z.number(),
+          lastActivity: z.number()
+        }))
+      })
+    })
+    return result as DataResponseSchema<Array<{
+      id: string
+      projectId?: number
+      createdAt: number
+      lastActivity: number
+    }>>
+  }
+
+  async closeMCPSession(sessionId: string) {
+    const result = await this.request('DELETE', `/mcp/sessions/${sessionId}`, {
+      responseSchema: z.object({
+        success: z.boolean()
+      })
+    })
+    return result as { success: boolean }
+  }
 }
 
 // Main OctoPrompt Client
