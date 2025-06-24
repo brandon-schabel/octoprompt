@@ -32,7 +32,7 @@ import type {
     CreatePromptBody,
     UpdatePromptBody
 } from '@octoprompt/schemas'
-import { getFullProjectSummary } from '@octoprompt/services'
+import { getProjectCompactSummary } from '@octoprompt/services'
 
 // MCP Tool Types
 export interface MCPToolInputSchema {
@@ -576,13 +576,13 @@ export const BUILTIN_TOOLS: readonly MCPToolDefinition[] = [
 
     {
         name: 'project_summary',
-        description: 'Get a summary of the project structure and contents',
+        description: 'Get a compact, AI-optimized summary of the project structure and contents',
         inputSchema: {
             type: 'object',
             properties: {
                 include_files: {
                     type: 'boolean',
-                    description: 'Whether to include file summaries',
+                    description: 'Whether to include AI-generated compact project summary',
                     default: true
                 }
             }
@@ -606,8 +606,8 @@ export const BUILTIN_TOOLS: readonly MCPToolDefinition[] = [
                 let summary = `Project: ${project.name}\nPath: ${project.path}\nDescription: ${project.description}\nFiles: ${fileCount}\nCreated: ${new Date(project.created).toLocaleString()}\nUpdated: ${new Date(project.updated).toLocaleString()}`
 
                 if (args.include_files && files && files.length > 0) {
-                    const fullSummary = await getFullProjectSummary(projectId)
-                    summary = fullSummary
+                    const compactSummary = await getProjectCompactSummary(projectId)
+                    summary = compactSummary
                 }
 
                 return {

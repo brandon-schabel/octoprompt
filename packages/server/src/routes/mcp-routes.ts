@@ -836,6 +836,68 @@ mcpRoutes.openapi(suggestFilesResourceRoute, async (c) => {
   }
 })
 
+/**
+ * Get compact project summary as an MCP resource
+ * This provides a condensed, AI-optimized project overview for quick context
+ */
+const getCompactProjectSummaryRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/compact-summary',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              uri: z.string(),
+              name: z.string(),
+              description: z.string(),
+              mimeType: z.string(),
+              content: z.string()
+            })
+          })
+        }
+      },
+      description: 'Compact project summary resource content'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      },
+      description: 'Project not found'
+    }
+  }
+})
+
+mcpRoutes.openapi(getCompactProjectSummaryRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+
+    const compactSummary = await projectService.getProjectCompactSummary(projectId)
+
+    const resourceContent = {
+      uri: `octoprompt://projects/${projectId}/compact-summary`,
+      name: 'Compact Project Summary',
+      description: 'AI-generated compact overview of project architecture and structure',
+      mimeType: 'text/markdown',
+      content: compactSummary
+    }
+
+    return c.json({ success: true, data: resourceContent })
+  } catch (error) {
+    console.error('[MCP CompactSummary] Error:', error)
+    return handleApiError(error, c)
+  }
+})
+
 // ====================
 // MCP TESTING ENDPOINTS
 // ====================

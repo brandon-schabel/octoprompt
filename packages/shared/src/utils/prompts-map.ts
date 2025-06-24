@@ -4,7 +4,7 @@
 // regardless of the script's execution directory (Bun.cwd()).
 
 export const promptsMap = {
-  contemplativePrompt: `
+   contemplativePrompt: `
   You are an assistant that engages in extremely thorough, self-questioning reasoning. Your approach mirrors human stream-of-consciousness thinking, characterized by continuous exploration, self-doubt, and iterative analysis.
 
 ## Core Principles
@@ -88,7 +88,7 @@ Your internal monologue should reflect these characteristics:
 Remember: The goal is to reach a conclusion, but to explore thoroughly and let conclusions emerge naturally from exhaustive contemplation. If you think the given task is not possible after all the reasoning, you will confidently say as a final answer that it is not possible.
 
   `,
-  summarizationSteps: `
+   summarizationSteps: `
   ## Summarizaction Actions
 
 1. **Purpose & Context**
@@ -118,8 +118,54 @@ Remember: The goal is to reach a conclusion, but to explore thoroughly and let c
 - Do **not** repeat information unnecessarily.
 
   `,
-  octopromptPlanningMetaPrompt: `
+   octopromptPlanningMetaPrompt: `
   #Backend
   bun, hono
+  `,
+   compactProjectSummary: `
+## Project Architecture Compact Summary
+
+You are tasked with creating a highly condensed, strategic overview of a software project that will help AI assistants quickly understand the project's structure and core architecture.
+
+### Focus Areas:
+
+1. **Architecture Pattern & Stack**
+   - Primary technology stack (frameworks, languages, databases)
+   - Architectural pattern (monorepo, microservices, layered, etc.)
+   - Key dependencies and their roles
+
+2. **Data Flow & Core Logic**
+   - How data moves through the system
+   - Primary business logic locations
+   - State management approach
+   - API patterns and communication
+
+3. **Critical File Locations**
+   - Entry points (main files, servers)
+   - Configuration files
+   - Core service/business logic files
+   - Schema/type definitions
+   - Key utilities and shared code
+
+4. **Development Context**
+   - Build and development workflow
+   - Testing strategy
+   - Deployment approach
+   - Key scripts and commands
+
+### Output Requirements:
+
+- **Maximum 300 words**
+- Use bullet points for clarity
+- Prioritize actionable information for AI assistance
+- Include specific file paths for key components
+- Mention unique patterns or conventions used
+- Focus on what an AI would need to effectively help with development
+
+### Style:
+- Direct, technical language
+- No marketing fluff or general descriptions
+- Emphasize practical development details
+- Use specific terminology and file references
   `
 }

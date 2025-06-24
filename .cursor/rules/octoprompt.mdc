@@ -8,6 +8,71 @@ alwaysApply: true
 ## General Code Principles
 Write self-explanatory, modular, and functional code. Adhere to DRY (Don't Repeat Yourself), SRP (Single Responsibility Principle), and KISS (Keep It Simple, Stupid). Code should be easily unit-testable and read like a clear sentence, avoiding magic numbers. Include a comment at the top of each file detailing the 5 most recent changes to prevent repeated mistakes. Minimize file size by writing concise code and fitting more characters per line where readable.
 
+### Linear Workspace Configuration
+
+- **Workspace**: BS Projects (Team ID: `2868a346-2a0d-4953-af4e-4b695aa5a981`)
+- **Projects**:
+  - **OctoPrompt** (Project ID: `9e96fe84-c58e-47d3-8402-3552cdf0bf3b`)
+
+### OctoPrompt MCP Usage
+
+The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
+
+**OctoPrompt Project Details:**
+
+- **Project ID**: `1750564533014`
+
+**Key MCP Tools Available:**
+
+- `mcp_octoprompt_project_*` - Project management (create, read, update, delete)
+- `mcp_octoprompt_file_*` - File operations (read, write, list)
+- `mcp_octoprompt_prompt_*` - Prompt management and organization
+- `mcp_octoprompt_suggest_files` - AI-powered file suggestions
+- `mcp_octoprompt_project_summary` - Generate project overviews
+- `mcp_octoprompt_optimize_user_input` - AI prompt optimization
+
+**Common Workflows:**
+
+1. **Project Management:**
+
+   ```typescript
+   // List all projects
+   mcp_octoprompt_project_list()
+   
+   // Get specific project details
+   mcp_octoprompt_project_get({ projectId: 1 })
+   
+   // Create new project
+   mcp_octoprompt_project_create({ name: "New Project", path: "/path/to/project" })
+   ```
+
+2. **File Operations:**
+
+   ```typescript
+   // List project files
+   mcp_octoprompt_file_list({ path: ".", recursive: true })
+   
+   // Read file content
+   mcp_octoprompt_file_read({ path: "src/main.ts" })
+   
+   // Write file content
+   mcp_octoprompt_file_write({ path: "new-file.ts", content: "console.log('Hello')" })
+   ```
+
+3. **AI-Powered Features:**
+
+   ```typescript
+   // Get AI file suggestions for a task
+   mcp_octoprompt_suggest_files({ prompt: "implement authentication", limit: 5 })
+   
+   // Generate project summary
+   mcp_octoprompt_project_summary({ include_files: true })
+   
+   // Optimize user prompts
+   mcp_octoprompt_optimize_user_input({ prompt: "help me build a login form" })
+   ```
+
+
 ---
 ## TypeScript Rules
 Apply these to all TypeScript files for a consistent, high-quality codebase.

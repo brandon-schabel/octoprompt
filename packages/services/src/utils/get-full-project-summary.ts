@@ -1,8 +1,10 @@
-import { ApiError, buildProjectSummary } from '@octoprompt/shared'
+import { ApiError, buildProjectSummary, promptsMap } from '@octoprompt/shared'
 import { getProjectFiles } from '@octoprompt/services'
+import { generateSingleText } from '../gen-ai-services'
+import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
 
-export const getSafeAllProjectFiles = async (projectId: number, includeAllVersions: boolean = false) => {
-  const allFiles = await getProjectFiles(projectId, includeAllVersions)
+export const getSafeAllProjectFiles = async (projectId: number) => {
+  const allFiles = await getProjectFiles(projectId)
   if (!allFiles) {
     throw new ApiError(404, 'Project files not found', 'NOT_FOUND')
   }
@@ -13,8 +15,22 @@ export const getSafeAllProjectFiles = async (projectId: number, includeAllVersio
 }
 
 export const getFullProjectSummary = async (projectId: number) => {
-  // Only get latest versions for project summary
-  const latestFiles = await getSafeAllProjectFiles(projectId, false)
+  // Get all project files for project summary
+  const latestFiles = await getSafeAllProjectFiles(projectId)
 
   return buildProjectSummary(latestFiles)
+}
+
+export const getCompactProjectSummary = async (projectId: number) => {
+  // Get the full project summary first
+  const fullSummary = await getFullProjectSummary(projectId)
+
+  // Use AI to create a compact version
+  const compactSummary = await generateSingleText({
+    prompt: fullSummary,
+    systemMessage: promptsMap.compactProjectSummary,
+    options: LOW_MODEL_CONFIG
+  })
+
+  return compactSummary.trim()
 }

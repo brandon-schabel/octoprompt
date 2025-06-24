@@ -1,3 +1,11 @@
+/**
+ * Recent changes:
+ * 1. Fixed file suggestions API response handling - now correctly uses ProjectFile[] directly instead of mapping IDs
+ * 2.
+ * 3.
+ * 4.
+ * 5.
+ */
 import { forwardRef, useState, useEffect, useRef, useImperativeHandle, useMemo } from 'react'
 
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -131,19 +139,9 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
         },
         {
           onSuccess: (recommendedFiles) => {
-            if (recommendedFiles && recommendedFiles) {
-              const files = recommendedFiles
-                .map((id) => {
-                  const file = projectFileMap.get(id)
-                  if (file) {
-                    return file
-                  }
-
-                  return null
-                })
-                .filter(Boolean) as ProjectFile[]
-
-              setSuggestedFiles(files)
+            if (recommendedFiles && recommendedFiles.length > 0) {
+              // recommendedFiles is already an array of ProjectFile objects
+              setSuggestedFiles(recommendedFiles)
               setShowSuggestions(true)
             }
           }

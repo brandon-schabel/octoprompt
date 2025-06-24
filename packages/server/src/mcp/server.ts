@@ -18,9 +18,9 @@ import {
   listProjects,
   listAllPrompts,
   listPromptsByProject,
-  getPromptById
+  getPromptById,
+  getProjectCompactSummary
 } from '@octoprompt/services'
-import { getFullProjectSummary } from '@octoprompt/services/src/utils/get-full-project-summary'
 import { ApiError } from '@octoprompt/shared'
 import path from 'node:path'
 import fs from 'node:fs/promises'
@@ -48,7 +48,7 @@ export function getMCPServer(): Server {
 
     // Register tools
     registerTools(mcpServer)
-    
+
     // Register resources
     registerResources(mcpServer)
   }
@@ -99,9 +99,10 @@ function registerTools(server: Server) {
           required: ['projectId', 'filePath']
         }
       },
+
       {
-        name: 'get_project_summary',
-        description: 'Get a comprehensive summary of a project including structure, stats, and key files',
+        name: 'get_project_compact_summary',
+        description: 'Get a compact, AI-generated architectural overview of the project optimized for AI context',
         inputSchema: {
           type: 'object',
           properties: {
@@ -154,19 +155,19 @@ function registerTools(server: Server) {
       switch (name) {
         case 'browse_project_files':
           return await handleBrowseProjectFiles(args as any)
-        
+
         case 'get_file_content':
           return await handleGetFileContent(args as any)
-        
-        case 'get_project_summary':
-          return await handleGetProjectSummary(args as any)
-        
+
+        case 'get_project_compact_summary':
+          return await handleGetProjectCompactSummary(args as any)
+
         case 'list_prompts':
           return await handleListPrompts(args as any)
-        
+
         case 'get_prompt':
           return await handleGetPrompt(args as any)
-        
+
         default:
           throw new Error(`Unknown tool: ${name}`)
       }
@@ -192,7 +193,7 @@ function registerResources(server: Server) {
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     try {
       const projects = await listProjects()
-      
+
       const resources: Resource[] = projects.map(project => ({
         uri: `octoprompt://project/${project.id}/structure`,
         name: `${project.name} Structure`,
@@ -208,7 +209,7 @@ function registerResources(server: Server) {
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const { uri } = request.params
-    
+
     try {
       // Parse the URI
       const match = uri.match(/^octoprompt:\/\/project\/(\d+)\/structure$/)
@@ -217,8 +218,8 @@ function registerResources(server: Server) {
       }
 
       const projectId = parseInt(match[1], 10)
-      const summary = await getFullProjectSummary(projectId)
-      
+      const summary = await getProjectCompactSummary(projectId)
+
       return {
         contents: [
           {
@@ -240,24 +241,24 @@ function registerResources(server: Server) {
  */
 async function handleBrowseProjectFiles(args: { projectId: number; path?: string }): Promise<CallToolResult> {
   const { projectId, path: browsePath } = args
-  
+
   const project = await getProjectById(projectId)
   const files = await getProjectFiles(projectId)
-  
+
   if (!files) {
     throw new Error('Failed to get project files')
   }
-  
+
   let result = `Project: ${project.name}\n`
   result += `Path: ${project.path}\n`
   result += `Total files: ${files.length}\n\n`
-  
+
   if (browsePath) {
     // Filter files to show only those under the specified path
     const filteredFiles = files
       .filter(file => file.path.startsWith(browsePath))
       .sort((a, b) => a.path.localeCompare(b.path))
-    
+
     result += `Files under ${browsePath}:\n`
     for (const file of filteredFiles) {
       const relativePath = file.path.substring(browsePath.length).replace(/^\//, '')
@@ -267,7 +268,7 @@ async function handleBrowseProjectFiles(args: { projectId: number; path?: string
     // Show directory structure
     const dirs = new Set<string>()
     const rootFiles: string[] = []
-    
+
     files.forEach(file => {
       const parts = file.path.split('/')
       if (parts.length > 1) {
@@ -276,12 +277,12 @@ async function handleBrowseProjectFiles(args: { projectId: number; path?: string
         rootFiles.push(file.path)
       }
     })
-    
+
     result += 'Directories:\n'
     Array.from(dirs).sort().forEach(dir => {
       result += `  ${dir}/\n`
     })
-    
+
     if (rootFiles.length > 0) {
       result += '\nRoot files:\n'
       rootFiles.sort().forEach(file => {
@@ -289,7 +290,7 @@ async function handleBrowseProjectFiles(args: { projectId: number; path?: string
       })
     }
   }
-  
+
   return {
     content: [
       {
@@ -302,32 +303,32 @@ async function handleBrowseProjectFiles(args: { projectId: number; path?: string
 
 async function handleGetFileContent(args: { projectId: number; filePath: string }): Promise<CallToolResult> {
   const { projectId, filePath } = args
-  
+
   const project = await getProjectById(projectId)
   const files = await getProjectFiles(projectId)
-  
+
   if (!files) {
     throw new Error('Failed to get project files')
   }
-  
+
   // Find the file by path
   const file = files.find(f => f.path === filePath)
-  
+
   if (!file) {
     throw new Error(`File not found: ${filePath}`)
   }
-  
+
   // Check if it's an image file
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']
   const ext = path.extname(filePath).toLowerCase()
-  
+
   if (imageExtensions.includes(ext)) {
     // For images, we need to read from the actual file system
     const fullPath = path.join(project.path, filePath)
     try {
       const data = await fs.readFile(fullPath)
       const base64 = data.toString('base64')
-      
+
       return {
         content: [
           {
@@ -341,7 +342,7 @@ async function handleGetFileContent(args: { projectId: number; filePath: string 
       throw new Error(`Failed to read image file: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
-  
+
   // For text files, return the content from storage
   return {
     content: [
@@ -353,27 +354,27 @@ async function handleGetFileContent(args: { projectId: number; filePath: string 
   }
 }
 
-async function handleGetProjectSummary(args: { projectId: number }): Promise<CallToolResult> {
+async function handleGetProjectCompactSummary(args: { projectId: number }): Promise<CallToolResult> {
   const { projectId } = args
-  const summary = await getFullProjectSummary(projectId)
-  
+  const compactSummary = await getProjectCompactSummary(projectId)
+
   return {
     content: [
       {
         type: 'text',
-        text: summary
+        text: compactSummary
       }
     ]
   }
 }
 
 async function handleListPrompts(args: { projectId?: number }): Promise<CallToolResult> {
-  const prompts = args.projectId ? 
-    await listPromptsByProject(args.projectId) : 
+  const prompts = args.projectId ?
+    await listPromptsByProject(args.projectId) :
     await listAllPrompts()
-  
+
   let result = `Found ${prompts.length} prompts\n\n`
-  
+
   for (const prompt of prompts) {
     result += `ID: ${prompt.id}\n`
     result += `Name: ${prompt.name}\n`
@@ -384,7 +385,7 @@ async function handleListPrompts(args: { projectId?: number }): Promise<CallTool
     result += `Updated: ${new Date(prompt.updated).toISOString()}\n`
     result += '---\n\n'
   }
-  
+
   return {
     content: [
       {
@@ -398,7 +399,7 @@ async function handleListPrompts(args: { projectId?: number }): Promise<CallTool
 async function handleGetPrompt(args: { promptId: number }): Promise<CallToolResult> {
   const { promptId } = args
   const prompt = await getPromptById(promptId)
-  
+
   let result = `Prompt: ${prompt.name}\n`
   result += `ID: ${prompt.id}\n`
   if (prompt.projectId) {
@@ -407,7 +408,7 @@ async function handleGetPrompt(args: { promptId: number }): Promise<CallToolResu
   result += `Created: ${new Date(prompt.created).toISOString()}\n`
   result += `Updated: ${new Date(prompt.updated).toISOString()}\n\n`
   result += `Content:\n${prompt.content}`
-  
+
   return {
     content: [
       {
@@ -424,7 +425,7 @@ async function handleGetPrompt(args: { promptId: number }): Promise<CallToolResu
 export async function startStdioMCPServer() {
   const server = getMCPServer()
   const transport = new StdioServerTransport()
-  
+
   await server.connect(transport)
   console.error('MCP Server started on stdio')
 }

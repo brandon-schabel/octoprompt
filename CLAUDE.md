@@ -35,18 +35,269 @@ OctoPrompt guidance for Claude Code (claude.ai/code).
 
 The Linear MCP (Model Context Protocol) integration is built into Claude Code and provides direct access to Linear's API for project management. No additional setup or configuration is required - the MCP commands are available out of the box.
 
-### Available Linear MCP Commands
+### OctoPrompt MCP Usage
 
-- **List teams**: `mcp__linear__list_teams` - View all teams in the workspace
-- **List projects**: `mcp__linear__list_projects` - View all projects (use with teamId parameter)
-- **List issues**: `mcp__linear__list_issues` - View issues (use with teamId or projectId)
-- **Get issue details**: `mcp__linear__get_issue` - Get specific issue details (use with issue ID)
-- **Create comments**: `mcp__linear__create_comment` - Add comments to issues
-- **Create issue**: `mcp__linear__create_issue` - Create new issues
-- **Update issue**: `mcp__linear__update_issue` - Update existing issues
-- **List issue statuses**: `mcp__linear__list_issue_statuses` - View available statuses
-- **Get user**: `mcp__linear__get_user` - Get user information
-- **Search documentation**: `mcp__linear__search_documentation` - Search Linear docs
+The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
+
+**OctoPrompt Project Details:**
+
+- **Project ID**: `1750564533014`
+
+**Key MCP Tools Available:**
+
+- `mcp_octoprompt_project_*` - Project management (create, read, update, delete)
+- `mcp_octoprompt_file_*` - File operations (read, write, list)
+- `mcp_octoprompt_prompt_*` - Prompt management and organization
+- `mcp_octoprompt_suggest_files` - AI-powered file suggestions
+- `mcp_octoprompt_project_summary` - Generate project overviews
+- `mcp_octoprompt_optimize_user_input` - AI prompt optimization
+
+**Common Workflows:**
+
+1. **Project Management:**
+
+   ```typescript
+   // List all projects
+   mcp_octoprompt_project_list()
+   
+   // Get specific project details
+   mcp_octoprompt_project_get({ projectId: 1 })
+   
+   // Create new project
+   mcp_octoprompt_project_create({ name: "New Project", path: "/path/to/project" })
+   ```
+
+2. **File Operations:**
+
+   ```typescript
+   // List project files
+   mcp_octoprompt_file_list({ path: ".", recursive: true })
+   
+   // Read file content
+   mcp_octoprompt_file_read({ path: "src/main.ts" })
+   
+   // Write file content
+   mcp_octoprompt_file_write({ path: "new-file.ts", content: "console.log('Hello')" })
+   ```
+
+3. **AI-Powered Features:**
+
+   ```typescript
+   // Get AI file suggestions for a task
+   mcp_octoprompt_suggest_files({ prompt: "implement authentication", limit: 5 })
+   
+   // Generate project summary
+   mcp_octoprompt_project_summary({ include_files: true })
+   
+   // Optimize user prompts
+   mcp_octoprompt_optimize_user_input({ prompt: "help me build a login form" })
+   ```
+
+use mcp_octoprompt_optimize_user_input to give powerful extra context without having to go searching for files
+use suggest files to immediately find files that might be useful to the user query
+
+## Creating New MCP Tools
+
+Follow this step-by-step process to add new MCP tools to OctoPrompt:
+
+### 1. Add AI Prompt (if needed)
+
+If your tool uses AI, add a new prompt to `packages/shared/src/utils/prompts-map.ts`:
+
+```typescript
+export const promptsMap = {
+  // ... existing prompts
+  yourNewPrompt: `
+## Your New Prompt Title
+
+Your prompt content here with clear instructions for the AI.
+Include specific formatting requirements and context guidelines.
+  `
+}
+```
+
+### 2. Create Service Function
+
+Add the business logic to the appropriate service file (e.g., `packages/services/src/project-service.ts`):
+
+```typescript
+export async function yourNewFunction(projectId: number, ...params): Promise<YourReturnType> {
+  try {
+    await getProjectById(projectId) // Validate project exists
+    
+    // Your business logic here
+    // Use AI if needed: await generateSingleText({...})
+    
+    return result
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to execute your function: ${error instanceof Error ? error.message : String(error)}`,
+      'YOUR_FUNCTION_FAILED'
+    )
+  }
+}
+```
+
+### 3. Add MCP Server Tool
+
+In `packages/server/src/mcp/server.ts`, add your tool to the tools array:
+
+```typescript
+{
+  name: 'your_new_tool',
+  description: 'Description of what your tool does',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      projectId: {
+        type: 'number',
+        description: 'The ID of the project'
+      },
+      // Add other parameters
+    },
+    required: ['projectId']
+  }
+}
+```
+
+Add the tool handler in the switch statement:
+
+```typescript
+case 'your_new_tool':
+  return await handleYourNewTool(args as any)
+```
+
+Create the handler function:
+
+```typescript
+async function handleYourNewTool(args: { projectId: number }): Promise<CallToolResult> {
+  const { projectId } = args
+  const result = await yourNewFunction(projectId)
+  
+  return {
+    content: [
+      {
+        type: 'text',
+        text: result
+      }
+    ]
+  }
+}
+```
+
+### 4. Add MCP Client Mock (optional)
+
+In `packages/mcp-client/src/mcp-client.ts`, add to the mock tools array:
+
+```typescript
+{
+  id: 'your_new_tool',
+  name: 'your_new_tool',
+  description: 'Description of your tool',
+  serverId: this.config.id,
+  parameters: [
+    {
+      name: 'projectId',
+      type: 'number',
+      description: 'The ID of the project',
+      required: true
+    }
+  ],
+  inputSchema: {
+    type: 'object',
+    properties: {
+      projectId: {
+        type: 'number',
+        description: 'The ID of the project'
+      }
+    },
+    required: ['projectId']
+  }
+}
+```
+
+Add mock execution handling:
+
+```typescript
+private getMockToolExecution(toolId: string, parameters: Record<string, any>): any {
+  if (toolId === 'your_new_tool') {
+    return [
+      {
+        type: 'text',
+        text: `Mock response for ${toolId} with project ${parameters.projectId}`
+      }
+    ]
+  }
+  // ... existing code
+}
+```
+
+### 5. Add HTTP Route (optional)
+
+If you want HTTP access, add to `packages/server/src/routes/mcp-routes.ts`:
+
+```typescript
+const yourNewToolRoute = createRoute({
+  method: 'get', // or 'post'
+  path: '/api/projects/{projectId}/mcp/your-tool',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              // Define your response schema
+            })
+          })
+        }
+      },
+      description: 'Your tool response'
+    }
+  }
+})
+
+mcpRoutes.openapi(yourNewToolRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const result = await projectService.yourNewFunction(projectId)
+    return c.json({ success: true, data: result })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+```
+
+### 6. Testing
+
+1. **Unit Tests**: Add tests in the appropriate service test file
+2. **Integration Tests**: Test the MCP tool through the protocol
+3. **Manual Testing**: Use the MCP test endpoints in the API
+
+### Example: Compact Project Summary Tool
+
+See the recently added `get_project_compact_summary` tool as a complete example:
+
+- **Prompt**: `compactProjectSummary` in `prompts-map.ts`
+- **Service**: `getProjectCompactSummary()` in `project-service.ts`
+- **Utility**: `getCompactProjectSummary()` in `get-full-project-summary.ts`
+- **MCP Tool**: `get_project_compact_summary` in `mcp/server.ts`
+- **HTTP Route**: `/api/projects/{projectId}/mcp/compact-summary`
+
+This tool takes a full project summary and uses AI to create a compact, architecture-focused version that's perfect for providing context to AI assistants without overwhelming them with details.
+
+### Important Notes
+
+- **All MCP tools now use compact summaries** - Both the core MCP server and the tools registry have been updated to use `getProjectCompactSummary` instead of the verbose full summary
+- **Consistent experience** - Whether accessing via MCP tools, HTTP routes, or the tools registry, all project summary features now return the AI-optimized compact version
+- **Legacy compatibility** - The full summary function still exists for internal use but is no longer exposed through MCP interfaces
 
 ### Issue Workflow
 

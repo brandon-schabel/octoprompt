@@ -875,3 +875,23 @@ ${prompt}
     )
   }
 }
+
+/**
+ * Get a compact, AI-generated summary of the project's architecture and core structure
+ * This is useful for providing context to AI assistants without overwhelming them with details
+ */
+export async function getProjectCompactSummary(projectId: number): Promise<string> {
+  try {
+    await getProjectById(projectId) // Validate project exists
+
+    const { getCompactProjectSummary } = await import('./utils/get-full-project-summary')
+    return await getCompactProjectSummary(projectId)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get compact project summary for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_COMPACT_SUMMARY_FAILED'
+    )
+  }
+}

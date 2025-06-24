@@ -267,6 +267,30 @@ export class MCPClient {
           },
           required: ['path', 'content']
         }
+      },
+      {
+        id: 'get_project_compact_summary',
+        name: 'get_project_compact_summary',
+        description: 'Get a compact, AI-generated architectural overview of the project',
+        serverId: this.config.id,
+        parameters: [
+          {
+            name: 'projectId',
+            type: 'number',
+            description: 'The ID of the project to summarize',
+            required: true
+          }
+        ],
+        inputSchema: {
+          type: 'object',
+          properties: {
+            projectId: {
+              type: 'number',
+              description: 'The ID of the project to summarize'
+            }
+          },
+          required: ['projectId']
+        }
       }
     ]
   }
@@ -357,6 +381,33 @@ export class MCPClient {
   }
 
   private getMockToolExecution(toolId: string, parameters: Record<string, any>): any {
+    // Special handling for project compact summary
+    if (toolId === 'get_project_compact_summary') {
+      return [
+        {
+          type: 'text',
+          text: `## Project Architecture Summary (Mock)
+
+**Stack**: TypeScript, React, Bun, Hono
+**Pattern**: Monorepo with layered architecture
+**Storage**: JSON file-based with caching
+**AI Integration**: Multi-provider (OpenAI, Anthropic, etc.)
+
+**Key Files**:
+- \`packages/server/server.ts\` - Main server entry
+- \`packages/client/src/routes/\` - React frontend routes
+- \`packages/services/src/\` - Business logic layer
+- \`packages/storage/src/\` - Data persistence
+
+**Data Flow**: Client → API Routes → Services → Storage
+**Build**: \`bun run dev\` for development
+**Testing**: Bun test with functional API tests
+
+This is a mock response from MCP server '${this.config.name}' (ID: ${this.config.id}) for project ${parameters.projectId}.`
+        }
+      ]
+    }
+
     return [
       {
         type: 'text',
