@@ -5,6 +5,7 @@ import { AppSidebar } from '@/components/navigation/app-sidebar' // Added
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar' // Added
 import { useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { useSidecarServer } from '@/hooks/use-sidecar-server' // Added for Tauri sidecar
 import {
   CommandDialog,
   CommandEmpty,
@@ -40,6 +41,12 @@ function GlobalCommandPalette() {
   useHotkeys('mod+k', (evt) => {
     evt.preventDefault()
     setOpen((o) => !o)
+  })
+
+  // Add hotkey for asset generator
+  useHotkeys('mod+g', (evt) => {
+    evt.preventDefault()
+    navigate({ to: '/assets' })
   })
 
   const filteredProjects = (projectsData?.data ?? [])
@@ -111,6 +118,15 @@ function GlobalCommandPalette() {
           >
             Manage Prompts
           </CommandItem>
+          <CommandItem
+            onSelect={() => {
+              navigate({ to: '/assets' })
+              setOpen(false)
+            }}
+          >
+            Generate Assets
+            <CommandShortcut>⌘ G</CommandShortcut>
+          </CommandItem>
         </CommandGroup>
         <CommandGroup heading='File Navigation'>
           <CommandItem>
@@ -137,6 +153,34 @@ export const Route = createRootRouteWithContext()({
 
 function RootComponent() {
   const [activeProjectTabId] = useGetActiveProjectTabId()
+
+  // Initialize sidecar server for Tauri builds
+  const { isStarting, isReady, error: sidecarError } = useSidecarServer()
+
+  // Show loading state if server is starting in Tauri
+  if (window.__TAURI__ && (isStarting || !isReady)) {
+    return (
+      <div className='flex h-screen w-screen items-center justify-center bg-background text-foreground'>
+        <div className='text-center'>
+          <div className='mb-4'>Starting OctoPrompt server...</div>
+          <div className='text-sm text-muted-foreground'>This may take a few seconds on first launch</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if server failed to start in Tauri
+  if (window.__TAURI__ && sidecarError) {
+    return (
+      <div className='flex h-screen w-screen items-center justify-center bg-background text-foreground'>
+        <div className='text-center'>
+          <div className='mb-4 text-red-500'>Failed to start OctoPrompt server</div>
+          <div className='text-sm text-muted-foreground'>{sidecarError}</div>
+          <div className='mt-4 text-xs text-muted-foreground'>Please try restarting the application</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <ErrorBoundary>

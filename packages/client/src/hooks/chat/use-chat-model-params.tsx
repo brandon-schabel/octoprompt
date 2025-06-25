@@ -67,13 +67,13 @@ export function useChatModelParams() {
 
   const modelSettings: AiSdkOptions = useMemo(
     () => ({
-      temperature,
-      topP,
-      frequencyPenalty,
-      presencePenalty,
-      maxTokens,
-      model,
-      provider
+      temperature: temperature ?? 0.7,
+      topP: topP ?? 0.9,
+      frequencyPenalty: frequencyPenalty ?? 0,
+      presencePenalty: presencePenalty ?? 0,
+      maxTokens: maxTokens ?? 10000,
+      model: model ?? 'google/gemini-2.5-flash-preview',
+      provider: provider ?? 'openrouter'
     }),
     [temperature, topP, frequencyPenalty, presencePenalty, maxTokens, model, provider]
   )

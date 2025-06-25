@@ -2,9 +2,6 @@ import { z } from '@hono/zod-openapi'
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 
-import { ProjectFileSchema } from './project.schemas'
-import { unixTSArraySchemaSpec } from './schema-utils'
-
 // --- Schema for individual messages (aligns with Vercel AI SDK CoreMessage) ---
 export const AiMessageSchema = z
   .object({
@@ -230,6 +227,165 @@ export const FilenameSuggestionSchema = z
   })
   .openapi('FilenameSuggestionOutput')
 
+// Asset Generation Schemas
+export const ReadmeGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated README content in markdown format',
+      example: '# Project Name\n\nDescription...'
+    }),
+    sections: z.array(z.string()).openapi({
+      description: 'List of sections included in the README',
+      example: ['Introduction', 'Installation', 'Usage', 'API', 'Contributing', 'License']
+    })
+  })
+  .openapi('ReadmeGeneratorOutput')
+
+export const ReactComponentGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated React component code',
+      example: 'import React from "react"...'
+    }),
+    componentName: z.string().openapi({
+      description: 'The name of the generated component',
+      example: 'UserProfile'
+    }),
+    props: z
+      .array(z.string())
+      .optional()
+      .openapi({
+        description: 'List of props used in the component',
+        example: ['id', 'name', 'avatar', 'bio']
+      }),
+    imports: z.array(z.string()).openapi({
+      description: 'List of imports used in the component',
+      example: ['react', '@/lib/utils', '@/components/ui/card']
+    })
+  })
+  .openapi('ReactComponentGeneratorOutput')
+
+export const TestSuiteGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated test suite code',
+      example: 'import { describe, it, expect } from "bun:test"...'
+    }),
+    testCases: z.array(z.string()).openapi({
+      description: 'List of test cases included',
+      example: ['should render correctly', 'should handle click events', 'should validate inputs']
+    })
+  })
+  .openapi('TestSuiteGeneratorOutput')
+
+export const ConfigFileGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated configuration file content',
+      example: '{\n  "compilerOptions": {...}\n}'
+    }),
+    fileType: z.string().openapi({
+      description: 'The type of configuration file',
+      example: 'tsconfig'
+    })
+  })
+  .openapi('ConfigFileGeneratorOutput')
+
+export const ApiRouteGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated API route code',
+      example: 'import { createRoute } from "@hono/zod-openapi"...'
+    }),
+    routePath: z.string().openapi({
+      description: 'The API route path',
+      example: '/api/users/:id'
+    }),
+    methods: z.array(z.string()).openapi({
+      description: 'HTTP methods implemented',
+      example: ['GET', 'POST', 'PUT', 'DELETE']
+    })
+  })
+  .openapi('ApiRouteGeneratorOutput')
+
+export const ZodSchemaGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated Zod schema code',
+      example: 'import { z } from "zod"...'
+    }),
+    schemaName: z.string().openapi({
+      description: 'The name of the generated schema',
+      example: 'UserSchema'
+    }),
+    fields: z.array(z.string()).openapi({
+      description: 'List of fields in the schema',
+      example: ['id', 'name', 'email', 'createdAt']
+    })
+  })
+  .openapi('ZodSchemaGeneratorOutput')
+
+export const SvgGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The complete SVG code starting with <svg and ending with </svg>',
+      example:
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    })
+  })
+  .openapi('SvgGeneratorOutput')
+
+export const ArchitectureDocGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The generated architecture documentation in markdown format',
+      example: '# Project Architecture\n\n## Overview\n...'
+    }),
+    sections: z
+      .array(
+        z.object({
+          title: z.string(),
+          level: z.number().min(1).max(6)
+        })
+      )
+      .openapi({
+        description: 'Table of contents with section titles and heading levels',
+        example: [
+          { title: 'Overview', level: 2 },
+          { title: 'Core Components', level: 2 }
+        ]
+      }),
+    metadata: z
+      .object({
+        wordCount: z.number(),
+        estimatedReadTime: z.string()
+      })
+      .optional()
+  })
+  .openapi('ArchitectureDocGeneratorOutput')
+
+export const MermaidDiagramGeneratorSchema = z
+  .object({
+    content: z.string().openapi({
+      description: 'The complete mermaid diagram code in markdown format',
+      example: '```mermaid\ngraph TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Do this]\n  B -->|No| D[Do that]\n```'
+    }),
+    diagramType: z.enum(['flowchart', 'sequence', 'class', 'state', 'er', 'gantt', 'pie']).openapi({
+      description: 'The type of mermaid diagram generated',
+      example: 'flowchart'
+    }),
+    rawMermaidCode: z.string().openapi({
+      description: 'The raw mermaid code without markdown wrapper',
+      example: 'graph TD\n  A[Start] --> B{Decision}'
+    })
+  })
+  .openapi('MermaidDiagramGeneratorOutput')
+
+// Export internal schemas needed by routes
+export const FileSuggestionsZodSchema = z.object({
+  fileIds: z.array(z.number())
+})
+
 // Define other schemas as needed...
 // const CodeReviewSchema = z.object({ ... });
 
@@ -265,59 +421,167 @@ export const structuredDataSchemas = {
         summary: z.string().openapi({ description: 'The generated summary.' })
       })
       .openapi('BasicSummaryOutput')
+  },
+  // Asset generators
+  readmeGenerator: {
+    name: 'README Generator',
+    description: 'Generates comprehensive README files for projects',
+    promptTemplate: `Create a professional README.md file for the following project: {userInput}
+Include appropriate sections such as: Overview, Features, Installation, Usage, Configuration, API Reference (if applicable), Contributing, and License.
+Use clear markdown formatting with proper headings, code blocks, and lists.`,
+    systemPrompt:
+      'You are an expert technical writer specializing in creating clear, comprehensive, and well-structured README files for software projects.',
+    schema: ReadmeGeneratorSchema
+  },
+  componentGenerator: {
+    name: 'React Component Generator',
+    description: 'Creates React components with TypeScript and best practices',
+    promptTemplate: `Create a React component with TypeScript based on the following requirements: {userInput}
+Follow these guidelines:
+- Use functional components with proper TypeScript interfaces
+- Include appropriate imports
+- Follow React best practices and conventions
+- Add helpful comments where necessary
+- Use proper prop validation`,
+    systemPrompt:
+      'You are an expert React developer specializing in creating clean, reusable, and well-typed components.',
+    schema: ReactComponentGeneratorSchema
+  },
+  testGenerator: {
+    name: 'Test Suite Generator',
+    description: 'Generates test files using Bun test framework',
+    promptTemplate: `Create a comprehensive test suite using Bun test framework for: {userInput}
+Include:
+- Proper test structure with describe blocks
+- Multiple test cases covering different scenarios
+- Edge cases and error handling
+- Mock data where appropriate`,
+    systemPrompt: 'You are an expert in test-driven development, specializing in writing comprehensive test suites.',
+    schema: TestSuiteGeneratorSchema
+  },
+  configGenerator: {
+    name: 'Config File Generator',
+    description: 'Creates configuration files for various tools',
+    promptTemplate: `Generate a configuration file based on: {userInput}
+Ensure the configuration is:
+- Well-commented with explanations
+- Following best practices for the specific tool
+- Production-ready with sensible defaults`,
+    systemPrompt: 'You are an expert in development tooling and configuration management.',
+    schema: ConfigFileGeneratorSchema
+  },
+  apiRouteGenerator: {
+    name: 'API Route Generator',
+    description: 'Generates Hono API routes with validation',
+    promptTemplate: `Create a Hono API route with Zod validation based on: {userInput}
+Include:
+- Proper route definition with OpenAPI specs
+- Request/response validation schemas
+- Error handling
+- TypeScript types
+- Follow RESTful conventions`,
+    systemPrompt: 'You are an expert backend developer specializing in creating type-safe, well-documented APIs.',
+    schema: ApiRouteGeneratorSchema
+  },
+  schemaGenerator: {
+    name: 'Zod Schema Generator',
+    description: 'Creates Zod schemas with TypeScript types',
+    promptTemplate: `Generate a Zod schema with TypeScript types for: {userInput}
+Include:
+- Proper validation rules
+- Helpful error messages
+- TypeScript type inference
+- OpenAPI documentation where appropriate`,
+    systemPrompt: 'You are an expert in data validation and TypeScript, specializing in creating robust Zod schemas.',
+    schema: ZodSchemaGeneratorSchema
+  },
+  svgGenerator: {
+    name: 'SVG Generator',
+    description: 'Creates optimized SVG graphics',
+    promptTemplate: `{userInput}
+
+CRITICAL: You MUST generate valid SVG XML code. The output must be a complete SVG element that can be rendered in a browser.`,
+    systemPrompt: `You are an expert SVG designer who creates clean, optimized, and scalable vector graphics.
+
+CRITICAL INSTRUCTIONS:
+1. You MUST generate ONLY valid SVG XML code
+2. Your response MUST start with <svg and end with </svg>
+3. Do NOT include any text, explanations, or markdown - ONLY the SVG code
+4. The SVG must be complete and renderable
+
+Example of expected output format:
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"/>
+</svg>
+
+Follow these SVG best practices:
+- Include proper xmlns attribute
+- Use viewBox for scalability
+- Optimize paths and shapes
+- Use the specified dimensions
+- Apply the requested style (modern, minimalist, detailed, etc.)
+- Use the specified colors
+- Keep the code clean and optimized
+
+Remember: Output ONLY the SVG code, nothing else.`,
+    modelSettings: {
+      model: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 2000
+    },
+    schema: SvgGeneratorSchema
+  },
+  architectureDocGenerator: {
+    name: 'Architecture Documentation Generator',
+    description: 'Creates comprehensive project architecture documentation and development guidelines',
+    promptTemplate: `Generate a comprehensive architecture documentation based on the following project description and requirements: {userInput}
+
+The documentation should include:
+1. Project Overview - High-level description of what the project does
+2. Architecture Overview - Core architectural patterns and principles
+3. Project Structure - Directory organization and key components
+4. Technology Stack - Languages, frameworks, and tools used
+5. Core Concepts - Key abstractions and design patterns
+6. Development Guidelines - Coding standards, conventions, and best practices
+7. API Design Principles - How APIs should be structured
+8. State Management - How data flows through the application
+9. Testing Strategy - Approach to testing and quality assurance
+10. Performance Considerations - Optimization strategies
+11. Security Guidelines - Security best practices
+12. Deployment & Operations - How the project is built and deployed
+
+Make it practical and actionable, similar to a cursor rules file that helps developers understand how to work with and extend the codebase.`,
+    systemPrompt: `You are an expert software architect and technical writer. Create clear, comprehensive, and practical architecture documentation that serves as a guide for developers working on the project. Focus on explaining the "why" behind architectural decisions and provide concrete examples where helpful. Write in a clear, concise manner that is easy to understand.`,
+    modelSettings: {
+      model: 'gpt-4o',
+      temperature: 0.5,
+      maxTokens: 4000
+    },
+    schema: ArchitectureDocGeneratorSchema
+  },
+  mermaidDiagramGenerator: {
+    name: 'Mermaid Diagram Generator',
+    description: 'Creates mermaid diagrams for visualizing architecture, flows, and relationships',
+    promptTemplate: `Generate a mermaid diagram based on the following requirements: {userInput}
+
+CRITICAL INSTRUCTIONS:
+1. Generate a complete, valid mermaid diagram
+2. Choose the most appropriate diagram type (flowchart, sequence, class, state, er, etc.)
+3. Use clear, descriptive labels
+4. Follow mermaid syntax precisely
+5. Include the diagram in a markdown code block with \`\`\`mermaid
+
+The output should be a markdown code block containing the mermaid diagram that can be rendered in any markdown viewer that supports mermaid.`,
+    systemPrompt: `You are an expert in creating clear, informative mermaid diagrams. Generate diagrams that effectively communicate system architecture, data flows, relationships, and processes. Use appropriate diagram types and follow mermaid best practices for clarity and readability.`,
+    modelSettings: {
+      model: 'gpt-4o',
+      temperature: 0.3,
+      maxTokens: 2000
+    },
+    schema: MermaidDiagramGeneratorSchema
   }
   // Add more structured tasks here...
 } satisfies Record<string, StructuredDataSchemaConfig<any>>
-
-export const FileSummaryListResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z.array(ProjectFileSchema)
-  })
-  .openapi('FileSummaryListResponse')
-
-export const SummarizeFilesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    included: z.number().int().openapi({ example: 5 }),
-    skipped: z.number().int().openapi({ example: 2 }),
-    updatedFiles: z.array(ProjectFileSchema),
-    message: z.string().openapi({ example: 'Files summarized successfully.' })
-  })
-  .openapi('SummarizeFilesResponse')
-
-export const RemoveSummariesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    removedCount: z.number().int().openapi({ example: 3 }),
-    message: z.string().openapi({ example: 'Summaries removed.' })
-  })
-  .openapi('RemoveSummariesResponse')
-
-export const SuggestFilesResponseSchema = z
-  .object({
-    success: z.literal(true),
-    recommendedFileIds: unixTSArraySchemaSpec
-  })
-  .openapi('SuggestFilesResponse')
-
-// Export internal schemas needed by routes
-export const FileSuggestionsZodSchema = z.object({
-  fileIds: z.array(z.string())
-})
-
-export const FileSuggestionsJsonSchema = {
-  type: 'object',
-  properties: {
-    fileIds: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'An array of file IDs relevant to the user input'
-    }
-  },
-  required: ['fileIds'],
-  additionalProperties: false
-}
 
 // --- Type Exports ---
 export type AiSdkOptions = z.infer<typeof AiSdkOptionsSchema>

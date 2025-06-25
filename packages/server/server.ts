@@ -66,10 +66,10 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
 
     websocket: {
       async open(ws) {
-        console.debug('New WS connection', { clientId: ws.data.clientId })
+        console.debug('New WS connection', { clientId: (ws.data as any).clientId })
       },
       close(ws) {
-        console.debug('WS closed', { clientId: ws.data.clientId })
+        console.debug('WS closed', { clientId: (ws.data as any).clientId })
       },
       async message(ws, rawMessage) {
         try {
@@ -111,9 +111,32 @@ function serveStatic(path: string): Response {
 }
 
 if (import.meta.main) {
-  console.log('Starting server...')
   ;(async () => {
-    const server = await instantiateServer()
+    // Parse command line arguments
+    const args = process.argv.slice(2)
+
+    // Check if we should start in MCP stdio mode
+    if (args.includes('--mcp-stdio')) {
+      // Import and start MCP stdio server directly
+      console.error('Starting OctoPrompt MCP server in stdio mode...')
+      await import('./src/mcp-stdio-server.js')
+      return
+    }
+
+    let port = SERVER_PORT
+
+    // Look for --port argument
+    const portIndex = args.indexOf('--port')
+    if (portIndex !== -1 && args[portIndex + 1]) {
+      const parsedPort = parseInt(args[portIndex + 1], 10)
+      if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort < 65536) {
+        port = parsedPort
+      }
+    }
+
+    // Start normal HTTP server
+    console.log('Starting server...')
+    const server = await instantiateServer({ port })
     function handleShutdown() {
       console.log('Received kill signal. Shutting down gracefully...')
       watchersManager.stopAllWatchers?.()

@@ -1,13 +1,18 @@
 {
   "name": "@octoprompt/api-client",
-  "version": "0.5.4",
+  "version": "0.6.0",
   "module": "index.ts",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "bun run build",
     "publish:dry": "npm publish --dry-run",
-    "test": "bun src/tests/run-functional-tests.ts"
+    "test": "bun src/tests/run-functional-tests.ts",
+    "test:all": "bun src/tests/run-functional-tests.ts",
+    "test:projects": "bun test src/tests/projects-api.test.ts --timeout 30000",
+    "test:chat": "bun test src/tests/chat-api.test.ts --timeout 30000",
+    "test:prompt": "bun test src/tests/prompt-api.test.ts --timeout 30000",
+    "test:provider-key": "bun test src/tests/provider-key-api.test.ts --timeout 30000"
   },
   "devDependencies": {
     "@types/bun": "latest"

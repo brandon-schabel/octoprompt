@@ -1,6 +1,6 @@
 {
   "name": "octoprompt",
-  "version": "0.5.4",
+  "version": "0.6.0",
   "module": "server.ts",
   "scripts": {
     "test": "bun test src/",
@@ -8,11 +8,11 @@
     "start": "bun server.ts",
     "dev": "DEV=true bun server.ts",
     "dev:watch": "DEV=true bun --watch server.ts",
-    "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh"
+    "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh",
+    "mcp": "bun mcp-server.ts"
   },
   "type": "module",
   "dependencies": {
-    "@mastra/core": "^0.10.2",
-    "@mastra/rag": "^0.10.2"
+    "@modelcontextprotocol/sdk": "^0.5.0"
   }
 }

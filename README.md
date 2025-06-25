@@ -10,13 +10,13 @@ If you've worked with LLMs and code you know how much quality drops off with mor
 
 If you have [Bun](https://bun.sh/) installed then I'd recommend downloading the prebuilt Server/UI Bundle.
 
-[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.4/octoprompt-0.5.4-bun-bundle.zip)
+[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.6.0/octoprompt-0.6.0-bun-bundle.zip)
 
-[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.4/octoprompt-0.5.4-macos-arm64.zip)
+[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.6.0/octoprompt-0.6.0-macos-arm64.zip)
 
-[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.4/octoprompt-0.5.4-windows-x64.zip)
+[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.6.0/octoprompt-0.6.0-windows-x64.zip)
 
-[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.5.4/octoprompt-0.5.4-linux-x64.zip)
+[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.6.0/octoprompt-0.6.0-linux-x64.zip)
 
 > Once you have downloaded OctoPrompt for your platform please read "Running Binaries", especially for MacOS
 
@@ -29,10 +29,60 @@ Don't have NPM or Bun? Install Bun with curl on Mac/Linux `curl -fsSL https://bu
 Extract the zip file and cd into the extracted zip file and run the OctoPrompt server.
 
 ```bash
-cd octoprompt-0.5.4-bun-bundle && bun run start
+cd octoprompt-0.6.0-bun-bundle && bun run start
 ```
 
 [View Your Local OctoPrompt UI](http://localhost:3579/)
+
+## MCP Setup Quick Start
+
+Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
+
+### Prerequisites
+
+1. Have OctoPrompt running (`bun run start` or `bun run dev`)
+2. Create a project in OctoPrompt and note the Project ID
+
+### Claude Desktop Setup
+
+1. **Edit config file:**
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. **Add OctoPrompt server:**
+
+```json
+{
+  "mcpServers": {
+    "octoprompt": {
+      "command": "/absolute/path/to/octoprompt/packages/server/mcp-start.sh",
+      "env": {
+        "OCTOPROMPT_PROJECT_ID": "YOUR_PROJECT_ID"
+      }
+    }
+  }
+}
+```
+
+3. **Restart Claude Desktop**
+
+### Cursor Setup
+
+1. **Open Cursor Settings** → **Features** → **Model Context Protocol**
+2. **Add server:**
+   - **Name**: `octoprompt`
+   - **Command**: `/absolute/path/to/octoprompt/packages/server/mcp-start.sh`
+   - **Environment**: `OCTOPROMPT_PROJECT_ID=YOUR_PROJECT_ID`
+
+3. **Restart Cursor**
+
+### Test Connection
+
+Ask Claude/Cursor: *"What files are in this project?"* or *"Give me a project summary"*
+
+> **Note**: Replace `/absolute/path/to/octoprompt` with your actual OctoPrompt installation path and `YOUR_PROJECT_ID` with your project ID.
+
+For detailed setup instructions, see [MCP-SETUP.md](./MCP-SETUP.md).
 
 ## OctoPrompt Project Overview page
 
@@ -68,7 +118,7 @@ bun i
 bun run dev
 ```
 
-View the [Dev UI here](http://localhost:5173)
+View the [Dev UI here](http://localhost:1420)
 
 > If a file or folder doesn't show up that you need to show up, you can adjust your gitignore and/or update `packages/server/src/constants/file-sync-options.ts` file or your `.gitignore`
 
@@ -79,7 +129,7 @@ View the [Dev UI here](http://localhost:5173)
 On Linux you should be able to just navigate to the octoprompt binary file in the terminal and run it for example:
 
 ```bash
-cd ~/Downloads/octoprompt-v0.5.4
+cd ~/Downloads/octoprompt-v0.6.0
 ```
 
 Run the linux binary file:
@@ -93,7 +143,7 @@ Run the linux binary file:
 Currently I don't have MacOS code signing, so it just says the binary is damaged, but really it is quarntined. In order to run the binary on Mac you would have to do the following
 
 ```bash
-cd ~/Downloads/octoprompt-v0.5.4
+cd ~/Downloads/octoprompt-v0.6.0
 ```
 
 Then run to remove the quarantine:
@@ -110,18 +160,18 @@ Finally you can run the Octoprompt app by running the binary file as you normall
 
 ### Running on Windows
 
-After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.5.4-windows-x64.zip`), open Command Prompt or PowerShell.
+After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.6.0-windows-x64.zip`), open Command Prompt or PowerShell.
 
 Navigate to the extracted folder. For example, if you extracted it to your Downloads folder:
 
 ```batch
-cd %USERPROFILE%\Downloads\octoprompt-v0.5.4-windows-x64
+cd %USERPROFILE%\Downloads\octoprompt-v0.6.0-windows-x64
 ```
 
 Or using PowerShell:
 
 ```powershell
-cd $env:USERPROFILE\Downloads\octoprompt-v0.5.4-windows-x64
+cd $env:USERPROFILE\Downloads\octoprompt-v0.6.0-windows-x64
 ```
 
 Then, run the executable:
@@ -318,13 +368,13 @@ Selected the wrong folder? Undo your select with `control/cmd + z` and redo with
 bun run dev:server
 ```
 
-- **Client Only** from the root (runs on port 5173):
+- **Client Only** from the root (runs on port 1420):
 
 ```bash
 bun run dev:client
 ```
 
-The client is available at [http://localhost:5173](http://localhost:5173)  
+The client is available at [http://localhost:1420](http://localhost:1420)  
 The server is available at [http://localhost:3147](http://localhost:3147)
 
 ---
@@ -359,7 +409,7 @@ You can always install local models with software like:
 
 ### 1. Simple Local Chat
 
-- **Open** your web client at [localhost:5173](http://localhost:5173).
+- **Open** your web client at [localhost:1420](http://localhost:1420).
 - Click "Chat" in the Navbar.
 - Click the chat icon and **New Chat** in the top-left.
 - **Type** a question — OctoPrompt will respond in real-time. If you have a project synced, it can reference your local files in its responses.
@@ -403,7 +453,7 @@ bun run build-binaries
 then navigate to the built binaries in `/dist` - in this case for MacOS arm64
 
 ```bash
-cd dist/octoprompt-0.5.4-macos
+cd dist/octoprompt-0.6.0-macos
 ```
 
 then run the binary file for your platforms directory:

@@ -1,6 +1,6 @@
 import { createOctoPromptClient, DataResponseSchema } from '@octoprompt/api-client'
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
-import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, FileVersion } from '@octoprompt/schemas'
+import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@octoprompt/schemas'
 
 import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@octoprompt/schemas'
 
@@ -8,15 +8,6 @@ import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest 
 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
 import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
-
-import type {
-  MastraCodeChangeRequest,
-  MastraCodeChangeResponse,
-  MastraSummarizeRequest,
-  MastraSummarizeResponse,
-  MastraSingleSummarizeRequest,
-  MastraSingleSummarizeResponse
-} from '@octoprompt/schemas'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -230,6 +221,7 @@ const PROJECT_KEYS = {
   files: (projectId: number) => [...PROJECT_KEYS.all, 'files', projectId] as const,
   filesWithoutContent: (projectId: number) => [...PROJECT_KEYS.all, 'filesWithoutContent', projectId] as const,
   summary: (projectId: number) => [...PROJECT_KEYS.all, 'summary', projectId] as const,
+  statistics: (projectId: number) => [...PROJECT_KEYS.all, 'statistics', projectId] as const,
   fileVersions: (projectId: number, originalFileId: number) =>
     [...PROJECT_KEYS.all, 'fileVersions', projectId, originalFileId] as const,
   fileVersion: (projectId: number, originalFileId: number, version?: number) =>
@@ -258,7 +250,7 @@ export function useGetProjectFiles(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.files(projectId),
     queryFn: () => octoClient.projects.getProjectFiles(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 2 * 60 * 1000, // 2 minutes for files
     refetchOnWindowFocus: true
   })
@@ -268,7 +260,7 @@ export function useGetProjectFilesWithoutContent(projectId: number) {
   return useQuery({
     queryKey: PROJECT_KEYS.filesWithoutContent(projectId),
     queryFn: () => octoClient.projects.getProjectFilesWithoutContent(projectId),
-    enabled: !!projectId,
+    enabled: !!projectId && projectId !== -1,
     staleTime: 5 * 60 * 1000, // 5 minutes for file metadata
     refetchOnWindowFocus: true
   })
@@ -280,6 +272,15 @@ export function useGetProjectSummary(projectId: number) {
     queryFn: () => octoClient.projects.getProjectSummary(projectId),
     enabled: !!projectId,
     staleTime: 10 * 60 * 1000 // 10 minutes for summary
+  })
+}
+
+export function useGetProjectStatistics(projectId: number) {
+  return useQuery({
+    queryKey: PROJECT_KEYS.statistics(projectId),
+    queryFn: () => octoClient.projects.getProjectStatistics(projectId),
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000 // 5 minutes cache for statistics
   })
 }
 
@@ -365,48 +366,6 @@ export function useRefreshProject() {
   })
 }
 
-export function useSuggestFiles() {
-  return useMutation({
-    mutationFn: ({ projectId, userInput }: { projectId: number; userInput: string }) =>
-      octoClient.projects.suggestFiles(projectId, { userInput }),
-    onError: (error) => {
-      toast.error(error.message || 'Failed to suggest files')
-    }
-  })
-}
-
-export function useSummarizeProjectFiles() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-
-  return useMutation({
-    mutationFn: ({ projectId, fileIds, force = false }: { projectId: number; fileIds: number[]; force?: boolean }) =>
-      octoClient.projects.summarizeFiles(projectId, { fileIds, force }),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      toast.success('Files summarized successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to summarize files')
-    }
-  })
-}
-
-export function useRemoveSummaries() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-
-  return useMutation({
-    mutationFn: ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) =>
-      octoClient.projects.removeSummaries(projectId, { fileIds }),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      toast.success('Summaries removed successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to remove summaries')
-    }
-  })
-}
-
 export function useUpdateFileContent() {
   const { invalidateProjectFiles } = useInvalidateProjects()
 
@@ -426,6 +385,62 @@ export function useUpdateFileContent() {
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update file')
+    }
+  })
+}
+
+export function useSuggestFiles() {
+  return useMutation({
+    mutationFn: async ({ projectId, prompt, limit = 10 }: { projectId: number; prompt: string; limit?: number }) => {
+      const response = await octoClient.projects.suggestFiles(projectId, { prompt, limit })
+      return response.data
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to suggest files')
+    }
+  })
+}
+
+export function useSummarizeProjectFiles() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      fileIds,
+      force = false
+    }: {
+      projectId: number
+      fileIds: number[]
+      force?: boolean
+    }) => {
+      const response = await octoClient.projects.summarizeFiles(projectId, { fileIds, force })
+      return response.data
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate project files to refresh summaries
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(variables.projectId) })
+      toast.success(`Summarized ${data.included} files`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to summarize files')
+    }
+  })
+}
+
+export function useRemoveSummariesFromFiles() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, fileIds }: { projectId: number; fileIds: number[] }) => {
+      const response = await octoClient.projects.removeSummariesFromFiles(projectId, { fileIds })
+      return response.data
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate project files to refresh summaries
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(variables.projectId) })
+      toast.success(`Removed summaries from ${data.removedCount} files`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to remove summaries')
     }
   })
 }
@@ -560,49 +575,50 @@ export function useOptimizeUserInput() {
 }
 
 // --- File Versioning Hooks ---
-export function useGetFileVersions(projectId: number, originalFileId: number) {
-  return useQuery({
-    queryKey: PROJECT_KEYS.fileVersions(projectId, originalFileId),
-    queryFn: () => octoClient.projects.getFileVersions(projectId, originalFileId),
-    enabled: projectId > 0 && originalFileId > 0,
-    staleTime: 5 * 60 * 1000
-  })
-}
+// TODO: Uncomment when file versioning is implemented in the API
+// export function useGetFileVersions(projectId: number, originalFileId: number) {
+//   return useQuery({
+//     queryKey: PROJECT_KEYS.fileVersions(projectId, originalFileId),
+//     queryFn: () => octoClient.projects.getFileVersions(projectId, originalFileId),
+//     enabled: projectId > 0 && originalFileId > 0,
+//     staleTime: 5 * 60 * 1000
+//   })
+// }
 
-export function useGetFileVersion(projectId: number, originalFileId: number, version?: number) {
-  return useQuery({
-    queryKey: PROJECT_KEYS.fileVersion(projectId, originalFileId, version),
-    queryFn: () => octoClient.projects.getFileVersion(projectId, originalFileId, version),
-    enabled: projectId > 0 && originalFileId > 0,
-    staleTime: 5 * 60 * 1000
-  })
-}
+// export function useGetFileVersion(projectId: number, originalFileId: number, version?: number) {
+//   return useQuery({
+//     queryKey: PROJECT_KEYS.fileVersion(projectId, originalFileId, version),
+//     queryFn: () => octoClient.projects.getFileVersion(projectId, originalFileId, version),
+//     enabled: projectId > 0 && originalFileId > 0,
+//     staleTime: 5 * 60 * 1000
+//   })
+// }
 
-export function useRevertFileToVersion() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-  const queryClient = useQueryClient()
+// export function useRevertFileToVersion() {
+//   const { invalidateProjectFiles } = useInvalidateProjects()
+//   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: ({ projectId, fileId, targetVersion }: { projectId: number; fileId: number; targetVersion: number }) =>
-      octoClient.projects.revertFileToVersion(projectId, fileId, targetVersion),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      // Invalidate all version-related queries
-      queryClient.invalidateQueries({
-        queryKey: ['projects', 'fileVersions', projectId],
-        type: 'active'
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['projects', 'fileVersion', projectId],
-        type: 'active'
-      })
-      toast.success('File reverted successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to revert file')
-    }
-  })
-}
+//   return useMutation({
+//     mutationFn: ({ projectId, fileId, targetVersion }: { projectId: number; fileId: number; targetVersion: number }) =>
+//       octoClient.projects.revertFileToVersion(projectId, fileId, targetVersion),
+//     onSuccess: (_, { projectId }) => {
+//       invalidateProjectFiles(projectId)
+//       // Invalidate all version-related queries
+//       queryClient.invalidateQueries({
+//         queryKey: ['projects', 'fileVersions', projectId],
+//         type: 'active'
+//       })
+//       queryClient.invalidateQueries({
+//         queryKey: ['projects', 'fileVersion', projectId],
+//         type: 'active'
+//       })
+//       toast.success('File reverted successfully')
+//     },
+//     onError: (error) => {
+//       toast.error(error.message || 'Failed to revert file')
+//     }
+//   })
+// }
 
 const KEY_KEYS = {
   all: ['keys'] as const,
@@ -926,44 +942,4 @@ export function useSmartCaching() {
       })
     }
   }
-}
-
-// --- Mastra Hooks ---
-export function useMastraCodeChange() {
-  return useMutation<MastraCodeChangeResponse, Error, MastraCodeChangeRequest>({
-    mutationFn: (data: MastraCodeChangeRequest) => octoClient.mastra.codeChange(data),
-    onSuccess: () => {
-      toast.success('Code change generated successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra code change error:', error)
-      toast.error('Failed to generate code change')
-    }
-  })
-}
-
-export function useMastraBatchSummarize() {
-  return useMutation<MastraSummarizeResponse, Error, MastraSummarizeRequest>({
-    mutationFn: (data: MastraSummarizeRequest) => octoClient.mastra.batchSummarize(data),
-    onSuccess: () => {
-      toast.success('Batch summarization completed successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra batch summarize error:', error)
-      toast.error('Failed to complete batch summarization')
-    }
-  })
-}
-
-export function useMastraSummarizeFile() {
-  return useMutation<MastraSingleSummarizeResponse, Error, MastraSingleSummarizeRequest>({
-    mutationFn: (data: MastraSingleSummarizeRequest) => octoClient.mastra.summarizeFile(data),
-    onSuccess: () => {
-      toast.success('File summarization completed successfully')
-    },
-    onError: (error) => {
-      console.error('Mastra file summarize error:', error)
-      toast.error('Failed to summarize file')
-    }
-  })
 }

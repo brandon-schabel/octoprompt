@@ -186,15 +186,10 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       created: new Date(prompt.created).getTime(),
       updated: new Date(prompt.updated).getTime(),
       size: prompt.content?.length || 0,
-      meta: '',
-      summary: '',
-      summaryLastUpdated: new Date().getTime(),
-      checksum: '',
-      isLatest: true,
-      nextId: null,
-      originalFileId: null,
-      prevId: null,
-      version: 1
+      meta: null,
+      summary: null,
+      summaryLastUpdated: null,
+      checksum: null
     })
   }
 

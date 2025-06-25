@@ -61,7 +61,11 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     const [bookmarkName, setBookmarkName] = useState('')
     const updateProjectTabState = useUpdateProjectTabState(projectTabId)
     const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
-    const closeFileViewer = () => setViewedFile(null)
+    const [openInEditMode, setOpenInEditMode] = useState(false)
+    const closeFileViewer = () => {
+      setViewedFile(null)
+      setOpenInEditMode(false)
+    }
     const { copyToClipboard } = useCopyClipboard()
 
     const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
@@ -186,8 +190,8 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
           break
         case 'ArrowRight':
           e.preventDefault()
+          setOpenInEditMode(false)
           setViewedFile(projectFileMap.get(fileId) as ProjectFile)
-
           break
         case 'Backspace':
         case 'Delete': {
@@ -289,6 +293,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
           viewedFile={viewedFile as ProjectFile}
           onClose={closeFileViewer}
           projectId={projectTab?.selectedProjectId}
+          startInEditMode={openInEditMode}
         />
 
         <Dialog open={bookmarkDialogOpen} onOpenChange={setBookmarkDialogOpen}>
@@ -448,13 +453,21 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                   )}
                   tabIndex={0}
                   onKeyDown={(e) => handleKeyDown(e, fileId, index)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    setOpenInEditMode(true)
+                    setViewedFile(projectFileMap.get(fileId) as ProjectFile)
+                  }}
                 >
                   {/* Action buttons container with equal spacing */}
                   <div className='absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-100 z-10'>
                     <Button
                       variant='ghost'
                       size='icon'
-                      onClick={() => setViewedFile(projectFileMap.get(fileId) as ProjectFile)}
+                      onClick={() => {
+                        setOpenInEditMode(false)
+                        setViewedFile(projectFileMap.get(fileId) as ProjectFile)
+                      }}
                       className='h-8 w-8'
                     >
                       <Eye className='h-4 w-4' />
@@ -480,6 +493,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                       'group-hover:translate-x-12',
                       'group-hover:bg-muted group-hover:border-muted-foreground/20',
                       'dark:group-hover:bg-muted/70 dark:group-hover:border-muted-foreground/30',
+                      'select-none',
                       index === focusedIndex && 'bg-muted border-muted-foreground/20'
                     )}
                   >

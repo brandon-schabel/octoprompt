@@ -8,6 +8,8 @@ import { useCreateProject, useUpdateProject, useGetProject, useSyncProject } fro
 import { useEffect, useState } from 'react'
 import { CreateProjectRequestBody } from '@octoprompt/schemas'
 import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
+import { DirectoryBrowserDialog } from './directory-browser-dialog'
+import { FolderOpen } from 'lucide-react'
 
 type ProjectDialogProps = {
   open: boolean
@@ -23,6 +25,7 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
     description: '',
     path: ''
   })
+  const [showDirectoryBrowser, setShowDirectoryBrowser] = useState(false)
 
   const { mutate: createProject, isPending: isCreating } = useCreateProject()
   const { mutate: updateProject, isPending: isUpdating } = useUpdateProject()
@@ -92,44 +95,85 @@ export function ProjectDialog({ open, projectId, onOpenChange }: ProjectDialogPr
     }
   }
 
+  const handleSelectPath = (path: string) => {
+    setFormData((prev) => ({ ...prev, path }))
+    // If the name is empty, try to infer it from the path
+    if (!formData.name) {
+      const pathParts = path.split('/')
+      const folderName = pathParts[pathParts.length - 1]
+      if (folderName) {
+        setFormData((prev) => ({ ...prev, name: folderName }))
+      }
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{projectId ? 'Edit Project' : 'New Project'}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className='grid gap-4 py-4'>
-            <div className='grid gap-2'>
-              <Label htmlFor='name'>Name</Label>
-              <Input
-                id='name'
-                value={formData.name}
-                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, name: e.target.value }))}
-                required
-              />
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{projectId ? 'Edit Project' : 'New Project'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='name'>Name</Label>
+                <Input
+                  id='name'
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='path'>Path</Label>
+                <div className='flex gap-2'>
+                  <Input
+                    id='path'
+                    value={formData.path}
+                    onChange={(e) =>
+                      setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: e.target.value }))
+                    }
+                    required
+                    placeholder='Enter path or browse...'
+                  />
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='icon'
+                    onClick={() => setShowDirectoryBrowser(true)}
+                    title='Browse for folder'
+                  >
+                    <FolderOpen className='h-4 w-4' />
+                  </Button>
+                </div>
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='description'>Description</Label>
+                <Input
+                  id='description'
+                  value={formData.description || ''}
+                  onChange={(e) =>
+                    setFormData((prev: CreateProjectRequestBody) => ({ ...prev, description: e.target.value }))
+                  }
+                />
+              </div>
             </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='path'>Path</Label>
-              <Input
-                id='path'
-                value={formData.path}
-                onChange={(e) => setFormData((prev: CreateProjectRequestBody) => ({ ...prev, path: e.target.value }))}
-                required
-              />
-            </div>
-            <div className='grid gap-2'>
-              <Label htmlFor='description'>Description</Label>
-              <Input id='description' value={formData.description} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type='submit' disabled={isCreating || isUpdating}>
-              {projectId ? 'Save Changes' : 'Create Project'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              <Button type='submit' disabled={isCreating || isUpdating}>
+                {projectId ? 'Save Changes' : 'Create Project'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <DirectoryBrowserDialog
+        open={showDirectoryBrowser}
+        onOpenChange={setShowDirectoryBrowser}
+        onSelectPath={handleSelectPath}
+        initialPath={formData.path || undefined}
+      />
+    </>
   )
 }

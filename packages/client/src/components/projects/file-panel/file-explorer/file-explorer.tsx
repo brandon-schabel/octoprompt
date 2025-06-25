@@ -54,7 +54,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const project = useMemo(() => projectDataResponse?.data, [projectDataResponse])
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
-  const closeFileViewer = () => setViewedFile(null)
+  const [openInEditMode, setOpenInEditMode] = useState(false)
+  const closeFileViewer = () => {
+    setViewedFile(null)
+    setOpenInEditMode(false)
+  }
 
   const updateFileContentMutation = useUpdateFileContent()
 
@@ -150,6 +154,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
       />
     )
   }
+
+  const handleViewFile = useCallback((file: ProjectFile, editMode: boolean = false) => {
+    setOpenInEditMode(editMode)
+    setViewedFile(file)
+  }, [])
 
   const handleSaveFileContent = useCallback(
     async (content: string) => {
@@ -335,7 +344,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                     <FileTree
                       ref={ref.fileTreeRef}
                       root={fileTree}
-                      onViewFile={(file) => setViewedFile(file as ProjectFile)}
+                      onViewFile={(file) => handleViewFile(file as ProjectFile, false)}
+                      onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
                       projectRoot={project?.path || ''}
                       resolveImports={resolveImports}
                       preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
@@ -377,7 +387,8 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               <FileTree
                 ref={ref.fileTreeRef}
                 root={fileTree}
-                onViewFile={(file) => setViewedFile(file as ProjectFile)}
+                onViewFile={(file) => handleViewFile(file as ProjectFile, false)}
+                onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
                 projectRoot={project?.path || ''}
                 resolveImports={resolveImports}
                 preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
@@ -396,6 +407,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           open={!!viewedFile}
           onClose={closeFileViewer}
           projectId={selectedProjectId || undefined}
+          startInEditMode={openInEditMode}
         />
       )}
     </div>

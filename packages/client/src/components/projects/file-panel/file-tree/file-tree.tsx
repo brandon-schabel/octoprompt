@@ -11,18 +11,7 @@ import React, {
 } from 'react'
 import { Button } from '@ui'
 import { Checkbox } from '@ui'
-import {
-  Folder,
-  File as FileIcon,
-  ChevronRight,
-  Eye,
-  Code,
-  Copy,
-  Wand2,
-  RefreshCw,
-  ClipboardList,
-  Sparkles
-} from 'lucide-react'
+import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy, RefreshCw, ClipboardList } from 'lucide-react'
 import clsx from 'clsx'
 import { toast } from 'sonner'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@ui'
@@ -46,7 +35,6 @@ import { buildNodeContent, buildNodeSummaries } from '@octoprompt/shared'
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useRefreshProject } from '@/hooks/api/use-projects-api'
-import { useSummarizeProjectFiles } from '@/hooks/api/use-projects-api'
 import { EditorType, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
@@ -62,6 +50,7 @@ export type VisibleItem = {
 export type FileTreeProps = {
   root: Record<string, FileNode>
   onViewFile?: (file: ProjectFile | null) => void
+  onViewFileInEditMode?: (file: ProjectFile | null) => void
   projectRoot: string
   resolveImports?: boolean
   preferredEditor: EditorType
@@ -103,6 +92,7 @@ interface FileTreeNodeRowProps {
   onFocus: () => void
   onToggleOpen: () => void
   onViewFile?: (file: ProjectFile) => void
+  onViewFileInEditMode?: (file: ProjectFile) => void
   projectRoot: string
 }
 
@@ -111,7 +101,7 @@ interface FileTreeNodeRowProps {
  * ForwardRef so we can focus DOM nodes from parent.
  */
 const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(function FileTreeNodeRow(
-  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, projectRoot },
+  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, onViewFileInEditMode, projectRoot },
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
@@ -122,7 +112,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const projectId = projectTabState?.selectedProjectId ?? -1
 
   const { mutate: refreshProject } = useRefreshProject()
-  const summarizeMutation = useSummarizeProjectFiles()
 
   const isFolder = item.node._folder === true
 
@@ -203,9 +192,15 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
           }}
           tabIndex={0}
           onClick={onFocus}
+          onDoubleClick={(e) => {
+            e.stopPropagation()
+            if (!isFolder && item.node.file && onViewFileInEditMode) {
+              onViewFileInEditMode(item.node.file)
+            }
+          }}
           onKeyDown={handleKeyDown}
         >
-          <div className='flex items-center hover:bg-muted/50 rounded-sm gap-1 group'>
+          <div className='flex items-center hover:bg-muted/50 rounded-sm gap-1 group select-none'>
             {isFolder ? (
               <Button
                 variant='ghost'
@@ -285,37 +280,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                     className='h-1 w-1 bg-yellow-300 flex-shrink-0 ml-auto mr-1 rounded-full'
                     title='No summary'
                   ></div>
-                )}
-
-                {/* Conditionally show Summarize button */}
-                {!hasSummary && (
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    title='Summarize this file'
-                    className='h-6 w-6 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity'
-                    disabled={
-                      summarizeMutation.isPending && summarizeMutation.variables?.fileIds.includes(item.node.file.id)
-                    }
-                    onClick={(e) => {
-                      e.stopPropagation()
-
-                      summarizeMutation.mutate(
-                        { fileIds: [item.node.file!.id], force: false, projectId }, // force: false initially
-                        {
-                          onSuccess: () => {
-                            toast.success('File summary started.')
-                          },
-                          onError: (error: any) => {
-                            // Added 'any' type temporarily
-                            toast.error(error?.error?.message || 'Failed to start summarization.')
-                          }
-                        }
-                      )
-                    }}
-                  >
-                    <RefreshCw className='h-3.5 w-3.5 animate-spin' />
-                  </Button>
                 )}
 
                 {onViewFile && (
@@ -485,7 +449,7 @@ export type FileTreeRef = {
 }
 
 export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree(
-  { root, onViewFile, projectRoot, resolveImports, onNavigateRight, onNavigateToSearch },
+  { root, onViewFile, onViewFileInEditMode, projectRoot, resolveImports, onNavigateRight, onNavigateToSearch },
   ref
 ) {
   const totalFiles = countTotalFiles(root)
@@ -733,6 +697,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
               onFocus={() => setFocusedIndex(idx)}
               onToggleOpen={() => toggleOpen(item.path)}
               onViewFile={onViewFile}
+              onViewFileInEditMode={onViewFileInEditMode}
               projectRoot={projectRoot}
             />
           ))}

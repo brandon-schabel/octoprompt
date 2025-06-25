@@ -15,7 +15,9 @@ import {
   LightbulbIcon,
   MenuIcon, // Icon for SidebarTrigger if needed, or use default
   FolderCogIcon,
-  FolderTreeIcon
+  FolderTreeIcon,
+  Bot,
+  Sparkles
 } from 'lucide-react'
 import { HelpDialog } from '@/components/navigation/help-dialog'
 import { SettingsDialog } from '@/components/settings/settings-dialog'
@@ -28,9 +30,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger, // Import if you want a dedicated trigger button in main content
   useSidebar,
-  SidebarMenuBadge,
   SidebarRail
 } from '@/components/ui/sidebar' // Correct path to your sidebar.tsx
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
@@ -41,9 +41,10 @@ const mainNavItems = [
     title: 'Projects',
     to: '/projects',
     icon: FolderIcon,
-    routeIds: ['/projects', '/project-summarization']
+    routeIds: ['/projects']
   },
   { id: 'chat', title: 'Chat', to: '/chat', icon: MessageSquareIcon, routeIds: ['/chat'], search: { prefill: false } },
+  { id: 'assets', title: 'Assets', to: '/assets', icon: Sparkles, routeIds: ['/assets'] },
   { id: 'keys', title: 'Keys', to: '/keys', icon: KeyIcon, routeIds: ['/keys'] },
   { id: 'prompts', title: 'Prompts', to: '/prompts', icon: LightbulbIcon, routeIds: ['/prompts'] }
 ]
@@ -163,7 +164,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
-                <span className='px-3'>v0.5.4</span>
+                <span className='px-3'>v0.6.0</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

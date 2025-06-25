@@ -1,85 +1,45 @@
-import { projectStorage, type ProjectFilesStorage, ProjectFilesStorageSchema } from '@octoprompt/storage'
 import {
   type CreateProjectBody,
   type Project,
-  type ProjectFile,
-  ProjectFileSchema,
   ProjectSchema,
   type UpdateProjectBody,
-  type FileVersion
+  type ProjectFile,
+  ProjectFileSchema,
+  LOW_MODEL_CONFIG,
+  type APIProviders,
+  FileSuggestionsZodSchema
 } from '@octoprompt/schemas'
-import path from 'path'
-import { z, ZodError } from 'zod'
-
-// TODO: Replace with Mastra hooks when ready
+import { ApiError, promptsMap } from '@octoprompt/shared'
+import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
+import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
-import { ApiError } from '@octoprompt/shared'
-import { promptsMap } from '@octoprompt/shared'
-import { buildProjectSummary } from '@octoprompt/shared'
-// Summarize function moved to Mastra - using mock for now
-const summarizeFiles = async (projectId: number, fileIds: number[]) => {
-  // TODO: Implement Mastra integration for file summarization
-  console.log(`Mock: summarizing ${fileIds.length} files for project ${projectId}`)
-
-  // Get all the files from storage
-  const projectFilesStorage = await projectStorage.readProjectFiles(projectId)
-
-  // For each file ID, generate a summary using the AI service
-  for (const fileId of fileIds) {
-    const file = projectFilesStorage[fileId]
-    if (file) {
-      try {
-        // TODO: Replace with Mastra summarization service when ready
-        const summary = `Summary for ${file.name || 'file'} (${file.extension || 'unknown'}) - ${Math.ceil(file.content.length / 100)} lines of code`
-
-        // Update the file with the new summary
-        await projectStorage.updateProjectFile(projectId, fileId, {
-          summary,
-          summaryLastUpdated: Date.now()
-        })
-      } catch (error) {
-        console.error(`Failed to summarize file ${fileId}:`, error)
-      }
-    }
-  }
-}
+import { generateStructuredData, generateSingleText } from './gen-ai-services'
+import { getFullProjectSummary } from './utils/get-full-project-summary'
 import { resolvePath } from './utils/path-utils'
+import path from 'node:path'
 
-// Existing project CRUD functions remain the same...
 export async function createProject(data: CreateProjectBody): Promise<Project> {
-  let projectId = projectStorage.generateId()
-  const initialProjectId = projectId
-  let incrementCount = 0
   const now = Date.now()
 
-  const newProjectData: Project = {
-    id: projectId,
-    name: data.name,
-    path: data.path,
-    description: data.description || '',
-    created: now,
-    updated: now
-  }
-
   try {
+    const projectId = projectStorage.generateId()
+
+    const newProjectData: Project = {
+      id: projectId,
+      name: data.name,
+      path: data.path,
+      description: data.description || '',
+      created: now,
+      updated: now
+    }
+
+    const validatedProject = ProjectSchema.parse(newProjectData)
+
     const existingProjectsObject = await projectStorage.readProjects()
     const projectsMap = new Map<number, Project>(
       Object.entries(existingProjectsObject).map(([id, proj]) => [Number(id), proj as Project])
     )
 
-    while (projectsMap.has(projectId)) {
-      projectId++
-      incrementCount++
-    }
-
-    if (incrementCount > 0) {
-      newProjectData.id = projectId
-      console.log(
-        `Project ID ${initialProjectId} was taken. Found available ID ${projectId} after ${incrementCount} increment(s).`
-      )
-    }
-
-    const validatedProject = ProjectSchema.parse(newProjectData)
     projectsMap.set(validatedProject.id, validatedProject)
 
     await projectStorage.writeProjects(Object.fromEntries(projectsMap))
@@ -122,6 +82,13 @@ export async function getProjectById(projectId: number): Promise<Project> {
   }
 }
 
+/**
+ * Alias for getProjectById for backward compatibility
+ */
+export async function getProject(projectId: number): Promise<Project> {
+  return getProjectById(projectId)
+}
+
 export async function listProjects(): Promise<Project[]> {
   try {
     const projects = await projectStorage.readProjects()
@@ -152,6 +119,7 @@ export async function updateProject(projectId: number, data: UpdateProjectBody):
     }
 
     const validatedProject = ProjectSchema.parse(updatedProjectData)
+
     projects[projectId] = validatedProject
     await projectStorage.writeProjects(projects)
 
@@ -183,7 +151,12 @@ export async function deleteProject(projectId: number): Promise<boolean> {
 
     delete projects[projectId]
     await projectStorage.writeProjects(projects)
+
     await projectStorage.deleteProjectData(projectId)
+
+    // Clean up MCP servers for this project
+    const { cleanupProjectMCPServers } = await import('./mcp-service')
+    await cleanupProjectMCPServers(projectId)
 
     return true
   } catch (error) {
@@ -196,25 +169,14 @@ export async function deleteProject(projectId: number): Promise<boolean> {
   }
 }
 
-// UPDATED: Only return latest versions by default
-export async function getProjectFiles(
-  projectId: number,
-  includeAllVersions: boolean = false
-): Promise<ProjectFile[] | null> {
+export async function getProjectFiles(projectId: number): Promise<ProjectFile[] | null> {
   try {
-    await getProjectById(projectId)
+    await getProjectById(projectId) // Throws 404 if project not found
     const files = await projectStorage.readProjectFiles(projectId)
-    const fileList = Object.values(files)
-
-    if (includeAllVersions) {
-      return fileList.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
-    } else {
-      // Only return latest versions
-      return fileList.filter((file) => file.isLatest).sort((a, b) => a.path.localeCompare(b.path))
-    }
+    return Object.values(files)
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
-      return null
+      return null // Maintain original behavior of returning null for not found project
     }
     if (error instanceof ApiError) throw error
     throw new ApiError(
@@ -225,42 +187,6 @@ export async function getProjectFiles(
   }
 }
 
-// NEW: Get project files without content for performance optimization
-export async function getProjectFilesWithoutContent(
-  projectId: number,
-  includeAllVersions: boolean = false
-): Promise<Omit<ProjectFile, 'content'>[] | null> {
-  try {
-    await getProjectById(projectId)
-    const files = await projectStorage.readProjectFiles(projectId)
-    const fileList = Object.values(files)
-
-    // Remove content from all files for performance
-    const filesWithoutContent = fileList.map((file) => {
-      const { content, ...fileWithoutContent } = file
-      return fileWithoutContent
-    })
-
-    if (includeAllVersions) {
-      return filesWithoutContent.sort((a, b) => a.path.localeCompare(b.path) || a.version - b.version)
-    } else {
-      // Only return latest versions
-      return filesWithoutContent.filter((file) => file.isLatest).sort((a, b) => a.path.localeCompare(b.path))
-    }
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null
-    }
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get files for project ${projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'PROJECT_FILES_GET_FAILED'
-    )
-  }
-}
-
-// UPDATED: Create new version instead of updating existing file
 export async function updateFileContent(
   projectId: number,
   fileId: number,
@@ -268,13 +194,33 @@ export async function updateFileContent(
   options?: { updated?: Date }
 ): Promise<ProjectFile> {
   try {
-    await getProjectById(projectId)
+    const files = await projectStorage.readProjectFiles(projectId)
+    const existingFile = files[fileId]
 
-    // Create a new version instead of updating the existing file
-    const newVersion = await projectStorage.createFileVersion(projectId, fileId, content)
+    if (!existingFile) {
+      throw new ApiError(
+        404,
+        `File not found with ID ${fileId} in project ${projectId} during content update.`,
+        'FILE_NOT_FOUND'
+      )
+    }
 
-    console.log(`Created new version ${newVersion.version} for file ${fileId} in project ${projectId}`)
-    return newVersion
+    const newUpdatedAt = options?.updated?.getTime() ?? Date.now()
+
+    const updatedFileData: ProjectFile = {
+      ...existingFile,
+      content: content,
+      size: Buffer.byteLength(content, 'utf8'),
+      updated: newUpdatedAt
+      // checksum: calculateChecksum(content),
+    }
+
+    const validatedFile = ProjectFileSchema.parse(updatedFileData)
+
+    files[fileId] = validatedFile
+    await projectStorage.writeProjectFiles(projectId, files)
+
+    return validatedFile
   } catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof ZodError) {
@@ -293,81 +239,11 @@ export async function updateFileContent(
   }
 }
 
-// NEW: Get all versions of a file
-export async function getFileVersions(projectId: number, originalFileId: number): Promise<FileVersion[]> {
-  try {
-    await getProjectById(projectId)
-    const versions = await projectStorage.getFileVersions(projectId, originalFileId)
-
-    return versions.map((file) => ({
-      fileId: file.id,
-      version: file.version,
-      created: file.created,
-      updated: file.updated,
-      isLatest: file.isLatest
-    }))
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get file versions for ${originalFileId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_VERSIONS_GET_FAILED'
-    )
-  }
-}
-
-// NEW: Get specific version of a file
-export async function getFileVersion(
-  projectId: number,
-  originalFileId: number,
-  version?: number
-): Promise<ProjectFile | null> {
-  try {
-    await getProjectById(projectId)
-
-    if (version) {
-      return await projectStorage.getFileVersion(projectId, originalFileId, version)
-    } else {
-      return await projectStorage.getLatestFileVersion(projectId, originalFileId)
-    }
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to get file version. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_VERSION_GET_FAILED'
-    )
-  }
-}
-
-// NEW: Revert file to a specific version
-export async function revertFileToVersion(
-  projectId: number,
-  fileId: number,
-  targetVersion: number
-): Promise<ProjectFile> {
-  try {
-    await getProjectById(projectId)
-
-    const revertedFile = await projectStorage.revertToVersion(projectId, fileId, targetVersion)
-    console.log(`Reverted file ${fileId} to version ${targetVersion}, created new version ${revertedFile.version}`)
-
-    return revertedFile
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to revert file to version ${targetVersion}. Reason: ${error instanceof Error ? error.message : String(error)}`,
-      'FILE_REVERT_FAILED'
-    )
-  }
-}
-
 export async function resummarizeAllFiles(projectId: number): Promise<void> {
   const project = await getProjectById(projectId)
   await syncProject(project)
 
-  const allFiles = await getProjectFiles(projectId, false) // Only latest versions
+  const allFiles = await getProjectFiles(projectId)
   if (!allFiles || allFiles.length === 0) {
     console.warn(`[ProjectService] No files found for project ${projectId} after sync during resummarize all.`)
     return
@@ -398,7 +274,7 @@ export async function removeSummariesFromFiles(
     return { removedCount: 0, message: 'No file IDs provided' }
   }
   try {
-    await getProjectById(projectId)
+    await getProjectById(projectId) // Check for project existence
     const files = await projectStorage.readProjectFiles(projectId)
     let removedCount = 0
     const now = Date.now()
@@ -464,54 +340,36 @@ export async function createProjectFileRecord(
   )
   const normalizedRelativePath = path.relative(absoluteProjectPath, absoluteFilePath)
 
-  let fileId = projectStorage.generateId()
-  const initialFileId = fileId
-  let incrementCount = 0
   const now = Date.now()
   const fileName = path.basename(normalizedRelativePath)
   const fileExtension = path.extname(normalizedRelativePath)
   const size = Buffer.byteLength(initialContent, 'utf8')
 
-  const newFileData: ProjectFile = {
-    id: fileId,
-    projectId: projectId,
-    name: fileName,
-    path: normalizedRelativePath,
-    extension: fileExtension,
-    size: size,
-    content: initialContent,
-    summary: null,
-    summaryLastUpdated: null,
-    meta: '{}',
-    checksum: null,
-    created: now,
-    updated: now,
-    // New versioning fields
-    version: 1,
-    prevId: null,
-    nextId: null,
-    isLatest: true,
-    originalFileId: null // This is the original file
-  }
-
   try {
+    const fileId = projectStorage.generateFileId()
+
+    const newFileData: ProjectFile = {
+      id: fileId,
+      projectId: projectId,
+      name: fileName,
+      path: normalizedRelativePath,
+      extension: fileExtension,
+      size: size,
+      content: initialContent,
+      summary: null,
+      summaryLastUpdated: null,
+      meta: '{}',
+      checksum: null,
+      created: now,
+      updated: now
+    }
+
     const validatedFile = ProjectFileSchema.parse(newFileData)
+
     const files = await projectStorage.readProjectFiles(projectId)
-
-    while (files[newFileData.id]) {
-      newFileData.id++
-      incrementCount++
-    }
-    fileId = newFileData.id
-
-    if (incrementCount > 0) {
-      console.log(
-        `File ID ${initialFileId} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`
-      )
-    }
-
     files[fileId] = validatedFile
 
+    // even though the keys are numbers, they are saved as string because that is default javascript behavior
     const validatedMap = ProjectFilesStorageSchema.parse(files)
     await projectStorage.writeProjectFiles(projectId, validatedMap)
 
@@ -534,6 +392,7 @@ export async function createProjectFileRecord(
   }
 }
 
+/** Represents the data needed to create or update a file record during sync. */
 export interface FileSyncData {
   path: string
   name: string
@@ -543,6 +402,7 @@ export interface FileSyncData {
   checksum: string
 }
 
+/** Creates multiple file records in the project's JSON file. */
 export async function bulkCreateProjectFiles(projectId: number, filesToCreate: FileSyncData[]): Promise<ProjectFile[]> {
   if (filesToCreate.length === 0) return []
   await getProjectById(projectId)
@@ -553,12 +413,14 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
   try {
     filesMap = await projectStorage.readProjectFiles(projectId)
 
-    for (const fileData of filesToCreate) {
-      let fileId = projectStorage.generateId()
-      const initialFileId = fileId
-      let incrementCount = 0
+    // Generate bulk IDs to avoid conflicts
+    const { getDb } = await import('@octoprompt/storage')
+    const db = getDb()
+    const fileIds = db.generateBulkIds('project_files', filesToCreate.length)
+    let idIndex = 0
 
-      const existingInMapByPath = Object.values(filesMap).find((f) => f.path === fileData.path && f.isLatest)
+    for (const fileData of filesToCreate) {
+      const existingInMapByPath = Object.values(filesMap).find((f) => f.path === fileData.path)
 
       if (existingInMapByPath) {
         console.warn(
@@ -567,14 +429,10 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         continue
       }
 
-      while (filesMap[fileId]) {
-        fileId++
-        incrementCount++
-      }
-      if (incrementCount > 0) {
-        console.log(
-          `[ProjectService] Bulk create: File ID ${initialFileId} for path ${fileData.path} in project ${projectId} was taken. Found available ID ${fileId} after ${incrementCount} increment(s).`
-        )
+      const fileId = fileIds[idIndex++]
+      if (!fileId) {
+        console.error(`[ProjectService] No file ID available for ${fileData.path}`)
+        continue
       }
 
       const newFileData: ProjectFile = {
@@ -590,17 +448,12 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         meta: '{}',
         checksum: fileData.checksum,
         created: now,
-        updated: now,
-        // New versioning fields
-        version: 1,
-        prevId: null,
-        nextId: null,
-        isLatest: true,
-        originalFileId: null
+        updated: now
       }
 
       try {
         const validatedFile = ProjectFileSchema.parse(newFileData)
+
         filesMap[validatedFile.id] = validatedFile
         createdFiles.push(validatedFile)
       } catch (validationError) {
@@ -636,7 +489,7 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
   }
 }
 
-// UPDATED: Bulk update now creates new versions for each file
+/** Updates multiple existing file records based on their IDs. */
 export async function bulkUpdateProjectFiles(
   projectId: number,
   updates: { fileId: number; data: FileSyncData }[]
@@ -644,29 +497,61 @@ export async function bulkUpdateProjectFiles(
   if (updates.length === 0) return []
   await getProjectById(projectId)
   const updatedFilesResult: ProjectFile[] = []
+  const now = Date.now()
+  let files: ProjectFilesStorage
+  let changesMade = false
 
   try {
+    files = await projectStorage.readProjectFiles(projectId)
+
     for (const { fileId, data } of updates) {
+      const existingFile = files[fileId]
+      if (!existingFile) {
+        console.warn(
+          `[ProjectService] File ID ${fileId} not found during bulk update for project ${projectId}. Skipping.`
+        )
+        continue
+      }
+
+      const updatedFileData: ProjectFile = {
+        ...existingFile,
+        content: data.content,
+        extension: data.extension,
+        size: data.size,
+        checksum: data.checksum,
+        updated: now
+      }
+
       try {
-        // Create new version instead of updating existing file
-        const newVersion = await projectStorage.createFileVersion(projectId, fileId, data.content, {
-          extension: data.extension,
-          size: data.size,
-          checksum: data.checksum
-        })
-        updatedFilesResult.push(newVersion)
-      } catch (error) {
+        const validatedFile = ProjectFileSchema.parse(updatedFileData)
+        files[fileId] = validatedFile
+        updatedFilesResult.push(validatedFile)
+        changesMade = true
+      } catch (validationError) {
         console.error(
-          `[ProjectService] Failed to create new version for file ${fileId} during bulk update:`,
-          error instanceof Error ? error.message : String(error)
+          `[ProjectService] Validation failed for file ${fileId} (${existingFile.path}) during bulk update:`,
+          validationError instanceof ZodError ? validationError.flatten().fieldErrors : validationError
         )
         continue
       }
     }
 
+    if (changesMade) {
+      const validatedMap = ProjectFilesStorageSchema.parse(files)
+      await projectStorage.writeProjectFiles(projectId, validatedMap)
+    }
+
     return updatedFilesResult
   } catch (error) {
     if (error instanceof ApiError) throw error
+    if (error instanceof ZodError) {
+      throw new ApiError(
+        500,
+        `Internal validation of project files map failed during bulk update for project ${projectId}: ${error.message}`,
+        'PROJECT_FILES_MAP_VALIDATION_ERROR_INTERNAL',
+        error.flatten().fieldErrors
+      )
+    }
     throw new ApiError(
       500,
       `Bulk file update failed for project ${projectId}. Some files might be updated. Reason: ${error instanceof Error ? error.message : String(error)}`,
@@ -675,6 +560,7 @@ export async function bulkUpdateProjectFiles(
   }
 }
 
+/** Deletes multiple files by their IDs for a specific project. */
 export async function bulkDeleteProjectFiles(
   projectId: number,
   fileIdsToDelete: number[]
@@ -724,11 +610,8 @@ export async function bulkDeleteProjectFiles(
   }
 }
 
-export async function getProjectFilesByIds(
-  projectId: number,
-  fileIds: number[],
-  includeAllVersions: boolean = false
-): Promise<ProjectFile[]> {
+/** Retrieves specific files by ID for a project */
+export async function getProjectFilesByIds(projectId: number, fileIds: number[]): Promise<ProjectFile[]> {
   if (!fileIds || fileIds.length === 0) {
     return []
   }
@@ -740,16 +623,8 @@ export async function getProjectFilesByIds(
     const resultFiles: ProjectFile[] = []
 
     for (const id of uniqueFileIds) {
-      const file = filesMap[id]
-      if (file) {
-        // If not including all versions, only add files that are latest versions
-        if (includeAllVersions || file.isLatest !== false) {
-          resultFiles.push(file)
-        } else {
-          console.warn(
-            `[getProjectFilesByIds] Skipping non-latest version file: ${file.path} (ID: ${id}, version: ${file.version}) in project ${projectId}`
-          )
-        }
+      if (filesMap[id]) {
+        resultFiles.push(filesMap[id])
       }
     }
     return resultFiles
@@ -763,8 +638,134 @@ export async function getProjectFilesByIds(
   }
 }
 
+/** Summarizes a single file if it meets conditions and updates the project's file storage. */
+export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFile | null> {
+  const fileContent = file.content || ''
+
+  if (!fileContent.trim()) {
+    console.warn(
+      `[SummarizeSingleFile] File ${file.path} (ID: ${file.id}) in project ${file.projectId} is empty, skipping summarization.`
+    )
+    return null
+  }
+
+  const systemPrompt = `
+  ## You are a coding assistant specializing in concise code summaries.
+  1. Provide a short overview of what the file does.
+  2. Outline main exports (functions/classes).
+  3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
+  `
+
+  const cfg = LOW_MODEL_CONFIG
+  const provider = (cfg.provider as APIProviders) || 'openrouter'
+  const modelId = cfg.model
+
+  if (!modelId) {
+    console.error(`[SummarizeSingleFile] Model not configured for summarize-file task for file ${file.path}.`)
+    throw new ApiError(
+      500,
+      `AI Model not configured for summarize-file task (file ${file.path}).`,
+      'AI_MODEL_NOT_CONFIGURED',
+      { projectId: file.projectId, fileId: file.id }
+    )
+  }
+
+  try {
+    const result = await generateStructuredData({
+      prompt: fileContent,
+      options: cfg,
+      schema: z.object({
+        summary: z.string()
+      }),
+      systemMessage: systemPrompt
+    })
+
+    const summary = result.object.summary
+    const trimmedSummary = summary.trim()
+
+    const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
+      summary: trimmedSummary,
+      summaryLastUpdated: Date.now()
+    })
+
+    console.log(
+      `[SummarizeSingleFile] Successfully summarized and updated file: ${file.path} in project ${file.projectId}`
+    )
+    return updatedFile
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to summarize file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'FILE_SUMMARIZE_FAILED',
+      { originalError: error, projectId: file.projectId, fileId: file.id }
+    )
+  }
+}
+
+/** Summarize multiple files, respecting summarization rules. Processes files sequentially to avoid storage write conflicts. */
+export async function summarizeFiles(
+  projectId: number,
+  fileIdsToSummarize: number[]
+): Promise<{ included: number; skipped: number; updatedFiles: ProjectFile[] }> {
+  const allProjectFiles = await getProjectFiles(projectId)
+
+  if (!allProjectFiles) {
+    console.warn(`[BatchSummarize] No files found for project ${projectId}.`)
+    return { included: 0, skipped: 0, updatedFiles: [] }
+  }
+
+  const filesToProcess = allProjectFiles.filter((f) => fileIdsToSummarize.includes(f.id))
+
+  const updatedFilesResult: ProjectFile[] = []
+  let summarizedCount = 0
+  let skippedByEmptyCount = 0
+  let errorCount = 0
+
+  for (const file of filesToProcess) {
+    try {
+      const summarizedFile = await summarizeSingleFile(file)
+      if (summarizedFile) {
+        updatedFilesResult.push(summarizedFile)
+        summarizedCount++
+      } else {
+        skippedByEmptyCount++
+      }
+    } catch (error) {
+      console.error(
+        `[BatchSummarize] Error processing file ${file.path} (ID: ${file.id}) in project ${projectId} for summarization: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof ApiError ? error.details : ''
+      )
+      errorCount++
+    }
+  }
+
+  const totalProcessed = filesToProcess.length
+  const finalSkippedCount = skippedByEmptyCount + errorCount
+
+  console.log(
+    `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
+      `Total to process: ${totalProcessed}, ` +
+      `Successfully summarized: ${summarizedCount}, ` +
+      `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (errors): ${errorCount}, ` +
+      `Total not summarized: ${finalSkippedCount}`
+  )
+
+  return {
+    included: summarizedCount,
+    skipped: finalSkippedCount,
+    updatedFiles: updatedFilesResult
+  }
+}
+
+/**
+ * Takes the user's original context/intent/prompt and uses a model
+ * to generate a refined (optimized) version of that prompt.
+ * This function does not interact with prompt storage for CRUD and remains unchanged.
+ */
 export async function optimizeUserInput(projectId: number, userContext: string): Promise<string> {
-  const projectSummary = await buildProjectSummary((await projectStorage.getProjectFileArray(projectId)) ?? [])
+  const projectSummary = await getFullProjectSummary(projectId)
 
   const systemMessage = `
 <SystemPrompt>
@@ -772,6 +773,7 @@ You are the Promptimizer, a specialized assistant that refines or rewrites user 
 more effective prompts based on the project context. Given the user's context or goal, output ONLY the single optimized prompt.
 No additional commentary, no extraneous text, no markdown formatting.
 </SystemPrompt>
+
 
 <ProjectSummary>
 ${projectSummary}
@@ -789,8 +791,10 @@ ${promptsMap.contemplativePrompt}
   }
 
   try {
-    // TODO: Replace with Mastra prompt optimization service when ready
-    const optimizedPrompt = `Optimized: ${userMessage}`
+    const optimizedPrompt = await generateSingleText({
+      systemMessage: systemMessage,
+      prompt: userMessage
+    })
 
     return optimizedPrompt.trim()
   } catch (error: any) {
@@ -803,6 +807,87 @@ ${promptsMap.contemplativePrompt}
       `Failed to optimize prompt: ${error.message || 'AI provider error'}`,
       'PROMPT_OPTIMIZE_ERROR',
       { originalError: error }
+    )
+  }
+}
+
+/**
+ * Suggests relevant files based on user input and project context using AI
+ */
+export async function suggestFiles(projectId: number, prompt: string, limit: number = 10): Promise<ProjectFile[]> {
+  try {
+    await getProjectById(projectId) // Validate project exists
+
+    const projectSummary = await getFullProjectSummary(projectId)
+    const systemPrompt = `
+<role>
+You are a code assistant that recommends relevant files based on user input.
+You have a list of file summaries and a user request.
+</role>
+
+<response_format>
+    {"fileIds": [1234567890123, 1234567890124]}
+</response_format>
+
+<guidelines>
+- Return file IDs as numbers (unix timestamps in milliseconds)
+- For simple tasks: return max 5 files
+- For complex tasks: return max ${Math.min(limit, 10)} files
+- For very complex tasks: return max ${Math.min(limit, 20)} files
+- Do not add comments in your response
+- Strictly follow the JSON schema, do not add any additional properties or comments
+- DO NOT RETURN THE FILE NAME UNDER ANY CIRCUMSTANCES, JUST THE FILE ID
+</guidelines>
+`
+
+    const userPrompt = `
+<project_summary>
+${projectSummary}
+</project_summary>
+
+<user_query>
+${prompt}
+</user_query>
+`
+
+    const result = await generateStructuredData({
+      prompt: userPrompt,
+      schema: FileSuggestionsZodSchema,
+      systemMessage: systemPrompt
+    })
+
+    // Fetch the actual file objects based on the recommended file IDs
+    const fileIds = result.object.fileIds
+    const allFiles = await getProjectFiles(projectId)
+    const recommendedFiles = allFiles?.filter((file) => fileIds.includes(file.id)) || []
+
+    return recommendedFiles
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to suggest files for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
+      'AI_SUGGESTION_ERROR'
+    )
+  }
+}
+
+/**
+ * Get a compact, AI-generated summary of the project's architecture and core structure
+ * This is useful for providing context to AI assistants without overwhelming them with details
+ */
+export async function getProjectCompactSummary(projectId: number): Promise<string> {
+  try {
+    await getProjectById(projectId) // Validate project exists
+
+    const { getCompactProjectSummary } = await import('./utils/get-full-project-summary')
+    return await getCompactProjectSummary(projectId)
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to get compact project summary for project ${projectId}: ${error instanceof Error ? error.message : String(error)}`,
+      'PROJECT_COMPACT_SUMMARY_FAILED'
     )
   }
 }

@@ -154,7 +154,7 @@ export function createChatService() {
       role: message.role,
       content: message.content,
       created: message.created || normalizeToUnixMs(now), // Use provided createdAt if exists (e.g. for imported messages), else new
-      attachments: message.attachments // Include attachments if provided
+      updated: normalizeToUnixMs(now) // Always set updated to now
     }
 
     try {
@@ -444,10 +444,6 @@ export function createChatService() {
     return newChatData
   }
 
-  async function getChatById(chatId: number): Promise<Chat | null> {
-    return await chatStorage.getChatById(chatId)
-  }
-
   return {
     createChat,
     updateChatTimestamp,
@@ -459,8 +455,7 @@ export function createChatService() {
     deleteChat,
     deleteMessage, // Signature changed
     forkChat,
-    forkChatFromMessage,
-    getChatById
+    forkChatFromMessage
   }
 }
 

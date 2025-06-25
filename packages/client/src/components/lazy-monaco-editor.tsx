@@ -21,6 +21,7 @@ interface LazyMonacoEditorProps {
   height?: string
   readOnly?: boolean
   onSave?: () => void
+  className?: string
 }
 
 export function LazyMonacoEditor(props: LazyMonacoEditorProps) {

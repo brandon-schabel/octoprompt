@@ -9,7 +9,8 @@ import {
   AiGenerateStructuredRequestSchema,
   AiGenerateStructuredResponseSchema,
   StructuredDataSchemaConfig,
-  ModelsListResponseSchema
+  ModelsListResponseSchema,
+  structuredDataSchemas
 } from '@octoprompt/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
@@ -36,35 +37,8 @@ const FilenameSuggestionSchema = z
   })
   .openapi('FilenameSuggestionOutput')
 
-// Central object mapping keys to structured task configurations
-// Place this here or in a separate config file (e.g., gen-ai-config.ts) and import it
-const structuredDataSchemas: Record<string, StructuredDataSchemaConfig<any>> = {
-  filenameSuggestion: {
-    name: 'Filename Suggestion',
-    description: "Suggests 5 suitable filenames based on a description of the file's content.",
-    promptTemplate:
-      'Based on the following file description, suggest 5 suitable and conventional filenames. File Description: {userInput}',
-    systemPrompt:
-      'You are an expert programmer specializing in clear code organization and naming conventions. Provide concise filename suggestions.',
-    modelSettings: {
-      model: 'gpt-4o',
-      temperature: 0.5
-    },
-    schema: FilenameSuggestionSchema
-  },
-  basicSummary: {
-    name: 'Basic Summary',
-    description: 'Generates a short summary of the input text.',
-    promptTemplate: 'Summarize the following text concisely: {userInput}',
-    systemPrompt: 'You are a summarization expert.',
-    modelSettings: { model: 'gpt-4o', temperature: 0.6, maxTokens: 150 },
-    schema: z
-      .object({
-        summary: z.string().openapi({ description: 'The generated summary.' })
-      })
-      .openapi('BasicSummaryOutput')
-  }
-}
+// Use the imported structuredDataSchemas from @octoprompt/schemas
+// which now includes all our asset generators
 
 const getModelsRoute = createRoute({
   method: 'get',

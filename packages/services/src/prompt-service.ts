@@ -33,34 +33,32 @@ async function populatePromptsProjectIds(prompts: Prompt[]): Promise<Prompt[]> {
 }
 
 export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
-  let promptId = promptStorage.generateId()
   const now = Date.now()
-  const allPrompts = await promptStorage.readPrompts()
-  const initialPromptId = promptId
-  let incrementCount = 0
-
-  while (allPrompts[promptId]) {
-    promptId++
-    incrementCount++
-  }
-
-  if (incrementCount > 0) {
-    console.log(
-      `[PromptService] Prompt ID ${initialPromptId} was taken. Found available ID ${promptId} after ${incrementCount} increment(s).`
-    )
-  }
-
-  const newPromptData: Prompt = {
-    id: promptId,
-    name: data.name,
-    content: data.content,
-    projectId: data.projectId,
-    created: now,
-    updated: now
-  }
 
   try {
+    const promptId = promptStorage.generateId()
+
+    const newPromptData: Prompt = {
+      id: promptId,
+      name: data.name,
+      content: data.content,
+      projectId: data.projectId,
+      created: now,
+      updated: now
+    }
+
     PromptSchema.parse(newPromptData) // Validate before adding to storage
+
+    const allPrompts = await promptStorage.readPrompts()
+    allPrompts[promptId] = newPromptData
+    await promptStorage.writePrompts(allPrompts)
+
+    if (data.projectId) {
+      await addPromptToProject(newPromptData.id, data.projectId)
+    }
+
+    // Return the prompt with populated projectId
+    return await populatePromptProjectId(newPromptData)
   } catch (error) {
     if (error instanceof ZodError) {
       console.error(`Validation failed for new prompt data: ${error.message}`, error.flatten().fieldErrors)
@@ -71,18 +69,8 @@ export async function createPrompt(data: CreatePromptBody): Promise<Prompt> {
         error.flatten().fieldErrors
       )
     }
-    throw error // Should not happen if data is constructed correctly
+    throw error
   }
-
-  allPrompts[promptId] = newPromptData
-  await promptStorage.writePrompts(allPrompts)
-
-  if (data.projectId) {
-    await addPromptToProject(newPromptData.id, data.projectId)
-  }
-
-  // Return the prompt with populated projectId
-  return await populatePromptProjectId(newPromptData)
 }
 
 export async function addPromptToProject(promptId: number, projectId: number): Promise<void> {
@@ -120,21 +108,7 @@ export async function addPromptToProject(promptId: number, projectId: number): P
   // To replicate: filter out existing links for this promptId, then add the new one.
   promptProjects = promptProjects.filter((link) => link.promptId !== promptId)
 
-  let associationId = promptStorage.generateId()
-  const initialAssociationId = associationId
-  let associationIncrementCount = 0
-
-  // Ensure the association ID itself is unique within the promptProjects array
-  while (promptProjects.some((link) => link.id === associationId)) {
-    associationId++
-    associationIncrementCount++
-  }
-
-  if (associationIncrementCount > 0) {
-    console.log(
-      `[PromptService] Prompt-Project link ID ${initialAssociationId} was taken. Found available ID ${associationId} after ${associationIncrementCount} increment(s).`
-    )
-  }
+  const associationId = promptStorage.generateId()
 
   const newLink: PromptProject = {
     id: associationId, // ID for the association itself

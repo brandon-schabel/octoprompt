@@ -1,7 +1,4 @@
 import { z } from '@hono/zod-openapi'
-// TODO: Replace with Mastra schemas when ready
-// Temporary minimal schemas until Mastra integration is complete
-
 import { MessageRoleEnum } from './common.schemas'
 import { LOW_MODEL_CONFIG } from './constants/model-default-configs'
 
@@ -28,6 +25,7 @@ export const ChatSchema = z
   .object({
     id: unixTSSchemaSpec,
     title: z.string(),
+    projectId: unixTSSchemaSpec.optional(),
     // unix timestamp in milliseconds
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
@@ -52,7 +50,9 @@ export const ChatMessageSchema = z
     chatId: unixTSSchemaSpec,
     role: MessageRoleEnum.openapi({ example: 'user', description: 'Role of the message sender' }),
     content: z.string().openapi({ example: 'Hello, world!', description: 'Message content' }),
+    type: z.string().optional().openapi({ description: 'Message type for categorization' }),
     created: unixTSSchemaSpec,
+    updated: unixTSSchemaSpec,
     attachments: z
       .array(ChatMessageAttachmentSchema)
       .optional()

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useRef, useState, useEffect } from 'react'
 import { Button } from '@ui'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useGetProjects, useDeleteProject, useGetProject } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
@@ -21,14 +21,20 @@ import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectStatsDisplay } from '@/components/projects/project-stats-display'
-import { ProjectSummarizationSettingsPage } from '@/routes/project-summarization'
+import { ProjectStatsDisplayEnhanced } from '@/components/projects/project-stats-display-enhanced-v2'
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
+import { ProjectSummarizationSettingsPage } from './project-summarization'
+import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
+import { ProjectAssetsView } from '@/components/projects/project-assets-view'
+import { Bot, Code2, Sparkles, Plug } from 'lucide-react'
+import { MCPTabView } from '@/components/mcp/mcp-tab-view'
+import { TicketsTabView } from '@/components/tickets/tickets-tab-view'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
   const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
-  const [activeProjectTabState] = useActiveProjectTab()
+  const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
 
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
@@ -79,23 +85,12 @@ export function ProjectsPage() {
   ])
 
   const handleSelectProject = (id: number) => {
-    // If there are no tabs, create one for the selected project
-    if (noTabsYet) {
-      const selectedProject = projects.find((p) => p.id === id)
-      const newTabId = createProjectTabFromHook({
-        displayName: selectedProject?.name || `Tab for ${id.toString().substring(0, 6)}`,
-        selectedProjectId: id
-      })
-      setActiveProjectTabId(newTabId)
-    } else {
-      // Update the existing active tab
-      updateActiveProjectTab((prev) => ({
-        ...(prev || {}),
-        selectedProjectId: id,
-        selectedFiles: [],
-        selectedPrompts: []
-      }))
-    }
+    updateActiveProjectTab((prev) => ({
+      ...(prev || {}),
+      selectedProjectId: id,
+      selectedFiles: [],
+      selectedPrompts: []
+    }))
     setProjectModalOpen(false)
   }
 
@@ -186,14 +181,27 @@ export function ProjectsPage() {
                 {projectData.name}
               </h2>
             )}
-
-            <div className='flex w-full justify-center items-center'>
-              <TabsList>
-                <TabsTrigger value='context'>Context</TabsTrigger>
-                <TabsTrigger value='stats'>Statistics</TabsTrigger>
-                <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-              </TabsList>
-            </div>
+            <TabsList>
+              <TabsTrigger value='context'>Context</TabsTrigger>
+              <TabsTrigger value='stats'>Statistics</TabsTrigger>
+              <TabsTrigger value='tickets' className='flex items-center gap-1'>
+                <Bot className='h-3.5 w-3.5' />
+                Tickets
+              </TabsTrigger>
+              <TabsTrigger value='summarization'>Summarization</TabsTrigger>
+              {/* <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
+                <Code2 className='h-3.5 w-3.5' />
+                Agent Coder
+              </TabsTrigger> */}
+              <TabsTrigger value='assets' className='flex items-center gap-1'>
+                <Sparkles className='h-3.5 w-3.5' />
+                Assets
+              </TabsTrigger>
+              <TabsTrigger value='mcp' className='flex items-center gap-1'>
+                <Plug className='h-3.5 w-3.5' />
+                MCP
+              </TabsTrigger>
+            </TabsList>
             <div className='ml-auto'>
               <ProjectSettingsDialog />
             </div>
@@ -201,7 +209,6 @@ export function ProjectsPage() {
 
           <TabsContent value='context' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
             <MainProjectsLayout
-              projectData={projectData}
               filePanelRef={filePanelRef as React.RefObject<FilePanelRef>}
               promptPanelRef={promptPanelRef as React.RefObject<PromptOverviewPanelRef>}
             />
@@ -209,9 +216,20 @@ export function ProjectsPage() {
 
           <TabsContent value='stats' className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId ? (
-              <ProjectStatsDisplay projectId={selectedProjectId} />
+              <ProjectStatsDisplayEnhanced projectId={selectedProjectId} />
             ) : (
               <p>No project selected for stats.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='tickets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId && projectData && activeProjectTabId ? (
+              <TicketsTabView
+                projectId={selectedProjectId}
+                projectName={projectData.name}
+                projectTabId={activeProjectTabId}
+              />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for tickets.</p>
             )}
           </TabsContent>
           <TabsContent
@@ -222,6 +240,31 @@ export function ProjectsPage() {
               <ProjectSummarizationSettingsPage />
             ) : (
               <p>No project selected for summarization settings.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='agent-coder' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId && projectData && allProjectsData ? (
+              <AgentCoderTabView
+                project={projectData}
+                projectId={selectedProjectId}
+                allProjects={allProjectsData.data || []}
+              />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Agent Coder.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId && projectData ? (
+              <ProjectAssetsView project={projectData} projectId={selectedProjectId} />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Assets.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='mcp' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? (
+              <MCPTabView projectId={selectedProjectId} />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for MCP.</p>
             )}
           </TabsContent>
         </Tabs>
@@ -260,12 +303,11 @@ export function ProjectsPage() {
 export const Route = createFileRoute('/projects')({ component: ProjectsPage })
 
 type MainProjectsLayoutProps = {
-  projectData: ProjectResponse['data'] | undefined
   filePanelRef: React.RefObject<FilePanelRef>
   promptPanelRef: React.RefObject<PromptOverviewPanelRef>
 }
 
-function MainProjectsLayout({ projectData, filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
+function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
   return (
     <ErrorBoundary>
       <div className='flex-1 min-h-0 overflow-hidden h-full flex flex-col'>

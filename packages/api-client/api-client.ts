@@ -1,16 +1,9 @@
 import { z } from 'zod'
 
 // Import only the actual types we need (not response schemas)
-import type {
-  CreateChatBody,
-  UpdateChatBody,
-  AiChatStreamRequest,
-  Chat,
-  ChatMessage,
-  FileVersion
-} from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@octoprompt/schemas'
 
-import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody } from '@octoprompt/schemas'
+import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody, ProjectStatistics } from '@octoprompt/schemas'
 
 import type { CreatePromptBody, UpdatePromptBody, OptimizePromptRequest, Prompt } from '@octoprompt/schemas'
 
@@ -32,15 +25,13 @@ import {
   ProjectResponseSchema as ProjectResponseSchemaZ,
   ProjectListResponseSchema as ProjectListResponseSchemaZ,
   FileListResponseSchema as FileListResponseSchemaZ,
+  FileResponseSchema as FileResponseSchemaZ,
   ProjectSummaryResponseSchema as ProjectSummaryResponseSchemaZ,
+  ProjectFileWithoutContentListResponseSchema as ProjectFileWithoutContentListResponseSchemaZ,
+  ProjectStatisticsResponseSchema as ProjectStatisticsResponseSchemaZ,
   CreateProjectBodySchema,
   UpdateProjectBodySchema,
-  SummarizeFilesBodySchema,
-  RemoveSummariesBodySchema,
-  SuggestFilesBodySchema,
-  RefreshQuerySchema,
-  FileVersionListResponseSchema,
-  RevertToVersionBodySchema
+  RefreshQuerySchema
 } from '@octoprompt/schemas'
 
 import {
@@ -65,12 +56,6 @@ import {
 } from '@octoprompt/schemas'
 
 import {
-  SuggestFilesResponseSchema as SuggestFilesResponseSchemaZ,
-  SummarizeFilesResponseSchema as SummarizeFilesResponseSchemaZ,
-  RemoveSummariesResponseSchema as RemoveSummariesResponseSchemaZ
-} from '@octoprompt/schemas'
-
-import {
   AiGenerateTextRequestSchema,
   AiGenerateTextResponseSchema,
   AiGenerateStructuredRequestSchema,
@@ -80,19 +65,81 @@ import {
   type UnifiedModel
 } from '@octoprompt/schemas'
 
+// Agent Coder imports
+import type {
+  RunAgentCoderBody,
+  RunAgentCoderResponseData,
+  ListAgentCoderRunsResponseData,
+  GetAgentCoderLogsResponseData,
+  GetAgentCoderDataResponseData,
+  ConfirmAgentCoderChangesResponseData,
+  DeleteAgentCoderRunResponseData,
+  AgentCoderRun,
+  AgentCoderLog
+} from '@octoprompt/schemas'
+
 import {
-  MastraCodeChangeRequestSchema,
-  MastraCodeChangeResponseSchema,
-  MastraSummarizeRequestSchema,
-  MastraSummarizeResponseSchema,
-  MastraSingleSummarizeRequestSchema,
-  MastraSingleSummarizeResponseSchema,
-  type MastraCodeChangeRequest,
-  type MastraCodeChangeResponse,
-  type MastraSummarizeRequest,
-  type MastraSummarizeResponse,
-  type MastraSingleSummarizeRequest,
-  type MastraSingleSummarizeResponse
+  AgentCoderRunRequestSchema as RunAgentCoderBodySchema,
+  AgentCoderRunResponseSchema as RunAgentCoderResponseDataSchema,
+  ListAgentCoderRunsResponseSchema as ListAgentCoderRunsResponseDataSchema,
+  GetAgentCoderLogsResponseSchema as GetAgentCoderLogsResponseDataSchema,
+  GetAgentCoderDataResponseSchema as GetAgentCoderDataResponseDataSchema,
+  ConfirmAgentCoderChangesResponseSchema as ConfirmAgentCoderChangesResponseDataSchema,
+  DeleteAgentCoderRunResponseSchema as DeleteAgentCoderRunResponseDataSchema
+} from '@octoprompt/schemas'
+
+// Browse Directory imports
+import type { BrowseDirectoryRequest, BrowseDirectoryResponse } from '@octoprompt/schemas'
+import { BrowseDirectoryRequestSchema, BrowseDirectoryResponseSchema } from '@octoprompt/schemas'
+
+// MCP imports
+import type {
+  CreateMCPServerConfigBody,
+  UpdateMCPServerConfigBody,
+  MCPServerConfig,
+  MCPServerState,
+  MCPTool,
+  MCPResource,
+  MCPToolExecutionRequest,
+  MCPToolExecutionResult
+} from '@octoprompt/schemas'
+import {
+  CreateMCPServerConfigBodySchema,
+  UpdateMCPServerConfigBodySchema,
+  MCPServerConfigResponseSchema,
+  MCPServerConfigListResponseSchema,
+  MCPToolListResponseSchema,
+  MCPResourceListResponseSchema,
+  MCPToolExecutionRequestSchema,
+  MCPToolExecutionResultResponseSchema,
+  MCPServerStateSchema
+} from '@octoprompt/schemas'
+
+// Ticket imports
+import type {
+  CreateTicketBody,
+  UpdateTicketBody,
+  CreateTaskBody,
+  UpdateTaskBody,
+  ReorderTasksBody,
+  Ticket,
+  TicketTask,
+  TicketWithTasks,
+  TicketWithTaskCount
+} from '@octoprompt/schemas'
+import {
+  CreateTicketBodySchema,
+  UpdateTicketBodySchema,
+  CreateTaskBodySchema,
+  UpdateTaskBodySchema,
+  ReorderTasksBodySchema,
+  TicketSchema,
+  TicketTaskSchema,
+  TicketWithTasksSchema,
+  TicketWithTaskCountSchema,
+  SuggestTasksBodySchema,
+  TicketSuggestFilesBodySchema,
+  SuggestFilesBodySchema
 } from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
@@ -118,6 +165,7 @@ interface ApiConfig {
   baseUrl: string
   timeout?: number
   headers?: Record<string, string>
+  customFetch?: typeof fetch
 }
 
 // Base API client with common functionality
@@ -125,6 +173,7 @@ class BaseApiClient {
   protected baseUrl: string
   protected timeout: number
   protected headers: Record<string, string>
+  protected customFetch: typeof fetch
 
   constructor(config: ApiConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, '')
@@ -132,6 +181,19 @@ class BaseApiClient {
     this.headers = {
       'Content-Type': 'application/json',
       ...config.headers
+    }
+    // Ensure fetch maintains its context
+    if (config.customFetch) {
+      // Wrap the custom fetch to ensure it maintains context
+      this.customFetch = config.customFetch
+    } else {
+      // Bind default fetch to window context
+      // @ts-ignore
+      this.customFetch =
+        typeof window !== 'undefined' && window.fetch
+          ? // @ts-ignore
+            window.fetch.bind(window)
+          : fetch
     }
   }
 
@@ -160,7 +222,7 @@ class BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await this.customFetch(url.toString(), {
         method,
         headers: this.headers,
         body: options?.body ? JSON.stringify(options.body) : undefined,
@@ -231,6 +293,18 @@ class BaseApiClient {
       }
       throw e
     }
+  }
+
+  // Build query string from object
+  protected buildQueryString(params: Record<string, any>): string {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value))
+      }
+    }
+    const queryString = searchParams.toString()
+    return queryString ? `?${queryString}` : ''
   }
 }
 
@@ -314,7 +388,7 @@ export class ChatService extends BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await this.customFetch(url.toString(), {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify(validatedData),
@@ -360,8 +434,6 @@ export class ChatService extends BaseApiClient {
     }
   }
 }
-
-type SummarizeFilesResponse = z.infer<typeof SummarizeFilesResponseSchemaZ>
 
 // Project Service
 export class ProjectService extends BaseApiClient {
@@ -419,45 +491,12 @@ export class ProjectService extends BaseApiClient {
     return result as DataResponseSchema<ProjectFile[]>
   }
 
-  // NEW: Get project files without content for performance optimization
-  async getProjectFilesWithoutContent(projectId: number, includeAllVersions: boolean = false) {
+  // Get project files without content for performance optimization
+  async getProjectFilesWithoutContent(projectId: number) {
     const result = await this.request('GET', `/projects/${projectId}/files/metadata`, {
-      params: { includeAllVersions },
-      responseSchema: FileListResponseSchemaZ
+      responseSchema: ProjectFileWithoutContentListResponseSchemaZ
     })
     return result as DataResponseSchema<Omit<ProjectFile, 'content'>[]>
-  }
-
-  // NEW: File versioning methods
-  async getFileVersions(projectId: number, originalFileId: number) {
-    const result = await this.request('GET', `/projects/${projectId}/files/${originalFileId}/versions`, {
-      responseSchema: FileVersionListResponseSchema
-    })
-    return result as DataResponseSchema<FileVersion[]>
-  }
-
-  async getFileVersion(projectId: number, originalFileId: number, version?: number) {
-    const params = version ? { version } : undefined
-    const result = await this.request('GET', `/projects/${projectId}/files/${originalFileId}/version`, {
-      params,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.unknown()
-      })
-    })
-    return result as DataResponseSchema<ProjectFile>
-  }
-
-  async revertFileToVersion(projectId: number, fileId: number, targetVersion: number) {
-    const validatedData = this.validateBody(RevertToVersionBodySchema, { version: targetVersion })
-    const result = await this.request('POST', `/projects/${projectId}/files/${fileId}/revert`, {
-      body: validatedData,
-      responseSchema: z.object({
-        success: z.literal(true),
-        data: z.unknown()
-      })
-    })
-    return result as DataResponseSchema<ProjectFile>
   }
 
   async refreshProject(projectId: number, query?: z.infer<typeof RefreshQuerySchema>) {
@@ -478,34 +517,6 @@ export class ProjectService extends BaseApiClient {
     }
   }
 
-  async suggestFiles(projectId: number, data: z.infer<typeof SuggestFilesBodySchema>) {
-    const validatedData = this.validateBody(SuggestFilesBodySchema, data)
-    const result = await this.request('POST', `/projects/${projectId}/suggest-files`, {
-      body: validatedData,
-      responseSchema: SuggestFilesResponseSchemaZ
-    })
-    return result as {
-      recommendedFileIds: number[]
-      success: boolean
-    }
-  }
-
-  async summarizeFiles(projectId: number, data: z.infer<typeof SummarizeFilesBodySchema>) {
-    const validatedData = this.validateBody(SummarizeFilesBodySchema, data)
-    return await this.request('POST', `/projects/${projectId}/summarize`, {
-      body: validatedData,
-      responseSchema: SummarizeFilesResponseSchemaZ
-    })
-  }
-
-  async removeSummaries(projectId: number, data: z.infer<typeof RemoveSummariesBodySchema>) {
-    const validatedData = this.validateBody(RemoveSummariesBodySchema, data)
-    return await this.request('POST', `/projects/${projectId}/remove-summaries`, {
-      body: validatedData,
-      responseSchema: RemoveSummariesResponseSchemaZ
-    })
-  }
-
   async updateFileContent(projectId: number, fileId: number, content: string) {
     const result = await this.request('PUT', `/projects/${projectId}/files/${fileId}`, {
       body: { content },
@@ -514,7 +525,7 @@ export class ProjectService extends BaseApiClient {
         data: z.unknown()
       })
     })
-    return result
+    return result as DataResponseSchema<ProjectFile>
   }
   async bulkCreateFiles(
     projectId: number,
@@ -546,6 +557,60 @@ export class ProjectService extends BaseApiClient {
       })
     })
     return result.data
+  }
+
+  async suggestFiles(projectId: number, data: { prompt: string; limit?: number }) {
+    const result = await this.request('POST', `/projects/${projectId}/suggest-files`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.array(z.unknown())
+      })
+    })
+    return result as DataResponseSchema<ProjectFile[]>
+  }
+
+  async summarizeFiles(projectId: number, data: { fileIds: number[]; force?: boolean }) {
+    const result = await this.request('POST', `/projects/${projectId}/files/summarize`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          included: z.number(),
+          skipped: z.number(),
+          updatedFiles: z.array(z.unknown())
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      included: number
+      skipped: number
+      updatedFiles: ProjectFile[]
+    }>
+  }
+
+  async removeSummariesFromFiles(projectId: number, data: { fileIds: number[] }) {
+    const result = await this.request('POST', `/projects/${projectId}/files/remove-summaries`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          removedCount: z.number(),
+          message: z.string()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      removedCount: number
+      message: string
+    }>
+  }
+
+  async getProjectStatistics(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/statistics`, {
+      responseSchema: ProjectStatisticsResponseSchemaZ
+    })
+    return result as DataResponseSchema<ProjectStatistics>
   }
 }
 
@@ -700,7 +765,7 @@ export class GenAiService extends BaseApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await this.customFetch(url.toString(), {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify(validatedData),
@@ -732,34 +797,512 @@ export class GenAiService extends BaseApiClient {
   }
 }
 
-// Mastra Service
-export class MastraService extends BaseApiClient {
-  async codeChange(data: MastraCodeChangeRequest): Promise<MastraCodeChangeResponse> {
-    const validatedData = this.validateBody(MastraCodeChangeRequestSchema, data)
-    // The endpoint path matches what's in mastra-routes.ts
-    const result = await this.request('POST', '/mastra/code-change', {
+// Agent Coder Service
+export class AgentCoderService extends BaseApiClient {
+  async runAgentCoder(projectId: number, body: RunAgentCoderBody) {
+    const validatedData = this.validateBody(RunAgentCoderBodySchema, body)
+    const result = await this.request('POST', `/projects/${projectId}/agent-coder`, {
       body: validatedData,
-      responseSchema: MastraCodeChangeResponseSchema
+      responseSchema: RunAgentCoderResponseDataSchema
     })
-    return result as MastraCodeChangeResponse
+    return result as RunAgentCoderResponseData
   }
 
-  async batchSummarize(data: MastraSummarizeRequest): Promise<MastraSummarizeResponse> {
-    const validatedData = this.validateBody(MastraSummarizeRequestSchema, data)
-    const result = await this.request('POST', '/mastra/summarize', {
-      body: validatedData,
-      responseSchema: MastraSummarizeResponseSchema
+  async listRuns(projectId: number) {
+    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs`, {
+      responseSchema: ListAgentCoderRunsResponseDataSchema
     })
-    return result as MastraSummarizeResponse
+    return result as ListAgentCoderRunsResponseData
   }
 
-  async summarizeFile(data: MastraSingleSummarizeRequest): Promise<MastraSingleSummarizeResponse> {
-    const validatedData = this.validateBody(MastraSingleSummarizeRequestSchema, data)
-    const result = await this.request('POST', '/mastra/summarize/file', {
-      body: validatedData,
-      responseSchema: MastraSingleSummarizeResponseSchema
+  async getLogs(projectId: number, agentJobId: number) {
+    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/logs`, {
+      responseSchema: GetAgentCoderLogsResponseDataSchema
     })
-    return result as MastraSingleSummarizeResponse
+    return result as GetAgentCoderLogsResponseData
+  }
+
+  async getData(projectId: number, agentJobId: number) {
+    const result = await this.request('GET', `/agent-coder/project/${projectId}/runs/${agentJobId}/data`, {
+      responseSchema: GetAgentCoderDataResponseDataSchema
+    })
+    return result as GetAgentCoderDataResponseData
+  }
+
+  async confirmChanges(projectId: number, agentJobId: number) {
+    const result = await this.request('POST', `/agent-coder/project/${projectId}/runs/${agentJobId}/confirm`, {
+      responseSchema: ConfirmAgentCoderChangesResponseDataSchema
+    })
+    return result as ConfirmAgentCoderChangesResponseData
+  }
+
+  async deleteRun(agentJobId: number) {
+    const result = await this.request('DELETE', `/agent-coder/runs/${agentJobId}`, {
+      responseSchema: DeleteAgentCoderRunResponseDataSchema
+    })
+    return result as DeleteAgentCoderRunResponseData
+  }
+}
+
+// System Service (for browsing directories, etc.)
+export class SystemService extends BaseApiClient {
+  async browseDirectory(data?: BrowseDirectoryRequest) {
+    const validatedData = data ? this.validateBody(BrowseDirectoryRequestSchema, data) : {}
+    const result = await this.request('POST', '/browse-directory', {
+      body: validatedData,
+      responseSchema: BrowseDirectoryResponseSchema
+    })
+    return result as BrowseDirectoryResponse
+  }
+}
+
+// MCP Service
+export class MCPService extends BaseApiClient {
+  // MCP Server Config operations
+  async createServerConfig(projectId: number, data: CreateMCPServerConfigBody) {
+    const validatedData = this.validateBody(CreateMCPServerConfigBodySchema, data)
+    const result = await this.request('POST', `/projects/${projectId}/mcp-servers`, {
+      body: validatedData,
+      responseSchema: MCPServerConfigResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig>
+  }
+
+  async listServerConfigs(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-servers`, {
+      responseSchema: MCPServerConfigListResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig[]>
+  }
+
+  async getServerConfig(projectId: number, configId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-servers/${configId}`, {
+      responseSchema: MCPServerConfigResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig>
+  }
+
+  async updateServerConfig(projectId: number, configId: number, data: UpdateMCPServerConfigBody) {
+    const validatedData = this.validateBody(UpdateMCPServerConfigBodySchema, data)
+    const result = await this.request('PATCH', `/projects/${projectId}/mcp-servers/${configId}`, {
+      body: validatedData,
+      responseSchema: MCPServerConfigResponseSchema
+    })
+    return result as DataResponseSchema<MCPServerConfig>
+  }
+
+  async deleteServerConfig(projectId: number, configId: number): Promise<boolean> {
+    await this.request('DELETE', `/projects/${projectId}/mcp-servers/${configId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  // MCP Server Management operations
+  async startServer(projectId: number, configId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp-servers/${configId}/start`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: MCPServerStateSchema
+      })
+    })
+    return result as DataResponseSchema<MCPServerState>
+  }
+
+  async stopServer(projectId: number, configId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp-servers/${configId}/stop`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: MCPServerStateSchema
+      })
+    })
+    return result as DataResponseSchema<MCPServerState>
+  }
+
+  async getServerState(projectId: number, configId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-servers/${configId}/state`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: MCPServerStateSchema
+      })
+    })
+    return result as DataResponseSchema<MCPServerState>
+  }
+
+  // MCP Tool operations
+  async listTools(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-tools`, {
+      responseSchema: MCPToolListResponseSchema
+    })
+    return result as DataResponseSchema<MCPTool[]>
+  }
+
+  async executeTool(projectId: number, request: MCPToolExecutionRequest) {
+    const validatedData = this.validateBody(MCPToolExecutionRequestSchema, request)
+    const result = await this.request('POST', `/projects/${projectId}/mcp-tools/execute`, {
+      body: validatedData,
+      responseSchema: MCPToolExecutionResultResponseSchema
+    })
+    return result as DataResponseSchema<MCPToolExecutionResult>
+  }
+
+  // MCP Resource operations
+  async listResources(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-resources`, {
+      responseSchema: MCPResourceListResponseSchema
+    })
+    return result as DataResponseSchema<MCPResource[]>
+  }
+
+  async readResource(projectId: number, serverId: number, uri: string) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp-resources/${serverId}`, {
+      params: { uri },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.any()
+      })
+    })
+    return result as DataResponseSchema<any>
+  }
+
+  // MCP Testing operations
+  async testConnection(projectId: number, url: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/test-connection`, {
+      body: { url },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          connected: z.boolean(),
+          responseTime: z.number(),
+          error: z.string().optional(),
+          serverInfo: z.any().optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      connected: boolean
+      responseTime: number
+      error?: string
+      serverInfo?: any
+    }>
+  }
+
+  async testInitialize(projectId: number, url: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/test-initialize`, {
+      body: { url },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          initialized: z.boolean(),
+          sessionId: z.string().optional(),
+          capabilities: z.any().optional(),
+          serverInfo: z.any().optional(),
+          error: z.string().optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      initialized: boolean
+      sessionId?: string
+      capabilities?: any
+      serverInfo?: any
+      error?: string
+    }>
+  }
+
+  async testMethod(projectId: number, url: string, method: string, params: any, sessionId?: string) {
+    const result = await this.request('POST', `/projects/${projectId}/mcp/test-method`, {
+      body: { url, method, params, sessionId },
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          request: z.any(),
+          response: z.any(),
+          responseTime: z.number(),
+          error: z.string().optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      request: any
+      response: any
+      responseTime: number
+      error?: string
+    }>
+  }
+
+  async getTestData(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/mcp/test-data`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          projectId: z.number(),
+          projectName: z.string(),
+          mcpEndpoints: z.object({
+            main: z.string(),
+            projectSpecific: z.string()
+          }),
+          sampleMethods: z.array(
+            z.object({
+              method: z.string(),
+              description: z.string(),
+              params: z.any(),
+              example: z.any()
+            })
+          ),
+          sampleFiles: z
+            .array(
+              z.object({
+                path: z.string(),
+                name: z.string(),
+                id: z.number()
+              })
+            )
+            .optional()
+        })
+      })
+    })
+    return result as DataResponseSchema<{
+      projectId: number
+      projectName: string
+      mcpEndpoints: {
+        main: string
+        projectSpecific: string
+      }
+      sampleMethods: Array<{
+        method: string
+        description: string
+        params: any
+        example: any
+      }>
+      sampleFiles?: Array<{
+        path: string
+        name: string
+        id: number
+      }>
+    }>
+  }
+
+  async getMCPSessions() {
+    const result = await this.request('GET', '/mcp/sessions', {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(
+          z.object({
+            id: z.string(),
+            projectId: z.number().optional(),
+            createdAt: z.number(),
+            lastActivity: z.number()
+          })
+        )
+      })
+    })
+    return result as DataResponseSchema<
+      Array<{
+        id: string
+        projectId?: number
+        createdAt: number
+        lastActivity: number
+      }>
+    >
+  }
+
+  async closeMCPSession(sessionId: string) {
+    const result = await this.request('DELETE', `/mcp/sessions/${sessionId}`, {
+      responseSchema: z.object({
+        success: z.boolean()
+      })
+    })
+    return result as { success: boolean }
+  }
+}
+
+// Ticket Service
+export class TicketService extends BaseApiClient {
+  async listTickets(projectId: number, status?: string) {
+    const params: Record<string, any> = {}
+    if (status) params.status = status
+
+    const result = await this.request('GET', `/projects/${projectId}/tickets`, {
+      params,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketSchema)
+      })
+    })
+    return result as DataResponseSchema<Ticket[]>
+  }
+
+  async createTicket(data: CreateTicketBody) {
+    const validatedData = this.validateBody(CreateTicketBodySchema, data)
+    const result = await this.request('POST', '/tickets', {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketSchema
+      })
+    })
+    return result as DataResponseSchema<Ticket>
+  }
+
+  async getTicket(ticketId: number) {
+    const result = await this.request('GET', `/tickets/${ticketId}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketSchema
+      })
+    })
+    return result as DataResponseSchema<Ticket>
+  }
+
+  async updateTicket(ticketId: number, data: UpdateTicketBody) {
+    const validatedData = this.validateBody(UpdateTicketBodySchema, data)
+    const result = await this.request('PATCH', `/tickets/${ticketId}`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketSchema
+      })
+    })
+    return result as DataResponseSchema<Ticket>
+  }
+
+  async deleteTicket(ticketId: number): Promise<boolean> {
+    await this.request('DELETE', `/tickets/${ticketId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  // Task operations
+  async getTasks(ticketId: number) {
+    const result = await this.request('GET', `/tickets/${ticketId}/tasks`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketTaskSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketTask[]>
+  }
+
+  async createTask(ticketId: number, data: CreateTaskBody) {
+    const validatedData = this.validateBody(CreateTaskBodySchema, data)
+    const result = await this.request('POST', `/tickets/${ticketId}/tasks`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketTaskSchema
+      })
+    })
+    return result as DataResponseSchema<TicketTask>
+  }
+
+  async updateTask(ticketId: number, taskId: number, data: UpdateTaskBody) {
+    const validatedData = this.validateBody(UpdateTaskBodySchema, data)
+    const result = await this.request('PATCH', `/tickets/${ticketId}/tasks/${taskId}`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketTaskSchema
+      })
+    })
+    return result as DataResponseSchema<TicketTask>
+  }
+
+  async deleteTask(ticketId: number, taskId: number): Promise<boolean> {
+    await this.request('DELETE', `/tickets/${ticketId}/tasks/${taskId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async reorderTasks(ticketId: number, data: ReorderTasksBody) {
+    const validatedData = this.validateBody(ReorderTasksBodySchema, data)
+    const result = await this.request('PATCH', `/tickets/${ticketId}/tasks/reorder`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketTaskSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketTask[]>
+  }
+
+  // AI-powered operations
+  async suggestTasks(ticketId: number, userContext?: string) {
+    const validatedData = this.validateBody(SuggestTasksBodySchema, { userContext })
+    const result = await this.request('POST', `/tickets/${ticketId}/suggest-tasks`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          suggestedTasks: z.array(z.string())
+        })
+      })
+    })
+    return result as { success: boolean; data: { suggestedTasks: string[] } }
+  }
+
+  async autoGenerateTasks(ticketId: number) {
+    const result = await this.request('POST', `/tickets/${ticketId}/auto-generate-tasks`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketTaskSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketTask[]>
+  }
+
+  async suggestFiles(ticketId: number, extraUserInput?: string) {
+    const validatedData = this.validateBody(TicketSuggestFilesBodySchema, { extraUserInput })
+    const result = await this.request('POST', `/tickets/${ticketId}/suggest-files`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          recommendedFileIds: z.array(z.string()),
+          combinedSummaries: z.string().optional(),
+          message: z.string().optional()
+        })
+      })
+    })
+    return result as {
+      success: boolean
+      data: {
+        recommendedFileIds: string[]
+        combinedSummaries?: string
+        message?: string
+      }
+    }
+  }
+
+  // Bulk operations
+  async getTicketsWithCounts(projectId: number, status?: string) {
+    const params: Record<string, any> = {}
+    if (status) params.status = status
+
+    const result = await this.request('GET', `/projects/${projectId}/tickets-with-count`, {
+      params,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketWithTaskCountSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketWithTaskCount[]>
+  }
+
+  async getTicketsWithTasks(projectId: number, status?: string) {
+    const params: Record<string, any> = {}
+    if (status) params.status = status
+
+    const result = await this.request('GET', `/projects/${projectId}/tickets-with-tasks`, {
+      params,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketWithTasksSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketWithTasks[]>
   }
 }
 
@@ -770,7 +1313,10 @@ export class OctoPromptClient {
   public readonly prompts: PromptService
   public readonly keys: ProviderKeyService
   public readonly genAi: GenAiService
-  public readonly mastra: MastraService
+  public readonly agentCoder: AgentCoderService
+  public readonly system: SystemService
+  public readonly mcp: MCPService
+  public readonly tickets: TicketService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -778,7 +1324,10 @@ export class OctoPromptClient {
     this.prompts = new PromptService(config)
     this.keys = new ProviderKeyService(config)
     this.genAi = new GenAiService(config)
-    this.mastra = new MastraService(config)
+    this.agentCoder = new AgentCoderService(config)
+    this.system = new SystemService(config)
+    this.mcp = new MCPService(config)
+    this.tickets = new TicketService(config)
   }
 }
 

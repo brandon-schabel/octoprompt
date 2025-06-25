@@ -1,0 +1,18 @@
+{
+  "name": "@octoprompt/mcp-client",
+  "version": "0.6.0",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "bun test src/"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

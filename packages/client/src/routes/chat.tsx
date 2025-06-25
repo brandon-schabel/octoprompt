@@ -13,8 +13,7 @@ import {
   GitFork,
   Trash,
   SendIcon,
-  MessageSquareText,
-  Paperclip
+  MessageSquareText
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Message } from '@ai-sdk/react'
@@ -30,11 +29,8 @@ import {
   useDeleteMessage,
   useForkChatFromMessage
 } from '@/hooks/api/use-chat-api'
-import { useUploadFile } from '@/hooks/api/use-file-upload-api'
 import { Chat, ChatMessage, ChatMessageAttachment } from '@octoprompt/schemas'
 import { cn } from '@/lib/utils'
-import { FileUploadButton } from '@/components/file-upload-input'
-import { FileAttachmentList } from '@/components/file-attachment'
 import {
   ScrollArea,
   Select,
@@ -55,7 +51,7 @@ import {
 } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { APIProviders } from '@octoprompt/schemas'
+import { APIProviders, AiSdkOptions } from '@octoprompt/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
@@ -63,9 +59,12 @@ import { useActiveChatId, useSelectSetting } from '@/hooks/use-kv-local-storage'
 import { OctoCombobox } from '@/components/octo/octo-combobox'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { useGetModels } from '@/hooks/api/use-gen-ai-api'
+import {
+  ProviderModelSelector,
+  ModelSettingsPopover as ReusableModelSettingsPopover
+} from '@/components/model-selection'
 
 export function ModelSettingsPopover() {
-  const [open, setOpen] = useState(false)
   const {
     settings,
     setTemperature,
@@ -86,194 +85,59 @@ export function ModelSettingsPopover() {
   const [provider, updateProvider] = useLocalStorage('MODEL_PROVIDER', settings.provider ?? 'openrouter')
   const [currentModel, updateCurrentModel] = useLocalStorage('MODEL_CURRENT_MODEL', 'gpt-4o')
 
-  const handleUpdateTemperature = (value: number) => {
-    setTemperature(value)
-    updateTemperature(value)
+  const handleSettingsChange = (newSettings: Partial<AiSdkOptions>) => {
+    if (newSettings.temperature !== undefined) {
+      setTemperature(newSettings.temperature)
+      updateTemperature(newSettings.temperature)
+    }
+    if (newSettings.maxTokens !== undefined) {
+      setMaxTokens(newSettings.maxTokens)
+      updateMaxTokens(newSettings.maxTokens)
+    }
+    if (newSettings.topP !== undefined) {
+      setTopP(newSettings.topP)
+      updateTopP(newSettings.topP)
+    }
+    if (newSettings.frequencyPenalty !== undefined) {
+      setFreqPenalty(newSettings.frequencyPenalty)
+      updateFreqPenalty(newSettings.frequencyPenalty)
+    }
+    if (newSettings.presencePenalty !== undefined) {
+      setPresPenalty(newSettings.presencePenalty)
+      updatePresPenalty(newSettings.presencePenalty)
+    }
   }
 
-  const handleUpdateMaxTokens = (value: number) => {
-    setMaxTokens(value)
-    updateMaxTokens(value)
-  }
-
-  const handleUpdateTopP = (value: number) => {
-    setTopP(value)
-    updateTopP(value)
-  }
-
-  const handleUpdateFreqPenalty = (value: number) => {
-    setFreqPenalty(value)
-    updateFreqPenalty(value)
-  }
-
-  const handleUpdatePresPenalty = (value: number) => {
-    setPresPenalty(value)
-    updatePresPenalty(value)
-  }
-
-  const handleUpdateProvider = (value: APIProviders) => {
+  const handleProviderChange = (value: APIProviders) => {
     setProvider(value)
     updateProvider(value)
   }
 
-  const handleUpdateCurrentModel = (value: string) => {
+  const handleModelChange = (value: string) => {
     setModel(value)
     updateCurrentModel(value)
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant='outline' size='icon' className='h-8 w-8'>
-          <Settings2Icon className='h-4 w-4' />
-          <span className='sr-only'>Model Settings</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className='w-80'>
-        <div className='space-y-4'>
-          <h4 className='font-medium leading-none mb-3'>Model Settings</h4>
-          <ErrorBoundary>
-            <ProviderModelSector
-              provider={provider as APIProviders}
-              currentModel={currentModel}
-              onProviderChange={handleUpdateProvider}
-              onModelChange={handleUpdateCurrentModel}
-              className='flex-col !gap-2'
-            />
-          </ErrorBoundary>
-          <hr />
-          <div className='space-y-2'>
-            <Label htmlFor='temperature'>Temperature: {temperature.toFixed(2)}</Label>
-            <Slider
-              id='temperature'
-              disabled={isTempDisabled}
-              min={0}
-              max={1}
-              step={0.01}
-              value={[temperature]}
-              onValueChange={(temps) => handleUpdateTemperature(temps[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='maxTokens'>Max Tokens: {maxTokens}</Label>
-            <Slider
-              id='maxTokens'
-              min={1000}
-              max={1000000}
-              step={1000}
-              value={[maxTokens]}
-              onValueChange={(maxTokens) => handleUpdateMaxTokens(maxTokens[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='topP'>Top P: {topP.toFixed(2)}</Label>
-            <Slider
-              id='topP'
-              min={0}
-              max={1}
-              step={0.01}
-              value={[topP]}
-              onValueChange={(topP) => handleUpdateTopP(topP[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='frequencyPenalty'>Frequency Penalty: {freqPenalty.toFixed(2)}</Label>
-            <Slider
-              id='frequencyPenalty'
-              min={-2}
-              max={2}
-              step={0.01}
-              value={[freqPenalty]}
-              onValueChange={(freqPenalty) => handleUpdateFreqPenalty(freqPenalty[0])}
-            />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='presencePenalty'>Presence Penalty: {presPenalty.toFixed(2)}</Label>
-            <Slider
-              id='presencePenalty'
-              min={-2}
-              max={2}
-              step={0.01}
-              value={[presPenalty]}
-              onValueChange={(presPenalty) => handleUpdatePresPenalty(presPenalty[0])}
-            />
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <ReusableModelSettingsPopover
+      provider={provider as APIProviders}
+      model={currentModel}
+      settings={{
+        temperature,
+        maxTokens,
+        topP,
+        frequencyPenalty: freqPenalty,
+        presencePenalty: presPenalty
+      }}
+      onProviderChange={handleProviderChange}
+      onModelChange={handleModelChange}
+      onSettingsChange={handleSettingsChange}
+      isTempDisabled={isTempDisabled}
+    />
   )
 }
 
-type ModelSelectorProps = {
-  provider: APIProviders
-  currentModel: string
-  onProviderChange: (provider: APIProviders) => void
-  onModelChange: (modelId: string) => void
-  className?: string
-}
-
-export function ProviderModelSector({
-  provider,
-  currentModel,
-  onProviderChange,
-  onModelChange,
-  className
-}: ModelSelectorProps) {
-  const { data: modelsData, isPending: isLoadingModels } = useGetModels(provider)
-
-  const comboboxOptions = useMemo(
-    () =>
-      modelsData?.data.map((m) => ({
-        value: m.id,
-        label: m.name
-      })) ?? [],
-    [modelsData]
-  )
-
-  useEffect(() => {
-    const isCurrentModelValid = comboboxOptions.some((model) => model.value === currentModel)
-    if ((!currentModel || !isCurrentModelValid) && comboboxOptions.length > 0) {
-      onModelChange(comboboxOptions[0].value)
-    }
-  }, [comboboxOptions, currentModel, onModelChange])
-
-  const handleModelChange = useCallback(
-    (value: string | null) => {
-      if (value !== null) {
-        onModelChange(value)
-      }
-    },
-    [onModelChange]
-  )
-
-  return (
-    <div className={cn('flex gap-4', className)}>
-      <Select value={provider} onValueChange={(val) => onProviderChange(val as APIProviders)}>
-        <SelectTrigger className='w-full'>
-          <SelectValue placeholder='Select provider' />
-        </SelectTrigger>
-        <SelectContent>
-          {PROVIDER_SELECT_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <OctoCombobox
-        options={comboboxOptions}
-        value={currentModel}
-        onValueChange={handleModelChange}
-        placeholder={isLoadingModels ? 'Loading...' : comboboxOptions.length === 0 ? 'No models' : 'Select model'}
-        searchPlaceholder='Search models...'
-        className='w-full min-w-[150px]'
-        popoverClassName='w-[300px]'
-        disabled={isLoadingModels || comboboxOptions.length === 0}
-      />
-    </div>
-  )
-}
+// ProviderModelSector is now imported from the reusable components
 
 type AdaptiveChatInputProps = {
   value: string
@@ -297,17 +161,16 @@ export function AdaptiveChatInput({
 }: AdaptiveChatInputProps) {
   const [localValue, setLocalValue] = useLocalStorage('CHAT_INPUT_VALUE', value)
   const [isMultiline, setIsMultiline] = useState(false)
+  const isInitializedRef = useRef(false)
 
   const debouncedOnChange = useDebounceCallback(onChange, 200)
 
+  // Initialize only once on mount
   useEffect(() => {
-    // call onChange to set the local value
-    onChange(localValue)
-  }, [])
-
-  // update using onChange when localValue changes
-  useEffect(() => {
-    onChange(localValue)
+    if (!isInitializedRef.current) {
+      onChange(localValue)
+      isInitializedRef.current = true
+    }
   }, [localValue, onChange])
 
   useEffect(() => {
@@ -315,14 +178,15 @@ export function AdaptiveChatInput({
     if (shouldBeMultilineInitially !== isMultiline) {
       setIsMultiline(shouldBeMultilineInitially)
     }
-  }, [value])
+  }, [value, isMultiline])
 
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const newValue = e.target.value
       setLocalValue(newValue)
+      debouncedOnChange(newValue)
     },
-    [debouncedOnChange]
+    [debouncedOnChange, setLocalValue]
   )
 
   const handlePaste = useCallback(
@@ -427,7 +291,7 @@ function parseThinkBlock(content: string) {
 
 const ChatMessageItem = React.memo(
   (props: {
-    msg: Message | ChatMessage
+    msg: Message
     excluded: boolean
     rawView: boolean
     onCopyMessage: (content: string) => void
@@ -441,28 +305,53 @@ const ChatMessageItem = React.memo(
 
     const { copyToClipboard } = useCopyClipboard()
 
-    // Handle both Message and ChatMessage types
-    const messageId = typeof msg.id === 'string' ? parseInt(msg.id) : msg.id
-    const messageRole = msg.role
-    const messageContent = msg.content
-    const messageAttachments = 'attachments' in msg ? msg.attachments : undefined
-
-    if (!messageId) {
+    if (!msg.id) {
       console.warn('ChatMessageItem: Message missing ID', msg)
       return null
     }
 
-    const isUser = messageRole === 'user'
-    const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(messageContent)
+    const isUser = msg.role === 'user'
+    const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(msg.content)
+
+    const messageId = useMemo(() => {
+      const id = Number(msg.id)
+      return isNaN(id) ? null : id
+    }, [msg.id])
 
     const handleCopy = useCallback(
-      () => onCopyMessage(mainContent || messageContent),
-      [mainContent, messageContent, onCopyMessage]
+      () => onCopyMessage(mainContent || msg.content),
+      [mainContent, msg.content, onCopyMessage]
     )
-    const handleFork = useCallback(() => onForkMessage(messageId), [messageId, onForkMessage])
-    const handleDelete = useCallback(() => onDeleteMessage(messageId), [messageId, onDeleteMessage])
-    const handleToggleExclude = useCallback(() => onToggleExclude(messageId), [messageId, onToggleExclude])
-    const handleToggleRaw = useCallback(() => onToggleRawView(messageId), [messageId, onToggleRawView])
+    const handleFork = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot fork: Invalid message ID', msg.id)
+        toast.error('Cannot fork: Invalid message ID')
+        return
+      }
+      onForkMessage(messageId)
+    }, [messageId, onForkMessage, msg.id])
+    const handleDelete = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot delete: Invalid message ID', msg.id)
+        toast.error('Cannot delete: Invalid message ID')
+        return
+      }
+      onDeleteMessage(messageId)
+    }, [messageId, onDeleteMessage, msg.id])
+    const handleToggleExclude = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot toggle exclude: Invalid message ID', msg.id)
+        return
+      }
+      onToggleExclude(messageId)
+    }, [messageId, onToggleExclude, msg.id])
+    const handleToggleRaw = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot toggle raw view: Invalid message ID', msg.id)
+        return
+      }
+      onToggleRawView(messageId)
+    }, [messageId, onToggleRawView, msg.id])
     const handleCopyThinkText = useCallback(() => copyToClipboard(thinkContent), [copyToClipboard, thinkContent])
 
     const MessageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -500,18 +389,18 @@ const ChatMessageItem = React.memo(
                 </Button>
               </div>
               <div className='flex items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground'>
-                <Label htmlFor={`exclude-${messageId}`} className='flex items-center gap-1 cursor-pointer'>
+                <Label htmlFor={`exclude-${msg.id}`} className='flex items-center gap-1 cursor-pointer'>
                   <Switch
-                    id={`exclude-${messageId}`}
+                    id={`exclude-${msg.id}`}
                     checked={excluded}
                     onCheckedChange={handleToggleExclude}
                     className='scale-75'
                   />
                   Exclude
                 </Label>
-                <Label htmlFor={`raw-${messageId}`} className='flex items-center gap-1 cursor-pointer'>
+                <Label htmlFor={`raw-${msg.id}`} className='flex items-center gap-1 cursor-pointer'>
                   <Switch
-                    id={`raw-${messageId}`}
+                    id={`raw-${msg.id}`}
                     checked={rawView}
                     onCheckedChange={handleToggleRaw}
                     className='scale-75'
@@ -529,12 +418,6 @@ const ChatMessageItem = React.memo(
       return (
         <MessageWrapper>
           <MessageHeader />
-          {/* Display attachments if present */}
-          {messageAttachments && messageAttachments.length > 0 && (
-            <div className='mb-2'>
-              <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
-            </div>
-          )}
           <pre className='whitespace-pre-wrap font-mono p-2 bg-background/50 rounded text-xs sm:text-sm overflow-x-auto'>
             {msg.content}
           </pre>
@@ -545,12 +428,6 @@ const ChatMessageItem = React.memo(
     return (
       <MessageWrapper>
         <MessageHeader />
-        {/* Display attachments if present */}
-        {messageAttachments && messageAttachments.length > 0 && (
-          <div className='mb-2'>
-            <FileAttachmentList attachments={messageAttachments} showRemove={false} className='space-y-1' />
-          </div>
-        )}
         {hasThinkBlock ? (
           <div className='text-sm space-y-2'>
             {isThinking ? (
@@ -609,20 +486,41 @@ export function ChatMessages({
   const autoScrollEnabled = useSelectSetting('autoScrollEnabled')
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const lastMessageCountRef = useRef(0)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    if (autoScrollEnabled && bottomRef.current) {
-      const scrollViewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]')
-      if (scrollViewport) {
-        const isScrolledUp = scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150
-        if (!isScrolledUp || messages.length <= 2) {
-          bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    // Only scroll if messages have actually changed (new message added)
+    if (autoScrollEnabled && bottomRef.current && messages.length !== lastMessageCountRef.current) {
+      // Clear any pending scroll
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+
+      // Debounce scrolling to prevent excessive calls during streaming
+      scrollTimeoutRef.current = setTimeout(() => {
+        const scrollViewport = scrollAreaRef.current?.querySelector(':scope > div[style*="overflow: scroll"]')
+        if (scrollViewport) {
+          const isScrolledUp =
+            scrollViewport.scrollHeight - scrollViewport.scrollTop - scrollViewport.clientHeight > 150
+          if (!isScrolledUp || messages.length <= 2) {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+          }
+        } else {
+          bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
         }
-      } else {
-        bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }, 100) // 100ms debounce
+
+      lastMessageCountRef.current = messages.length
+    }
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
       }
     }
-  }, [messages, autoScrollEnabled])
+  }, [messages.length, autoScrollEnabled]) // Only depend on message count, not entire array
 
   const handleCopyMessage = useCallback(
     (content: string) => {
@@ -1017,19 +915,19 @@ function ChatPage() {
   const { settings: modelSettings, setModel } = useChatModelParams()
   const provider = modelSettings.provider ?? 'openrouter'
   const model = modelSettings.model
-  const { data: modelsData } = useGetModels(provider)
+  const { data: modelsData } = useGetModels(provider as APIProviders)
   const { copyToClipboard } = useCopyClipboard()
   const [excludedMessageIds, setExcludedMessageIds] = useState<number[]>([])
 
   const [initialChatContent, setInitialChatContent] = useLocalStorage<string | null>('initial-chat-content', null)
 
   useEffect(() => {
-    if (activeChatId && !model) {
-      const newModelSelection = modelsData?.data[0].id ?? ''
+    if (activeChatId && !model && modelsData?.data?.[0]) {
+      const newModelSelection = modelsData.data[0].id
       console.info('NO MODEL SET, SETTING DEFAULT MODEL', newModelSelection)
       setModel(newModelSelection)
     }
-  }, [activeChatId, setModel])
+  }, [activeChatId, model, modelsData, setModel])
 
   const {
     messages,
@@ -1045,37 +943,6 @@ function ChatPage() {
     model: model ?? '',
     systemMessage: 'You are a helpful assistant that can answer questions and help with tasks.'
   })
-
-  // File attachment state and functionality
-  const [pendingAttachments, setPendingAttachments] = useState<ChatMessageAttachment[]>([])
-  const uploadFileMutation = useUploadFile()
-
-  const handleFileSelect = useCallback(
-    async (files: File[]) => {
-      if (!activeChatId) {
-        toast.error('Please select a chat first')
-        return
-      }
-
-      for (const file of files) {
-        try {
-          const attachment = await uploadFileMutation.mutateAsync({
-            chatId: activeChatId,
-            file
-          })
-          setPendingAttachments((prev) => [...prev, attachment])
-        } catch (error) {
-          console.error('File upload failed:', error)
-          // Error is already handled by the mutation
-        }
-      }
-    },
-    [activeChatId, uploadFileMutation]
-  )
-
-  const handleRemoveAttachment = useCallback((attachmentId: number) => {
-    setPendingAttachments((prev) => prev.filter((att) => att.id !== attachmentId))
-  }, [])
 
   const selectedModelName = useMemo(() => {
     return modelsData?.data?.find((m) => m.id === model)?.name ?? model ?? '...'
@@ -1101,18 +968,14 @@ function ChatPage() {
         return
       }
       try {
-        await sendMessage(input, {
-          ...modelSettings,
-          currentMessageAttachments: pendingAttachments.length > 0 ? pendingAttachments : undefined
-        })
+        await sendMessage(input, { ...modelSettings })
         setInput('') // Clear input after sending
-        setPendingAttachments([]) // Clear attachments after sending
       } catch (err) {
         console.error('Error sending message:', err)
         toast.error('Failed to send message.')
       }
     },
-    [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId, pendingAttachments]
+    [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId]
   )
 
   const hasActiveChat = !!activeChatId
@@ -1132,7 +995,7 @@ function ChatPage() {
       toast.success('Context loaded into input.')
       setInitialChatContent(null) // Clear from localStorage after setting input
     }
-  }, [activeChatId, initialChatContent, setInput, input, messages, isAiLoading, setInitialChatContent])
+  }, [activeChatId, initialChatContent, setInput, input, messages.length, isAiLoading, setInitialChatContent]) // Use messages.length instead of messages array
 
   // Cleanup effect to ensure ref is reset if chat changes or content is cleared
   useEffect(() => {
@@ -1183,24 +1046,14 @@ function ChatPage() {
                   )}
                 </span>
               </div>
-              {/* File attachments section */}
-              {pendingAttachments.length > 0 && (
-                <div className='mx-auto w-full max-w-[72rem] px-4 pt-2'>
-                  <FileAttachmentList attachments={pendingAttachments} onRemove={handleRemoveAttachment} />
-                </div>
-              )}
-
               <div className='mx-auto flex w-full max-w-[72rem] items-end gap-2 px-4 py-3'>
-                <div className='flex flex-col flex-grow gap-2'>
-                  <AdaptiveChatInput
-                    value={input ?? ''}
-                    onChange={handleChatInputChange}
-                    placeholder='Type your message...'
-                    preserveFormatting
-                    className='flex-grow rounded-lg'
-                  />
-                </div>
-                <FileUploadButton onFileSelect={handleFileSelect} disabled={!activeChatId} />
+                <AdaptiveChatInput
+                  value={input ?? ''}
+                  onChange={handleChatInputChange}
+                  placeholder='Type your message...'
+                  preserveFormatting
+                  className='flex-grow rounded-lg'
+                />
                 <Button
                   type='submit'
                   disabled={input?.trim() === ''}

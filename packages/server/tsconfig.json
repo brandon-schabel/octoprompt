@@ -19,8 +19,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@db": ["../services/src/utils/database.ts"]
     }
   },
-  "include": ["src", "server.ts", "build.ts"]
+  "include": ["src", "server.ts", "build.ts"],
+  "exclude": ["node_modules/**/test/**", "node_modules/**/*.test.*", "node_modules/**/*.spec.*"]
 }

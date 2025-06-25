@@ -21,8 +21,7 @@ export function AppNavbar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const matches = useMatches()
-  // We treat /project-summarization as part of "projects" route
-  const isOnProjectsRoute = matches.some((match) => ['/projects', '/project-summarization'].includes(match.routeId))
+  const isOnProjectsRoute = matches.some((match) => match.routeId === '/projects')
   const isOnChatRoute = matches.some((match) => match.routeId === '/chat')
   const isOnKeysRoute = matches.some((match) => match.routeId === '/keys')
   const isOnPromptsRoute = matches.some((match) => match.routeId === '/prompts')
@@ -182,7 +181,7 @@ export function AppNavbar() {
 
       {/* Dialog: Open Project */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className='sm:max-w-[425px]'>
+        <DialogContent className='sm:max-w-[600px] max-h-[80vh] overflow-hidden'>
           <DialogHeader>
             <DialogTitle>Open Project</DialogTitle>
           </DialogHeader>
