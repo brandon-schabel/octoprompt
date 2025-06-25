@@ -56,9 +56,6 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
   "mcpServers": {
     "octoprompt": {
       "command": "/absolute/path/to/octoprompt/packages/server/mcp-start.sh",
-      "env": {
-        "OCTOPROMPT_PROJECT_ID": "YOUR_PROJECT_ID"
-      }
     }
   }
 }
@@ -72,7 +69,6 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
 2. **Add server:**
    - **Name**: `octoprompt`
    - **Command**: `/absolute/path/to/octoprompt/packages/server/mcp-start.sh`
-   - **Environment**: `OCTOPROMPT_PROJECT_ID=YOUR_PROJECT_ID`
 
 3. **Restart Cursor**
 
