@@ -28,7 +28,7 @@ const colors = {
   yellow: '\x1b[33m',
   red: '\x1b[31m',
   cyan: '\x1b[36m',
-  blue: '\x1b[34m',
+  blue: '\x1b[34m'
 }
 
 interface BenchmarkResult {
@@ -64,7 +64,7 @@ class PerformanceBenchmark {
 
   generateTestData(count: number): TestRecord[] {
     const categories = ['urgent', 'normal', 'low', 'archived']
-    
+
     return Array.from({ length: count }, (_, i) => ({
       id: Date.now() + i,
       name: `Test Record ${i}`,
@@ -72,13 +72,11 @@ class PerformanceBenchmark {
       category: categories[i % categories.length],
       priority: i % 10,
       created: Date.now(),
-      updated: Date.now(),
+      updated: Date.now()
     }))
   }
 
-  async measureOperation<T>(
-    operation: () => Promise<T>
-  ): Promise<{ time: number; result: T }> {
+  async measureOperation<T>(operation: () => Promise<T>): Promise<{ time: number; result: T }> {
     const start = performance.now()
     const result = await operation()
     const time = performance.now() - start
@@ -94,7 +92,7 @@ class PerformanceBenchmark {
     delete: number
   }> {
     const filePath = path.join(this.testDataDir, 'file-storage.json')
-    
+
     // Insert
     const insertResult = await this.measureOperation(async () => {
       const data: Record<number, TestRecord> = {}
@@ -122,7 +120,7 @@ class PerformanceBenchmark {
     const updateResult = await this.measureOperation(async () => {
       const content = await fs.readFile(filePath, 'utf-8')
       const data = JSON.parse(content)
-      
+
       // Update 10% of records
       const updateCount = Math.floor(testData.length * 0.1)
       for (let i = 0; i < updateCount; i++) {
@@ -130,7 +128,7 @@ class PerformanceBenchmark {
         data[record.id].priority = 99
         data[record.id].updated = Date.now()
       }
-      
+
       await fs.writeFile(filePath, JSON.stringify(data, null, 2))
     })
 
@@ -138,13 +136,13 @@ class PerformanceBenchmark {
     const deleteResult = await this.measureOperation(async () => {
       const content = await fs.readFile(filePath, 'utf-8')
       const data = JSON.parse(content)
-      
+
       // Delete 10% of records
       const deleteCount = Math.floor(testData.length * 0.1)
       for (let i = 0; i < deleteCount; i++) {
         delete data[testData[i].id]
       }
-      
+
       await fs.writeFile(filePath, JSON.stringify(data, null, 2))
     })
 
@@ -153,7 +151,7 @@ class PerformanceBenchmark {
       read: readResult.time,
       readAll: readAllResult.time,
       update: updateResult.time,
-      delete: deleteResult.time,
+      delete: deleteResult.time
     }
   }
 
@@ -167,7 +165,7 @@ class PerformanceBenchmark {
   }> {
     const dbPath = path.join(this.testDataDir, 'benchmark.db')
     const db = new Database(dbPath)
-    
+
     // Create table
     db.exec(`
       CREATE TABLE IF NOT EXISTS records (
@@ -217,7 +215,7 @@ class PerformanceBenchmark {
           updateStmt.run(JSON.stringify(data), id)
         }
       })
-      
+
       // Update 10% of records
       const updateCount = Math.floor(testData.length * 0.1)
       const updates = []
@@ -225,7 +223,7 @@ class PerformanceBenchmark {
         const record = { ...testData[i], priority: 99, updated: Date.now() }
         updates.push({ id: record.id, data: record })
       }
-      
+
       updateBatch(updates)
     })
 
@@ -236,11 +234,11 @@ class PerformanceBenchmark {
           deleteStmt.run(id)
         }
       })
-      
+
       // Delete 10% of records
       const deleteCount = Math.floor(testData.length * 0.1)
-      const idsToDelete = testData.slice(0, deleteCount).map(r => r.id)
-      
+      const idsToDelete = testData.slice(0, deleteCount).map((r) => r.id)
+
       deleteBatch(idsToDelete)
     })
 
@@ -251,37 +249,37 @@ class PerformanceBenchmark {
       read: readResult.time,
       readAll: readAllResult.time,
       update: updateResult.time,
-      delete: deleteResult.time,
+      delete: deleteResult.time
     }
   }
 
   async benchmarkSize(size: number): Promise<void> {
     console.log(`\n${colors.bright}${colors.yellow}=== Testing with ${size} records ===${colors.reset}`)
-    
+
     const testData = this.generateTestData(size)
-    
+
     // Run file operations
     console.log(`${colors.cyan}Running file-based operations...${colors.reset}`)
     const fileResults = await this.fileOperations(testData)
-    
+
     // Clean between tests
     await this.cleanup()
     this.ensureDirectory(this.testDataDir)
-    
+
     // Regenerate test data for consistency
     const freshTestData = this.generateTestData(size)
-    
+
     // Run SQLite operations
     console.log(`${colors.cyan}Running SQLite operations...${colors.reset}`)
     const sqliteResults = await this.sqliteOperations(freshTestData)
-    
+
     // Record results
     const operations = ['insert', 'read', 'readAll', 'update', 'delete'] as const
-    
+
     for (const op of operations) {
       const fileTime = fileResults[op]
       const sqliteTime = sqliteResults[op]
-      
+
       this.results.push({
         operation: op.charAt(0).toUpperCase() + op.slice(1),
         fileTime,
@@ -289,7 +287,7 @@ class PerformanceBenchmark {
         speedup: fileTime / sqliteTime,
         size,
         fileOps: op === 'read' ? 1 : op === 'readAll' ? size : Math.floor(size * 0.1),
-        sqliteOps: op === 'read' ? 1 : op === 'readAll' ? size : Math.floor(size * 0.1),
+        sqliteOps: op === 'read' ? 1 : op === 'readAll' ? size : Math.floor(size * 0.1)
       })
     }
   }
@@ -299,7 +297,7 @@ class PerformanceBenchmark {
 
     // Group results by dataset size
     for (const size of DATASET_SIZES) {
-      const sizeResults = this.results.filter(r => r.size === size)
+      const sizeResults = this.results.filter((r) => r.size === size)
       if (sizeResults.length === 0) continue
 
       output += `${colors.cyan}Dataset Size: ${size} records${colors.reset}\n`
@@ -311,7 +309,7 @@ class PerformanceBenchmark {
         const winner = result.speedup > 1 ? 'SQLite' : 'File'
         const winnerColor = result.speedup > 1 ? colors.green : colors.yellow
         const speedupColor = result.speedup > 1.5 ? colors.green : result.speedup < 0.7 ? colors.red : colors.yellow
-        
+
         const fileOpsPerSec = result.fileOps ? Math.round((result.fileOps / result.fileTime) * 1000) : 0
         const sqliteOpsPerSec = result.sqliteOps ? Math.round((result.sqliteOps / result.sqliteTime) * 1000) : 0
         const opsPerSec = winner === 'SQLite' ? sqliteOpsPerSec : fileOpsPerSec
@@ -324,7 +322,7 @@ class PerformanceBenchmark {
 
     // Summary and recommendations
     output += `${colors.bright}Summary:${colors.reset}\n`
-    
+
     const avgSpeedup = this.results.reduce((sum, r) => sum + r.speedup, 0) / this.results.length
     if (avgSpeedup > 1.2) {
       output += `${colors.green}✓ SQLite shows ${avgSpeedup.toFixed(2)}x average performance improvement${colors.reset}\n`
@@ -350,14 +348,14 @@ class PerformanceBenchmark {
 
   async saveMarkdownReport(): Promise<void> {
     const reportPath = path.join(process.cwd(), 'packages', 'storage', 'benchmark-report.md')
-    
+
     let markdown = '# Storage Performance Benchmark Report\n\n'
     markdown += `Generated: ${new Date().toISOString()}\n\n`
     markdown += '## Test Environment\n\n'
     markdown += `- Platform: ${process.platform}\n`
     markdown += `- Node Version: ${process.version}\n`
     markdown += `- Bun Version: ${process.versions.bun || 'N/A'}\n\n`
-    
+
     markdown += '## Test Configuration\n\n'
     markdown += `- Dataset sizes: ${DATASET_SIZES.join(', ')} records\n`
     markdown += '- Operations tested: Insert (bulk), Read (single), Read All, Update (10%), Delete (10%)\n'
@@ -367,7 +365,7 @@ class PerformanceBenchmark {
     markdown += '## Results\n\n'
 
     for (const size of DATASET_SIZES) {
-      const sizeResults = this.results.filter(r => r.size === size)
+      const sizeResults = this.results.filter((r) => r.size === size)
       if (sizeResults.length === 0) continue
 
       markdown += `### Dataset: ${size} records\n\n`
@@ -379,7 +377,7 @@ class PerformanceBenchmark {
         const fileOpsPerSec = result.fileOps ? Math.round((result.fileOps / result.fileTime) * 1000) : 0
         const sqliteOpsPerSec = result.sqliteOps ? Math.round((result.sqliteOps / result.sqliteTime) * 1000) : 0
         const throughput = winner === '**SQLite**' ? sqliteOpsPerSec : fileOpsPerSec
-        
+
         markdown += `| ${result.operation} | ${this.formatTime(result.fileTime)} | ${this.formatTime(result.sqliteTime)} | ${result.speedup.toFixed(2)}x | ${winner} | ${throughput.toLocaleString()} ops/s |\n`
       }
 
@@ -387,9 +385,9 @@ class PerformanceBenchmark {
     }
 
     markdown += '## Analysis\n\n'
-    
+
     const avgSpeedup = this.results.reduce((sum, r) => sum + r.speedup, 0) / this.results.length
-    
+
     markdown += '### Performance Comparison\n\n'
     if (avgSpeedup > 1.2) {
       markdown += '✅ **SQLite demonstrates superior performance**\n\n'
@@ -442,7 +440,6 @@ class PerformanceBenchmark {
 
       // Save markdown report
       await this.saveMarkdownReport()
-
     } finally {
       await this.cleanup()
     }

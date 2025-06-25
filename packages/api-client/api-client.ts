@@ -3,7 +3,7 @@ import { z } from 'zod'
 // Import only the actual types we need (not response schemas)
 import type { CreateChatBody, UpdateChatBody, AiChatStreamRequest, Chat, ChatMessage } from '@octoprompt/schemas'
 
-import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody } from '@octoprompt/schemas'
+import type { CreateProjectBody, Project, ProjectFile, UpdateProjectBody, ProjectStatistics } from '@octoprompt/schemas'
 
 import type { CreatePromptBody, UpdatePromptBody, OptimizePromptRequest, Prompt } from '@octoprompt/schemas'
 
@@ -28,6 +28,7 @@ import {
   FileResponseSchema as FileResponseSchemaZ,
   ProjectSummaryResponseSchema as ProjectSummaryResponseSchemaZ,
   ProjectFileWithoutContentListResponseSchema as ProjectFileWithoutContentListResponseSchemaZ,
+  ProjectStatisticsResponseSchema as ProjectStatisticsResponseSchemaZ,
   CreateProjectBodySchema,
   UpdateProjectBodySchema,
   RefreshQuerySchema
@@ -114,6 +115,33 @@ import {
   MCPServerStateSchema
 } from '@octoprompt/schemas'
 
+// Ticket imports
+import type {
+  CreateTicketBody,
+  UpdateTicketBody,
+  CreateTaskBody,
+  UpdateTaskBody,
+  ReorderTasksBody,
+  Ticket,
+  TicketTask,
+  TicketWithTasks,
+  TicketWithTaskCount
+} from '@octoprompt/schemas'
+import {
+  CreateTicketBodySchema,
+  UpdateTicketBodySchema,
+  CreateTaskBodySchema,
+  UpdateTaskBodySchema,
+  ReorderTasksBodySchema,
+  TicketSchema,
+  TicketTaskSchema,
+  TicketWithTasksSchema,
+  TicketWithTaskCountSchema,
+  SuggestTasksBodySchema,
+  TicketSuggestFilesBodySchema,
+  SuggestFilesBodySchema
+} from '@octoprompt/schemas'
+
 export type DataResponseSchema<T> = {
   success: boolean
   data: T
@@ -161,10 +189,11 @@ class BaseApiClient {
     } else {
       // Bind default fetch to window context
       // @ts-ignore
-      this.customFetch = typeof window !== 'undefined' && window.fetch
-        // @ts-ignore
-        ? window.fetch.bind(window)
-        : fetch
+      this.customFetch =
+        typeof window !== 'undefined' && window.fetch
+          ? // @ts-ignore
+            window.fetch.bind(window)
+          : fetch
     }
   }
 
@@ -575,6 +604,13 @@ export class ProjectService extends BaseApiClient {
       removedCount: number
       message: string
     }>
+  }
+
+  async getProjectStatistics(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/statistics`, {
+      responseSchema: ProjectStatisticsResponseSchemaZ
+    })
+    return result as DataResponseSchema<ProjectStatistics>
   }
 }
 
@@ -1006,17 +1042,23 @@ export class MCPService extends BaseApiClient {
             main: z.string(),
             projectSpecific: z.string()
           }),
-          sampleMethods: z.array(z.object({
-            method: z.string(),
-            description: z.string(),
-            params: z.any(),
-            example: z.any()
-          })),
-          sampleFiles: z.array(z.object({
-            path: z.string(),
-            name: z.string(),
-            id: z.number()
-          })).optional()
+          sampleMethods: z.array(
+            z.object({
+              method: z.string(),
+              description: z.string(),
+              params: z.any(),
+              example: z.any()
+            })
+          ),
+          sampleFiles: z
+            .array(
+              z.object({
+                path: z.string(),
+                name: z.string(),
+                id: z.number()
+              })
+            )
+            .optional()
         })
       })
     })
@@ -1045,20 +1087,24 @@ export class MCPService extends BaseApiClient {
     const result = await this.request('GET', '/mcp/sessions', {
       responseSchema: z.object({
         success: z.boolean(),
-        data: z.array(z.object({
-          id: z.string(),
-          projectId: z.number().optional(),
-          createdAt: z.number(),
-          lastActivity: z.number()
-        }))
+        data: z.array(
+          z.object({
+            id: z.string(),
+            projectId: z.number().optional(),
+            createdAt: z.number(),
+            lastActivity: z.number()
+          })
+        )
       })
     })
-    return result as DataResponseSchema<Array<{
-      id: string
-      projectId?: number
-      createdAt: number
-      lastActivity: number
-    }>>
+    return result as DataResponseSchema<
+      Array<{
+        id: string
+        projectId?: number
+        createdAt: number
+        lastActivity: number
+      }>
+    >
   }
 
   async closeMCPSession(sessionId: string) {
@@ -1068,6 +1114,195 @@ export class MCPService extends BaseApiClient {
       })
     })
     return result as { success: boolean }
+  }
+}
+
+// Ticket Service
+export class TicketService extends BaseApiClient {
+  async listTickets(projectId: number, status?: string) {
+    const params: Record<string, any> = {}
+    if (status) params.status = status
+
+    const result = await this.request('GET', `/projects/${projectId}/tickets`, {
+      params,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketSchema)
+      })
+    })
+    return result as DataResponseSchema<Ticket[]>
+  }
+
+  async createTicket(data: CreateTicketBody) {
+    const validatedData = this.validateBody(CreateTicketBodySchema, data)
+    const result = await this.request('POST', '/tickets', {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketSchema
+      })
+    })
+    return result as DataResponseSchema<Ticket>
+  }
+
+  async getTicket(ticketId: number) {
+    const result = await this.request('GET', `/tickets/${ticketId}`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketSchema
+      })
+    })
+    return result as DataResponseSchema<Ticket>
+  }
+
+  async updateTicket(ticketId: number, data: UpdateTicketBody) {
+    const validatedData = this.validateBody(UpdateTicketBodySchema, data)
+    const result = await this.request('PATCH', `/tickets/${ticketId}`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketSchema
+      })
+    })
+    return result as DataResponseSchema<Ticket>
+  }
+
+  async deleteTicket(ticketId: number): Promise<boolean> {
+    await this.request('DELETE', `/tickets/${ticketId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  // Task operations
+  async getTasks(ticketId: number) {
+    const result = await this.request('GET', `/tickets/${ticketId}/tasks`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketTaskSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketTask[]>
+  }
+
+  async createTask(ticketId: number, data: CreateTaskBody) {
+    const validatedData = this.validateBody(CreateTaskBodySchema, data)
+    const result = await this.request('POST', `/tickets/${ticketId}/tasks`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketTaskSchema
+      })
+    })
+    return result as DataResponseSchema<TicketTask>
+  }
+
+  async updateTask(ticketId: number, taskId: number, data: UpdateTaskBody) {
+    const validatedData = this.validateBody(UpdateTaskBodySchema, data)
+    const result = await this.request('PATCH', `/tickets/${ticketId}/tasks/${taskId}`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: TicketTaskSchema
+      })
+    })
+    return result as DataResponseSchema<TicketTask>
+  }
+
+  async deleteTask(ticketId: number, taskId: number): Promise<boolean> {
+    await this.request('DELETE', `/tickets/${ticketId}/tasks/${taskId}`, {
+      responseSchema: OperationSuccessResponseSchemaZ
+    })
+    return true
+  }
+
+  async reorderTasks(ticketId: number, data: ReorderTasksBody) {
+    const validatedData = this.validateBody(ReorderTasksBodySchema, data)
+    const result = await this.request('PATCH', `/tickets/${ticketId}/tasks/reorder`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketTaskSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketTask[]>
+  }
+
+  // AI-powered operations
+  async suggestTasks(ticketId: number, userContext?: string) {
+    const validatedData = this.validateBody(SuggestTasksBodySchema, { userContext })
+    const result = await this.request('POST', `/tickets/${ticketId}/suggest-tasks`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          suggestedTasks: z.array(z.string())
+        })
+      })
+    })
+    return result as { success: boolean; data: { suggestedTasks: string[] } }
+  }
+
+  async autoGenerateTasks(ticketId: number) {
+    const result = await this.request('POST', `/tickets/${ticketId}/auto-generate-tasks`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketTaskSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketTask[]>
+  }
+
+  async suggestFiles(ticketId: number, extraUserInput?: string) {
+    const validatedData = this.validateBody(TicketSuggestFilesBodySchema, { extraUserInput })
+    const result = await this.request('POST', `/tickets/${ticketId}/suggest-files`, {
+      body: validatedData,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.object({
+          recommendedFileIds: z.array(z.string()),
+          combinedSummaries: z.string().optional(),
+          message: z.string().optional()
+        })
+      })
+    })
+    return result as {
+      success: boolean
+      data: {
+        recommendedFileIds: string[]
+        combinedSummaries?: string
+        message?: string
+      }
+    }
+  }
+
+  // Bulk operations
+  async getTicketsWithCounts(projectId: number, status?: string) {
+    const params: Record<string, any> = {}
+    if (status) params.status = status
+
+    const result = await this.request('GET', `/projects/${projectId}/tickets-with-count`, {
+      params,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketWithTaskCountSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketWithTaskCount[]>
+  }
+
+  async getTicketsWithTasks(projectId: number, status?: string) {
+    const params: Record<string, any> = {}
+    if (status) params.status = status
+
+    const result = await this.request('GET', `/projects/${projectId}/tickets-with-tasks`, {
+      params,
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(TicketWithTasksSchema)
+      })
+    })
+    return result as DataResponseSchema<TicketWithTasks[]>
   }
 }
 
@@ -1081,6 +1316,7 @@ export class OctoPromptClient {
   public readonly agentCoder: AgentCoderService
   public readonly system: SystemService
   public readonly mcp: MCPService
+  public readonly tickets: TicketService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -1091,6 +1327,7 @@ export class OctoPromptClient {
     this.agentCoder = new AgentCoderService(config)
     this.system = new SystemService(config)
     this.mcp = new MCPService(config)
+    this.tickets = new TicketService(config)
   }
 }
 

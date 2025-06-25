@@ -20,14 +20,20 @@ export const MCPServerConfigSchema = z
       description: 'Command to start the MCP server',
       example: 'npx @modelcontextprotocol/server-filesystem'
     }),
-    args: z.array(z.string()).default([]).openapi({
-      description: 'Command line arguments for the server',
-      example: ['--root', '/path/to/project']
-    }),
-    env: z.record(z.string()).default({}).openapi({
-      description: 'Environment variables for the server',
-      example: { NODE_ENV: 'production' }
-    }),
+    args: z
+      .array(z.string())
+      .default([])
+      .openapi({
+        description: 'Command line arguments for the server',
+        example: ['--root', '/path/to/project']
+      }),
+    env: z
+      .record(z.string())
+      .default({})
+      .openapi({
+        description: 'Environment variables for the server',
+        example: { NODE_ENV: 'production' }
+      }),
     enabled: z.boolean().default(true).openapi({
       description: 'Whether the server is enabled',
       example: true
@@ -98,16 +104,19 @@ export const MCPToolSchema = z
     parameters: z.array(MCPToolParameterSchema).default([]).openapi({
       description: 'Parameters required by the tool'
     }),
-    inputSchema: z.record(z.any()).optional().openapi({
-      description: 'JSON Schema for tool input validation',
-      example: {
-        type: 'object',
-        properties: {
-          path: { type: 'string', description: 'File path to read' }
-        },
-        required: ['path']
-      }
-    }),
+    inputSchema: z
+      .record(z.any())
+      .optional()
+      .openapi({
+        description: 'JSON Schema for tool input validation',
+        example: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: 'File path to read' }
+          },
+          required: ['path']
+        }
+      }),
     serverId: z.number().int().positive().openapi({
       description: 'ID of the MCP server providing this tool'
     })
@@ -152,10 +161,13 @@ export const MCPToolExecutionRequestSchema = z
     serverId: z.number().int().positive().openapi({
       description: 'ID of the MCP server to execute the tool on'
     }),
-    parameters: z.record(z.any()).default({}).openapi({
-      description: 'Parameters to pass to the tool',
-      example: { path: '/path/to/file.txt' }
-    })
+    parameters: z
+      .record(z.any())
+      .default({})
+      .openapi({
+        description: 'Parameters to pass to the tool',
+        example: { path: '/path/to/file.txt' }
+      })
   })
   .openapi('MCPToolExecutionRequest')
 
@@ -254,7 +266,8 @@ export const CreateMCPServerConfigBodySchema = MCPServerConfigSchema.omit({
 
 export type CreateMCPServerConfigBody = z.infer<typeof CreateMCPServerConfigBodySchema>
 
-export const UpdateMCPServerConfigBodySchema = CreateMCPServerConfigBodySchema.partial().openapi('UpdateMCPServerConfigBody')
+export const UpdateMCPServerConfigBodySchema =
+  CreateMCPServerConfigBodySchema.partial().openapi('UpdateMCPServerConfigBody')
 
 export type UpdateMCPServerConfigBody = z.infer<typeof UpdateMCPServerConfigBodySchema>
 

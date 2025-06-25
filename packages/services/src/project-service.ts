@@ -745,11 +745,11 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-    `Total to process: ${totalProcessed}, ` +
-    `Successfully summarized: ${summarizedCount}, ` +
-    `Skipped (empty): ${skippedByEmptyCount}, ` +
-    `Skipped (errors): ${errorCount}, ` +
-    `Total not summarized: ${finalSkippedCount}`
+      `Total to process: ${totalProcessed}, ` +
+      `Successfully summarized: ${summarizedCount}, ` +
+      `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (errors): ${errorCount}, ` +
+      `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
@@ -814,11 +814,7 @@ ${promptsMap.contemplativePrompt}
 /**
  * Suggests relevant files based on user input and project context using AI
  */
-export async function suggestFiles(
-  projectId: number,
-  prompt: string,
-  limit: number = 10
-): Promise<ProjectFile[]> {
+export async function suggestFiles(projectId: number, prompt: string, limit: number = 10): Promise<ProjectFile[]> {
   try {
     await getProjectById(projectId) // Validate project exists
 

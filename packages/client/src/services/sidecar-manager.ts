@@ -26,13 +26,10 @@ export class OctoPromptSidecarManager {
         this.isReady = true
       })
 
-      this.unsubscribeTerminated = await listen<number | null>(
-        'octoprompt-server-terminated',
-        (event) => {
-          console.log('OctoPrompt server terminated with code:', event.payload)
-          this.isReady = false
-        }
-      )
+      this.unsubscribeTerminated = await listen<number | null>('octoprompt-server-terminated', (event) => {
+        console.log('OctoPrompt server terminated with code:', event.payload)
+        this.isReady = false
+      })
 
       // Start the server via Rust command
       const result = await invoke<string>('start_octoprompt_server')
@@ -48,7 +45,7 @@ export class OctoPromptSidecarManager {
 
   private async waitForReady(timeout = 30000): Promise<void> {
     const start = Date.now()
-    
+
     // First check if server is already running
     const initialCheck = await this.checkHealth()
     if (initialCheck) {
@@ -64,7 +61,7 @@ export class OctoPromptSidecarManager {
         this.isReady = true
         return
       }
-      
+
       // Wait a bit before next check
       await new Promise((resolve) => setTimeout(resolve, 500))
     }
@@ -80,7 +77,7 @@ export class OctoPromptSidecarManager {
       console.log(result)
       this.isReady = false
       this.startupPromise = null
-      
+
       // Clean up listeners
       if (this.unsubscribeReady) {
         this.unsubscribeReady()
@@ -111,9 +108,9 @@ export class OctoPromptSidecarManager {
   // Alternative method using Command directly (if needed)
   async startWithCommand(): Promise<Child> {
     const command = Command.sidecar('binaries/octoprompt-server', ['--port', '3147'])
-    
+
     const child = await command.spawn()
-    
+
     // Monitor stdout for readiness
     child.stdout.on('data', (line: string) => {
       console.log('Server:', line)
@@ -121,15 +118,15 @@ export class OctoPromptSidecarManager {
         this.isReady = true
       }
     })
-    
+
     // Handle errors
     child.stderr.on('data', (line: string) => {
       console.error('Server error:', line)
     })
-    
+
     // Wait for server to be ready
     await this.waitForReady()
-    
+
     return child
   }
 }

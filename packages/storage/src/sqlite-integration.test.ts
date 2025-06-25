@@ -10,21 +10,21 @@ import { chatStorage } from './chat-storage'
 import { projectStorage } from './project-storage'
 import { promptStorage } from './prompt-storage'
 import { providerKeyStorage } from './provider-key-storage'
-import { 
-  mcpServerConfigStorage, 
-  mcpServerStateStorage, 
-  mcpToolStorage, 
+import {
+  mcpServerConfigStorage,
+  mcpServerStateStorage,
+  mcpToolStorage,
   mcpResourceStorage,
-  mcpToolExecutionStorage 
+  mcpToolExecutionStorage
 } from './mcp-storage'
 
 // Import types and schemas
-import type { 
-  Chat, 
-  ChatMessage, 
-  Project, 
-  ProjectFile, 
-  Prompt, 
+import type {
+  Chat,
+  ChatMessage,
+  Project,
+  ProjectFile,
+  Prompt,
   PromptProject,
   ProviderKey,
   MCPServerConfig,
@@ -41,10 +41,10 @@ describe('SQLite Storage Integration Tests', () => {
   beforeEach(async () => {
     // Ensure we're in test mode
     process.env.NODE_ENV = 'test'
-    
+
     // Get the database instance
     db = DatabaseManager.getInstance()
-    
+
     // Clear all tables before each test
     await db.clearAllTables()
   })
@@ -52,16 +52,15 @@ describe('SQLite Storage Integration Tests', () => {
   afterEach(async () => {
     // Clear all tables for test isolation
     await db.clearAllTables()
-    
-    // Add a small delay to avoid timestamp collisions
-    await new Promise(resolve => setTimeout(resolve, 5))
-  })
 
+    // Add a small delay to avoid timestamp collisions
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  })
 
   describe('Database Initialization', () => {
     test('should create all required tables', async () => {
       const database = db.getDatabase()
-      
+
       // Check that all tables exist
       const tables = [
         'provider_keys',
@@ -79,9 +78,7 @@ describe('SQLite Storage Integration Tests', () => {
       ]
 
       for (const tableName of tables) {
-        const query = database.prepare(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
-        )
+        const query = database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
         const result = query.get(tableName) as { name: string } | undefined
         expect(result).toBeDefined()
         expect(result?.name).toBe(tableName)
@@ -90,7 +87,7 @@ describe('SQLite Storage Integration Tests', () => {
 
     test('should create all required indexes', async () => {
       const database = db.getDatabase()
-      
+
       // Check some key indexes exist
       const indexes = [
         'idx_chats_created_at',
@@ -101,9 +98,7 @@ describe('SQLite Storage Integration Tests', () => {
       ]
 
       for (const indexName of indexes) {
-        const query = database.prepare(
-          "SELECT name FROM sqlite_master WHERE type='index' AND name=?"
-        )
+        const query = database.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name=?")
         const result = query.get(indexName) as { name: string } | undefined
         expect(result).toBeDefined()
         expect(result?.name).toBe(indexName)
@@ -112,7 +107,7 @@ describe('SQLite Storage Integration Tests', () => {
 
     test('should use in-memory database in test mode', () => {
       const database = db.getDatabase()
-      const query = database.prepare("PRAGMA database_list")
+      const query = database.prepare('PRAGMA database_list')
       const result = query.get() as { name: string; file: string }
       expect(result.file).toBe('') // Empty string indicates in-memory database
     })
@@ -152,12 +147,10 @@ describe('SQLite Storage Integration Tests', () => {
 
       // Query chats by project using JSON field
       const database = db.getDatabase()
-      const query = database.prepare(
-        "SELECT data FROM chats WHERE JSON_EXTRACT(data, '$.projectId') = ?"
-      )
+      const query = database.prepare("SELECT data FROM chats WHERE JSON_EXTRACT(data, '$.projectId') = ?")
       const results = query.all(project.id) as Array<{ data: string }>
       expect(results).toHaveLength(1)
-      
+
       const foundChat = JSON.parse(results[0].data) as Chat
       expect(foundChat.id).toBe(chat.id)
     })
@@ -304,9 +297,9 @@ describe('SQLite Storage Integration Tests', () => {
       expect(savedAssociations).toHaveLength(2)
 
       // Verify both associations were saved correctly
-      const assocForProject1 = savedAssociations.find(a => a.projectId === project1.id)
-      const assocForProject2 = savedAssociations.find(a => a.projectId === project2.id)
-      
+      const assocForProject1 = savedAssociations.find((a) => a.projectId === project1.id)
+      const assocForProject2 = savedAssociations.find((a) => a.projectId === project2.id)
+
       expect(assocForProject1).toBeDefined()
       expect(assocForProject2).toBeDefined()
       expect(assocForProject1?.promptId).toBe(prompt.id)
@@ -349,7 +342,7 @@ describe('SQLite Storage Integration Tests', () => {
     test('should handle concurrent writes with transactions', async () => {
       // Create multiple chats concurrently
       const createPromises = []
-      
+
       for (let i = 0; i < 10; i++) {
         const chat: Chat = {
           id: Date.now() + i,
@@ -357,10 +350,8 @@ describe('SQLite Storage Integration Tests', () => {
           created: Date.now(),
           updated: Date.now()
         }
-        
-        createPromises.push(
-          db.create('chats', String(chat.id), chat)
-        )
+
+        createPromises.push(db.create('chats', String(chat.id), chat))
       }
 
       await Promise.all(createPromises)
@@ -372,7 +363,7 @@ describe('SQLite Storage Integration Tests', () => {
 
     test('should handle transaction rollback on error', async () => {
       const database = db.getDatabase()
-      
+
       // Count initial projects
       const initialCount = Object.keys(await projectStorage.readProjects()).length
 
@@ -387,10 +378,8 @@ describe('SQLite Storage Integration Tests', () => {
             created: Date.now(),
             updated: Date.now()
           }
-          
-          const query = database.prepare(
-            'INSERT INTO projects (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)'
-          )
+
+          const query = database.prepare('INSERT INTO projects (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)')
           query.run(String(project1.id), JSON.stringify(project1), Date.now(), Date.now())
 
           // Force an error
@@ -409,7 +398,7 @@ describe('SQLite Storage Integration Tests', () => {
   describe('Performance with Larger Datasets', () => {
     test('should handle bulk inserts efficiently', async () => {
       const startTime = Date.now()
-      
+
       // Create 1000 provider keys
       const keys: Record<string, ProviderKey> = {}
       for (let i = 0; i < 1000; i++) {
@@ -429,10 +418,10 @@ describe('SQLite Storage Integration Tests', () => {
       }
 
       await providerKeyStorage.writeProviderKeys(keys)
-      
+
       const writeTime = Date.now() - startTime
       console.log(`Bulk insert of 1000 keys took ${writeTime}ms`)
-      
+
       // Should complete in reasonable time (less than 1 second)
       expect(writeTime).toBeLessThan(1000)
 
@@ -445,13 +434,13 @@ describe('SQLite Storage Integration Tests', () => {
       // Create test data with varied timestamps
       const baseTime = Date.now() - 1000000 // 1 million ms ago
       const chats: Record<string, Chat> = {}
-      
+
       for (let i = 0; i < 500; i++) {
         const chat: Chat = {
-          id: baseTime + (i * 1000), // Spread over time
+          id: baseTime + i * 1000, // Spread over time
           title: `Performance Test Chat ${i}`,
-          created: baseTime + (i * 1000),
-          updated: baseTime + (i * 1000)
+          created: baseTime + i * 1000,
+          updated: baseTime + i * 1000
         }
         chats[chat.id] = chat
       }
@@ -461,20 +450,20 @@ describe('SQLite Storage Integration Tests', () => {
       // Query by date range (should use index)
       const startRange = baseTime + 100000
       const endRange = baseTime + 200000
-      
+
       const startTime = Date.now()
       const rangeChats = await chatStorage.findChatsByDateRange(startRange, endRange)
       const queryTime = Date.now() - startTime
 
       console.log(`Date range query took ${queryTime}ms`)
-      
+
       // Should be fast due to index
       expect(queryTime).toBeLessThan(50)
-      
+
       // The exact count depends on the range selected
       if (rangeChats.length > 0) {
         expect(rangeChats.length).toBeLessThan(500)
-        
+
         // Verify all results are within the range
         for (const chat of rangeChats) {
           expect(chat.created).toBeGreaterThanOrEqual(startRange)
@@ -560,9 +549,7 @@ describe('SQLite Storage Integration Tests', () => {
       expect(appliedVersions).toContain(2)
 
       // Verify tables were created
-      const query = database.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'test_table_%'"
-      )
+      const query = database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'test_table_%'")
       const tables = query.all() as Array<{ name: string }>
       expect(tables).toHaveLength(2)
     })
@@ -600,10 +587,8 @@ describe('SQLite Storage Integration Tests', () => {
           `)
 
           // Insert sample data
-          const insertQuery = db.prepare(
-            'INSERT INTO legacy_data (id, data, created_at) VALUES (?, ?, ?)'
-          )
-          
+          const insertQuery = db.prepare('INSERT INTO legacy_data (id, data, created_at) VALUES (?, ?, ?)')
+
           for (let i = 1; i <= 5; i++) {
             insertQuery.run(i, `Legacy item ${i}`, Date.now())
           }
@@ -630,13 +615,8 @@ describe('SQLite Storage Integration Tests', () => {
               created: row.created_at,
               updated: row.created_at
             }
-            
-            projectInsert.run(
-              String(project.id),
-              JSON.stringify(project),
-              row.created_at,
-              row.created_at
-            )
+
+            projectInsert.run(String(project.id), JSON.stringify(project), row.created_at, row.created_at)
           }
         }
       }
@@ -659,30 +639,30 @@ describe('SQLite Storage Integration Tests', () => {
         created: Date.now(),
         updated: Date.now()
       }
-      
+
       await chatStorage.writeChats({ [validChat.id]: validChat })
-      
+
       // Verify it was saved
       const chats = await chatStorage.readChats()
       expect(Object.keys(chats)).toHaveLength(1)
-      
+
       // Now test handling of invalid data at the storage level
       try {
         // Try to write invalid chat data (missing required fields)
         const invalidChat = {
-          id: Date.now() + 1,
+          id: Date.now() + 1
           // Missing title, created, updated
         } as any
-        
+
         await chatStorage.writeChats({ [invalidChat.id]: invalidChat })
-        
+
         // Should not reach here
         expect(true).toBe(false)
       } catch (error) {
         // Should catch validation error
         expect(error).toBeDefined()
       }
-      
+
       // Original valid chat should still be there
       const chatsAfterError = await chatStorage.readChats()
       expect(Object.keys(chatsAfterError)).toHaveLength(1)
@@ -692,7 +672,7 @@ describe('SQLite Storage Integration Tests', () => {
     test('should handle database connection errors', async () => {
       // This is hard to test with in-memory database
       // But we can test error handling in storage methods
-      
+
       try {
         // Try to read from a non-existent table
         await db.get('non_existent_table', '123')
@@ -703,9 +683,7 @@ describe('SQLite Storage Integration Tests', () => {
 
       // Verify table was created
       const database = db.getDatabase()
-      const query = database.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='non_existent_table'"
-      )
+      const query = database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='non_existent_table'")
       const result = query.get() as { name: string } | undefined
       expect(result).toBeDefined()
     })
@@ -736,7 +714,7 @@ describe('SQLite Storage Integration Tests', () => {
     test('should restore from backup', async () => {
       // Create and backup data
       const originalData = await createTestData()
-      
+
       const backup = {
         chats: await chatStorage.readChats(),
         projects: await projectStorage.readProjects(),
@@ -769,7 +747,7 @@ describe('SQLite Storage Integration Tests', () => {
       expect(Object.keys(await projectStorage.readProjects())).toHaveLength(2)
       expect(Object.keys(await promptStorage.readPrompts())).toHaveLength(1)
       expect(Object.keys(await providerKeyStorage.readProviderKeys())).toHaveLength(2)
-      expect((await promptStorage.readPromptProjects())).toHaveLength(1)
+      expect(await promptStorage.readPromptProjects()).toHaveLength(1)
     })
   })
 
@@ -835,7 +813,7 @@ describe('SQLite Storage Integration Tests', () => {
   describe('MCP Storage Integration', () => {
     test('should handle MCP server configurations', async () => {
       const projectId = Date.now() - 1000
-      
+
       const configData = {
         projectId: projectId,
         name: 'Test MCP Server',
@@ -859,7 +837,7 @@ describe('SQLite Storage Integration Tests', () => {
       expect(config.id).toBeDefined()
       expect(config.name).toBe('Test MCP Server')
       expect(config.projectId).toBe(projectId)
-      
+
       const saved = await mcpServerConfigStorage.get(config.id)
       expect(saved).toBeDefined()
       expect(saved?.name).toBe('Test MCP Server')
@@ -873,7 +851,7 @@ describe('SQLite Storage Integration Tests', () => {
 
     test('should track MCP server states', async () => {
       const serverId = Date.now()
-      
+
       // MCP server states are runtime state, stored in memory
       // The schema doesn't include id/created/updated fields, so we need to handle this specially
       const stateData = {
@@ -887,10 +865,10 @@ describe('SQLite Storage Integration Tests', () => {
 
       // For MemoryAdapter with strict schema, we can use the adapter directly
       const adapter = (mcpServerStateStorage as any).adapter as MemoryAdapter<any>
-      
+
       // Create with serverId as the key
       await adapter.write(serverId, stateData)
-      
+
       // Read it back
       const state = await adapter.read(serverId)
       expect(state).toBeDefined()
@@ -951,12 +929,12 @@ describe('SQLite Storage Integration Tests', () => {
       // Verify tools and resources were stored
       expect(tool).toBeDefined()
       expect(resource).toBeDefined()
-      
+
       // Since we're using memory adapter in test mode, we can verify by getting the items
       const savedTool = await mcpToolStorage.get(toolData.id)
       expect(savedTool).toBeDefined()
       expect(savedTool?.serverId).toBe(serverId)
-      
+
       const savedResource = await mcpResourceStorage.get(resourceData.uri)
       expect(savedResource).toBeDefined()
       expect(savedResource?.serverId).toBe(serverId)
@@ -979,7 +957,7 @@ describe('SQLite Storage Integration Tests', () => {
       // Verify execution was stored
       expect(execution).toBeDefined()
       expect(execution.id).toBeDefined()
-      
+
       const savedExecution = await mcpToolExecutionStorage.get(execution.id)
       expect(savedExecution).toBeDefined()
       expect(savedExecution?.status).toBe('success')
@@ -1014,7 +992,7 @@ describe('SQLite Storage Integration Tests', () => {
 
       // Cache reads should be faster (though this might be minimal with in-memory DB)
       console.log(`First read: ${time1}ms, Second read: ${time2}ms`)
-      
+
       // Verify data consistency
       expect(read1[project.id]).toEqual(read2[project.id])
     })
@@ -1025,7 +1003,7 @@ describe('SQLite Storage Integration Tests', () => {
       const baseTime = Date.now() - 1000000
 
       for (let i = 0; i < 100; i++) {
-        const timestamp = baseTime + (i * 1000)
+        const timestamp = baseTime + i * 1000
         const project: Project = {
           id: timestamp,
           name: `Index Test ${i}`,
@@ -1040,7 +1018,7 @@ describe('SQLite Storage Integration Tests', () => {
       await projectStorage.writeProjects(projects)
 
       // Wait a bit to ensure all writes are complete
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       // Use findByDateRange which should leverage the created_at index
       const rangeStart = baseTime + 25000
@@ -1056,14 +1034,13 @@ describe('SQLite Storage Integration Tests', () => {
 
       console.log(`Indexed query returned ${results.length} results in ${queryTime}ms`)
       console.log(`Query range: ${rangeStart} to ${rangeEnd}`)
-      
+
       // With 100 projects spread over 100 seconds (100,000ms), querying 50 seconds should return ~50 results
       expect(results.length).toBeGreaterThanOrEqual(45) // Allow some tolerance
       expect(results.length).toBeLessThanOrEqual(55)
     })
   })
 })
-
 
 // Helper function to create test data
 async function createTestData() {

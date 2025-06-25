@@ -50,7 +50,10 @@ export function getMCPClientManager(): MCPClientManager {
 }
 
 // MCP Server Config CRUD operations
-export async function createMCPServerConfig(projectId: number, data: CreateMCPServerConfigBody): Promise<MCPServerConfig> {
+export async function createMCPServerConfig(
+  projectId: number,
+  data: CreateMCPServerConfigBody
+): Promise<MCPServerConfig> {
   try {
     // Verify project exists
     await getProjectById(projectId)
@@ -91,11 +94,11 @@ export async function createMCPServerConfig(projectId: number, data: CreateMCPSe
 
 export async function getMCPServerConfigById(configId: number): Promise<MCPServerConfig> {
   const config = await mcpStorage.getMCPServerConfig(configId)
-  
+
   if (!config) {
     throw new ApiError(404, `MCP server config not found with ID ${configId}`, 'MCP_CONFIG_NOT_FOUND')
   }
-  
+
   return config
 }
 
@@ -103,7 +106,7 @@ export async function listMCPServerConfigs(projectId: number): Promise<MCPServer
   try {
     // Verify project exists
     await getProjectById(projectId)
-    
+
     return await mcpStorage.getProjectMCPServerConfigs(projectId)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -115,17 +118,20 @@ export async function listMCPServerConfigs(projectId: number): Promise<MCPServer
   }
 }
 
-export async function updateMCPServerConfig(configId: number, data: UpdateMCPServerConfigBody): Promise<MCPServerConfig> {
+export async function updateMCPServerConfig(
+  configId: number,
+  data: UpdateMCPServerConfigBody
+): Promise<MCPServerConfig> {
   try {
     const existing = await getMCPServerConfigById(configId)
     const updated = await mcpStorage.updateMCPServerConfig(configId, data)
-    
+
     if (!updated) {
       throw new ApiError(404, `MCP server config not found with ID ${configId}`, 'MCP_CONFIG_NOT_FOUND')
     }
 
     const manager = getMCPClientManager()
-    
+
     // Handle state changes based on update
     if (existing.enabled && !updated.enabled) {
       // Server was disabled, stop it
@@ -160,10 +166,10 @@ export async function updateMCPServerConfig(configId: number, data: UpdateMCPSer
 export async function deleteMCPServerConfig(configId: number): Promise<boolean> {
   try {
     const manager = getMCPClientManager()
-    
+
     // Stop the server if running
     await manager.stopServer(configId)
-    
+
     // Delete from storage
     return await mcpStorage.deleteMCPServerConfig(configId)
   } catch (error) {
@@ -180,14 +186,14 @@ export async function deleteMCPServerConfig(configId: number): Promise<boolean> 
 export async function startMCPServer(configId: number): Promise<MCPServerState> {
   try {
     const config = await getMCPServerConfigById(configId)
-    
+
     if (!config.enabled) {
       throw new ApiError(400, 'Cannot start disabled MCP server', 'MCP_SERVER_DISABLED')
     }
 
     const manager = getMCPClientManager()
     await manager.startServer(config)
-    
+
     return manager.getServerState(configId)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -203,7 +209,7 @@ export async function stopMCPServer(configId: number): Promise<MCPServerState> {
   try {
     const manager = getMCPClientManager()
     await manager.stopServer(configId)
-    
+
     return manager.getServerState(configId)
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -225,7 +231,7 @@ export async function listMCPTools(projectId: number): Promise<MCPTool[]> {
   try {
     // Verify project exists
     await getProjectById(projectId)
-    
+
     const manager = getMCPClientManager()
     return await manager.listAllTools(projectId)
   } catch (error) {
@@ -238,14 +244,17 @@ export async function listMCPTools(projectId: number): Promise<MCPTool[]> {
   }
 }
 
-export async function executeMCPTool(projectId: number, request: MCPToolExecutionRequest): Promise<MCPToolExecutionResult> {
+export async function executeMCPTool(
+  projectId: number,
+  request: MCPToolExecutionRequest
+): Promise<MCPToolExecutionResult> {
   try {
     // Verify project exists
     await getProjectById(projectId)
-    
+
     // Validate request
     const validatedRequest = MCPToolExecutionRequestSchema.parse(request)
-    
+
     // Verify the server belongs to this project
     const config = await getMCPServerConfigById(validatedRequest.serverId)
     if (config.projectId !== projectId) {
@@ -308,7 +317,7 @@ export async function listMCPResources(projectId: number): Promise<MCPResource[]
   try {
     // Verify project exists
     await getProjectById(projectId)
-    
+
     const manager = getMCPClientManager()
     return await manager.listAllResources(projectId)
   } catch (error) {
@@ -325,7 +334,7 @@ export async function readMCPResource(projectId: number, serverId: number, uri: 
   try {
     // Verify project exists
     await getProjectById(projectId)
-    
+
     // Verify the server belongs to this project
     const config = await getMCPServerConfigById(serverId)
     if (config.projectId !== projectId) {
@@ -360,12 +369,12 @@ export async function cleanupProjectMCPServers(projectId: number): Promise<void>
   try {
     const configs = await listMCPServerConfigs(projectId)
     const manager = getMCPClientManager()
-    
+
     // Stop all servers for this project
     for (const config of configs) {
       await manager.stopServer(config.id)
     }
-    
+
     // Delete all MCP data for this project
     await mcpStorage.deleteProjectMCPData(projectId)
   } catch (error) {

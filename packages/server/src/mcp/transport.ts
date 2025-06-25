@@ -9,12 +9,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import type { Context } from 'hono'
 import { ApiError } from '@octoprompt/shared'
-import {
-  getMCPClientManager,
-  getProjectFiles,
-  getProjectById,
-  suggestFiles
-} from '@octoprompt/services'
+import { getMCPClientManager, getProjectFiles, getProjectById, suggestFiles } from '@octoprompt/services'
 import { BUILTIN_TOOLS, getToolByName } from './tools-registry'
 
 // JSON-RPC 2.0 message types
@@ -77,17 +72,20 @@ function generateSessionId(): string {
 }
 
 // Session cleanup (remove sessions older than 1 hour)
-setInterval(() => {
-  const now = Date.now()
-  const oneHour = 60 * 60 * 1000
+setInterval(
+  () => {
+    const now = Date.now()
+    const oneHour = 60 * 60 * 1000
 
-  for (const [sessionId, session] of sessions.entries()) {
-    if (now - session.lastActivity > oneHour) {
-      sessions.delete(sessionId)
-      console.log(`[MCP] Cleaned up expired session: ${sessionId}`)
+    for (const [sessionId, session] of sessions.entries()) {
+      if (now - session.lastActivity > oneHour) {
+        sessions.delete(sessionId)
+        console.log(`[MCP] Cleaned up expired session: ${sessionId}`)
+      }
     }
-  }
-}, 5 * 60 * 1000) // Check every 5 minutes
+  },
+  5 * 60 * 1000
+) // Check every 5 minutes
 
 // Create SSE response with session ID in headers
 function createSSEResponse(messages: JSONRPCMessage[], sessionId?: string): Response {
@@ -104,7 +102,7 @@ function createSSEResponse(messages: JSONRPCMessage[], sessionId?: string): Resp
   const headers: Record<string, string> = {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Mcp-Session-Id',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
@@ -216,11 +214,7 @@ async function handleJSONRPCRequest(
 }
 
 // Initialize MCP session
-async function handleInitialize(
-  id: string | number,
-  params: any,
-  projectId?: string
-): Promise<JSONRPCResponse> {
+async function handleInitialize(id: string | number, params: any, projectId?: string): Promise<JSONRPCResponse> {
   const { capabilities, clientInfo } = params || {}
 
   const sessionId = generateSessionId()
@@ -255,7 +249,7 @@ async function handleInitialize(
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'octoprompt-mcp',
-        version: '0.5.4'
+        version: '0.6.0'
       },
       _meta: { sessionId } // Include session ID for client reference
     }
@@ -271,7 +265,7 @@ async function handleToolsList(
 ): Promise<JSONRPCResponse> {
   try {
     // Return OctoPrompt's built-in MCP tools from shared registry
-    const mcpTools = BUILTIN_TOOLS.map(tool => ({
+    const mcpTools = BUILTIN_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema
@@ -288,16 +282,20 @@ async function handleToolsList(
             description: `[External] ${tool.description}`,
             inputSchema: tool.inputSchema || {
               type: 'object' as const,
-              properties: tool.parameters?.reduce((acc, param) => {
-                acc[param.name] = {
-                  type: param.type,
-                  description: param.description,
-                  ...(param.enum && { enum: param.enum }),
-                  ...(param.default !== undefined && { default: param.default })
-                }
-                return acc
-              }, {} as Record<string, any>) || {},
-              required: tool.parameters?.filter(p => p.required).map(p => p.name) || []
+              properties:
+                tool.parameters?.reduce(
+                  (acc, param) => {
+                    acc[param.name] = {
+                      type: param.type,
+                      description: param.description,
+                      ...(param.enum && { enum: param.enum }),
+                      ...(param.default !== undefined && { default: param.default })
+                    }
+                    return acc
+                  },
+                  {} as Record<string, any>
+                ) || {},
+              required: tool.parameters?.filter((p) => p.required).map((p) => p.name) || []
             }
           }
           mcpTools.push(externalTool as any)
@@ -362,7 +360,7 @@ async function handleToolsCall(
 
       const externalToolName = name.replace('external_', '')
       const tools = await getMCPClientManager().listAllTools(parseInt(projectId))
-      const tool = tools.find(t => t.name === externalToolName)
+      const tool = tools.find((t) => t.name === externalToolName)
 
       if (!tool) {
         return {
@@ -376,12 +374,14 @@ async function handleToolsCall(
       }
 
       const result = await getMCPClientManager().executeTool(tool.serverId, externalToolName, args || {})
-      const content = Array.isArray(result) ? result : [
-        {
-          type: 'text',
-          text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
-        }
-      ]
+      const content = Array.isArray(result)
+        ? result
+        : [
+          {
+            type: 'text',
+            text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+          }
+        ]
 
       return {
         jsonrpc: '2.0',
@@ -409,10 +409,12 @@ async function handleToolsCall(
       const toolResult = await tool.handler(args || {}, projectId ? parseInt(projectId) : undefined)
       result = toolResult.content
     } catch (error) {
-      result = [{
-        type: 'text',
-        text: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`
-      }]
+      result = [
+        {
+          type: 'text',
+          text: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`
+        }
+      ]
     }
 
     return {
@@ -466,14 +468,18 @@ async function handleResourcesList(
         })
 
         // Add individual file resources (limit to first 10 for performance)
-        const fileResources = (files || []).slice(0, 10).map(file => ({
+        const fileResources = (files || []).slice(0, 10).map((file) => ({
           uri: `octoprompt://projects/${projectId}/files/${file.id}`,
           name: file.name,
           description: `File: ${file.path} (${file.size} bytes)`,
-          mimeType: file.extension === '.json' ? 'application/json' :
-            file.extension === '.md' ? 'text/markdown' :
-              file.extension.match(/\.(js|ts|jsx|tsx)$/) ? 'text/javascript' :
-                'text/plain'
+          mimeType:
+            file.extension === '.json'
+              ? 'application/json'
+              : file.extension === '.md'
+                ? 'text/markdown'
+                : file.extension.match(/\.(js|ts|jsx|tsx)$/)
+                  ? 'text/javascript'
+                  : 'text/plain'
         }))
 
         mcpResources.push(...fileResources)
@@ -486,7 +492,7 @@ async function handleResourcesList(
     if (projectId) {
       try {
         const externalResources = await getMCPClientManager().listAllResources(parseInt(projectId))
-        const externalMcpResources = externalResources.map(resource => ({
+        const externalMcpResources = externalResources.map((resource) => ({
           uri: `external://${resource.uri}`,
           name: `[External] ${resource.name}`,
           description: resource.description,
@@ -553,7 +559,7 @@ async function handleResourcesRead(
 
       const externalUri = uri.replace('external://', '')
       const resources = await getMCPClientManager().listAllResources(parseInt(projectId))
-      const resource = resources.find(r => r.uri === externalUri)
+      const resource = resources.find((r) => r.uri === externalUri)
 
       if (!resource) {
         return {
@@ -571,13 +577,15 @@ async function handleResourcesRead(
         jsonrpc: '2.0',
         id,
         result: {
-          contents: Array.isArray(content) ? content : [
-            {
-              uri,
-              mimeType: resource.mimeType || 'text/plain',
-              text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
-            }
-          ]
+          contents: Array.isArray(content)
+            ? content
+            : [
+              {
+                uri,
+                mimeType: resource.mimeType || 'text/plain',
+                text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+              }
+            ]
         }
       }
     }
@@ -628,16 +636,20 @@ async function handleResourcesRead(
                 {
                   uri,
                   mimeType: 'application/json',
-                  text: JSON.stringify({
-                    message: 'This resource requires a prompt parameter. Use the suggest_files tool instead.',
-                    example: {
-                      tool: 'suggest_files',
-                      arguments: {
-                        prompt: 'components for user authentication',
-                        limit: 10
+                  text: JSON.stringify(
+                    {
+                      message: 'This resource requires a prompt parameter. Use the suggest_files tool instead.',
+                      example: {
+                        tool: 'suggest_files',
+                        arguments: {
+                          prompt: 'components for user authentication',
+                          limit: 10
+                        }
                       }
-                    }
-                  }, null, 2)
+                    },
+                    null,
+                    2
+                  )
                 }
               ]
             }
@@ -646,7 +658,7 @@ async function handleResourcesRead(
           // Individual file resource
           const fileId = parseInt(urlParts[3])
           const files = await getProjectFiles(parseInt(projectId))
-          const file = files?.find(f => f.id === fileId)
+          const file = files?.find((f) => f.id === fileId)
 
           if (!file) {
             return {
@@ -666,10 +678,14 @@ async function handleResourcesRead(
               contents: [
                 {
                   uri,
-                  mimeType: file.extension === '.json' ? 'application/json' :
-                    file.extension === '.md' ? 'text/markdown' :
-                      file.extension.match(/\.(js|ts|jsx|tsx)$/) ? 'text/javascript' :
-                        'text/plain',
+                  mimeType:
+                    file.extension === '.json'
+                      ? 'application/json'
+                      : file.extension === '.md'
+                        ? 'text/markdown'
+                        : file.extension.match(/\.(js|ts|jsx|tsx)$/)
+                          ? 'text/javascript'
+                          : 'text/plain',
                   text: file.content
                 }
               ]
@@ -771,11 +787,7 @@ async function handlePromptsGet(
 }
 
 // Set logging level
-async function handleLoggingSetLevel(
-  id: string | number,
-  params: any,
-  sessionId?: string
-): Promise<JSONRPCResponse> {
+async function handleLoggingSetLevel(id: string | number, params: any, sessionId?: string): Promise<JSONRPCResponse> {
   try {
     const { level } = params
 
@@ -830,11 +842,14 @@ async function handlePOSTRequest(c: Context): Promise<Response> {
       const parsed = JSON.parse(body)
       messages = Array.isArray(parsed) ? parsed : [parsed]
     } catch {
-      return Response.json({
-        jsonrpc: '2.0',
-        id: null,
-        error: JSON_RPC_ERRORS.PARSE_ERROR
-      }, { status: 400 })
+      return Response.json(
+        {
+          jsonrpc: '2.0',
+          id: null,
+          error: JSON_RPC_ERRORS.PARSE_ERROR
+        },
+        { status: 400 }
+      )
     }
 
     const responses: JSONRPCResponse[] = []
@@ -882,14 +897,17 @@ async function handlePOSTRequest(c: Context): Promise<Response> {
     return new Response(JSON.stringify(result), { headers })
   } catch (error) {
     console.error('[MCP] POST request error:', error)
-    return Response.json({
-      jsonrpc: '2.0',
-      id: null,
-      error: {
-        ...JSON_RPC_ERRORS.INTERNAL_ERROR,
-        data: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }, { status: 500 })
+    return Response.json(
+      {
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          ...JSON_RPC_ERRORS.INTERNAL_ERROR,
+          data: error instanceof Error ? error.message : 'Unknown error'
+        }
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -945,7 +963,7 @@ export async function handleHTTPTransport(c: Context): Promise<Response> {
 
 // Session management exports
 export function getActiveSessions() {
-  return Array.from(sessions.values()).map(session => ({
+  return Array.from(sessions.values()).map((session) => ({
     id: session.id,
     projectId: session.projectId,
     createdAt: session.createdAt,

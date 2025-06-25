@@ -42,10 +42,7 @@ const handleApiError = (error: unknown, c: any) => {
       error.status
     )
   }
-  return c.json(
-    { success: false, error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } },
-    500
-  )
+  return c.json({ success: false, error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } }, 500)
 }
 
 // MCP Server Config Routes
@@ -608,11 +605,13 @@ const getBuiltinToolsRoute = createRoute({
           schema: z.object({
             success: z.boolean(),
             data: z.object({
-              tools: z.array(z.object({
-                name: z.string(),
-                description: z.string(),
-                inputSchema: z.any()
-              })),
+              tools: z.array(
+                z.object({
+                  name: z.string(),
+                  description: z.string(),
+                  inputSchema: z.any()
+                })
+              ),
               toolNames: z.array(z.string()),
               totalCount: z.number()
             })
@@ -626,7 +625,7 @@ const getBuiltinToolsRoute = createRoute({
 
 mcpRoutes.openapi(getBuiltinToolsRoute, async (c) => {
   try {
-    const tools = BUILTIN_TOOLS.map(tool => ({
+    const tools = BUILTIN_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema
@@ -683,12 +682,14 @@ const getMCPSessionsRoute = createRoute({
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            data: z.array(z.object({
-              id: z.string(),
-              projectId: z.number().optional(),
-              createdAt: z.number(),
-              lastActivity: z.number()
-            }))
+            data: z.array(
+              z.object({
+                id: z.string(),
+                projectId: z.number().optional(),
+                createdAt: z.number(),
+                lastActivity: z.number()
+              })
+            )
           })
         }
       },
@@ -818,7 +819,7 @@ mcpRoutes.openapi(suggestFilesResourceRoute, async (c) => {
       content: {
         prompt,
         limit,
-        suggestions: suggestedFiles.map(file => ({
+        suggestions: suggestedFiles.map((file) => ({
           id: file.id,
           name: file.name,
           path: file.path,
@@ -899,6 +900,143 @@ mcpRoutes.openapi(getCompactProjectSummaryRoute, async (c) => {
 })
 
 // ====================
+// TICKET MCP ROUTES
+// ====================
+
+/**
+ * List tickets as MCP resource
+ */
+const listTicketsResourceRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/mcp/tickets',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    query: z.object({
+      status: z.enum(['open', 'in_progress', 'closed']).optional()
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              uri: z.string(),
+              name: z.string(),
+              description: z.string(),
+              mimeType: z.string(),
+              content: z.object({
+                tickets: z.array(z.any())
+              })
+            })
+          })
+        }
+      },
+      description: 'Tickets resource content'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      },
+      description: 'Project not found'
+    }
+  }
+})
+
+mcpRoutes.openapi(listTicketsResourceRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { status } = c.req.valid('query')
+
+    const { listTicketsWithTaskCount } = await import('@octoprompt/services')
+    const tickets = await listTicketsWithTaskCount(projectId, status)
+
+    const resourceContent = {
+      uri: `octoprompt://projects/${projectId}/tickets`,
+      name: 'Project Tickets',
+      description: `Tickets for project ${projectId}${status ? ` filtered by status: ${status}` : ''}`,
+      mimeType: 'application/json',
+      content: { tickets }
+    }
+
+    return c.json({ success: true, data: resourceContent })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+/**
+ * Get AI-suggested tasks for a ticket
+ */
+const suggestTicketTasksRoute = createRoute({
+  method: 'post',
+  path: '/api/tickets/{ticketId}/mcp/suggest-tasks',
+  request: {
+    params: z.object({
+      ticketId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            userContext: z.string().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              ticketId: z.number(),
+              suggestions: z.array(z.string())
+            })
+          })
+        }
+      },
+      description: 'AI-suggested tasks'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: ApiErrorResponseSchema
+        }
+      },
+      description: 'Ticket not found'
+    }
+  }
+})
+
+mcpRoutes.openapi(suggestTicketTasksRoute, async (c) => {
+  try {
+    const { ticketId } = c.req.valid('param')
+    const { userContext } = c.req.valid('json')
+
+    const { suggestTasksForTicket } = await import('@octoprompt/services')
+    const suggestions = await suggestTasksForTicket(ticketId, userContext)
+
+    return c.json({
+      success: true,
+      data: {
+        ticketId,
+        suggestions
+      }
+    })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+
+// ====================
 // MCP TESTING ENDPOINTS
 // ====================
 
@@ -953,7 +1091,7 @@ mcpRoutes.openapi(testMCPConnectionRoute, async (c) => {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Accept': 'text/event-stream',
+          Accept: 'text/event-stream',
           'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
         },
         signal: AbortSignal.timeout(5000) // 5 second timeout
@@ -1069,7 +1207,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
         },
         body: JSON.stringify({
@@ -1085,7 +1223,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.5.4'
+              version: '0.6.0'
             }
           }
         }),
@@ -1093,7 +1231,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
       })
 
       if (response.ok) {
-        const result = await response.json() as any
+        const result = (await response.json()) as any
         const sessionId = response.headers.get('Mcp-Session-Id')
 
         if (result.error) {
@@ -1198,7 +1336,7 @@ mcpRoutes.openapi(testMCPMethodRoute, async (c) => {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'User-Agent': 'OctoPrompt-MCP-Tester/1.0'
       }
 
@@ -1266,17 +1404,23 @@ const getMCPTestDataRoute = createRoute({
                 main: z.string(),
                 projectSpecific: z.string()
               }),
-              sampleMethods: z.array(z.object({
-                method: z.string(),
-                description: z.string(),
-                params: z.any(),
-                example: z.any()
-              })),
-              sampleFiles: z.array(z.object({
-                path: z.string(),
-                name: z.string(),
-                id: z.number()
-              })).optional()
+              sampleMethods: z.array(
+                z.object({
+                  method: z.string(),
+                  description: z.string(),
+                  params: z.any(),
+                  example: z.any()
+                })
+              ),
+              sampleFiles: z
+                .array(
+                  z.object({
+                    path: z.string(),
+                    name: z.string(),
+                    id: z.number()
+                  })
+                )
+                .optional()
             })
           })
         }
@@ -1295,7 +1439,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
 
     // Get some sample files from the project
     const projectFiles = await projectService.getProjectFiles(projectId)
-    const sampleFiles = (projectFiles || []).slice(0, 5).map(file => ({
+    const sampleFiles = (projectFiles || []).slice(0, 5).map((file) => ({
       path: file.path,
       name: file.name,
       id: file.id
@@ -1323,7 +1467,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.5.4'
+              version: '0.6.0'
             }
           },
           example: {
@@ -1333,7 +1477,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             params: {
               protocolVersion: '2024-11-05',
               capabilities: { tools: true, resources: true },
-              clientInfo: { name: 'octoprompt-tester', version: '0.5.4' }
+              clientInfo: { name: 'octoprompt-tester', version: '0.6.0' }
             }
           }
         },

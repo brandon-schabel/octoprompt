@@ -41,7 +41,10 @@ class LRUCache<T> {
   private cache: Map<string | number, { value: T; timestamp: number }> = new Map()
   private accessOrder: (string | number)[] = []
 
-  constructor(private maxSize: number, private ttl?: number) { }
+  constructor(
+    private maxSize: number,
+    private ttl?: number
+  ) {}
 
   get(key: string | number): T | null {
     const entry = this.cache.get(key)
@@ -113,7 +116,7 @@ interface Index<T> {
 class HashIndex<T> implements Index<T> {
   private index: Map<any, Set<string | number>> = new Map()
 
-  constructor(private field: string) { }
+  constructor(private field: string) {}
 
   add(id: string | number, item: T): void {
     const value = this.getValue(item)
@@ -157,7 +160,7 @@ class HashIndex<T> implements Index<T> {
 class BTreeIndex<T> implements Index<T> {
   private entries: Array<{ value: any; ids: Set<string | number> }> = []
 
-  constructor(private field: string) { }
+  constructor(private field: string) {}
 
   add(id: string | number, item: T): void {
     const value = this.getValue(item)
@@ -179,7 +182,7 @@ class BTreeIndex<T> implements Index<T> {
       entry.ids.delete(id)
     }
     // Remove empty entries
-    this.entries = this.entries.filter(e => e.ids.size > 0)
+    this.entries = this.entries.filter((e) => e.ids.size > 0)
   }
 
   find(value: any): (string | number)[] {
@@ -376,9 +379,8 @@ export class StorageV2<T extends Record<string, any>> {
     // Initialize indexes
     if (config.indexes) {
       for (const indexConfig of config.indexes) {
-        const index = indexConfig.type === 'hash'
-          ? new HashIndex<T>(indexConfig.field)
-          : new BTreeIndex<T>(indexConfig.field)
+        const index =
+          indexConfig.type === 'hash' ? new HashIndex<T>(indexConfig.field) : new BTreeIndex<T>(indexConfig.field)
         this.indexes.set(indexConfig.field, index)
       }
     }
@@ -433,8 +435,9 @@ export class StorageV2<T extends Record<string, any>> {
     const testData = { ...data, id: sampleId, created: 1, updated: 1 }
     const testResult = await this.schema.safeParse(testData)
 
-    const expectsStringId = !testResult.success &&
-      testResult.error.errors.some(e => e.path[0] === 'id' && e.code === 'invalid_type' && e.expected === 'string')
+    const expectsStringId =
+      !testResult.success &&
+      testResult.error.errors.some((e) => e.path[0] === 'id' && e.code === 'invalid_type' && e.expected === 'string')
 
     const id = expectsStringId ? await this.generateStringId() : await this.generateId()
     const now = Date.now()
@@ -587,13 +590,17 @@ export class StorageV2<T extends Record<string, any>> {
 
   private async generateStringId(): Promise<string> {
     const timestamp = Date.now()
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+    const random = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, '0')
     let id = `${timestamp}_${random}`
 
     // Handle collisions
     let attempts = 0
     while (await this.adapter.exists(id)) {
-      const newRandom = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+      const newRandom = Math.floor(Math.random() * 10000)
+        .toString()
+        .padStart(4, '0')
       id = `${timestamp}_${newRandom}_${attempts}`
       attempts++
 

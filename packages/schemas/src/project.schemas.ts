@@ -152,6 +152,79 @@ export const ProjectSummaryResponseSchema = z
   })
   .openapi('ProjectSummaryResponse')
 
+// Project Statistics Schemas
+export const ProjectStatisticsSchema = z
+  .object({
+    fileStats: z.object({
+      totalFiles: z.number(),
+      totalSize: z.number(),
+      filesByType: z.record(z.string(), z.number()),
+      sizeByType: z.record(z.string(), z.number()),
+      filesByCategory: z.object({
+        source: z.number(),
+        tests: z.number(),
+        docs: z.number(),
+        config: z.number(),
+        other: z.number()
+      }),
+      filesWithSummaries: z.number(),
+      averageSummaryLength: z.number()
+    }),
+    ticketStats: z.object({
+      totalTickets: z.number(),
+      ticketsByStatus: z.object({
+        open: z.number(),
+        in_progress: z.number(),
+        closed: z.number()
+      }),
+      ticketsByPriority: z.object({
+        low: z.number(),
+        normal: z.number(),
+        high: z.number()
+      }),
+      averageTasksPerTicket: z.number()
+    }),
+    taskStats: z.object({
+      totalTasks: z.number(),
+      completedTasks: z.number(),
+      completionRate: z.number(),
+      tasksByTicket: z.array(
+        z.object({
+          ticketId: z.number(),
+          ticketTitle: z.string(),
+          totalTasks: z.number(),
+          completedTasks: z.number()
+        })
+      )
+    }),
+    promptStats: z.object({
+      totalPrompts: z.number(),
+      totalTokens: z.number(),
+      averagePromptLength: z.number(),
+      promptTypes: z.record(z.string(), z.number())
+    }),
+    activityStats: z.object({
+      recentUpdates: z.number(),
+      lastUpdateTime: z.number(),
+      creationTrend: z.array(
+        z.object({
+          date: z.string(),
+          files: z.number(),
+          tickets: z.number(),
+          tasks: z.number()
+        })
+      )
+    })
+  })
+  .openapi('ProjectStatistics')
+
+export const ProjectStatisticsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: ProjectStatisticsSchema
+  })
+  .openapi('ProjectStatisticsResponse')
+
 // Define ProjectFileMapSchema using z.map
 export const ProjectFileMapSchema = z
   .map(z.number(), ProjectFileSchema)
@@ -181,4 +254,6 @@ export type ProjectListResponse = z.infer<typeof ProjectListResponseSchema>
 export type FileListResponse = z.infer<typeof FileListResponseSchema>
 export type ProjectFileWithoutContentListResponse = z.infer<typeof ProjectFileWithoutContentListResponseSchema>
 export type FileResponse = z.infer<typeof FileResponseSchema>
+export type ProjectStatistics = z.infer<typeof ProjectStatisticsSchema>
+export type ProjectStatisticsResponse = z.infer<typeof ProjectStatisticsResponseSchema>
 export type ProjectSummaryResponse = z.infer<typeof ProjectSummaryResponseSchema>

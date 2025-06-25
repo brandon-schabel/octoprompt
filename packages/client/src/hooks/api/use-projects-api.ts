@@ -4,6 +4,7 @@ export {
   useGetProjectFiles,
   useGetProjectFilesWithoutContent,
   useGetProjectSummary,
+  useGetProjectStatistics,
   useCreateProject,
   useUpdateProject,
   useDeleteProject,

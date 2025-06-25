@@ -8,17 +8,9 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -33,7 +25,7 @@ const mcpServerFormSchema = z.object({
   args: z.string().optional().default(''),
   env: z.string().optional().default(''),
   enabled: z.boolean().default(true),
-  autoStart: z.boolean().default(false),
+  autoStart: z.boolean().default(false)
 })
 
 type MCPServerFormValues = z.infer<typeof mcpServerFormSchema>
@@ -45,12 +37,7 @@ interface MCPServerDialogProps {
   editingServer?: MCPServerConfig | null
 }
 
-export function MCPServerDialog({ 
-  projectId, 
-  open, 
-  onOpenChange, 
-  editingServer 
-}: MCPServerDialogProps) {
+export function MCPServerDialog({ projectId, open, onOpenChange, editingServer }: MCPServerDialogProps) {
   const isEditing = !!editingServer
   const createMutation = useCreateMCPServerConfig(projectId)
   const updateMutation = useUpdateMCPServerConfig(projectId, editingServer?.id || 0)
@@ -63,8 +50,8 @@ export function MCPServerDialog({
       args: '',
       env: '',
       enabled: true,
-      autoStart: false,
-    },
+      autoStart: false
+    }
   })
 
   useEffect(() => {
@@ -77,7 +64,7 @@ export function MCPServerDialog({
           .map(([key, value]) => `${key}=${value}`)
           .join('\n'),
         enabled: editingServer.enabled,
-        autoStart: editingServer.autoStart,
+        autoStart: editingServer.autoStart
       })
     } else {
       form.reset({
@@ -86,7 +73,7 @@ export function MCPServerDialog({
         args: '',
         env: '',
         enabled: true,
-        autoStart: false,
+        autoStart: false
       })
     }
   }, [editingServer, form])
@@ -95,11 +82,11 @@ export function MCPServerDialog({
     try {
       // Parse args from string to array
       const args = values.args?.trim() ? values.args.trim().split(/\s+/) : []
-      
+
       // Parse env from string to object
       const env: Record<string, string> = {}
       if (values.env?.trim()) {
-        values.env.split('\n').forEach(line => {
+        values.env.split('\n').forEach((line) => {
           const [key, ...valueParts] = line.split('=')
           if (key && valueParts.length > 0) {
             env[key.trim()] = valueParts.join('=').trim()
@@ -113,7 +100,7 @@ export function MCPServerDialog({
         args,
         env,
         enabled: values.enabled,
-        autoStart: values.autoStart,
+        autoStart: values.autoStart
       }
 
       if (isEditing) {
@@ -132,30 +119,24 @@ export function MCPServerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className='sm:max-w-[600px]'>
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Edit MCP Server' : 'Add MCP Server'}
-          </DialogTitle>
-          <DialogDescription>
-            Configure a Model Context Protocol server for this project
-          </DialogDescription>
+          <DialogTitle>{isEditing ? 'Edit MCP Server' : 'Add MCP Server'}</DialogTitle>
+          <DialogDescription>Configure a Model Context Protocol server for this project</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
             <FormField
               control={form.control}
-              name="name"
+              name='name'
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="File System Tools" {...field} />
+                    <Input placeholder='File System Tools' {...field} />
                   </FormControl>
-                  <FormDescription>
-                    A friendly name for this MCP server
-                  </FormDescription>
+                  <FormDescription>A friendly name for this MCP server</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -163,19 +144,14 @@ export function MCPServerDialog({
 
             <FormField
               control={form.control}
-              name="command"
+              name='command'
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Command</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="npx @modelcontextprotocol/server-filesystem" 
-                      {...field} 
-                    />
+                    <Input placeholder='npx @modelcontextprotocol/server-filesystem' {...field} />
                   </FormControl>
-                  <FormDescription>
-                    The command to start the MCP server
-                  </FormDescription>
+                  <FormDescription>The command to start the MCP server</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -183,19 +159,14 @@ export function MCPServerDialog({
 
             <FormField
               control={form.control}
-              name="args"
+              name='args'
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Arguments (optional)</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="--root /path/to/project" 
-                      {...field} 
-                    />
+                    <Input placeholder='--root /path/to/project' {...field} />
                   </FormControl>
-                  <FormDescription>
-                    Command line arguments separated by spaces
-                  </FormDescription>
+                  <FormDescription>Command line arguments separated by spaces</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -203,44 +174,35 @@ export function MCPServerDialog({
 
             <FormField
               control={form.control}
-              name="env"
+              name='env'
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Environment Variables (optional)</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="NODE_ENV=production&#10;API_KEY=your-key" 
+                    <Textarea
+                      placeholder='NODE_ENV=production&#10;API_KEY=your-key'
                       rows={3}
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    One per line in KEY=value format
-                  </FormDescription>
+                  <FormDescription>One per line in KEY=value format</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="space-y-2">
+            <div className='space-y-2'>
               <FormField
                 control={form.control}
-                name="enabled"
+                name='enabled'
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormItem className='flex flex-row items-start space-x-3 space-y-0'>
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Enabled
-                      </FormLabel>
-                      <FormDescription>
-                        Allow this server to be started
-                      </FormDescription>
+                    <div className='space-y-1 leading-none'>
+                      <FormLabel>Enabled</FormLabel>
+                      <FormDescription>Allow this server to be started</FormDescription>
                     </div>
                   </FormItem>
                 )}
@@ -248,22 +210,15 @@ export function MCPServerDialog({
 
               <FormField
                 control={form.control}
-                name="autoStart"
+                name='autoStart'
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormItem className='flex flex-row items-start space-x-3 space-y-0'>
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Auto-start
-                      </FormLabel>
-                      <FormDescription>
-                        Automatically start when project opens
-                      </FormDescription>
+                    <div className='space-y-1 leading-none'>
+                      <FormLabel>Auto-start</FormLabel>
+                      <FormDescription>Automatically start when project opens</FormDescription>
                     </div>
                   </FormItem>
                 )}
@@ -271,21 +226,17 @@ export function MCPServerDialog({
             </div>
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type='submit' disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting
                   ? isEditing
                     ? 'Updating...'
                     : 'Creating...'
                   : isEditing
-                  ? 'Update'
-                  : 'Create'}
+                    ? 'Update'
+                    : 'Create'}
               </Button>
             </DialogFooter>
           </form>

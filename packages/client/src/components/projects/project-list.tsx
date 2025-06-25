@@ -29,18 +29,18 @@ interface ProjectListProps {
 
 function truncatePath(path: string, maxLength: number = 50): string {
   if (path.length <= maxLength) return path
-  
+
   const parts = path.split('/')
   if (parts.length <= 2) return `...${path.slice(-(maxLength - 3))}`
-  
+
   const firstPart = parts[0]
   const lastPart = parts[parts.length - 1]
   const middleLength = maxLength - firstPart.length - lastPart.length - 6
-  
+
   if (middleLength > 0) {
     return `${firstPart}/.../${lastPart}`
   }
-  
+
   return `.../${lastPart}`.slice(0, maxLength)
 }
 

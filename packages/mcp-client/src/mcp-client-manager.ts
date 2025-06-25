@@ -31,7 +31,7 @@ export class MCPClientManager {
     }
 
     let client = this.clients.get(config.id)
-    
+
     if (!client) {
       client = new MCPClient({
         config,
@@ -60,7 +60,7 @@ export class MCPClientManager {
 
   async stopAllServers(): Promise<void> {
     const stopPromises = Array.from(this.clients.entries()).map(([serverId, client]) =>
-      client.stop().catch(error => {
+      client.stop().catch((error) => {
         console.error(`Error stopping MCP server ${serverId}:`, error)
       })
     )
@@ -76,7 +76,7 @@ export class MCPClientManager {
 
   getServerState(serverId: number): MCPServerState {
     const client = this.clients.get(serverId)
-    
+
     if (!client) {
       return {
         serverId,
@@ -90,7 +90,7 @@ export class MCPClientManager {
 
     const state = client.getState()
     const now = Date.now()
-    
+
     return {
       serverId,
       status: state,
@@ -103,7 +103,7 @@ export class MCPClientManager {
 
   async listAllTools(projectId: number): Promise<MCPTool[]> {
     const tools: MCPTool[] = []
-    
+
     for (const client of this.clients.values()) {
       if (client.getConfig().projectId === projectId && client.getState() === 'running') {
         try {
@@ -129,7 +129,7 @@ export class MCPClientManager {
 
   async listAllResources(projectId: number): Promise<MCPResource[]> {
     const resources: MCPResource[] = []
-    
+
     for (const client of this.clients.values()) {
       if (client.getConfig().projectId === projectId && client.getState() === 'running') {
         try {
@@ -155,10 +155,10 @@ export class MCPClientManager {
 
   // Auto-start servers for a project
   async autoStartProjectServers(configs: MCPServerConfig[]): Promise<void> {
-    const autoStartConfigs = configs.filter(config => config.enabled && config.autoStart)
-    
-    const startPromises = autoStartConfigs.map(config =>
-      this.startServer(config).catch(error => {
+    const autoStartConfigs = configs.filter((config) => config.enabled && config.autoStart)
+
+    const startPromises = autoStartConfigs.map((config) =>
+      this.startServer(config).catch((error) => {
         console.error(`Failed to auto-start MCP server ${config.name}:`, error)
         this.onServerError?.(config.id, error instanceof Error ? error : new Error(String(error)))
       })
@@ -170,7 +170,7 @@ export class MCPClientManager {
   // Get all active servers
   async getActiveServers(): Promise<MCPServerConfig[]> {
     const activeConfigs: MCPServerConfig[] = []
-    
+
     for (const client of this.clients.values()) {
       if (client.getState() === 'running') {
         activeConfigs.push(client.getConfig())

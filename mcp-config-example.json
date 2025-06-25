@@ -1,10 +1,10 @@
 {
-    "mcpServers": {
-        "octoprompt": {
-            "command": "/Users/brandon/Programming/octoprompt/packages/server/mcp-start.sh",
-            "env": {
-                "OCTOPROMPT_PROJECT_ID": "1"
-            }
-        }
+  "mcpServers": {
+    "octoprompt": {
+      "command": "/Users/brandon/Programming/octoprompt/packages/server/mcp-start.sh",
+      "env": {
+        "OCTOPROMPT_PROJECT_ID": "1"
+      }
     }
+  }
 }

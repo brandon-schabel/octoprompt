@@ -11,7 +11,7 @@ describe('Chat Storage (SQLite)', () => {
     // Get database instance and clear tables
     const db = DatabaseManager.getInstance()
     await db.clearAllTables()
-    
+
     testChatId = Date.now()
     testMessageId = testChatId + 1
   })
@@ -127,7 +127,7 @@ describe('Chat Storage (SQLite)', () => {
     // Find by date range
     const foundChats = await chatStorage.findChatsByDateRange(now - 1000, now + 1000)
     expect(foundChats.length).toBeGreaterThan(0)
-    expect(foundChats.some(chat => chat.id === testChatId)).toBe(true)
+    expect(foundChats.some((chat) => chat.id === testChatId)).toBe(true)
   })
 
   it('should count messages for a chat', async () => {

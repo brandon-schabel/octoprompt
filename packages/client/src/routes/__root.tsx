@@ -153,10 +153,10 @@ export const Route = createRootRouteWithContext()({
 
 function RootComponent() {
   const [activeProjectTabId] = useGetActiveProjectTabId()
-  
+
   // Initialize sidecar server for Tauri builds
   const { isStarting, isReady, error: sidecarError } = useSidecarServer()
-  
+
   // Show loading state if server is starting in Tauri
   if (window.__TAURI__ && (isStarting || !isReady)) {
     return (
@@ -168,7 +168,7 @@ function RootComponent() {
       </div>
     )
   }
-  
+
   // Show error if server failed to start in Tauri
   if (window.__TAURI__ && sidecarError) {
     return (
@@ -176,9 +176,7 @@ function RootComponent() {
         <div className='text-center'>
           <div className='mb-4 text-red-500'>Failed to start OctoPrompt server</div>
           <div className='text-sm text-muted-foreground'>{sidecarError}</div>
-          <div className='mt-4 text-xs text-muted-foreground'>
-            Please try restarting the application
-          </div>
+          <div className='mt-4 text-xs text-muted-foreground'>Please try restarting the application</div>
         </div>
       </div>
     )

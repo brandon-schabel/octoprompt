@@ -11,12 +11,14 @@ const UserSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   role: z.enum(['admin', 'user', 'guest']),
-  preferences: z.object({
-    theme: z.enum(['light', 'dark']),
-    notifications: z.boolean(),
-  }).optional(),
+  preferences: z
+    .object({
+      theme: z.enum(['light', 'dark']),
+      notifications: z.boolean()
+    })
+    .optional(),
   created: z.number(),
-  updated: z.number(),
+  updated: z.number()
 })
 
 type User = z.infer<typeof UserSchema>
@@ -24,7 +26,7 @@ type User = z.infer<typeof UserSchema>
 // 2. Create SQLite adapter
 const adapter = new SQLiteAdapter<User>({
   tableName: 'users',
-  dbPath: 'data/app.db', // Or use existing db instance
+  dbPath: 'data/app.db' // Or use existing db instance
 })
 
 // 3. Create StorageV2 instance with SQLite adapter
@@ -32,14 +34,14 @@ const userStorage = new StorageV2<User>({
   adapter,
   schema: UserSchema,
   indexes: [
-    { field: 'email', type: 'hash' },    // Fast email lookups
-    { field: 'role', type: 'hash' },     // Filter by role
-    { field: 'created', type: 'btree' }, // Range queries by date
+    { field: 'email', type: 'hash' }, // Fast email lookups
+    { field: 'role', type: 'hash' }, // Filter by role
+    { field: 'created', type: 'btree' } // Range queries by date
   ],
   cache: {
     maxSize: 100,
-    ttl: 300000, // 5 minutes
-  },
+    ttl: 300000 // 5 minutes
+  }
 })
 
 // 4. Usage examples
@@ -51,8 +53,8 @@ async function examples() {
     role: 'user',
     preferences: {
       theme: 'dark',
-      notifications: true,
-    },
+      notifications: true
+    }
   })
   console.log('Created user:', newUser)
 
@@ -65,7 +67,7 @@ async function examples() {
   console.log('Admin users:', admins)
 
   // Find users created in the last 24 hours
-  const yesterday = Date.now() - (24 * 60 * 60 * 1000)
+  const yesterday = Date.now() - 24 * 60 * 60 * 1000
   const recentUsers = await userStorage.findByRange('created', yesterday, Date.now())
   console.log('Recent users:', recentUsers)
 
@@ -74,8 +76,8 @@ async function examples() {
     name: 'John Smith',
     preferences: {
       theme: 'light',
-      notifications: false,
-    },
+      notifications: false
+    }
   })
   console.log('Updated user:', updated)
 
@@ -83,7 +85,7 @@ async function examples() {
   const batchUsers = [
     { id: 100, data: { ...newUser, id: 100, email: 'user1@example.com' } },
     { id: 101, data: { ...newUser, id: 101, email: 'user2@example.com' } },
-    { id: 102, data: { ...newUser, id: 102, email: 'user3@example.com' } },
+    { id: 102, data: { ...newUser, id: 102, email: 'user3@example.com' } }
   ]
   await adapter.writeBatch(batchUsers)
   console.log('Batch write completed')
@@ -100,29 +102,29 @@ async function examples() {
 async function dbManagerExample() {
   // This adapter integrates with the existing DatabaseManager
   const adapter = new SQLiteDbManagerAdapter<User>('users')
-  
+
   const userStorage = new StorageV2<User>({
     adapter,
     schema: UserSchema,
     indexes: [
       { field: 'email', type: 'hash' },
-      { field: 'role', type: 'hash' },
+      { field: 'role', type: 'hash' }
     ],
     cache: {
       maxSize: 50,
-      ttl: 60000, // 1 minute
-    },
+      ttl: 60000 // 1 minute
+    }
   })
 
   // Usage is the same as with SQLiteAdapter
   const user = await userStorage.create({
     email: 'admin@example.com',
     name: 'Admin User',
-    role: 'admin',
+    role: 'admin'
   })
-  
+
   console.log('Created user with DbManager adapter:', user)
-  
+
   // Can also use DatabaseManager-specific features
   const adminUsers = await adapter.findByJsonField('$.role', 'admin')
   console.log('Admin users via JSON query:', adminUsers)
@@ -132,7 +134,7 @@ async function dbManagerExample() {
 if (import.meta.main) {
   console.log('=== SQLiteAdapter Example ===')
   await examples().catch(console.error)
-  
+
   console.log('\n=== SQLiteDbManagerAdapter Example ===')
   await dbManagerExample().catch(console.error)
 }

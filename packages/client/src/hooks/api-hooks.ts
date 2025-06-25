@@ -221,6 +221,7 @@ const PROJECT_KEYS = {
   files: (projectId: number) => [...PROJECT_KEYS.all, 'files', projectId] as const,
   filesWithoutContent: (projectId: number) => [...PROJECT_KEYS.all, 'filesWithoutContent', projectId] as const,
   summary: (projectId: number) => [...PROJECT_KEYS.all, 'summary', projectId] as const,
+  statistics: (projectId: number) => [...PROJECT_KEYS.all, 'statistics', projectId] as const,
   fileVersions: (projectId: number, originalFileId: number) =>
     [...PROJECT_KEYS.all, 'fileVersions', projectId, originalFileId] as const,
   fileVersion: (projectId: number, originalFileId: number, version?: number) =>
@@ -271,6 +272,15 @@ export function useGetProjectSummary(projectId: number) {
     queryFn: () => octoClient.projects.getProjectSummary(projectId),
     enabled: !!projectId,
     staleTime: 10 * 60 * 1000 // 10 minutes for summary
+  })
+}
+
+export function useGetProjectStatistics(projectId: number) {
+  return useQuery({
+    queryKey: PROJECT_KEYS.statistics(projectId),
+    queryFn: () => octoClient.projects.getProjectStatistics(projectId),
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000 // 5 minutes cache for statistics
   })
 }
 

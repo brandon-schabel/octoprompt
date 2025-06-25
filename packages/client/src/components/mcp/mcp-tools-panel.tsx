@@ -21,11 +21,11 @@ interface ToolItemProps {
   projectId: number
 }
 
-function ParameterInput({ 
-  parameter, 
-  value, 
-  onChange 
-}: { 
+function ParameterInput({
+  parameter,
+  value,
+  onChange
+}: {
   parameter: MCPToolParameter
   value: any
   onChange: (value: any) => void
@@ -34,7 +34,7 @@ function ParameterInput({
     return (
       <Select value={value || ''} onValueChange={onChange}>
         <SelectTrigger>
-          <SelectValue placeholder="Select a value" />
+          <SelectValue placeholder='Select a value' />
         </SelectTrigger>
         <SelectContent>
           {parameter.enum.map((option) => (
@@ -54,8 +54,8 @@ function ParameterInput({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="true">true</SelectItem>
-          <SelectItem value="false">false</SelectItem>
+          <SelectItem value='true'>true</SelectItem>
+          <SelectItem value='false'>false</SelectItem>
         </SelectContent>
       </Select>
     )
@@ -64,7 +64,7 @@ function ParameterInput({
   if (parameter.type === 'number' || parameter.type === 'integer') {
     return (
       <Input
-        type="number"
+        type='number'
         value={value || ''}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
         placeholder={parameter.default ? String(parameter.default) : 'Enter a number'}
@@ -74,7 +74,7 @@ function ParameterInput({
 
   return (
     <Input
-      type="text"
+      type='text'
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder={parameter.default ? String(parameter.default) : 'Enter a value'}
@@ -91,10 +91,8 @@ function ToolItem({ tool, projectId }: ToolItemProps) {
   const handleExecute = async () => {
     try {
       // Validate required parameters
-      const missingParams = tool.parameters
-        .filter(p => p.required && !parameters[p.name])
-        .map(p => p.name)
-      
+      const missingParams = tool.parameters.filter((p) => p.required && !parameters[p.name]).map((p) => p.name)
+
       if (missingParams.length > 0) {
         toast.error(`Missing required parameters: ${missingParams.join(', ')}`)
         return
@@ -119,85 +117,71 @@ function ToolItem({ tool, projectId }: ToolItemProps) {
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className='border rounded-lg'>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-4 hover:bg-gray-50">
-            <div className="flex items-center gap-3 text-left">
-              <Wrench className="h-4 w-4 text-gray-500" />
+        <CollapsibleTrigger className='w-full'>
+          <div className='flex items-center justify-between p-4 hover:bg-gray-50'>
+            <div className='flex items-center gap-3 text-left'>
+              <Wrench className='h-4 w-4 text-gray-500' />
               <div>
-                <h4 className="font-medium">{tool.name}</h4>
-                <p className="text-sm text-gray-500">{tool.description}</p>
+                <h4 className='font-medium'>{tool.name}</h4>
+                <p className='text-sm text-gray-500'>{tool.description}</p>
               </div>
             </div>
-            <ChevronRight className={cn(
-              "h-4 w-4 transition-transform",
-              isOpen && "rotate-90"
-            )} />
+            <ChevronRight className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-90')} />
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="p-4 pt-0 space-y-4">
+          <div className='p-4 pt-0 space-y-4'>
             {tool.parameters.length > 0 && (
-              <div className="space-y-3">
-                <h5 className="text-sm font-medium">Parameters</h5>
+              <div className='space-y-3'>
+                <h5 className='text-sm font-medium'>Parameters</h5>
                 {tool.parameters.map((param) => (
-                  <div key={param.name} className="space-y-1">
-                    <Label htmlFor={param.name} className="text-sm">
+                  <div key={param.name} className='space-y-1'>
+                    <Label htmlFor={param.name} className='text-sm'>
                       {param.name}
-                      {param.required && <span className="text-red-500 ml-1">*</span>}
+                      {param.required && <span className='text-red-500 ml-1'>*</span>}
                     </Label>
-                    {param.description && (
-                      <p className="text-xs text-gray-500">{param.description}</p>
-                    )}
+                    {param.description && <p className='text-xs text-gray-500'>{param.description}</p>}
                     <ParameterInput
                       parameter={param}
                       value={parameters[param.name]}
-                      onChange={(value) => setParameters(prev => ({
-                        ...prev,
-                        [param.name]: value
-                      }))}
+                      onChange={(value) =>
+                        setParameters((prev) => ({
+                          ...prev,
+                          [param.name]: value
+                        }))
+                      }
                     />
                   </div>
                 ))}
               </div>
             )}
 
-            <Button
-              size="sm"
-              onClick={handleExecute}
-              disabled={executeMutation.isPending}
-              className="w-full"
-            >
+            <Button size='sm' onClick={handleExecute} disabled={executeMutation.isPending} className='w-full'>
               {executeMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  <Loader2 className='h-4 w-4 mr-1 animate-spin' />
                   Executing...
                 </>
               ) : (
                 <>
-                  <Play className="h-4 w-4 mr-1" />
+                  <Play className='h-4 w-4 mr-1' />
                   Execute
                 </>
               )}
             </Button>
 
             {result && (
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h5 className="text-sm font-medium">Result</h5>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setResult(null)}
-                  >
+              <div className='mt-4 space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <h5 className='text-sm font-medium'>Result</h5>
+                  <Button size='sm' variant='ghost' onClick={() => setResult(null)}>
                     Clear
                   </Button>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <pre className="text-xs overflow-auto">
-                    {JSON.stringify(result, null, 2)}
-                  </pre>
+                <div className='bg-gray-50 rounded-lg p-3'>
+                  <pre className='text-xs overflow-auto'>{JSON.stringify(result, null, 2)}</pre>
                 </div>
               </div>
             )}
@@ -215,8 +199,8 @@ export function MCPToolsPanel({ projectId }: MCPToolsPanelProps) {
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center p-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
+        <CardContent className='flex items-center justify-center p-8'>
+          <Loader2 className='h-6 w-6 animate-spin' />
         </CardContent>
       </Card>
     )
@@ -225,27 +209,23 @@ export function MCPToolsPanel({ projectId }: MCPToolsPanelProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Code className="h-5 w-5" />
+        <CardTitle className='text-lg flex items-center gap-2'>
+          <Code className='h-5 w-5' />
           MCP Tools
-          <Badge variant="secondary">{tools.length}</Badge>
+          <Badge variant='secondary'>{tools.length}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
         {tools.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Wrench className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-            <p className="text-sm">No tools available</p>
-            <p className="text-xs mt-1">Start an MCP server to access tools</p>
+          <div className='text-center py-8 text-gray-500'>
+            <Wrench className='h-12 w-12 mx-auto mb-2 text-gray-300' />
+            <p className='text-sm'>No tools available</p>
+            <p className='text-xs mt-1'>Start an MCP server to access tools</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className='space-y-2'>
             {tools.map((tool) => (
-              <ToolItem
-                key={`${tool.serverId}-${tool.id}`}
-                tool={tool}
-                projectId={projectId}
-              />
+              <ToolItem key={`${tool.serverId}-${tool.id}`} tool={tool} projectId={projectId} />
             ))}
           </div>
         )}

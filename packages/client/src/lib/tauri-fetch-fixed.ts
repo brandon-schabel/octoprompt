@@ -41,7 +41,7 @@ const createCustomFetch = (): typeof fetch => {
   // This function will be called with proper context
   const fetchWrapper: typeof fetch = async (input, init) => {
     console.log('[TauriFetch] Fetch called for:', input)
-    
+
     // In Tauri environment
     if (isTauri) {
       // Wait for Tauri plugin to load if it's still loading

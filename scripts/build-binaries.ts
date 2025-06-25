@@ -55,7 +55,7 @@ async function buildProject() {
   console.log('Building binary for current platform...')
   const currentPlatformExt = process.platform === 'win32' ? '.exe' : ''
   await $`cd ${serverDir} && bun build --compile ./server.ts --outfile ${join(distDir, `${pkg.name}-bundle${currentPlatformExt}`)}`
-  
+
   // Define targets with proper executable extensions
   const bundleNamePrefix = `${pkg.name}-${pkg.version}`
 

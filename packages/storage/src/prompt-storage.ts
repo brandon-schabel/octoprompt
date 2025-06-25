@@ -173,11 +173,7 @@ export const promptStorage = {
     }
 
     // Find all associations for this prompt
-    const associations = await db.findByJsonField<PromptProject>(
-      'prompt_projects',
-      '$.promptId',
-      promptId
-    )
+    const associations = await db.findByJsonField<PromptProject>('prompt_projects', '$.promptId', promptId)
 
     // Use transaction for deletion
     return db.transaction(async () => {
@@ -201,14 +197,10 @@ export const promptStorage = {
     const db = getDb()
 
     // Find all associations for this project
-    const associations = await db.findByJsonField<PromptProject>(
-      'prompt_projects',
-      '$.projectId',
-      projectId
-    )
+    const associations = await db.findByJsonField<PromptProject>('prompt_projects', '$.projectId', projectId)
 
     // Get all unique prompt IDs
-    const promptIds = [...new Set(associations.map(a => a.promptId))]
+    const promptIds = [...new Set(associations.map((a) => a.promptId))]
 
     // Fetch all prompts
     const prompts: Prompt[] = []

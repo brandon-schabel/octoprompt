@@ -1,6 +1,6 @@
 /**
  * Example usage of migration utilities
- * 
+ *
  * This file demonstrates how to use the migration system with StorageV2
  */
 
@@ -12,7 +12,7 @@ import {
   createRenameFieldMigration,
   createTransformMigration,
   runMigrations,
-  type Migration,
+  type Migration
 } from './index'
 
 // Define your schema versions
@@ -21,7 +21,7 @@ const userSchemaV1 = z.object({
   username: z.string(),
   email: z.string(),
   created: z.number(),
-  updated: z.number(),
+  updated: z.number()
 })
 
 const userSchemaV2 = z.object({
@@ -31,52 +31,34 @@ const userSchemaV2 = z.object({
   role: z.string(), // new field
   isActive: z.boolean(), // new field
   created: z.number(),
-  updated: z.number(),
+  updated: z.number()
 })
 
 // Define migrations
 const migrations: Migration[] = [
   // Migration 1: Rename username to name
-  createRenameFieldMigration(
-    1,
-    'Rename username field to name',
-    'username',
-    'name'
-  ),
+  createRenameFieldMigration(1, 'Rename username field to name', 'username', 'name'),
 
   // Migration 2: Add role field with default value
-  createAddFieldMigration(
-    2,
-    'Add role field with default user role',
-    'role',
-    'user'
-  ),
+  createAddFieldMigration(2, 'Add role field with default user role', 'role', 'user'),
 
   // Migration 3: Add isActive field based on created date
-  createTransformMigration(
-    3,
-    'Add isActive field based on account age',
-    (record) => ({
-      ...record,
-      isActive: Date.now() - record.created < 90 * 24 * 60 * 60 * 1000, // Active if created within 90 days
-    })
-  ),
+  createTransformMigration(3, 'Add isActive field based on account age', (record) => ({
+    ...record,
+    isActive: Date.now() - record.created < 90 * 24 * 60 * 60 * 1000 // Active if created within 90 days
+  })),
 
   // Migration 4: Custom migration for complex logic
-  createMigration(
-    4,
-    'Assign admin role to early users',
-    async (adapter) => {
-      const all = await adapter.readAll()
-      const sortedUsers = Array.from(all.entries())
-        .sort(([, a], [, b]) => a.created - b.created)
-        .slice(0, 10) // First 10 users
+  createMigration(4, 'Assign admin role to early users', async (adapter) => {
+    const all = await adapter.readAll()
+    const sortedUsers = Array.from(all.entries())
+      .sort(([, a], [, b]) => a.created - b.created)
+      .slice(0, 10) // First 10 users
 
-      for (const [id, user] of sortedUsers) {
-        await adapter.write(id, { ...user, role: 'admin' })
-      }
+    for (const [id, user] of sortedUsers) {
+      await adapter.write(id, { ...user, role: 'admin' })
     }
-  ),
+  }),
 
   // Migration 5: Example with down migration for rollback
   createMigration(
@@ -96,7 +78,7 @@ const migrations: Migration[] = [
         await adapter.write(id, rest)
       }
     }
-  ),
+  )
 ]
 
 // Example: Setting up storage with migrations
@@ -108,7 +90,7 @@ export async function setupUserStorage() {
   await runMigrations({
     adapter,
     migrations,
-    logger: (message) => console.log(`[Migration] ${message}`),
+    logger: (message) => console.log(`[Migration] ${message}`)
   })
 
   // Now create storage with the latest schema
@@ -119,12 +101,12 @@ export async function setupUserStorage() {
       { field: 'id', type: 'hash' },
       { field: 'email', type: 'hash' },
       { field: 'role', type: 'hash' },
-      { field: 'created', type: 'btree' },
+      { field: 'created', type: 'btree' }
     ],
     cache: {
       maxSize: 100,
-      ttl: 5 * 60 * 1000, // 5 minutes
-    },
+      ttl: 5 * 60 * 1000 // 5 minutes
+    }
   })
 
   return storage
@@ -133,15 +115,15 @@ export async function setupUserStorage() {
 // Example: Running migrations programmatically
 export async function migrateUserData() {
   const adapter = new FileAdapter<any>('users', 'data')
-  
+
   try {
     await runMigrations({
       adapter,
       migrations,
       useTransaction: true, // Use transactions for safety
-      logger: console.log,
+      logger: console.log
     })
-    
+
     console.log('User data migration completed successfully')
   } catch (error) {
     console.error('Migration failed:', error)
@@ -153,20 +135,20 @@ export async function migrateUserData() {
 export async function checkMigrationStatus() {
   const { getMigrationStatus } = await import('./index')
   const adapter = new FileAdapter<any>('users', 'data')
-  
+
   const status = await getMigrationStatus(adapter, migrations)
-  
+
   console.log(`Total migrations: ${status.total}`)
   console.log(`Applied migrations: ${status.applied.length}`)
   console.log(`Pending migrations: ${status.pending.length}`)
-  
+
   if (status.pending.length > 0) {
     console.log('\nPending migrations:')
     for (const migration of status.pending) {
       console.log(`  - ${migration.version}: ${migration.description}`)
     }
   }
-  
+
   return status
 }
 
@@ -174,7 +156,7 @@ export async function checkMigrationStatus() {
 if (import.meta.main) {
   // This runs when the file is executed directly
   console.log('Running user data migrations...')
-  
+
   migrateUserData()
     .then(() => checkMigrationStatus())
     .then((status) => {

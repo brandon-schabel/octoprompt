@@ -70,7 +70,7 @@ describe('StorageV2', () => {
     })
 
     // Add small delay to ensure timestamp difference
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
 
     const updated = await storage.update(created.id, {
       name: 'Updated Item',
@@ -105,7 +105,7 @@ describe('StorageV2', () => {
 
     const cat1Items = await storage.findBy('category', 'cat1')
     expect(cat1Items).toHaveLength(2)
-    expect(cat1Items.every(item => item.category === 'cat1')).toBe(true)
+    expect(cat1Items.every((item) => item.category === 'cat1')).toBe(true)
   })
 
   test('findByRange with btree index', async () => {
@@ -116,7 +116,7 @@ describe('StorageV2', () => {
 
     const rangeItems = await storage.findByRange('value', 150, 350)
     expect(rangeItems).toHaveLength(2)
-    expect(rangeItems.every(item => item.value >= 150 && item.value <= 350)).toBe(true)
+    expect(rangeItems.every((item) => item.value >= 150 && item.value <= 350)).toBe(true)
   })
 
   test('getAll', async () => {
@@ -156,7 +156,7 @@ describe('FileAdapter', () => {
     try {
       await fs.rm(testDir, { recursive: true, force: true })
     } catch {}
-    
+
     adapter = new FileAdapter<TestItem>(testFile, testDir, TestItemSchema)
   })
 
@@ -179,7 +179,10 @@ describe('FileAdapter', () => {
 
     // Verify file exists
     const filePath = path.join(testDir, `${testFile}.json`)
-    const exists = await fs.access(filePath).then(() => true).catch(() => false)
+    const exists = await fs
+      .access(filePath)
+      .then(() => true)
+      .catch(() => false)
     expect(exists).toBe(true)
   })
 })

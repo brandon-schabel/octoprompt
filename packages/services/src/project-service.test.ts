@@ -52,10 +52,10 @@ mock.module('./gen-ai-services', () => ({
 const mockSyncProject = mock(async (project: Project) => {
   // Import project service functions inside the mock to avoid circular dependencies
   const { getProjectFiles, createProjectFileRecord } = await import('./project-service')
-  
+
   // Check if project has files
   const existingFiles = await getProjectFiles(project.id)
-  
+
   if (!existingFiles || existingFiles.length === 0) {
     // Add a test file if none exist
     await createProjectFileRecord(project.id, 'synced-file.txt', 'console.log("synced");')
@@ -68,13 +68,13 @@ const mockSyncProject = mock(async (project: Project) => {
       error: null
     }
   }
-  
+
   // Just return a successful sync result with no changes
   return {
     added: [],
     updated: [],
     removed: [],
-    unchanged: existingFiles.map(f => f.path),
+    unchanged: existingFiles.map((f) => f.path),
     log: [],
     error: null
   }
@@ -94,11 +94,11 @@ describe('Project Service (File Storage)', () => {
     // Reset the database manager before each test
     const { DatabaseManager } = await import('@octoprompt/storage')
     DatabaseManager.reset()
-    
+
     // Get a fresh instance and clear all data
     const db = DatabaseManager.getInstance()
     await db.clearAllTables()
-    
+
     // Reset mock call counts
     mockGenerateStructuredData.mockClear()
     mockSyncProject.mockClear()
@@ -110,7 +110,7 @@ describe('Project Service (File Storage)', () => {
     const db = DatabaseManager.getInstance()
     await db.clearAllTables()
     DatabaseManager.reset()
-    
+
     // Reset mocks
     mockGenerateStructuredData.mockClear()
     mockSyncProject.mockClear()
@@ -334,11 +334,7 @@ describe('Project Service (File Storage)', () => {
       await createProjectFileRecord(projectId, 'f3.txt', 'c3') // Another file not fetched
       const nonExistentFileId = 999999999999
 
-      const fetched = await getProjectFilesByIds(projectId, [
-        file1_created.id,
-        file2_created.id,
-        nonExistentFileId
-      ])
+      const fetched = await getProjectFilesByIds(projectId, [file1_created.id, file2_created.id, nonExistentFileId])
       expect(fetched.length).toBe(2)
       expect(fetched).toEqual(
         expect.arrayContaining([
@@ -452,8 +448,8 @@ describe('Project Service (File Storage)', () => {
       expect(updatedResult.length).toBe(2)
 
       const filesInDb = await getProjectFiles(projectId)
-      const f1InDb = filesInDb?.find(f => f.id === f1_created.id)
-      const f2InDb = filesInDb?.find(f => f.id === f2_created.id)
+      const f1InDb = filesInDb?.find((f) => f.id === f1_created.id)
+      const f2InDb = filesInDb?.find((f) => f.id === f2_created.id)
       expect(f1InDb?.content).toBe('new1')
       expect(f2InDb?.checksum).toBe('cs_new2')
     })
@@ -472,9 +468,9 @@ describe('Project Service (File Storage)', () => {
       expect(deletedCount).toBe(2)
 
       const filesInDb = await getProjectFiles(projectId)
-      expect(filesInDb?.find(f => f.id === f1_created.id)).toBeUndefined()
-      expect(filesInDb?.find(f => f.id === f2_created.id)).toBeUndefined()
-      expect(filesInDb?.find(f => f.id === f3_created.id)).toBeDefined()
+      expect(filesInDb?.find((f) => f.id === f1_created.id)).toBeUndefined()
+      expect(filesInDb?.find((f) => f.id === f2_created.id)).toBeUndefined()
+      expect(filesInDb?.find((f) => f.id === f3_created.id)).toBeDefined()
     })
   })
 

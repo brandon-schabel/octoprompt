@@ -80,16 +80,16 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
     }
   })
 
-    // Start watchers for existing projects
-    ; (async () => {
-      const allProjects = await listProjects()
-      for (const project of allProjects) {
-        // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
-        watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
-      }
+  // Start watchers for existing projects
+  ;(async () => {
+    const allProjects = await listProjects()
+    for (const project of allProjects) {
+      // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
+      watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+    }
 
-      cleanupService.start()
-    })()
+    cleanupService.start()
+  })()
 
   console.log(`Server running at http://localhost:${server.port}`)
   console.log(`Server swagger at http://localhost:${server.port}/swagger`)
@@ -111,7 +111,7 @@ function serveStatic(path: string): Response {
 }
 
 if (import.meta.main) {
-  ; (async () => {
+  ;(async () => {
     // Parse command line arguments
     const args = process.argv.slice(2)
 

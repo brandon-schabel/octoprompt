@@ -19,7 +19,15 @@ import {
   listAllPrompts,
   listPromptsByProject,
   getPromptById,
-  getProjectCompactSummary
+  getProjectCompactSummary,
+  createTicket,
+  getTicketById,
+  listTicketsByProject,
+  updateTicket,
+  createTask,
+  getTasks,
+  updateTask,
+  suggestTasksForTicket
 } from '@octoprompt/services'
 import { ApiError } from '@octoprompt/shared'
 import path from 'node:path'
@@ -141,6 +149,170 @@ function registerTools(server: Server) {
           },
           required: ['promptId']
         }
+      },
+      {
+        name: 'list_tickets',
+        description: 'List all tickets for a project with optional status filter',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            projectId: {
+              type: 'number',
+              description: 'The ID of the project'
+            },
+            status: {
+              type: 'string',
+              description: 'Filter by ticket status (open, in_progress, closed)'
+            }
+          },
+          required: ['projectId']
+        }
+      },
+      {
+        name: 'get_ticket',
+        description: 'Get details of a specific ticket',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ticketId: {
+              type: 'number',
+              description: 'The ID of the ticket to retrieve'
+            }
+          },
+          required: ['ticketId']
+        }
+      },
+      {
+        name: 'create_ticket',
+        description: 'Create a new ticket',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            projectId: {
+              type: 'number',
+              description: 'The ID of the project'
+            },
+            title: {
+              type: 'string',
+              description: 'The title of the ticket'
+            },
+            overview: {
+              type: 'string',
+              description: 'Detailed description of the ticket'
+            },
+            priority: {
+              type: 'string',
+              description: 'Priority level (low, normal, high)'
+            }
+          },
+          required: ['projectId', 'title']
+        }
+      },
+      {
+        name: 'update_ticket',
+        description: 'Update an existing ticket',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ticketId: {
+              type: 'number',
+              description: 'The ID of the ticket to update'
+            },
+            title: {
+              type: 'string',
+              description: 'New title for the ticket'
+            },
+            overview: {
+              type: 'string',
+              description: 'New overview for the ticket'
+            },
+            status: {
+              type: 'string',
+              description: 'New status (open, in_progress, closed)'
+            },
+            priority: {
+              type: 'string',
+              description: 'New priority (low, normal, high)'
+            }
+          },
+          required: ['ticketId']
+        }
+      },
+      {
+        name: 'list_tasks',
+        description: 'List all tasks for a ticket',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ticketId: {
+              type: 'number',
+              description: 'The ID of the ticket'
+            }
+          },
+          required: ['ticketId']
+        }
+      },
+      {
+        name: 'create_task',
+        description: 'Create a new task for a ticket',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ticketId: {
+              type: 'number',
+              description: 'The ID of the ticket'
+            },
+            content: {
+              type: 'string',
+              description: 'The content of the task'
+            }
+          },
+          required: ['ticketId', 'content']
+        }
+      },
+      {
+        name: 'update_task',
+        description: 'Update a task',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ticketId: {
+              type: 'number',
+              description: 'The ID of the ticket'
+            },
+            taskId: {
+              type: 'number',
+              description: 'The ID of the task to update'
+            },
+            content: {
+              type: 'string',
+              description: 'New content for the task'
+            },
+            done: {
+              type: 'boolean',
+              description: 'Whether the task is completed'
+            }
+          },
+          required: ['ticketId', 'taskId']
+        }
+      },
+      {
+        name: 'suggest_ticket_tasks',
+        description: 'Get AI-suggested tasks for a ticket',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            ticketId: {
+              type: 'number',
+              description: 'The ID of the ticket'
+            },
+            userContext: {
+              type: 'string',
+              description: 'Additional context to help generate better task suggestions'
+            }
+          },
+          required: ['ticketId']
+        }
       }
     ]
 
@@ -168,6 +340,30 @@ function registerTools(server: Server) {
         case 'get_prompt':
           return await handleGetPrompt(args as any)
 
+        case 'list_tickets':
+          return await handleListTickets(args as any)
+
+        case 'get_ticket':
+          return await handleGetTicket(args as any)
+
+        case 'create_ticket':
+          return await handleCreateTicket(args as any)
+
+        case 'update_ticket':
+          return await handleUpdateTicket(args as any)
+
+        case 'list_tasks':
+          return await handleListTasks(args as any)
+
+        case 'create_task':
+          return await handleCreateTask(args as any)
+
+        case 'update_task':
+          return await handleUpdateTask(args as any)
+
+        case 'suggest_ticket_tasks':
+          return await handleSuggestTicketTasks(args as any)
+
         default:
           throw new Error(`Unknown tool: ${name}`)
       }
@@ -194,7 +390,7 @@ function registerResources(server: Server) {
     try {
       const projects = await listProjects()
 
-      const resources: Resource[] = projects.map(project => ({
+      const resources: Resource[] = projects.map((project) => ({
         uri: `octoprompt://project/${project.id}/structure`,
         name: `${project.name} Structure`,
         description: `File structure and organization of ${project.name}`,
@@ -256,7 +452,7 @@ async function handleBrowseProjectFiles(args: { projectId: number; path?: string
   if (browsePath) {
     // Filter files to show only those under the specified path
     const filteredFiles = files
-      .filter(file => file.path.startsWith(browsePath))
+      .filter((file) => file.path.startsWith(browsePath))
       .sort((a, b) => a.path.localeCompare(b.path))
 
     result += `Files under ${browsePath}:\n`
@@ -269,7 +465,7 @@ async function handleBrowseProjectFiles(args: { projectId: number; path?: string
     const dirs = new Set<string>()
     const rootFiles: string[] = []
 
-    files.forEach(file => {
+    files.forEach((file) => {
       const parts = file.path.split('/')
       if (parts.length > 1) {
         dirs.add(parts[0])
@@ -279,13 +475,15 @@ async function handleBrowseProjectFiles(args: { projectId: number; path?: string
     })
 
     result += 'Directories:\n'
-    Array.from(dirs).sort().forEach(dir => {
-      result += `  ${dir}/\n`
-    })
+    Array.from(dirs)
+      .sort()
+      .forEach((dir) => {
+        result += `  ${dir}/\n`
+      })
 
     if (rootFiles.length > 0) {
       result += '\nRoot files:\n'
-      rootFiles.sort().forEach(file => {
+      rootFiles.sort().forEach((file) => {
         result += `  ${file}\n`
       })
     }
@@ -312,7 +510,7 @@ async function handleGetFileContent(args: { projectId: number; filePath: string 
   }
 
   // Find the file by path
-  const file = files.find(f => f.path === filePath)
+  const file = files.find((f) => f.path === filePath)
 
   if (!file) {
     throw new Error(`File not found: ${filePath}`)
@@ -369,9 +567,7 @@ async function handleGetProjectCompactSummary(args: { projectId: number }): Prom
 }
 
 async function handleListPrompts(args: { projectId?: number }): Promise<CallToolResult> {
-  const prompts = args.projectId ?
-    await listPromptsByProject(args.projectId) :
-    await listAllPrompts()
+  const prompts = args.projectId ? await listPromptsByProject(args.projectId) : await listAllPrompts()
 
   let result = `Found ${prompts.length} prompts\n\n`
 
@@ -408,6 +604,183 @@ async function handleGetPrompt(args: { promptId: number }): Promise<CallToolResu
   result += `Created: ${new Date(prompt.created).toISOString()}\n`
   result += `Updated: ${new Date(prompt.updated).toISOString()}\n\n`
   result += `Content:\n${prompt.content}`
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: result
+      }
+    ]
+  }
+}
+
+/**
+ * Ticket-related tool handlers
+ */
+async function handleListTickets(args: { projectId: number; status?: string }): Promise<CallToolResult> {
+  const { projectId, status } = args
+  const tickets = await listTicketsByProject(projectId, status)
+
+  let result = `Found ${tickets.length} tickets\n\n`
+
+  for (const ticket of tickets) {
+    result += `ID: ${ticket.id}\n`
+    result += `Title: ${ticket.title}\n`
+    result += `Status: ${ticket.status}\n`
+    result += `Priority: ${ticket.priority}\n`
+    result += `Overview: ${ticket.overview.substring(0, 100)}${ticket.overview.length > 100 ? '...' : ''}\n`
+    result += `Created: ${new Date(ticket.created).toISOString()}\n`
+    result += '---\n\n'
+  }
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: result
+      }
+    ]
+  }
+}
+
+async function handleGetTicket(args: { ticketId: number }): Promise<CallToolResult> {
+  const { ticketId } = args
+  const ticket = await getTicketById(ticketId)
+
+  let result = `Ticket: ${ticket.title}\n`
+  result += `ID: ${ticket.id}\n`
+  result += `Project ID: ${ticket.projectId}\n`
+  result += `Status: ${ticket.status}\n`
+  result += `Priority: ${ticket.priority}\n`
+  result += `Created: ${new Date(ticket.created).toISOString()}\n`
+  result += `Updated: ${new Date(ticket.updated).toISOString()}\n\n`
+  result += `Overview:\n${ticket.overview}`
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: result
+      }
+    ]
+  }
+}
+
+async function handleCreateTicket(args: {
+  projectId: number
+  title: string
+  overview?: string
+  priority?: 'low' | 'normal' | 'high'
+}): Promise<CallToolResult> {
+  const ticket = await createTicket({
+    projectId: args.projectId,
+    title: args.title,
+    overview: args.overview || '',
+    priority: args.priority || 'normal'
+  })
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Ticket created successfully:\nID: ${ticket.id}\nTitle: ${ticket.title}\nStatus: ${ticket.status}`
+      }
+    ]
+  }
+}
+
+async function handleUpdateTicket(args: {
+  ticketId: number
+  title?: string
+  overview?: string
+  status?: 'open' | 'in_progress' | 'closed'
+  priority?: 'low' | 'normal' | 'high'
+}): Promise<CallToolResult> {
+  const ticket = await updateTicket(args.ticketId, {
+    title: args.title,
+    overview: args.overview,
+    status: args.status,
+    priority: args.priority
+  })
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Ticket updated successfully:\nID: ${ticket.id}\nTitle: ${ticket.title}\nStatus: ${ticket.status}`
+      }
+    ]
+  }
+}
+
+async function handleListTasks(args: { ticketId: number }): Promise<CallToolResult> {
+  const { ticketId } = args
+  const tasks = await getTasks(ticketId)
+
+  let result = `Found ${tasks.length} tasks for ticket ${ticketId}\n\n`
+
+  for (const task of tasks) {
+    result += `ID: ${task.id}\n`
+    result += `Status: ${task.done ? '[✓]' : '[ ]'}\n`
+    result += `Content: ${task.content}\n`
+    result += `Order: ${task.orderIndex}\n`
+    result += '---\n\n'
+  }
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: result
+      }
+    ]
+  }
+}
+
+async function handleCreateTask(args: { ticketId: number; content: string }): Promise<CallToolResult> {
+  const { ticketId, content } = args
+  const task = await createTask(ticketId, content)
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Task created successfully:\nID: ${task.id}\nContent: ${task.content}\nOrder: ${task.orderIndex}`
+      }
+    ]
+  }
+}
+
+async function handleUpdateTask(args: {
+  ticketId: number
+  taskId: number
+  content?: string
+  done?: boolean
+}): Promise<CallToolResult> {
+  const task = await updateTask(args.ticketId, args.taskId, {
+    content: args.content,
+    done: args.done
+  })
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Task updated successfully:\nID: ${task.id}\nContent: ${task.content}\nStatus: ${task.done ? 'Done' : 'Pending'}`
+      }
+    ]
+  }
+}
+
+async function handleSuggestTicketTasks(args: { ticketId: number; userContext?: string }): Promise<CallToolResult> {
+  const { ticketId, userContext } = args
+  const suggestions = await suggestTasksForTicket(ticketId, userContext)
+
+  let result = `AI-suggested tasks for ticket ${ticketId}:\n\n`
+  suggestions.forEach((task, index) => {
+    result += `${index + 1}. ${task}\n`
+  })
 
   return {
     content: [

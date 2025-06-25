@@ -10,7 +10,6 @@ A compound component that displays both provider and model selection UI.
 
 ```tsx
 import { ProviderModelSelector } from '@/components/model-selection'
-
 ;<ProviderModelSelector
   provider='openai'
   currentModel='gpt-4'
@@ -43,7 +42,6 @@ A popover component that includes model selection and advanced settings like tem
 
 ```tsx
 import { ModelSettingsPopover } from '@/components/model-selection'
-
 ;<ModelSettingsPopover
   provider='openai'
   model='gpt-4'
@@ -230,7 +228,6 @@ If you're migrating from the original implementation in chat.tsx:
 
 // After
 import { ProviderModelSelector } from '@/components/model-selection'
-
 ;<ProviderModelSelector
   provider={provider}
   currentModel={model}

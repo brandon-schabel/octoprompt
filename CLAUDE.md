@@ -37,64 +37,21 @@ The Linear MCP (Model Context Protocol) integration is built into Claude Code an
 
 ### OctoPrompt MCP Usage
 
+OctoPrompt is my personal project, so make heavy use of it. Write a feedback file (octo-feedback.md) on what can be improved.
+
+Use the OctoPrompt MCP for the following
+
+- Creating Tickets and Tasks when planning
+- Save and retrieve relevant prompts for later used (retrieve when it would help the context)
+- Get suggested files based on relevant context, the project is indexed and sumarized and uses that when providing suggestions
+- Retrieve compact project summary to gain quick insights into the architecture of the project.
+- Optimize a prompt using the context of the project, for example it can be helpful to upgrade a project by adding project specific context
+
 The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
 
 **OctoPrompt Project Details:**
 
 - **Project ID**: `1750564533014`
-
-**Key MCP Tools Available:**
-
-- `mcp_octoprompt_project_*` - Project management (create, read, update, delete)
-- `mcp_octoprompt_file_*` - File operations (read, write, list)
-- `mcp_octoprompt_prompt_*` - Prompt management and organization
-- `mcp_octoprompt_suggest_files` - AI-powered file suggestions
-- `mcp_octoprompt_project_summary` - Generate project overviews
-- `mcp_octoprompt_optimize_user_input` - AI prompt optimization
-
-**Common Workflows:**
-
-1. **Project Management:**
-
-   ```typescript
-   // List all projects
-   mcp_octoprompt_project_list()
-   
-   // Get specific project details
-   mcp_octoprompt_project_get({ projectId: 1 })
-   
-   // Create new project
-   mcp_octoprompt_project_create({ name: "New Project", path: "/path/to/project" })
-   ```
-
-2. **File Operations:**
-
-   ```typescript
-   // List project files
-   mcp_octoprompt_file_list({ path: ".", recursive: true })
-   
-   // Read file content
-   mcp_octoprompt_file_read({ path: "src/main.ts" })
-   
-   // Write file content
-   mcp_octoprompt_file_write({ path: "new-file.ts", content: "console.log('Hello')" })
-   ```
-
-3. **AI-Powered Features:**
-
-   ```typescript
-   // Get AI file suggestions for a task
-   mcp_octoprompt_suggest_files({ prompt: "implement authentication", limit: 5 })
-   
-   // Generate project summary
-   mcp_octoprompt_project_summary({ include_files: true })
-   
-   // Optimize user prompts
-   mcp_octoprompt_optimize_user_input({ prompt: "help me build a login form" })
-   ```
-
-use mcp_octoprompt_optimize_user_input to give powerful extra context without having to go searching for files
-use suggest files to immediately find files that might be useful to the user query
 
 ## Creating New MCP Tools
 
@@ -124,10 +81,10 @@ Add the business logic to the appropriate service file (e.g., `packages/services
 export async function yourNewFunction(projectId: number, ...params): Promise<YourReturnType> {
   try {
     await getProjectById(projectId) // Validate project exists
-    
+
     // Your business logic here
     // Use AI if needed: await generateSingleText({...})
-    
+
     return result
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -175,7 +132,7 @@ Create the handler function:
 async function handleYourNewTool(args: { projectId: number }): Promise<CallToolResult> {
   const { projectId } = args
   const result = await yourNewFunction(projectId)
-  
+
   return {
     content: [
       {

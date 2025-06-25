@@ -87,9 +87,9 @@ describe('DatabaseManager', () => {
   test('getAll returns items in descending order by created_at', async () => {
     // Create items with slight delays to ensure different timestamps
     await db.create('projects', 'project-1', { name: 'Project 1' })
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
     await db.create('projects', 'project-2', { name: 'Project 2' })
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
     await db.create('projects', 'project-3', { name: 'Project 3' })
 
     const allProjects = await db.getAll<{ name: string }>('projects')
@@ -103,27 +103,23 @@ describe('DatabaseManager', () => {
 
   test('findByJsonField queries JSON data correctly', async () => {
     // Create chat messages
-    await db.create('chat_messages', 'msg-1', { 
+    await db.create('chat_messages', 'msg-1', {
       chatId: 'chat-123',
       content: 'Hello',
       role: 'user'
     })
-    await db.create('chat_messages', 'msg-2', { 
+    await db.create('chat_messages', 'msg-2', {
       chatId: 'chat-123',
       content: 'Hi there',
       role: 'assistant'
     })
-    await db.create('chat_messages', 'msg-3', { 
+    await db.create('chat_messages', 'msg-3', {
       chatId: 'chat-456',
       content: 'Different chat',
       role: 'user'
     })
 
-    const messages = await db.findByJsonField<any>(
-      'chat_messages',
-      '$.chatId',
-      'chat-123'
-    )
+    const messages = await db.findByJsonField<any>('chat_messages', '$.chatId', 'chat-123')
 
     expect(messages.length).toBe(2)
     expect(messages[0].chatId).toBe('chat-123')
@@ -166,11 +162,13 @@ describe('DatabaseManager', () => {
     try {
       db.transaction(() => {
         // This should succeed
-        db.getDatabase().prepare('INSERT INTO projects (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)')
+        db.getDatabase()
+          .prepare('INSERT INTO projects (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)')
           .run('tx-1', JSON.stringify({ name: 'Transaction Test' }), Date.now(), Date.now())
-        
+
         // This should cause an error (duplicate primary key)
-        db.getDatabase().prepare('INSERT INTO projects (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)')
+        db.getDatabase()
+          .prepare('INSERT INTO projects (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)')
           .run('tx-1', JSON.stringify({ name: 'Duplicate' }), Date.now(), Date.now())
       })
     } catch (error) {
@@ -178,7 +176,7 @@ describe('DatabaseManager', () => {
     }
 
     expect(errorThrown).toBe(true)
-    
+
     // Transaction should have rolled back
     const result = await db.get('projects', 'tx-1')
     expect(result).toBeNull()

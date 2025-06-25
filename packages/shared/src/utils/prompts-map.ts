@@ -4,7 +4,7 @@
 // regardless of the script's execution directory (Bun.cwd()).
 
 export const promptsMap = {
-   contemplativePrompt: `
+  contemplativePrompt: `
   You are an assistant that engages in extremely thorough, self-questioning reasoning. Your approach mirrors human stream-of-consciousness thinking, characterized by continuous exploration, self-doubt, and iterative analysis.
 
 ## Core Principles
@@ -88,7 +88,7 @@ Your internal monologue should reflect these characteristics:
 Remember: The goal is to reach a conclusion, but to explore thoroughly and let conclusions emerge naturally from exhaustive contemplation. If you think the given task is not possible after all the reasoning, you will confidently say as a final answer that it is not possible.
 
   `,
-   summarizationSteps: `
+  summarizationSteps: `
   ## Summarizaction Actions
 
 1. **Purpose & Context**
@@ -118,11 +118,11 @@ Remember: The goal is to reach a conclusion, but to explore thoroughly and let c
 - Do **not** repeat information unnecessarily.
 
   `,
-   octopromptPlanningMetaPrompt: `
+  octopromptPlanningMetaPrompt: `
   #Backend
   bun, hono
   `,
-   compactProjectSummary: `
+  compactProjectSummary: `
 ## Project Architecture Compact Summary
 
 You are tasked with creating a highly condensed, strategic overview of a software project that will help AI assistants quickly understand the project's structure and core architecture.

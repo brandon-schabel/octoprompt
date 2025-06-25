@@ -14,53 +14,53 @@ export const providerKeyStorage = {
   async readProviderKeys(): Promise<ProviderKeysStorage> {
     const db = getDb()
     const keysMap = await db.getAll<ProviderKey>('provider_keys')
-    
+
     // Convert Map to ProviderKeysStorage (Record)
     const providerKeys: ProviderKeysStorage = {}
     for (const [id, key] of keysMap) {
       providerKeys[String(id)] = key
     }
-    
+
     // Validate the result
     const validationResult = ProviderKeysStorageSchema.safeParse(providerKeys)
     if (!validationResult.success) {
       console.error('Validation failed reading provider keys from database:', validationResult.error.errors)
       return {}
     }
-    
+
     return validationResult.data
   },
 
   /** Writes all provider keys to the database (replaces entire collection). */
   async writeProviderKeys(keys: ProviderKeysStorage): Promise<ProviderKeysStorage> {
     const db = getDb()
-    
+
     // Validate input
     const validationResult = ProviderKeysStorageSchema.safeParse(keys)
     if (!validationResult.success) {
       console.error('Validation failed before writing provider keys to database:', validationResult.error.errors)
       throw new ZodError(validationResult.error.errors)
     }
-    
+
     const validatedKeys = validationResult.data
-    
+
     // Use transaction to ensure atomicity
     db.transaction(() => {
       // Clear existing keys - synchronous in transaction
       db.getDatabase().exec(`DELETE FROM provider_keys`)
-      
+
       // Insert all keys - synchronous in transaction
       const insertStmt = db.getDatabase().prepare(`
         INSERT INTO provider_keys (id, data, created_at, updated_at)
         VALUES (?, ?, ?, ?)
       `)
-      
+
       for (const [id, key] of Object.entries(validatedKeys)) {
         const now = Date.now()
         insertStmt.run(id, JSON.stringify(key), now, now)
       }
     })
-    
+
     return validatedKeys
   },
 
@@ -73,19 +73,19 @@ export const providerKeyStorage = {
   /** Creates or updates a provider key. */
   async upsertProviderKey(key: ProviderKey): Promise<ProviderKey> {
     const db = getDb()
-    
+
     // Validate the key
     const validatedKey = ProviderKeySchema.parse(key)
     const id = String(validatedKey.id)
-    
+
     // Use the database directly for better control
     const now = Date.now()
     const database = db.getDatabase()
-    
+
     // Check if exists
     const existsQuery = database.prepare(`SELECT 1 FROM provider_keys WHERE id = ? LIMIT 1`)
     const existingRow = existsQuery.get(id)
-    
+
     if (existingRow) {
       // Update
       const updateQuery = database.prepare(`
@@ -102,7 +102,7 @@ export const providerKeyStorage = {
       `)
       insertQuery.run(id, JSON.stringify(validatedKey), now, now)
     }
-    
+
     return validatedKey
   },
 
@@ -115,25 +115,17 @@ export const providerKeyStorage = {
   /** Gets all provider keys for a specific provider. */
   async getKeysByProvider(provider: string): Promise<ProviderKey[]> {
     const db = getDb()
-    
+
     // Find all keys for this provider
-    return await db.findByJsonField<ProviderKey>(
-      'provider_keys',
-      '$.provider',
-      provider
-    )
+    return await db.findByJsonField<ProviderKey>('provider_keys', '$.provider', provider)
   },
 
   /** Gets all active provider keys. */
   async getActiveKeys(): Promise<ProviderKey[]> {
     const db = getDb()
-    
+
     // Find all active keys
-    return await db.findByJsonField<ProviderKey>(
-      'provider_keys',
-      '$.isActive',
-      true
-    )
+    return await db.findByJsonField<ProviderKey>('provider_keys', '$.isActive', true)
   },
 
   /** Gets provider keys created within a date range. */

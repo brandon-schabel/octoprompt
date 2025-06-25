@@ -11,6 +11,7 @@ export * from './src/gen-ai.schemas'
 export * from './src/agent-coder.schemas'
 export * from './src/browse-directory.schemas'
 export * from './src/mcp.schemas'
+export * from './src/ticket.schemas'
 
 // export constants
 export * from './src/constants/file-sync-options'

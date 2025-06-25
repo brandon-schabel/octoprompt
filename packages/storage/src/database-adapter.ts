@@ -18,7 +18,7 @@ export class DatabaseAdapter<T> implements StorageAdapter<T> {
 
   async readAll(): Promise<Map<string | number, T>> {
     const stringMap = await this.db.getAll<T>(this.tableName)
-    
+
     // Convert string keys to numbers where appropriate
     const resultMap = new Map<string | number, T>()
     for (const [key, value] of stringMap) {
@@ -26,14 +26,14 @@ export class DatabaseAdapter<T> implements StorageAdapter<T> {
       const actualKey = isNaN(numKey) ? key : numKey
       resultMap.set(actualKey, value)
     }
-    
+
     return resultMap
   }
 
   async write(id: string | number, data: T): Promise<void> {
     const stringId = String(id)
     const exists = await this.db.exists(this.tableName, stringId)
-    
+
     if (exists) {
       await this.db.update(this.tableName, stringId, data)
     } else {

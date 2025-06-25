@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { sidecarManager } from '@/services/sidecar-manager'
 
-//  Tauri sidecar service hook, 
+//  Tauri sidecar service hook,
 export function useSidecarServer() {
   const [isStarting, setIsStarting] = useState(false)
   const [isReady, setIsReady] = useState(false)

@@ -57,7 +57,7 @@ const migrationHistorySchema = z.object({
   description: z.string(),
   appliedAt: z.number(),
   executionTime: z.number(),
-  checksum: z.string(),
+  checksum: z.string()
 })
 
 // --- Migration Runner ---
@@ -83,13 +83,13 @@ export class MigrationRunner {
 
     // Get applied migrations
     const appliedMigrations = await this.getAppliedMigrations()
-    const appliedVersions = new Set(appliedMigrations.map(m => m.version))
+    const appliedVersions = new Set(appliedMigrations.map((m) => m.version))
 
     // Sort migrations by version
     const sortedMigrations = [...this.config.migrations].sort((a, b) => a.version - b.version)
 
     // Find pending migrations
-    const pendingMigrations = sortedMigrations.filter(m => !appliedVersions.has(m.version))
+    const pendingMigrations = sortedMigrations.filter((m) => !appliedVersions.has(m.version))
 
     if (pendingMigrations.length === 0) {
       this.logger('No pending migrations')
@@ -130,7 +130,7 @@ export class MigrationRunner {
         description: migration.description,
         appliedAt: Date.now(),
         executionTime,
-        checksum: this.calculateChecksum(migration),
+        checksum: this.calculateChecksum(migration)
       }
 
       await this.historyAdapter.write(migration.version, historyEntry)
@@ -174,14 +174,14 @@ export class MigrationRunner {
       version: migration.version,
       description: migration.description,
       up: migration.up.toString(),
-      down: migration.down?.toString(),
+      down: migration.down?.toString()
     })
-    
+
     // Simple hash function for checksum
     let hash = 0
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
+      hash = (hash << 5) - hash + char
       hash = hash & hash // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(16)
@@ -200,7 +200,7 @@ export class MigrationRunner {
       async readAll(): Promise<Map<string | number, MigrationHistoryEntry>> {
         const all = await baseAdapter.readAll()
         const migrations = new Map<string | number, MigrationHistoryEntry>()
-        
+
         for (const [key, value] of all) {
           if (String(key).startsWith('_migration_')) {
             const version = Number(String(key).replace('_migration_', ''))
@@ -213,7 +213,7 @@ export class MigrationRunner {
             }
           }
         }
-        
+
         return migrations
       },
       async write(id: string | number, data: MigrationHistoryEntry): Promise<void> {
@@ -230,7 +230,7 @@ export class MigrationRunner {
         for (const key of all.keys()) {
           await this.delete(key)
         }
-      },
+      }
     }
   }
 
@@ -240,7 +240,7 @@ export class MigrationRunner {
   private async runInTransaction(fn: () => Promise<void>): Promise<void> {
     // Basic transaction simulation - in real implementation would use adapter's transaction support
     const backup = await this.config.adapter.readAll()
-    
+
     try {
       await fn()
     } catch (error) {
@@ -269,7 +269,7 @@ export function createMigration(
     version,
     description,
     up,
-    down,
+    down
   }
 }
 
@@ -389,19 +389,19 @@ export function createFilterMigration(
     async (adapter) => {
       const all = await adapter.readAll()
       const deletedRecords: Array<[string | number, any]> = []
-      
+
       for (const [id, record] of all) {
         if (!predicate(record)) {
           deletedRecords.push([id, record])
           await adapter.delete(id)
         }
       }
-      
+
       // Store deleted records for potential rollback
       await adapter.write('_deleted_by_migration_' + version, deletedRecords)
     },
     async (adapter) => {
-      const deletedRecords = await adapter.read('_deleted_by_migration_' + version) as Array<[string | number, any]>
+      const deletedRecords = (await adapter.read('_deleted_by_migration_' + version)) as Array<[string | number, any]>
       if (deletedRecords) {
         for (const [id, record] of deletedRecords) {
           await adapter.write(id, record)
@@ -425,13 +425,13 @@ export async function getMigrationStatus(
 }> {
   const runner = new MigrationRunner({ adapter, migrations })
   const applied = await (runner as any).getAppliedMigrations()
-  const appliedVersions = new Set(applied.map(m => m.version))
-  const pending = migrations.filter(m => !appliedVersions.has(m.version))
-  
+  const appliedVersions = new Set(applied.map((m) => m.version))
+  const pending = migrations.filter((m) => !appliedVersions.has(m.version))
+
   return {
     applied,
     pending,
-    total: migrations.length,
+    total: migrations.length
   }
 }
 
@@ -440,17 +440,17 @@ export async function getMigrationStatus(
  */
 export function validateMigrations(migrations: Migration[]): void {
   const versions = new Set<number>()
-  
+
   for (const migration of migrations) {
     if (versions.has(migration.version)) {
       throw new Error(`Duplicate migration version: ${migration.version}`)
     }
     versions.add(migration.version)
-    
+
     if (migration.version < 1) {
       throw new Error(`Invalid migration version: ${migration.version}`)
     }
-    
+
     if (!migration.description) {
       throw new Error(`Migration ${migration.version} missing description`)
     }

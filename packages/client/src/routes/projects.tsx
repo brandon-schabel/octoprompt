@@ -21,6 +21,7 @@ import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectStatsDisplay } from '@/components/projects/project-stats-display'
+import { ProjectStatsDisplayEnhanced } from '@/components/projects/project-stats-display-enhanced-v2'
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
@@ -28,11 +29,12 @@ import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
 import { ProjectAssetsView } from '@/components/projects/project-assets-view'
 import { Bot, Code2, Sparkles, Plug } from 'lucide-react'
 import { MCPTabView } from '@/components/mcp/mcp-tab-view'
+import { TicketsTabView } from '@/components/tickets/tickets-tab-view'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
   const promptPanelRef = useRef<PromptOverviewPanelRef>(null)
-  const [activeProjectTabState] = useActiveProjectTab()
+  const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
 
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
@@ -182,11 +184,15 @@ export function ProjectsPage() {
             <TabsList>
               <TabsTrigger value='context'>Context</TabsTrigger>
               <TabsTrigger value='stats'>Statistics</TabsTrigger>
+              <TabsTrigger value='tickets' className='flex items-center gap-1'>
+                <Bot className='h-3.5 w-3.5' />
+                Tickets
+              </TabsTrigger>
               <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-              <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
+              {/* <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
                 <Code2 className='h-3.5 w-3.5' />
                 Agent Coder
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger value='assets' className='flex items-center gap-1'>
                 <Sparkles className='h-3.5 w-3.5' />
                 Assets
@@ -210,9 +216,20 @@ export function ProjectsPage() {
 
           <TabsContent value='stats' className='flex-1 overflow-y-auto p-4 md:p-6 mt-0 ring-0 focus-visible:ring-0'>
             {selectedProjectId ? (
-              <ProjectStatsDisplay projectId={selectedProjectId} />
+              <ProjectStatsDisplayEnhanced projectId={selectedProjectId} />
             ) : (
               <p>No project selected for stats.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='tickets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId && projectData && activeProjectTabId ? (
+              <TicketsTabView
+                projectId={selectedProjectId}
+                projectName={projectData.name}
+                projectTabId={activeProjectTabId}
+              />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for tickets.</p>
             )}
           </TabsContent>
           <TabsContent

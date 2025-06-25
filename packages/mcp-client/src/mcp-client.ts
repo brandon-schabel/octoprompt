@@ -55,7 +55,7 @@ export class MCPClient {
       this.client = new Client(
         {
           name: `octoprompt-${this.config.id}`,
-          version: '0.5.4'
+          version: '0.6.0'
         },
         {
           capabilities: {
@@ -86,7 +86,7 @@ export class MCPClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json'
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -97,7 +97,7 @@ export class MCPClient {
             capabilities: {},
             clientInfo: {
               name: `octoprompt-client-${this.config.id}`,
-              version: '0.5.4'
+              version: '0.6.0'
             }
           }
         })
@@ -174,7 +174,7 @@ export class MCPClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json'
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -351,7 +351,7 @@ export class MCPClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json'
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -444,7 +444,7 @@ This is a mock response from MCP server '${this.config.name}' (ID: ${this.config
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json'
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -524,7 +524,7 @@ This is a mock response from MCP server '${this.config.name}' (ID: ${this.config
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json'
         },
         body: JSON.stringify({
           jsonrpc: '2.0',

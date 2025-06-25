@@ -20,16 +20,12 @@ import { FileAdapter } from '@octoprompt/storage'
 
 // Define migrations
 const migrations = [
-  createMigration(
-    1,
-    'Add status field to users',
-    async (adapter) => {
-      const all = await adapter.readAll()
-      for (const [id, user] of all) {
-        await adapter.write(id, { ...user, status: 'active' })
-      }
+  createMigration(1, 'Add status field to users', async (adapter) => {
+    const all = await adapter.readAll()
+    for (const [id, user] of all) {
+      await adapter.write(id, { ...user, status: 'active' })
     }
-  ),
+  })
 ]
 
 // Run migrations
@@ -38,7 +34,7 @@ await runMigrations({
   adapter,
   migrations,
   logger: console.log,
-  useTransaction: true,
+  useTransaction: true
 })
 ```
 
@@ -58,25 +54,16 @@ const migration = createAddFieldMigration(
 ### Rename Field Migration
 
 ```typescript
-const migration = createRenameFieldMigration(
-  2,
-  'Rename username to name',
-  'username',
-  'name'
-)
+const migration = createRenameFieldMigration(2, 'Rename username to name', 'username', 'name')
 ```
 
 ### Transform Migration
 
 ```typescript
-const migration = createTransformMigration(
-  3,
-  'Normalize emails',
-  (record) => ({
-    ...record,
-    email: record.email.toLowerCase()
-  })
-)
+const migration = createTransformMigration(3, 'Normalize emails', (record) => ({
+  ...record,
+  email: record.email.toLowerCase()
+}))
 ```
 
 ### Filter Migration

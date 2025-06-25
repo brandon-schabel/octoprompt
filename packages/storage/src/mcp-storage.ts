@@ -1,10 +1,10 @@
-import { 
-  MCPServerConfigSchema, 
-  MCPServerStateSchema, 
+import {
+  MCPServerConfigSchema,
+  MCPServerStateSchema,
   MCPToolSchema,
   MCPResourceSchema,
   MCPToolExecutionResultSchema,
-  type MCPServerConfig, 
+  type MCPServerConfig,
   type MCPServerState,
   type MCPTool,
   type MCPResource,
@@ -105,29 +105,32 @@ export const mcpStorage = {
     return mcpServerConfigStorage.get(id)
   },
 
-  async updateMCPServerConfig(id: number, updates: Partial<Omit<MCPServerConfig, 'id' | 'created'>>): Promise<MCPServerConfig | null> {
+  async updateMCPServerConfig(
+    id: number,
+    updates: Partial<Omit<MCPServerConfig, 'id' | 'created'>>
+  ): Promise<MCPServerConfig | null> {
     return mcpServerConfigStorage.update(id, updates)
   },
 
   async deleteMCPServerConfig(id: number): Promise<boolean> {
     const deleted = await mcpServerConfigStorage.delete(id)
-    
+
     if (deleted) {
       // Also delete associated state
       await mcpServerStateStorage.delete(id)
-      
+
       // Delete associated tools and resources
       const tools = await mcpToolStorage.findBy('serverId', id)
       for (const tool of tools) {
         await mcpToolStorage.delete(tool.id)
       }
-      
+
       const resources = await mcpResourceStorage.findBy('serverId', id)
       for (const resource of resources) {
         await mcpResourceStorage.delete(resource.uri)
       }
     }
-    
+
     return deleted
   },
 
@@ -146,7 +149,7 @@ export const mcpStorage = {
 
   async updateMCPServerState(serverId: number, state: Omit<MCPServerState, 'serverId'>): Promise<MCPServerState> {
     const existingState = await mcpServerStateStorage.get(serverId)
-    
+
     if (existingState) {
       return mcpServerStateStorage.update(serverId, state) as Promise<MCPServerState>
     } else {
@@ -228,7 +231,7 @@ export const mcpStorage = {
   async deleteProjectMCPData(projectId: number): Promise<void> {
     // Delete all server configs for this project
     const configs = await mcpServerConfigStorage.findBy('projectId', projectId)
-    
+
     for (const config of configs) {
       // This will cascade delete states, tools, and resources
       await this.deleteMCPServerConfig(config.id)

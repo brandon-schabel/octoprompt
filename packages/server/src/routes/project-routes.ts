@@ -23,7 +23,14 @@ import { resolve as resolvePath } from 'node:path'
 import { homedir as getHomedir } from 'node:os'
 
 import * as projectService from '@octoprompt/services'
-import { getFullProjectSummary, optimizeUserInput, syncProject, syncProjectFolder, watchersManager } from '@octoprompt/services'
+import {
+  getFullProjectSummary,
+  getProjectStatistics,
+  optimizeUserInput,
+  syncProject,
+  syncProjectFolder,
+  watchersManager
+} from '@octoprompt/services'
 import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
 
 // File operation schemas
@@ -364,6 +371,92 @@ const optimizeUserInputRoute = createRoute({
       content: { 'application/json': { schema: ApiErrorResponseSchema } },
       description: 'Internal Server Error or AI provider error during optimization'
     }
+  }
+})
+
+const getProjectStatisticsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/statistics',
+  tags: ['Projects', 'Statistics'],
+  summary: 'Get comprehensive statistics for a project',
+  request: {
+    params: ProjectIdParamsSchema
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              fileStats: z.object({
+                totalFiles: z.number(),
+                totalSize: z.number(),
+                filesByType: z.record(z.number()),
+                sizeByType: z.record(z.number()),
+                filesByCategory: z.object({
+                  source: z.number(),
+                  tests: z.number(),
+                  docs: z.number(),
+                  config: z.number(),
+                  other: z.number()
+                }),
+                filesWithSummaries: z.number(),
+                averageSummaryLength: z.number()
+              }),
+              ticketStats: z.object({
+                totalTickets: z.number(),
+                ticketsByStatus: z.object({
+                  open: z.number(),
+                  in_progress: z.number(),
+                  closed: z.number()
+                }),
+                ticketsByPriority: z.object({
+                  low: z.number(),
+                  normal: z.number(),
+                  high: z.number()
+                }),
+                averageTasksPerTicket: z.number()
+              }),
+              taskStats: z.object({
+                totalTasks: z.number(),
+                completedTasks: z.number(),
+                completionRate: z.number(),
+                tasksByTicket: z.array(
+                  z.object({
+                    ticketId: z.number(),
+                    ticketTitle: z.string(),
+                    totalTasks: z.number(),
+                    completedTasks: z.number()
+                  })
+                )
+              }),
+              promptStats: z.object({
+                totalPrompts: z.number(),
+                totalTokens: z.number(),
+                averagePromptLength: z.number(),
+                promptTypes: z.record(z.number())
+              }),
+              activityStats: z.object({
+                recentUpdates: z.number(),
+                lastUpdateTime: z.number(),
+                creationTrend: z.array(
+                  z.object({
+                    date: z.string(),
+                    files: z.number(),
+                    tickets: z.number(),
+                    tasks: z.number()
+                  })
+                )
+              })
+            })
+          })
+        }
+      },
+      description: 'Project statistics retrieved successfully'
+    },
+    404: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Project not found' },
+    500: { content: { 'application/json': { schema: ApiErrorResponseSchema } }, description: 'Internal Server Error' }
   }
 })
 
@@ -769,5 +862,18 @@ export const projectRoutes = new OpenAPIHono()
       )
     }
   )
+  .openapi(getProjectStatisticsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+
+    const statistics = await getProjectStatistics(projectId)
+
+    return c.json(
+      {
+        success: true as const,
+        data: statistics
+      },
+      200
+    )
+  })
 
 export type ProjectRouteTypes = typeof projectRoutes

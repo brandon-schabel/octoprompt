@@ -40,15 +40,7 @@ Add the OctoPrompt MCP server configuration:
 {
   "mcpServers": {
     "octoprompt": {
-      "command": "bun",
-      "args": [
-        "run",
-        "mcp"
-      ],
-      "cwd": "/absolute/path/to/octoprompt/packages/server",
-      "env": {
-        "OCTOPROMPT_PROJECT_ID": "1"
-      }
+      "command": "/Users/brandon/Programming/octoprompt/packages/server/mcp-start.sh"
     }
   }
 }

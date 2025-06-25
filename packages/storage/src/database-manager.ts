@@ -79,6 +79,19 @@ export class DatabaseManager {
     {
       name: 'mcp_tool_executions',
       indexes: ['JSON_EXTRACT(data, "$.toolId")', 'created_at']
+    },
+    {
+      name: 'tickets',
+      indexes: ['JSON_EXTRACT(data, "$.projectId")', 'created_at', 'JSON_EXTRACT(data, "$.status")', 'updated_at']
+    },
+    {
+      name: 'ticket_tasks',
+      indexes: [
+        'JSON_EXTRACT(data, "$.ticketId")',
+        'JSON_EXTRACT(data, "$.orderIndex")',
+        'created_at',
+        'JSON_EXTRACT(data, "$.done")'
+      ]
     }
   ]
 
@@ -212,9 +225,7 @@ export class DatabaseManager {
 
   private getIndexName(tableName: string, indexField: string): string {
     // Clean up the index field for naming
-    const cleanField = indexField
-      .replace(/JSON_EXTRACT\(data, "\$\.(\w+)"\)/g, '$1')
-      .replace(/[^a-zA-Z0-9_]/g, '_')
+    const cleanField = indexField.replace(/JSON_EXTRACT\(data, "\$\.(\w+)"\)/g, '$1').replace(/[^a-zA-Z0-9_]/g, '_')
     return `idx_${tableName}_${cleanField}`
   }
 
@@ -310,7 +321,7 @@ export class DatabaseManager {
 
         if (attempts >= 50) {
           // Use a new base with offset
-          currentId = Date.now() + (i * 10) + Math.floor(Math.random() * 10)
+          currentId = Date.now() + i * 10 + Math.floor(Math.random() * 10)
         }
 
         ids.push(currentId)
@@ -405,11 +416,7 @@ export class DatabaseManager {
 
   // --- Utility Methods ---
 
-  async findByJsonField<T>(
-    tableName: string,
-    jsonPath: string,
-    value: any
-  ): Promise<T[]> {
+  async findByJsonField<T>(tableName: string, jsonPath: string, value: any): Promise<T[]> {
     this.ensureTable(tableName)
     const query = this.db.prepare(`
       SELECT data FROM ${tableName}
@@ -417,14 +424,10 @@ export class DatabaseManager {
       ORDER BY created_at DESC
     `)
     const rows = query.all(jsonPath, value) as Array<{ data: string }>
-    return rows.map(row => JSON.parse(row.data))
+    return rows.map((row) => JSON.parse(row.data))
   }
 
-  async findByDateRange<T>(
-    tableName: string,
-    startTime: number,
-    endTime: number
-  ): Promise<T[]> {
+  async findByDateRange<T>(tableName: string, startTime: number, endTime: number): Promise<T[]> {
     this.ensureTable(tableName)
     const query = this.db.prepare(`
       SELECT data FROM ${tableName}
@@ -432,14 +435,10 @@ export class DatabaseManager {
       ORDER BY created_at DESC
     `)
     const rows = query.all(startTime, endTime) as Array<{ data: string }>
-    return rows.map(row => JSON.parse(row.data))
+    return rows.map((row) => JSON.parse(row.data))
   }
 
-  async countByJsonField(
-    tableName: string,
-    jsonPath: string,
-    value: any
-  ): Promise<number> {
+  async countByJsonField(tableName: string, jsonPath: string, value: any): Promise<number> {
     this.ensureTable(tableName)
     const query = this.db.prepare(`
       SELECT COUNT(*) as count FROM ${tableName}
@@ -488,7 +487,7 @@ export class DatabaseManager {
 
     const query = this.db.prepare('SELECT version FROM migrations ORDER BY version')
     const rows = query.all() as Array<{ version: number }>
-    return rows.map(row => row.version)
+    return rows.map((row) => row.version)
   }
 
   // --- Transaction Support ---

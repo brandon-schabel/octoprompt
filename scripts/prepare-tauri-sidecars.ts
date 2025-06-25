@@ -9,7 +9,7 @@ const PLATFORM_MAP: Record<string, string> = {
   'bun-linux-x64': 'x86_64-unknown-linux-gnu',
   'bun-darwin-x64': 'x86_64-apple-darwin',
   'bun-darwin-arm64': 'aarch64-apple-darwin',
-  'bun-windows-x64': 'x86_64-pc-windows-msvc',
+  'bun-windows-x64': 'x86_64-pc-windows-msvc'
 }
 
 // Get the current platform's Rust target triple
@@ -46,7 +46,7 @@ async function prepareTauriSidecars() {
     if (existsSync(sourcePath)) {
       console.log(`Copying ${bunPlatform} -> ${rustTriple}`)
       copyFileSync(sourcePath, targetPath)
-      
+
       // Make executable on Unix systems
       if (!bunPlatform.includes('windows')) {
         chmodSync(targetPath, 0o755)
@@ -63,7 +63,7 @@ async function prepareTauriSidecars() {
   if (existsSync(bundlePath) && !existsSync(currentTargetPath)) {
     console.log(`Copying current platform bundle -> ${currentTriple}`)
     copyFileSync(bundlePath, currentTargetPath)
-    
+
     if (process.platform !== 'win32') {
       chmodSync(currentTargetPath, 0o755)
     }

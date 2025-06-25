@@ -71,7 +71,7 @@ describe('Prompt Service', () => {
       expect(prompt.created).toBeDefined()
       expect(prompt.updated).toBeDefined()
       expect(mockPromptsDb[prompt.id]).toBeDefined()
-      
+
       // Check that prompt-project association was created
       expect(mockPromptProjectsDb.length).toBe(1)
       expect(mockPromptProjectsDb[0].promptId).toBe(prompt.id)
@@ -132,7 +132,7 @@ describe('Prompt Service', () => {
         content: 'Updated content'
       }
 
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
       const updated = await updatePrompt(created.id, updates)
 
       expect(updated.name).toBe('Updated')
@@ -188,7 +188,7 @@ describe('Prompt Service', () => {
       await addPromptToProject(promptId, projectId)
 
       const associations = mockPromptProjectsDb.filter(
-        link => link.promptId === promptId && link.projectId === projectId
+        (link) => link.promptId === promptId && link.projectId === projectId
       )
       expect(associations.length).toBe(1)
     })
@@ -254,16 +254,16 @@ describe('Prompt Service', () => {
       const prompts = await listPromptsByProject(projectId)
 
       expect(prompts.length).toBe(2)
-      expect(prompts.map(p => p.id)).toContain(prompt1.id)
-      expect(prompts.map(p => p.id)).toContain(prompt2.id)
+      expect(prompts.map((p) => p.id)).toContain(prompt1.id)
+      expect(prompts.map((p) => p.id)).toContain(prompt2.id)
       // All returned prompts should have the projectId set
-      expect(prompts.every(p => p.projectId === projectId)).toBe(true)
+      expect(prompts.every((p) => p.projectId === projectId)).toBe(true)
     })
 
     test('getPromptProjects returns all associations for a prompt', async () => {
       // Add prompt to multiple projects
       await addPromptToProject(promptId, projectId)
-      
+
       // Since addPromptToProject replaces, we need to manually add to test multiple
       mockPromptProjectsDb.push({
         id: generateTestId(),
@@ -274,8 +274,8 @@ describe('Prompt Service', () => {
       const associations = await getPromptProjects(promptId)
 
       expect(associations.length).toBe(2)
-      expect(associations.map(a => a.projectId)).toContain(projectId)
-      expect(associations.map(a => a.projectId)).toContain(8888)
+      expect(associations.map((a) => a.projectId)).toContain(projectId)
+      expect(associations.map((a) => a.projectId)).toContain(8888)
     })
 
     test('getPromptsByIds returns requested prompts', async () => {
@@ -286,9 +286,9 @@ describe('Prompt Service', () => {
       const prompts = await getPromptsByIds([prompt1.id, prompt3.id, generateTestId()])
 
       expect(prompts.length).toBe(2)
-      expect(prompts.map(p => p.id)).toContain(prompt1.id)
-      expect(prompts.map(p => p.id)).toContain(prompt3.id)
-      expect(prompts.map(p => p.id)).not.toContain(prompt2.id)
+      expect(prompts.map((p) => p.id)).toContain(prompt1.id)
+      expect(prompts.map((p) => p.id)).toContain(prompt3.id)
+      expect(prompts.map((p) => p.id)).not.toContain(prompt2.id)
     })
   })
 })

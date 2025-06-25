@@ -16,21 +16,25 @@ MCP (Model Context Protocol) is a standard protocol for connecting AI assistants
 ### Backend Components
 
 1. **Schemas** (`@octoprompt/schemas/src/mcp.schemas.ts`)
+
    - MCP server configuration schemas
    - Tool and resource schemas
    - Execution request/response schemas
 
 2. **Storage** (`@octoprompt/storage/src/mcp-storage.ts`)
+
    - JSON-based storage for MCP configurations
    - Server state persistence
    - Project-specific MCP data management
 
 3. **MCP Client** (`@octoprompt/mcp-client`)
+
    - Wrapper around the official MCP SDK
    - Server lifecycle management
    - Tool execution and resource access
 
 4. **Services** (`@octoprompt/services/src/mcp-service.ts`)
+
    - High-level MCP operations
    - Server configuration CRUD
    - Tool/resource discovery and execution
@@ -42,6 +46,7 @@ MCP (Model Context Protocol) is a standard protocol for connecting AI assistants
 ### Frontend Components
 
 1. **React Hooks** (`packages/client/src/hooks/api/use-mcp-api.ts`)
+
    - Query and mutation hooks for MCP operations
    - Real-time server state updates
 
@@ -57,7 +62,7 @@ MCP (Model Context Protocol) is a standard protocol for connecting AI assistants
 ### Adding an MCP Server
 
 1. Navigate to a project and click the "MCP" tab
-2. Click "Add Server" 
+2. Click "Add Server"
 3. Configure the server:
    - **Name**: Display name for the server
    - **Command**: Command to start the server (e.g., `npx @modelcontextprotocol/server-filesystem`)
@@ -93,24 +98,30 @@ MCP (Model Context Protocol) is a standard protocol for connecting AI assistants
 ## Example MCP Servers
 
 ### File System Server
+
 ```
 Command: npx @modelcontextprotocol/server-filesystem
 Arguments: --root /path/to/project
 ```
+
 Provides file system access tools and resources.
 
 ### GitHub Server
+
 ```
 Command: npx @modelcontextprotocol/server-github
 Environment: GITHUB_TOKEN=your-token
 ```
+
 Provides GitHub repository tools and resources.
 
 ### Custom Server
+
 ```
 Command: node my-mcp-server.js
 Arguments: --config ./config.json
 ```
+
 Run your own MCP server implementation.
 
 ## Security Considerations

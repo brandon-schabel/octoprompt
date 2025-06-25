@@ -10,7 +10,7 @@ describe('Prompt Storage (SQLite)', () => {
     // Get database instance and clear tables
     const db = DatabaseManager.getInstance()
     await db.clearAllTables()
-    
+
     testPromptId = Date.now()
   })
 
@@ -78,7 +78,7 @@ describe('Prompt Storage (SQLite)', () => {
       content: 'Updated content',
       updated: Date.now()
     }
-    
+
     const updatedPrompts = { [String(testPromptId)]: updatedPrompt }
     await promptStorage.writePrompts(updatedPrompts)
 
@@ -152,19 +152,19 @@ describe('Prompt Storage (SQLite)', () => {
     // Read and verify
     const retrievedAssociations = await promptStorage.readPromptProjects()
     expect(retrievedAssociations).toHaveLength(3)
-    
+
     // Check that all associations are preserved
-    const prompt1Associations = retrievedAssociations.filter(a => a.promptId === promptId1)
+    const prompt1Associations = retrievedAssociations.filter((a) => a.promptId === promptId1)
     expect(prompt1Associations).toHaveLength(2)
-    
-    const project1Associations = retrievedAssociations.filter(a => a.projectId === projectId1)
+
+    const project1Associations = retrievedAssociations.filter((a) => a.projectId === projectId1)
     expect(project1Associations).toHaveLength(2)
   })
 
   it('should generate unique IDs', () => {
     const id1 = promptStorage.generateId()
     const id2 = promptStorage.generateId()
-    
+
     expect(id1).toBeDefined()
     expect(id2).toBeDefined()
     expect(id1).not.toBe(id2)

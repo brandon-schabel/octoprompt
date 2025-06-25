@@ -1,5 +1,6 @@
-import { ApiError } from 'shared'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from 'shared/src/schemas/common.schemas'
+// Last 5 changes: Fixed imports to use OctoPrompt package structure
+import { ApiError } from '@octoprompt/shared'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
 import {
   createTicket,
   getTicketById,
@@ -18,68 +19,47 @@ import {
   getTasksForTickets,
   listTicketsWithTasks,
   suggestFilesForTicket
-} from '../services/ticket-service'
-import { ticketsApiValidation } from 'shared/src/schemas/ticket.schemas'
+} from '@octoprompt/services'
+import { ticketsApiValidation, TicketSchema, TicketTaskSchema } from '@octoprompt/schemas'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 
-const TicketSchema = z
-  .object({
-    id: z.string().openapi({ description: 'Unique ticket identifier' }),
-    projectId: z.string().openapi({ description: 'Project this ticket belongs to' }),
-    title: z.string().openapi({ description: 'Ticket title' }),
-    overview: z.string().openapi({ description: 'Ticket description' }),
-    status: z.enum(['open', 'in_progress', 'closed']).openapi({ description: 'Current ticket status' }),
-    priority: z.enum(['low', 'normal', 'high']).openapi({ description: 'Ticket priority' }),
-    suggestedFileIds: z.string().openapi({ description: 'JSON string of suggested file IDs' }),
-    createdAt: z.string().datetime().openapi({ description: 'Creation timestamp' }),
-    updatedAt: z.string().datetime().openapi({ description: 'Last update timestamp' })
-  })
-  .openapi('Ticket')
+// Use the proper TicketSchema from @octoprompt/schemas instead of redefining
 
-const TaskSchema = z
-  .object({
-    id: z.string().openapi({ description: 'Unique task identifier' }),
-    ticketId: z.string().openapi({ description: 'Ticket this task belongs to' }),
-    content: z.string().openapi({ description: 'Task content/description' }),
-    done: z.boolean().openapi({ description: 'Whether the task is completed' }),
-    orderIndex: z.number().openapi({ description: 'Task order within the ticket' }),
-    createdAt: z.string().datetime().openapi({ description: 'Creation timestamp' }),
-    updatedAt: z.string().datetime().openapi({ description: 'Last update timestamp' })
-  })
-  .openapi('Task')
+// Use the proper TicketTaskSchema from @octoprompt/schemas instead of redefining
+const TaskSchema = TicketTaskSchema // Alias for consistency with existing code
 
 const TicketResponseSchema = z
   .object({
     success: z.literal(true),
-    ticket: TicketSchema
+    data: TicketSchema
   })
   .openapi('TicketResponse')
 
 const TicketListResponseSchema = z
   .object({
     success: z.literal(true),
-    tickets: z.array(TicketSchema)
+    data: z.array(TicketSchema)
   })
   .openapi('TicketListResponse')
 
 const TaskResponseSchema = z
   .object({
     success: z.literal(true),
-    task: TaskSchema
+    data: TaskSchema
   })
   .openapi('TaskResponse')
 
 const TaskListResponseSchema = z
   .object({
     success: z.literal(true),
-    tasks: z.array(TaskSchema)
+    data: z.array(TaskSchema)
   })
   .openapi('TaskListResponse')
 
 const LinkedFilesResponseSchema = z
   .object({
     success: z.literal(true),
-    linkedFiles: z.array(
+    data: z.array(
       z.object({
         ticketId: z.string(),
         fileId: z.string()
@@ -91,16 +71,20 @@ const LinkedFilesResponseSchema = z
 const SuggestedTasksResponseSchema = z
   .object({
     success: z.literal(true),
-    suggestedTasks: z.array(z.string())
+    data: z.object({
+      suggestedTasks: z.array(z.string())
+    })
   })
   .openapi('SuggestedTasksResponse')
 
 const SuggestedFilesResponseSchema = z
   .object({
     success: z.literal(true),
-    recommendedFileIds: z.array(z.string()),
-    combinedSummaries: z.string().optional(),
-    message: z.string().optional()
+    data: z.object({
+      recommendedFileIds: z.array(z.string()),
+      combinedSummaries: z.string().optional(),
+      message: z.string().optional()
+    })
   })
   .openapi('SuggestedFilesResponse')
 
@@ -115,7 +99,7 @@ const TicketWithTaskCountSchema = z
 const TicketWithTaskCountListResponseSchema = z
   .object({
     success: z.literal(true),
-    ticketsWithCount: z.array(TicketWithTaskCountSchema)
+    data: z.array(TicketWithTaskCountSchema)
   })
   .openapi('TicketWithTaskCountListResponse')
 
@@ -129,14 +113,14 @@ const TicketWithTasksSchema = z
 const TicketWithTasksListResponseSchema = z
   .object({
     success: z.literal(true),
-    ticketsWithTasks: z.array(TicketWithTasksSchema)
+    data: z.array(TicketWithTasksSchema)
   })
   .openapi('TicketWithTasksListResponse')
 
 const BulkTasksResponseSchema = z
   .object({
     success: z.literal(true),
-    tasks: z.record(z.string(), z.array(TaskSchema))
+    data: z.record(z.string(), z.array(TaskSchema))
   })
   .openapi('BulkTasksResponse')
 
@@ -174,13 +158,7 @@ const StatusQuerySchema = z
 
 const LinkFilesBodySchema = ticketsApiValidation.linkFiles.body.openapi('LinkFilesBody')
 const SuggestTasksBodySchema = ticketsApiValidation.suggestTasks.body.openapi('SuggestTasksBody')
-const SuggestFilesBodySchema = z
-  .object({
-    extraUserInput: z.string().optional().openapi({
-      description: 'Optional additional context for file suggestions'
-    })
-  })
-  .openapi('SuggestFilesBody')
+const SuggestFilesBodySchema = ticketsApiValidation.suggestFiles.body.openapi('SuggestFilesBody')
 
 const CreateTaskBodySchema = ticketsApiValidation.createTask.body.openapi('CreateTaskBody')
 const UpdateTaskBodySchema = ticketsApiValidation.updateTask.body.openapi('UpdateTaskBody')
@@ -519,35 +497,25 @@ const getTasksForTicketsRoute = createRoute({
   }
 })
 
-const formatTicketData = (ticket: any): z.infer<typeof TicketSchema> => {
-  const dataToValidate = {
-    ...ticket,
-
-    createdAt: ticket.createdAt instanceof Date ? ticket.createdAt.toISOString() : ticket.createdAt,
-    updatedAt: ticket.updatedAt instanceof Date ? ticket.updatedAt.toISOString() : ticket.updatedAt,
-
-    suggestedFileIds:
-      typeof ticket.suggestedFileIds === 'string'
-        ? ticket.suggestedFileIds
-        : JSON.stringify(ticket.suggestedFileIds || []),
-
-    status: ticket.status,
-    priority: ticket.priority
+// Helper function to parse string ID to number
+const parseNumericId = (id: string): number => {
+  const parsed = parseInt(id, 10)
+  if (isNaN(parsed)) {
+    throw new ApiError(400, `Invalid ID format: ${id}`, 'INVALID_ID_FORMAT')
   }
+  return parsed
+}
 
-  return TicketSchema.parse(dataToValidate)
+const formatTicketData = (ticket: any): z.infer<typeof TicketSchema> => {
+  // The ticket data from service already matches the schema format
+  // Just ensure all fields are present and valid
+  return TicketSchema.parse(ticket)
 }
 
 const formatTaskData = (task: any): z.infer<typeof TaskSchema> => {
-  const dataToValidate = {
-    ...task,
-    done: Boolean(task.done),
-
-    createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : task.createdAt,
-    updatedAt: task.updatedAt instanceof Date ? task.updatedAt.toISOString() : task.updatedAt,
-    orderIndex: Number(task.orderIndex)
-  }
-  return TaskSchema.parse(dataToValidate)
+  // The task data from service already matches the schema format
+  // Just ensure all fields are present and valid
+  return TaskSchema.parse(task)
 }
 
 export const ticketRoutes = new OpenAPIHono()
@@ -556,27 +524,27 @@ export const ticketRoutes = new OpenAPIHono()
     const body = c.req.valid('json')
     const ticket = await createTicket(body)
     const formattedTicket = formatTicketData(ticket)
-    const payload: z.infer<typeof TicketResponseSchema> = { success: true, ticket: formattedTicket }
+    const payload: z.infer<typeof TicketResponseSchema> = { success: true, data: formattedTicket }
     return c.json(payload, 201)
   })
   .openapi(getTicketRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
-    const ticket = await getTicketById(ticketId)
+    const ticket = await getTicketById(parseNumericId(ticketId))
     const formattedTicket = formatTicketData(ticket)
-    const payload: z.infer<typeof TicketResponseSchema> = { success: true, ticket: formattedTicket }
+    const payload: z.infer<typeof TicketResponseSchema> = { success: true, data: formattedTicket }
     return c.json(payload, 200)
   })
   .openapi(updateTicketRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const body = c.req.valid('json')
-    const updatedTicket = await updateTicket(ticketId, body)
+    const updatedTicket = await updateTicket(parseNumericId(ticketId), body)
     const formattedTicket = formatTicketData(updatedTicket)
-    const payload: z.infer<typeof TicketResponseSchema> = { success: true, ticket: formattedTicket }
+    const payload: z.infer<typeof TicketResponseSchema> = { success: true, data: formattedTicket }
     return c.json(payload, 200)
   })
   .openapi(deleteTicketRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
-    await deleteTicket(ticketId)
+    await deleteTicket(parseNumericId(ticketId))
     const payload: z.infer<typeof OperationSuccessResponseSchema> = {
       success: true,
       message: 'Ticket deleted successfully'
@@ -587,20 +555,22 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(linkFilesRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { fileIds } = c.req.valid('json')
-    const result = await linkFilesToTicket(ticketId, fileIds)
-    const payload: z.infer<typeof LinkedFilesResponseSchema> = { success: true, linkedFiles: result }
+    const result = await linkFilesToTicket(parseNumericId(ticketId), fileIds)
+    const payload: z.infer<typeof LinkedFilesResponseSchema> = { success: true, data: result }
     return c.json(payload, 200)
   })
   .openapi(suggestFilesRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { extraUserInput } = c.req.valid('json')
-    const result = await suggestFilesForTicket(ticketId, { extraUserInput })
+    const result = await suggestFilesForTicket(parseNumericId(ticketId), { extraUserInput })
 
     const payload: z.infer<typeof SuggestedFilesResponseSchema> = {
       success: true,
-      recommendedFileIds: result.recommendedFileIds || [],
-      combinedSummaries: result.combinedSummaries,
-      message: result.message
+      data: {
+        recommendedFileIds: result.recommendedFileIds || [],
+        combinedSummaries: result.combinedSummaries,
+        message: result.message
+      }
     }
     return c.json(payload, 200)
   })
@@ -608,19 +578,19 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(suggestTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { userContext } = c.req.valid('json')
-    const tasks = await suggestTasksForTicket(ticketId, userContext)
-    const payload: z.infer<typeof SuggestedTasksResponseSchema> = { success: true, suggestedTasks: tasks }
+    const tasks = await suggestTasksForTicket(parseNumericId(ticketId), userContext)
+    const payload: z.infer<typeof SuggestedTasksResponseSchema> = { success: true, data: { suggestedTasks: tasks } }
     return c.json(payload, 200)
   })
 
   .openapi(listTicketsByProjectRoute, async (c) => {
     const { projectId } = c.req.valid('param')
     const query = c.req.valid('query')
-    const tickets = await listTicketsByProject(projectId, query?.status)
+    const tickets = await listTicketsByProject(parseNumericId(projectId), query?.status)
     const formattedTickets = tickets.map(formatTicketData)
     const payload: z.infer<typeof TicketListResponseSchema> = {
       success: true,
-      tickets: formattedTickets
+      data: formattedTickets
     }
     return c.json(payload, 200)
   })
@@ -629,9 +599,9 @@ export const ticketRoutes = new OpenAPIHono()
     const query = c.req.valid('query')
     const statusFilter = query?.status === 'all' ? undefined : query?.status
 
-    const results = await listTicketsWithTaskCount(projectId, statusFilter)
+    const results = await listTicketsWithTaskCount(parseNumericId(projectId), statusFilter)
 
-    const formatted: z.infer<typeof TicketWithTaskCountSchema>[] = results.map((item) => {
+    const formatted: z.infer<typeof TicketWithTaskCountSchema>[] = results.map((item: any) => {
       const { taskCount, completedTaskCount, ...ticketData } = item
       return {
         ticket: formatTicketData(ticketData),
@@ -642,7 +612,7 @@ export const ticketRoutes = new OpenAPIHono()
 
     const payload: z.infer<typeof TicketWithTaskCountListResponseSchema> = {
       success: true,
-      ticketsWithCount: formatted
+      data: formatted
     }
     return c.json(payload, 200)
   })
@@ -651,16 +621,16 @@ export const ticketRoutes = new OpenAPIHono()
     const query = c.req.valid('query')
     const statusFilter = query?.status === 'all' ? undefined : query?.status
 
-    const ticketsWithTasks = await listTicketsWithTasks(projectId, statusFilter)
+    const ticketsWithTasks = await listTicketsWithTasks(parseNumericId(projectId), statusFilter)
 
-    const formatted: z.infer<typeof TicketWithTasksSchema>[] = ticketsWithTasks.map((item) => ({
+    const formatted: z.infer<typeof TicketWithTasksSchema>[] = ticketsWithTasks.map((item: any) => ({
       ticket: formatTicketData(item),
       tasks: (item.tasks || []).map(formatTaskData)
     }))
 
     const payload: z.infer<typeof TicketWithTasksListResponseSchema> = {
       success: true,
-      ticketsWithTasks: formatted
+      data: formatted
     }
     return c.json(payload, 200)
   })
@@ -668,29 +638,29 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(createTaskRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { content } = c.req.valid('json')
-    const task = await createTask(ticketId, content)
+    const task = await createTask(parseNumericId(ticketId), content)
     const formattedTask = formatTaskData(task)
-    const payload: z.infer<typeof TaskResponseSchema> = { success: true, task: formattedTask }
+    const payload: z.infer<typeof TaskResponseSchema> = { success: true, data: formattedTask }
     return c.json(payload, 201)
   })
   .openapi(getTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
-    const tasks = await getTasks(ticketId)
+    const tasks = await getTasks(parseNumericId(ticketId))
     const formattedTasks = tasks.map(formatTaskData)
-    const payload: z.infer<typeof TaskListResponseSchema> = { success: true, tasks: formattedTasks }
+    const payload: z.infer<typeof TaskListResponseSchema> = { success: true, data: formattedTasks }
     return c.json(payload, 200)
   })
   .openapi(updateTaskRoute, async (c) => {
     const { ticketId, taskId } = c.req.valid('param')
     const body = c.req.valid('json')
-    const updatedTask = await updateTask(ticketId, taskId, body)
+    const updatedTask = await updateTask(parseNumericId(ticketId), parseNumericId(taskId), body)
     const formattedTask = formatTaskData(updatedTask)
-    const payload: z.infer<typeof TaskResponseSchema> = { success: true, task: formattedTask }
+    const payload: z.infer<typeof TaskResponseSchema> = { success: true, data: formattedTask }
     return c.json(payload, 200)
   })
   .openapi(deleteTaskRoute, async (c) => {
     const { ticketId, taskId } = c.req.valid('param')
-    await deleteTask(ticketId, taskId)
+    await deleteTask(parseNumericId(ticketId), parseNumericId(taskId))
     const payload: z.infer<typeof OperationSuccessResponseSchema> = {
       success: true,
       message: 'Task deleted successfully'
@@ -700,28 +670,34 @@ export const ticketRoutes = new OpenAPIHono()
   .openapi(reorderTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
     const { tasks } = c.req.valid('json')
-    const updatedTasks = await reorderTasks(ticketId, tasks)
+    // Convert string taskIds to numbers in the tasks array
+    const numericTasks = tasks.map((task: any) => ({
+      taskId: parseNumericId(task.taskId.toString()),
+      orderIndex: task.orderIndex
+    }))
+    const updatedTasks = await reorderTasks(parseNumericId(ticketId), numericTasks)
     const formattedTasks = updatedTasks.map(formatTaskData)
-    const payload: z.infer<typeof TaskListResponseSchema> = { success: true, tasks: formattedTasks }
+    const payload: z.infer<typeof TaskListResponseSchema> = { success: true, data: formattedTasks }
     return c.json(payload, 200)
   })
   .openapi(autoGenerateTasksRoute, async (c) => {
     const { ticketId } = c.req.valid('param')
-    const newTasks = await autoGenerateTasksFromOverview(ticketId)
+    const newTasks = await autoGenerateTasksFromOverview(parseNumericId(ticketId))
     const formattedTasks = newTasks.map(formatTaskData)
-    const payload: z.infer<typeof TaskListResponseSchema> = { success: true, tasks: formattedTasks }
+    const payload: z.infer<typeof TaskListResponseSchema> = { success: true, data: formattedTasks }
     return c.json(payload, 200)
   })
   .openapi(getTasksForTicketsRoute, async (c) => {
     const { ids } = c.req.valid('query')
-    const tasksByTicketId = await getTasksForTickets(ids)
+    const numericIds = ids.map((id: string) => parseNumericId(id))
+    const tasksByTicketId = await getTasksForTickets(numericIds)
 
     const formattedTasks: Record<string, z.infer<typeof TaskSchema>[]> = {}
     for (const [ticketId, tasks] of Object.entries(tasksByTicketId)) {
-      formattedTasks[ticketId] = tasks.map(formatTaskData)
+      formattedTasks[ticketId] = (tasks as any[]).map(formatTaskData)
     }
 
-    const payload: z.infer<typeof BulkTasksResponseSchema> = { success: true, tasks: formattedTasks }
+    const payload: z.infer<typeof BulkTasksResponseSchema> = { success: true, data: formattedTasks }
     return c.json(payload, 200)
   })
 
