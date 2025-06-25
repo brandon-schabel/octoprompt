@@ -769,8 +769,9 @@ export function AgentCoderControlDialog({
                     <div className='flex flex-col flex-1 min-h-0'>
                       <div className='flex-1 overflow-y-auto p-2'>
                         <h3 className='text-sm font-medium mb-2'>Proposed Changes</h3>
-                        {agentRunData.updatedFiles.map((fileId: number) => {
-                          const file = projectFileMap.get(fileId as number)
+                        {agentRunData.updatedFiles.map((fileId) => {
+                          if (!fileId) return null
+                          const file = projectFileMap.get(fileId)
                           if (!file) return null
                           return <FileChangePreview key={file.id} file={file} projectFileMap={projectFileMap} />
                         })}

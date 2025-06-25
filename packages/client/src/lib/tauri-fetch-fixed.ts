@@ -27,7 +27,7 @@ if (isTauri) {
   tauriLoadPromise = import('@tauri-apps/plugin-http')
     .then((module) => {
       // Ensure Tauri fetch is also bound properly
-      tauriFetch = module.fetch
+      tauriFetch = module.fetch as typeof fetch
       console.log('[TauriFetch] Tauri HTTP plugin loaded successfully')
     })
     .catch((error) => {
@@ -37,9 +37,9 @@ if (isTauri) {
 }
 
 // Create the custom fetch function that returns a bound function
-const createCustomFetch = (): typeof fetch => {
+const createCustomFetch = () => {
   // This function will be called with proper context
-  const fetchWrapper: typeof fetch = async (input, init) => {
+  const fetchWrapper = async (input: RequestInfo | URL, init?: RequestInit) => {
     console.log('[TauriFetch] Fetch called for:', input)
 
     // In Tauri environment
@@ -80,8 +80,13 @@ const createCustomFetch = (): typeof fetch => {
     }
   }
 
+  // Add preconnect as a no-op to match the fetch type
+  ;(fetchWrapper as any).preconnect = (origin: string) => {
+    console.log('[TauriFetch] Preconnect called for:', origin)
+  }
+
   // Return the wrapper function directly - it doesn't need binding
-  return fetchWrapper
+  return fetchWrapper as typeof fetch
 }
 
 // Export the custom fetch function

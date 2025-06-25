@@ -42,12 +42,6 @@ export const useProjectFileMap = (projectId: number) => {
   return useMemo(() => {
     const files = fileData?.data ?? []
 
-    if (files.length > 0) {
-      console.log('Building project file map with', files.length, 'files')
-      console.log('First file sample:', files[0])
-    } else {
-      console.log('No files to build map with')
-    }
 
     const map = buildProjectFileMap(files)
     console.log('Generated project file map size:', map.size)

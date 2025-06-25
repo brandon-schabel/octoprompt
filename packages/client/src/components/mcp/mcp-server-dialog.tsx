@@ -96,6 +96,7 @@ export function MCPServerDialog({ projectId, open, onOpenChange, editingServer }
 
       const data = {
         name: values.name,
+        projectId,
         command: values.command,
         args,
         env,

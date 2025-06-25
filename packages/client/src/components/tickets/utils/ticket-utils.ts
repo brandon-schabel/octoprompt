@@ -15,9 +15,9 @@ export function buildTicketContent(ticket: Ticket, tasks?: TicketTask[]): string
   content += `## Metadata\n`
   content += `- **Status:** ${ticket.status?.replace('_', ' ').toUpperCase() || 'N/A'}\n`
   content += `- **Priority:** ${ticket.priority?.toUpperCase() || 'N/A'}\n`
-  content += `- **Created:** ${new Date(ticket.createdAt).toLocaleString()}\n`
-  if (ticket.updatedAt) {
-    content += `- **Last Updated:** ${new Date(ticket.updatedAt).toLocaleString()}\n`
+  content += `- **Created:** ${new Date(ticket.created).toLocaleString()}\n`
+  if (ticket.updated) {
+    content += `- **Last Updated:** ${new Date(ticket.updated).toLocaleString()}\n`
   }
   content += '\n'
 

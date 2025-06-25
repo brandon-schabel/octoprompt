@@ -83,7 +83,22 @@ export const projectTabStateSchema = z
       .number()
       .optional()
       .default(0)
-      .openapi({ description: 'Numerical sort order for arranging project tabs.' })
+      .openapi({ description: 'Numerical sort order for arranging project tabs.' }),
+    ticketSearch: z
+      .string()
+      .optional()
+      .default('')
+      .openapi({ description: 'Current search query for tickets within this project tab.' }),
+    ticketSort: z
+      .enum(['created_asc', 'created_desc', 'status', 'priority'])
+      .optional()
+      .default('created_desc')
+      .openapi({ description: 'Sort order for tickets display.' }),
+    ticketStatusFilter: z
+      .enum(['all', 'open', 'in_progress', 'closed'])
+      .optional()
+      .default('all')
+      .openapi({ description: 'Status filter for tickets display.' })
   })
   .openapi('ProjectTabState', {
     description:
@@ -357,7 +372,10 @@ export const createSafeGlobalState = (): GlobalState => ({
       preferredEditor: 'vscode' as const,
       suggestedFileIds: [],
       bookmarkedFileGroups: {},
-      sortOrder: 0
+      sortOrder: 0,
+      ticketSearch: '',
+      ticketSort: 'created_desc' as const,
+      ticketStatusFilter: 'all' as const
     }
   },
   projectActiveTabId: 1,

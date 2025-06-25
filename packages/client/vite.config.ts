@@ -27,7 +27,12 @@ export default defineConfig({
       ignored: ['**/src-tauri/**']
     }
   },
-  plugins: [TanStackRouterVite({}), react({}), tsconfigPaths()],
+  plugins: [
+    // TanStackRouterVite automatically generates routeTree.gen.ts during dev and build
+    TanStackRouterVite(), 
+    react({}), 
+    tsconfigPaths()
+  ],
   resolve: {
     alias: {
       '@': '/src'

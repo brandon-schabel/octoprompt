@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { ProjectData } from '@octoprompt/schemas'
+import { Project } from '@octoprompt/schemas'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Play, Check, X, Trash2 } from 'lucide-react'
 import { LazyMonacoEditor } from '@/components/lazy-monaco-editor'
 import { toast } from 'sonner'
@@ -20,15 +21,26 @@ import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from 'date-fns'
 
 interface AgentCoderAgentProps {
-  project: ProjectData
+  project: Project
   projectId: number
-  allProjects: ProjectData[]
+  allProjects: Project[]
+  selectedFileIds?: number[]
+  selectedPromptIds?: number[]
+  userInput?: string
 }
 
-export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderAgentProps) {
+export function AgentCoderAgent({ 
+  project, 
+  projectId, 
+  allProjects,
+  selectedFileIds = [],
+  selectedPromptIds = [],
+  userInput: initialUserInput = ''
+}: AgentCoderAgentProps) {
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
   const [showRawData, setShowRawData] = useState(false)
   const [activeTab, setActiveTab] = useState<'runs' | 'logs' | 'confirm'>('runs')
+  const [userInput, setUserInput] = useState(initialUserInput)
 
   const runAgentCoder = useRunAgentCoder()
   const { data: runs = [], isLoading: isLoadingRuns } = useGetAgentCoderRuns(projectId)
@@ -38,13 +50,25 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
   const deleteRun = useDeleteAgentCoderRun()
 
   const handleRunAgentCoder = async () => {
+    if (!userInput.trim()) {
+      toast.error('Please provide instructions for the Agent Coder')
+      return
+    }
+    
     try {
-      const result = await runAgentCoder.mutateAsync({ projectId })
-      setSelectedRunId(result.jobId)
-      setActiveTab('logs')
-      toast.success('Agent Coder job started')
+      const result = await runAgentCoder.mutateAsync({ 
+        projectId,
+        userInput,
+        selectedFileIds,
+        selectedPromptIds
+      })
+      
+      if (result.success && result.data?.agentJobId) {
+        setSelectedRunId(result.data.agentJobId)
+        setActiveTab('logs')
+      }
     } catch (error) {
-      toast.error('Failed to start Agent Coder job')
+      // Error already handled by the mutation hook
     }
   }
 
@@ -72,26 +96,39 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
     }
   }
 
-  const currentRun = runs.find((run) => run.jobId === selectedRunId)
-  const hasChanges = runData?.fileChanges && Object.keys(runData.fileChanges).length > 0
+  const currentRunId = selectedRunId
+  const hasChanges = runData?.updatedFiles && runData.updatedFiles.length > 0
 
   return (
     <div className='h-full flex flex-col'>
-      <div className='flex items-center justify-between p-4 border-b'>
-        <h2 className='text-lg font-semibold'>Agent Coder</h2>
-        <Button onClick={handleRunAgentCoder} disabled={runAgentCoder.isPending} size='sm'>
-          {runAgentCoder.isPending ? (
-            <>
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-              Running...
-            </>
-          ) : (
-            <>
-              <Play className='mr-2 h-4 w-4' />
-              Run Agent
-            </>
-          )}
-        </Button>
+      <div className='p-4 border-b space-y-4'>
+        <div className='flex items-center justify-between'>
+          <h2 className='text-lg font-semibold'>Agent Coder</h2>
+          <Button onClick={handleRunAgentCoder} disabled={runAgentCoder.isPending || !userInput.trim()} size='sm'>
+            {runAgentCoder.isPending ? (
+              <>
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className='mr-2 h-4 w-4' />
+                Run Agent
+              </>
+            )}
+          </Button>
+        </div>
+        <div>
+          <Textarea
+            placeholder="Enter instructions for the Agent Coder (e.g., 'Refactor the authentication logic to use JWT tokens')"
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            className='min-h-[80px]'
+          />
+          <div className='text-xs text-muted-foreground mt-2'>
+            Selected: {selectedFileIds.length} file(s), {selectedPromptIds.length} prompt(s)
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className='flex-1 flex flex-col'>
@@ -117,30 +154,26 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
               </Alert>
             ) : (
               <div className='space-y-2'>
-                {runs.map((run) => (
+                {runs.map((runId) => (
                   <Card
-                    key={run.jobId}
+                    key={runId}
                     className={`p-4 cursor-pointer transition-colors ${
-                      selectedRunId === run.jobId ? 'border-primary' : ''
+                      selectedRunId === runId ? 'border-primary' : ''
                     }`}
-                    onClick={() => setSelectedRunId(run.jobId)}
+                    onClick={() => setSelectedRunId(runId)}
                   >
                     <div className='flex items-center justify-between'>
                       <div>
                         <div className='flex items-center gap-2'>
-                          <span className='font-medium'>Run #{run.jobId}</span>
-                          <Badge variant={run.status === 'completed' ? 'default' : 'secondary'}>{run.status}</Badge>
+                          <span className='font-medium'>Run #{runId}</span>
                         </div>
-                        <p className='text-sm text-muted-foreground'>
-                          {formatDistanceToNow(new Date(run.startTime), { addSuffix: true })}
-                        </p>
                       </div>
                       <Button
                         variant='ghost'
                         size='sm'
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDeleteRun(run.jobId)
+                          handleDeleteRun(runId)
                         }}
                       >
                         <Trash2 className='h-4 w-4' />
@@ -173,14 +206,7 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
               <div className='space-y-2'>
                 {logs.map((log, index) => (
                   <div key={index} className='font-mono text-sm'>
-                    <span className='text-muted-foreground'>[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
-                    <span
-                      className={`${
-                        log.level === 'error' ? 'text-red-500' : log.level === 'warning' ? 'text-yellow-500' : ''
-                      }`}
-                    >
-                      {log.message}
-                    </span>
+                    <pre className='whitespace-pre-wrap'>{JSON.stringify(log, null, 2)}</pre>
                   </div>
                 ))}
               </div>
@@ -189,10 +215,10 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
         </TabsContent>
 
         <TabsContent value='confirm' className='flex-1 flex flex-col p-4'>
-          {runData?.fileChanges && (
+          {runData && hasChanges && (
             <>
               <div className='flex items-center justify-between mb-4'>
-                <h3 className='font-medium'>Proposed Changes</h3>
+                <h3 className='font-medium'>Run Details</h3>
                 <Button onClick={handleConfirmChanges} disabled={confirmChanges.isPending}>
                   {confirmChanges.isPending ? (
                     <>
@@ -209,18 +235,20 @@ export function AgentCoderAgent({ project, projectId, allProjects }: AgentCoderA
               </div>
               <ScrollArea className='flex-1'>
                 <div className='space-y-4'>
-                  {Object.entries(runData.fileChanges).map(([path, change]) => (
-                    <Card key={path} className='p-4'>
-                      <h4 className='font-medium mb-2'>{path}</h4>
-                      <LazyMonacoEditor
-                        value={change.content}
-                        onChange={() => {}}
-                        language={path.split('.').pop() || 'plaintext'}
-                        readOnly
-                        height='300px'
-                      />
-                    </Card>
-                  ))}
+                  <Card className='p-4'>
+                    <h4 className='font-medium mb-2'>Updated Files</h4>
+                    <p className='text-sm text-muted-foreground'>
+                      {runData.updatedFiles.length} file(s) were modified
+                    </p>
+                    {runData.taskPlan && (
+                      <div className='mt-4'>
+                        <h5 className='font-medium mb-2'>Task Plan</h5>
+                        <pre className='text-xs whitespace-pre-wrap'>
+                          {JSON.stringify(runData.taskPlan, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </Card>
                 </div>
               </ScrollArea>
             </>

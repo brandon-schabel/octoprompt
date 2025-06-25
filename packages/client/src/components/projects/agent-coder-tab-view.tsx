@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { ResizablePanel } from '@ui'
 import { AgentCoderAgent } from '@/components/agent-coder/agent-coder-agent'
-import { ProjectData, ProjectTabState } from '@octoprompt/schemas'
+import { Project, ProjectTabState } from '@octoprompt/schemas'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, RefreshCw, FileText, MessageSquare, User } from 'lucide-react'
@@ -14,9 +14,9 @@ import { useGetProjectPrompts } from '@/hooks/api/use-prompts-api'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 interface AgentCoderTabViewProps {
-  project: ProjectData
+  project: Project
   projectId: number
-  allProjects: ProjectData[]
+  allProjects: Project[]
 }
 
 export function AgentCoderTabView({ project, projectId, allProjects }: AgentCoderTabViewProps) {
@@ -141,7 +141,15 @@ export function AgentCoderTabView({ project, projectId, allProjects }: AgentCode
   )
 
   const agentContent = (
-    <AgentCoderAgent key={refreshKey} project={project} projectId={projectId} allProjects={allProjects} />
+    <AgentCoderAgent 
+      key={refreshKey} 
+      project={project} 
+      projectId={projectId} 
+      allProjects={allProjects}
+      selectedFileIds={activeProjectTabState?.selectedFiles || []}
+      selectedPromptIds={activeProjectTabState?.selectedPrompts || []}
+      userInput={activeProjectTabState?.userPrompt || ''}
+    />
   )
 
   if (!isDesktop) {

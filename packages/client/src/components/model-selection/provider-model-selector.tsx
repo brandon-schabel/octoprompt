@@ -47,17 +47,16 @@ export function ProviderModelSelector({
 
   // Prepare model options with optional filtering
   const comboboxOptions = useMemo(() => {
-    const models =
-      modelsData?.data.map((m) => ({
-        value: m.id,
-        label: m.name
-      })) ?? []
+    let filteredModels = modelsData?.data ?? []
 
     if (filterModels) {
-      return models.filter(filterModels)
+      filteredModels = filteredModels.filter(filterModels)
     }
 
-    return models
+    return filteredModels.map((m) => ({
+      value: m.id,
+      label: m.name
+    }))
   }, [modelsData, filterModels])
 
   // Auto-select first model when provider changes or current model is invalid

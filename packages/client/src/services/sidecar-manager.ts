@@ -111,16 +111,24 @@ export class OctoPromptSidecarManager {
 
     const child = await command.spawn()
 
-    // Monitor stdout for readiness
-    child.stdout.on('data', (line: string) => {
+    // Set up event handlers using the correct Tauri v2 API
+    command.on('close', (data) => {
+      console.log(`Server process exited with code ${data.code} and signal ${data.signal}`)
+      this.isReady = false
+    })
+
+    command.on('error', (error) => {
+      console.error('Server error:', error)
+    })
+
+    command.stdout.on('data', (line: string) => {
       console.log('Server:', line)
       if (line.includes('Server running') || line.includes('Listening on')) {
         this.isReady = true
       }
     })
 
-    // Handle errors
-    child.stderr.on('data', (line: string) => {
+    command.stderr.on('data', (line: string) => {
       console.error('Server error:', line)
     })
 

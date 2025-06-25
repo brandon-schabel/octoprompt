@@ -1,6 +1,6 @@
 import { createOctoPromptClient, DataResponseSchema } from '@octoprompt/api-client'
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
-import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile, FileVersion } from '@octoprompt/schemas'
+import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@octoprompt/schemas'
 
 import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@octoprompt/schemas'
 
@@ -418,7 +418,7 @@ export function useSummarizeProjectFiles() {
     },
     onSuccess: (data, variables) => {
       // Invalidate project files to refresh summaries
-      queryClient.invalidateQueries({ queryKey: projectKeys.files(variables.projectId) })
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(variables.projectId) })
       toast.success(`Summarized ${data.included} files`)
     },
     onError: (error) => {
@@ -436,7 +436,7 @@ export function useRemoveSummariesFromFiles() {
     },
     onSuccess: (data, variables) => {
       // Invalidate project files to refresh summaries
-      queryClient.invalidateQueries({ queryKey: projectKeys.files(variables.projectId) })
+      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.files(variables.projectId) })
       toast.success(`Removed summaries from ${data.removedCount} files`)
     },
     onError: (error) => {
@@ -575,49 +575,50 @@ export function useOptimizeUserInput() {
 }
 
 // --- File Versioning Hooks ---
-export function useGetFileVersions(projectId: number, originalFileId: number) {
-  return useQuery({
-    queryKey: PROJECT_KEYS.fileVersions(projectId, originalFileId),
-    queryFn: () => octoClient.projects.getFileVersions(projectId, originalFileId),
-    enabled: projectId > 0 && originalFileId > 0,
-    staleTime: 5 * 60 * 1000
-  })
-}
+// TODO: Uncomment when file versioning is implemented in the API
+// export function useGetFileVersions(projectId: number, originalFileId: number) {
+//   return useQuery({
+//     queryKey: PROJECT_KEYS.fileVersions(projectId, originalFileId),
+//     queryFn: () => octoClient.projects.getFileVersions(projectId, originalFileId),
+//     enabled: projectId > 0 && originalFileId > 0,
+//     staleTime: 5 * 60 * 1000
+//   })
+// }
 
-export function useGetFileVersion(projectId: number, originalFileId: number, version?: number) {
-  return useQuery({
-    queryKey: PROJECT_KEYS.fileVersion(projectId, originalFileId, version),
-    queryFn: () => octoClient.projects.getFileVersion(projectId, originalFileId, version),
-    enabled: projectId > 0 && originalFileId > 0,
-    staleTime: 5 * 60 * 1000
-  })
-}
+// export function useGetFileVersion(projectId: number, originalFileId: number, version?: number) {
+//   return useQuery({
+//     queryKey: PROJECT_KEYS.fileVersion(projectId, originalFileId, version),
+//     queryFn: () => octoClient.projects.getFileVersion(projectId, originalFileId, version),
+//     enabled: projectId > 0 && originalFileId > 0,
+//     staleTime: 5 * 60 * 1000
+//   })
+// }
 
-export function useRevertFileToVersion() {
-  const { invalidateProjectFiles } = useInvalidateProjects()
-  const queryClient = useQueryClient()
+// export function useRevertFileToVersion() {
+//   const { invalidateProjectFiles } = useInvalidateProjects()
+//   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: ({ projectId, fileId, targetVersion }: { projectId: number; fileId: number; targetVersion: number }) =>
-      octoClient.projects.revertFileToVersion(projectId, fileId, targetVersion),
-    onSuccess: (_, { projectId }) => {
-      invalidateProjectFiles(projectId)
-      // Invalidate all version-related queries
-      queryClient.invalidateQueries({
-        queryKey: ['projects', 'fileVersions', projectId],
-        type: 'active'
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['projects', 'fileVersion', projectId],
-        type: 'active'
-      })
-      toast.success('File reverted successfully')
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to revert file')
-    }
-  })
-}
+//   return useMutation({
+//     mutationFn: ({ projectId, fileId, targetVersion }: { projectId: number; fileId: number; targetVersion: number }) =>
+//       octoClient.projects.revertFileToVersion(projectId, fileId, targetVersion),
+//     onSuccess: (_, { projectId }) => {
+//       invalidateProjectFiles(projectId)
+//       // Invalidate all version-related queries
+//       queryClient.invalidateQueries({
+//         queryKey: ['projects', 'fileVersions', projectId],
+//         type: 'active'
+//       })
+//       queryClient.invalidateQueries({
+//         queryKey: ['projects', 'fileVersion', projectId],
+//         type: 'active'
+//       })
+//       toast.success('File reverted successfully')
+//     },
+//     onError: (error) => {
+//       toast.error(error.message || 'Failed to revert file')
+//     }
+//   })
+// }
 
 const KEY_KEYS = {
   all: ['keys'] as const,

@@ -1,24 +1,27 @@
 import React from 'react'
-import { useLinkFilesToTicket } from '../../hooks/api/use-tickets-api'
-import { ProjectFile } from '@/generated'
+// import { useLinkFilesToTicket } from '../../hooks/api/use-tickets-api'
+import { type ProjectFile } from '@octoprompt/schemas'
 
 interface TicketAttachmentsPanelProps {
-  ticketId: string
+  ticketId: number
   projectFiles: ProjectFile[]
 }
 
 export function TicketAttachmentsPanel({ ticketId, projectFiles }: TicketAttachmentsPanelProps) {
-  const [selectedFiles, setSelectedFiles] = React.useState<string[]>([])
-  const { mutateAsync: linkFiles, isPending } = useLinkFilesToTicket()
+  const [selectedFiles, setSelectedFiles] = React.useState<number[]>([])
+  // TODO: Implement useLinkFilesToTicket hook
+  // const { mutateAsync: linkFiles, isPending } = useLinkFilesToTicket()
+  const isPending = false
 
-  function toggleFile(fileId: string) {
+  function toggleFile(fileId: number) {
     setSelectedFiles((prev) => (prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]))
   }
 
   async function handleLink() {
     try {
-      await linkFiles({ ticketId, fileIds: selectedFiles })
-      alert('Files linked successfully!')
+      // TODO: Implement linking files to tickets
+      // await linkFiles({ ticketId, fileIds: selectedFiles })
+      alert('Feature not implemented yet')
     } catch (err) {
       console.error('Failed to link files:', err)
     }

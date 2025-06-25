@@ -207,17 +207,17 @@ export function AssetGeneratorDialog({ open, onOpenChange, assetType, onSuccess 
 
         if (assetFormat === 'svg') {
           // Generate a fallback SVG
-          const [width, height] = formData.dimensions.split('x')
+          const [width, height] = svgFormData.dimensions.split('x')
           generatedContent = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${width}" height="${height}" fill="${formData.colors}" opacity="0.1"/>
-  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="${formData.colors}" font-family="system-ui" font-size="14">
-    ${formData.name}
+  <rect width="${width}" height="${height}" fill="${svgFormData.colors}" opacity="0.1"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="${svgFormData.colors}" font-family="system-ui" font-size="14">
+    ${commonFormData.name}
   </text>
 </svg>`
           toast.warning('Generated a placeholder SVG. Please try again with a different description.')
         } else {
           // Generate fallback markdown
-          generatedContent = `# ${formData.name}\n\n${formData.description}\n\n*Failed to generate content. Please try again.*`
+          generatedContent = `# ${commonFormData.name}\n\n${commonFormData.description}\n\n*Failed to generate content. Please try again.*`
           toast.warning('Generated placeholder content. Please try again with a different description.')
         }
       } else {

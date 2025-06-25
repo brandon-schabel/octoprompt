@@ -13,9 +13,6 @@ export {
   useSuggestFiles,
   useOptimizeUserInput,
   useInvalidateProjects,
-  useGetFileVersions,
-  useGetFileVersion,
-  useRevertFileToVersion,
   useUpdateFileContent,
   useSummarizeProjectFiles,
   useRemoveSummariesFromFiles

@@ -313,14 +313,45 @@ const ChatMessageItem = React.memo(
     const isUser = msg.role === 'user'
     const { hasThinkBlock, isThinking, thinkContent, mainContent } = parseThinkBlock(msg.content)
 
+    const messageId = useMemo(() => {
+      const id = Number(msg.id)
+      return isNaN(id) ? null : id
+    }, [msg.id])
+
     const handleCopy = useCallback(
       () => onCopyMessage(mainContent || msg.content),
       [mainContent, msg.content, onCopyMessage]
     )
-    const handleFork = useCallback(() => onForkMessage(Number(msg.id)), [msg.id, onForkMessage])
-    const handleDelete = useCallback(() => onDeleteMessage(Number(msg.id)), [msg.id, onDeleteMessage])
-    const handleToggleExclude = useCallback(() => onToggleExclude(Number(msg.id)), [msg.id, onToggleExclude])
-    const handleToggleRaw = useCallback(() => onToggleRawView(Number(msg.id)), [msg.id, onToggleRawView])
+    const handleFork = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot fork: Invalid message ID', msg.id)
+        toast.error('Cannot fork: Invalid message ID')
+        return
+      }
+      onForkMessage(messageId)
+    }, [messageId, onForkMessage, msg.id])
+    const handleDelete = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot delete: Invalid message ID', msg.id)
+        toast.error('Cannot delete: Invalid message ID')
+        return
+      }
+      onDeleteMessage(messageId)
+    }, [messageId, onDeleteMessage, msg.id])
+    const handleToggleExclude = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot toggle exclude: Invalid message ID', msg.id)
+        return
+      }
+      onToggleExclude(messageId)
+    }, [messageId, onToggleExclude, msg.id])
+    const handleToggleRaw = useCallback(() => {
+      if (messageId === null) {
+        console.warn('Cannot toggle raw view: Invalid message ID', msg.id)
+        return
+      }
+      onToggleRawView(messageId)
+    }, [messageId, onToggleRawView, msg.id])
     const handleCopyThinkText = useCallback(() => copyToClipboard(thinkContent), [copyToClipboard, thinkContent])
 
     const MessageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (

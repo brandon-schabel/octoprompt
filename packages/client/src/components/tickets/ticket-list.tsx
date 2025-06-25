@@ -1,4 +1,4 @@
-import { Ticket } from '@/generated'
+import { type Ticket } from '@octoprompt/schemas'
 import { Badge } from '@ui'
 
 interface TicketListProps {

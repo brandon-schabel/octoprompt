@@ -41,7 +41,7 @@ export function TicketsTabView({ projectId, projectName, projectTabId }: Tickets
       </div>
 
       <div className='flex-1'>
-        <TicketListPanel projectTabId={projectTabId.toString()} onSelectTicket={handleSelectTicket} />
+        <TicketListPanel projectTabId={projectTabId} onSelectTicket={handleSelectTicket} />
       </div>
 
       <TicketDialog

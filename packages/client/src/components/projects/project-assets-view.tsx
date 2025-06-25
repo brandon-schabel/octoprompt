@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ProjectData } from '@octoprompt/schemas'
+import { Project } from '@octoprompt/schemas'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -31,7 +31,7 @@ import { MarkdownInlinePreview } from '@/components/markdown-inline-preview'
 import { MarkdownPreview } from '@/components/markdown-preview'
 
 interface ProjectAssetsViewProps {
-  project: ProjectData
+  project: Project
   projectId: number
 }
 

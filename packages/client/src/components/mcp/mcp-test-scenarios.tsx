@@ -165,7 +165,9 @@ export function MCPTestScenarios({ projectId, sessionId, onSessionCreated }: MCP
               }
               if (result.data.sessionId) {
                 currentSessionId = result.data.sessionId
-                onSessionCreated?.(currentSessionId)
+                if (currentSessionId) {
+                  onSessionCreated?.(currentSessionId)
+                }
               }
               break
 
