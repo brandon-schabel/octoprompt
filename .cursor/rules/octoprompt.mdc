@@ -5,8 +5,30 @@ alwaysApply: true
 ---
 # OctoPrompt Development Guide
 
-## General Code Principles
-Write self-explanatory, modular, and functional code. Adhere to DRY (Don't Repeat Yourself), SRP (Single Responsibility Principle), and KISS (Keep It Simple, Stupid). Code should be easily unit-testable and read like a clear sentence, avoiding magic numbers. Include a comment at the top of each file detailing the 5 most recent changes to prevent repeated mistakes. Minimize file size by writing concise code and fitting more characters per line where readable.
+OctoPrompt guidance for Claude Code (claude.ai/code).
+
+## Commands
+
+### Development
+
+- `bun run dev` - Start client and server
+- `bun run dev:client` - Client only (port 1420)
+- `bun run dev:server` - Server only (port 3147)
+
+### Testing
+
+- `bun run test:all` - Run all tests
+- `bun run test:[package]` - Run specific package tests
+- `bun run e2e` - Run Playwright E2E tests
+
+## CRITICAL FILE SAFETY RULES
+
+- **NEVER delete files outside the project working directory** (/Users/brandon/Programming/td-engine)
+- **NEVER make changes that could be catastrophic to the system**
+- **ALWAYS double-check before any file deletion** - think carefully about WHY a file is being deleted
+- **BE EXTREMELY CAUTIOUS with file operations** - especially deletions
+- **If uncertain about a file deletion, ASK THE USER FIRST**
+- **Verify file paths** - ensure all operations are within the project scope
 
 ### Linear Workspace Configuration
 
@@ -14,7 +36,21 @@ Write self-explanatory, modular, and functional code. Adhere to DRY (Don't Repea
 - **Projects**:
   - **OctoPrompt** (Project ID: `9e96fe84-c58e-47d3-8402-3552cdf0bf3b`)
 
+### Linear MCP Integration
+
+The Linear MCP (Model Context Protocol) integration is built into Claude Code and provides direct access to Linear's API for project management. No additional setup or configuration is required - the MCP commands are available out of the box.
+
 ### OctoPrompt MCP Usage
+
+OctoPrompt is my personal project, so make heavy use of it. Write a feedback file (octo-feedback.md) on what can be improved.
+
+Use the OctoPrompt MCP for the following
+
+- Creating Tickets and Tasks when planning
+- Save and retrieve relevant prompts for later used (retrieve when it would help the context)
+- Get suggested files based on relevant context, the project is indexed and sumarized and uses that when providing suggestions
+- Retrieve compact project summary to gain quick insights into the architecture of the project.
+- Optimize a prompt using the context of the project, for example it can be helpful to upgrade a project by adding project specific context
 
 The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
 
@@ -22,521 +58,472 @@ The OctoPrompt MCP provides seamless integration with the OctoPrompt project man
 
 - **Project ID**: `1750564533014`
 
-**Key MCP Tools Available:**
+## Creating New MCP Tools
 
-- `mcp_octoprompt_project_*` - Project management (create, read, update, delete)
-- `mcp_octoprompt_file_*` - File operations (read, write, list)
-- `mcp_octoprompt_prompt_*` - Prompt management and organization
-- `mcp_octoprompt_suggest_files` - AI-powered file suggestions
-- `mcp_octoprompt_project_summary` - Generate project overviews
-- `mcp_octoprompt_optimize_user_input` - AI prompt optimization
+Follow this step-by-step process to add new MCP tools to OctoPrompt:
 
-**Common Workflows:**
+### 1. Add AI Prompt (if needed)
 
-1. **Project Management:**
+If your tool uses AI, add a new prompt to `packages/shared/src/utils/prompts-map.ts`:
 
-   ```typescript
-   // List all projects
-   mcp_octoprompt_project_list()
-   
-   // Get specific project details
-   mcp_octoprompt_project_get({ projectId: 1 })
-   
-   // Create new project
-   mcp_octoprompt_project_create({ name: "New Project", path: "/path/to/project" })
-   ```
-
-2. **File Operations:**
-
-   ```typescript
-   // List project files
-   mcp_octoprompt_file_list({ path: ".", recursive: true })
-   
-   // Read file content
-   mcp_octoprompt_file_read({ path: "src/main.ts" })
-   
-   // Write file content
-   mcp_octoprompt_file_write({ path: "new-file.ts", content: "console.log('Hello')" })
-   ```
-
-3. **AI-Powered Features:**
-
-   ```typescript
-   // Get AI file suggestions for a task
-   mcp_octoprompt_suggest_files({ prompt: "implement authentication", limit: 5 })
-   
-   // Generate project summary
-   mcp_octoprompt_project_summary({ include_files: true })
-   
-   // Optimize user prompts
-   mcp_octoprompt_optimize_user_input({ prompt: "help me build a login form" })
-   ```
-
-
----
-## TypeScript Rules
-Apply these to all TypeScript files for a consistent, high-quality codebase.
-
-### 1. Strong Typing & Advanced TS Features
-- **No `any` Unless Absolutely Necessary**: Use strong typing. For unknown shapes, use or create a Zod schema and derive the TS type.
-- **Generics & Inference**: Leverage TypeScript’s generics and advanced inference to avoid wide or unknown types.
-- **Modern TS Constructs**: Use mapped types, intersection types, `satisfies` expressions, etc., for clarity or correctness.
-
-### 2. Functional & Readable Code
-- **Functional Programming Style**: Prefer pure functions; avoid side effects unless essential.
-- **No Bloated Functions**: Each function should have a single, small responsibility. Refactor large functions.
-- **Descriptive Naming**: Use clear names. Avoid abbreviations or single-letter variables (except in trivial loops).
-
-### 3. Error Handling & Logging
-- **Throw or Return**: On error, throw a typed error (`Error` subclass) or return a descriptive error object. Do not silently swallow errors.
-- **Logging**: Use a consistent logging approach (e.g., custom `logger` module). Prefer structured logs over `console.log` for production.
-
-### 4. Minimal External Dependencies
-- **Prefer Bun & Standard Lib**: Rely on Bun’s built-in features or TS/Node standard libraries. Verify necessary external libraries carefully.
-- **Tree Shaking & Dead Code**: Minimize imports and remove unused code. Don’t import entire libraries for small parts.
-
-### 5. File & Module Organization
-- **Single-Responsibility Files**: Each file should typically contain one main concept (class, service, or small group of related functions).
-- **Clear Imports & Exports**: Use named exports unless a file’s purpose is a single main export. Sort and group imports logically.
-
-### 6. Testing & Documentation
-- **Test-Driven Mindset**: Add/update tests when introducing new logic. Keep functions small and unit-testable.
-- **Inline Documentation**: Provide concise docstrings or inline comments for complex logic. Keep them accurate.
-
-* **Readability and Simplicity (KISS)**: Write clear, concise code.
-* **Modularity**: Organize code into logical modules/packages. Avoid circular dependencies.
-* **Error Handling**: Handle exceptions gracefully. Use specific exception types.
-* **Docstrings**: Write clear docstrings for modules, functions, and Pydantic models (e.g., Google style).
-* **Consistent Formatting**: Use a formatter like Black or Ruff. Adhere to PEP 8.
-* **Avoid Global Variables**: Minimize their use.
-* **Configuration Over Hardcoding**: Use Pydantic `BaseSettings` for configs.
-* **Regularly Refactor**.
-
----
-## OctoPrompt Specifics
-- **Timestamps & IDs**: All IDs, `created`, and `updated` timestamps are Unix timestamps in milliseconds. For IDs, `-1` signifies `null`; otherwise, it must be a valid Unix timestamp (ms).
-- **Maps with Numeric Keys**: Prefer `new Map()` over plain objects, as object keys are converted to strings.
-- **Service File Structure**: Typically:
-    - Schema file: Base schema + CRUD operation schemas (e.g., `id`, `created`, `updated` excluded on create).
-    - Storage file: JSON file-based data persistence.
-    - Service file: Business logic for data manipulation.
-    - Routes/API file: API route definitions.
-- **API Type Safety**:
-    - TypeScript: Zod with Hono for validation (note: route/API params often parse as strings).
-- **OpenAPI Specs**: Every API must have proper OpenAPI specifications.
-- **Route Ordering**: Crucial. Incorrect order leads to incorrect route matching. Pay very close attention.
-
----
-## Major Features/Services
-- **Projects and Files**: Core concept; projects contain chats.
-- **Chats and Messages**: Built-in AI chat functionality.
-- **Gen AI**: Services for generating structured data, coding agents, file search, and summarization.
-- **Provider Key Service**: Manages API keys for AI providers.
-- **Prompts**: Manages user prompts used to guide AI.
-- **Tickets and Tasks**: Project-related; users create tickets and tasks with project context.
-- **Global State**: Primarily frontend; synced to local storage to preserve user context.
-
----
-## Other Technical Info
-- **Functional API Tests**: Each API must have them.
-- **Unit Testable Functions**: Design functions with minimal external reliance, predictable I/O (except Gen AI).
-- **Single Source of Truth (SSOT)**: Adhere to this principle.
-
----
-## Project Overall Structure
-```
-OctoPrompt  
-	packages
-
-				
-		api-client
-			index.ts // contains the entire octoprompt client
-			src
-				tests // contains a test suite that tests the client against the server endpoints
-	
-		client
-			src
-				constants
-				utils
-				routes
-					chat.tsx
-					projects.tsx
-					prompts.tsx
-				components
-				hooks
-					api // api hooks directly importing shared schema types
-		schemas
-			src
-					project.schema.ts
-					chat.schema.ts
-					prompt.schema.ts
-
-	    shared
-			src
-				constants
-					model-default.ts // contains llm model default configs like temp, max tokens, etc, 3 configs, low, med, high
-schemas using z.infer<>
-
-    	server
-			server.ts // main serverentry
-        	src
-				app.ts // where hono router is defined, all routes are imported and mapped here, middleware, and global server error handling live here
-				routes
-					chat-routes.ts
-					prompt-routes.ts
-					project-routes.ts
-
-				
-		services
-			src
-				chat-service.ts
-				prompt-service.ts
-				project-service.ts
-		storage
-			chat-storage.ts
-			prompt-storage.ts
-			project-storage.ts
-```
-```
-
----
-## Scripts
-
-**Root `package.json`:**
-```json
-{
-	"dev": "bun run scripts/start-dev.ts",
-    "dev:client": "bun run scripts/start-client-dev.ts",
-    "dev:server": "bun run scripts/start-server-dev.ts",
-    "stop": "bun run scripts/stop.ts",
-    "build-binaries": "bun run scripts/build-binaries.ts",
-    "format": "prettier --write .",
-    "test:server": "cd packages/server && bun run test",
-    "test:shared": "cd packages/shared && bun run test",
-    "test:schemas": "cd packages/schemas && bun run test"Ï
-}
-```
-
-**`packages/server/package.json`:**
-```json
-{
-  "test": "bun test src/",
-  "test:watch": "bun test --watch src/",
-  "start": "bun server.ts",
-  "dev": "DEV=true bun server.ts",
-  "dev:watch": "DEV=true bun --watch server.ts",
-  "start:prod": "ENVIRONMENT=prod cd dist && ./start.sh"
-}
-```
-
-**`packages/client/package.json`:**
-```json
-{
-  "dev": "vite",
-  "build": "tsc -b tsconfig.app.json && vite build",
-  "build:prod": "tsc -b tsconfig.app.json && ENVIRONMENT=prod vite build",
-  "preview": "vite preview",
-  "test": "bun test",
-  "test:watch": "bun test --watch"
-}
-```
-
-**`packages/shared/package.json`:** (Assuming a `package.json` exists here)
-```json
-{
-  "test": "bun test"
-}
-```
----
-## Useful Utils
-
-**`@octoprompt/schemas`:**
-- `unixTSSchemaSpec`: Standard Unix timestamp (ms) schema.
-- `unixTSOptionalSchemaSpec`: Optional Unix timestamp (ms).
-- `unixTSArraySchemaSpec`: Required array of Unix timestamps (ms).
-- `unixTSArrayOptionalSchemaSpec`: Optional array of Unix timestamps (ms).
-
-**`@octoprompt/shared`:**
-- `mergeDeep<T>([obj1, obj2, ...]): T`: Recursively merges objects.
-- `normalizePath(filePath: string): string`: Normalizes path separators.
-- `filterByPatterns(filePaths: string[], patterns: string[], options?: picomatch.PicomatchOptions): string[]`: Filters file paths by glob patterns.
-- `buildPromptContent({ fileMap, promptData, selectedFiles, selectedPrompts, userPrompt }): string`
-- `calculateTotalTokens({ promptData, selectedPrompts, userPrompt, selectedFiles, fileMap }): number`
-- `buildFileTree(files: ProjectFile[]): Record<string, any>`
-- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `octopromptPlanningMetaPrompt`) 
-- `promptsMap`: Exported object mapping names to prompt strings.
-**`packages/shared/src/constants/model-default-configs.ts`:**
-- `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`: `ModelOptionsWithProvider` objects with settings for temperature, maxTokens, provider, model, etc. (e.g., `LOW_MODEL_CONFIG` uses `google/gemini-2.5-flash-preview`).
-
-
-**`@octoprompt/shared`:**
-- `getFullProjectSummary(projectId: number): Promise<string>`: Generates a full project summary.
-- `resolveJsonPath(rawPath: string | string[], basePath?: string): string`: Resolves input to a normalized file path.
-- `writeJson<TData, S extends ZodTypeAny>(options: { path, data, schema?, basePath? }): Promise<S extends ZodTypeAny ? z.infer<S> : TData>`: Writes data to JSON, optionally validating. Creates directories.
-- `readJson<T = unknown>(options: { path, basePath? }): Promise<T | null>`: Reads and parses JSON (no validation on read).
-- `parseTimestamp(tsValue: unknown): Date | null`: Safely parses various timestamp formats to `Date`.
-- `normalizeToUnixMs(tsValue: unknown): number`: Parses timestamp and converts to Unix ms (defaulting to `new Date().getTime()` if parsing fails).
-- `resolvePath(path: string): string`: Resolves path, expanding tilde.
-- `normalizePathForDb(path: string): string`: Normalizes path for database storage (consistent format).
-
----
-## Frontend
-### Major Packages
-React (v19), TanStack Router, DND Kit, ShadCN (Radix), React Hook Form, Tailwind CSS, TanStack Query, AI SDK (Vercel AI SDK).
-
-Organized by major features (Projects, Chat & Messages, Prompts, Tickets & Tasks).
-
-### Routes (`packages/client/src/routes`)
-`__root.tsx` (base layout), `index.tsx`, `projects.tsx`, `chat.tsx`, `prompts.tsx`, `keys.tsx`, `project-summarization.tsx`, `tickets.tsx`, `admin.tsx`, `health.tsx`.
-
-### Components (`packages/client/src/components`)
-- `components/ui`: ShadCN components (e.g., `button.tsx`, `card.tsx`, `dialog.tsx`).
-- Feature-specific components:
-    - `file-changes`: `diff-viewer.tsx`, `ai-file-change-dialog.tsx`.
-    - `settings`: `settings-dialog.tsx`.
-    - `tickets`: `ticket-list-panel.tsx`, `ticket-dialog.tsx`.
-    - `projects`: `project-list.tsx`, `file-panel/file-tree.tsx`, `agent-coding-dialog.tsx`.
-    - `navigation`: `app-navbar.tsx`, `app-sidebar.tsx`.
-    - `prompts`: `all-prompts-dialog.tsx`.
-- Common components: `markdown-renderer.tsx`, `error-boundary/error-boundary.tsx`, `shortcuts-palette.tsx`.
-
-### Data Fetching
-Direct schema import approach for type safety (TypeScript types from shared Zod schemas).
-
-**API Hooks (`packages/client/src/hooks/api`):**
-`use-projects-api.ts`, `use-chat-api.ts`, `use-prompts-api.ts`, `use-keys-api.ts`, `use-tickets-api.ts`, `use-gen-ai-api.ts`, `use-agent-coder-api.ts`, `use-admin-api.ts`, `use-ai-chat.ts`, `use-ai-file-changes-api.ts`, `common-mutation-error-handler.ts`.
-
-**Modern API Hook Pattern (Example `useCreateChat`):**
 ```typescript
-import type { CreateChatBody } from '@octoprompt/schemas'; // Import types directly
-// ... other imports: useQueryClient, useMutation, octoClient, toast
+export const promptsMap = {
+  // ... existing prompts
+  yourNewPrompt: `
+## Your New Prompt Title
 
+Your prompt content here with clear instructions for the AI.
+Include specific formatting requirements and context guidelines.
+  `
+}
+```
+
+### 2. Create Service Function
+
+Add the business logic to the appropriate service file (e.g., `packages/services/src/project-service.ts`):
+
+```typescript
+export async function yourNewFunction(projectId: number, ...params): Promise<YourReturnType> {
+  try {
+    await getProjectById(projectId) // Validate project exists
+
+    // Your business logic here
+    // Use AI if needed: await generateSingleText({...})
+
+    return result
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to execute your function: ${error instanceof Error ? error.message : String(error)}`,
+      'YOUR_FUNCTION_FAILED'
+    )
+  }
+}
+```
+
+### 3. Add MCP Server Tool
+
+In `packages/server/src/mcp/server.ts`, add your tool to the tools array:
+
+```typescript
+{
+  name: 'your_new_tool',
+  description: 'Description of what your tool does',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      projectId: {
+        type: 'number',
+        description: 'The ID of the project'
+      },
+      // Add other parameters
+    },
+    required: ['projectId']
+  }
+}
+```
+
+Add the tool handler in the switch statement:
+
+```typescript
+case 'your_new_tool':
+  return await handleYourNewTool(args as any)
+```
+
+Create the handler function:
+
+```typescript
+async function handleYourNewTool(args: { projectId: number }): Promise<CallToolResult> {
+  const { projectId } = args
+  const result = await yourNewFunction(projectId)
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: result
+      }
+    ]
+  }
+}
+```
+
+### 4. Add MCP Client Mock (optional)
+
+In `packages/mcp-client/src/mcp-client.ts`, add to the mock tools array:
+
+```typescript
+{
+  id: 'your_new_tool',
+  name: 'your_new_tool',
+  description: 'Description of your tool',
+  serverId: this.config.id,
+  parameters: [
+    {
+      name: 'projectId',
+      type: 'number',
+      description: 'The ID of the project',
+      required: true
+    }
+  ],
+  inputSchema: {
+    type: 'object',
+    properties: {
+      projectId: {
+        type: 'number',
+        description: 'The ID of the project'
+      }
+    },
+    required: ['projectId']
+  }
+}
+```
+
+Add mock execution handling:
+
+```typescript
+private getMockToolExecution(toolId: string, parameters: Record<string, any>): any {
+  if (toolId === 'your_new_tool') {
+    return [
+      {
+        type: 'text',
+        text: `Mock response for ${toolId} with project ${parameters.projectId}`
+      }
+    ]
+  }
+  // ... existing code
+}
+```
+
+### 5. Add HTTP Route (optional)
+
+If you want HTTP access, add to `packages/server/src/routes/mcp-routes.ts`:
+
+```typescript
+const yourNewToolRoute = createRoute({
+  method: 'get', // or 'post'
+  path: '/api/projects/{projectId}/mcp/your-tool',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              // Define your response schema
+            })
+          })
+        }
+      },
+      description: 'Your tool response'
+    }
+  }
+})
+
+mcpRoutes.openapi(yourNewToolRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const result = await projectService.yourNewFunction(projectId)
+    return c.json({ success: true, data: result })
+  } catch (error) {
+    return handleApiError(error, c)
+  }
+})
+```
+
+### 6. Testing
+
+1. **Unit Tests**: Add tests in the appropriate service test file
+2. **Integration Tests**: Test the MCP tool through the protocol
+3. **Manual Testing**: Use the MCP test endpoints in the API
+
+### Example: Compact Project Summary Tool
+
+See the recently added `get_project_compact_summary` tool as a complete example:
+
+- **Prompt**: `compactProjectSummary` in `prompts-map.ts`
+- **Service**: `getProjectCompactSummary()` in `project-service.ts`
+- **Utility**: `getCompactProjectSummary()` in `get-full-project-summary.ts`
+- **MCP Tool**: `get_project_compact_summary` in `mcp/server.ts`
+- **HTTP Route**: `/api/projects/{projectId}/mcp/compact-summary`
+
+This tool takes a full project summary and uses AI to create a compact, architecture-focused version that's perfect for providing context to AI assistants without overwhelming them with details.
+
+### Important Notes
+
+- **All MCP tools now use compact summaries** - Both the core MCP server and the tools registry have been updated to use `getProjectCompactSummary` instead of the verbose full summary
+- **Consistent experience** - Whether accessing via MCP tools, HTTP routes, or the tools registry, all project summary features now return the AI-optimized compact version
+- **Legacy compatibility** - The full summary function still exists for internal use but is no longer exposed through MCP interfaces
+
+### Issue Workflow
+
+1. **Check available issues** using MCP commands with the appropriate project ID
+2. **Copy branch name** from Linear issue (Cmd/Ctrl + Shift + .)
+3. **Create feature branch** with Linear's naming convention (e.g., `brandonschabel/td-123-feature-name`)
+4. **Link commits/PRs** to Linear issues using issue ID (e.g., TD-123, OP-456)
+5. **Linear automatically updates** issue status based on PR activity
+
+### Branch Naming Convention
+
+- Format: `username/project-issueNumber-description`
+- Examples:
+  - OctoPrompt: `brandonschabel/op-456-implement-feature`
+
+### Build
+
+- `bun run build-binaries` - Build cross-platform binaries
+- `bun run format` - Format with Prettier
+
+### Database
+
+- `bun run migrate:sqlite` - Run SQLite database migrations
+
+## Code Principles
+
+- Write self-explanatory, modular, functional code
+- Follow DRY, SRP, KISS principles
+- Make code unit-testable
+- Use descriptive naming, avoid magic numbers
+- Keep files concise
+
+## TypeScript Rules
+
+1. **Strong Typing**: No `any`, use Zod schemas
+2. **Functional Style**: Pure functions, minimal side effects
+3. **Error Handling**: Throw typed errors or return error objects
+4. **Minimal Dependencies**: Prefer Bun/standard lib
+5. **Single Responsibility**: One concept per file
+6. **Clear Documentation**: Concise docstrings for complex logic
+
+## OctoPrompt Specifics
+
+- **IDs & Timestamps**: Unix timestamps in milliseconds, `-1` = null
+- **Maps**: Use `Map()` for numeric keys (not plain objects)
+- **File Structure**: Schema → Storage → Service → Routes
+- **Type Safety**: Zod + Hono validation
+- **Route Order**: Critical - specific routes before parameterized
+
+## Project Structure
+
+```
+packages/
+  api-client/            # Type-safe API client
+  client/                # React frontend (Vite + TanStack)
+  schemas/               # Zod schemas and types
+  server/                # Hono backend
+  services/              # Business logic
+  shared/                # Utilities
+  storage/               # V2 storage with caching/indexing
+
+data/                    # Runtime storage
+  octoprompt.db          # SQLite database (production)
+scripts/                 # Build scripts
+docs/                    # Documentation
+```
+
+## Storage V2 Features
+
+- **LRU Caching** with TTL
+- **Indexing**: Hash (O(1)) and B-tree for ranges
+- **Migrations**: Versioned schema evolution
+- **Adapters**: File-based (prod), SQLite, and memory (test)
+- **Concurrency**: File locking, atomic operations
+
+```typescript
+// File-based adapter (JSON storage)
+const storage = new StorageV2<Project>({
+  adapter: new FileAdapter('projects'),
+  indexes: [
+    { field: 'id', type: 'hash' },
+    { field: 'created', type: 'btree' }
+  ],
+  cache: { maxSize: 100, ttl: 300000 }
+})
+
+// SQLite adapter (recommended for production)
+const storage = new StorageV2<Project>({
+  adapter: new SQLiteAdapter(db, 'projects'),
+  indexes: [
+    { field: 'id', type: 'hash' },
+    { field: 'created', type: 'btree' }
+  ],
+  cache: { maxSize: 100, ttl: 300000 }
+})
+```
+
+## SQLite Storage
+
+### Overview
+
+- **Database Location**: `data/octoprompt.db` (production)
+- **Test Mode**: Automatically uses `:memory:` database for tests
+- **Migration Command**: `bun run migrate:sqlite`
+- **Performance**: 10-50x faster than file-based storage
+
+### Architecture
+
+- **DatabaseManager**: Singleton for database lifecycle
+- **SQLiteAdapter**: Storage V2 adapter implementation
+- **Migrations**: Automatic schema versioning
+- **Connection Pooling**: Built-in with better-sqlite3
+
+### Usage
+
+```typescript
+import { DatabaseManager } from '@octoprompt/storage'
+
+// Initialize database (runs migrations automatically)
+const db = DatabaseManager.getInstance()
+
+// Create storage with SQLite adapter
+const projectStorage = new StorageV2<Project>({
+  adapter: new SQLiteAdapter(db, 'projects'),
+  indexes: [{ field: 'id', type: 'hash' }],
+  cache: { maxSize: 100, ttl: 300000 }
+})
+```
+
+### Benefits
+
+- **ACID Compliance**: Full transactional support
+- **Concurrent Access**: Multiple processes can read/write safely
+- **Query Performance**: Native SQL indexing
+- **Reduced I/O**: Single file vs many JSON files
+- **Atomic Operations**: No partial writes
+- **Backup**: Simple file copy for full backup
+
+### Migration System
+
+```typescript
+// Migrations run automatically on startup
+// Located in packages/storage/src/migrations/
+export const migrations = [
+  {
+    version: 1,
+    up: (db) => {
+      db.exec(`CREATE TABLE IF NOT EXISTS projects (...)`)
+    },
+    down: (db) => {
+      db.exec(`DROP TABLE IF EXISTS projects`)
+    }
+  }
+]
+```
+
+### Troubleshooting
+
+- **Database Locked**: Check for multiple server instances
+- **Migration Errors**: Run `bun run migrate:sqlite` manually
+- **Performance**: Enable WAL mode (enabled by default)
+- **Disk Space**: Database in `data/` directory
+- **Testing**: Uses `:memory:` automatically, no cleanup needed
+
+## Frontend Stack
+
+- React 19 with Compiler
+- TanStack Router/Query
+- ShadCN UI (Radix)
+- Monaco Editor
+- Tailwind CSS
+
+### Key Hooks Pattern
+
+```typescript
 export function useCreateChat() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
-    onSuccess: () => { /* Invalidate queries, show toast */ },
-    onError: (error) => { /* Show error toast */ },
-  });
-}
-```
-
-**Schema-First Query (Example `useGetPrompt`):**
-```typescript
-import type { Prompt } from '@octoprompt/schemas'; // Import types
-// ... other imports: useQuery, octoClient, PROMPT_KEYS
-
-export function useGetPrompt(promptId: number) {
-  return useQuery({
-    queryKey: PROMPT_KEYS.detail(promptId),
-    queryFn: () => octoClient.prompts.getPrompt(promptId),
-    enabled: !!promptId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-```
-
-**OctoPrompt Client Instance (`octoClient`):**
-Singleton client in `packages/client/src/hooks/api.ts` (created via `createOctoPromptClient`) provides type-safe methods for each service (e.g., `octoClient.chats.createChat(data)`).
-
----
-## OctoPrompt Backend Architecture
-TypeScript/Bun backend: AI-powered project management, layered architecture, file-based JSON storage, service-oriented logic, OpenAPI-compliant REST APIs.
-
-### Architecture Layers
-- **Storage Layer (`@octoprompt/storage`)**: JSON file storage with CRUD and Zod validation.
-  Example: `projectStorage.readProjects()`, `projectStorage.writeProjectFiles()`.
-  Files: `project-storage.ts`, `chat-storage.ts`, `prompt-storage.ts`, `ticket-storage.ts`, `provider-key-storage.ts`.
-  Patterns: Unix ms IDs, `Record<string, Entity>` data structure, Zod validation, atomic file ops.
-
-- **Services Layer (`@octprompt/services`)**: Business logic orchestrating storage.
-  Example: `projectService.createProject(data)`.
-  Services: `project-service.ts`, `chat-service.ts`, `gen-ai-services.ts`, `file-services/`.
-
-- **API Layer (`packages/server/src/routes`)**: Hono-based routes with OpenAPI specs.
-  Example: `createRoute()` for OpenAPI definitions, `OpenAPIHono().openapi(route, handler)`.
-
-### Core Systems
-- **File Synchronization**: `syncProject()` uses `getTextFiles`, `loadIgnoreRules`, `syncFileSet`. `createFileChangeWatcher()` for live updates, triggering sync and summarization.
-- **AI Integration**: Multi-provider AI via Vercel AI SDK. `getProviderLanguageModelInterface()` (handles OpenAI, Anthropic, OpenRouter), `generateStructuredData()` (uses `generateObject` from AI SDK).
-
----
-## Complete Feature Example: Todo System
-Illustrates schema, storage, service, and API route implementation.
-
-### 1. Schemas (`schemas/src/todo.schemas.ts`)
-Defines `TodoSchema`, `TodoCategorySchema`, `CreateTodoBodySchema`, `TodoResponseSchema`, `TodoListResponseSchema` using Zod and `openapi()` helpers. Includes type exports derived via `z.infer`.
-```typescript
-import { z } from '@hono/zod-openapi'
-import { unixTSSchemaSpec, unixTSArraySchemaSpec } from './schema-utils' // Assuming path
-
-export const TodoSchema = z.object({
-  id: unixTSSchemaSpec, projectId: unixTSSchemaSpec, title: z.string().min(1),
-  description: z.string().optional(), status: z.enum(['pending', 'in_progress', 'completed']),
-  priority: z.enum(['low', 'medium', 'high']), assignedTo: z.string().optional(),
-  dueDate: unixTSSchemaSpec.optional(), tags: z.array(z.string()).default([]),
-  created: unixTSSchemaSpec, updated: unixTSSchemaSpec
-}).openapi('Todo')
-
-// ... (TodoCategorySchema, CreateTodoBodySchema, etc. are similarly defined)
-
-export type Todo = z.infer<typeof TodoSchema>; /* ... other types */
-```
-
-### 2. Storage (`packages/storage/src/todo-storage.ts`)
-Implements `readTodos`, `writeTodos`, `readTodoCategories`, `writeTodoCategories`, `generateId` using `readJson`, `writeJson` from `json-scribe.ts`. Data validated with Zod schemas.
-```typescript
-import { z } from 'zod'; // Assuming path
-import { TodoSchema, TodoCategorySchema } from '@octoprompt/schemas';
-import { readJson, writeJson } from '../json-scribe'; // Assuming path
-import { normalizeToUnixMs } from '@octoprompt/schemas'; // Assuming path
-
-export const TodoStorageSchema = z.record(z.string(), TodoSchema);
-// ... (TodoCategoryStorageSchema defined similarly)
-const getTodosPath = (projectId: number): string[] => ['data', 'projects', projectId.toString(), 'todos.json'];
-
-export const todoStorage = {
-  async readTodos(projectId: number): Promise<z.infer<typeof TodoStorageSchema>> { /* ... */ },
-  async writeTodos(projectId: number, todos: z.infer<typeof TodoStorageSchema>): Promise<z.infer<typeof TodoStorageSchema>> { /* ... */ },
-  // ... (category methods and generateId)
-};
-```
-
-### 3. Service (`packages/services/src/todo-service.ts`)
-Business logic: `createTodo`, `updateTodoStatus`, `getTodosByProject`, `deleteTodo`, `generateTodoSuggestions` (uses `generateStructuredData`). Handles ID conflicts, validation, and error wrapping (`ApiError`).
-```typescript
-import { Todo, CreateTodoBody, TodoSchema } from '@octoprompt/schemas'; // Assuming path
-import { todoStorage } from '@/utils/storage/todo-storage'; // Assuming path
-import { ApiError } from '@octoprompt/shared'; // Assuming path
-// ... (other imports like generateStructuredData, getProjectById)
-
-export async function createTodo(data: CreateTodoBody): Promise<Todo> {
-  let todoId = todoStorage.generateId(); const now = Date.now();
-  const newTodoData: Todo = { id: todoId, ...data, status: 'pending', created: now, updated: now };
-  // try-catch for error handling, ID conflict resolution, validation, and writing
-  // ...
-}
-// ... (updateTodoStatus, getTodosByProject, deleteTodo, generateTodoSuggestions)
-```
-
-### 4. Routes (`packages/storage/src/routes/todo-routes.ts`)
-Hono `OpenAPIHono` routes for CRUD operations and suggestions. Uses `createRoute` for OpenAPI definitions, Zod schemas for request/response validation.
-```typescript
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'; // Assuming path
-import { CreateTodoBodySchema, TodoResponseSchema, /* ... */ } from 'shared/src/schemas/todo.schemas'; // Path
-import { createTodo, /* ... */ } from '@/services/todo-service'; // Path
-
-const createTodoRoute = createRoute({ method: 'post', path: '/api/todos', /* ... */ });
-// ... (other route definitions: getTodosRoute, updateTodoStatusRoute, etc.)
-
-export const todoRoutes = new OpenAPIHono()
-  .openapi(createTodoRoute, async (c) => {
-    const body = c.req.valid('json');
-    const todo = await createTodo(body);
-    return c.json({ success: true, data: todo }, 201);
+    onSuccess: () => {
+      /* invalidate queries */
+    }
   })
-  // ... (other route handlers for get, patch, delete, suggestions)
+}
 ```
 
-### 5. Register Routes (`packages/server/src/app.ts`)
-Todo routes are registered with the main Hono app instance.
-```typescript
-// import { todoRoutes } from './routes/todo-routes'; // Assuming path
-// export const app = new OpenAPIHono().route('/', todoRoutes); // Example
-```
-(Actual registration may vary based on full `app.ts` structure)
+## Backend Architecture
 
-### 6. Tests (`packages/services/src/todo-service.test.ts`)
-Unit tests for `todo-service` using `bun:test`. Mocks `todoStorage` and `project-service` for isolated testing of service logic, including ID generation and conflict resolution.
-```typescript
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { createTodo, /* ... */ } from './todo-service'; // Path
-import { CreateTodoBody, Todo } from 'shared/src/schemas/todo.schemas'; // Path
+### Layers
 
-// Mock setup for todoStorage and projectService
-// In-memory DB for tests: mockTodosDb
-// beforeEach clears mockTodosDb
-// Test cases for createTodo, updateTodoStatus, getTodosByProject, deleteTodo, ID conflict
-describe('TodoService (Mocked Storage)', () => {
-  // ... (setup like testProjectId, beforeEach, afterEach)
-  test('createTodo should insert a new todo record', async () => { /* ... */ });
-  // ... (other tests)
-});
-```
+1. **Storage**: Enhanced storage with V2 features (SQLite or JSON)
+2. **Services**: Business logic orchestration
+3. **Routes**: Hono + OpenAPI specs
 
----
-## Key Backend Patterns
-- **Error Handling**: Custom `ApiError` class for consistent API error responses. Global error handler in `app.ts` catches `ApiError` instances.
-  ```typescript
-  // if (!project) throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND');
-  // app.onError((err, c) => { /* handle ApiError */ });
-  ```
-- **Validation**: Zod schemas for data validation at storage and API layers. `c.req.valid('json')` for auto-validated request bodies in Hono.
-- **ID Generation**: `storage.generateId()` (typically `normalizeToUnixMs(new Date())` or `Date.now()`). Handles collisions by incrementing ID if already exists in the storage record.
+### Core Patterns
 
----
-## Functional API Testing (`packages/api-tests/`)
-End-to-end tests verifying complete request/response cycles against a running server.
-Uses a helper like `apiFetch` to make requests and validate responses against Zod schemas.
-Ensures proper cleanup of test data.
-```typescript
-// Example: todo-api.test.ts
-// describe('Todo API Tests', () => {
-//   beforeAll(() => { /* ... */ });
-//   afterAll(async () => { /* Cleanup test data */ });
-//   test('POST /api/todos - Create todos', async () => {
-//     // const result = await apiFetch(createTodoEndpoint, todoData, TodoResponseSchema);
-//     // expect(result.success).toBe(true);
-//   });
-//   // ... (tests for GET, PATCH, DELETE, error scenarios)
-// });
-```
-Examples: `chat-api.test.ts`, `projects-api.test.ts` cover CRUD, error handling, and complex workflows.
+- **Error Handling**: `ApiError` class
+- **Validation**: Zod at storage and API layers
+- **ID Generation**: `Date.now()` with collision handling
 
----
-## Hono Route Matching (First-Match-Wins)
-Routes are evaluated in registration order; the earliest match handles the request.
+## AI Integration
 
-### 1. Matching Basics
-```ts
-app.get('/users/{id}', h1)   // /users/profile matches this if h1 is registered first
-   .get('/users/profile', h2); // This would be unreachable
-```
-Different HTTP verbs on the *same* path are fine but subject to ordering if paths are similar (e.g., `/path/{param}` vs `/path/literal`).
+- **Multi-Provider**: OpenAI, Anthropic, Google, Groq
+- **Streaming**: Real-time responses
+- **Model Configs**: LOW, MEDIUM, HIGH presets
 
-### 2. Ordering Strategy: High → Low Specificity
-1.  Exact literals (e.g., `/api/health`)
-2.  Literal segments + param (e.g., `/api/users/me`)
-3.  Specific literal actions (e.g., `/api/projects/{pId}/files/bulk`) before more general params.
-4.  Single-param (e.g., `/api/users/{uId}`)
-5.  Multi-param (e.g., `/api/projects/{pId}/files/{fId}`)
-6.  Catch-alls (e.g., `/api/{resource}`, `*`)
+## Testing
 
-### 3. Typical Conflict Patterns & Fixes
-| Pattern        | Wrong                           | Right                                           |
-|----------------|---------------------------------|-------------------------------------------------|
-| Literal vs Param | `/{userId}` before `/me`        | `/me` first                                     |
-| Nested action  | `/{fileId}` before `/bulk`      | `/bulk` first                                   |
-| Param type     | `z.coerce.number()` captures "bulk" → NaN | Reorder; or validate param as string then cast/check |
+- **Runner**: Bun test
+- **E2E**: Playwright
+- **API**: Type-safe functional tests
+- **Patterns**: Schema validation, mocking, cleanup
 
-### 4. Debugging
-- Log registered paths.
-- Use middleware to log `c.req.method`, `c.req.path`, `c.req.param()` on match.
+## Hono Route Ordering
 
-### 5. Testing Precedence
-Write tests that explicitly check if the more specific route is hit before a parameterized one.
-```ts
-// it('bulk vs param', async () => {
-//   expect((await app.request('/api/projects/1/files/bulk', { method:'PUT' })).status).toBe(200); // Specific
-//   expect((await app.request('/api/projects/1/files/2',    { method:'PUT' })).status).toBe(200); // Param
-// });
+Order routes from most to least specific:
+
+1. Exact literals (`/api/health`)
+2. Literal + param (`/api/users/me`)
+3. Single param (`/api/users/{id}`)
+4. Multi-param (`/api/projects/{pId}/files/{fId}`)
+5. Catch-alls (`*`)
+
+## Utilities
+
+**Schemas (`@octoprompt/schemas`)**
+
+- `unixTSSchemaSpec` - Unix timestamp validation
+- Model configs: `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`
+
+**Shared (`@octoprompt/shared`)**
+
+- `mergeDeep()` - Recursive object merge
+- `writeJson()` - Write with optional Zod validation
+- `readJson()` - Read and parse JSON
+- `normalizeToUnixMs()` - Convert to Unix ms
+- `ApiError` - Consistent error handling
+
+## Configuration
+
+**Prettier**
+
+```json
+{
+  "semi": false,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 100
+}
 ```
 
-### 6. Parameter Schemas
-Use Zod for param validation, e.g., `z.coerce.number().int().positive()`.
+**TypeScript**
 
-### 7. Gotchas & Mitigations
-- Paths are case-sensitive.
-- `/path` vs `/path/`: Normalize using middleware if needed.
-- For IDs that might conflict with literal segments (e.g., "bulk", "me"), validate as string + regex first, then cast, rather than direct `z.coerce.number()`.
-- For many versioned routes, consider sub-routers: `app.route('/v1', v1Router)`.
+- Strict mode enabled
+- Path aliases
+- ES2022 target
+
+## Important Reminders
+
+- NEVER create files unless necessary
+- ALWAYS prefer editing existing files
+- Use appropriate AI model configs
+- Write tests for new functionality
+- Use Storage V2 features for performance
+- Validate route ordering
+- Handle errors consistently

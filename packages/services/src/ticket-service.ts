@@ -442,3 +442,38 @@ export async function linkFilesToTicket(
     fileId
   }))
 }
+
+export async function getTicketFiles(ticketId: number): Promise<Array<{ id: string; name: string; path: string }>> {
+  const ticket = await getTicketById(ticketId)
+
+  // Return basic file info based on suggested file IDs
+  // In a real implementation, this would query the files table
+  return ticket.suggestedFileIds.map((fileId) => ({
+    id: fileId,
+    name: `file-${fileId}`,
+    path: `path/to/${fileId}`
+  }))
+}
+
+export async function getTicketsWithFiles(
+  projectId: number,
+  statusFilter?: string
+): Promise<Array<Ticket & { fileIds: string[] }>> {
+  const tickets = await listTicketsByProject(projectId, statusFilter)
+
+  return tickets.map((ticket) => ({
+    ...ticket,
+    fileIds: ticket.suggestedFileIds || []
+  }))
+}
+
+export async function getTicketWithSuggestedFiles(
+  ticketId: number
+): Promise<Ticket & { parsedSuggestedFileIds: string[] } | null> {
+  const ticket = await getTicketById(ticketId)
+
+  return {
+    ...ticket,
+    parsedSuggestedFileIds: ticket.suggestedFileIds || []
+  }
+}

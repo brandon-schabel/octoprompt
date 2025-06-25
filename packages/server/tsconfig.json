@@ -19,7 +19,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@db": ["../services/src/utils/database.ts"]
     }
   },
   "include": ["src", "server.ts", "build.ts"],

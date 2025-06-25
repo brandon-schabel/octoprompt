@@ -37,20 +37,7 @@ export const useProjectFileMap = (projectId: number) => {
     return useMemo(() => new Map(), [projectId])
   }
 
-  const { data: fileData, isLoading, error } = useGetProjectFiles(projectId)
-
-  if (error) {
-    console.error('useProjectFileMap error:', error)
-    console.trace('Stack trace for error:')
-  }
-
-  console.log('useProjectFileMap debug:', {
-    projectId,
-    fileData: fileData?.data,
-    fileDataLength: fileData?.data?.length,
-    isLoading,
-    error
-  })
+  const { data: fileData } = useGetProjectFiles(projectId)
 
   return useMemo(() => {
     const files = fileData?.data ?? []
