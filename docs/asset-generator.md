@@ -1,6 +1,6 @@
 # Asset Generator
 
-The Asset Generator is a powerful feature in OctoPrompt that allows you to quickly generate high-quality code assets using AI assistance.
+The Asset Generator is a powerful feature in Promptliano that allows you to quickly generate high-quality code assets using AI assistance.
 
 ## Overview
 

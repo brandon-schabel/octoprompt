@@ -32,7 +32,7 @@ async function prepareDevSidecar() {
 
   const currentTriple = getCurrentTargetTriple()
   const currentExt = process.platform === 'win32' ? '.exe' : ''
-  const targetPath = join(tauriBindir, `octoprompt-server-${currentTriple}${currentExt}`)
+  const targetPath = join(tauriBindir, `promptliano-server-${currentTriple}${currentExt}`)
 
   console.log(`Building development sidecar for ${currentTriple}...`)
 

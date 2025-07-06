@@ -4,7 +4,7 @@
  */
 
 import { ProviderModelSelector, useModelSelection, ModelSettingsPopover } from '@/components/model-selection'
-import { APIProviders, AiSdkOptions } from '@octoprompt/schemas'
+import { APIProviders, AiSdkOptions } from '@promptliano/schemas'
 import { Card, CardContent, CardHeader, CardTitle } from '@ui'
 import { useState } from 'react'
 

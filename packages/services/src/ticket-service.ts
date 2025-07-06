@@ -1,4 +1,4 @@
-// Last 5 changes: Completely rewritten to use OctoPrompt storage patterns and proper error handling
+// Last 5 changes: Completely rewritten to use Promptliano storage patterns and proper error handling
 import type {
   CreateTicketBody,
   UpdateTicketBody,
@@ -8,11 +8,11 @@ import type {
   Ticket,
   TicketTask,
   TaskSuggestions
-} from '@octoprompt/schemas'
-import { TaskSuggestionsSchema, MEDIUM_MODEL_CONFIG } from '@octoprompt/schemas'
-import { ticketStorage } from '@octoprompt/storage'
-import { ApiError } from '@octoprompt/shared'
-import { getFullProjectSummary } from '@octoprompt/services'
+} from '@promptliano/schemas'
+import { TaskSuggestionsSchema, MEDIUM_MODEL_CONFIG } from '@promptliano/schemas'
+import { ticketStorage } from '@promptliano/storage'
+import { ApiError } from '@promptliano/shared'
+import { getFullProjectSummary } from '@promptliano/services'
 import { generateStructuredData } from './gen-ai-services'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:

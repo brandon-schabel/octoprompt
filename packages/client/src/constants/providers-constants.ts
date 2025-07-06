@@ -1,4 +1,4 @@
-import { APIProviders } from '@octoprompt/schemas'
+import { APIProviders } from '@promptliano/schemas'
 
 export type ModelProvider = {
   id: APIProviders
@@ -66,7 +66,7 @@ export const PROVIDERS = [
     linkTitle: 'Download LM Studio',
     isLocal: true,
     description:
-      'LM Studio is a UI based tool for running LLMs on your local machine. Click the link to download the app. Once you have LM Studio installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them. You can change LM Studio base URL in the settings.'
+      'LM Studio is a UI based tool for running LLMs on your local machine. Click the link to download the app. Once you have LM Studio installed, Promptliano will automatically start pulling the models API and you can select and start chatting with them. You can change LM Studio base URL in the settings.'
   },
   {
     id: 'ollama',
@@ -75,7 +75,7 @@ export const PROVIDERS = [
     linkTitle: 'Download Ollama',
     isLocal: true,
     description:
-      'Ollama is a lightweight terminal based tool for running LLMs on your local machine. Click the link to download the app. Once you have Ollama installed, OctoPrompt will automatically start pulling the models API and you can select and start chatting with them. You can change Ollama base URL in the settings.'
+      'Ollama is a lightweight terminal based tool for running LLMs on your local machine. Click the link to download the app. Once you have Ollama installed, Promptliano will automatically start pulling the models API and you can select and start chatting with them. You can change Ollama base URL in the settings.'
   }
 ] satisfies ModelProvider[]
 

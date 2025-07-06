@@ -29,7 +29,7 @@ import {
   useDeleteMessage,
   useForkChatFromMessage
 } from '@/hooks/api/use-chat-api'
-import { Chat, ChatMessage, ChatMessageAttachment } from '@octoprompt/schemas'
+import { Chat, ChatMessage, ChatMessageAttachment } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 import {
   ScrollArea,
@@ -51,7 +51,7 @@ import {
 } from '@ui'
 import { MarkdownRenderer } from '@/components/markdown-renderer'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
-import { APIProviders, AiSdkOptions } from '@octoprompt/schemas'
+import { APIProviders, AiSdkOptions } from '@promptliano/schemas'
 import { useDebounceCallback } from '@/hooks/utility-hooks/use-debounce'
 import { PROVIDER_SELECT_OPTIONS } from '@/constants/providers-constants'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'

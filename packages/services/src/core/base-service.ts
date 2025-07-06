@@ -1,6 +1,6 @@
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import { createCrudErrorHandlers, throwNotFound, safeAsync } from '../utils/error-handlers'
-import type { BaseStorage, BaseEntity } from '@octoprompt/storage'
+import type { BaseStorage, BaseEntity } from '@promptliano/storage'
 
 /**
  * Base service class with common CRUD operations and error handling

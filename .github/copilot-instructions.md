@@ -1,4 +1,4 @@
-# OctoPrompt Development Guide
+# Promptliano Development Guide
 
 ## General Code Principles
 
@@ -42,18 +42,18 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 - **Test-Driven Mindset**: Add/update tests when introducing new logic. Keep functions small and unit-testable.
 - **Inline Documentation**: Provide concise docstrings or inline comments for complex logic. Keep them accurate.
 
-* **Readability and Simplicity (KISS)**: Write clear, concise code.
-* **Modularity**: Organize code into logical modules/packages. Avoid circular dependencies.
-* **Error Handling**: Handle exceptions gracefully. Use specific exception types.
-* **Docstrings**: Write clear docstrings for modules, functions, and Pydantic models (e.g., Google style).
-* **Consistent Formatting**: Use a formatter like Black or Ruff. Adhere to PEP 8.
-* **Avoid Global Variables**: Minimize their use.
-* **Configuration Over Hardcoding**: Use Pydantic `BaseSettings` for configs.
-* **Regularly Refactor**.
+- **Readability and Simplicity (KISS)**: Write clear, concise code.
+- **Modularity**: Organize code into logical modules/packages. Avoid circular dependencies.
+- **Error Handling**: Handle exceptions gracefully. Use specific exception types.
+- **Docstrings**: Write clear docstrings for modules, functions, and Pydantic models (e.g., Google style).
+- **Consistent Formatting**: Use a formatter like Black or Ruff. Adhere to PEP 8.
+- **Avoid Global Variables**: Minimize their use.
+- **Configuration Over Hardcoding**: Use Pydantic `BaseSettings` for configs.
+- **Regularly Refactor**.
 
 ---
 
-## OctoPrompt Specifics
+## Promptliano Specifics
 
 - **Timestamps & IDs**: All IDs, `created`, and `updated` timestamps are Unix timestamps in milliseconds. For IDs, `-1` signifies `null`; otherwise, it must be a valid Unix timestamp (ms).
 - **Maps with Numeric Keys**: Prefer `new Map()` over plain objects, as object keys are converted to strings.
@@ -92,56 +92,56 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 ## Project Overall Structure
 
 ```
-OctoPrompt
-	packages
+Promptliano
+ packages
 
-		api-client
-			index.ts // contains the entire octoprompt client
-			src
-				tests // contains a test suite that tests the client against the server endpoints
+  api-client
+   index.ts // contains the entire promptliano client
+   src
+    tests // contains a test suite that tests the client against the server endpoints
 
-		client
-			src
-				constants
-				utils
-				routes
-					chat.tsx
-					projects.tsx
-					prompts.tsx
-				components
-				hooks
-					api // api hooks directly importing shared schema types
-		schemas
-			src
-					project.schema.ts
-					chat.schema.ts
-					prompt.schema.ts
+  client
+   src
+    constants
+    utils
+    routes
+     chat.tsx
+     projects.tsx
+     prompts.tsx
+    components
+    hooks
+     api // api hooks directly importing shared schema types
+  schemas
+   src
+     project.schema.ts
+     chat.schema.ts
+     prompt.schema.ts
 
-	    shared
-			src
-				constants
-					model-default.ts // contains llm model default configs like temp, max tokens, etc, 3 configs, low, med, high
+     shared
+   src
+    constants
+     model-default.ts // contains llm model default configs like temp, max tokens, etc, 3 configs, low, med, high
 schemas using z.infer<>
 
-    	server
-			server.ts // main serverentry
-        	src
-				app.ts // where hono router is defined, all routes are imported and mapped here, middleware, and global server error handling live here
-				routes
-					chat-routes.ts
-					prompt-routes.ts
-					project-routes.ts
+     server
+   server.ts // main serverentry
+         src
+    app.ts // where hono router is defined, all routes are imported and mapped here, middleware, and global server error handling live here
+    routes
+     chat-routes.ts
+     prompt-routes.ts
+     project-routes.ts
 
 
-		services
-			src
-				chat-service.ts
-				prompt-service.ts
-				project-service.ts
-		storage
-			chat-storage.ts
-			prompt-storage.ts
-			project-storage.ts
+  services
+   src
+    chat-service.ts
+    prompt-service.ts
+    project-service.ts
+  storage
+   chat-storage.ts
+   prompt-storage.ts
+   project-storage.ts
 ```
 
 ````
@@ -152,7 +152,7 @@ schemas using z.infer<>
 **Root `package.json`:**
 ```json
 {
-	"dev": "bun run scripts/start-dev.ts",
+ "dev": "bun run scripts/start-dev.ts",
     "dev:client": "bun run scripts/start-client-dev.ts",
     "dev:server": "bun run scripts/start-server-dev.ts",
     "stop": "bun run scripts/stop.ts",
@@ -202,14 +202,14 @@ schemas using z.infer<>
 
 ## Useful Utils
 
-**`@octoprompt/schemas`:**
+**`@promptliano/schemas`:**
 
 - `unixTSSchemaSpec`: Standard Unix timestamp (ms) schema.
 - `unixTSOptionalSchemaSpec`: Optional Unix timestamp (ms).
 - `unixTSArraySchemaSpec`: Required array of Unix timestamps (ms).
 - `unixTSArrayOptionalSchemaSpec`: Optional array of Unix timestamps (ms).
 
-**`@octoprompt/shared`:**
+**`@promptliano/shared`:**
 
 - `mergeDeep<T>([obj1, obj2, ...]): T`: Recursively merges objects.
 - `normalizePath(filePath: string): string`: Normalizes path separators.
@@ -217,12 +217,12 @@ schemas using z.infer<>
 - `buildPromptContent({ fileMap, promptData, selectedFiles, selectedPrompts, userPrompt }): string`
 - `calculateTotalTokens({ promptData, selectedPrompts, userPrompt, selectedFiles, fileMap }): number`
 - `buildFileTree(files: ProjectFile[]): Record<string, any>`
-- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `octopromptPlanningMetaPrompt`)
+- Predefined prompt file contents (e.g., `contemplativePrompt`, `summarizationSteps`, `promptlianoPlanningMetaPrompt`)
 - `promptsMap`: Exported object mapping names to prompt strings.
   **`packages/shared/src/constants/model-default-configs.ts`:**
 - `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`: `ModelOptionsWithProvider` objects with settings for temperature, maxTokens, provider, model, etc. (e.g., `LOW_MODEL_CONFIG` uses `google/gemini-2.5-flash-preview`).
 
-**`@octoprompt/shared`:**
+**`@promptliano/shared`:**
 
 - `getFullProjectSummary(projectId: number): Promise<string>`: Generates a full project summary.
 - `resolveJsonPath(rawPath: string | string[], basePath?: string): string`: Resolves input to a normalized file path.
@@ -264,12 +264,12 @@ Organized by major features (Projects, Chat & Messages, Prompts, Tickets & Tasks
 Direct schema import approach for type safety (TypeScript types from shared Zod schemas).
 
 **API Hooks (`packages/client/src/hooks/api`):**
-`use-projects-api.ts`, `use-chat-api.ts`, `use-prompts-api.ts`, `use-keys-api.ts`, `use-tickets-api.ts`, `use-gen-ai-api.ts`, `use-agent-coder-api.ts`, `use-admin-api.ts`, `use-ai-chat.ts`, `use-ai-file-changes-api.ts`, `common-mutation-error-handler.ts`.
+`use-projects-api.ts`, `use-chat-api.ts`, `use-prompts-api.ts`, `use-keys-api.ts`, `use-tickets-api.ts`, `use-gen-ai-api.ts`, `use-admin-api.ts`, `use-ai-chat.ts`, `use-ai-file-changes-api.ts`, `common-mutation-error-handler.ts`.
 
 **Modern API Hook Pattern (Example `useCreateChat`):**
 
 ```typescript
-import type { CreateChatBody } from '@octoprompt/schemas' // Import types directly
+import type { CreateChatBody } from '@promptliano/schemas' // Import types directly
 // ... other imports: useQueryClient, useMutation, octoClient, toast
 
 export function useCreateChat() {
@@ -289,7 +289,7 @@ export function useCreateChat() {
 **Schema-First Query (Example `useGetPrompt`):**
 
 ```typescript
-import type { Prompt } from '@octoprompt/schemas' // Import types
+import type { Prompt } from '@promptliano/schemas' // Import types
 // ... other imports: useQuery, octoClient, PROMPT_KEYS
 
 export function useGetPrompt(promptId: number) {
@@ -302,18 +302,18 @@ export function useGetPrompt(promptId: number) {
 }
 ```
 
-**OctoPrompt Client Instance (`octoClient`):**
-Singleton client in `packages/client/src/hooks/api.ts` (created via `createOctoPromptClient`) provides type-safe methods for each service (e.g., `octoClient.chats.createChat(data)`).
+**Promptliano Client Instance (`octoClient`):**
+Singleton client in `packages/client/src/hooks/api.ts` (created via `createPromptlianoClient`) provides type-safe methods for each service (e.g., `octoClient.chats.createChat(data)`).
 
 ---
 
-## OctoPrompt Backend Architecture
+## Promptliano Backend Architecture
 
 TypeScript/Bun backend: AI-powered project management, layered architecture, file-based JSON storage, service-oriented logic, OpenAPI-compliant REST APIs.
 
 ### Architecture Layers
 
-- **Storage Layer (`@octoprompt/storage`)**: JSON file storage with CRUD and Zod validation.
+- **Storage Layer (`@promptliano/storage`)**: JSON file storage with CRUD and Zod validation.
   Example: `projectStorage.readProjects()`, `projectStorage.writeProjectFiles()`.
   Files: `project-storage.ts`, `chat-storage.ts`, `prompt-storage.ts`, `ticket-storage.ts`, `provider-key-storage.ts`.
   Patterns: Unix ms IDs, `Record<string, Entity>` data structure, Zod validation, atomic file ops.
@@ -371,9 +371,9 @@ Implements `readTodos`, `writeTodos`, `readTodoCategories`, `writeTodoCategories
 
 ```typescript
 import { z } from 'zod' // Assuming path
-import { TodoSchema, TodoCategorySchema } from '@octoprompt/schemas'
+import { TodoSchema, TodoCategorySchema } from '@promptliano/schemas'
 import { readJson, writeJson } from '../json-scribe' // Assuming path
-import { normalizeToUnixMs } from '@octoprompt/schemas' // Assuming path
+import { normalizeToUnixMs } from '@promptliano/schemas' // Assuming path
 
 export const TodoStorageSchema = z.record(z.string(), TodoSchema)
 // ... (TodoCategoryStorageSchema defined similarly)
@@ -398,9 +398,9 @@ export const todoStorage = {
 Business logic: `createTodo`, `updateTodoStatus`, `getTodosByProject`, `deleteTodo`, `generateTodoSuggestions` (uses `generateStructuredData`). Handles ID conflicts, validation, and error wrapping (`ApiError`).
 
 ```typescript
-import { Todo, CreateTodoBody, TodoSchema } from '@octoprompt/schemas' // Assuming path
+import { Todo, CreateTodoBody, TodoSchema } from '@promptliano/schemas' // Assuming path
 import { todoStorage } from '@/utils/storage/todo-storage' // Assuming path
-import { ApiError } from '@octoprompt/shared' // Assuming path
+import { ApiError } from '@promptliano/shared' // Assuming path
 // ... (other imports like generateStructuredData, getProjectById)
 
 export async function createTodo(data: CreateTodoBody): Promise<Todo> {
@@ -471,10 +471,12 @@ describe('TodoService (Mocked Storage)', () => {
 ## Key Backend Patterns
 
 - **Error Handling**: Custom `ApiError` class for consistent API error responses. Global error handler in `app.ts` catches `ApiError` instances.
+
   ```typescript
   // if (!project) throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND');
   // app.onError((err, c) => { /* handle ApiError */ });
   ```
+
 - **Validation**: Zod schemas for data validation at storage and API layers. `c.req.valid('json')` for auto-validated request bodies in Hono.
 - **ID Generation**: `storage.generateId()` (typically `normalizeToUnixMs(new Date())` or `Date.now()`). Handles collisions by incrementing ID if already exists in the storage record.
 
@@ -519,12 +521,12 @@ Different HTTP verbs on the _same_ path are fine but subject to ordering if path
 
 ### 2. Ordering Strategy: High → Low Specificity
 
-1.  Exact literals (e.g., `/api/health`)
-2.  Literal segments + param (e.g., `/api/users/me`)
-3.  Specific literal actions (e.g., `/api/projects/{pId}/files/bulk`) before more general params.
-4.  Single-param (e.g., `/api/users/{uId}`)
-5.  Multi-param (e.g., `/api/projects/{pId}/files/{fId}`)
-6.  Catch-alls (e.g., `/api/{resource}`, `*`)
+1. Exact literals (e.g., `/api/health`)
+2. Literal segments + param (e.g., `/api/users/me`)
+3. Specific literal actions (e.g., `/api/projects/{pId}/files/bulk`) before more general params.
+4. Single-param (e.g., `/api/users/{uId}`)
+5. Multi-param (e.g., `/api/projects/{pId}/files/{fId}`)
+6. Catch-alls (e.g., `/api/{resource}`, `*`)
 
 ### 3. Typical Conflict Patterns & Fixes
 

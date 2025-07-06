@@ -1,20 +1,20 @@
-import { createOctoPromptClient, DataResponseSchema } from '@octoprompt/api-client'
+import { createPromptlianoClient, DataResponseSchema } from '@promptliano/api-client'
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
-import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@octoprompt/schemas'
+import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@promptliano/schemas'
 
-import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@octoprompt/schemas'
+import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@promptliano/schemas'
 
-import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest } from '@octoprompt/schemas'
+import type { CreatePromptBody, UpdatePromptBody, Prompt, OptimizePromptRequest } from '@promptliano/schemas'
 
 // packages/client/src/hooks/api/use-keys-api-v2.ts
-import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@octoprompt/schemas'
+import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '@promptliano/schemas'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
 // Create a singleton client instance
-export const octoClient = createOctoPromptClient({
+export const octoClient = createPromptlianoClient({
   baseUrl: SERVER_HTTP_ENDPOINT,
   timeout: 30000
 })
@@ -702,7 +702,7 @@ const TICKET_KEYS = {
 
 // --- Utility Hooks for Complex Operations ---
 
-// packages/client/src/hooks/api/use-octoprompt-utils.ts
+// packages/client/src/hooks/api/use-promptliano-utils.ts
 export function useInvalidateProject(projectId: number) {
   const queryClient = useQueryClient()
 

@@ -9,7 +9,7 @@ async function generateSpec() {
     const document = app.getOpenAPIDocument({
       openapi: '3.1.0',
       info: {
-        description: 'OctoPrompt OpenAPI Server Spec',
+        description: 'Promptliano OpenAPI Server Spec',
         version: serverPackageJson.version,
         title: serverPackageJson.name
       }

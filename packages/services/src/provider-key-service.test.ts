@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 
-import type { ProviderKeysStorage } from '@octoprompt/storage' // ADDED
-import { ApiError } from '@octoprompt/shared'
-import { normalizeToUnixMs } from '@octoprompt/shared'
+import type { ProviderKeysStorage } from '@promptliano/storage' // ADDED
+import { ApiError } from '@promptliano/shared'
+import { normalizeToUnixMs } from '@promptliano/shared'
 import { createProviderKeyService } from './provider-key-service'
 
 // In-memory store for our mock
@@ -10,8 +10,8 @@ let mockProviderKeysDb: ProviderKeysStorage = {}
 
 // Mock the providerKeyStorage utility
 // Ensure the path to the module is correct based on your project structure.
-// If provider-key-storage.ts is in '@octoprompt/storage/', this path should be correct.
-mock.module('@octoprompt/storage', () => ({
+// If provider-key-storage.ts is in '@promptliano/storage/', this path should be correct.
+mock.module('@promptliano/storage', () => ({
   providerKeyStorage: {
     readProviderKeys: async () => JSON.parse(JSON.stringify(mockProviderKeysDb)),
     writeProviderKeys: async (data: ProviderKeysStorage) => {

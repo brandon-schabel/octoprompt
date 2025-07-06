@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { buildCombinedFileSummariesXml, type SummaryXmlOptions } from './project-summary-formatter'
-import type { ProjectFile } from '@octoprompt/schemas' // Assuming this path is correct
+import type { ProjectFile } from '@promptliano/schemas' // Assuming this path is correct
 
 // Use a compatible interface for testing, ProjectFile might have more fields
 interface TestProjectFile {

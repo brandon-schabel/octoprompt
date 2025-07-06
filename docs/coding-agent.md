@@ -1,31 +1,31 @@
-# User Guide: The OctoPrompt Coding Agent
+# User Guide: The Promptliano Coding Agent
 
-Welcome to the OctoPrompt Coding Agent guide! This powerful feature is designed to assist you by automating coding tasks, planning changes, and even generating code modifications based on your instructions and the context you provide from your project.
+Welcome to the Promptliano Coding Agent guide! This powerful feature is designed to assist you by automating coding tasks, planning changes, and even generating code modifications based on your instructions and the context you provide from your project.
 
 `[SCREENSHOT: Overview of the Project Screen highlighting where the "Agent" button might be, perhaps near the user input field]`
 
 ## Table of Contents
 
-1.  [What is the Coding Agent?](#1-what-is-the-coding-agent)
-2.  [How the Coding Agent Works](#2-how-the-coding-agent-works)
+1. [What is the Coding Agent?](#1-what-is-the-coding-agent)
+2. [How the Coding Agent Works](#2-how-the-coding-agent-works)
     - [Context is Key](#context-is-key)
     - [The Two-Step Process: Planning and Coding](#the-two-step-process-planning-and-coding)
-3.  [Initiating the Agent: The Agent Control Dialog](#3-initiating-the-agent-the-agent-control-dialog)
-4.  [Navigating the Agent Control Dialog](#4-navigating-the-agent-control-dialog)
+3. [Initiating the Agent: The Agent Control Dialog](#3-initiating-the-agent-the-agent-control-dialog)
+4. [Navigating the Agent Control Dialog](#4-navigating-the-agent-control-dialog)
     - [Run ID Selector and Management](#run-id-selector-and-management)
     - [New Job Tab](#new-job-tab)
     - [Logs & Data Tab](#logs--data-tab)
     - [Confirm Tab](#confirm-tab)
-5.  [Step-by-Step: Using the Coding Agent](#5-step-by-step-using-the-coding-agent)
-6.  [Reviewing and Applying Changes](#6-reviewing-and-applying-changes)
-7.  [Tips for Best Results](#7-tips-for-best-results)
-8.  [Important Considerations](#8-important-considerations)
+5. [Step-by-Step: Using the Coding Agent](#5-step-by-step-using-the-coding-agent)
+6. [Reviewing and Applying Changes](#6-reviewing-and-applying-changes)
+7. [Tips for Best Results](#7-tips-for-best-results)
+8. [Important Considerations](#8-important-considerations)
 
 ---
 
 ## 1. What is the Coding Agent?
 
-The OctoPrompt Coding Agent is an AI-powered assistant integrated into your workspace. It takes your natural language instructions, selected project files, and chosen prompts to:
+The Promptliano Coding Agent is an AI-powered assistant integrated into your workspace. It takes your natural language instructions, selected project files, and chosen prompts to:
 
 - **Understand your goals:** Deciphers what you want to achieve in your codebase.
 - **Plan tasks:** Breaks down complex requests into a series of specific, actionable steps.
@@ -55,24 +55,24 @@ The agent's performance heavily relies on the quality and specificity of the con
 
 Behind the scenes, the agent typically follows a multi-stage process:
 
-1.  **Planning Phase:**
+1. **Planning Phase:**
 
     - You initiate an agent run with your gathered context.
     - A specialized "Planning Agent" analyzes your request and the provided file information.
     - It creates a structured plan, breaking down your goal into a series of specific tasks (e.g., "modify function X in file Y.ts," "create new file Z.ts with specified content"). This plan is crucial for guiding the next phase.
 
-2.  **Execution Phase (Coding Agent):**
+2. **Execution Phase (Coding Agent):**
 
     - For each task in the generated plan, a "Coding Agent" takes over.
     - It receives the specific task instruction and the content of the target file (if it's an existing file).
     - The Coding Agent then generates the necessary code modifications or the content for a new file.
 
-3.  **Proposal:**
+3. **Proposal:**
 
     - Once all tasks are processed, the agent compiles all proposed changes (additions, modifications, deletions).
     - These are presented to you in the "Confirm" tab of the Agent Control Dialog for your review.
 
-4.  **Confirmation (Your Role):**
+4. **Confirmation (Your Role):**
     - You carefully review the proposed changes.
     - If satisfied, you confirm, and only then does the agent write the changes directly to your file system. Otherwise, you can discard them.
 
@@ -82,12 +82,12 @@ Behind the scenes, the agent typically follows a multi-stage process:
 
 To start working with the Coding Agent:
 
-1.  Navigate to the **Project Screen** for the project you want to work on.
-2.  **Gather your context:**
+1. Navigate to the **Project Screen** for the project you want to work on.
+2. **Gather your context:**
     - Select the relevant files from the File Panel.
     - Choose any guiding prompts from the Prompt Overview Panel.
     - Clearly describe your task or objective in the "User Input" text area.
-3.  Click the **<Bot /> Agent** button. This button is typically located underneath the "User Input" field.
+3. Click the **<Bot /> Agent** button. This button is typically located underneath the "User Input" field.
 
 `[SCREENSHOT: Close-up of the "User Input" field and the "Agent" button beneath it.]`
 
@@ -183,26 +183,26 @@ This tab is where you review the changes proposed by the agent after it has comp
 
 ## 5. Step-by-Step: Using the Coding Agent
 
-1.  **Open Your Project:** Navigate to the Project Screen in OctoPrompt.
-2.  **Prepare Context:**
+1. **Open Your Project:** Navigate to the Project Screen in Promptliano.
+2. **Prepare Context:**
     - In the **File Panel**, select the files that are most relevant to the task you want the agent to perform.
     - In the **Prompt Overview Panel**, select any pre-defined prompts that might help guide the AI (e.g., coding style, output format).
     - In the **User Input** text area, write a clear and specific description of what you want the agent to do. For example:
       - "Refactor the `getUserData` function in `user-service.ts` to use async/await instead of promises."
       - "Create a new React component named `UserProfileCard.tsx` that accepts a user object and displays their name, email, and avatar. Also, create a basic Storybook story for this component."
       - "Add JSDoc comments to all public methods in `api-handler.js`."
-3.  **Initiate Agent:** Click the **<Bot /> Agent** button (usually found below the User Input field). The Agent Control Dialog will open.
-4.  **Review and Start (New Job Tab):**
+3. **Initiate Agent:** Click the **<Bot /> Agent** button (usually found below the User Input field). The Agent Control Dialog will open.
+4. **Review and Start (New Job Tab):**
     - The dialog will open to the **New Job** tab.
     - Verify that your User Input, Selected Prompts, and Selected Files are correctly listed.
     - Check the **Token Input Estimate**.
     - Click the **<Bot /> Start Agent Run** button.
-5.  **Monitor Progress (Logs & Data Tab):**
+5. **Monitor Progress (Logs & Data Tab):**
     - You will likely be switched to the **Logs & Data** tab automatically.
     - Observe the log stream to see the agent's progress. It will indicate planning stages, which files it's working on, and any significant actions or errors.
     - If the agent seems stuck or you want more detail, you can switch to "Viewing Raw Data" (though logs are usually more user-friendly for monitoring).
     - The agent will go through its planning and execution phases. This may take some time depending on the complexity of the task and the number of files involved.
-6.  **Await Completion:** Wait for the agent to indicate that it has finished processing all tasks. The logs should reflect this, and the UI might update to show the run as completed.
+6. **Await Completion:** Wait for the agent to indicate that it has finished processing all tasks. The logs should reflect this, and the UI might update to show the run as completed.
 
 ---
 
@@ -210,8 +210,8 @@ This tab is where you review the changes proposed by the agent after it has comp
 
 Once the agent has completed its run:
 
-1.  **Navigate to Confirm Tab:** If not already there, click on the **Confirm** tab in the Agent Control Dialog.
-2.  **Examine Proposed Changes:**
+1. **Navigate to Confirm Tab:** If not already there, click on the **Confirm** tab in the Agent Control Dialog.
+2. **Examine Proposed Changes:**
     - You'll see a list of files the agent intends to create, modify, or delete.
     - For each file:
       - Note the **change type icon** (<FilePlus />, <FileEdit />, <FileMinus />).
@@ -220,7 +220,7 @@ Once the agent has completed its run:
         - For modifications, carefully review the highlighted diffs. Ensure the changes are correct, safe, and align with your expectations.
         - For new files, review the entire generated content.
         - For deletions, confirm you want the file removed.
-3.  **Make Your Decision:**
+3. **Make Your Decision:**
     - **If you approve all changes:** Click the **<CheckCircle /> Confirm & Apply Changes** button. The agent will write these modifications to your project files on your computer.
     - **If you do NOT approve the changes:** Simply close the Agent Control Dialog or navigate away. No changes will be made to your files. You can then refine your input/context and start a new agent run if desired.
 
@@ -242,11 +242,11 @@ Once the agent has completed its run:
 
 ## 8. Important Considerations
 
-- **You Are in Control:** The OctoPrompt Coding Agent will **never** make changes to your files without your explicit action of clicking the "<CheckCircle /> Confirm & Apply Changes" button.
-- **API Key Configuration:** The Coding Agent relies on AI models. Ensure your API keys for the relevant AI providers (e.g., OpenRouter, OpenAI) are correctly configured on the "Keys" page in OctoPrompt. Without valid keys, AI features will not function.
-- **Model Configuration:** The default AI models and settings used by the agent (e.g., for planning or coding) are typically defined in configuration files within OctoPrompt (e.g., `shared/constants/model-default-configs.ts`, specifically variables like `HIGH_MODEL_CONFIG`). While UI controls for these might be limited initially, advanced users might be aware of these configurations.
+- **You Are in Control:** The Promptliano Coding Agent will **never** make changes to your files without your explicit action of clicking the "<CheckCircle /> Confirm & Apply Changes" button.
+- **API Key Configuration:** The Coding Agent relies on AI models. Ensure your API keys for the relevant AI providers (e.g., OpenRouter, OpenAI) are correctly configured on the "Keys" page in Promptliano. Without valid keys, AI features will not function.
+- **Model Configuration:** The default AI models and settings used by the agent (e.g., for planning or coding) are typically defined in configuration files within Promptliano (e.g., `shared/constants/model-default-configs.ts`, specifically variables like `HIGH_MODEL_CONFIG`). While UI controls for these might be limited initially, advanced users might be aware of these configurations.
 - **Token Usage:** AI models consume tokens based on the input context (files, prompts, your instructions) and the output they generate. Be mindful of the "Token Input Estimate" to manage potential costs with your AI provider.
 
 ---
 
-By understanding how the Coding Agent works and following these guidelines, you can leverage its power to enhance your development workflow in OctoPrompt. Happy coding!
+By understanding how the Coding Agent works and following these guidelines, you can leverage its power to enhance your development workflow in Promptliano. Happy coding!

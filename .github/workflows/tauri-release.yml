@@ -1,0 +1,246 @@
+name: Tauri Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'tauri-v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for release'
+        required: true
+        default: 'v0.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          release_name: Promptliano ${{ github.event.inputs.tag_name || github.ref_name }}
+          body: |
+            # Promptliano Release ${{ github.event.inputs.tag_name || github.ref_name }}
+
+            ## Desktop Applications
+            - **Windows**: Download `.exe` installer or `.msi` package
+            - **macOS**: Download `.dmg` for your architecture (Intel or Apple Silicon)
+            - **Linux**: Download `.AppImage`, `.deb`, or `.rpm` based on your distribution
+
+            ## Server Binaries
+            Standalone server binaries are available for:
+            - Linux x64
+            - Windows x64
+            - macOS x64 (Intel)
+            - macOS ARM64 (Apple Silicon)
+
+            ## What's Changed
+            <!-- Will be auto-generated in future releases -->
+
+            ## Installation Instructions
+
+            ### Desktop App
+            1. Download the appropriate installer for your platform
+            2. Run the installer and follow the prompts
+            3. Launch Promptliano from your applications menu
+
+            ### Server Binary
+            1. Download the server binary for your platform
+            2. Make it executable (Unix/macOS): `chmod +x promptliano-server-*`
+            3. Run the server: `./promptliano-server-*`
+
+            ---
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/...
+          draft: true
+          prerelease: false
+
+  build-tauri:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+            target: 'universal-apple-darwin'
+            name: 'macOS Universal'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+            name: 'macOS Intel'
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+            name: 'macOS Apple Silicon'
+          - platform: 'ubuntu-20.04'
+            args: ''
+            target: 'x86_64-unknown-linux-gnu'
+            name: 'Linux'
+          - platform: 'windows-latest'
+            args: ''
+            target: 'x86_64-pc-windows-msvc'
+            name: 'Windows'
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './packages/client/src-tauri -> target'
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install macOS dependencies
+        if: matrix.platform == 'macos-latest'
+        run: |
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build frontend
+        run: bun run build:client
+        env:
+          VITE_BUILD_MODE: desktop
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE && 'true' || 'false' }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: packages/client
+          args: ${{ matrix.args }}
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          releaseDraft: true
+          includeDebug: false
+          includeRelease: true
+
+  build-server-binaries:
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - platform: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: linux-x64
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: windows-x64
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            name: darwin-x64
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            name: darwin-arm64
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build server binary
+        run: bun run build-binaries
+        env:
+          BUILD_TARGET: ${{ matrix.name }}
+
+      - name: Compress server binary
+        run: |
+          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+            7z a -tzip promptliano-server-${{ matrix.name }}.zip dist/promptliano-server-*
+          else
+            tar -czf promptliano-server-${{ matrix.name }}.tar.gz -C dist .
+          fi
+        shell: bash
+
+      - name: Upload server binary to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: promptliano-server-${{ matrix.name }}.${{ matrix.platform == 'windows-latest' && 'zip' || 'tar.gz' }}
+          asset_name: promptliano-server-${{ matrix.name }}.${{ matrix.platform == 'windows-latest' && 'zip' || 'tar.gz' }}
+          asset_content_type: ${{ matrix.platform == 'windows-latest' && 'application/zip' || 'application/gzip' }}
+
+  publish-release:
+    needs: [build-tauri, build-server-binaries]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Publish Release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              draft: false
+            })
+
+            console.log('Release published successfully!')

@@ -5,7 +5,7 @@ import { OctoTooltip } from '@/components/octo/octo-tooltip'
 import { Badge } from '@ui'
 import { ScrollArea } from '@ui'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { ProjectFileMap } from '@octoprompt/schemas'
+import { ProjectFileMap } from '@promptliano/schemas'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 
 type SelectedFilesSidebarProps = {

@@ -1,11 +1,11 @@
 // Recent changes:
-// 1. Updated to use OctoPromptClient from api-client.ts
-// 2. Replaced createApiClient with createOctoPromptClient
+// 1. Updated to use PromptlianoClient from api-client.ts
+// 2. Replaced createApiClient with createPromptlianoClient
 // 3. Used MCPService from the main client
 // 4. Maintained same API interface for backward compatibility
 // 5. Added proper type safety and validation
 
-import { createOctoPromptClient, type MCPService } from '../api-client'
+import { createPromptlianoClient, type MCPService } from '../api-client'
 import type {
   CreateMCPServerConfigBody,
   UpdateMCPServerConfigBody,
@@ -15,10 +15,10 @@ import type {
   MCPResource,
   MCPToolExecutionRequest,
   MCPToolExecutionResult
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 export function createMCPApi(apiUrl: string) {
-  const client = createOctoPromptClient({ baseUrl: apiUrl })
+  const client = createPromptlianoClient({ baseUrl: apiUrl })
   const mcpService = client.mcp
 
   return {

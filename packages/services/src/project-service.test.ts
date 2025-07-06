@@ -19,12 +19,12 @@ import {
   summarizeFiles,
   type FileSyncData
 } from './project-service'
-import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody } from '@octoprompt/schemas'
-import type { ProjectsStorage, ProjectFilesStorage } from '@octoprompt/storage'
-import { ProjectFilesStorageSchema } from '@octoprompt/storage'
-import { ApiError, LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from '@octoprompt/shared'
+import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody } from '@promptliano/schemas'
+import type { ProjectsStorage, ProjectFilesStorage } from '@promptliano/storage'
+import { ProjectFilesStorageSchema } from '@promptliano/storage'
+import { ApiError, LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from '@promptliano/shared'
 import { z } from 'zod'
-import { normalizeToUnixMs } from '@octoprompt/shared'
+import { normalizeToUnixMs } from '@promptliano/shared'
 
 // Set test environment to use in-memory database
 process.env.NODE_ENV = 'test'
@@ -92,7 +92,7 @@ const randomString = (length = 8) =>
 describe('Project Service (File Storage)', () => {
   beforeEach(async () => {
     // Reset the database manager before each test
-    const { DatabaseManager } = await import('@octoprompt/storage')
+    const { DatabaseManager } = await import('@promptliano/storage')
     DatabaseManager.reset()
 
     // Get a fresh instance and clear all data
@@ -106,7 +106,7 @@ describe('Project Service (File Storage)', () => {
 
   afterEach(async () => {
     // Clean up after each test
-    const { DatabaseManager } = await import('@octoprompt/storage')
+    const { DatabaseManager } = await import('@promptliano/storage')
     const db = DatabaseManager.getInstance()
     await db.clearAllTables()
     DatabaseManager.reset()

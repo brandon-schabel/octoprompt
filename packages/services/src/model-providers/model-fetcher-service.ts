@@ -1,4 +1,4 @@
-import type { APIProviders } from '@octoprompt/schemas'
+import type { APIProviders } from '@promptliano/schemas'
 import {
   GEMINI_BASE_URL,
   GROQ_BASE_URL,
@@ -170,7 +170,7 @@ export type ListModelsOptions = {
 }
 
 export class ModelFetcherService {
-  constructor(private config: ProviderKeysConfig) {}
+  constructor(private config: ProviderKeysConfig) { }
 
   private ensure(key?: string, providerName = 'unknown') {
     if (!key) throw new Error(`${providerName} API key not found in config`)

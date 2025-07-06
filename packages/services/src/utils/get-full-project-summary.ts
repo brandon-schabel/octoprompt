@@ -1,7 +1,7 @@
-import { ApiError, buildProjectSummary, promptsMap } from '@octoprompt/shared'
-import { getProjectFiles } from '@octoprompt/services'
+import { ApiError, buildProjectSummary, promptsMap } from '@promptliano/shared'
+import { getProjectFiles } from '@promptliano/services'
 import { generateSingleText } from '../gen-ai-services'
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
+import { LOW_MODEL_CONFIG } from '@promptliano/schemas'
 
 export const getSafeAllProjectFiles = async (projectId: number) => {
   const allFiles = await getProjectFiles(projectId)

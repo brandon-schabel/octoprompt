@@ -4,11 +4,11 @@ import {
   type ChatMessage,
   type Chat,
   type ExtendedChatMessage
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
-import { chatStorage, type ChatMessagesStorage } from '@octoprompt/storage' // New import
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
+import { chatStorage, type ChatMessagesStorage } from '@promptliano/storage' // New import
 import { ZodError } from 'zod'
-import { normalizeToUnixMs } from '@octoprompt/shared'
+import { normalizeToUnixMs } from '@promptliano/shared'
 
 export type CreateChatOptions = {
   copyExisting?: boolean

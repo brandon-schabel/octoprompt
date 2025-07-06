@@ -6,7 +6,7 @@ import {
   claudeCodeStorage,
   createCleanupScheduler,
   type CleanupOptions
-} from '@octoprompt/storage'
+} from '@promptliano/storage'
 import path from 'node:path'
 
 interface MaintenanceOptions {

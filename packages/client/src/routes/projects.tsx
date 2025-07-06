@@ -8,7 +8,7 @@ import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/p
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
 import { ResizablePanel } from '@ui'
-import { ProjectResponse } from '@octoprompt/schemas'
+import { ProjectResponse } from '@promptliano/schemas'
 import {
   useActiveProjectTab,
   useGetProjectTabs,
@@ -20,12 +20,10 @@ import {
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ProjectStatsDisplay } from '@/components/projects/project-stats-display'
 import { ProjectStatsDisplayEnhanced } from '@/components/projects/project-stats-display-enhanced-v2'
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
-import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
 import { ProjectAssetsView } from '@/components/projects/project-assets-view'
 import { Bot, Code2, Sparkles, Plug } from 'lucide-react'
 import { MCPTabView } from '@/components/mcp/mcp-tab-view'
@@ -189,10 +187,6 @@ export function ProjectsPage() {
                 Tickets
               </TabsTrigger>
               <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-              {/* <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
-                <Code2 className='h-3.5 w-3.5' />
-                Agent Coder
-              </TabsTrigger> */}
               <TabsTrigger value='assets' className='flex items-center gap-1'>
                 <Sparkles className='h-3.5 w-3.5' />
                 Assets
@@ -240,17 +234,6 @@ export function ProjectsPage() {
               <ProjectSummarizationSettingsPage />
             ) : (
               <p>No project selected for summarization settings.</p>
-            )}
-          </TabsContent>
-          <TabsContent value='agent-coder' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
-            {selectedProjectId && projectData && allProjectsData ? (
-              <AgentCoderTabView
-                project={projectData}
-                projectId={selectedProjectId}
-                allProjects={allProjectsData.data || []}
-              />
-            ) : (
-              <p className='p-4 md:p-6'>No project selected for Agent Coder.</p>
             )}
           </TabsContent>
           <TabsContent value='assets' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>

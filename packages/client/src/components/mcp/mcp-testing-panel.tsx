@@ -19,7 +19,7 @@ export function MCPTestingPanel({ projectId }: MCPTestingPanelProps) {
       <div className='mb-4'>
         <h2 className='text-lg font-semibold mb-2'>MCP Protocol Testing</h2>
         <p className='text-sm text-gray-600'>
-          Test the OctoPrompt MCP server implementation with real JSON-RPC requests. Use this to validate protocol
+          Test the Promptliano MCP server implementation with real JSON-RPC requests. Use this to validate protocol
           compliance and debug MCP connections.
         </p>
       </div>

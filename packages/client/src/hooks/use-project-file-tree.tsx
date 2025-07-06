@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useActiveProjectTab } from './use-kv-local-storage'
 import { useGetProjectFilesWithoutContent } from './api/use-projects-api'
-import { buildFileTree } from '@octoprompt/shared'
+import { buildFileTree } from '@promptliano/shared'
 
 export const useProjectFileTree = () => {
   const [activeProjectTabState] = useActiveProjectTab()

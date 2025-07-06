@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi' //
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import {
   CreateProviderKeyBodySchema,
   UpdateProviderKeyBodySchema,
@@ -7,9 +7,9 @@ import {
   ProviderKeyResponseSchema,
   ProviderKeyListResponseSchema,
   ProviderKey
-} from '@octoprompt/schemas'
-import { providerKeyService } from '@octoprompt/services'
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
+} from '@promptliano/schemas'
+import { providerKeyService } from '@promptliano/services'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
 
 const createProviderKeyRoute = createRoute({
   method: 'post',

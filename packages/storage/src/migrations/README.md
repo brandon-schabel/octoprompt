@@ -1,6 +1,6 @@
 # Storage Migration Utilities
 
-A comprehensive migration system for OctoPrompt's Storage V2 that provides version tracking, atomicity, and rollback capabilities.
+A comprehensive migration system for Promptliano's Storage V2 that provides version tracking, atomicity, and rollback capabilities.
 
 ## Features
 
@@ -15,8 +15,8 @@ A comprehensive migration system for OctoPrompt's Storage V2 that provides versi
 ## Basic Usage
 
 ```typescript
-import { runMigrations, createMigration } from '@octoprompt/storage'
-import { FileAdapter } from '@octoprompt/storage'
+import { runMigrations, createMigration } from '@promptliano/storage'
+import { FileAdapter } from '@promptliano/storage'
 
 // Define migrations
 const migrations = [
@@ -103,7 +103,7 @@ createMigration(
 ## Checking Migration Status
 
 ```typescript
-import { getMigrationStatus } from '@octoprompt/storage'
+import { getMigrationStatus } from '@promptliano/storage'
 
 const status = await getMigrationStatus(adapter, migrations)
 console.log(`Applied: ${status.applied.length}`)
@@ -113,7 +113,7 @@ console.log(`Pending: ${status.pending.length}`)
 ## Integration with StorageV2
 
 ```typescript
-import { StorageV2, runMigrations } from '@octoprompt/storage'
+import { StorageV2, runMigrations } from '@promptliano/storage'
 
 // Run migrations first
 await runMigrations({ adapter, migrations })

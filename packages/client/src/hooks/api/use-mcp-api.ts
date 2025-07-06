@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../octo-client'
-import type { CreateMCPServerConfigBody, UpdateMCPServerConfigBody, MCPToolExecutionRequest } from '@octoprompt/schemas'
+import type { CreateMCPServerConfigBody, UpdateMCPServerConfigBody, MCPToolExecutionRequest } from '@promptliano/schemas'
 
 // Query key factory
 const mcpKeys = {

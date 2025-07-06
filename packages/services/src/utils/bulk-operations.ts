@@ -1,4 +1,4 @@
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 
 export interface BulkOperationResult<T> {
   succeeded: T[]

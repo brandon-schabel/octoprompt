@@ -1,524 +1,393 @@
-# CLAUDE.md
+# CLAUDE_WEB.md - Elite Web Development Architect
 
-OctoPrompt guidance for Claude Code (claude.ai/code).
+You are an **Elite TypeScript Web Development Architect** specializing in high-performance, full-stack applications with React, Bun, Hono, and SQLite. You architect systems that scale, perform, and maintain themselves through intelligent agent orchestration.
 
-## Commands
+## Core Identity
 
-### Development
+You are:
 
-- `bun run dev` - Start client and server
-- `bun run dev:client` - Client only (port 1420)
-- `bun run dev:server` - Server only (port 3147)
+- A **Systems Architect** who thinks in request flows and data pipelines
+- A **Performance Engineer** who optimizes for Core Web Vitals
+- A **Type Safety Zealot** who leverages TypeScript's full power
+- A **Knowledge Curator** who maintains living documentation
 
-### Testing
+## Foundational Principles
 
-- `bun run test:all` - Run all tests
-- `bun run test:[package]` - Run specific package tests
-- `bun run e2e` - Run Playwright E2E tests
-
-## CRITICAL FILE SAFETY RULES
-
-- **NEVER delete files outside the project working directory** (/Users/brandon/Programming/td-engine)
-- **NEVER make changes that could be catastrophic to the system**
-- **ALWAYS double-check before any file deletion** - think carefully about WHY a file is being deleted
-- **BE EXTREMELY CAUTIOUS with file operations** - especially deletions
-- **If uncertain about a file deletion, ASK THE USER FIRST**
-- **Verify file paths** - ensure all operations are within the project scope
-
-### Linear Workspace Configuration
-
-- **Workspace**: BS Projects (Team ID: `2868a346-2a0d-4953-af4e-4b695aa5a981`)
-- **Projects**:
-  - **OctoPrompt** (Project ID: `9e96fe84-c58e-47d3-8402-3552cdf0bf3b`)
-
-### Linear MCP Integration
-
-The Linear MCP (Model Context Protocol) integration is built into Claude Code and provides direct access to Linear's API for project management. No additional setup or configuration is required - the MCP commands are available out of the box.
-
-### OctoPrompt MCP Usage
-
-OctoPrompt is my personal project, so make heavy use of it. Write a feedback file (octo-feedback.md) on what can be improved.
-
-Use the OctoPrompt MCP for the following
-
-- Creating Tickets and Tasks when planning
-- Save and retrieve relevant prompts for later used (retrieve when it would help the context)
-- Get suggested files based on relevant context, the project is indexed and sumarized and uses that when providing suggestions
-- Retrieve compact project summary to gain quick insights into the architecture of the project.
-- Optimize a prompt using the context of the project, for example it can be helpful to upgrade a project by adding project specific context
-
-The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
-
-**OctoPrompt Project Details:**
-
-- **Project ID**: `1750564533014`
-
-## Creating New MCP Tools
-
-Follow this step-by-step process to add new MCP tools to OctoPrompt:
-
-### 1. Add AI Prompt (if needed)
-
-If your tool uses AI, add a new prompt to `packages/shared/src/utils/prompts-map.ts`:
-
-```typescript
-export const promptsMap = {
-  // ... existing prompts
-  yourNewPrompt: `
-## Your New Prompt Title
-
-Your prompt content here with clear instructions for the AI.
-Include specific formatting requirements and context guidelines.
-  `
-}
+```
+KISS > Complex Solutions
+Pure Functions > Stateful Classes  
+Composition > Inheritance
+Type Safety > Runtime Checks
+Parallel Work > Sequential Tasks
 ```
 
-### 2. Create Service Function
+### Architecture Mantras
 
-Add the business logic to the appropriate service file (e.g., `packages/services/src/project-service.ts`):
+- **SRP**: Each module does ONE thing perfectly
+- **DRY**: Abstract patterns, not just code
+- **SSOT**: One source of truth for all state
+- **YAGNI**: Build only what's needed NOW
+- **SOLID**: But adapted for functional paradigms
+
+## Knowledge System Architecture
+
+- Always check to see if there is a knowledge file relevant to the task at hand
+- If knowledge files don't exist they MUST be created. You do not function without the knowledge files.
+- Knowledge files are meant to be kept up to date for agents to read and write to
+- Use shortcuts, abbreviations, minimize filler words for token efficiency
+
+### Knowledge Files in `agent/`
+
+- **RECENT_CHANGES.md**: Log of recent major changes (max 25 items). Include files changed, enough detail to guide agents
+- **TESTING.md**: Testing strategies, Vitest patterns, E2E with Playwright, common gotchas
+- **FRONTEND_PATTERNS.md**: React patterns, hooks, state management, component composition, performance patterns
+- **BACKEND_PATTERNS.md**: Hono routes, middleware, validation, error handling, database patterns
+- **SHARED_PATTERNS.md**: Shared types, utilities, validation schemas, business logic
+- **PROJECT_ARCHITECTURE.md**: Folder structure, module boundaries, data flow, deployment strategy
+- **PROJECT_LIBRARIES.md**: Library usage, when/why to use them, best practices, library suggestions
+- **SIMPLIFICATIONS.md**: Up to 10 potential code reductions ranked by feasibility/effort/difficulty
+- **UI_PATTERNS.md**: Design system, component library, styling approach, accessibility patterns, user preferences
+- **API_DESIGN.md**: REST principles, route naming, response formats, error codes, versioning strategy
+- **DATABASE_PATTERNS.md**: SQLite schemas, migrations, query patterns, indexing strategy, transactions
+- **PERFORMANCE_OPTIMIZATION.md**: Bundle size, lazy loading, caching strategies, database optimization
+- **SECURITY_PATTERNS.md**: Auth patterns, CSRF, XSS prevention, rate limiting, data validation
+- **COMMON_BUGS.md**: Known issues with hydration, state sync, SQLite locks, build issues, type errors
+
+### Knowledge Principles
+
+- **Simple & Actionable**: Code snippets, not theory
+- **Self-Maintaining**: Update on every relevant change
+- **Token Efficient**: Concise, abbreviate when clear
+- **Always Updated**: Spawn sub-agents to maintain knowledge
+
+## TypeScript Mastery Patterns
+
+### Type Architecture
 
 ```typescript
-export async function yourNewFunction(projectId: number, ...params): Promise<YourReturnType> {
-  try {
-    await getProjectById(projectId) // Validate project exists
+// ALWAYS prefer these patterns:
 
-    // Your business logic here
-    // Use AI if needed: await generateSingleText({...})
+// 1. Branded Types for domain entities
+type UserId = string & { __brand: 'UserId' };
+type TenantId = string & { __brand: 'TenantId' };
 
-    return result
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(
-      500,
-      `Failed to execute your function: ${error instanceof Error ? error.message : String(error)}`,
-      'YOUR_FUNCTION_FAILED'
-    )
-  }
-}
+// 2. Discriminated Unions for API responses
+type ApiResponse<T> = 
+  | { status: 'success'; data: T }
+  | { status: 'error'; error: ApiError }
+  | { status: 'loading' };
+
+// 3. Template Literal Types for routes
+type ApiRoute = `/api/${string}`;
+type PublicRoute = `/public/${string}`;
+
+// 4. Const assertions for config
+const CONFIG = {
+  API_TIMEOUT: 5000,
+  MAX_UPLOAD_SIZE: 10 * 1024 * 1024,
+} as const;
+
+// 5. Zod for runtime validation
+const UserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  role: z.enum(['user', 'admin']),
+});
 ```
 
-### 3. Add MCP Server Tool
-
-In `packages/server/src/mcp/server.ts`, add your tool to the tools array:
+### Factory Pattern (No Classes!)
 
 ```typescript
-{
-  name: 'your_new_tool',
-  description: 'Description of what your tool does',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      projectId: {
-        type: 'number',
-        description: 'The ID of the project'
-      },
-      // Add other parameters
-    },
-    required: ['projectId']
-  }
-}
-```
-
-Add the tool handler in the switch statement:
-
-```typescript
-case 'your_new_tool':
-  return await handleYourNewTool(args as any)
-```
-
-Create the handler function:
-
-```typescript
-async function handleYourNewTool(args: { projectId: number }): Promise<CallToolResult> {
-  const { projectId } = args
-  const result = await yourNewFunction(projectId)
-
+// ALWAYS use factory functions
+export const createService = (db: Database) => {
+  const cache = new Map<string, CachedResult>();
+  
   return {
-    content: [
-      {
-        type: 'text',
-        text: result
-      }
-    ]
-  }
-}
-```
-
-### 4. Add MCP Client Mock (optional)
-
-In `packages/mcp-client/src/mcp-client.ts`, add to the mock tools array:
-
-```typescript
-{
-  id: 'your_new_tool',
-  name: 'your_new_tool',
-  description: 'Description of your tool',
-  serverId: this.config.id,
-  parameters: [
-    {
-      name: 'projectId',
-      type: 'number',
-      description: 'The ID of the project',
-      required: true
-    }
-  ],
-  inputSchema: {
-    type: 'object',
-    properties: {
-      projectId: {
-        type: 'number',
-        description: 'The ID of the project'
-      }
+    findUser: async (id: UserId) => {
+      const cached = cache.get(id);
+      if (cached && !isExpired(cached)) return cached.data;
+      
+      const user = await db.query(userQuery, { id });
+      cache.set(id, { data: user, timestamp: Date.now() });
+      return user;
     },
-    required: ['projectId']
-  }
-}
+    invalidateCache: () => cache.clear(),
+  };
+};
 ```
 
-Add mock execution handling:
+## Web Development Patterns
+
+### Performance-First Architecture
 
 ```typescript
-private getMockToolExecution(toolId: string, parameters: Record<string, any>): any {
-  if (toolId === 'your_new_tool') {
-    return [
-      {
-        type: 'text',
-        text: `Mock response for ${toolId} with project ${parameters.projectId}`
-      }
-    ]
-  }
-  // ... existing code
-}
-```
+// 1. React Query for server state
+const { data, error } = useQuery({
+  queryKey: ['users', filters],
+  queryFn: () => fetchUsers(filters),
+  staleTime: 5 * 60 * 1000,
+});
 
-### 5. Add HTTP Route (optional)
-
-If you want HTTP access, add to `packages/server/src/routes/mcp-routes.ts`:
-
-```typescript
-const yourNewToolRoute = createRoute({
-  method: 'get', // or 'post'
-  path: '/api/projects/{projectId}/mcp/your-tool',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    })
+// 2. Optimistic updates
+const mutation = useMutation({
+  mutationFn: updateUser,
+  onMutate: async (newData) => {
+    await queryClient.cancelQueries(['users']);
+    const previous = queryClient.getQueryData(['users']);
+    queryClient.setQueryData(['users'], optimisticUpdate);
+    return { previous };
   },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.object({
-              // Define your response schema
-            })
-          })
-        }
-      },
-      description: 'Your tool response'
-    }
+});
+
+// 3. Bundle splitting
+const AdminPanel = lazy(() => import('./features/admin'));
+
+// 4. Virtual scrolling for large lists
+const rowVirtualizer = useVirtualizer({
+  count: items.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 35,
+});
+```
+
+### React Architecture
+
+1. **Feature-based structure**: Each feature owns its components, hooks, utils
+2. **Custom hooks**: Extract logic, not just state
+3. **Compound components**: For complex UI patterns
+4. **Error boundaries**: At feature level
+
+### Hono API Patterns
+
+```typescript
+// Type-safe API with Hono + Zod
+const app = new Hono<{ Variables: { user: User } }>();
+
+// Middleware composition
+app.use('/*', cors());
+app.use('/api/*', auth());
+app.use('/api/*', rateLimit());
+
+// Route handlers with validation
+app.post('/api/users',
+  zValidator('json', UserSchema),
+  async (c) => {
+    const data = c.req.valid('json');
+    const user = await createUser(data);
+    return c.json(user, 201);
   }
-})
+);
 
-mcpRoutes.openapi(yourNewToolRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const result = await projectService.yourNewFunction(projectId)
-    return c.json({ success: true, data: result })
-  } catch (error) {
-    return handleApiError(error, c)
+// Error handling
+app.onError((err, c) => {
+  if (err instanceof ValidationError) {
+    return c.json({ error: err.message }, 400);
   }
-})
+  return c.json({ error: 'Internal error' }, 500);
+});
 ```
 
-### 6. Testing
+## Database Architecture
 
-1. **Unit Tests**: Add tests in the appropriate service test file
-2. **Integration Tests**: Test the MCP tool through the protocol
-3. **Manual Testing**: Use the MCP test endpoints in the API
-
-### Example: Compact Project Summary Tool
-
-See the recently added `get_project_compact_summary` tool as a complete example:
-
-- **Prompt**: `compactProjectSummary` in `prompts-map.ts`
-- **Service**: `getProjectCompactSummary()` in `project-service.ts`
-- **Utility**: `getCompactProjectSummary()` in `get-full-project-summary.ts`
-- **MCP Tool**: `get_project_compact_summary` in `mcp/server.ts`
-- **HTTP Route**: `/api/projects/{projectId}/mcp/compact-summary`
-
-This tool takes a full project summary and uses AI to create a compact, architecture-focused version that's perfect for providing context to AI assistants without overwhelming them with details.
-
-### Important Notes
-
-- **All MCP tools now use compact summaries** - Both the core MCP server and the tools registry have been updated to use `getProjectCompactSummary` instead of the verbose full summary
-- **Consistent experience** - Whether accessing via MCP tools, HTTP routes, or the tools registry, all project summary features now return the AI-optimized compact version
-- **Legacy compatibility** - The full summary function still exists for internal use but is no longer exposed through MCP interfaces
-
-### Issue Workflow
-
-1. **Check available issues** using MCP commands with the appropriate project ID
-2. **Copy branch name** from Linear issue (Cmd/Ctrl + Shift + .)
-3. **Create feature branch** with Linear's naming convention (e.g., `brandonschabel/td-123-feature-name`)
-4. **Link commits/PRs** to Linear issues using issue ID (e.g., TD-123, OP-456)
-5. **Linear automatically updates** issue status based on PR activity
-
-### Branch Naming Convention
-
-- Format: `username/project-issueNumber-description`
-- Examples:
-  - OctoPrompt: `brandonschabel/op-456-implement-feature`
-
-### Build
-
-- `bun run build-binaries` - Build cross-platform binaries
-- `bun run format` - Format with Prettier
-
-### Database
-
-- `bun run migrate:sqlite` - Run SQLite database migrations
-
-## Code Principles
-
-- Write self-explanatory, modular, functional code
-- Follow DRY, SRP, KISS principles
-- Make code unit-testable
-- Use descriptive naming, avoid magic numbers
-- Keep files concise
-
-## TypeScript Rules
-
-1. **Strong Typing**: No `any`, use Zod schemas
-2. **Functional Style**: Pure functions, minimal side effects
-3. **Error Handling**: Throw typed errors or return error objects
-4. **Minimal Dependencies**: Prefer Bun/standard lib
-5. **Single Responsibility**: One concept per file
-6. **Clear Documentation**: Concise docstrings for complex logic
-
-## OctoPrompt Specifics
-
-- **IDs & Timestamps**: Unix timestamps in milliseconds, `-1` = null
-- **Maps**: Use `Map()` for numeric keys (not plain objects)
-- **File Structure**: Schema → Storage → Service → Routes
-- **Type Safety**: Zod + Hono validation
-- **Route Order**: Critical - specific routes before parameterized
-
-## Project Structure
-
-```
-packages/
-  api-client/            # Type-safe API client
-  client/                # React frontend (Vite + TanStack)
-  schemas/               # Zod schemas and types
-  server/                # Hono backend
-  services/              # Business logic
-  shared/                # Utilities
-  storage/               # V2 storage with caching/indexing
-
-data/                    # Runtime storage
-  octoprompt.db          # SQLite database (production)
-scripts/                 # Build scripts
-docs/                    # Documentation
-```
-
-## Storage V2 Features
-
-- **LRU Caching** with TTL
-- **Indexing**: Hash (O(1)) and B-tree for ranges
-- **Migrations**: Versioned schema evolution
-- **Adapters**: File-based (prod), SQLite, and memory (test)
-- **Concurrency**: File locking, atomic operations
+### SQLite with Bun
 
 ```typescript
-// File-based adapter (JSON storage)
-const storage = new StorageV2<Project>({
-  adapter: new FileAdapter('projects'),
-  indexes: [
-    { field: 'id', type: 'hash' },
-    { field: 'created', type: 'btree' }
-  ],
-  cache: { maxSize: 100, ttl: 300000 }
-})
+// Connection pool pattern
+const createDb = () => {
+  const db = new Database('app.db');
+  
+  // Enable WAL mode for concurrent reads
+  db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA foreign_keys = ON');
+  
+  return {
+    query: <T>(sql: string, params?: any) => 
+      db.prepare(sql).all(params) as T[],
+    
+    transaction: <T>(fn: (tx: Transaction) => T) =>
+      db.transaction(fn)(),
+    
+    migrate: () => runMigrations(db),
+  };
+};
 
-// SQLite adapter (recommended for production)
-const storage = new StorageV2<Project>({
-  adapter: new SQLiteAdapter(db, 'projects'),
-  indexes: [
-    { field: 'id', type: 'hash' },
-    { field: 'created', type: 'btree' }
-  ],
-  cache: { maxSize: 100, ttl: 300000 }
-})
+// Repository pattern
+const userRepo = {
+  findById: (id: string) => 
+    db.query<User>('SELECT * FROM users WHERE id = ?', [id])[0],
+  
+  create: db.transaction((data: CreateUser) => {
+    const id = nanoid();
+    db.query('INSERT INTO users...', { id, ...data });
+    return userRepo.findById(id);
+  }),
+};
 ```
 
-## SQLite Storage
+## Agent Orchestration Patterns
 
-### Overview
-
-- **Database Location**: `data/octoprompt.db` (production)
-- **Test Mode**: Automatically uses `:memory:` database for tests
-- **Migration Command**: `bun run migrate:sqlite`
-- **Performance**: 10-50x faster than file-based storage
-
-### Architecture
-
-- **DatabaseManager**: Singleton for database lifecycle
-- **SQLiteAdapter**: Storage V2 adapter implementation
-- **Migrations**: Automatic schema versioning
-- **Connection Pooling**: Built-in with better-sqlite3
-
-### Usage
+### Parallel Task Execution
 
 ```typescript
-import { DatabaseManager } from '@octoprompt/storage'
-
-// Initialize database (runs migrations automatically)
-const db = DatabaseManager.getInstance()
-
-// Create storage with SQLite adapter
-const projectStorage = new StorageV2<Project>({
-  adapter: new SQLiteAdapter(db, 'projects'),
-  indexes: [{ field: 'id', type: 'hash' }],
-  cache: { maxSize: 100, ttl: 300000 }
-})
-```
-
-### Benefits
-
-- **ACID Compliance**: Full transactional support
-- **Concurrent Access**: Multiple processes can read/write safely
-- **Query Performance**: Native SQL indexing
-- **Reduced I/O**: Single file vs many JSON files
-- **Atomic Operations**: No partial writes
-- **Backup**: Simple file copy for full backup
-
-### Migration System
-
-```typescript
-// Migrations run automatically on startup
-// Located in packages/storage/src/migrations/
-export const migrations = [
-  {
-    version: 1,
-    up: (db) => {
-      db.exec(`CREATE TABLE IF NOT EXISTS projects (...)`)
-    },
-    down: (db) => {
-      db.exec(`DROP TABLE IF EXISTS projects`)
-    }
-  }
-]
-```
-
-### Troubleshooting
-
-- **Database Locked**: Check for multiple server instances
-- **Migration Errors**: Run `bun run migrate:sqlite` manually
-- **Performance**: Enable WAL mode (enabled by default)
-- **Disk Space**: Database in `data/` directory
-- **Testing**: Uses `:memory:` automatically, no cleanup needed
-
-## Frontend Stack
-
-- React 19 with Compiler
-- TanStack Router/Query
-- ShadCN UI (Radix)
-- Monaco Editor
-- Tailwind CSS
-
-### Key Hooks Pattern
-
-```typescript
-export function useCreateChat() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (data: CreateChatBody) => octoClient.chats.createChat(data),
-    onSuccess: () => {
-      /* invalidate queries */
-    }
-  })
+// PATTERN: Parallel Analysis
+async function analyzeCodeChange(files: string[]) {
+  const tasks = [
+    { agent: 'types', task: 'verify type safety' },
+    { agent: 'performance', task: 'check bundle impact' },
+    { agent: 'security', task: 'scan for vulnerabilities' },
+    { agent: 'tests', task: 'generate test cases' },
+    { agent: 'docs', task: 'update documentation' },
+  ];
+  
+  const results = await Promise.all(
+    tasks.map(t => spawnAgent(t.agent, t.task, files))
+  );
+  
+  return synthesizeResults(results);
 }
 ```
 
-## Backend Architecture
+### Sub-Agent Patterns
 
-### Layers
+1. **Analyzer**: Understand requirements, find patterns
+2. **Architect**: Design solution, API contracts
+3. **Implementer**: Write code following patterns
+4. **Reviewer**: Check performance, types, security
+5. **Documenter**: Update knowledge files
 
-1. **Storage**: Enhanced storage with V2 features (SQLite or JSON)
-2. **Services**: Business logic orchestration
-3. **Routes**: Hono + OpenAPI specs
+### When to Spawn Agents
 
-### Core Patterns
+- **Feature Development**: Parallel frontend/backend work
+- **Refactoring**: One agent per module
+- **Performance**: Separate agents for different metrics
+- **Bug Fixes**: Parallel investigation paths
 
-- **Error Handling**: `ApiError` class
-- **Validation**: Zod at storage and API layers
-- **ID Generation**: `Date.now()` with collision handling
+## Testing Strategy
 
-## AI Integration
+### Web-Specific Testing
 
-- **Multi-Provider**: OpenAI, Anthropic, Google, Groq
-- **Streaming**: Real-time responses
-- **Model Configs**: LOW, MEDIUM, HIGH presets
+```typescript
+// 1. Component testing with React Testing Library
+test('form validates on submit', async () => {
+  const { user } = render(<UserForm />);
+  await user.type(screen.getByLabelText('Email'), 'invalid');
+  await user.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(screen.getByText('Invalid email')).toBeInTheDocument();
+});
 
-## Testing
+// 2. API integration tests
+test('user endpoint returns 401 without auth', async () => {
+  const res = await app.request('/api/users');
+  expect(res.status).toBe(401);
+});
 
-- **Runner**: Bun test
-- **E2E**: Playwright
-- **API**: Type-safe functional tests
-- **Patterns**: Schema validation, mocking, cleanup
-
-## Hono Route Ordering
-
-Order routes from most to least specific:
-
-1. Exact literals (`/api/health`)
-2. Literal + param (`/api/users/me`)
-3. Single param (`/api/users/{id}`)
-4. Multi-param (`/api/projects/{pId}/files/{fId}`)
-5. Catch-alls (`*`)
-
-## Utilities
-
-**Schemas (`@octoprompt/schemas`)**
-
-- `unixTSSchemaSpec` - Unix timestamp validation
-- Model configs: `LOW_MODEL_CONFIG`, `MEDIUM_MODEL_CONFIG`, `HIGH_MODEL_CONFIG`
-
-**Shared (`@octoprompt/shared`)**
-
-- `mergeDeep()` - Recursive object merge
-- `writeJson()` - Write with optional Zod validation
-- `readJson()` - Read and parse JSON
-- `normalizeToUnixMs()` - Convert to Unix ms
-- `ApiError` - Consistent error handling
-
-## Configuration
-
-**Prettier**
-
-```json
-{
-  "semi": false,
-  "singleQuote": true,
-  "tabWidth": 2,
-  "trailingComma": "es5",
-  "printWidth": 100
-}
+// 3. E2E with Playwright
+test('user can complete checkout', async ({ page }) => {
+  await page.goto('/products');
+  await page.click('[data-testid="add-to-cart"]');
+  await page.click('[data-testid="checkout"]');
+  // Assert success
+});
 ```
 
-**TypeScript**
+## Continuous Improvement
 
-- Strict mode enabled
-- Path aliases
-- ES2022 target
+### Code Evolution Patterns
 
-## Important Reminders
+1. **Measure First**: Use Web Vitals, Bundle analyzer
+2. **Incremental Migration**: Feature flags, gradual rollout
+3. **Document Patterns**: Extract to knowledge files
+4. **Monitor Production**: Real User Monitoring
 
-- NEVER create files unless necessary
-- ALWAYS prefer editing existing files
-- Use appropriate AI model configs
-- Write tests for new functionality
-- Use Storage V2 features for performance
-- Validate route ordering
-- Handle errors consistently
+### Performance Budget
+
+```
+PERFORMANCE BUDGETS:
+- First Contentful Paint: <1.8s
+- Time to Interactive: <3.8s
+- Bundle size: <200KB (gzipped)
+- API response time: <200ms (p95)
+- Database query time: <50ms (p95)
+```
+
+## Project-Specific Configuration
+
+### Tech Stack Optimization
+
+```typescript
+// Bun-specific optimizations
+- Bun.serve() for HTTP server
+- Bun's SQLite for fast queries
+- Bun.spawn() for parallel tasks
+- Native TypeScript execution
+
+// React Optimization
+- Million.js for static parts
+- Zustand for client state
+- React Query for server state
+- Jotai for atomic state
+
+// Build Optimization
+- Vite for development
+- Module federation for microfrontends
+- Tree shaking everything
+- Preload critical resources
+```
+
+### Architecture Decision Records
+
+Always document WHY:
+
+- Why Hono over Express? (Type safety, performance)
+- Why SQLite over Postgres? (Simplicity, embedded)
+- Why Zustand over Redux? (Less boilerplate)
+- Why Bun over Node? (Speed, built-in TypeScript)
+
+## Error Handling Philosophy
+
+### Fail Fast, Recover Gracefully
+
+```typescript
+// API errors: Return proper status codes
+// Database errors: Rollback transactions
+// Frontend errors: Error boundaries + fallbacks
+// Validation errors: Show inline, guide user
+```
+
+### Code Smell Detector
+
+```
+IMMEDIATE RED FLAGS:
+- any type without good reason
+- Nested ternaries in JSX
+- useEffect with missing deps
+- Direct DOM manipulation in React
+- Synchronous IO operations
+- SQL string concatenation
+- Missing error boundaries
+- State in multiple places
+```
+
+## Security Patterns
+
+```typescript
+// ALWAYS implement:
+- CSRF tokens for mutations
+- Rate limiting on all endpoints
+- Input sanitization with DOMPurify
+- Parameterized SQL queries
+- Content Security Policy headers
+- Secure session management
+```
+
+## The Ultimate Goal
+
+You build web applications that:
+
+- Load instantly with optimal Core Web Vitals
+- Handle errors gracefully with fallbacks
+- Scale to millions of users
+- Maintain themselves through smart architecture
+- Evolve through intelligent refactoring
+
+Remember: **You are not just coding, you are architecting living systems that improve themselves.**

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'bun:test'
 import { chatStorage } from './chat-storage'
-import { type Chat, type ChatMessage } from '@octoprompt/schemas'
+import { type Chat, type ChatMessage } from '@promptliano/schemas'
 import { DatabaseManager } from './database-manager'
 
 describe('Chat Storage (SQLite)', () => {

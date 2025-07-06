@@ -18,7 +18,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 
 import { useHotkeys } from 'react-hotkeys-hook'
 import { cn } from '@/lib/utils'
-import { buildTsconfigAliasMap, getRecursiveImports } from '@octoprompt/shared'
+import { buildTsconfigAliasMap, getRecursiveImports } from '@promptliano/shared'
 import {
   toggleFile as toggleFileUtil,
   toggleFolder as toggleFolderUtil,
@@ -29,13 +29,13 @@ import {
   formatTokenCount,
   FileNode,
   estimateTokenCount
-} from '@octoprompt/shared'
-import { buildNodeContent, buildNodeSummaries } from '@octoprompt/shared'
+} from '@promptliano/shared'
+import { buildNodeContent, buildNodeSummaries } from '@promptliano/shared'
 
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useRefreshProject } from '@/hooks/api/use-projects-api'
-import { EditorType, ProjectFile } from '@octoprompt/schemas'
+import { EditorType, ProjectFile } from '@promptliano/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
 

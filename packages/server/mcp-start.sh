@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# MCP Server startup script for OctoPrompt
+# MCP Server startup script for Promptliano
 # This script ensures the correct environment is set up
 
 # Get the directory where this script is located
@@ -21,7 +21,7 @@ cd "$SCRIPT_DIR"
 
 # Try to find bun
 if command -v bun >/dev/null 2>&1; then
-    echo "Starting OctoPrompt MCP server with project ID: $OCTOPROMPT_PROJECT_ID" >&2
+    echo "Starting Promptliano MCP server with project ID: $OCTOPROMPT_PROJECT_ID" >&2
     exec bun run mcp
 else
     echo "Error: bun not found in PATH" >&2

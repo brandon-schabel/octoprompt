@@ -9,7 +9,7 @@ import { LazyMonacoEditor } from '@/components/lazy-monaco-editor'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Switch } from '@ui'
 import { useSelectSetting } from '@/hooks/use-kv-local-storage'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import * as themes from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { useUpdateFileContent } from '@/hooks/api/use-projects-api'
 

@@ -1,4 +1,4 @@
-import type { ModelOptions, APIProviders } from '@octoprompt/schemas'
+import type { ModelOptions, APIProviders } from '@promptliano/schemas'
 
 export type ModelOptionsWithProvider = ModelOptions & {
   provider: APIProviders

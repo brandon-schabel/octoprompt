@@ -2,7 +2,7 @@
 // - Created dedicated MCP stdio server for Claude Desktop compatibility
 // - Implemented all MCP protocol methods (initialize, tools/list, tools/call, resources/list, resources/read)
 // - Added proper error handling and JSON-RPC 2.0 compliance
-// - Connected to existing OctoPrompt services for file operations and project management
+// - Connected to existing Promptliano services for file operations and project management
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -12,13 +12,13 @@ import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js'
-import { getProjectFiles, getProjectById, suggestFiles, listProjects } from '@octoprompt/services'
+import { getProjectFiles, getProjectById, suggestFiles, listProjects } from '@promptliano/services'
 import { BUILTIN_TOOLS, getToolByName } from './mcp/tools-registry'
 
 // Create MCP server
 const server = new Server(
   {
-    name: 'octoprompt-mcp',
+    name: 'promptliano-mcp',
     version: '0.6.0'
   },
   {
@@ -114,13 +114,13 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 
     const resources = [
       {
-        uri: `octoprompt://projects/${projectId}/summary`,
+        uri: `promptliano://projects/${projectId}/summary`,
         name: 'Project Summary',
         description: `Summary of project "${project.name}"`,
         mimeType: 'text/plain'
       },
       {
-        uri: `octoprompt://projects/${projectId}/suggest-files`,
+        uri: `promptliano://projects/${projectId}/suggest-files`,
         name: 'File Suggestions',
         description: 'AI-powered file suggestions based on prompts',
         mimeType: 'application/json'
@@ -129,7 +129,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 
     // Add individual file resources (limit to first 20 for performance)
     const fileResources = (files || []).slice(0, 20).map((file) => ({
-      uri: `octoprompt://projects/${projectId}/files/${file.id}`,
+      uri: `promptliano://projects/${projectId}/files/${file.id}`,
       name: file.name,
       description: `File: ${file.path} (${file.size} bytes)`,
       mimeType:
@@ -158,8 +158,8 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   try {
     const projectId = await ensureProject()
 
-    if (uri.startsWith('octoprompt://')) {
-      const urlParts = uri.replace('octoprompt://', '').split('/')
+    if (uri.startsWith('promptliano://')) {
+      const urlParts = uri.replace('promptliano://', '').split('/')
 
       if (urlParts[0] === 'projects' && urlParts[1] === projectId.toString()) {
         if (urlParts[2] === 'summary') {
@@ -243,7 +243,7 @@ async function main() {
   const transport = new StdioServerTransport()
   await server.connect(transport)
   // Use stderr for logging to avoid interfering with JSON-RPC messages on stdout
-  console.error('OctoPrompt MCP server running on stdio')
+  console.error('Promptliano MCP server running on stdio')
 }
 
 main().catch((error) => {

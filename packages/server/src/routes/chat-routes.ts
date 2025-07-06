@@ -1,8 +1,8 @@
 import { createRoute, z } from '@hono/zod-openapi'
 
-import { createChatService, handleChatMessage } from '@octoprompt/services'
-import { ApiError } from '@octoprompt/shared'
-import { ApiErrorResponseSchema, MessageRoleEnum, OperationSuccessResponseSchema } from '@octoprompt/schemas'
+import { createChatService, handleChatMessage } from '@promptliano/services'
+import { ApiError } from '@promptliano/shared'
+import { ApiErrorResponseSchema, MessageRoleEnum, OperationSuccessResponseSchema } from '@promptliano/schemas'
 import {
   ChatListResponseSchema,
   ChatResponseSchema,
@@ -18,10 +18,10 @@ import {
   UpdateChatBodySchema,
   UpdateChatParamsSchema,
   AiChatStreamRequestSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
 import { OpenAPIHono } from '@hono/zod-openapi'
-import { APIProviders, ProviderKey } from '@octoprompt/schemas'
+import { APIProviders, ProviderKey } from '@promptliano/schemas'
 import { stream } from 'hono/streaming'
 
 const chatService = createChatService()

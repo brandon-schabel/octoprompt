@@ -1,10 +1,10 @@
-# OctoPrompt MCP Setup Guide
+# Promptliano MCP Setup Guide
 
-This guide explains how to set up OctoPrompt as a Model Context Protocol (MCP) server for use with Claude Desktop and other MCP-compatible clients.
+This guide explains how to set up Promptliano as a Model Context Protocol (MCP) server for use with Claude Desktop and other MCP-compatible clients.
 
 ## Overview
 
-OctoPrompt provides an MCP server that exposes your project files and AI-powered features to Claude Desktop via stdio transport. This allows Claude to:
+Promptliano provides an MCP server that exposes your project files and AI-powered features to Claude Desktop via stdio transport. This allows Claude to:
 
 - Read files from your project
 - List project files and structure
@@ -14,16 +14,16 @@ OctoPrompt provides an MCP server that exposes your project files and AI-powered
 ## Prerequisites
 
 1. **Bun** - Make sure you have Bun installed
-2. **OctoPrompt** - Have OctoPrompt running with at least one project created
+2. **Promptliano** - Have Promptliano running with at least one project created
 3. **Claude Desktop** - Install Claude Desktop app
 
 ## Setup Steps
 
 ### 1. Find Your Project ID
 
-First, you need to know which OctoPrompt project you want to expose to Claude. You can find project IDs by:
+First, you need to know which Promptliano project you want to expose to Claude. You can find project IDs by:
 
-- Opening OctoPrompt web interface at `http://localhost:3147`
+- Opening Promptliano web interface at `http://localhost:3147`
 - Going to the Projects page
 - The project ID is shown in the URL or project details
 
@@ -34,19 +34,19 @@ Edit your Claude Desktop MCP configuration file:
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-Add the OctoPrompt MCP server configuration:
+Add the Promptliano MCP server configuration:
 
 ```json
 {
   "mcpServers": {
-    "octoprompt": {
-      "command": "/Users/brandon/Programming/octoprompt/packages/server/mcp-start.sh"
+    "promptliano": {
+      "command": "/Users/brandon/Programming/promptliano/packages/server/mcp-start.sh"
     }
   }
 }
 ```
 
-**Important**: Replace `/absolute/path/to/octoprompt/packages/server` with the actual absolute path to your OctoPrompt server directory.
+**Important**: Replace `/absolute/path/to/promptliano/packages/server` with the actual absolute path to your Promptliano server directory.
 
 ### 3. Set Environment Variables
 
@@ -58,7 +58,7 @@ After updating the configuration, restart Claude Desktop for the changes to take
 
 ## Available Tools
 
-Once configured, Claude Desktop will have access to these OctoPrompt tools:
+Once configured, Claude Desktop will have access to these Promptliano tools:
 
 ### `file_read`
 
@@ -121,14 +121,14 @@ The MCP server also exposes these resources:
 
 ### "Project not found" errors
 
-1. Make sure OctoPrompt server is running (`bun run dev:server` from the root)
-2. Verify the project ID exists in OctoPrompt
+1. Make sure Promptliano server is running (`bun run dev:server` from the root)
+2. Verify the project ID exists in Promptliano
 3. Check that the project has been synced and contains files
 
 ### Permission errors
 
 1. Ensure Claude Desktop has permission to execute Bun
-2. Check that the OctoPrompt directory is readable
+2. Check that the Promptliano directory is readable
 3. Verify file permissions on the project directory
 
 ## Testing the Connection
@@ -152,7 +152,7 @@ Once set up, you can ask Claude things like:
 - "Give me a summary of this project's structure"
 - "Find files that handle user authentication"
 
-Claude will use the MCP tools to access your OctoPrompt project and provide informed responses based on your actual codebase.
+Claude will use the MCP tools to access your Promptliano project and provide informed responses based on your actual codebase.
 
 ## Security Notes
 
@@ -169,11 +169,11 @@ To switch between projects, you can:
 
 1. Change the `OCTOPROMPT_PROJECT_ID` in the config
 2. Create multiple MCP server entries for different projects
-3. Use different server names (e.g., "octoprompt-project1", "octoprompt-project2")
+3. Use different server names (e.g., "promptliano-project1", "promptliano-project2")
 
 ### Custom Port
 
-If your OctoPrompt server runs on a different port, the MCP server will automatically connect to it via the services layer.
+If your Promptliano server runs on a different port, the MCP server will automatically connect to it via the services layer.
 
 ### Development Mode
 

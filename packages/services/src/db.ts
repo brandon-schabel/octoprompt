@@ -1,5 +1,5 @@
 // Database utilities for services package
-import { DatabaseManager } from '@octoprompt/storage'
+import { DatabaseManager } from '@promptliano/storage'
 import type { Database } from 'bun:sqlite'
 
 // Get database instance

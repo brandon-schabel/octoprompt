@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { octoClient } from '../api-hooks'
-import type { BrowseDirectoryRequest, DirectoryEntry } from '@octoprompt/schemas'
+import type { BrowseDirectoryRequest, DirectoryEntry } from '@promptliano/schemas'
 
 export function useBrowseDirectory() {
   return useMutation({

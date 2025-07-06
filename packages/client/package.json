@@ -11,7 +11,15 @@
     "test": "bun test",
     "test:watch": "bun test --watch",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:debug": "tauri build --debug",
+    "tauri:build:mac": "tauri build --target universal-apple-darwin",
+    "tauri:build:mac-intel": "tauri build --target x86_64-apple-darwin",
+    "tauri:build:mac-arm": "tauri build --target aarch64-apple-darwin",
+    "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
+    "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+    "tauri:icon": "tauri icon",
+    "tauri:signer": "tauri signer"
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.9",

@@ -1,13 +1,13 @@
-import { providerKeyStorage } from '@octoprompt/storage' // ADDED
+import { providerKeyStorage } from '@promptliano/storage' // ADDED
 import {
   CreateProviderKeyInputSchema,
   type ProviderKey,
   ProviderKeySchema,
   type UpdateProviderKeyInput
-} from '@octoprompt/schemas'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/schemas'
+import { ApiError } from '@promptliano/shared'
 import { z } from '@hono/zod-openapi'
-import { normalizeToUnixMs } from '@octoprompt/shared'
+import { normalizeToUnixMs } from '@promptliano/shared'
 
 // The mapDbRowToProviderKey function is no longer needed as we store objects directly
 // that should conform to the ProviderKey schema.

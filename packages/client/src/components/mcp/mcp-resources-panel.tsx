@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import { useGetMCPResources, useReadMCPResource } from '@/hooks/api/use-mcp-api'
-import type { MCPResource } from '@octoprompt/schemas'
+import type { MCPResource } from '@promptliano/schemas'
 
 interface MCPResourcesPanelProps {
   projectId: number

@@ -39,8 +39,7 @@ import { useGetProjectSummary, useSuggestFiles } from '@/hooks/api/use-projects-
 import { useProjectFileTree } from '@/hooks/use-project-file-tree'
 import { buildTreeStructure } from './file-panel/file-tree/file-tree'
 import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
-import { ProjectFile } from '@octoprompt/schemas'
-import { AgentCoderControlDialog } from './agent-coder-dialog'
+import { ProjectFile } from '@promptliano/schemas'
 
 export type PromptOverviewPanelRef = {
   focusPrompt: () => void
@@ -54,7 +53,7 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
   function PromptOverviewPanel({ className }, ref) {
     const [activeProjectTabState, , activeProjectTabId] = useActiveProjectTab()
     const updateActiveProjectTab = useUpdateActiveProjectTab()
-    const [isLogDialogOpen, setIsLogDialogOpen] = useState(false)
+    const [, setIsLogDialogOpen] = useState(false)
 
     const { data: selectedPrompts = [] } = useProjectTabField('selectedPrompts', activeProjectTabId ?? -1)
     const { data: globalUserPrompt = '' } = useProjectTabField('userPrompt', activeProjectTabId ?? -1)
@@ -379,18 +378,6 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
                 resizerClassName='my-1'
               />
             </div>
-
-            <AgentCoderControlDialog
-              open={isLogDialogOpen}
-              onOpenChange={setIsLogDialogOpen}
-              userInput={localUserPrompt}
-              selectedFiles={selectedFiles}
-              projectId={activeProjectTabState?.selectedProjectId || -1}
-              selectedPrompts={selectedPrompts}
-              promptData={promptData?.data}
-              totalTokens={totalTokens}
-              projectFileMap={projectFileMap}
-            />
           </div>
         </TooltipProvider>
       </ErrorBoundary>

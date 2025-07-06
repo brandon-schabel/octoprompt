@@ -10,7 +10,7 @@ import {
   toggleFile,
   toggleFolder
 } from './file-node-tree-utils'
-import type { ProjectFile } from '@octoprompt/schemas'
+import type { ProjectFile } from '@promptliano/schemas'
 
 describe('estimateTokenCount', () => {
   test('should correctly estimate tokens for normal text', () => {

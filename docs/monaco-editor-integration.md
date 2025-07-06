@@ -1,6 +1,6 @@
 # Monaco Editor Integration
 
-This document describes the Monaco Editor integration in OctoPrompt, providing a modern code editing experience with syntax highlighting, IntelliSense, and advanced features.
+This document describes the Monaco Editor integration in Promptliano, providing a modern code editing experience with syntax highlighting, IntelliSense, and advanced features.
 
 ## Overview
 
@@ -8,7 +8,7 @@ Monaco Editor is the code editor that powers VS Code. Our integration provides:
 
 - **Syntax Highlighting** for 30+ programming languages
 - **Keyboard Shortcuts** (Ctrl+S for save, Ctrl+Shift+F for format)
-- **Theme Integration** with OctoPrompt's dark/light mode
+- **Theme Integration** with Promptliano's dark/light mode
 - **Diff Viewer** for AI-generated file changes
 - **Graceful Fallbacks** when Monaco fails to load
 
@@ -16,7 +16,7 @@ Monaco Editor is the code editor that powers VS Code. Our integration provides:
 
 ### MonacoEditorWrapper
 
-The main Monaco Editor component with OctoPrompt-specific features:
+The main Monaco Editor component with Promptliano-specific features:
 
 - Theme switching based on app settings
 - Keyboard shortcuts for save and format
@@ -99,7 +99,7 @@ Automatic language detection for file extensions:
 
 ## Configuration
 
-Monaco Editor options are configured for optimal OctoPrompt experience:
+Monaco Editor options are configured for optimal Promptliano experience:
 
 ```tsx
 options={{
@@ -136,7 +136,7 @@ The integration is designed to gracefully handle failures:
 
 ## Theme Integration
 
-Monaco Editor automatically switches themes based on OctoPrompt's theme setting:
+Monaco Editor automatically switches themes based on Promptliano's theme setting:
 
 - **Dark Mode**: `vs-dark` theme
 - **Light Mode**: `light` theme
@@ -177,7 +177,7 @@ Use the `MonacoTestComponent` to verify integration:
 Potential improvements for the Monaco integration:
 
 - **TypeScript IntelliSense** with project context
-- **Custom Themes** matching OctoPrompt brand
+- **Custom Themes** matching Promptliano brand
 - **Collaborative Editing** for team features
 - **Vim/Emacs Keybindings** for power users
 - **Custom Language Support** for domain-specific files

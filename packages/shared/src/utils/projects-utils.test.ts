@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test'
-import type { ProjectFile } from '@octoprompt/schemas'
+import type { ProjectFile } from '@promptliano/schemas'
 import { buildPromptContent, calculateTotalTokens, buildFileTree } from './projects-utils'
-import type { Prompt } from '@octoprompt/schemas'
+import type { Prompt } from '@promptliano/schemas'
 
 // Mock data
 const mockPrompts: Prompt[] = [

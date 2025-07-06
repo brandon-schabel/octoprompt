@@ -1,7 +1,7 @@
 import { z, type ZodTypeAny } from 'zod'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 
 // --- Types ---
 export interface StorageAdapter<T> {
@@ -44,7 +44,7 @@ class LRUCache<T> {
   constructor(
     private maxSize: number,
     private ttl?: number
-  ) {}
+  ) { }
 
   get(key: string | number): T | null {
     const entry = this.cache.get(key)
@@ -116,7 +116,7 @@ interface Index<T> {
 class HashIndex<T> implements Index<T> {
   private index: Map<any, Set<string | number>> = new Map()
 
-  constructor(private field: string) {}
+  constructor(private field: string) { }
 
   add(id: string | number, item: T): void {
     const value = this.getValue(item)
@@ -160,7 +160,7 @@ class HashIndex<T> implements Index<T> {
 class BTreeIndex<T> implements Index<T> {
   private entries: Array<{ value: any; ids: Set<string | number> }> = []
 
-  constructor(private field: string) {}
+  constructor(private field: string) { }
 
   add(id: string | number, item: T): void {
     const value = this.getValue(item)

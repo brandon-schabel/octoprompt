@@ -22,7 +22,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { PromptSchema } from '@octoprompt/schemas'
+import { PromptSchema } from '@promptliano/schemas'
 
 import { PromptsDialogAll } from '../prompts/all-prompts-dialog'
 import {
@@ -41,7 +41,7 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Badge } from '@ui'
 import { OctoTooltip } from '../octo/octo-tooltip'
 import { ShortcutDisplay } from '../app-shortcut-display'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import { useGetProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 

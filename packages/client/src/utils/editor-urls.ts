@@ -1,4 +1,4 @@
-import { EditorType } from '@octoprompt/schemas'
+import { EditorType } from '@promptliano/schemas'
 
 export function getEditorUrl(editor: EditorType, filePath: string): string {
   const normalizedPath = filePath.replace(/\\/g, '/')

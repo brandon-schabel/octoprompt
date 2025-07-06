@@ -19,8 +19,8 @@ import { ArrowDownAZ, ArrowUpDown, Copy, Pencil } from 'lucide-react'
 import { Badge } from '@ui'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { ExpandableTextarea } from '@/components/expandable-textarea'
-import { Prompt } from '@octoprompt/schemas'
-import { estimateTokenCount, formatTokenCount } from '@octoprompt/shared'
+import { Prompt } from '@promptliano/schemas'
+import { estimateTokenCount, formatTokenCount } from '@promptliano/shared'
 
 export function PromptsPage() {
   const [searchQuery, setSearchQuery] = useState('')

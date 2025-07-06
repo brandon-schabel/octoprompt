@@ -14,7 +14,7 @@ import { useActiveProjectTab, useProjectTabField } from '@/hooks/use-kv-local-st
 import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
 import { useClickAway } from '@/hooks/utility-hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
-import { buildFileTree } from '@octoprompt/shared'
+import { buildFileTree } from '@promptliano/shared'
 import { FileTreeRef, FileTree } from '../file-tree/file-tree'
 import { SelectedFilesListDisplay } from './selected-files-list-display'
 import { NoResultsScreen } from './no-results-screen'
@@ -23,7 +23,7 @@ import { SelectedFilesDrawer } from '../../selected-files-drawer'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject, useUpdateFileContent } from '@/hooks/api/use-projects-api'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 type ExplorerRefs = {

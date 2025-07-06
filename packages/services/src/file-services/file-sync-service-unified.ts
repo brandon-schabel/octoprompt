@@ -1,8 +1,8 @@
 import { watch as fsWatch, type FSWatcher, existsSync as fsLibExistsSync } from 'fs'
 import { join, extname, resolve as pathResolve, relative, basename } from 'node:path'
 import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs'
-import { type Project, type ProjectFile } from '@octoprompt/schemas'
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
+import { type Project, type ProjectFile } from '@promptliano/schemas'
+import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@promptliano/schemas'
 import ignorePackage, { type Ignore } from 'ignore'
 import {
   getProjectFiles,
@@ -11,9 +11,9 @@ import {
   bulkDeleteProjectFiles,
   type FileSyncData, // Interface from project-service
   listProjects
-} from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
+} from '@promptliano/services' // Adjusted path assuming this file is in services/file-services/
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
-import { summarizeSingleFile } from '@octoprompt/services'
+import { summarizeSingleFile } from '@promptliano/services'
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //

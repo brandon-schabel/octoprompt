@@ -1,19 +1,19 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { createOctoPromptClient, OctoPromptError } from '@octoprompt/api-client'
-import type { OctoPromptClient } from '@octoprompt/api-client'
-import { type Prompt } from '@octoprompt/schemas'
+import { createPromptlianoClient, PromptlianoError } from '@promptliano/api-client'
+import type { PromptlianoClient } from '@promptliano/api-client'
+import { type Prompt } from '@promptliano/schemas'
 import { TEST_API_URL } from './test-config'
 
 const BASE_URL = TEST_API_URL
 
 describe('Prompt API Tests', () => {
-  let client: OctoPromptClient
+  let client: PromptlianoClient
   let testPrompts: Prompt[] = []
   let testProjectId: number | null = null
 
   beforeAll(async () => {
     console.log('Starting Prompt API Tests...')
-    client = createOctoPromptClient({ baseUrl: BASE_URL })
+    client = createPromptlianoClient({ baseUrl: BASE_URL })
 
     // Create a test project for prompt association tests
     try {
@@ -39,7 +39,7 @@ describe('Prompt API Tests', () => {
       try {
         await client.prompts.deletePrompt(prompt.id)
       } catch (err) {
-        if (err instanceof OctoPromptError && err.statusCode === 404) {
+        if (err instanceof PromptlianoError && err.statusCode === 404) {
           // Already deleted, ignore
         } else {
           console.error(`Failed to delete prompt ${prompt.id}:`, err)
@@ -51,7 +51,7 @@ describe('Prompt API Tests', () => {
       try {
         await client.projects.deleteProject(testProjectId)
       } catch (err) {
-        if (err instanceof OctoPromptError && err.statusCode === 404) {
+        if (err instanceof PromptlianoError && err.statusCode === 404) {
           // Already deleted, ignore
         } else {
           console.error(`Failed to delete test project ${testProjectId}:`, err)
@@ -282,8 +282,8 @@ describe('Prompt API Tests', () => {
         await client.prompts.getPrompt(prompt.id)
         expect(true).toBe(false)
       } catch (error) {
-        expect(error).toBeInstanceOf(OctoPromptError)
-        if (error instanceof OctoPromptError) {
+        expect(error).toBeInstanceOf(PromptlianoError)
+        if (error instanceof PromptlianoError) {
           expect(error.statusCode).toBe(404)
         }
       }

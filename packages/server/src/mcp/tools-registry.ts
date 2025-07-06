@@ -15,7 +15,7 @@ import {
   updateFileContent,
   optimizeUserInput,
   suggestFiles
-} from '@octoprompt/services'
+} from '@promptliano/services'
 import {
   listAllPrompts,
   getPromptById,
@@ -25,7 +25,7 @@ import {
   listPromptsByProject,
   addPromptToProject,
   removePromptFromProject
-} from '@octoprompt/services'
+} from '@promptliano/services'
 import {
   createTicket,
   getTicketById,
@@ -42,7 +42,7 @@ import {
   suggestFilesForTicket,
   listTicketsWithTaskCount,
   listTicketsWithTasks
-} from '@octoprompt/services'
+} from '@promptliano/services'
 import type {
   CreateProjectBody,
   UpdateProjectBody,
@@ -53,8 +53,8 @@ import type {
   CreateTaskBody,
   UpdateTaskBody,
   ReorderTasksBody
-} from '@octoprompt/schemas'
-import { getProjectCompactSummary } from '@octoprompt/services'
+} from '@promptliano/schemas'
+import { getProjectCompactSummary } from '@promptliano/services'
 
 // MCP Tool Types
 export interface MCPToolInputSchema {

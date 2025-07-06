@@ -15,7 +15,7 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import type { MCPServerConfig } from '@octoprompt/schemas'
+import type { MCPServerConfig } from '@promptliano/schemas'
 import {
   useGetMCPServerConfigs,
   useDeleteMCPServerConfig,

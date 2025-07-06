@@ -1,5 +1,5 @@
 {
-  "name": "octoprompt",
+  "name": "promptliano",
   "module": "index.ts",
   "version": "0.6.0",
   "type": "module",
@@ -23,7 +23,8 @@
     "test:api-client": "cd packages/api-client && bun run test",
     "test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client",
     "migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts",
-    "migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run"
+    "migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run",
+    "build:client": "cd packages/client && bun run build"
   },
   "workspaces": [
     "packages/*"
@@ -49,11 +50,11 @@
     "@hono/zod-openapi": "^0.19.8",
     "@hono/zod-validator": "^0.4.3",
     "@modelcontextprotocol/sdk": "^1.13.0",
-    "@octoprompt/api-client": "workspace:*",
-    "@octoprompt/schemas": "workspace:*",
-    "@octoprompt/services": "workspace:*",
-    "@octoprompt/shared": "workspace:*",
-    "@octoprompt/storage": "workspace:*",
+    "@promptliano/api-client": "workspace:*",
+    "@promptliano/schemas": "workspace:*",
+    "@promptliano/services": "workspace:*",
+    "@promptliano/shared": "workspace:*",
+    "@promptliano/storage": "workspace:*",
     "@openrouter/ai-sdk-provider": "^0.4.6",
     "ai": "^4.3.16",
     "fast-xml-parser": "^5.2.4",

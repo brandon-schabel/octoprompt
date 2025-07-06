@@ -12,16 +12,16 @@ import {
   useRemoveSummariesFromFiles,
   useSummarizeProjectFiles
 } from '@/hooks/api/use-projects-api'
-import { buildCombinedFileSummariesXml } from '@octoprompt/shared'
+import { buildCombinedFileSummariesXml } from '@promptliano/shared'
 
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { SummaryDialog } from '@/components/projects/summary-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { FormatTokenCount } from '@/components/format-token-count'
-import { estimateTokenCount } from '@octoprompt/shared'
+import { estimateTokenCount } from '@promptliano/shared'
 
 import { toast } from 'sonner'
-import { ProjectFile } from '@octoprompt/schemas'
+import { ProjectFile } from '@promptliano/schemas'
 import { useActiveProjectTab, useAppSettings } from '@/hooks/use-kv-local-storage'
 
 export const Route = createFileRoute('/project-summarization')({

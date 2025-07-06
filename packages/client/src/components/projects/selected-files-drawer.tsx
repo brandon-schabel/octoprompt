@@ -7,8 +7,8 @@ import { useState } from 'react'
 import { FormatTokenCount } from '../format-token-count'
 import { Badge } from '@ui'
 import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { ProjectFileMap, ProjectTabState } from '@octoprompt/schemas'
-import { estimateTokenCount } from '@octoprompt/shared'
+import { ProjectFileMap, ProjectTabState } from '@promptliano/schemas'
+import { estimateTokenCount } from '@promptliano/shared'
 import { useActiveProjectTab, useGetActiveProjectTabId } from '@/hooks/use-kv-local-storage'
 
 type SelectedFilesDrawerProps = {

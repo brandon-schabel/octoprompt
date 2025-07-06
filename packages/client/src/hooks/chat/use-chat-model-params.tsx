@@ -1,7 +1,7 @@
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
-import { AiSdkOptions } from '@octoprompt/schemas'
+import { AiSdkOptions } from '@promptliano/schemas'
 import { useCallback, useMemo } from 'react'
-import { APIProviders, modelsTempNotAllowed } from '@octoprompt/schemas'
+import { APIProviders, modelsTempNotAllowed } from '@promptliano/schemas'
 
 type ModelParamMutationFn = (value: number) => void
 

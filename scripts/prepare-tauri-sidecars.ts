@@ -40,8 +40,8 @@ async function prepareTauriSidecars() {
   // Copy all platform binaries if they exist
   for (const [bunPlatform, rustTriple] of Object.entries(PLATFORM_MAP)) {
     const ext = bunPlatform.includes('windows') ? '.exe' : ''
-    const sourcePath = join(distDir, `octoprompt-${bunPlatform.replace('bun-', '')}${ext}`)
-    const targetPath = join(tauriBindir, `octoprompt-server-${rustTriple}${ext}`)
+    const sourcePath = join(distDir, `promptliano-${bunPlatform.replace('bun-', '')}${ext}`)
+    const targetPath = join(tauriBindir, `promptliano-server-${rustTriple}${ext}`)
 
     if (existsSync(sourcePath)) {
       console.log(`Copying ${bunPlatform} -> ${rustTriple}`)
@@ -57,8 +57,8 @@ async function prepareTauriSidecars() {
   // Also prepare the current platform's binary from the simple bundle if available
   const currentTriple = getCurrentTargetTriple()
   const currentExt = process.platform === 'win32' ? '.exe' : ''
-  const bundlePath = join(distDir, `octoprompt-bundle${currentExt}`)
-  const currentTargetPath = join(tauriBindir, `octoprompt-server-${currentTriple}${currentExt}`)
+  const bundlePath = join(distDir, `promptliano-bundle${currentExt}`)
+  const currentTargetPath = join(tauriBindir, `promptliano-server-${currentTriple}${currentExt}`)
 
   if (existsSync(bundlePath) && !existsSync(currentTargetPath)) {
     console.log(`Copying current platform bundle -> ${currentTriple}`)

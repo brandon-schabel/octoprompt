@@ -1,4 +1,4 @@
-// Last 5 changes: Created comprehensive ticket API hooks following OctoPrompt patterns
+// Last 5 changes: Created comprehensive ticket API hooks following Promptliano patterns
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   CreateTicketBody,
@@ -10,7 +10,7 @@ import type {
   TicketTask,
   TicketWithTasks,
   TicketWithTaskCount
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 import { commonErrorHandler } from './common-mutation-error-handler'
 import { apiClient } from '../octo-client'
 

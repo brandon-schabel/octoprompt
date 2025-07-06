@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import type { MCPServerConfig } from '@octoprompt/schemas'
+import type { MCPServerConfig } from '@promptliano/schemas'
 import { useCreateMCPServerConfig, useUpdateMCPServerConfig } from '@/hooks/api/use-mcp-api'
 
 const mcpServerFormSchema = z.object({

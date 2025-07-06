@@ -1,19 +1,19 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test'
-import { createOctoPromptClient, OctoPromptError } from '../../api-client' // Adjusted path
-import type { OctoPromptClient } from '../../api-client' // Adjusted path
+import { createPromptlianoClient, PromptlianoError } from '../../api-client' // Adjusted path
+import type { PromptlianoClient } from '../../api-client' // Adjusted path
 
-import { ProviderKeySchema, type ProviderKey } from '@octoprompt/schemas' // Path kept as is from original (note: this was different from others)
+import { ProviderKeySchema, type ProviderKey } from '@promptliano/schemas' // Path kept as is from original (note: this was different from others)
 import { TEST_API_URL } from './test-config'
 
 const BASE_URL = TEST_API_URL
 
 describe('Provider Key API Tests', () => {
-  let client: OctoPromptClient
+  let client: PromptlianoClient
   let testKeys: ProviderKey[] = []
 
   beforeAll(() => {
     console.log('Starting Provider Key API Tests...')
-    client = createOctoPromptClient({ baseUrl: BASE_URL })
+    client = createPromptlianoClient({ baseUrl: BASE_URL })
   })
 
   afterAll(async () => {
@@ -22,7 +22,7 @@ describe('Provider Key API Tests', () => {
       try {
         await client.keys.deleteKey(key.id)
       } catch (err) {
-        if (err instanceof OctoPromptError && err.statusCode === 404) {
+        if (err instanceof PromptlianoError && err.statusCode === 404) {
           // Already deleted
         } else {
           console.error(`Failed to delete provider key ${key.id}:`, err)
@@ -171,8 +171,8 @@ describe('Provider Key API Tests', () => {
         await client.keys.getKey(key.id)
         expect(true).toBe(false) // Should not reach here
       } catch (error) {
-        expect(error).toBeInstanceOf(OctoPromptError)
-        if (error instanceof OctoPromptError) {
+        expect(error).toBeInstanceOf(PromptlianoError)
+        if (error instanceof PromptlianoError) {
           expect(error.statusCode).toBe(404)
           // Check specific error code if client provides it and API guarantees it
           // expect(error.errorCode).toBe('PROVIDER_KEY_NOT_FOUND')

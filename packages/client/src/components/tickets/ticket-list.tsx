@@ -1,4 +1,4 @@
-import { type Ticket } from '@octoprompt/schemas'
+import { type Ticket } from '@promptliano/schemas'
 import { Badge } from '@ui'
 
 interface TicketListProps {

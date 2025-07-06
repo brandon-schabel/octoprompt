@@ -1,10 +1,10 @@
 # MCP Integration Guide
 
-OctoPrompt now supports the Model Context Protocol (MCP), allowing projects to integrate with external tools and resources through MCP servers.
+Promptliano now supports the Model Context Protocol (MCP), allowing projects to integrate with external tools and resources through MCP servers.
 
 ## Overview
 
-MCP (Model Context Protocol) is a standard protocol for connecting AI assistants to external tools and data sources. OctoPrompt's MCP integration allows you to:
+MCP (Model Context Protocol) is a standard protocol for connecting AI assistants to external tools and data sources. Promptliano's MCP integration allows you to:
 
 - Configure and manage MCP servers per project
 - Execute tools provided by MCP servers
@@ -15,31 +15,31 @@ MCP (Model Context Protocol) is a standard protocol for connecting AI assistants
 
 ### Backend Components
 
-1. **Schemas** (`@octoprompt/schemas/src/mcp.schemas.ts`)
+1. **Schemas** (`@promptliano/schemas/src/mcp.schemas.ts`)
 
    - MCP server configuration schemas
    - Tool and resource schemas
    - Execution request/response schemas
 
-2. **Storage** (`@octoprompt/storage/src/mcp-storage.ts`)
+2. **Storage** (`@promptliano/storage/src/mcp-storage.ts`)
 
    - JSON-based storage for MCP configurations
    - Server state persistence
    - Project-specific MCP data management
 
-3. **MCP Client** (`@octoprompt/mcp-client`)
+3. **MCP Client** (`@promptliano/mcp-client`)
 
    - Wrapper around the official MCP SDK
    - Server lifecycle management
    - Tool execution and resource access
 
-4. **Services** (`@octoprompt/services/src/mcp-service.ts`)
+4. **Services** (`@promptliano/services/src/mcp-service.ts`)
 
    - High-level MCP operations
    - Server configuration CRUD
    - Tool/resource discovery and execution
 
-5. **API Routes** (`@octoprompt/server/src/routes/mcp-routes.ts`)
+5. **API Routes** (`@promptliano/server/src/routes/mcp-routes.ts`)
    - RESTful endpoints for MCP operations
    - OpenAPI documentation
 
@@ -126,7 +126,7 @@ Run your own MCP server implementation.
 
 ## Security Considerations
 
-- MCP servers run as separate processes with the permissions of the OctoPrompt server
+- MCP servers run as separate processes with the permissions of the Promptliano server
 - Be cautious when configuring servers that access sensitive resources
 - Review tool parameters before execution
 - Environment variables are stored in plain text
@@ -150,17 +150,17 @@ Run your own MCP server implementation.
 
 ### Adding New MCP Features
 
-1. Update schemas in `@octoprompt/schemas`
-2. Update storage if needed in `@octoprompt/storage`
-3. Add service methods in `@octoprompt/services`
-4. Create API routes in `@octoprompt/server`
+1. Update schemas in `@promptliano/schemas`
+2. Update storage if needed in `@promptliano/storage`
+3. Add service methods in `@promptliano/services`
+4. Create API routes in `@promptliano/server`
 5. Add React hooks in the client
 6. Build UI components
 
 ### Testing MCP Servers
 
 1. Install an MCP server: `npm install -g @modelcontextprotocol/server-filesystem`
-2. Add it to a project in OctoPrompt
+2. Add it to a project in Promptliano
 3. Start the server and verify tools/resources appear
 4. Test tool execution and resource access
 

@@ -28,8 +28,8 @@ import {
   getTasks,
   updateTask,
   suggestTasksForTicket
-} from '@octoprompt/services'
-import { ApiError } from '@octoprompt/shared'
+} from '@promptliano/services'
+import { ApiError } from '@promptliano/shared'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 
@@ -43,7 +43,7 @@ export function getMCPServer(): Server {
   if (!mcpServer) {
     mcpServer = new Server(
       {
-        name: 'octoprompt-mcp',
+        name: 'promptliano-mcp',
         version: '1.0.0'
       },
       {
@@ -391,7 +391,7 @@ function registerResources(server: Server) {
       const projects = await listProjects()
 
       const resources: Resource[] = projects.map((project) => ({
-        uri: `octoprompt://project/${project.id}/structure`,
+        uri: `promptliano://project/${project.id}/structure`,
         name: `${project.name} Structure`,
         description: `File structure and organization of ${project.name}`,
         mimeType: 'text/plain'
@@ -408,7 +408,7 @@ function registerResources(server: Server) {
 
     try {
       // Parse the URI
-      const match = uri.match(/^octoprompt:\/\/project\/(\d+)\/structure$/)
+      const match = uri.match(/^promptliano:\/\/project\/(\d+)\/structure$/)
       if (!match) {
         throw new Error('Invalid resource URI')
       }

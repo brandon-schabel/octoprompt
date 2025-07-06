@@ -1,20 +1,19 @@
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import { chatRoutes } from './routes/chat-routes'
 import { genAiRoutes } from './routes/gen-ai-routes'
 import { projectRoutes } from './routes/project-routes'
 import { providerKeyRoutes } from './routes/provider-key-routes'
 import { promptRoutes } from './routes/prompt-routes'
 import { ticketRoutes } from './routes/ticket-routes'
-import { agentCoderRoutes } from './routes/agent-coder-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
 import { mcpRoutes } from './routes/mcp-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
-import { corsConfig } from '@octoprompt/services/src/constants/server-config'
+import { corsConfig } from '@promptliano/services/src/constants/server-config'
 import { swaggerUI } from '@hono/swagger-ui'
-import { ApiErrorResponseSchema } from '@octoprompt/schemas'
+import { ApiErrorResponseSchema } from '@promptliano/schemas'
 
 // Helper to format Zod errors for more readable responses
 const formatZodErrors = (error: z.ZodError) => {
@@ -56,7 +55,6 @@ app.route('/', providerKeyRoutes)
 app.route('/', promptRoutes)
 app.route('/', ticketRoutes)
 app.route('/', genAiRoutes)
-app.route('/', agentCoderRoutes)
 app.route('/', browseDirectoryRoutes)
 app.route('/', mcpRoutes)
 
@@ -137,7 +135,7 @@ app.get('/swagger', swaggerUI({ url: '/doc' }))
 app.doc('/doc', {
   openapi: '3.1.1',
   info: {
-    description: 'OctoPrompt OpenAPI Server Spec',
+    description: 'Promptliano OpenAPI Server Spec',
     version: packageJson.version,
     title: packageJson.name
   }

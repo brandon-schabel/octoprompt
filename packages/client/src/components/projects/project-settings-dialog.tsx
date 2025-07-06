@@ -10,7 +10,7 @@ import { useProjectTabField, useUpdateActiveProjectTab, useAppSettings } from '@
 import { useEffect } from 'react'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { EditorType, EDITOR_OPTIONS } from '@octoprompt/schemas'
+import { EditorType, EDITOR_OPTIONS } from '@promptliano/schemas'
 
 export function ProjectSettingsDialog() {
   const updateActiveProjectTab = useUpdateActiveProjectTab()

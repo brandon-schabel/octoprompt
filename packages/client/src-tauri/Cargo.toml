@@ -1,5 +1,5 @@
 [package]
-name = "OctoPrompt"
+name = "Promptliano"
 version = "0.5.4"
 description = "AI Toolkit For Architecting Codebases"
 authors = ["Brandon Schabel"]

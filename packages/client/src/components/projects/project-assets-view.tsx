@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Project } from '@octoprompt/schemas'
+import { Project } from '@promptliano/schemas'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'

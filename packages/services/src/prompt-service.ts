@@ -1,4 +1,4 @@
-import { promptStorage } from '@octoprompt/storage'
+import { promptStorage } from '@promptliano/storage'
 import {
   type CreatePromptBody,
   type UpdatePromptBody,
@@ -6,9 +6,9 @@ import {
   PromptSchema,
   type PromptProject,
   PromptProjectSchema
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import { ZodError } from 'zod'
 
 // Utility function to populate projectId on prompts from associations

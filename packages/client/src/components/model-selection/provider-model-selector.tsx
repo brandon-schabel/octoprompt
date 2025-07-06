@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react'
-import { APIProviders } from '@octoprompt/schemas'
+import { APIProviders } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { OctoCombobox } from '@/components/octo/octo-combobox'

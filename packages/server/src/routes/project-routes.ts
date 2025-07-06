@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { ApiError } from '@octoprompt/shared'
+import { ApiError } from '@promptliano/shared'
 import {
   ProjectIdParamsSchema,
   CreateProjectBodySchema,
@@ -14,15 +14,15 @@ import {
   ProjectSummaryResponseSchema,
   ProjectFileSchema,
   ProjectFile
-} from '@octoprompt/schemas'
+} from '@promptliano/schemas'
 
-import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@octoprompt/schemas'
+import { ApiErrorResponseSchema, OperationSuccessResponseSchema } from '@promptliano/schemas'
 
 import { existsSync } from 'node:fs'
 import { resolve as resolvePath } from 'node:path'
 import { homedir as getHomedir } from 'node:os'
 
-import * as projectService from '@octoprompt/services'
+import * as projectService from '@promptliano/services'
 import {
   getFullProjectSummary,
   getProjectStatistics,
@@ -30,8 +30,8 @@ import {
   syncProject,
   syncProjectFolder,
   watchersManager
-} from '@octoprompt/services'
-import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@octoprompt/schemas'
+} from '@promptliano/services'
+import { OptimizePromptResponseSchema, OptimizeUserInputRequestSchema } from '@promptliano/schemas'
 
 // File operation schemas
 const FileIdParamsSchema = z.object({

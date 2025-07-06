@@ -80,7 +80,7 @@ If you have a large library of prompts, the search functionality can help you fi
 
 ## 4. Managing Your Prompts
 
-OctoPrompt provides straightforward tools for creating, viewing, editing, and deleting your prompts.
+Promptliano provides straightforward tools for creating, viewing, editing, and deleting your prompts.
 
 ### Creating a New Prompt
 
@@ -136,7 +136,7 @@ The true power of the Prompts Page comes from applying your saved prompts within
 
 ### Importing Prompts into a Project
 
-OctoPrompt allows you to associate prompts from your global library with specific projects. This helps keep your project workspace clean and ensures you only see relevant prompts for the task at hand.
+Promptliano allows you to associate prompts from your global library with specific projects. This helps keep your project workspace clean and ensures you only see relevant prompts for the task at hand.
 
 To use a library prompt in a project:
 
@@ -174,4 +174,4 @@ Crafting good prompts is key to getting the best results from AI. Here are a few
 
 ---
 
-By effectively utilizing the Prompts Page, you can significantly enhance your productivity and the quality of AI-generated outputs within OctoPrompt. Happy prompting!
+By effectively utilizing the Prompts Page, you can significantly enhance your productivity and the quality of AI-generated outputs within Promptliano. Happy prompting!

@@ -8,8 +8,8 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import type { Context } from 'hono'
-import { ApiError } from '@octoprompt/shared'
-import { getMCPClientManager, getProjectFiles, getProjectById, suggestFiles } from '@octoprompt/services'
+import { ApiError } from '@promptliano/shared'
+import { getMCPClientManager, getProjectFiles, getProjectById, suggestFiles } from '@promptliano/services'
 import { BUILTIN_TOOLS, getToolByName } from './tools-registry'
 
 // JSON-RPC 2.0 message types
@@ -248,7 +248,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       protocolVersion: '2024-11-05',
       capabilities: serverCapabilities,
       serverInfo: {
-        name: 'octoprompt-mcp',
+        name: 'promptliano-mcp',
         version: '0.6.0'
       },
       _meta: { sessionId } // Include session ID for client reference
@@ -264,7 +264,7 @@ async function handleToolsList(
   sessionId?: string
 ): Promise<JSONRPCResponse> {
   try {
-    // Return OctoPrompt's built-in MCP tools from shared registry
+    // Return Promptliano's built-in MCP tools from shared registry
     const mcpTools = BUILTIN_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
@@ -344,7 +344,7 @@ async function handleToolsCall(
       }
     }
 
-    // Handle built-in OctoPrompt tools
+    // Handle built-in Promptliano tools
     if (name.startsWith('external_')) {
       // Handle external MCP server tools
       if (!projectId) {
@@ -445,7 +445,7 @@ async function handleResourcesList(
   try {
     const mcpResources = []
 
-    // Add built-in OctoPrompt resources
+    // Add built-in Promptliano resources
     if (projectId) {
       try {
         const project = await getProjectById(parseInt(projectId))
@@ -453,7 +453,7 @@ async function handleResourcesList(
 
         // Add project summary resource
         mcpResources.push({
-          uri: `octoprompt://projects/${projectId}/summary`,
+          uri: `promptliano://projects/${projectId}/summary`,
           name: 'Project Summary',
           description: `Summary of project "${project.name}"`,
           mimeType: 'text/plain'
@@ -461,7 +461,7 @@ async function handleResourcesList(
 
         // Add file suggestion resource
         mcpResources.push({
-          uri: `octoprompt://projects/${projectId}/suggest-files`,
+          uri: `promptliano://projects/${projectId}/suggest-files`,
           name: 'File Suggestions',
           description: 'AI-powered file suggestions based on prompts',
           mimeType: 'application/json'
@@ -469,7 +469,7 @@ async function handleResourcesList(
 
         // Add individual file resources (limit to first 10 for performance)
         const fileResources = (files || []).slice(0, 10).map((file) => ({
-          uri: `octoprompt://projects/${projectId}/files/${file.id}`,
+          uri: `promptliano://projects/${projectId}/files/${file.id}`,
           name: file.name,
           description: `File: ${file.path} (${file.size} bytes)`,
           mimeType:
@@ -590,20 +590,20 @@ async function handleResourcesRead(
       }
     }
 
-    // Handle built-in OctoPrompt resources
-    if (uri.startsWith('octoprompt://')) {
+    // Handle built-in Promptliano resources
+    if (uri.startsWith('promptliano://')) {
       if (!projectId) {
         return {
           jsonrpc: '2.0',
           id,
           error: {
             ...JSON_RPC_ERRORS.INVALID_PARAMS,
-            message: 'Project ID is required for OctoPrompt resource access'
+            message: 'Project ID is required for Promptliano resource access'
           }
         }
       }
 
-      const urlParts = uri.replace('octoprompt://', '').split('/')
+      const urlParts = uri.replace('promptliano://', '').split('/')
 
       if (urlParts[0] === 'projects' && urlParts[1] === projectId) {
         if (urlParts[2] === 'summary') {
@@ -920,7 +920,7 @@ async function handleGETRequest(c: Context): Promise<Response> {
     jsonrpc: '2.0',
     id: 'welcome',
     result: {
-      message: 'OctoPrompt MCP Server - Streamable HTTP Transport',
+      message: 'Promptliano MCP Server - Streamable HTTP Transport',
       projectId: projectId || null,
       timestamp: Date.now(),
       protocolVersion: '2024-11-05'

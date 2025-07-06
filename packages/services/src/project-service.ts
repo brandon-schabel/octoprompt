@@ -8,9 +8,9 @@ import {
   LOW_MODEL_CONFIG,
   type APIProviders,
   FileSuggestionsZodSchema
-} from '@octoprompt/schemas'
-import { ApiError, promptsMap } from '@octoprompt/shared'
-import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
+} from '@promptliano/schemas'
+import { ApiError, promptsMap } from '@promptliano/shared'
+import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@promptliano/storage'
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { generateStructuredData, generateSingleText } from './gen-ai-services'
@@ -414,7 +414,7 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
     filesMap = await projectStorage.readProjectFiles(projectId)
 
     // Generate bulk IDs to avoid conflicts
-    const { getDb } = await import('@octoprompt/storage')
+    const { getDb } = await import('@promptliano/storage')
     const db = getDb()
     const fileIds = db.generateBulkIds('project_files', filesToCreate.length)
     let idIndex = 0
@@ -745,11 +745,11 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
-      `Successfully summarized: ${summarizedCount}, ` +
-      `Skipped (empty): ${skippedByEmptyCount}, ` +
-      `Skipped (errors): ${errorCount}, ` +
-      `Total not summarized: ${finalSkippedCount}`
+    `Total to process: ${totalProcessed}, ` +
+    `Successfully summarized: ${summarizedCount}, ` +
+    `Skipped (empty): ${skippedByEmptyCount}, ` +
+    `Skipped (errors): ${errorCount}, ` +
+    `Total not summarized: ${finalSkippedCount}`
   )
 
   return {

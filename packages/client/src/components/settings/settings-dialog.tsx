@@ -6,7 +6,7 @@ import { Label } from '@ui'
 import { Input } from '@ui'
 import { ScrollArea } from '@ui'
 import { useLocalStorage } from '@/hooks/utility-hooks/use-local-storage'
-import { Theme } from '@octoprompt/schemas'
+import { Theme } from '@promptliano/schemas'
 import { useAppSettings } from '@/hooks/use-kv-local-storage'
 
 type ThemeOption = {

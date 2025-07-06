@@ -7,7 +7,7 @@
 // 5. Added loading and error states.
 import React from 'react'
 import { useGetProjectFilesWithoutContent } from '@/hooks/api/use-projects-api'
-import { ProjectFile } from '@octoprompt/schemas' // Using direct schema type
+import { ProjectFile } from '@promptliano/schemas' // Using direct schema type
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   ChartContainer,

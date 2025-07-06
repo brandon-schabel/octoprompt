@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { useGetMCPTools, useExecuteMCPTool } from '@/hooks/api/use-mcp-api'
-import type { MCPTool, MCPToolParameter } from '@octoprompt/schemas'
+import type { MCPTool, MCPToolParameter } from '@promptliano/schemas'
 import { cn } from '@/lib/utils'
 
 interface MCPToolsPanelProps {
