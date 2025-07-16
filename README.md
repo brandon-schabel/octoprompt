@@ -1,6 +1,6 @@
 # OctoPrompt
 
-Your AI toolkit for streamlined codebase management.
+Your AI toolkit for context engineering.
 
 ## Introduction
 
