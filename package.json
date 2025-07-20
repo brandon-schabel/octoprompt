@@ -29,6 +29,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@swc/core": "^1.13.1",
     "@types/archiver": "^6.0.3",
     "@types/bun": "latest",
     "@types/picomatch": "^3.0.2",

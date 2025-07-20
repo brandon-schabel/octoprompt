@@ -15,6 +15,7 @@ import {
 } from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
 import { summarizeSingleFile } from '@octoprompt/services'
+import { analyzeCodeImportsExports } from '../utils/code-analysis'
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
@@ -416,13 +417,21 @@ export async function syncFileSet(
         extension = fileName // e.g., '.env'
       }
 
+      // Analyze imports/exports for supported file types
+      let codeAnalysis = null
+      if (['.js', '.jsx', '.ts', '.tsx', '.py'].includes(extension)) {
+        codeAnalysis = analyzeCodeImportsExports(content, fileName)
+      }
+
       const fileData: FileSyncData = {
         path: normalizedRelativePath,
         name: fileName,
         extension: extension,
         content: content,
         size: stats.size,
-        checksum: checksum
+        checksum: checksum,
+        imports: codeAnalysis?.imports || null,
+        exports: codeAnalysis?.exports || null
       }
 
       const existingDbFile = dbFileMap.get(normalizedRelativePath)

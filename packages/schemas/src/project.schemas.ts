@@ -13,6 +13,35 @@ export const ProjectSchema = z
   })
   .openapi('Project')
 
+// Import and Export info schemas
+export const ImportInfoSchema = z
+  .object({
+    source: z.string(),
+    specifiers: z.array(
+      z.object({
+        type: z.enum(['default', 'named', 'namespace']),
+        imported: z.string().optional(),
+        local: z.string()
+      })
+    )
+  })
+  .openapi('ImportInfo')
+
+export const ExportInfoSchema = z
+  .object({
+    type: z.enum(['default', 'named', 'all']),
+    source: z.string().optional(),
+    specifiers: z
+      .array(
+        z.object({
+          exported: z.string(),
+          local: z.string().optional()
+        })
+      )
+      .optional()
+  })
+  .openapi('ExportInfo')
+
 export const ProjectFileSchema = z
   .object({
     id: unixTSSchemaSpec,
@@ -26,6 +55,8 @@ export const ProjectFileSchema = z
     summaryLastUpdated: unixTSSchemaSpec.nullable(),
     meta: z.string().nullable(),
     checksum: z.string().nullable(),
+    imports: z.array(ImportInfoSchema).nullable().default(null),
+    exports: z.array(ExportInfoSchema).nullable().default(null),
     created: unixTSSchemaSpec,
     updated: unixTSSchemaSpec
   })
@@ -243,6 +274,8 @@ export type ProjectFile = z.infer<typeof ProjectFileSchema>
 export type ProjectFileWithoutContent = z.infer<typeof ProjectFileWithoutContentSchema>
 export type CreateProjectBody = z.infer<typeof CreateProjectBodySchema>
 export type UpdateProjectBody = z.infer<typeof UpdateProjectBodySchema>
+export type ImportInfo = z.infer<typeof ImportInfoSchema>
+export type ExportInfo = z.infer<typeof ExportInfoSchema>
 
 // a key/value map by id of all project object (content, file name, path, extension, etc)
 export type ProjectFileMap = z.infer<typeof ProjectFileMapSchema>

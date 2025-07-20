@@ -363,6 +363,8 @@ export async function createProjectFileRecord(
       summaryLastUpdated: null,
       meta: '{}',
       checksum: null,
+      imports: null,
+      exports: null,
       created: now,
       updated: now
     }
@@ -403,6 +405,8 @@ export interface FileSyncData {
   content: string
   size: number
   checksum: string
+  imports?: ImportInfo[] | null
+  exports?: ExportInfo[] | null
 }
 
 /** Creates multiple file records in the project's JSON file. */
@@ -450,6 +454,8 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         summaryLastUpdated: null,
         meta: '{}',
         checksum: fileData.checksum,
+        imports: fileData.imports || null,
+        exports: fileData.exports || null,
         created: now,
         updated: now
       }
@@ -522,6 +528,8 @@ export async function bulkUpdateProjectFiles(
         extension: data.extension,
         size: data.size,
         checksum: data.checksum,
+        imports: data.imports !== undefined ? data.imports : existingFile.imports,
+        exports: data.exports !== undefined ? data.exports : existingFile.exports,
         updated: now
       }
 
@@ -689,12 +697,26 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
   // Check if content was already truncated during file sync
   const wasTruncatedDuringSync = fileContent.includes(FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX)
   
+  const importsContext = file.imports?.length 
+    ? `The file imports from: ${[...new Set(file.imports.map(i => i.source))].join(', ')}`
+    : ''
+  
+  const exportsContext = file.exports?.length
+    ? `The file exports: ${file.exports.map(e => {
+        if (e.type === 'default') return 'default export'
+        if (e.type === 'all') return `all from ${e.source}`
+        return e.specifiers?.map(s => s.exported).join(', ') || 'named exports'
+      }).join(', ')}`
+    : ''
+
   const systemPrompt = `
   ## You are a coding assistant specializing in concise code summaries.
   1. Provide a short overview of what the file does.
   2. Outline main exports (functions/classes).
   3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
-  ${wasTruncatedDuringSync ? '4. Note: This file was truncated for summarization, so the summary may be incomplete.' : ''}
+  ${importsContext ? `4. ${importsContext}` : ''}
+  ${exportsContext ? `5. ${exportsContext}` : ''}
+  ${wasTruncatedDuringSync ? '6. Note: This file was truncated for summarization, so the summary may be incomplete.' : ''}
   `
 
   const cfg = LOW_MODEL_CONFIG
