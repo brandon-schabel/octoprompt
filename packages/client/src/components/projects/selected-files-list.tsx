@@ -29,8 +29,6 @@ import { ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useProjectTabById, useUpdateProjectTabState } from '@/hooks/use-kv-local-storage'
 import { useUpdateFileContent } from '@/hooks/api/use-projects-api'
-import { useProjectGitStatus } from '@/hooks/api/use-git-api'
-import type { GitFileStatus } from '@octoprompt/schemas'
 
 type SelectedFilesListProps = {
   onRemoveFile: (fileId: number) => void
@@ -44,32 +42,6 @@ export type SelectedFilesListRef = {
   focusList: () => void
 }
 
-const getGitStatusColor = (gitFileStatus: GitFileStatus | undefined) => {
-  if (!gitFileStatus || gitFileStatus.status === 'unchanged' || gitFileStatus.status === 'ignored') {
-    return undefined
-  }
-
-  // Use darker colors for unstaged, brighter for staged
-  const isStaged = gitFileStatus.staged
-
-  if (gitFileStatus.status === 'added' || gitFileStatus.status === 'untracked') {
-    return isStaged ? 'text-green-500' : 'text-green-700'
-  }
-
-  if (gitFileStatus.status === 'modified') {
-    return isStaged ? 'text-yellow-500' : 'text-yellow-700'
-  }
-
-  if (gitFileStatus.status === 'deleted') {
-    return isStaged ? 'text-red-500' : 'text-red-700'
-  }
-
-  if (gitFileStatus.status === 'renamed' || gitFileStatus.status === 'copied') {
-    return isStaged ? 'text-blue-500' : 'text-blue-700'
-  }
-
-  return 'text-gray-500'
-}
 
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(
   ({ onRemoveFile, onNavigateLeft, className = '', projectTabId }, ref) => {
@@ -99,20 +71,6 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
     const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
     const updateFileContentMutation = useUpdateFileContent()
-
-    // Get git status for the project
-    const { data: gitStatus } = useProjectGitStatus(selectedProjectId)
-
-    // Create a map of file paths to git file status
-    const gitStatusMap = useMemo(() => {
-      const map = new Map<string, GitFileStatus>()
-      if (gitStatus?.success && gitStatus.data.files) {
-        gitStatus.data.files.forEach((file) => {
-          map.set(file.path, file)
-        })
-      }
-      return map
-    }, [gitStatus])
 
     const handleSaveFileContent = useCallback(
       async (content: string) => {
@@ -481,7 +439,6 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
               if (!file) return null
               const shortcutNumber = index + 1
               const showShortcut = shortcutNumber <= 9
-              const gitFileStatus = gitStatusMap.get(file.path)
 
               return (
                 <div
@@ -545,14 +502,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                       {showShortcut && (
                         <span className='text-xs text-muted-foreground mr-2 whitespace-nowrap'>{shortcutNumber}</span>
                       )}
-                      <span
-                        className={cn('text-sm truncate', getGitStatusColor(gitFileStatus))}
-                        title={
-                          gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored'
-                            ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})`
-                            : undefined
-                        }
-                      >
+                      <span className='text-sm truncate'>
                         {file.name}
                       </span>
                       {file.content && (

@@ -25,8 +25,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject, useUpdateFileContent } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@octoprompt/schemas'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useProjectGitStatus, useStageAll, useUnstageAll } from '@/hooks/api/use-git-api'
-import { GitPullRequest, GitBranch, Plus, Minus } from 'lucide-react'
+import { useProjectGitStatus } from '@/hooks/api/use-git-api'
+import { GitPullRequest, GitBranch } from 'lucide-react'
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>
@@ -102,8 +102,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
   // Get git status for the project
   const { data: gitStatus } = useProjectGitStatus(selectedProjectId)
-  const { mutate: stageAll } = useStageAll(selectedProjectId)
-  const { mutate: unstageAll } = useUnstageAll(selectedProjectId)
 
   const filteredFiles = useMemo(() => {
     if (!projectFiles) return []
@@ -298,26 +296,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               </Button>
             )
           })()}
-
-        {/* Git stage/unstage all buttons */}
-        {gitStatus?.success && gitStatus.data.files.length > 0 && (
-          <>
-            {gitStatus.data.files.some(
-              (file) => file.status !== 'unchanged' && file.status !== 'ignored' && !file.staged
-            ) && (
-              <Button variant='outline' size='sm' onClick={() => stageAll()} title='Stage all changed files'>
-                <Plus className='h-4 w-4 mr-1 text-green-600' />
-                Stage All
-              </Button>
-            )}
-            {gitStatus.data.files.some((file) => file.staged) && (
-              <Button variant='outline' size='sm' onClick={() => unstageAll()} title='Unstage all staged files'>
-                <Minus className='h-4 w-4 mr-1 text-red-600' />
-                Unstage All
-              </Button>
-            )}
-          </>
-        )}
 
         <OctoTooltip>
           <div className='space-y-2'>
