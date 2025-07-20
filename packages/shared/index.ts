@@ -2,6 +2,9 @@ export { ApiError } from './src/error/api-error'
 export { matchesAnyPattern, filterByPatterns } from './src/utils/pattern-matcher'
 export * from './src/utils/merge-deep'
 
+// Constants
+export * from './src/constants/file-limits'
+
 // Structured outputs
 export * from './src/structured-outputs/structured-output-schema'
 export * from './src/structured-outputs/structured-output-utils'

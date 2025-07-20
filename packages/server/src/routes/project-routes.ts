@@ -757,7 +757,12 @@ export const projectRoutes = new OpenAPIHono()
                 data: z.object({
                   included: z.number(),
                   skipped: z.number(),
-                  updatedFiles: z.array(ProjectFileSchema)
+                  updatedFiles: z.array(ProjectFileSchema),
+                  skippedReasons: z.object({
+                    empty: z.number(),
+                    tooLarge: z.number(),
+                    errors: z.number()
+                  }).optional()
                 })
               })
             }
@@ -781,16 +786,8 @@ export const projectRoutes = new OpenAPIHono()
         throw new ApiError(404, `Project not found: ${projectId}`, 'PROJECT_NOT_FOUND')
       }
 
-      // If force is true, we need to call resummarizeAllFiles for each file ID
-      // Otherwise use summarizeFiles which respects existing summaries
-      let result
-      if (force && fileIds.length > 0) {
-        // For force re-summarization, we'll use the existing summarizeFiles function
-        // which handles individual files properly
-        result = await projectService.summarizeFiles(projectId, fileIds)
-      } else {
-        result = await projectService.summarizeFiles(projectId, fileIds)
-      }
+      // Pass the force parameter to summarizeFiles
+      const result = await projectService.summarizeFiles(projectId, fileIds, force)
 
       return c.json(
         {

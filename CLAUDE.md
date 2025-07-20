@@ -37,7 +37,6 @@ The Linear MCP (Model Context Protocol) integration is built into Claude Code an
 
 ### OctoPrompt MCP Usage
 
-OctoPrompt is my personal project, so make heavy use of it. Write a feedback file (octo-feedback.md) on what can be improved.
 
 Use the OctoPrompt MCP for the following
 
@@ -278,6 +277,40 @@ This tool takes a full project summary and uses AI to create a compact, architec
 ### Database
 
 - `bun run migrate:sqlite` - Run SQLite database migrations
+
+## GitHub Integration
+
+Claude Code includes built-in GitHub integration through the `gh` CLI. Once authenticated, you can:
+
+### Available Operations
+
+- **Repository Management**: View repo info, stats, and activity
+- **Issues**: Create, list, update, and close issues
+- **Pull Requests**: Create PRs, view PR status, manage reviews
+- **GitHub Actions**: Monitor workflows, view run status
+- **Commits**: View history, create commits with proper co-author attribution
+
+### Authentication
+
+GitHub integration requires `gh` CLI authentication:
+```bash
+gh auth login -h github.com -w
+```
+
+### Common Commands
+
+- `gh issue create --title "Title" --body "Description"`
+- `gh pr create --title "Title" --body "Description"`
+- `gh workflow list`
+- `gh run list --workflow="Workflow Name"`
+
+### PR Creation
+
+When creating PRs, Claude Code automatically:
+- Analyzes all commits in the branch
+- Generates comprehensive PR descriptions
+- Includes proper formatting and test plans
+- Adds Claude Code attribution
 
 ## Code Principles
 

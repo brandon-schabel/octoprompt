@@ -2,7 +2,7 @@ import { ApiError } from '@octoprompt/shared'
 import { getProjectById, getProjectFiles } from './project-service'
 import { listTicketsByProject, getTasks } from './ticket-service'
 import { listPromptsByProject } from './prompt-service'
-import type { Ticket } from '@octoprompt/schemas'
+import { type Ticket, MAX_FILE_SIZE_FOR_SUMMARY } from '@octoprompt/schemas'
 
 export interface ProjectStatistics {
   // File Statistics
@@ -20,6 +20,8 @@ export interface ProjectStatistics {
     }
     filesWithSummaries: number
     averageSummaryLength: number
+    filesExceedingSizeLimit: number
+    largestFileSize: number
   }
 
   // Ticket Statistics
@@ -151,6 +153,8 @@ function calculateFileStats(files: any[]): ProjectStatistics['fileStats'] {
   let totalSize = 0
   let filesWithSummaries = 0
   let totalSummaryLength = 0
+  let filesExceedingSizeLimit = 0
+  let largestFileSize = 0
 
   files.forEach((file) => {
     const ext = file.extension || 'unknown'
@@ -165,6 +169,16 @@ function calculateFileStats(files: any[]): ProjectStatistics['fileStats'] {
       filesWithSummaries++
       totalSummaryLength += file.summary.length
     }
+
+    // Track files exceeding size limit
+    if (file.size > MAX_FILE_SIZE_FOR_SUMMARY) {
+      filesExceedingSizeLimit++
+    }
+
+    // Track largest file
+    if (file.size > largestFileSize) {
+      largestFileSize = file.size
+    }
   })
 
   return {
@@ -174,7 +188,9 @@ function calculateFileStats(files: any[]): ProjectStatistics['fileStats'] {
     sizeByType,
     filesByCategory,
     filesWithSummaries,
-    averageSummaryLength: filesWithSummaries > 0 ? totalSummaryLength / filesWithSummaries : 0
+    averageSummaryLength: filesWithSummaries > 0 ? totalSummaryLength / filesWithSummaries : 0,
+    filesExceedingSizeLimit,
+    largestFileSize
   }
 }
 

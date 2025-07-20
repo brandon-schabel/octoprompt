@@ -2,8 +2,9 @@ import { watch as fsWatch, type FSWatcher, existsSync as fsLibExistsSync } from 
 import { join, extname, resolve as pathResolve, relative, basename } from 'node:path'
 import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs'
 import { type Project, type ProjectFile } from '@octoprompt/schemas'
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
+import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS, MAX_FILE_SIZE_FOR_SUMMARY } from '@octoprompt/schemas'
 import ignorePackage, { type Ignore } from 'ignore'
+import { truncateForSummarization } from '@octoprompt/shared'
 import {
   getProjectFiles,
   bulkCreateProjectFiles,
@@ -378,9 +379,37 @@ export async function syncFileSet(
     const normalizedRelativePath = normalizePathForDbUtil(relativePath)
 
     try {
-      const content = readFileSync(absFilePath, 'utf-8')
       const stats = statSync(absFilePath)
-      const checksum = computeChecksum(content)
+      
+      // Check if file is too large for content reading
+      let content: string
+      let checksum: string
+      
+      if (stats.size > MAX_FILE_SIZE_FOR_SUMMARY) {
+        // For files too large to summarize, we still track them but with empty content
+        content = ''
+        checksum = 'FILE_TOO_LARGE'
+        console.log(`[FileSync] File ${normalizedRelativePath} is too large (${stats.size} bytes) for content processing. Will track metadata only.`)
+      } else {
+        const rawContent = readFileSync(absFilePath, 'utf-8')
+        // Truncate content for summarization to control AI costs
+        const truncationResult = truncateForSummarization(rawContent)
+        content = truncationResult.content
+        checksum = computeChecksum(rawContent) // Use original content for checksum
+        
+        if (truncationResult.wasTruncated) {
+          console.log(
+            `[FileSync] File truncated for summarization:\n` +
+            `  Path: ${normalizedRelativePath}\n` +
+            `  Project: ${project.name} (ID: ${project.id})\n` +
+            `  File size: ${stats.size.toLocaleString()} bytes\n` +
+            `  Original length: ${truncationResult.originalLength.toLocaleString()} chars\n` +
+            `  Truncated to: ${content.length.toLocaleString()} chars\n` +
+            `  Reduction: ${Math.round((1 - content.length / truncationResult.originalLength) * 100)}%`
+          )
+        }
+      }
+      
       const fileName = basename(normalizedRelativePath)
       let extension = extname(fileName).toLowerCase()
       if (!extension && fileName.startsWith('.')) {
@@ -594,7 +623,7 @@ export function createFileChangePlugin() {
 
       // Re-summarize the (created or modified) file
       // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
-      await summarizeSingleFile(updatedFile) // From summarize-files-agent
+      await summarizeSingleFile(updatedFile, true) // From summarize-files-agent - force=true for new/updated files
       // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
     } catch (err) {
       console.error('[FileChangePlugin] Error handling file change:', err)
