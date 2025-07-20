@@ -28,10 +28,8 @@ jobs:
       - name: Install shared dependencies
         run: cd packages/shared && bun install
 
-
       - name: Install server dependencies
         run: cd packages/server && bun install
-
 
     #   - name: Run E2E tests
     #     run: |

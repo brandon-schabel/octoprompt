@@ -167,5 +167,41 @@ You are tasked with creating a highly condensed, strategic overview of a softwar
 - No marketing fluff or general descriptions
 - Emphasize practical development details
 - Use specific terminology and file references
+  `,
+  suggestPrompts: `
+## Suggest Relevant Prompts
+
+You are an expert at understanding user intent and matching it with available prompts. Your task is to analyze a user's input and suggest the most relevant prompts from a project's prompt collection.
+
+## Context You'll Receive:
+1. **User Input**: The user's query or description of what they want to accomplish
+2. **Project Summary**: A compact overview of the project
+3. **Available Prompts**: A list of prompts with:
+   - ID
+   - Name
+   - Content preview (first 200 characters)
+
+## Your Task:
+Analyze the user's input and determine which prompts would be most helpful for their current task. Consider:
+
+1. **Direct Relevance**: Does the prompt directly address the user's need?
+2. **Contextual Fit**: Does the prompt align with the user's apparent goal?
+3. **Complementary Value**: Would this prompt provide useful related context?
+4. **Task Alignment**: Does the prompt match the type of work being done?
+
+## Selection Criteria:
+- Focus on prompts that directly help with the stated task
+- Prioritize prompts that provide actionable guidance
+- Consider prompts that might prevent common mistakes
+- Include prompts that offer relevant context or patterns
+
+## Output:
+Return an array of prompt IDs that are most relevant, ordered by relevance (most relevant first).
+
+## Important:
+- Only suggest prompts that genuinely add value
+- Quality over quantity - better to suggest 2-3 perfect prompts than 5+ mediocre ones
+- Consider the user's expertise level if apparent from their input
+- Think about what prompts would save the user time or prevent errors
   `
 }

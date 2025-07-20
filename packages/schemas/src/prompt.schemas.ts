@@ -100,9 +100,36 @@ export const PromptProjectSchema = z.object({
   projectId: unixTSSchemaSpec
 })
 
+// --- Suggest Prompts Schemas ---
+export const SuggestPromptsRequestSchema = z
+  .object({
+    userInput: z.string().min(1).openapi({
+      example: 'help me implement authentication',
+      description: 'The user input describing what they want to accomplish'
+    }),
+    limit: z.number().int().positive().max(10).optional().default(5).openapi({
+      example: 5,
+      description: 'Maximum number of prompts to suggest (default: 5, max: 10)'
+    })
+  })
+  .openapi('SuggestPromptsRequest')
+
+export const SuggestPromptsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.object({
+      prompts: z.array(PromptSchema).openapi({
+        description: 'Array of suggested prompts ordered by relevance (most relevant first)'
+      })
+    })
+  })
+  .openapi('SuggestPromptsResponse')
+
 // Export types if needed elsewhere
 export type OptimizePromptRequest = z.infer<typeof OptimizeUserInputRequestSchema>
 export type Prompt = z.infer<typeof PromptSchema>
 export type PromptListResponse = z.infer<typeof PromptListResponseSchema>
 export type PromptResponse = z.infer<typeof PromptResponseSchema>
 export type PromptProject = z.infer<typeof PromptProjectSchema>
+export type SuggestPromptsRequest = z.infer<typeof SuggestPromptsRequestSchema>
+export type SuggestPromptsResponse = z.infer<typeof SuggestPromptsResponseSchema>

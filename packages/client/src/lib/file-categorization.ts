@@ -3,25 +3,77 @@ import { ProjectFile } from '@octoprompt/schemas'
 // Common binary file extensions
 const BINARY_EXTENSIONS = new Set([
   // Images
-  '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.svg', '.webp', '.tiff',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.bmp',
+  '.ico',
+  '.svg',
+  '.webp',
+  '.tiff',
   // Videos
-  '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm',
+  '.mp4',
+  '.avi',
+  '.mov',
+  '.wmv',
+  '.flv',
+  '.mkv',
+  '.webm',
   // Audio
-  '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a',
+  '.mp3',
+  '.wav',
+  '.flac',
+  '.aac',
+  '.ogg',
+  '.wma',
+  '.m4a',
   // Archives
-  '.zip', '.tar', '.gz', '.rar', '.7z', '.bz2', '.xz',
+  '.zip',
+  '.tar',
+  '.gz',
+  '.rar',
+  '.7z',
+  '.bz2',
+  '.xz',
   // Documents
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
   // Executables
-  '.exe', '.dll', '.so', '.dylib', '.app',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  '.app',
   // Data
-  '.db', '.sqlite', '.mdb',
+  '.db',
+  '.sqlite',
+  '.mdb',
   // Other
-  '.bin', '.dat', '.iso', '.dmg', '.pkg', '.deb', '.rpm',
+  '.bin',
+  '.dat',
+  '.iso',
+  '.dmg',
+  '.pkg',
+  '.deb',
+  '.rpm',
   // Fonts
-  '.ttf', '.otf', '.woff', '.woff2', '.eot',
+  '.ttf',
+  '.otf',
+  '.woff',
+  '.woff2',
+  '.eot',
   // Models/Data files
-  '.pkl', '.h5', '.model', '.weights', '.onnx',
+  '.pkl',
+  '.h5',
+  '.model',
+  '.weights',
+  '.onnx'
 ])
 
 // File size limit for summarization (from schemas)
@@ -80,9 +132,9 @@ export function categorizeFile(file: ProjectFile): FileCategory {
 
   // Check if too large
   if (file.size > MAX_FILE_SIZE_FOR_SUMMARY) {
-    return { 
-      category: 'too-large', 
-      reason: `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds 1MB limit` 
+    return {
+      category: 'too-large',
+      reason: `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds 1MB limit`
     }
   }
 
@@ -112,7 +164,7 @@ export function categorizeProjectFiles(files: ProjectFile[]): FileCategorization
 
   for (const file of files) {
     const { category } = categorizeFile(file)
-    
+
     switch (category) {
       case 'summarized':
         categorization.summarized.push(file)
@@ -148,10 +200,10 @@ export function categorizeProjectFiles(files: ProjectFile[]): FileCategorization
  */
 export function getSummarizationStats(files: ProjectFile[]): SummarizationStats {
   const categorization = categorizeProjectFiles(files)
-  
+
   const total = files.length
   const summarizable = categorization.summarized.length + categorization.pending.length + categorization.error.length
-  
+
   const stats: SummarizationStats = {
     total,
     summarized: categorization.summarized.length,
@@ -173,6 +225,6 @@ export function getSummarizationStats(files: ProjectFile[]): SummarizationStats 
  * Get a human-readable description for file count
  */
 export function getFileCountDescription(count: number, total: number): string {
-  const percentage = total > 0 ? (count / total * 100).toFixed(1) : '0'
+  const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0'
   return `${count} file${count !== 1 ? 's' : ''} (${percentage}%)`
 }

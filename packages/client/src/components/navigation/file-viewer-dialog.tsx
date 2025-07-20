@@ -94,21 +94,25 @@ export function FileViewerDialog({
   const codeThemeLight = useSelectSetting('codeThemeLight')
 
   const updateFileContent = useUpdateFileContent()
-  
+
   // Git status and diff hooks
   const { data: gitStatus } = useProjectGitStatus(projectId, open && !!projectId)
   const gitFileStatus = useMemo(() => {
     if (!gitStatus?.success || !gitStatus.data || !viewedFile) return null
-    return gitStatus.data.files.find(f => f.path === viewedFile.path)
+    return gitStatus.data.files.find((f) => f.path === viewedFile.path)
   }, [gitStatus, viewedFile])
-  
+
   const hasGitChanges = gitFileStatus && gitFileStatus.status !== 'unchanged'
-  const hasStaged = gitStatus?.success && gitStatus.data && viewedFile ? 
-    gitStatus.data.staged.includes(viewedFile.path) : false
+  const hasStaged =
+    gitStatus?.success && gitStatus.data && viewedFile ? gitStatus.data.staged.includes(viewedFile.path) : false
   const hasUnstaged = gitFileStatus ? !gitFileStatus.staged : false
-  
+
   // File diff data
-  const { data: diffData, isLoading: diffLoading, error: diffError } = useFileDiff(
+  const {
+    data: diffData,
+    isLoading: diffLoading,
+    error: diffError
+  } = useFileDiff(
     projectId,
     viewedFile?.path,
     { staged: diffViewMode === 'staged' },
@@ -262,16 +266,20 @@ export function FileViewerDialog({
         {/* Show file content editor */}
         {viewedFile && projectId ? (
           hasGitChanges ? (
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'content' | 'diff')} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="content">Current File</TabsTrigger>
-                <TabsTrigger value="diff" className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4" />
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as 'content' | 'diff')}
+              className='flex-1 flex flex-col min-h-0'
+            >
+              <TabsList className='grid w-full grid-cols-2'>
+                <TabsTrigger value='content'>Current File</TabsTrigger>
+                <TabsTrigger value='diff' className='flex items-center gap-2'>
+                  <GitBranch className='h-4 w-4' />
                   Git Changes
                 </TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="content" className="flex-1 min-h-0 mt-4">
+
+              <TabsContent value='content' className='flex-1 min-h-0 mt-4'>
                 <div className={`h-full overflow-auto border rounded-md ${isFullscreen ? 'p-2 mx-4' : 'p-2'}`}>
                   {!isEditingFile ? (
                     // @ts-ignore
@@ -296,28 +304,32 @@ export function FileViewerDialog({
                   )}
                 </div>
               </TabsContent>
-              
-              <TabsContent value="diff" className="flex-1 min-h-0 mt-4 flex flex-col">
-                {(hasStaged && hasUnstaged) && (
-                  <Tabs value={diffViewMode} onValueChange={(v) => setDiffViewMode(v as 'unstaged' | 'staged')} className="mb-2">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="unstaged">Unstaged Changes</TabsTrigger>
-                      <TabsTrigger value="staged">Staged Changes</TabsTrigger>
+
+              <TabsContent value='diff' className='flex-1 min-h-0 mt-4 flex flex-col'>
+                {hasStaged && hasUnstaged && (
+                  <Tabs
+                    value={diffViewMode}
+                    onValueChange={(v) => setDiffViewMode(v as 'unstaged' | 'staged')}
+                    className='mb-2'
+                  >
+                    <TabsList className='grid w-full grid-cols-2'>
+                      <TabsTrigger value='unstaged'>Unstaged Changes</TabsTrigger>
+                      <TabsTrigger value='staged'>Staged Changes</TabsTrigger>
                     </TabsList>
                   </Tabs>
                 )}
-                
-                <div className="mb-2 flex items-center justify-between">
+
+                <div className='mb-2 flex items-center justify-between'>
                   <Tabs value={diffViewType} onValueChange={(v) => setDiffViewType(v as 'monaco' | 'simple')}>
                     <TabsList>
-                      <TabsTrigger value="monaco">Side-by-side</TabsTrigger>
-                      <TabsTrigger value="simple">Unified</TabsTrigger>
+                      <TabsTrigger value='monaco'>Side-by-side</TabsTrigger>
+                      <TabsTrigger value='simple'>Unified</TabsTrigger>
                     </TabsList>
                   </Tabs>
-                  
+
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant='outline'
+                    size='sm'
                     onClick={async () => {
                       if (!diffData?.diff) return
                       try {
@@ -329,42 +341,36 @@ export function FileViewerDialog({
                     }}
                     disabled={!diffData?.diff}
                   >
-                    <Copy className="h-4 w-4 mr-2" />
+                    <Copy className='h-4 w-4 mr-2' />
                     Copy Diff
                   </Button>
                 </div>
-                
-                <div className="flex-1 overflow-auto">
-                  {diffLoading && (
-                    <Skeleton className="w-full h-full" />
-                  )}
-                  
-                  {diffError && (
-                    <div className="text-red-500 p-4">
-                      Failed to load diff: {diffError.message}
-                    </div>
-                  )}
-                  
+
+                <div className='flex-1 overflow-auto'>
+                  {diffLoading && <Skeleton className='w-full h-full' />}
+
+                  {diffError && <div className='text-red-500 p-4'>Failed to load diff: {diffError.message}</div>}
+
                   {diffData?.diff && !diffLoading && !diffError && (
                     <>
                       {diffViewType === 'monaco' ? (
-                        <div className="h-full">
+                        <div className='h-full'>
                           {(() => {
                             const parseDiff = (diff: string) => {
                               const lines = diff.split('\n')
                               const original: string[] = []
                               const modified: string[] = []
-                              
+
                               let inDiffSection = false
-                              
+
                               for (const line of lines) {
                                 if (line.startsWith('@@')) {
                                   inDiffSection = true
                                   continue
                                 }
-                                
+
                                 if (!inDiffSection) continue
-                                
+
                                 if (line.startsWith('-') && !line.startsWith('---')) {
                                   original.push(line.substring(1))
                                 } else if (line.startsWith('+') && !line.startsWith('+++')) {
@@ -374,7 +380,7 @@ export function FileViewerDialog({
                                   modified.push(line.substring(1))
                                 }
                               }
-                              
+
                               return {
                                 original: original.join('\n'),
                                 modified: modified.join('\n')
@@ -382,11 +388,11 @@ export function FileViewerDialog({
                             }
                             const { original, modified } = parseDiff(diffData.diff)
                             return (
-                              <div className="relative h-full">
+                              <div className='relative h-full'>
                                 <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="absolute top-2 left-2 z-10 bg-background/95 backdrop-blur"
+                                  variant='outline'
+                                  size='sm'
+                                  className='absolute top-2 left-2 z-10 bg-background/95 backdrop-blur'
                                   onClick={async () => {
                                     try {
                                       await navigator.clipboard.writeText(original)
@@ -396,7 +402,7 @@ export function FileViewerDialog({
                                     }
                                   }}
                                 >
-                                  <Copy className="h-4 w-4 mr-2" />
+                                  <Copy className='h-4 w-4 mr-2' />
                                   Copy Original
                                 </Button>
                                 <LazyMonacoDiffViewer
@@ -410,17 +416,15 @@ export function FileViewerDialog({
                           })()}
                         </div>
                       ) : (
-                        <div className="max-h-full overflow-auto">
-                          <pre className="text-xs p-2 bg-muted rounded font-mono">{diffData.diff}</pre>
+                        <div className='max-h-full overflow-auto'>
+                          <pre className='text-xs p-2 bg-muted rounded font-mono'>{diffData.diff}</pre>
                         </div>
                       )}
                     </>
                   )}
-                  
+
                   {diffData?.diff === '' && !diffLoading && !diffError && (
-                    <div className="text-muted-foreground p-4 text-center">
-                      No changes in {diffViewMode} area
-                    </div>
+                    <div className='text-muted-foreground p-4 text-center'>No changes in {diffViewMode} area</div>
                   )}
                 </div>
               </TabsContent>

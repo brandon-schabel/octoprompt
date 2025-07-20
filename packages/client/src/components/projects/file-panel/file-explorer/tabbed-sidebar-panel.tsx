@@ -17,7 +17,7 @@ export function TabbedSidebarPanel({
 }: TabbedSidebarPanelProps) {
   const { selectedFiles } = useSelectedFiles()
 
-  // return 
+  // return
 
   return (
     <div className='flex flex-col h-full'>

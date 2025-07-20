@@ -386,10 +386,10 @@ export async function syncFileSet(
       let content: string
       let checksum: string
       const rawContent = readFileSync(absFilePath, 'utf-8')
-      
+
       // Always compute checksum from the full content for change detection
       checksum = computeChecksum(rawContent)
-      
+
       // Truncate content for storage and summarization to control AI costs
       const truncationResult = truncateForSummarization(rawContent)
       content = truncationResult.content

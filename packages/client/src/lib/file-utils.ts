@@ -1,6 +1,6 @@
 export function getFileLanguage(filePath: string): string {
   const extension = filePath.includes('.') ? `.${filePath.split('.').pop()?.toLowerCase()}` : ''
-  
+
   const languageMap: Record<string, string> = {
     '.ts': 'typescript',
     '.tsx': 'typescript',
@@ -33,6 +33,6 @@ export function getFileLanguage(filePath: string): string {
     '.dockerfile': 'dockerfile',
     '.txt': 'plaintext'
   }
-  
+
   return languageMap[extension] || 'plaintext'
 }

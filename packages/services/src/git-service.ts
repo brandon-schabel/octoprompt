@@ -1,8 +1,15 @@
-import { simpleGit, type SimpleGit, type StatusResult, type FileStatusResult, type LogResult, type BranchSummary } from 'simple-git'
-import type { 
-  GitStatus, 
-  GitFileStatus, 
-  GitStatusResult, 
+import {
+  simpleGit,
+  type SimpleGit,
+  type StatusResult,
+  type FileStatusResult,
+  type LogResult,
+  type BranchSummary
+} from 'simple-git'
+import type {
+  GitStatus,
+  GitFileStatus,
+  GitStatusResult,
   GitFileStatusType,
   GitBranch,
   GitCommit,
@@ -334,7 +341,7 @@ export async function getBranches(projectId: number): Promise<GitBranch[]> {
 
     const branchSummary = await git.branchLocal()
     const remoteBranches = await git.branch(['-r'])
-    
+
     const branches: GitBranch[] = []
 
     // Add local branches
@@ -472,7 +479,11 @@ export async function deleteBranch(projectId: number, branchName: string, force:
   }
 }
 
-export async function mergeBranch(projectId: number, branchName: string, options?: { noFastForward?: boolean; message?: string }): Promise<void> {
+export async function mergeBranch(
+  projectId: number,
+  branchName: string,
+  options?: { noFastForward?: boolean; message?: string }
+): Promise<void> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -507,12 +518,12 @@ export async function mergeBranch(projectId: number, branchName: string, options
 // ============================================
 
 export async function getCommitLog(
-  projectId: number, 
-  options?: { 
-    limit?: number; 
-    skip?: number; 
-    branch?: string;
-    file?: string;
+  projectId: number,
+  options?: {
+    limit?: number
+    skip?: number
+    branch?: string
+    file?: string
   }
 ): Promise<GitLogEntry[]> {
   try {
@@ -552,8 +563,8 @@ export async function getCommitLog(
     }
 
     const log = await git.log([...args, '--format=' + JSON.stringify(logOptions.format)])
-    
-    return log.all.map(commit => ({
+
+    return log.all.map((commit) => ({
       hash: commit.hash,
       abbreviatedHash: (commit as any).abbreviatedHash || commit.hash.substring(0, 7),
       message: commit.message,
@@ -594,7 +605,7 @@ export async function getCommitDetails(projectId: number, commitHash: string): P
     const subject = lines[1]
     const body = lines[2]
     const message = body ? `${subject}\n\n${body}` : subject
-    
+
     return {
       hash,
       message,
@@ -609,7 +620,7 @@ export async function getCommitDetails(projectId: number, commitHash: string): P
         date: lines[8]
       },
       parents: lines[9] ? lines[9].split(' ') : [],
-      files: diffSummary.files.map(f => f.file)
+      files: diffSummary.files.map((f) => f.file)
     }
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -621,7 +632,11 @@ export async function getCommitDetails(projectId: number, commitHash: string): P
   }
 }
 
-export async function getFileDiff(projectId: number, filePath: string, options?: { commit?: string; staged?: boolean }): Promise<string> {
+export async function getFileDiff(
+  projectId: number,
+  filePath: string,
+  options?: { commit?: string; staged?: boolean }
+): Promise<string> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -664,11 +679,15 @@ export async function getCommitDiff(projectId: number, commitHash: string): Prom
     ])
 
     return {
-      files: diffSummary.files.map(file => ({
+      files: diffSummary.files.map((file) => ({
         path: file.file,
-        type: file.binary ? 'modified' : 
-              file.insertions > 0 && file.deletions === 0 ? 'added' :
-              file.insertions === 0 && file.deletions > 0 ? 'deleted' : 'modified',
+        type: file.binary
+          ? 'modified'
+          : file.insertions > 0 && file.deletions === 0
+            ? 'added'
+            : file.insertions === 0 && file.deletions > 0
+              ? 'deleted'
+              : 'modified',
         additions: file.insertions,
         deletions: file.deletions,
         binary: file.binary
@@ -724,8 +743,8 @@ export async function getRemotes(projectId: number): Promise<GitRemote[]> {
     const git: SimpleGit = simpleGit(projectPath)
 
     const remotes = await git.getRemotes(true)
-    
-    return remotes.map(remote => ({
+
+    return remotes.map((remote) => ({
       name: remote.name,
       fetch: remote.refs.fetch || '',
       push: remote.refs.push || ''
@@ -782,7 +801,11 @@ export async function removeRemote(projectId: number, name: string): Promise<voi
   }
 }
 
-export async function fetch(projectId: number, remote: string = 'origin', options?: { prune?: boolean }): Promise<void> {
+export async function fetch(
+  projectId: number,
+  remote: string = 'origin',
+  options?: { prune?: boolean }
+): Promise<void> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -808,7 +831,12 @@ export async function fetch(projectId: number, remote: string = 'origin', option
   }
 }
 
-export async function pull(projectId: number, remote: string = 'origin', branch?: string, options?: { rebase?: boolean }): Promise<void> {
+export async function pull(
+  projectId: number,
+  remote: string = 'origin',
+  branch?: string,
+  options?: { rebase?: boolean }
+): Promise<void> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -840,7 +868,12 @@ export async function pull(projectId: number, remote: string = 'origin', branch?
   }
 }
 
-export async function push(projectId: number, remote: string = 'origin', branch?: string, options?: { force?: boolean; setUpstream?: boolean }): Promise<void> {
+export async function push(
+  projectId: number,
+  remote: string = 'origin',
+  branch?: string,
+  options?: { force?: boolean; setUpstream?: boolean }
+): Promise<void> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -887,11 +920,13 @@ export async function getTags(projectId: number): Promise<GitTag[]> {
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
 
-    const tags = await git.tags(['--format=%(refname:short)%09%(objectname)%09%(subject)%09%(taggername)%09%(taggeremail)%09%(taggerdate:iso)'])
-    
-    return tags.all.map(tagLine => {
+    const tags = await git.tags([
+      '--format=%(refname:short)%09%(objectname)%09%(subject)%09%(taggername)%09%(taggeremail)%09%(taggerdate:iso)'
+    ])
+
+    return tags.all.map((tagLine) => {
       const [name, commit, annotation = '', taggerName = '', taggerEmail = '', taggerDate = ''] = tagLine.split('\t')
-      
+
       const tag: GitTag = {
         name,
         commit,
@@ -918,7 +953,11 @@ export async function getTags(projectId: number): Promise<GitTag[]> {
   }
 }
 
-export async function createTag(projectId: number, tagName: string, options?: { message?: string; ref?: string }): Promise<void> {
+export async function createTag(
+  projectId: number,
+  tagName: string,
+  options?: { message?: string; ref?: string }
+): Promise<void> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -1013,12 +1052,11 @@ export async function stashList(projectId: number): Promise<GitStash[]> {
     const git: SimpleGit = simpleGit(projectPath)
 
     const stashListResult = await git.stashList()
-    
+
     return stashListResult.all.map((stashItem, index) => {
       // Parse stash message format: stash@{0}: WIP on branch: message
-      const match = stashItem.message.match(/WIP on (.+?): (.+)$/) || 
-                   stashItem.message.match(/On (.+?): (.+)$/)
-      
+      const match = stashItem.message.match(/WIP on (.+?): (.+)$/) || stashItem.message.match(/On (.+?): (.+)$/)
+
       return {
         index,
         message: match ? match[2] : stashItem.message,
@@ -1170,7 +1208,7 @@ export async function blame(projectId: number, filePath: string): Promise<GitBla
 
     // Use git blame with porcelain format for easier parsing
     const blameResult = await git.raw(['blame', '--porcelain', filePath])
-    
+
     const lines: GitBlameLine[] = []
     const blameLines = blameResult.split('\n')
     let i = 0
@@ -1187,12 +1225,12 @@ export async function blame(projectId: number, filePath: string): Promise<GitBla
       if (match) {
         const commit = match[1]
         const lineNumber = parseInt(match[3], 10)
-        
+
         // Skip metadata lines
         let author = ''
         let date = ''
         let content = ''
-        
+
         i++
         while (i < blameLines.length && !blameLines[i].startsWith('\t')) {
           const metaLine = blameLines[i]
@@ -1239,7 +1277,10 @@ export async function blame(projectId: number, filePath: string): Promise<GitBla
 // Other Advanced Features
 // ============================================
 
-export async function clean(projectId: number, options?: { directories?: boolean; force?: boolean; dryRun?: boolean }): Promise<string[]> {
+export async function clean(
+  projectId: number,
+  options?: { directories?: boolean; force?: boolean; dryRun?: boolean }
+): Promise<string[]> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -1272,7 +1313,11 @@ export async function clean(projectId: number, options?: { directories?: boolean
   }
 }
 
-export async function getConfig(projectId: number, key?: string, options?: { global?: boolean }): Promise<string | Record<string, string>> {
+export async function getConfig(
+  projectId: number,
+  key?: string,
+  options?: { global?: boolean }
+): Promise<string | Record<string, string>> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {
@@ -1288,7 +1333,7 @@ export async function getConfig(projectId: number, key?: string, options?: { glo
         configOptions.push('--global')
       }
       configOptions.push(key)
-      
+
       const value = await git.raw(configOptions)
       return value.trim()
     } else {
@@ -1296,17 +1341,17 @@ export async function getConfig(projectId: number, key?: string, options?: { glo
       if (options?.global) {
         configOptions.push('--global')
       }
-      
+
       const configList = await git.raw(configOptions)
       const config: Record<string, string> = {}
-      
-      configList.split('\n').forEach(line => {
+
+      configList.split('\n').forEach((line) => {
         const [key, value] = line.split('=', 2)
         if (key && value) {
           config[key] = value
         }
       })
-      
+
       return config
     }
   } catch (error) {
@@ -1319,7 +1364,12 @@ export async function getConfig(projectId: number, key?: string, options?: { glo
   }
 }
 
-export async function setConfig(projectId: number, key: string, value: string, options?: { global?: boolean }): Promise<void> {
+export async function setConfig(
+  projectId: number,
+  key: string,
+  value: string,
+  options?: { global?: boolean }
+): Promise<void> {
   try {
     const project = await getProjectById(projectId)
     if (!project.path) {

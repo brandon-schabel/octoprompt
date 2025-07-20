@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '../octo-client'
+import { octoClient } from '../octo-client'
 import { toast } from 'sonner'
 
 import type { GitStatusResult, GitBranch, GitLogEntry, GitRemote, GitTag, GitStash } from '@octoprompt/schemas'
@@ -11,7 +11,7 @@ export function useProjectGitStatus(projectId: number | undefined, enabled = tru
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await apiClient.git.getProjectGitStatus(projectId)
+      const response = await octoClient.git.getProjectGitStatus(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch git status')
       }
@@ -41,7 +41,7 @@ export function useStageFiles(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.stageFiles(projectId, filePaths)
+      return octoClient.git.stageFiles(projectId, filePaths)
     },
     onSuccess: (data, filePaths) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -61,7 +61,7 @@ export function useUnstageFiles(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.unstageFiles(projectId, filePaths)
+      return octoClient.git.unstageFiles(projectId, filePaths)
     },
     onSuccess: (data, filePaths) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -81,7 +81,7 @@ export function useStageAll(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.stageAll(projectId)
+      return octoClient.git.stageAll(projectId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -101,7 +101,7 @@ export function useUnstageAll(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.unstageAll(projectId)
+      return octoClient.git.unstageAll(projectId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -121,7 +121,7 @@ export function useCommitChanges(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.commitChanges(projectId, message)
+      return octoClient.git.commitChanges(projectId, message)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -134,8 +134,8 @@ export function useCommitChanges(projectId: number | undefined) {
 }
 
 export function useFileDiff(
-  projectId: number | undefined, 
-  filePath: string | undefined, 
+  projectId: number | undefined,
+  filePath: string | undefined,
   options?: { staged?: boolean; commit?: string },
   enabled = true
 ) {
@@ -145,7 +145,7 @@ export function useFileDiff(
       if (!projectId || !filePath) {
         throw new Error('Project ID and file path are required')
       }
-      const response = await apiClient.git.getFileDiff(projectId, filePath, options)
+      const response = await octoClient.git.getFileDiff(projectId, filePath, options)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch file diff')
       }
@@ -167,7 +167,7 @@ export function useGitBranches(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await apiClient.git.getBranches(projectId)
+      const response = await octoClient.git.getBranches(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch branches')
       }
@@ -186,7 +186,7 @@ export function useCreateBranch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.createBranch(projectId, name, startPoint)
+      return octoClient.git.createBranch(projectId, name, startPoint)
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
@@ -207,7 +207,7 @@ export function useSwitchBranch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.switchBranch(projectId, branchName)
+      return octoClient.git.switchBranch(projectId, branchName)
     },
     onSuccess: (data, branchName) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
@@ -236,7 +236,7 @@ export function useGitLog(
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await apiClient.git.getCommitLog(projectId, options)
+      const response = await octoClient.git.getCommitLog(projectId, options)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch commit log')
       }
@@ -258,7 +258,7 @@ export function useGitRemotes(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await apiClient.git.getRemotes(projectId)
+      const response = await octoClient.git.getRemotes(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch remotes')
       }
@@ -273,21 +273,21 @@ export function useGitPush(projectId: number | undefined) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      remote, 
-      branch, 
-      force, 
-      setUpstream 
-    }: { 
-      remote?: string; 
-      branch?: string; 
-      force?: boolean; 
-      setUpstream?: boolean 
+    mutationFn: async ({
+      remote,
+      branch,
+      force,
+      setUpstream
+    }: {
+      remote?: string
+      branch?: string
+      force?: boolean
+      setUpstream?: boolean
     }) => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.push(projectId, remote, branch, { force, setUpstream })
+      return octoClient.git.push(projectId, remote, branch, { force, setUpstream })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -308,7 +308,7 @@ export function useGitFetch(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.fetch(projectId, remote, prune)
+      return octoClient.git.fetch(projectId, remote, prune)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'branches'] })
@@ -325,19 +325,11 @@ export function useGitPull(projectId: number | undefined) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      remote, 
-      branch, 
-      rebase 
-    }: { 
-      remote?: string; 
-      branch?: string; 
-      rebase?: boolean 
-    }) => {
+    mutationFn: async ({ remote, branch, rebase }: { remote?: string; branch?: string; rebase?: boolean }) => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.pull(projectId, remote, branch, rebase)
+      return octoClient.git.pull(projectId, remote, branch, rebase)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
@@ -360,7 +352,7 @@ export function useGitTags(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await apiClient.git.getTags(projectId)
+      const response = await octoClient.git.getTags(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch tags')
       }
@@ -375,19 +367,11 @@ export function useCreateTag(projectId: number | undefined) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      name, 
-      message, 
-      ref 
-    }: { 
-      name: string; 
-      message?: string; 
-      ref?: string 
-    }) => {
+    mutationFn: async ({ name, message, ref }: { name: string; message?: string; ref?: string }) => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.createTag(projectId, name, { message, ref })
+      return octoClient.git.createTag(projectId, name, { message, ref })
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'tags'] })
@@ -410,7 +394,7 @@ export function useGitStashList(projectId: number | undefined, enabled = true) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      const response = await apiClient.git.getStashList(projectId)
+      const response = await octoClient.git.getStashList(projectId)
       if (!response.success || !response.data) {
         throw new Error(response.message || 'Failed to fetch stash list')
       }
@@ -429,7 +413,7 @@ export function useGitStash(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.stash(projectId, message)
+      return octoClient.git.stash(projectId, message)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -450,7 +434,7 @@ export function useGitStashApply(projectId: number | undefined) {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.stashApply(projectId, ref)
+      return octoClient.git.stashApply(projectId, ref)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'git', 'status'] })
@@ -470,17 +454,11 @@ export function useGitReset(projectId: number | undefined) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ 
-      ref, 
-      mode 
-    }: { 
-      ref: string; 
-      mode?: 'soft' | 'mixed' | 'hard' 
-    }) => {
+    mutationFn: async ({ ref, mode }: { ref: string; mode?: 'soft' | 'mixed' | 'hard' }) => {
       if (!projectId) {
         throw new Error('Project ID is required')
       }
-      return apiClient.git.reset(projectId, ref, mode)
+      return octoClient.git.reset(projectId, ref, mode)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects', projectId] })

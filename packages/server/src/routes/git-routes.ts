@@ -844,8 +844,14 @@ const getCommitLogRoute = createRoute({
       projectId: z.string().transform((val) => parseInt(val, 10))
     }),
     query: z.object({
-      limit: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
-      skip: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
+      limit: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : undefined)),
+      skip: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : undefined)),
       branch: z.string().optional(),
       file: z.string().optional()
     })

@@ -92,6 +92,10 @@ export class DatabaseManager {
         'created_at',
         'JSON_EXTRACT(data, "$.done")'
       ]
+    },
+    {
+      name: 'selected_files',
+      indexes: ['JSON_EXTRACT(data, "$.projectId")', 'JSON_EXTRACT(data, "$.tabId")', 'updated_at']
     }
   ]
 
@@ -406,7 +410,7 @@ export class DatabaseManager {
     this.ensureTable(tableName)
     const query = this.db.prepare(`SELECT 1 FROM ${tableName} WHERE id = ? LIMIT 1`)
     const row = query.get(id)
-    return row !== undefined
+    return row != null // Use != to check for both null and undefined
   }
 
   async clear(tableName: string): Promise<void> {

@@ -246,10 +246,10 @@ export const gitResetRequestSchema = z.object({
 // Git diff request/response schemas
 export const gitDiffRequestSchema = z.object({
   filePath: z.string().describe('The file path to get diff for'),
-  staged: z.union([
-    z.boolean(),
-    z.string().transform((val) => val === 'true')
-  ]).optional().describe('Get staged diff instead of working directory diff'),
+  staged: z
+    .union([z.boolean(), z.string().transform((val) => val === 'true')])
+    .optional()
+    .describe('Get staged diff instead of working directory diff'),
   commit: z.string().optional().describe('Get diff for a specific commit')
 })
 
@@ -257,12 +257,14 @@ export type GitDiffRequest = z.infer<typeof gitDiffRequestSchema>
 
 export const gitDiffResponseSchema = z.object({
   success: z.boolean(),
-  data: z.object({
-    filePath: z.string(),
-    diff: z.string().describe('The raw diff content'),
-    staged: z.boolean(),
-    commit: z.string().optional()
-  }).optional(),
+  data: z
+    .object({
+      filePath: z.string(),
+      diff: z.string().describe('The raw diff content'),
+      staged: z.boolean(),
+      commit: z.string().optional()
+    })
+    .optional(),
   message: z.string().optional()
 })
 

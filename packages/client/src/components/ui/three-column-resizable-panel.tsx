@@ -86,46 +86,46 @@ export function ThreeColumnResizablePanel({
 
   const handleDragEnd = (event: any) => {
     const { active, delta } = event
-    
+
     if (!delta) return
 
     const deltaPercentage = (delta.x / containerWidth) * 100
 
     if (active.id === 'left-resizer') {
       setIsDraggingLeft(false)
-      
+
       // Calculate new left width
       let newLeftWidth = leftPanelWidth + deltaPercentage
-      
+
       // Enforce minimum widths
       const minLeftPercent = (minLeftPanelWidth / containerWidth) * 100
       const minMiddlePercent = (minMiddlePanelWidth / containerWidth) * 100
-      
+
       // Don't let left panel get too small
       newLeftWidth = Math.max(minLeftPercent, newLeftWidth)
-      
+
       // Don't let middle panel get too small
       const maxLeftWidth = 100 - rightPanelWidth - minMiddlePercent
       newLeftWidth = Math.min(maxLeftWidth, newLeftWidth)
-      
+
       setLeftPanelWidth(newLeftWidth)
     } else if (active.id === 'right-resizer') {
       setIsDraggingRight(false)
-      
+
       // Calculate new right width (resizer moves opposite direction)
       let newRightWidth = rightPanelWidth - deltaPercentage
-      
+
       // Enforce minimum widths
       const minRightPercent = (minRightPanelWidth / containerWidth) * 100
       const minMiddlePercent = (minMiddlePanelWidth / containerWidth) * 100
-      
+
       // Don't let right panel get too small
       newRightWidth = Math.max(minRightPercent, newRightWidth)
-      
+
       // Don't let middle panel get too small
       const maxRightWidth = 100 - leftPanelWidth - minMiddlePercent
       newRightWidth = Math.min(maxRightWidth, newRightWidth)
-      
+
       setRightPanelWidth(newRightWidth)
     }
   }
@@ -141,7 +141,10 @@ export function ThreeColumnResizablePanel({
 
   return (
     <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-      <div id='three-column-resizable-container' className={cn('flex flex-row overflow-hidden w-full h-full', className)}>
+      <div
+        id='three-column-resizable-container'
+        className={cn('flex flex-row overflow-hidden w-full h-full', className)}
+      >
         {/* Left Panel */}
         <div
           className={cn('h-full overflow-auto', leftPanelClassName)}

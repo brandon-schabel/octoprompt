@@ -5,11 +5,14 @@ import {
   type Prompt,
   PromptSchema,
   type PromptProject,
-  PromptProjectSchema
+  PromptProjectSchema,
+  PromptSuggestionsZodSchema
 } from '@octoprompt/schemas'
 
-import { ApiError } from '@octoprompt/shared'
+import { ApiError, promptsMap } from '@octoprompt/shared'
 import { ZodError } from 'zod'
+import { generateStructuredData } from './gen-ai-services'
+import { getCompactProjectSummary } from './utils/get-full-project-summary'
 
 // Utility function to populate projectId on prompts from associations
 async function populatePromptProjectId(prompt: Prompt): Promise<Prompt> {
@@ -252,4 +255,67 @@ export async function deletePrompt(promptId: number): Promise<boolean> {
 export async function getPromptProjects(promptId: number): Promise<PromptProject[]> {
   const promptProjects = await promptStorage.readPromptProjects()
   return promptProjects.filter((link) => link.promptId === promptId)
+}
+
+export async function suggestPrompts(projectId: number, userInput: string, limit: number = 5): Promise<Prompt[]> {
+  try {
+    // Get all prompts for the project
+    const projectPrompts = await listPromptsByProject(projectId)
+
+    if (projectPrompts.length === 0) {
+      return []
+    }
+
+    // Get compact project summary for context
+    const projectSummary = await getCompactProjectSummary(projectId)
+
+    // Build prompt summaries with id, name, and content preview
+    const promptSummaries = projectPrompts.map((prompt) => ({
+      id: prompt.id,
+      name: prompt.name,
+      contentPreview: prompt.content.slice(0, 200) + (prompt.content.length > 200 ? '...' : '')
+    }))
+
+    const systemPrompt = promptsMap.suggestPrompts
+
+    const userPrompt = `
+<user_input>
+${userInput}
+</user_input>
+
+<project_summary>
+${projectSummary}
+</project_summary>
+
+<available_prompts>
+${JSON.stringify(promptSummaries, null, 2)}
+</available_prompts>
+
+Based on the user's input and project context, suggest the most relevant prompts that would help them accomplish their task. Return only the prompt IDs.
+`
+
+    // Use AI to get suggested prompt IDs
+    const suggestions = await generateStructuredData(systemPrompt, userPrompt, PromptSuggestionsZodSchema)
+
+    // Filter and order prompts based on AI suggestions
+    const suggestedPromptIds = suggestions.promptIds.slice(0, limit)
+    const suggestedPrompts: Prompt[] = []
+
+    // Maintain the order suggested by AI
+    for (const promptId of suggestedPromptIds) {
+      const prompt = projectPrompts.find((p) => p.id === promptId)
+      if (prompt) {
+        suggestedPrompts.push(prompt)
+      }
+    }
+
+    return suggestedPrompts
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to suggest prompts: ${error instanceof Error ? error.message : String(error)}`,
+      'SUGGEST_PROMPTS_FAILED'
+    )
+  }
 }

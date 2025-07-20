@@ -13,6 +13,7 @@ export * from './src/browse-directory.schemas'
 export * from './src/mcp.schemas'
 export * from './src/ticket.schemas'
 export * from './src/git.schemas'
+export * from './src/selected-files.schemas'
 
 // export constants
 export * from './src/constants/file-sync-options'

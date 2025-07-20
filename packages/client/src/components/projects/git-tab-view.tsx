@@ -165,8 +165,8 @@ export function GitTabView({ projectId }: GitTabViewProps) {
               ) : (
                 <div className='space-y-1'>
                   {unstagedFiles.map((file) => (
-                    <div 
-                      key={file.path} 
+                    <div
+                      key={file.path}
                       className='flex items-center gap-2 p-2 hover:bg-accent rounded-md group cursor-pointer'
                       onClick={() => {
                         setSelectedFile(file.path)
@@ -235,8 +235,8 @@ export function GitTabView({ projectId }: GitTabViewProps) {
               ) : (
                 <div className='space-y-1'>
                   {stagedFiles.map((file) => (
-                    <div 
-                      key={file.path} 
+                    <div
+                      key={file.path}
                       className='flex items-center gap-2 p-2 hover:bg-accent rounded-md group cursor-pointer'
                       onClick={() => {
                         setSelectedFile(file.path)
@@ -325,8 +325,8 @@ export function GitTabView({ projectId }: GitTabViewProps) {
           }}
           projectId={projectId}
           filePath={selectedFile}
-          hasStaged={stagedFiles.some(f => f.path === selectedFile)}
-          hasUnstaged={unstagedFiles.some(f => f.path === selectedFile)}
+          hasStaged={stagedFiles.some((f) => f.path === selectedFile)}
+          hasUnstaged={unstagedFiles.some((f) => f.path === selectedFile)}
         />
       )}
     </div>

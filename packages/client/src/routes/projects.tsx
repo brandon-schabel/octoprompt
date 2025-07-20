@@ -311,7 +311,7 @@ type MainProjectsLayoutProps = {
 
 function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
   const userInputRef = useRef<UserInputPanelRef>(null)
-  
+
   return (
     <ErrorBoundary>
       <div className='flex-1 min-h-0 overflow-hidden h-full flex flex-col'>

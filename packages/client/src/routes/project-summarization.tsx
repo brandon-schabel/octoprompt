@@ -148,13 +148,13 @@ export function ProjectSummarizationSettingsPage() {
         const tokenCount = tokensMap.get(file.id) ?? 0
         if (minTokensFilter !== null && tokenCount < minTokensFilter) return false
         if (maxTokensFilter !== null && tokenCount > maxTokensFilter) return false
-        
+
         // Category filter
         if (categoryFilter !== 'all') {
           const fileCategory = categorizeFile(file)
           if (fileCategory.category !== categoryFilter) return false
         }
-        
+
         return true
       }),
     [projectFiles, tokensMap, minTokensFilter, maxTokensFilter, categoryFilter]
@@ -357,7 +357,7 @@ export function ProjectSummarizationSettingsPage() {
           return category.category === 'pending'
         })
         .map((file) => file.id)
-        
+
       setSelectedFileIds(pendingIds)
       if (pendingIds.length > 0) {
         toast.info(`Selected ${pendingIds.length} files pending summarization.`)
@@ -377,10 +377,7 @@ export function ProjectSummarizationSettingsPage() {
   return (
     <div className='p-4 space-y-6'>
       {/* Summarization Coverage Stats */}
-      <SummarizationStatsCard 
-        projectFiles={projectFiles} 
-        isEnabled={isProjectSummarizationEnabled} 
-      />
+      <SummarizationStatsCard projectFiles={projectFiles} isEnabled={isProjectSummarizationEnabled} />
 
       <Card>
         <CardHeader>
@@ -598,11 +595,7 @@ export function ProjectSummarizationSettingsPage() {
                           <span className='truncate'>{file.path}</span>
                           {/* Category Badge */}
                           {fileCategory.category !== 'summarized' && fileCategory.category !== 'pending' && (
-                            <Badge 
-                              variant='outline' 
-                              className='text-[10px] px-1 py-0 h-4'
-                              title={fileCategory.reason}
-                            >
+                            <Badge variant='outline' className='text-[10px] px-1 py-0 h-4' title={fileCategory.reason}>
                               {fileCategory.category === 'binary' && 'Binary'}
                               {fileCategory.category === 'too-large' && 'Too Large'}
                               {fileCategory.category === 'empty' && 'Empty'}

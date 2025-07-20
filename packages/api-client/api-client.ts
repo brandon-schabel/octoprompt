@@ -38,6 +38,8 @@ import {
   PromptResponseSchema as PromptResponseSchemaZ,
   PromptListResponseSchema as PromptListResponseSchemaZ,
   OptimizePromptResponseSchema as OptimizePromptResponseSchemaZ,
+  SuggestPromptsRequestSchema,
+  SuggestPromptsResponseSchema as SuggestPromptsResponseSchemaZ,
   CreatePromptBodySchema,
   UpdatePromptBodySchema,
   OptimizeUserInputRequestSchema
@@ -143,10 +145,10 @@ import {
 } from '@octoprompt/schemas'
 
 // Git imports
-import type { 
-  GitStatusResult, 
-  GetProjectGitStatusResponse, 
-  GitOperationResponse, 
+import type {
+  GitStatusResult,
+  GetProjectGitStatusResponse,
+  GitOperationResponse,
   GitDiffResponse,
   GitBranch,
   GitLogEntry,
@@ -649,6 +651,71 @@ export class ProjectService extends BaseApiClient {
     })
     return result as DataResponseSchema<ProjectStatistics>
   }
+
+  // Selected Files methods
+  async getSelectedFiles(projectId: number, tabId?: number) {
+    const result = await this.request('GET', `/projects/${projectId}/selected-files`, {
+      params: tabId ? { tabId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.any().nullable()
+      })
+    })
+    return result
+  }
+
+  async getAllSelectedFiles(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/selected-files/all`, {
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.array(z.any())
+      })
+    })
+    return result
+  }
+
+  async updateSelectedFiles(projectId: number, data: {
+    tabId: number
+    fileIds: number[]
+    promptIds?: number[]
+    userPrompt?: string
+  }) {
+    const result = await this.request('PUT', `/projects/${projectId}/selected-files`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.any()
+      })
+    })
+    return result
+  }
+
+  async clearSelectedFiles(projectId: number, tabId?: number) {
+    const result = await this.request('DELETE', `/projects/${projectId}/selected-files`, {
+      params: tabId ? { tabId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        message: z.string()
+      })
+    })
+    return result.success
+  }
+
+  async getSelectionContext(projectId: number, tabId?: number) {
+    const result = await this.request('GET', `/projects/${projectId}/selection-context`, {
+      params: tabId ? { tabId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          fileIds: z.array(z.number()),
+          promptIds: z.array(z.number()),
+          userPrompt: z.string(),
+          lastUpdated: z.number()
+        }).nullable()
+      })
+    })
+    return result
+  }
 }
 
 // Prompt Service
@@ -720,6 +787,15 @@ export class PromptService extends BaseApiClient {
       responseSchema: OptimizePromptResponseSchemaZ
     })
     return result as DataResponseSchema<{ optimizedPrompt: string }>
+  }
+
+  async suggestPrompts(projectId: number, data: { userInput: string; limit?: number }) {
+    const validatedData = this.validateBody(SuggestPromptsRequestSchema, data)
+    const result = await this.request('POST', `/projects/${projectId}/suggest-prompts`, {
+      body: validatedData,
+      responseSchema: SuggestPromptsResponseSchemaZ
+    })
+    return result as DataResponseSchema<{ prompts: Prompt[] }>
   }
 }
 
@@ -1397,7 +1473,7 @@ export class GitService extends BaseApiClient {
     const queryParams = new URLSearchParams({ filePath })
     if (options?.staged) queryParams.append('staged', 'true')
     if (options?.commit) queryParams.append('commit', options.commit)
-    
+
     const result = await this.request('GET', `/projects/${projectId}/git/diff?${queryParams}`, {
       responseSchema: gitDiffResponseSchema
     })
@@ -1457,12 +1533,17 @@ export class GitService extends BaseApiClient {
     return result as DataResponseSchema<GitRemote[]>
   }
 
-  async push(projectId: number, remote?: string, branch?: string, options?: { force?: boolean; setUpstream?: boolean }) {
-    const validatedData = this.validateBody(gitPushRequestSchema, { 
-      remote: remote || 'origin', 
-      branch, 
-      force: options?.force, 
-      setUpstream: options?.setUpstream 
+  async push(
+    projectId: number,
+    remote?: string,
+    branch?: string,
+    options?: { force?: boolean; setUpstream?: boolean }
+  ) {
+    const validatedData = this.validateBody(gitPushRequestSchema, {
+      remote: remote || 'origin',
+      branch,
+      force: options?.force,
+      setUpstream: options?.setUpstream
     })
     const result = await this.request('POST', `/projects/${projectId}/git/push`, {
       body: validatedData,

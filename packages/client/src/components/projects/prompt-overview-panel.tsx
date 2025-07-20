@@ -23,18 +23,20 @@ interface PromptOverviewPanelProps {
   className?: string
 }
 
-
 export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOverviewPanelProps>(
   function PromptOverviewPanel({ className }, ref) {
     const [, , activeProjectTabId] = useActiveProjectTab()
 
     const { data: promptsPanelCollapsed = true } = useProjectTabField('promptsPanelCollapsed', activeProjectTabId ?? -1)
-    const { data: selectedFilesCollapsed = true } = useProjectTabField('selectedFilesCollapsed', activeProjectTabId ?? -1)
+    const { data: selectedFilesCollapsed = true } = useProjectTabField(
+      'selectedFilesCollapsed',
+      activeProjectTabId ?? -1
+    )
 
     // Refs for child components
     const promptsListRef = useRef<PromptsListRef>(null)
     const selectedFilesListRef = useRef<SelectedFilesListRef>(null)
-    
+
     // Expose empty methods to parent (for compatibility)
     useImperativeHandle(ref, () => ({}))
 
@@ -47,17 +49,13 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
               // Both expanded - use resizable panel for manual control
               <VerticalResizablePanel
                 topPanel={
-                  <PromptsList 
-                    ref={promptsListRef} 
-                    projectTabId={activeProjectTabId || -1} 
-                    className='h-full w-full' 
-                  />
+                  <PromptsList ref={promptsListRef} projectTabId={activeProjectTabId || -1} className='h-full w-full' />
                 }
                 bottomPanel={
-                  <CollapsibleSelectedFilesList 
-                    ref={selectedFilesListRef} 
-                    projectTabId={activeProjectTabId || -1} 
-                    className='h-full w-full' 
+                  <CollapsibleSelectedFilesList
+                    ref={selectedFilesListRef}
+                    projectTabId={activeProjectTabId || -1}
+                    className='h-full w-full'
                   />
                 }
                 initialTopPanelHeight={50}
@@ -69,15 +67,15 @@ export const PromptOverviewPanel = forwardRef<PromptOverviewPanelRef, PromptOver
             ) : (
               // At least one collapsed - use flex layout for automatic sizing
               <div className='flex flex-col gap-4 h-full'>
-                <PromptsList 
-                  ref={promptsListRef} 
-                  projectTabId={activeProjectTabId || -1} 
-                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0 overflow-hidden'} 
+                <PromptsList
+                  ref={promptsListRef}
+                  projectTabId={activeProjectTabId || -1}
+                  className={promptsPanelCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0 overflow-hidden'}
                 />
-                <CollapsibleSelectedFilesList 
-                  ref={selectedFilesListRef} 
-                  projectTabId={activeProjectTabId || -1} 
-                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0 overflow-hidden'} 
+                <CollapsibleSelectedFilesList
+                  ref={selectedFilesListRef}
+                  projectTabId={activeProjectTabId || -1}
+                  className={selectedFilesCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0 overflow-hidden'}
                 />
               </div>
             )}

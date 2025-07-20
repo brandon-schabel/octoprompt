@@ -30,7 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 
 type ExplorerRefs = {
@@ -85,7 +85,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteIndex, setAutocompleteIndex] = useState(-1)
 
-
   const handleSearchChange = useCallback(
     (val: string) => {
       setLocalFileSearch(val)
@@ -137,14 +136,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     setAutocompleteIndex(-1)
   })
 
-  const handleViewFile = useCallback(
-    (file: ProjectFile, editMode: boolean = false, showDiff: boolean = false) => {
-      setOpenInEditMode(editMode)
-      setStartInDiffMode(showDiff)
-      setViewedFile(file)
-    },
-    []
-  )
+  const handleViewFile = useCallback((file: ProjectFile, editMode: boolean = false, showDiff: boolean = false) => {
+    setOpenInEditMode(editMode)
+    setStartInDiffMode(showDiff)
+    setViewedFile(file)
+  }, [])
 
   const handleSaveFileContent = useCallback(
     async (content: string) => {
@@ -252,11 +248,11 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           <DropdownMenuContent align='start' className='w-56'>
             <DropdownMenuLabel>File Selection</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            
+
             {/* Select All Files */}
             <DropdownMenuItem
               onClick={() => {
-                const allFileIds = projectFiles.map(file => file.id)
+                const allFileIds = projectFiles.map((file) => file.id)
                 selectFiles(allFileIds)
               }}
             >
@@ -268,101 +264,100 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
             </DropdownMenuItem>
 
             {/* Git options - only show if git is available */}
-            {gitStatus?.success && gitStatus.data.files.length > 0 && (() => {
-              const changedFiles = gitStatus.data.files.filter(
-                (file) => file.status !== 'unchanged' && file.status !== 'ignored'
-              )
-              const stagedFiles = changedFiles.filter((file) => file.staged)
-              const unstagedFiles = changedFiles.filter((file) => !file.staged)
+            {gitStatus?.success &&
+              gitStatus.data.files.length > 0 &&
+              (() => {
+                const changedFiles = gitStatus.data.files.filter(
+                  (file) => file.status !== 'unchanged' && file.status !== 'ignored'
+                )
+                const stagedFiles = changedFiles.filter((file) => file.staged)
+                const unstagedFiles = changedFiles.filter((file) => !file.staged)
 
-              if (changedFiles.length === 0) return null
+                if (changedFiles.length === 0) return null
 
-              return (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className='text-xs'>Git Changes</DropdownMenuLabel>
-                  
-                  {/* Select All Git Files */}
-                  <DropdownMenuItem
-                    onClick={() => {
-                      const filesWithChanges = changedFiles
-                        .map((file) => {
-                          const projectFile = projectFiles.find((pf) => pf.path === file.path)
-                          return projectFile?.id
-                        })
-                        .filter((id): id is number => id !== undefined)
+                return (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className='text-xs'>Git Changes</DropdownMenuLabel>
 
-                      if (filesWithChanges.length > 0) {
-                        selectFiles([...new Set([...selectedFiles, ...filesWithChanges])])
-                      }
-                    }}
-                  >
-                    <GitPullRequest className='h-4 w-4 mr-2' />
-                    <span>All Changed Files</span>
-                    <Badge variant='secondary' className='ml-auto'>
-                      {changedFiles.length}
-                    </Badge>
-                  </DropdownMenuItem>
-
-                  {/* Select Staged Files */}
-                  {stagedFiles.length > 0 && (
+                    {/* Select All Git Files */}
                     <DropdownMenuItem
                       onClick={() => {
-                        const stagedFileIds = stagedFiles
+                        const filesWithChanges = changedFiles
                           .map((file) => {
                             const projectFile = projectFiles.find((pf) => pf.path === file.path)
                             return projectFile?.id
                           })
                           .filter((id): id is number => id !== undefined)
 
-                        if (stagedFileIds.length > 0) {
-                          selectFiles([...new Set([...selectedFiles, ...stagedFileIds])])
-                        }
-                      }}
-                    >
-                      <GitBranch className='h-4 w-4 mr-2' />
-                      <span>Staged Files</span>
-                      <Badge variant='secondary' className='ml-auto'>
-                        {stagedFiles.length}
-                      </Badge>
-                    </DropdownMenuItem>
-                  )}
-
-                  {/* Select Unstaged Files */}
-                  {unstagedFiles.length > 0 && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const unstagedFileIds = unstagedFiles
-                          .map((file) => {
-                            const projectFile = projectFiles.find((pf) => pf.path === file.path)
-                            return projectFile?.id
-                          })
-                          .filter((id): id is number => id !== undefined)
-
-                        if (unstagedFileIds.length > 0) {
-                          selectFiles([...new Set([...selectedFiles, ...unstagedFileIds])])
+                        if (filesWithChanges.length > 0) {
+                          selectFiles([...new Set([...selectedFiles, ...filesWithChanges])])
                         }
                       }}
                     >
                       <GitPullRequest className='h-4 w-4 mr-2' />
-                      <span>Unstaged Files</span>
+                      <span>All Changed Files</span>
                       <Badge variant='secondary' className='ml-auto'>
-                        {unstagedFiles.length}
+                        {changedFiles.length}
                       </Badge>
                     </DropdownMenuItem>
-                  )}
-                </>
-              )
-            })()}
+
+                    {/* Select Staged Files */}
+                    {stagedFiles.length > 0 && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const stagedFileIds = stagedFiles
+                            .map((file) => {
+                              const projectFile = projectFiles.find((pf) => pf.path === file.path)
+                              return projectFile?.id
+                            })
+                            .filter((id): id is number => id !== undefined)
+
+                          if (stagedFileIds.length > 0) {
+                            selectFiles([...new Set([...selectedFiles, ...stagedFileIds])])
+                          }
+                        }}
+                      >
+                        <GitBranch className='h-4 w-4 mr-2' />
+                        <span>Staged Files</span>
+                        <Badge variant='secondary' className='ml-auto'>
+                          {stagedFiles.length}
+                        </Badge>
+                      </DropdownMenuItem>
+                    )}
+
+                    {/* Select Unstaged Files */}
+                    {unstagedFiles.length > 0 && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const unstagedFileIds = unstagedFiles
+                            .map((file) => {
+                              const projectFile = projectFiles.find((pf) => pf.path === file.path)
+                              return projectFile?.id
+                            })
+                            .filter((id): id is number => id !== undefined)
+
+                          if (unstagedFileIds.length > 0) {
+                            selectFiles([...new Set([...selectedFiles, ...unstagedFileIds])])
+                          }
+                        }}
+                      >
+                        <GitPullRequest className='h-4 w-4 mr-2' />
+                        <span>Unstaged Files</span>
+                        <Badge variant='secondary' className='ml-auto'>
+                          {unstagedFiles.length}
+                        </Badge>
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )
+              })()}
 
             {/* Clear selection */}
             {selectedFiles.length > 0 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => selectFiles([])}
-                  className='text-destructive focus:text-destructive'
-                >
+                <DropdownMenuItem onClick={() => selectFiles([])} className='text-destructive focus:text-destructive'>
                   <X className='h-4 w-4 mr-2' />
                   <span>Clear Selection</span>
                 </DropdownMenuItem>

@@ -12,7 +12,7 @@ import type {
   TicketWithTaskCount
 } from '@octoprompt/schemas'
 import { commonErrorHandler } from './common-mutation-error-handler'
-import { apiClient } from '../octo-client'
+import { octoClient } from '../octo-client'
 
 // Query keys for caching
 export const TICKET_KEYS = {
@@ -82,7 +82,7 @@ export function useGetTickets(projectId: number, status?: string) {
   return useQuery({
     queryKey: TICKET_KEYS.list(projectId, status),
     queryFn: async () => {
-      const response = await apiClient.tickets.listTickets(projectId, status)
+      const response = await octoClient.tickets.listTickets(projectId, status)
       return response.data
     },
     enabled: !!projectId,
@@ -94,7 +94,7 @@ export function useGetTicket(ticketId: number) {
   return useQuery({
     queryKey: TICKET_KEYS.detail(ticketId),
     queryFn: async () => {
-      const response = await apiClient.tickets.getTicket(ticketId)
+      const response = await octoClient.tickets.getTicket(ticketId)
       return response.data
     },
     enabled: !!ticketId,
@@ -106,7 +106,7 @@ export function useGetTicketsWithCounts(projectId: number, status?: string) {
   return useQuery({
     queryKey: TICKET_KEYS.withCounts(projectId, status),
     queryFn: async () => {
-      const response = await apiClient.tickets.getTicketsWithCounts(projectId, status)
+      const response = await octoClient.tickets.getTicketsWithCounts(projectId, status)
       return response.data
     },
     enabled: !!projectId,
@@ -118,7 +118,7 @@ export function useGetTicketsWithTasks(projectId: number, status?: string) {
   return useQuery({
     queryKey: TICKET_KEYS.withTasks(projectId, status),
     queryFn: async () => {
-      const response = await apiClient.tickets.getTicketsWithTasks(projectId, status)
+      const response = await octoClient.tickets.getTicketsWithTasks(projectId, status)
       return response.data
     },
     enabled: !!projectId,
@@ -131,7 +131,7 @@ export function useGetTasks(ticketId: number) {
   return useQuery({
     queryKey: TICKET_KEYS.tasks(ticketId),
     queryFn: async () => {
-      const response = await apiClient.tickets.getTasks(ticketId)
+      const response = await octoClient.tickets.getTasks(ticketId)
       return response.data
     },
     enabled: !!ticketId,
@@ -145,7 +145,7 @@ export function useCreateTicket() {
 
   return useMutation({
     mutationFn: async (data: CreateTicketBody) => {
-      const response = await apiClient.tickets.createTicket(data)
+      const response = await octoClient.tickets.createTicket(data)
       return response.data
     },
     onSuccess: (ticket) => {
@@ -163,7 +163,7 @@ export function useUpdateTicket() {
 
   return useMutation({
     mutationFn: async ({ ticketId, data }: { ticketId: number; data: UpdateTicketBody }) => {
-      const response = await apiClient.tickets.updateTicket(ticketId, data)
+      const response = await octoClient.tickets.updateTicket(ticketId, data)
       return response.data
     },
     onSuccess: (ticket) => {
@@ -181,7 +181,7 @@ export function useDeleteTicket() {
 
   return useMutation({
     mutationFn: async ({ ticketId, projectId }: { ticketId: number; projectId: number }) => {
-      await apiClient.tickets.deleteTicket(ticketId)
+      await octoClient.tickets.deleteTicket(ticketId)
       return { ticketId, projectId }
     },
     onSuccess: ({ ticketId, projectId }) => {
@@ -200,7 +200,7 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: async ({ ticketId, data }: { ticketId: number; data: CreateTaskBody }) => {
-      const response = await apiClient.tickets.createTask(ticketId, data)
+      const response = await octoClient.tickets.createTask(ticketId, data)
       return response.data
     },
     onSuccess: (task) => {
@@ -218,7 +218,7 @@ export function useUpdateTask() {
 
   return useMutation({
     mutationFn: async ({ ticketId, taskId, data }: { ticketId: number; taskId: number; data: UpdateTaskBody }) => {
-      const response = await apiClient.tickets.updateTask(ticketId, taskId, data)
+      const response = await octoClient.tickets.updateTask(ticketId, taskId, data)
       return response.data
     },
     onSuccess: (task) => {
@@ -236,7 +236,7 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: async ({ ticketId, taskId }: { ticketId: number; taskId: number }) => {
-      await apiClient.tickets.deleteTask(ticketId, taskId)
+      await octoClient.tickets.deleteTask(ticketId, taskId)
       return { ticketId, taskId }
     },
     onSuccess: ({ ticketId }) => {
@@ -255,7 +255,7 @@ export function useReorderTasks() {
 
   return useMutation({
     mutationFn: async ({ ticketId, data }: { ticketId: number; data: ReorderTasksBody }) => {
-      const response = await apiClient.tickets.reorderTasks(ticketId, data)
+      const response = await octoClient.tickets.reorderTasks(ticketId, data)
       return response.data
     },
     onSuccess: (tasks, { ticketId }) => {
@@ -272,7 +272,7 @@ export function useReorderTasks() {
 export function useSuggestTasks() {
   return useMutation({
     mutationFn: async ({ ticketId, userContext }: { ticketId: number; userContext?: string }) => {
-      const response = await apiClient.tickets.suggestTasks(ticketId, userContext)
+      const response = await octoClient.tickets.suggestTasks(ticketId, userContext)
       return response.data.suggestedTasks
     },
     onError: commonErrorHandler
@@ -284,7 +284,7 @@ export function useAutoGenerateTasks() {
 
   return useMutation({
     mutationFn: async (ticketId: number) => {
-      const response = await apiClient.tickets.autoGenerateTasks(ticketId)
+      const response = await octoClient.tickets.autoGenerateTasks(ticketId)
       return response.data
     },
     onSuccess: (tasks) => {
@@ -303,7 +303,7 @@ export function useAutoGenerateTasks() {
 export function useSuggestFiles() {
   return useMutation({
     mutationFn: async ({ ticketId, extraUserInput }: { ticketId: number; extraUserInput?: string }) => {
-      const response = await apiClient.tickets.suggestFiles(ticketId, extraUserInput)
+      const response = await octoClient.tickets.suggestFiles(ticketId, extraUserInput)
       return response.data
     },
     onError: commonErrorHandler

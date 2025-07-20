@@ -2,18 +2,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui'
 import { Progress } from '@ui'
 import { Badge } from '@ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui'
-import { 
-  FileText, 
-  Clock, 
-  Binary, 
-  AlertCircle, 
-  FileX, 
-  CheckCircle2,
-  HelpCircle,
-  TrendingUp
-} from 'lucide-react'
+import { FileText, Clock, Binary, AlertCircle, FileX, CheckCircle2, HelpCircle, TrendingUp } from 'lucide-react'
 import { ProjectFile } from '@octoprompt/schemas'
-import { getSummarizationStats, getFileCountDescription, FileCategorization, categorizeProjectFiles } from '@/lib/file-categorization'
+import {
+  getSummarizationStats,
+  getFileCountDescription,
+  FileCategorization,
+  categorizeProjectFiles
+} from '@/lib/file-categorization'
 
 interface SummarizationStatsCardProps {
   projectFiles: ProjectFile[]
@@ -81,14 +77,15 @@ export function SummarizationStatsCard({ projectFiles, isEnabled }: Summarizatio
                 <HelpCircle className='h-4 w-4 text-muted-foreground cursor-help' />
               </TooltipTrigger>
               <TooltipContent className='max-w-xs'>
-                <p>File summaries enable AI-powered features like intelligent file search, project documentation generation, and context-aware code suggestions.</p>
+                <p>
+                  File summaries enable AI-powered features like intelligent file search, project documentation
+                  generation, and context-aware code suggestions.
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </CardTitle>
-        <CardDescription>
-          Track your project's file summarization progress
-        </CardDescription>
+        <CardDescription>Track your project's file summarization progress</CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
         {/* Overall Progress */}
@@ -99,15 +96,10 @@ export function SummarizationStatsCard({ projectFiles, isEnabled }: Summarizatio
               {stats.summarized} / {stats.summarizable} summarizable files
             </span>
           </div>
-          <Progress 
-            value={stats.coveragePercentage} 
-            className='h-3'
-          />
+          <Progress value={stats.coveragePercentage} className='h-3' />
           <div className='flex justify-between text-xs text-muted-foreground'>
             <span>{stats.coveragePercentage.toFixed(1)}% complete</span>
-            {stats.pending > 0 && (
-              <span>{stats.pending} files remaining</span>
-            )}
+            {stats.pending > 0 && <span>{stats.pending} files remaining</span>}
           </div>
         </div>
 
@@ -170,7 +162,8 @@ export function SummarizationStatsCard({ projectFiles, isEnabled }: Summarizatio
           <div className='bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md'>
             <p className='text-sm text-blue-600 dark:text-blue-400'>
               <FileText className='inline h-4 w-4 mr-1' />
-              {stats.pending} files are ready to be summarized. Select them below and click "Summarize Selected" to improve your coverage.
+              {stats.pending} files are ready to be summarized. Select them below and click "Summarize Selected" to
+              improve your coverage.
             </p>
           </div>
         )}

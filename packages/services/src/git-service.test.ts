@@ -69,7 +69,7 @@ describe('Git Service', () => {
       expect(result.data!.ahead).toBe(1)
       expect(result.data!.behind).toBe(0)
       expect(result.data!.files).toHaveLength(4)
-      
+
       // Check file status mapping
       const files = result.data!.files
       expect(files[0]).toMatchObject({ path: 'file1.js', status: 'modified', staged: true })
@@ -81,10 +81,10 @@ describe('Git Service', () => {
     test('should return cached result within TTL', async () => {
       // First call
       await gitService.getProjectGitStatus(1)
-      
+
       // Second call should use cache
       const result = await gitService.getProjectGitStatus(1)
-      
+
       expect(result.success).toBe(true)
       // simpleGit should only be called once due to caching
       expect(simpleGitSpy).toHaveBeenCalledTimes(1)
@@ -145,10 +145,10 @@ describe('Git Service', () => {
     test('should clear cache for specific project', async () => {
       // Populate cache
       await gitService.getProjectGitStatus(1)
-      
+
       // Clear specific project cache
       gitService.clearGitStatusCache(1)
-      
+
       // Next call should not use cache
       await gitService.getProjectGitStatus(1)
       expect(simpleGitSpy).toHaveBeenCalledTimes(2)
@@ -159,14 +159,14 @@ describe('Git Service', () => {
       await gitService.getProjectGitStatus(1)
       getProjectByIdSpy.mockResolvedValue({ ...mockProject, id: 2 })
       await gitService.getProjectGitStatus(2)
-      
+
       // Clear all cache
       gitService.clearGitStatusCache()
-      
+
       // Both projects should fetch fresh data
       await gitService.getProjectGitStatus(1)
       await gitService.getProjectGitStatus(2)
-      
+
       // 4 calls total (2 initial + 2 after cache clear)
       expect(simpleGitSpy).toHaveBeenCalledTimes(4)
     })
@@ -196,12 +196,12 @@ describe('Git Service', () => {
     test('should clear cache after staging', async () => {
       // Populate cache
       await gitService.getProjectGitStatus(1)
-      
+
       // Reset call count
       simpleGitSpy.mockClear()
-      
+
       await gitService.stageFiles(1, ['file1.js'])
-      
+
       // Next status call should fetch fresh data (cache cleared)
       await gitService.getProjectGitStatus(1)
       // Should call simpleGit twice: once for stageFiles, once for getProjectGitStatus
@@ -246,12 +246,12 @@ describe('Git Service', () => {
 
     test('should clear cache after unstaging', async () => {
       await gitService.getProjectGitStatus(1)
-      
+
       // Reset call count
       simpleGitSpy.mockClear()
-      
+
       await gitService.unstageFiles(1, ['file1.js'])
-      
+
       await gitService.getProjectGitStatus(1)
       // Should call simpleGit twice: once for unstageFiles, once for getProjectGitStatus
       expect(simpleGitSpy).toHaveBeenCalledTimes(2)
@@ -269,12 +269,12 @@ describe('Git Service', () => {
 
     test('should clear cache after staging all', async () => {
       await gitService.getProjectGitStatus(1)
-      
+
       // Reset call count
       simpleGitSpy.mockClear()
-      
+
       await gitService.stageAll(1)
-      
+
       await gitService.getProjectGitStatus(1)
       // Should call simpleGit twice: once for stageAll, once for getProjectGitStatus
       expect(simpleGitSpy).toHaveBeenCalledTimes(2)
@@ -292,12 +292,12 @@ describe('Git Service', () => {
 
     test('should clear cache after unstaging all', async () => {
       await gitService.getProjectGitStatus(1)
-      
+
       // Reset call count
       simpleGitSpy.mockClear()
-      
+
       await gitService.unstageAll(1)
-      
+
       await gitService.getProjectGitStatus(1)
       // Should call simpleGit twice: once for unstageAll, once for getProjectGitStatus
       expect(simpleGitSpy).toHaveBeenCalledTimes(2)
@@ -306,9 +306,9 @@ describe('Git Service', () => {
 
   describe('commitChanges', () => {
     test('should commit staged changes', async () => {
-      const commitSpy = spyOn(mockGit, 'commit').mockResolvedValue({ 
-        commit: 'abc123', 
-        summary: { changes: 2, deletions: 0, insertions: 10 } 
+      const commitSpy = spyOn(mockGit, 'commit').mockResolvedValue({
+        commit: 'abc123',
+        summary: { changes: 2, deletions: 0, insertions: 10 }
       })
 
       await gitService.commitChanges(1, 'Test commit message')
@@ -334,19 +334,19 @@ describe('Git Service', () => {
       })
 
       await expect(gitService.commitChanges(1, 'Test commit')).rejects.toThrow('No staged changes to commit')
-      
+
       // Restore original status
       mockGit.status = originalStatus
     })
 
     test('should clear cache after commit', async () => {
       await gitService.getProjectGitStatus(1)
-      
+
       // Reset call count
       simpleGitSpy.mockClear()
-      
+
       await gitService.commitChanges(1, 'Test commit')
-      
+
       await gitService.getProjectGitStatus(1)
       // Should call simpleGit twice: once for commitChanges, once for getProjectGitStatus
       expect(simpleGitSpy).toHaveBeenCalledTimes(2)

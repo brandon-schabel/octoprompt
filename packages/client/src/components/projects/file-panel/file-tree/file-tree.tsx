@@ -93,7 +93,7 @@ export function buildTreeStructure(node: FileNode, indent = ''): string {
 export function collectGitFilesInFolder(
   folderPath: string,
   gitStatus: GitStatus | null
-): { staged: string[], unstaged: string[], all: string[] } {
+): { staged: string[]; unstaged: string[]; all: string[] } {
   const staged: string[] = []
   const unstaged: string[] = []
   const all: string[] = []
@@ -112,7 +112,7 @@ export function collectGitFilesInFolder(
     // Check if the file is in this folder or a subfolder
     if (file.path === folderPath || file.path.startsWith(folderPath + '/')) {
       all.push(file.path)
-      
+
       if (file.staged) {
         staged.push(file.path)
       } else {
@@ -134,17 +134,15 @@ export function collectGitFileContents(
   filter: 'all' | 'staged' | 'unstaged' = 'all'
 ): string {
   const gitFiles = collectGitFilesInFolder(folderPath, gitStatus)
-  const filePaths = filter === 'staged' ? gitFiles.staged : 
-                    filter === 'unstaged' ? gitFiles.unstaged : 
-                    gitFiles.all
-  
+  const filePaths = filter === 'staged' ? gitFiles.staged : filter === 'unstaged' ? gitFiles.unstaged : gitFiles.all
+
   const contents: string[] = []
-  
+
   // Helper to find a file node by path
   function findFileNode(path: string): FileNode | null {
     const parts = path.split('/')
     let current = root
-    
+
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i]
       if (!current[part] || !current[part]._folder || !current[part].children) {
@@ -152,11 +150,11 @@ export function collectGitFileContents(
       }
       current = current[part].children!
     }
-    
+
     const fileName = parts[parts.length - 1]
     return current[fileName] || null
   }
-  
+
   // Collect contents for each file
   for (const filePath of filePaths) {
     const node = findFileNode(filePath)
@@ -164,7 +162,7 @@ export function collectGitFileContents(
       contents.push(`// File: ${filePath}\n${node.file.content}`)
     }
   }
-  
+
   return contents.join('\n\n')
 }
 
@@ -214,7 +212,19 @@ const getGitStatusColor = (gitFileStatus: GitFileStatus | undefined) => {
 }
 
 const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(function FileTreeNodeRow(
-  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, onViewFileInEditMode, projectRoot, gitFileStatus, gitStatus, root },
+  {
+    item,
+    isOpen,
+    isFocused,
+    onFocus,
+    onToggleOpen,
+    onViewFile,
+    onViewFileInEditMode,
+    projectRoot,
+    gitFileStatus,
+    gitStatus,
+    root
+  },
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
@@ -226,7 +236,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
   const { mutate: stageFiles } = useStageFiles(projectId)
   const { mutate: unstageFiles } = useUnstageFiles(projectId)
-  
+
   // State for loading diff data
   const [loadingDiff, setLoadingDiff] = useState(false)
   const [loadingOriginal, setLoadingOriginal] = useState(false)
@@ -298,23 +308,23 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const contents = useMemo(() => buildNodeContent(item.node, isFolder), [item.node, isFolder])
   const tree = useMemo(() => buildTreeStructure(item.node), [item.node])
   const hasSummary = item.node.file?.summary
-  
+
   // Function to parse diff and extract original content
   const parseDiff = useCallback((diff: string) => {
     const lines = diff.split('\n')
     const original: string[] = []
     const modified: string[] = []
-    
+
     let inDiffSection = false
-    
+
     for (const line of lines) {
       if (line.startsWith('@@')) {
         inDiffSection = true
         continue
       }
-      
+
       if (!inDiffSection) continue
-      
+
       if (line.startsWith('-') && !line.startsWith('---')) {
         original.push(line.substring(1))
       } else if (line.startsWith('+') && !line.startsWith('+++')) {
@@ -324,7 +334,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
         modified.push(line.substring(1))
       }
     }
-    
+
     return {
       original: original.join('\n'),
       modified: modified.join('\n')
@@ -388,14 +398,15 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
             <span
               className={cn('font-mono text-sm truncate', getGitStatusColor(gitFileStatus))}
               title={
-                isFolder && gitStatus ? (() => {
-                  const folderGitFiles = collectGitFilesInFolder(item.path, gitStatus)
-                  if (folderGitFiles.all.length === 0) return undefined
-                  return `Git: ${folderGitFiles.staged.length} staged, ${folderGitFiles.unstaged.length} unstaged`
-                })() :
-                gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored'
-                  ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})`
-                  : undefined
+                isFolder && gitStatus
+                  ? (() => {
+                      const folderGitFiles = collectGitFilesInFolder(item.path, gitStatus)
+                      if (folderGitFiles.all.length === 0) return undefined
+                      return `Git: ${folderGitFiles.staged.length} staged, ${folderGitFiles.unstaged.length} unstaged`
+                    })()
+                  : gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored'
+                    ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})`
+                    : undefined
               }
             >
               {item.name}
@@ -549,9 +560,7 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
             >
               Copy Absolute Path
             </ContextMenuItem>
-            <ContextMenuItem
-              asChild
-            >
+            <ContextMenuItem asChild>
               <a
                 href={getEditorUrl(preferredEditor, `${projectRoot}/${item.node.file!.path}`)}
                 target='_blank'
@@ -646,9 +655,9 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 setLoadingOriginal(true)
                 try {
                   // Use the API client directly to fetch the diff
-                  const { apiClient } = await import('@/hooks/octo-client')
+                  const { octoClient: apiClient } = await import('@/hooks/octo-client')
                   const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
-                  
+
                   if (response.success && response.data?.diff) {
                     const { original } = parseDiff(response.data.diff)
                     await copyToClipboard(original, {
@@ -676,9 +685,9 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 setLoadingDiff(true)
                 try {
                   // Use the API client directly to fetch the diff
-                  const { apiClient } = await import('@/hooks/octo-client')
+                  const { octoClient: apiClient } = await import('@/hooks/octo-client')
                   const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
-                  
+
                   if (response.success && response.data?.diff) {
                     await copyToClipboard(response.data.diff, {
                       successMessage: 'Diff copied to clipboard',
@@ -703,102 +712,104 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
         )}
 
         {/* Git operations for folders */}
-        {isFolder && gitStatus && (() => {
-          const folderGitFiles = collectGitFilesInFolder(item.path, gitStatus)
-          const hasGitFiles = folderGitFiles.all.length > 0
-          const hasUnstagedFiles = folderGitFiles.unstaged.length > 0
-          const hasStagedFiles = folderGitFiles.staged.length > 0
-          
-          // Debug logging
-          if (item.path === 'packages') {
-            console.log('Folder git files for packages:', folderGitFiles)
-            console.log('gitStatus:', gitStatus)
-          }
+        {isFolder &&
+          gitStatus &&
+          (() => {
+            const folderGitFiles = collectGitFilesInFolder(item.path, gitStatus)
+            const hasGitFiles = folderGitFiles.all.length > 0
+            const hasUnstagedFiles = folderGitFiles.unstaged.length > 0
+            const hasStagedFiles = folderGitFiles.staged.length > 0
 
-          if (!hasGitFiles) return null
+            // Debug logging
+            if (item.path === 'packages') {
+              console.log('Folder git files for packages:', folderGitFiles)
+              console.log('gitStatus:', gitStatus)
+            }
 
-          return (
-            <>
-              <ContextMenuSeparator />
-              {hasUnstagedFiles && (
-                <ContextMenuItem
-                  onClick={() => {
-                    stageFiles(folderGitFiles.unstaged)
-                  }}
-                >
-                  <Plus className='h-4 w-4 mr-2 text-green-600' />
-                  Stage All Files in Folder ({folderGitFiles.unstaged.length})
-                </ContextMenuItem>
-              )}
-              {hasStagedFiles && (
-                <ContextMenuItem
-                  onClick={() => {
-                    unstageFiles(folderGitFiles.staged)
-                  }}
-                >
-                  <Minus className='h-4 w-4 mr-2 text-red-600' />
-                  Unstage All Files in Folder ({folderGitFiles.staged.length})
-                </ContextMenuItem>
-              )}
-              <ContextMenuSeparator />
-              {/* Copy git file contents options */}
-              {hasGitFiles && (
-                <ContextMenuItem
-                  onClick={async () => {
-                    const contents = collectGitFileContents(item.path, gitStatus, root, 'all')
-                    if (contents) {
-                      await copyToClipboard(contents, {
-                        successMessage: `Git files contents copied (${folderGitFiles.all.length} files)`,
-                        errorMessage: 'Failed to copy git files contents'
-                      })
-                    } else {
-                      toast.info('No git file contents found in this folder')
-                    }
-                  }}
-                >
-                  <Copy className='h-4 w-4 mr-2' />
-                  Copy All Git Files ({folderGitFiles.all.length})
-                </ContextMenuItem>
-              )}
-              {hasStagedFiles && (
-                <ContextMenuItem
-                  onClick={async () => {
-                    const contents = collectGitFileContents(item.path, gitStatus, root, 'staged')
-                    if (contents) {
-                      await copyToClipboard(contents, {
-                        successMessage: `Staged files contents copied (${folderGitFiles.staged.length} files)`,
-                        errorMessage: 'Failed to copy staged files contents'
-                      })
-                    } else {
-                      toast.info('No staged file contents found in this folder')
-                    }
-                  }}
-                >
-                  <Copy className='h-4 w-4 mr-2 text-green-600' />
-                  Copy Staged Files ({folderGitFiles.staged.length})
-                </ContextMenuItem>
-              )}
-              {hasUnstagedFiles && (
-                <ContextMenuItem
-                  onClick={async () => {
-                    const contents = collectGitFileContents(item.path, gitStatus, root, 'unstaged')
-                    if (contents) {
-                      await copyToClipboard(contents, {
-                        successMessage: `Unstaged files contents copied (${folderGitFiles.unstaged.length} files)`,
-                        errorMessage: 'Failed to copy unstaged files contents'
-                      })
-                    } else {
-                      toast.info('No unstaged file contents found in this folder')
-                    }
-                  }}
-                >
-                  <Copy className='h-4 w-4 mr-2 text-yellow-600' />
-                  Copy Unstaged Files ({folderGitFiles.unstaged.length})
-                </ContextMenuItem>
-              )}
-            </>
-          )
-        })()}
+            if (!hasGitFiles) return null
+
+            return (
+              <>
+                <ContextMenuSeparator />
+                {hasUnstagedFiles && (
+                  <ContextMenuItem
+                    onClick={() => {
+                      stageFiles(folderGitFiles.unstaged)
+                    }}
+                  >
+                    <Plus className='h-4 w-4 mr-2 text-green-600' />
+                    Stage All Files in Folder ({folderGitFiles.unstaged.length})
+                  </ContextMenuItem>
+                )}
+                {hasStagedFiles && (
+                  <ContextMenuItem
+                    onClick={() => {
+                      unstageFiles(folderGitFiles.staged)
+                    }}
+                  >
+                    <Minus className='h-4 w-4 mr-2 text-red-600' />
+                    Unstage All Files in Folder ({folderGitFiles.staged.length})
+                  </ContextMenuItem>
+                )}
+                <ContextMenuSeparator />
+                {/* Copy git file contents options */}
+                {hasGitFiles && (
+                  <ContextMenuItem
+                    onClick={async () => {
+                      const contents = collectGitFileContents(item.path, gitStatus, root, 'all')
+                      if (contents) {
+                        await copyToClipboard(contents, {
+                          successMessage: `Git files contents copied (${folderGitFiles.all.length} files)`,
+                          errorMessage: 'Failed to copy git files contents'
+                        })
+                      } else {
+                        toast.info('No git file contents found in this folder')
+                      }
+                    }}
+                  >
+                    <Copy className='h-4 w-4 mr-2' />
+                    Copy All Git Files ({folderGitFiles.all.length})
+                  </ContextMenuItem>
+                )}
+                {hasStagedFiles && (
+                  <ContextMenuItem
+                    onClick={async () => {
+                      const contents = collectGitFileContents(item.path, gitStatus, root, 'staged')
+                      if (contents) {
+                        await copyToClipboard(contents, {
+                          successMessage: `Staged files contents copied (${folderGitFiles.staged.length} files)`,
+                          errorMessage: 'Failed to copy staged files contents'
+                        })
+                      } else {
+                        toast.info('No staged file contents found in this folder')
+                      }
+                    }}
+                  >
+                    <Copy className='h-4 w-4 mr-2 text-green-600' />
+                    Copy Staged Files ({folderGitFiles.staged.length})
+                  </ContextMenuItem>
+                )}
+                {hasUnstagedFiles && (
+                  <ContextMenuItem
+                    onClick={async () => {
+                      const contents = collectGitFileContents(item.path, gitStatus, root, 'unstaged')
+                      if (contents) {
+                        await copyToClipboard(contents, {
+                          successMessage: `Unstaged files contents copied (${folderGitFiles.unstaged.length} files)`,
+                          errorMessage: 'Failed to copy unstaged files contents'
+                        })
+                      } else {
+                        toast.info('No unstaged file contents found in this folder')
+                      }
+                    }}
+                  >
+                    <Copy className='h-4 w-4 mr-2 text-yellow-600' />
+                    Copy Unstaged Files ({folderGitFiles.unstaged.length})
+                  </ContextMenuItem>
+                )}
+              </>
+            )
+          })()}
       </ContextMenuContent>
     </ContextMenu>
   )
@@ -1114,7 +1125,7 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                 item.node.file
                   ? gitStatusMap.get(item.node.file.path)
                   : item.node._folder
-                    ? folderContainsGitChanges(item.path) ?? undefined
+                    ? (folderContainsGitChanges(item.path) ?? undefined)
                     : undefined
               }
               gitStatus={gitStatus?.success ? gitStatus.data : null}

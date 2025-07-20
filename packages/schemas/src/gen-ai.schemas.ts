@@ -386,6 +386,10 @@ export const FileSuggestionsZodSchema = z.object({
   fileIds: z.array(z.number())
 })
 
+export const PromptSuggestionsZodSchema = z.object({
+  promptIds: z.array(z.number()).describe('Array of prompt IDs ordered by relevance (most relevant first)')
+})
+
 // Define other schemas as needed...
 // const CodeReviewSchema = z.object({ ... });
 

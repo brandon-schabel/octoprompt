@@ -6,7 +6,14 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { GitBranch, GitCommit, Plus, Minus, FileText, AlertCircle } from 'lucide-react'
-import { useProjectGitStatus, useStageFiles, useUnstageFiles, useStageAll, useUnstageAll, useCommitChanges } from '@/hooks/api/use-git-api'
+import {
+  useProjectGitStatus,
+  useStageFiles,
+  useUnstageFiles,
+  useStageAll,
+  useUnstageAll,
+  useCommitChanges
+} from '@/hooks/api/use-git-api'
 import type { GitFileStatus } from '@octoprompt/schemas'
 import { getGitStatusColor, getGitStatusLabel, getFileName } from '@/lib/git-utils'
 
@@ -112,7 +119,7 @@ export function GitOperationsPanel({ projectId, className }: GitOperationsPanelP
             {data.ahead > 0 && <span className='text-sm text-muted-foreground'>↑{data.ahead}</span>}
             {data.behind > 0 && <span className='text-sm text-muted-foreground'>↓{data.behind}</span>}
           </div>
-          {data.files?.some(f => f.staged) && (
+          {data.files?.some((f) => f.staged) && (
             <Button size='sm' onClick={() => setShowCommitForm(!showCommitForm)} disabled={commitChanges.isPending}>
               <GitCommit className='h-3 w-3 mr-1' />
               Commit
@@ -122,10 +129,13 @@ export function GitOperationsPanel({ projectId, className }: GitOperationsPanelP
 
         <div className='flex flex-wrap gap-4 text-sm'>
           <div className='flex items-center gap-1'>
-            <span className='text-green-600'>{data.files?.filter(f => f.staged).length || 0} staged</span>
+            <span className='text-green-600'>{data.files?.filter((f) => f.staged).length || 0} staged</span>
           </div>
           <div className='flex items-center gap-1'>
-            <span className='text-yellow-600'>{data.files?.filter(f => !f.staged && f.status !== 'unchanged' && f.status !== 'ignored').length || 0} unstaged</span>
+            <span className='text-yellow-600'>
+              {data.files?.filter((f) => !f.staged && f.status !== 'unchanged' && f.status !== 'ignored').length || 0}{' '}
+              unstaged
+            </span>
           </div>
         </div>
 
@@ -135,7 +145,10 @@ export function GitOperationsPanel({ projectId, className }: GitOperationsPanelP
             size='sm'
             variant='outline'
             onClick={handleStageAll}
-            disabled={!data.files?.some(f => !f.staged && f.status !== 'unchanged' && f.status !== 'ignored') || stageFiles.isPending}
+            disabled={
+              !data.files?.some((f) => !f.staged && f.status !== 'unchanged' && f.status !== 'ignored') ||
+              stageFiles.isPending
+            }
           >
             <Plus className='h-3 w-3 mr-1' />
             Stage All
@@ -144,7 +157,7 @@ export function GitOperationsPanel({ projectId, className }: GitOperationsPanelP
             size='sm'
             variant='outline'
             onClick={handleUnstageAll}
-            disabled={!data.files?.some(f => f.staged) || unstageFiles.isPending}
+            disabled={!data.files?.some((f) => f.staged) || unstageFiles.isPending}
           >
             <Minus className='h-3 w-3 mr-1' />
             Unstage All
@@ -164,7 +177,7 @@ export function GitOperationsPanel({ projectId, className }: GitOperationsPanelP
         </div>
 
         {/* Commit Form */}
-        {showCommitForm && data.files?.some(f => f.staged) && (
+        {showCommitForm && data.files?.some((f) => f.staged) && (
           <div className='space-y-2 pt-2 border-t'>
             <Textarea
               placeholder='Enter commit message...'
@@ -194,7 +207,8 @@ export function GitOperationsPanel({ projectId, className }: GitOperationsPanelP
               </Button>
             </div>
             <p className='text-xs text-muted-foreground'>
-              {data.files.filter(f => f.staged).length} file{data.files.filter(f => f.staged).length !== 1 ? 's' : ''} will be committed
+              {data.files.filter((f) => f.staged).length} file
+              {data.files.filter((f) => f.staged).length !== 1 ? 's' : ''} will be committed
             </p>
           </div>
         )}
@@ -235,19 +249,8 @@ export function GitOperationsPanel({ projectId, className }: GitOperationsPanelP
                         {file.path}
                       </span>
                     </div>
-                    <span
-                      className={cn(
-                        'text-xs uppercase',
-                        getGitStatusColor(
-                          file.status,
-                          file.staged
-                        )
-                      )}
-                    >
-                      {getGitStatusLabel(
-                        file.status,
-                        file.staged
-                      )}
+                    <span className={cn('text-xs uppercase', getGitStatusColor(file.status, file.staged))}>
+                      {getGitStatusLabel(file.status, file.staged)}
                     </span>
                     <div className='flex gap-1'>
                       {!isStaged && (
