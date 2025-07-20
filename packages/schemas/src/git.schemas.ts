@@ -8,7 +8,7 @@ export const gitFileStatusTypeSchema = z.enum([
   'copied',
   'untracked',
   'ignored',
-  'unchanged',
+  'unchanged'
 ])
 
 export type GitFileStatusType = z.infer<typeof gitFileStatusTypeSchema>
@@ -18,7 +18,7 @@ export const gitFileStatusSchema = z.object({
   status: gitFileStatusTypeSchema.describe('The git status of the file'),
   staged: z.boolean().describe('Whether the file is staged for commit'),
   index: z.string().nullable().describe('The index status code from git'),
-  workingDir: z.string().nullable().describe('The working directory status code from git'),
+  workingDir: z.string().nullable().describe('The working directory status code from git')
 })
 
 export type GitFileStatus = z.infer<typeof gitFileStatusSchema>
@@ -35,14 +35,14 @@ export const gitStatusSchema = z.object({
   created: z.array(z.string()).describe('List of created file paths'),
   deleted: z.array(z.string()).describe('List of deleted file paths'),
   renamed: z.array(z.string()).describe('List of renamed file paths'),
-  conflicted: z.array(z.string()).describe('List of conflicted file paths'),
+  conflicted: z.array(z.string()).describe('List of conflicted file paths')
 })
 
 export type GitStatus = z.infer<typeof gitStatusSchema>
 
 export const gitStatusErrorSchema = z.object({
   type: z.enum(['not_a_repo', 'git_not_installed', 'permission_denied', 'unknown']),
-  message: z.string(),
+  message: z.string()
 })
 
 export type GitStatusError = z.infer<typeof gitStatusErrorSchema>
@@ -50,12 +50,12 @@ export type GitStatusError = z.infer<typeof gitStatusErrorSchema>
 export const gitStatusResultSchema = z.union([
   z.object({
     success: z.literal(true),
-    data: gitStatusSchema,
+    data: gitStatusSchema
   }),
   z.object({
     success: z.literal(false),
-    error: gitStatusErrorSchema,
-  }),
+    error: gitStatusErrorSchema
+  })
 ])
 
 export type GitStatusResult = z.infer<typeof gitStatusResultSchema>
@@ -63,7 +63,28 @@ export type GitStatusResult = z.infer<typeof gitStatusResultSchema>
 export const getProjectGitStatusResponseSchema = z.object({
   success: z.boolean(),
   data: gitStatusResultSchema.optional(),
-  message: z.string().optional(),
+  message: z.string().optional()
 })
 
 export type GetProjectGitStatusResponse = z.infer<typeof getProjectGitStatusResponseSchema>
+
+// Stage/Unstage request schemas
+export const stageFilesRequestSchema = z.object({
+  filePaths: z.array(z.string()).describe('Array of file paths to stage')
+})
+
+export type StageFilesRequest = z.infer<typeof stageFilesRequestSchema>
+
+export const unstageFilesRequestSchema = z.object({
+  filePaths: z.array(z.string()).describe('Array of file paths to unstage')
+})
+
+export type UnstageFilesRequest = z.infer<typeof unstageFilesRequestSchema>
+
+// Generic success response for git operations
+export const gitOperationResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional()
+})
+
+export type GitOperationResponse = z.infer<typeof gitOperationResponseSchema>

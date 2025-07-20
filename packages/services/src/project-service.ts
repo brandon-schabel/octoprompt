@@ -653,18 +653,16 @@ export async function getProjectFilesByIds(projectId: number, fileIds: number[])
 export async function summarizeSingleFile(file: ProjectFile, force: boolean = false): Promise<ProjectFile | null> {
   // Check if file needs summarization based on timestamp
   const summarizationCheck = needsResummarization(file.summaryLastUpdated, force)
-  
+
   if (!summarizationCheck.needsSummarization) {
     console.log(
       `[SummarizeSingleFile] Skipping file ${file.path} (ID: ${file.id}) in project ${file.projectId}: ${summarizationCheck.reason}`
     )
     return null
   }
-  
-  console.log(
-    `[SummarizeSingleFile] Processing file ${file.path} (ID: ${file.id}): ${summarizationCheck.reason}`
-  )
-  
+
+  console.log(`[SummarizeSingleFile] Processing file ${file.path} (ID: ${file.id}): ${summarizationCheck.reason}`)
+
   const fileContent = file.content || ''
 
   if (!fileContent.trim()) {
@@ -696,17 +694,19 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   // Check if content was already truncated during file sync
   const wasTruncatedDuringSync = fileContent.includes(FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX)
-  
-  const importsContext = file.imports?.length 
-    ? `The file imports from: ${[...new Set(file.imports.map(i => i.source))].join(', ')}`
+
+  const importsContext = file.imports?.length
+    ? `The file imports from: ${[...new Set(file.imports.map((i) => i.source))].join(', ')}`
     : ''
-  
+
   const exportsContext = file.exports?.length
-    ? `The file exports: ${file.exports.map(e => {
-        if (e.type === 'default') return 'default export'
-        if (e.type === 'all') return `all from ${e.source}`
-        return e.specifiers?.map(s => s.exported).join(', ') || 'named exports'
-      }).join(', ')}`
+    ? `The file exports: ${file.exports
+        .map((e) => {
+          if (e.type === 'default') return 'default export'
+          if (e.type === 'all') return `all from ${e.source}`
+          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+        })
+        .join(', ')}`
     : ''
 
   const systemPrompt = `
@@ -828,7 +828,12 @@ export async function summarizeFiles(
   projectId: number,
   fileIdsToSummarize: number[],
   force: boolean = false
-): Promise<{ included: number; skipped: number; updatedFiles: ProjectFile[]; skippedReasons?: { [reason: string]: number } }> {
+): Promise<{
+  included: number
+  skipped: number
+  updatedFiles: ProjectFile[]
+  skippedReasons?: { [reason: string]: number }
+}> {
   const allProjectFiles = await getProjectFiles(projectId)
 
   if (!allProjectFiles) {

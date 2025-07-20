@@ -9,18 +9,18 @@ export const FILE_SUMMARIZATION_LIMITS = {
    * Adjustable based on your AI model and cost requirements
    */
   MAX_CHARACTERS: 100_000,
-  
+
   /**
    * Suffix added to truncated content to indicate truncation
    */
   TRUNCATION_SUFFIX: '\n\n[File truncated for summarization...]',
-  
+
   /**
    * Minimum time between re-summarizations (in milliseconds)
    * Default: 1 hour (3600000 ms)
    * Files won't be re-summarized within this time window unless forced
    */
-  SUMMARIZATION_COOLDOWN_MS: 60 * 60 * 1000, // 1 hour
+  SUMMARIZATION_COOLDOWN_MS: 60 * 60 * 1000 // 1 hour
 } as const
 
 /**
@@ -32,23 +32,22 @@ export function truncateForSummarization(content: string): {
   originalLength: number
 } {
   const originalLength = content.length
-  
+
   if (originalLength <= FILE_SUMMARIZATION_LIMITS.MAX_CHARACTERS) {
     return {
       content,
       wasTruncated: false,
-      originalLength,
+      originalLength
     }
   }
-  
-  const truncatedContent = 
-    content.substring(0, FILE_SUMMARIZATION_LIMITS.MAX_CHARACTERS) +
-    FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX
-  
+
+  const truncatedContent =
+    content.substring(0, FILE_SUMMARIZATION_LIMITS.MAX_CHARACTERS) + FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX
+
   return {
     content: truncatedContent,
     wasTruncated: true,
-    originalLength,
+    originalLength
   }
 }
 
@@ -69,7 +68,7 @@ export function needsResummarization(
       reason: 'Forced re-summarization requested'
     }
   }
-  
+
   // Summarize if never summarized before
   if (!summaryLastUpdated || summaryLastUpdated <= 0) {
     return {
@@ -77,11 +76,11 @@ export function needsResummarization(
       reason: 'File has never been summarized'
     }
   }
-  
+
   // Check if enough time has passed since last summarization
   const now = Date.now()
   const timeSinceLastSummary = now - summaryLastUpdated
-  
+
   if (timeSinceLastSummary >= FILE_SUMMARIZATION_LIMITS.SUMMARIZATION_COOLDOWN_MS) {
     const hours = Math.floor(timeSinceLastSummary / (60 * 60 * 1000))
     return {
@@ -89,7 +88,7 @@ export function needsResummarization(
       reason: `Last summarized ${hours} hour${hours !== 1 ? 's' : ''} ago`
     }
   }
-  
+
   // Skip summarization - too recent
   const minutesRemaining = Math.ceil(
     (FILE_SUMMARIZATION_LIMITS.SUMMARIZATION_COOLDOWN_MS - timeSinceLastSummary) / (60 * 1000)

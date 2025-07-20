@@ -143,13 +143,13 @@ import {
 } from '@octoprompt/schemas'
 
 // Git imports
-import type {
-  GitStatusResult,
-  GetProjectGitStatusResponse
-} from '@octoprompt/schemas'
+import type { GitStatusResult, GetProjectGitStatusResponse, GitOperationResponse } from '@octoprompt/schemas'
 
 import {
-  getProjectGitStatusResponseSchema
+  getProjectGitStatusResponseSchema,
+  stageFilesRequestSchema,
+  unstageFilesRequestSchema,
+  gitOperationResponseSchema
 } from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
@@ -1323,6 +1323,47 @@ export class GitService extends BaseApiClient {
       responseSchema: getProjectGitStatusResponseSchema
     })
     return result as GetProjectGitStatusResponse
+  }
+
+  async stageFiles(projectId: number, filePaths: string[]) {
+    const result = await this.request('POST', `/projects/${projectId}/git/stage`, {
+      body: { filePaths },
+      bodySchema: stageFilesRequestSchema,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async unstageFiles(projectId: number, filePaths: string[]) {
+    const result = await this.request('POST', `/projects/${projectId}/git/unstage`, {
+      body: { filePaths },
+      bodySchema: unstageFilesRequestSchema,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async stageAll(projectId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/git/stage-all`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async unstageAll(projectId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/git/unstage-all`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async commitChanges(projectId: number, message: string) {
+    const result = await this.request('POST', `/projects/${projectId}/git/commit`, {
+      body: { message },
+      bodySchema: z.object({ message: z.string().min(1) }),
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
   }
 }
 

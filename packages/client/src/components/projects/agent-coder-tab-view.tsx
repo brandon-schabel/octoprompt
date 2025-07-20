@@ -141,10 +141,10 @@ export function AgentCoderTabView({ project, projectId, allProjects }: AgentCode
   )
 
   const agentContent = (
-    <AgentCoderAgent 
-      key={refreshKey} 
-      project={project} 
-      projectId={projectId} 
+    <AgentCoderAgent
+      key={refreshKey}
+      project={project}
+      projectId={projectId}
       allProjects={allProjects}
       selectedFileIds={activeProjectTabState?.selectedFiles || []}
       selectedPromptIds={activeProjectTabState?.selectedPrompts || []}

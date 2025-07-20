@@ -1,8 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import {
-  summarizeSingleFile,
-  summarizeFiles
-} from './project-service'
+import { summarizeSingleFile, summarizeFiles } from './project-service'
 import {
   type ProjectFile,
   MAX_FILE_SIZE_FOR_SUMMARY,
@@ -59,7 +56,7 @@ describe('Large File Handling in Summarization', () => {
     test('should detect files with content exceeding token limit', async () => {
       // Create content that exceeds token limit
       const longContent = 'x'.repeat((MAX_TOKENS_FOR_SUMMARY + 1000) * CHARS_PER_TOKEN_ESTIMATE)
-      
+
       const fileWithLongContent: ProjectFile = {
         id: 3,
         projectId: 1,

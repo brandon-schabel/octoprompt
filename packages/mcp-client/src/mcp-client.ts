@@ -221,7 +221,18 @@ export class MCPClient {
             type: 'string',
             description: 'The action to perform',
             required: true,
-            enum: ['list', 'get', 'create', 'update', 'delete', 'get_summary', 'browse_files', 'get_file_content', 'update_file_content', 'suggest_files']
+            enum: [
+              'list',
+              'get',
+              'create',
+              'update',
+              'delete',
+              'get_summary',
+              'browse_files',
+              'get_file_content',
+              'update_file_content',
+              'suggest_files'
+            ]
           },
           {
             name: 'projectId',
@@ -242,7 +253,18 @@ export class MCPClient {
             action: {
               type: 'string',
               description: 'The action to perform',
-              enum: ['list', 'get', 'create', 'update', 'delete', 'get_summary', 'browse_files', 'get_file_content', 'update_file_content', 'suggest_files']
+              enum: [
+                'list',
+                'get',
+                'create',
+                'update',
+                'delete',
+                'get_summary',
+                'browse_files',
+                'get_file_content',
+                'update_file_content',
+                'suggest_files'
+              ]
             },
             projectId: {
               type: 'number',
@@ -267,7 +289,16 @@ export class MCPClient {
             type: 'string',
             description: 'The action to perform',
             required: true,
-            enum: ['list', 'get', 'create', 'update', 'delete', 'list_by_project', 'add_to_project', 'remove_from_project']
+            enum: [
+              'list',
+              'get',
+              'create',
+              'update',
+              'delete',
+              'list_by_project',
+              'add_to_project',
+              'remove_from_project'
+            ]
           },
           {
             name: 'projectId',
@@ -288,7 +319,16 @@ export class MCPClient {
             action: {
               type: 'string',
               description: 'The action to perform',
-              enum: ['list', 'get', 'create', 'update', 'delete', 'list_by_project', 'add_to_project', 'remove_from_project']
+              enum: [
+                'list',
+                'get',
+                'create',
+                'update',
+                'delete',
+                'list_by_project',
+                'add_to_project',
+                'remove_from_project'
+              ]
             },
             projectId: {
               type: 'number',

@@ -48,26 +48,26 @@ const getGitStatusColor = (gitFileStatus: GitFileStatus | undefined) => {
   if (!gitFileStatus || gitFileStatus.status === 'unchanged' || gitFileStatus.status === 'ignored') {
     return undefined
   }
-  
+
   // Use darker colors for unstaged, brighter for staged
   const isStaged = gitFileStatus.staged
-  
+
   if (gitFileStatus.status === 'added' || gitFileStatus.status === 'untracked') {
     return isStaged ? 'text-green-500' : 'text-green-700'
   }
-  
+
   if (gitFileStatus.status === 'modified') {
     return isStaged ? 'text-yellow-500' : 'text-yellow-700'
   }
-  
+
   if (gitFileStatus.status === 'deleted') {
     return isStaged ? 'text-red-500' : 'text-red-700'
   }
-  
+
   if (gitFileStatus.status === 'renamed' || gitFileStatus.status === 'copied') {
     return isStaged ? 'text-blue-500' : 'text-blue-700'
   }
-  
+
   return 'text-gray-500'
 }
 
@@ -78,7 +78,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     })
     const projectTab = useProjectTabById(projectTabId)
 
-    const { selectedProjectId } = projectTab
+    const { selectedProjectId = -1 } = projectTab || {}
 
     const projectFileMap = useProjectFileMap(selectedProjectId)
 
@@ -99,15 +99,15 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
 
     const bookmarkedGroups = projectTab?.bookmarkedFileGroups || {}
     const updateFileContentMutation = useUpdateFileContent()
-    
+
     // Get git status for the project
     const { data: gitStatus } = useProjectGitStatus(selectedProjectId)
-    
+
     // Create a map of file paths to git file status
     const gitStatusMap = useMemo(() => {
       const map = new Map<string, GitFileStatus>()
       if (gitStatus?.success && gitStatus.data.files) {
-        gitStatus.data.files.forEach(file => {
+        gitStatus.data.files.forEach((file) => {
           map.set(file.path, file)
         })
       }
@@ -545,11 +545,13 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                       {showShortcut && (
                         <span className='text-xs text-muted-foreground mr-2 whitespace-nowrap'>{shortcutNumber}</span>
                       )}
-                      <span 
+                      <span
                         className={cn('text-sm truncate', getGitStatusColor(gitFileStatus))}
-                        title={gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored' 
-                          ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})` 
-                          : undefined}
+                        title={
+                          gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored'
+                            ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})`
+                            : undefined
+                        }
                       >
                         {file.name}
                       </span>

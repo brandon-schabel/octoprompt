@@ -38,8 +38,9 @@ import { useRefreshProject } from '@/hooks/api/use-projects-api'
 import { EditorType, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
-import { useProjectGitStatus } from '@/hooks/api/use-git-api'
+import { useProjectGitStatus, useStageFiles, useUnstageFiles } from '@/hooks/api/use-git-api'
 import type { GitFileStatus } from '@octoprompt/schemas'
+import { GitBranch, Plus, Minus } from 'lucide-react'
 
 export type VisibleItem = {
   path: string
@@ -107,26 +108,26 @@ const getGitStatusColor = (gitFileStatus: GitFileStatus | undefined) => {
   if (!gitFileStatus || gitFileStatus.status === 'unchanged' || gitFileStatus.status === 'ignored') {
     return undefined
   }
-  
+
   // Use darker colors for unstaged, brighter for staged
   const isStaged = gitFileStatus.staged
-  
+
   if (gitFileStatus.status === 'added' || gitFileStatus.status === 'untracked') {
     return isStaged ? 'text-green-500' : 'text-green-700'
   }
-  
+
   if (gitFileStatus.status === 'modified') {
     return isStaged ? 'text-yellow-500' : 'text-yellow-700'
   }
-  
+
   if (gitFileStatus.status === 'deleted') {
     return isStaged ? 'text-red-500' : 'text-red-700'
   }
-  
+
   if (gitFileStatus.status === 'renamed' || gitFileStatus.status === 'copied') {
     return isStaged ? 'text-blue-500' : 'text-blue-700'
   }
-  
+
   return 'text-gray-500'
 }
 
@@ -142,6 +143,8 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const projectId = projectTabState?.selectedProjectId ?? -1
 
   const { mutate: refreshProject } = useRefreshProject()
+  const { mutate: stageFiles } = useStageFiles(projectId)
+  const { mutate: unstageFiles } = useUnstageFiles(projectId)
 
   const isFolder = item.node._folder === true
 
@@ -265,11 +268,13 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
             ) : (
               <FileIcon className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
             )}
-            <span 
+            <span
               className={cn('font-mono text-sm truncate', getGitStatusColor(gitFileStatus))}
-              title={gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored' 
-                ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})` 
-                : undefined}
+              title={
+                gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored'
+                  ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})`
+                  : undefined
+              }
             >
               {item.name}
             </span>
@@ -375,6 +380,44 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                     <ClipboardList className='h-4 w-4' />
                   </Button>
                 )}
+
+                {/* Git stage/unstage buttons */}
+                {gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored' && (
+                  <>
+                    {!gitFileStatus.staged && (
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        title='Stage file for commit'
+                        className='opacity-0 group-hover:opacity-100 transition-opacity'
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          if (item.node.file?.path) {
+                            stageFiles([item.node.file.path])
+                          }
+                        }}
+                      >
+                        <Plus className='h-4 w-4 text-green-600' />
+                      </Button>
+                    )}
+                    {gitFileStatus.staged && (
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        title='Unstage file from commit'
+                        className='opacity-0 group-hover:opacity-100 transition-opacity'
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          if (item.node.file?.path) {
+                            unstageFiles([item.node.file.path])
+                          }
+                        }}
+                      >
+                        <Minus className='h-4 w-4 text-red-600' />
+                      </Button>
+                    )}
+                  </>
+                )}
               </>
             )}
           </div>
@@ -449,6 +492,37 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
 
         {/* "Modify with AI..." for files */}
 
+        {/* Git operations for files */}
+        {!isFolder && gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored' && (
+          <>
+            <ContextMenuSeparator />
+            {!gitFileStatus.staged && (
+              <ContextMenuItem
+                onClick={() => {
+                  if (item.node.file?.path) {
+                    stageFiles([item.node.file.path])
+                  }
+                }}
+              >
+                <Plus className='h-4 w-4 mr-2 text-green-600' />
+                Stage File
+              </ContextMenuItem>
+            )}
+            {gitFileStatus.staged && (
+              <ContextMenuItem
+                onClick={() => {
+                  if (item.node.file?.path) {
+                    unstageFiles([item.node.file.path])
+                  }
+                }}
+              >
+                <Minus className='h-4 w-4 mr-2 text-red-600' />
+                Unstage File
+              </ContextMenuItem>
+            )}
+          </>
+        )}
+
         {/* Refresh options for folders */}
         {isFolder && (
           <>
@@ -496,12 +570,12 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
 
   // Get git status for the project
   const { data: gitStatus } = useProjectGitStatus(projectId)
-  
+
   // Create a map of file paths to git file status
   const gitStatusMap = useMemo(() => {
     const map = new Map<string, GitFileStatus>()
     if (gitStatus?.success && gitStatus.data.files) {
-      gitStatus.data.files.forEach(file => {
+      gitStatus.data.files.forEach((file) => {
         map.set(file.path, file)
       })
     }
@@ -509,33 +583,36 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
   }, [gitStatus])
 
   // Function to check if a folder contains any files with git changes
-  const folderContainsGitChanges = useCallback((folderPath: string): GitFileStatus | null => {
-    if (!gitStatus?.success) return null
-    
-    // Priority order for git statuses (most important first)
-    const statusPriority = ['deleted', 'added', 'modified', 'renamed', 'copied', 'untracked']
-    let bestStatus: GitFileStatus | null = null
-    
-    // Check if any git file starts with this folder path
-    for (const file of gitStatus.data.files) {
-      if (file.status !== 'unchanged' && file.status !== 'ignored') {
-        // Check if the file is in this folder or a subfolder
-        if (file.path.startsWith(folderPath + '/')) {
-          if (!bestStatus) {
-            bestStatus = file
-          } else {
-            // If we find a higher priority status, use it
-            const currentPriority = statusPriority.indexOf(bestStatus.status)
-            const newPriority = statusPriority.indexOf(file.status)
-            if (newPriority < currentPriority && newPriority !== -1) {
+  const folderContainsGitChanges = useCallback(
+    (folderPath: string): GitFileStatus | null => {
+      if (!gitStatus?.success) return null
+
+      // Priority order for git statuses (most important first)
+      const statusPriority = ['deleted', 'added', 'modified', 'renamed', 'copied', 'untracked']
+      let bestStatus: GitFileStatus | null = null
+
+      // Check if any git file starts with this folder path
+      for (const file of gitStatus.data.files) {
+        if (file.status !== 'unchanged' && file.status !== 'ignored') {
+          // Check if the file is in this folder or a subfolder
+          if (file.path.startsWith(folderPath + '/')) {
+            if (!bestStatus) {
               bestStatus = file
+            } else {
+              // If we find a higher priority status, use it
+              const currentPriority = statusPriority.indexOf(bestStatus.status)
+              const newPriority = statusPriority.indexOf(file.status)
+              if (newPriority < currentPriority && newPriority !== -1) {
+                bestStatus = file
+              }
             }
           }
         }
       }
-    }
-    return bestStatus
-  }, [gitStatus])
+      return bestStatus
+    },
+    [gitStatus]
+  )
 
   useImperativeHandle(
     ref,
@@ -771,9 +848,9 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
               onViewFileInEditMode={onViewFileInEditMode}
               projectRoot={projectRoot}
               gitFileStatus={
-                item.node.file 
-                  ? gitStatusMap.get(item.node.file.path) 
-                  : item.node._folder 
+                item.node.file
+                  ? gitStatusMap.get(item.node.file.path)
+                  : item.node._folder
                     ? folderContainsGitChanges(item.path)
                     : undefined
               }

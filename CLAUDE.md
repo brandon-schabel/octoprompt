@@ -40,6 +40,7 @@ The Linear MCP (Model Context Protocol) integration is built into Claude Code an
 The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system through 5 consolidated tools:
 
 **Use OctoPrompt MCP for:**
+
 - Managing projects and browsing/reading files
 - Creating and managing tickets and tasks for planning
 - Saving and retrieving prompts for context management
@@ -48,6 +49,7 @@ The OctoPrompt MCP provides seamless integration with the OctoPrompt project man
 - Optimizing prompts using project-specific context
 
 **OctoPrompt Project Details:**
+
 - **Project ID**: `1750564533014`
 
 ### OctoPrompt MCP Tools
@@ -55,9 +57,11 @@ The OctoPrompt MCP provides seamless integration with the OctoPrompt project man
 OctoPrompt now provides 5 consolidated MCP tools that group related functionality:
 
 #### 1. **project_manager** - Project and file operations
+
 Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files
 
 Example usage:
+
 ```json
 // List all projects
 { "action": "list" }
@@ -76,9 +80,11 @@ Example usage:
 ```
 
 #### 2. **prompt_manager** - Prompt operations
+
 Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project
 
 Example usage:
+
 ```json
 // Create a new prompt
 { "action": "create", "data": { "name": "Code Review", "content": "Review this code for..." } }
@@ -91,9 +97,11 @@ Example usage:
 ```
 
 #### 3. **ticket_manager** - Ticket operations
+
 Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files
 
 Example usage:
+
 ```json
 // Create a ticket
 { "action": "create", "projectId": 1750564533014, "data": { "title": "Fix login bug", "overview": "Users can't login", "priority": "high" } }
@@ -106,9 +114,11 @@ Example usage:
 ```
 
 #### 4. **task_manager** - Task operations
+
 Actions: list, create, update, delete, reorder
 
 Example usage:
+
 ```json
 // Create a task
 { "action": "create", "ticketId": 456, "data": { "content": "Debug login function" } }
@@ -121,9 +131,11 @@ Example usage:
 ```
 
 #### 5. **ai_assistant** - AI utilities
+
 Actions: optimize_prompt, get_compact_summary
 
 Example usage:
+
 ```json
 // Optimize a prompt with project context
 { "action": "optimize_prompt", "projectId": 1750564533014, "data": { "prompt": "help me fix the authentication" } }
@@ -131,7 +143,6 @@ Example usage:
 // Get AI-generated compact project summary
 { "action": "get_compact_summary", "projectId": 1750564533014 }
 ```
-
 
 ## Creating New MCP Tools
 
@@ -374,6 +385,7 @@ Claude Code includes built-in GitHub integration through the `gh` CLI. Once auth
 ### Authentication
 
 GitHub integration requires `gh` CLI authentication:
+
 ```bash
 gh auth login -h github.com -w
 ```
@@ -388,6 +400,7 @@ gh auth login -h github.com -w
 ### PR Creation
 
 When creating PRs, Claude Code automatically:
+
 - Analyzes all commits in the branch
 - Generates comprehensive PR descriptions
 - Includes proper formatting and test plans

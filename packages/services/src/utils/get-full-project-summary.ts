@@ -27,14 +27,14 @@ export const getCompactProjectSummary = async (projectId: number) => {
 
   // Ensure the summary doesn't exceed our character limits
   const truncationResult = truncateForSummarization(fullSummary)
-  
+
   if (truncationResult.wasTruncated) {
     console.log(
       `[CompactProjectSummary] Project summary truncated for AI processing:\n` +
-      `  Project ID: ${projectId}\n` +
-      `  Original length: ${truncationResult.originalLength.toLocaleString()} chars\n` +
-      `  Truncated to: ${truncationResult.content.length.toLocaleString()} chars\n` +
-      `  Reduction: ${Math.round((1 - truncationResult.content.length / truncationResult.originalLength) * 100)}%`
+        `  Project ID: ${projectId}\n` +
+        `  Original length: ${truncationResult.originalLength.toLocaleString()} chars\n` +
+        `  Truncated to: ${truncationResult.content.length.toLocaleString()} chars\n` +
+        `  Reduction: ${Math.round((1 - truncationResult.content.length / truncationResult.originalLength) * 100)}%`
     )
   }
 

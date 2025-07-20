@@ -469,7 +469,7 @@ export async function getTicketsWithFiles(
 
 export async function getTicketWithSuggestedFiles(
   ticketId: number
-): Promise<Ticket & { parsedSuggestedFileIds: string[] } | null> {
+): Promise<(Ticket & { parsedSuggestedFileIds: string[] }) | null> {
   const ticket = await getTicketById(ticketId)
 
   return {

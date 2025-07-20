@@ -50,7 +50,7 @@ export function getMCPServer(): Server {
 function registerTools(server: Server) {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     // Use consolidated tools only
-    const tools: Tool[] = CONSOLIDATED_TOOLS.map(tool => ({
+    const tools: Tool[] = CONSOLIDATED_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema
@@ -65,7 +65,7 @@ function registerTools(server: Server) {
 
     try {
       // Find and execute consolidated tool
-      const consolidatedTool = CONSOLIDATED_TOOLS.find(tool => tool.name === name)
+      const consolidatedTool = CONSOLIDATED_TOOLS.find((tool) => tool.name === name)
       if (consolidatedTool) {
         return await consolidatedTool.handler(args as any)
       }

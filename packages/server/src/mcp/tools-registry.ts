@@ -36,7 +36,7 @@ export interface MCPToolDefinition<TArgs = any> {
 }
 
 // Re-export consolidated tools and helpers
-import { 
+import {
   CONSOLIDATED_TOOLS,
   getConsolidatedToolByName,
   getAllConsolidatedToolNames,
@@ -44,7 +44,7 @@ import {
   type ConsolidatedToolNames
 } from './consolidated-tools'
 
-export { 
+export {
   CONSOLIDATED_TOOLS,
   getConsolidatedToolByName,
   getAllConsolidatedToolNames,

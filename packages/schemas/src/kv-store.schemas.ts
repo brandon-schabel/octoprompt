@@ -12,18 +12,23 @@ export const KVKeyEnum = {
   appSettings: 'appSettings',
   projectTabs: 'projectTabs',
   activeProjectTabId: 'activeProjectTabId',
-  activeChatId: 'activeChatId'
+  activeChatId: 'activeChatId',
+  recentProjects: 'recentProjects'
 } as const
 
 export type KVKey = (typeof KVKeyEnum)[keyof typeof KVKeyEnum]
 
 export const kvKeyEnumSchema = z.enum(Object.values(KVKeyEnum) as [KVKey, ...KVKey[]])
 
+// Schema for recent projects - array of project IDs
+const recentProjectsSchema = z.array(z.number()).max(5).default([])
+
 export const KvSchemas = {
   [KVKeyEnum.appSettings]: appSettingsSchema,
   [KVKeyEnum.projectTabs]: projectTabsStateRecordSchema,
   [KVKeyEnum.activeProjectTabId]: idSchemaSpec.default(1),
-  [KVKeyEnum.activeChatId]: idSchemaSpec.default(-1)
+  [KVKeyEnum.activeChatId]: idSchemaSpec.default(-1),
+  [KVKeyEnum.recentProjects]: recentProjectsSchema
 } as const
 
 const getInitialGlobalState = () => {
@@ -41,7 +46,8 @@ export const KVDefaultValues: { [K in KVKey]: KVValue<K> } = {
   activeChatId: initialGlobalState.activeChatId ?? 1,
   activeProjectTabId: initialGlobalState.projectActiveTabId ?? 1,
   appSettings: initialGlobalState.appSettings,
-  projectTabs: initialGlobalState.projectTabs
+  projectTabs: initialGlobalState.projectTabs,
+  recentProjects: []
 }
 
 export type KVValue<K extends KVKey> = z.infer<(typeof KvSchemas)[K]>

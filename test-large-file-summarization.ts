@@ -13,11 +13,11 @@ import * as path from 'path'
 
 async function main() {
   console.log('🧪 Testing Large File Summarization Feature\n')
-  
+
   // Create a test directory
   const testDir = path.join(process.cwd(), 'test-large-files-' + Date.now())
   await fs.mkdir(testDir, { recursive: true })
-  
+
   try {
     // Create test files of various sizes
     const files = [
@@ -45,12 +45,15 @@ export function goodbye() {
       },
       {
         name: 'long-content-file.ts',
-        content: '// File with content exceeding token limit\n' + 
-                 'const data = "' + 'a'.repeat(MAX_TOKENS_FOR_SUMMARY * CHARS_PER_TOKEN_ESTIMATE + 1000) + '";',
+        content:
+          '// File with content exceeding token limit\n' +
+          'const data = "' +
+          'a'.repeat(MAX_TOKENS_FOR_SUMMARY * CHARS_PER_TOKEN_ESTIMATE + 1000) +
+          '";',
         expectedResult: 'should be summarized with truncation'
       }
     ]
-    
+
     // Write test files
     console.log('📝 Creating test files...')
     for (const file of files) {
@@ -58,7 +61,7 @@ export function goodbye() {
       await fs.writeFile(filePath, file.content)
       console.log(`  - ${file.name} (${file.content.length} bytes) - ${file.expectedResult}`)
     }
-    
+
     // Create project
     console.log('\n📁 Creating project...')
     const project = await createProject({
@@ -66,15 +69,15 @@ export function goodbye() {
       path: testDir
     })
     console.log(`  Project created with ID: ${project.id}`)
-    
+
     // Wait for sync to complete
     console.log('\n🔄 Waiting for file sync...')
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
     // Get all project files
     const projectFiles = await getProjectFiles(project.id)
     console.log(`  Found ${projectFiles.length} files in project`)
-    
+
     // Display file information
     console.log('\n📊 File Information:')
     for (const file of projectFiles) {
@@ -82,12 +85,12 @@ export function goodbye() {
       const exceedsLimit = file.size > MAX_FILE_SIZE_FOR_SUMMARY
       console.log(`  - ${file.name}: ${sizeKB} KB ${exceedsLimit ? '⚠️  (exceeds limit)' : '✅'}`)
     }
-    
+
     // Attempt to summarize all files
     console.log('\n🤖 Summarizing files...')
-    const fileIds = projectFiles.map(f => f.id)
+    const fileIds = projectFiles.map((f) => f.id)
     const result = await summarizeFiles(project.id, fileIds)
-    
+
     // Display results
     console.log('\n📈 Summarization Results:')
     console.log(`  ✅ Successfully summarized: ${result.included}`)
@@ -97,7 +100,7 @@ export function goodbye() {
       console.log(`     - Too large: ${result.skippedReasons.tooLarge}`)
       console.log(`     - Errors: ${result.skippedReasons.errors}`)
     }
-    
+
     // Check which files were summarized
     console.log('\n📝 Summary Status:')
     const updatedFiles = await getProjectFiles(project.id)
@@ -107,21 +110,20 @@ export function goodbye() {
         console.log(`  ✅ ${file.name}: ${truncated ? 'Summarized (truncated)' : 'Summarized'}`)
         console.log(`     "${file.summary.substring(0, 100)}..."`)
       } else {
-        const reason = file.size > MAX_FILE_SIZE_FOR_SUMMARY ? 'too large' : 
-                      file.content.trim() === '' ? 'empty' : 'unknown'
+        const reason =
+          file.size > MAX_FILE_SIZE_FOR_SUMMARY ? 'too large' : file.content.trim() === '' ? 'empty' : 'unknown'
         console.log(`  ❌ ${file.name}: Not summarized (${reason})`)
       }
     }
-    
+
     // Cleanup
     console.log('\n🧹 Cleaning up...')
     await deleteProject(project.id)
-    
   } finally {
     // Remove test directory
     await fs.rm(testDir, { recursive: true, force: true })
   }
-  
+
   console.log('\n✅ Test completed successfully!')
 }
 

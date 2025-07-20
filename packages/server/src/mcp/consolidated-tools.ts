@@ -158,10 +158,7 @@ const TaskManagerSchema = z.object({
 })
 
 const AIAssistantSchema = z.object({
-  action: z.enum([
-    AIAssistantAction.OPTIMIZE_PROMPT,
-    AIAssistantAction.GET_COMPACT_SUMMARY
-  ]),
+  action: z.enum([AIAssistantAction.OPTIMIZE_PROMPT, AIAssistantAction.GET_COMPACT_SUMMARY]),
   projectId: z.number(),
   data: z.any().optional()
 })
@@ -236,7 +233,12 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             if (!projectId) throw new Error('Project ID is required')
             const success = await deleteProject(projectId)
             return {
-              content: [{ type: 'text', text: success ? `Project ${projectId} deleted successfully` : `Failed to delete project ${projectId}` }]
+              content: [
+                {
+                  type: 'text',
+                  text: success ? `Project ${projectId} deleted successfully` : `Failed to delete project ${projectId}`
+                }
+              ]
             }
           }
 
@@ -324,11 +326,13 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
                 const fileData = await fs.readFile(fullPath)
                 const base64 = fileData.toString('base64')
                 return {
-                  content: [{
-                    type: 'image',
-                    data: base64,
-                    mimeType: `image/${ext.substring(1)}`
-                  } as any]
+                  content: [
+                    {
+                      type: 'image',
+                      data: base64,
+                      mimeType: `image/${ext.substring(1)}`
+                    } as any
+                  ]
                 }
               } catch (error) {
                 throw new Error(`Failed to read image file: ${error instanceof Error ? error.message : String(error)}`)
@@ -374,10 +378,12 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         }
       } catch (error) {
         return {
-          content: [{
-            type: 'text',
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ],
           isError: true
         }
       }
@@ -459,7 +465,12 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             if (!promptId) throw new Error('Prompt ID is required')
             const success = await deletePrompt(promptId)
             return {
-              content: [{ type: 'text', text: success ? `Prompt ${promptId} deleted successfully` : `Failed to delete prompt ${promptId}` }]
+              content: [
+                {
+                  type: 'text',
+                  text: success ? `Prompt ${promptId} deleted successfully` : `Failed to delete prompt ${promptId}`
+                }
+              ]
             }
           }
 
@@ -497,10 +508,12 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         }
       } catch (error) {
         return {
-          content: [{
-            type: 'text',
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ],
           isError: true
         }
       }
@@ -539,7 +552,10 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const status = data?.status as string | undefined
             const tickets = await listTicketsByProject(projectId, status)
             const ticketList = tickets
-              .map((t) => `${t.id}: ${t.title} [${t.status}/${t.priority}] - ${t.overview.substring(0, 50)}${t.overview.length > 50 ? '...' : ''}`)
+              .map(
+                (t) =>
+                  `${t.id}: ${t.title} [${t.status}/${t.priority}] - ${t.overview.substring(0, 50)}${t.overview.length > 50 ? '...' : ''}`
+              )
               .join('\n')
             return {
               content: [{ type: 'text', text: ticketList || 'No tickets found' }]
@@ -609,7 +625,9 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             const status = data?.status as string | undefined
             const tickets = await listTicketsWithTaskCount(projectId, status)
             const ticketList = tickets
-              .map((t) => `${t.id}: ${t.title} [${t.status}/${t.priority}] - Tasks: ${t.completedTaskCount}/${t.taskCount}`)
+              .map(
+                (t) => `${t.id}: ${t.title} [${t.status}/${t.priority}] - Tasks: ${t.completedTaskCount}/${t.taskCount}`
+              )
               .join('\n')
             return {
               content: [{ type: 'text', text: ticketList || 'No tickets found' }]
@@ -643,7 +661,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             const extraUserInput = data?.extraUserInput as string | undefined
             const result = await suggestFilesForTicket(ticketId, { extraUserInput })
             return {
-              content: [{ type: 'text', text: `Suggested files: ${result.recommendedFileIds.join(', ') || 'None'}\n${result.message || ''}` }]
+              content: [
+                {
+                  type: 'text',
+                  text: `Suggested files: ${result.recommendedFileIds.join(', ') || 'None'}\n${result.message || ''}`
+                }
+              ]
             }
           }
 
@@ -652,10 +675,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         }
       } catch (error) {
         return {
-          content: [{
-            type: 'text',
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ],
           isError: true
         }
       }
@@ -745,10 +770,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         }
       } catch (error) {
         return {
-          content: [{
-            type: 'text',
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ],
           isError: true
         }
       }
@@ -803,10 +830,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         }
       } catch (error) {
         return {
-          content: [{
-            type: 'text',
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ],
           isError: true
         }
       }

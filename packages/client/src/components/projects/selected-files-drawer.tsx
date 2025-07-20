@@ -31,7 +31,7 @@ const getTotalFileTokens = ({ files, fileMap }: { files: number[]; fileMap: Proj
 
 export function SelectedFilesDrawer({ onRemoveFile, trigger, projectTabId }: SelectedFilesDrawerProps) {
   const [projectTabState] = useActiveProjectTab()
-  const { selectedProjectId } = projectTabState as ProjectTabState
+  const { selectedProjectId = -1 } = (projectTabState || {}) as ProjectTabState
   const { selectedFiles } = useSelectedFiles({ tabId: projectTabId })
   const projectFileMap = useProjectFileMap(selectedProjectId)
   const [open, setOpen] = useState(false)

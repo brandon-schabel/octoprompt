@@ -195,19 +195,19 @@ from ..utils import helper
     const result = analyzeCodeImportsExports(code, 'test.py')
     expect(result).not.toBeNull()
     expect(result!.imports).toHaveLength(6)
-    
+
     // Check simple import
     expect(result!.imports[0]).toEqual({
       source: '',
       specifiers: [{ type: 'named', imported: 'os', local: 'os' }]
     })
-    
+
     // Check from import
     expect(result!.imports[2]).toEqual({
       source: 'datetime',
       specifiers: [{ type: 'named', imported: 'datetime', local: 'datetime' }]
     })
-    
+
     // Check aliased imports
     expect(result!.imports[3]).toEqual({
       source: 'math',
@@ -245,8 +245,8 @@ class _PrivateClass:
     const result = analyzeCodeImportsExports(code, 'module.py')
     expect(result).not.toBeNull()
     expect(result!.exports).toHaveLength(4) // All top-level defs/classes (async_function not matched by regex)
-    
-    const exportedNames = result!.exports.flatMap(e => e.specifiers?.map(s => s.exported) || [])
+
+    const exportedNames = result!.exports.flatMap((e) => e.specifiers?.map((s) => s.exported) || [])
     expect(exportedNames).toContain('calculate_area')
     expect(exportedNames).toContain('Rectangle')
     expect(exportedNames).toContain('main')
@@ -298,16 +298,16 @@ export { api }
     expect(result).not.toBeNull()
     expect(result!.imports).toHaveLength(4)
     expect(result!.exports.length).toBeGreaterThan(0)
-    
+
     // Check imports
     expect(result!.imports[0].source).toBe('react')
     expect(result!.imports[1].source).toBe('@/components/ui')
     expect(result!.imports[2].source).toBe('./types')
     expect(result!.imports[3].source).toBe('./api')
-    
+
     // Check exports include both default and named
-    const hasDefaultExport = result!.exports.some(e => e.type === 'default')
-    const hasNamedExports = result!.exports.some(e => e.type === 'named')
+    const hasDefaultExport = result!.exports.some((e) => e.type === 'default')
+    const hasNamedExports = result!.exports.some((e) => e.type === 'named')
     expect(hasDefaultExport).toBe(true)
     expect(hasNamedExports).toBe(true)
   })

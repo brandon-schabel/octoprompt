@@ -46,6 +46,7 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
 ### Claude Desktop Setup
 
 1. **Edit config file:**
+
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -55,7 +56,7 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
 {
   "mcpServers": {
     "octoprompt": {
-      "command": "/absolute/path/to/octoprompt/packages/server/mcp-start.sh",
+      "command": "/absolute/path/to/octoprompt/packages/server/mcp-start.sh"
     }
   }
 }
@@ -67,6 +68,7 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
 
 1. **Open Cursor Settings** → **Features** → **Model Context Protocol**
 2. **Add server:**
+
    - **Name**: `octoprompt`
    - **Command**: `/absolute/path/to/octoprompt/packages/server/mcp-start.sh`
 
@@ -74,7 +76,7 @@ Connect OctoPrompt to Claude Desktop or Cursor for AI-powered codebase access.
 
 ### Test Connection
 
-Ask Claude/Cursor: *"What files are in this project?"* or *"Give me a project summary"*
+Ask Claude/Cursor: _"What files are in this project?"_ or _"Give me a project summary"_
 
 > **Note**: Replace `/absolute/path/to/octoprompt` with your actual OctoPrompt installation path and `YOUR_PROJECT_ID` with your project ID.
 

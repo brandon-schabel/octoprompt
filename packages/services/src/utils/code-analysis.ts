@@ -1,5 +1,13 @@
 import { parseSync } from '@swc/core'
-import type { Module, ImportDeclaration, ExportDeclaration, ExportAllDeclaration, ExportNamedDeclaration, ExportDefaultDeclaration, ModuleItem } from '@swc/core'
+import type {
+  Module,
+  ImportDeclaration,
+  ExportDeclaration,
+  ExportAllDeclaration,
+  ExportNamedDeclaration,
+  ExportDefaultDeclaration,
+  ModuleItem
+} from '@swc/core'
 
 export interface ImportInfo {
   source: string
@@ -51,15 +59,16 @@ function isExportDefaultExpression(item: ModuleItem): boolean {
 function analyzePythonImportsExports(content: string, filename: string): CodeAnalysisResult | null {
   try {
     const imports: ImportInfo[] = []
-    const exports: ExportInfo[] = []  // In Python: top-level defs/classes as "named exports"
+    const exports: ExportInfo[] = [] // In Python: top-level defs/classes as "named exports"
 
     // Simple regex for imports (handles import x, from y import z as w)
-    const importRegex = /^\s*(?:from\s+([\w.]+)\s+)?import\s+([\w.*]+(?:\s+as\s+\w+)?(?:\s*,\s*[\w.*]+(?:\s+as\s+\w+)?)*)/gm
+    const importRegex =
+      /^\s*(?:from\s+([\w.]+)\s+)?import\s+([\w.*]+(?:\s+as\s+\w+)?(?:\s*,\s*[\w.*]+(?:\s+as\s+\w+)?)*)/gm
     let match
     while ((match = importRegex.exec(content)) !== null) {
-      const source = match[1] || ''  // from source
+      const source = match[1] || '' // from source
       const specifiersStr = match[2]
-      const specifiers = specifiersStr.split(',').map(s => {
+      const specifiers = specifiersStr.split(',').map((s) => {
         const parts = s.trim().split(/\s+as\s+/)
         return {
           type: 'named' as const,
@@ -86,15 +95,12 @@ function analyzePythonImportsExports(content: string, filename: string): CodeAna
   }
 }
 
-export function analyzeCodeImportsExports(
-  content: string,
-  filename: string
-): CodeAnalysisResult | null {
+export function analyzeCodeImportsExports(content: string, filename: string): CodeAnalysisResult | null {
   try {
     const isTypeScript = filename.endsWith('.ts') || filename.endsWith('.tsx')
     const isJavaScript = filename.endsWith('.js') || filename.endsWith('.jsx')
     const isPython = filename.endsWith('.py')
-    
+
     if (!isTypeScript && !isJavaScript && !isPython) {
       return null
     }
@@ -106,7 +112,7 @@ export function analyzeCodeImportsExports(
     const ast = parseSync(content, {
       syntax: isTypeScript ? 'typescript' : 'ecmascript',
       tsx: filename.endsWith('.tsx'),
-      jsx: filename.endsWith('.jsx'),
+      jsx: filename.endsWith('.jsx')
     }) as Module
 
     const imports: ImportInfo[] = []
@@ -178,15 +184,16 @@ export function analyzeCodeImportsExports(
         })
       } else if (isExportDeclaration(item)) {
         if (item.declaration) {
-          if (item.declaration.type === 'FunctionDeclaration' || 
-              item.declaration.type === 'ClassDeclaration') {
+          if (item.declaration.type === 'FunctionDeclaration' || item.declaration.type === 'ClassDeclaration') {
             if (item.declaration.identifier) {
               exports.push({
                 type: 'named',
-                specifiers: [{
-                  exported: item.declaration.identifier.value,
-                  local: item.declaration.identifier.value
-                }]
+                specifiers: [
+                  {
+                    exported: item.declaration.identifier.value,
+                    local: item.declaration.identifier.value
+                  }
+                ]
               })
             }
           } else if (item.declaration.type === 'VariableDeclaration') {

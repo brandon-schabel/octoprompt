@@ -758,11 +758,13 @@ export const projectRoutes = new OpenAPIHono()
                   included: z.number(),
                   skipped: z.number(),
                   updatedFiles: z.array(ProjectFileSchema),
-                  skippedReasons: z.object({
-                    empty: z.number(),
-                    tooLarge: z.number(),
-                    errors: z.number()
-                  }).optional()
+                  skippedReasons: z
+                    .object({
+                      empty: z.number(),
+                      tooLarge: z.number(),
+                      errors: z.number()
+                    })
+                    .optional()
                 })
               })
             }

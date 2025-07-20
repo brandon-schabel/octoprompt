@@ -607,7 +607,7 @@ describe('File Content Truncation', () => {
       created: Date.now(),
       updated: Date.now()
     }
-    
+
     // Set up spies
     existsSyncSpy = spyOn(fs, 'existsSync').mockReturnValue(true)
     getProjectFilesSpy = spyOn(projectService, 'getProjectFiles').mockResolvedValue([])
@@ -617,7 +617,7 @@ describe('File Content Truncation', () => {
     readdirSyncSpy = spyOn(fs, 'readdirSync')
     readFileSyncSpy = spyOn(fs, 'readFileSync')
     statSyncSpy = spyOn(fs, 'statSync')
-    
+
     // Mock createProject and getProjectById to avoid database errors
     createProjectSpy = spyOn(projectService, 'createProject').mockResolvedValue(mockProject)
     getProjectByIdSpy = spyOn(projectService, 'getProjectById').mockResolvedValue(mockProject)
@@ -640,7 +640,7 @@ describe('File Content Truncation', () => {
   test('should truncate large file content for summarization', async () => {
     const largeContent = 'x'.repeat(150000) // 150k characters
     const fileName = 'large-file.ts'
-    
+
     readdirSyncSpy.mockReturnValue([
       {
         name: fileName,
@@ -648,7 +648,7 @@ describe('File Content Truncation', () => {
         isFile: () => true
       } as Dirent
     ])
-    
+
     readFileSyncSpy.mockReturnValue(largeContent)
     // Mock statSync to return directory stats for the project path
     statSyncSpy.mockImplementation((path: string) => {
@@ -668,11 +668,11 @@ describe('File Content Truncation', () => {
     })
 
     const result = await fileSyncService.syncProject(mockProject)
-    
+
     expect(bulkCreateSpy).toHaveBeenCalled()
     const createdFiles = bulkCreateSpy.mock.calls[0][1]
     expect(createdFiles).toHaveLength(1)
-    
+
     const fileData = createdFiles[0]
     expect(fileData.content.length).toBeLessThan(largeContent.length)
     expect(fileData.content).toContain('[File truncated for summarization...]')
@@ -681,7 +681,7 @@ describe('File Content Truncation', () => {
   test('should not truncate small file content', async () => {
     const smallContent = 'Hello World'
     const fileName = 'small-file.ts'
-    
+
     readdirSyncSpy.mockReturnValue([
       {
         name: fileName,
@@ -689,7 +689,7 @@ describe('File Content Truncation', () => {
         isFile: () => true
       } as Dirent
     ])
-    
+
     readFileSyncSpy.mockReturnValue(smallContent)
     // Mock statSync to return directory stats for the project path
     statSyncSpy.mockImplementation((path: string) => {
@@ -709,11 +709,11 @@ describe('File Content Truncation', () => {
     })
 
     const result = await fileSyncService.syncProject(mockProject)
-    
+
     expect(bulkCreateSpy).toHaveBeenCalled()
     const createdFiles = bulkCreateSpy.mock.calls[0][1]
     expect(createdFiles).toHaveLength(1)
-    
+
     const fileData = createdFiles[0]
     expect(fileData.content).toBe(smallContent)
     expect(fileData.content).not.toContain('[File truncated for summarization...]')

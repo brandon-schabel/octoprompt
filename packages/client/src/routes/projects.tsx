@@ -27,10 +27,10 @@ import { ErrorBoundary } from '@/components/error-boundary/error-boundary'
 import { ProjectSummarizationSettingsPage } from './project-summarization'
 import { AgentCoderTabView } from '@/components/projects/agent-coder-tab-view'
 import { ProjectAssetsView } from '@/components/projects/project-assets-view'
-import { Bot, Code2, Sparkles } from 'lucide-react'
+import { Bot, Code2, Sparkles, GitBranch } from 'lucide-react'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
 import { TicketsTabView } from '@/components/tickets/tickets-tab-view'
-import { useRecentProjects } from '@/hooks/use-recent-projects'
+import { GitTabView } from '@/components/projects/git-tab-view'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -58,14 +58,6 @@ export function ProjectsPage() {
   const tabsKeys = Object.keys(tabs || {})
   const { setActiveProjectTabId } = useSetActiveProjectTabId()
   const { mutate: updateProjectTabs } = useSetKvValue('projectTabs')
-  const { addRecentProject } = useRecentProjects()
-
-  // Track when a project is opened
-  useEffect(() => {
-    if (selectedProjectId) {
-      addRecentProject(selectedProjectId)
-    }
-  }, [selectedProjectId, addRecentProject])
 
   useEffect(() => {
     if (projects.length === 1 && noTabsYet) {
@@ -185,7 +177,11 @@ export function ProjectsPage() {
         </div>
         <Tabs defaultValue='context' className='flex-1 flex flex-col min-h-0'>
           <div className='flex-none px-4 py-2 border-b dark:border-slate-700 flex items-center'>
-            <ProjectSwitcher currentProject={projectData} className='mr-4' />
+            <ProjectSwitcher
+              currentProject={projectData}
+              className='mr-4'
+              onManageProjects={() => setProjectModalOpen(true)}
+            />
             <TabsList>
               <TabsTrigger value='context'>Context</TabsTrigger>
               <TabsTrigger value='stats'>Statistics</TabsTrigger>
@@ -201,6 +197,10 @@ export function ProjectsPage() {
               <TabsTrigger value='assets' className='flex items-center gap-1'>
                 <Sparkles className='h-3.5 w-3.5' />
                 Assets
+              </TabsTrigger>
+              <TabsTrigger value='git' className='flex items-center gap-1'>
+                <GitBranch className='h-3.5 w-3.5' />
+                Git
               </TabsTrigger>
             </TabsList>
             <div className='ml-auto'>
@@ -259,6 +259,13 @@ export function ProjectsPage() {
               <ProjectAssetsView project={projectData} projectId={selectedProjectId} />
             ) : (
               <p className='p-4 md:p-6'>No project selected for Assets.</p>
+            )}
+          </TabsContent>
+          <TabsContent value='git' className='flex-1 overflow-y-auto mt-0 ring-0 focus-visible:ring-0'>
+            {selectedProjectId ? (
+              <GitTabView projectId={selectedProjectId} />
+            ) : (
+              <p className='p-4 md:p-6'>No project selected for Git.</p>
             )}
           </TabsContent>
         </Tabs>

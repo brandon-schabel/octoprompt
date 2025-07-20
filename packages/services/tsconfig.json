@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
@@ -26,18 +24,10 @@
     // Path aliases
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@db": [
-        "./src/db"
-      ],
-      "@/services/*": [
-        "./src/*"
-      ],
-      "@/utils/*": [
-        "./src/utils/*"
-      ]
+      "@/*": ["./src/*"],
+      "@db": ["./src/db"],
+      "@/services/*": ["./src/*"],
+      "@/utils/*": ["./src/utils/*"]
     }
   }
 }
