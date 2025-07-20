@@ -677,7 +677,7 @@ describe('File Content Truncation', () => {
     const fileData = createdFiles[0]
     // Content should be truncated to 100k chars + truncation suffix
     expect(fileData.content.length).toBeLessThan(largeContent.length)
-    expect(fileData.content).toContain('[File truncated for summarization...]')
+    expect(fileData.content).toContain('\n\n[File truncated for summarization...]')
     // Checksum should be computed from full content
     expect(fileData.checksum).not.toBe('FILE_TOO_LARGE')
     expect(fileData.checksum).toMatch(/^[a-f0-9]{64}$/i) // Valid SHA256 checksum
@@ -721,7 +721,7 @@ describe('File Content Truncation', () => {
 
     const fileData = createdFiles[0]
     expect(fileData.content).toBe(smallContent)
-    expect(fileData.content).not.toContain('[File truncated for summarization...]')
+    expect(fileData.content).not.toContain('\n\n[File truncated for summarization...]')
     // Checksum should be computed correctly
     expect(fileData.checksum).toMatch(/^[a-f0-9]{64}$/i) // Valid SHA256 checksum
   })

@@ -3,7 +3,7 @@
  * Please use the Agent Coder tab in the project view instead of this dialog.
  * This file is kept for reference but should not be used in new code.
  */
-import { Prompt, ProjectFile } from '@octoprompt/schemas'
+import { Prompt, ProjectFile, ImportInfo, ExportInfo } from '@octoprompt/schemas'
 import {
   useGetAgentCoderData,
   useRunAgentCoder,
@@ -86,6 +86,8 @@ type UpdatedFileData = {
   size: number
   summaryLastUpdated: number | null
   checksum: string | null
+  imports: ImportInfo[] | null
+  exports: ExportInfo[] | null
   created: number
   updated: number
 }
