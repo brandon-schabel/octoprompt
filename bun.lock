@@ -34,6 +34,7 @@
       },
       "devDependencies": {
         "@swc/core": "^1.13.1",
+        "@swc/wasm": "^1.13.1",
         "@types/archiver": "^6.0.3",
         "@types/bun": "latest",
         "@types/picomatch": "^3.0.2",
@@ -631,6 +632,8 @@
     "@swc/counter": ["@swc/counter@0.1.3", "", {}, "sha512-e2BR4lsJkkRlKZ/qCHPw9ZaSxc0MVUd7gtbtaB7aMvHeJVYe8sOB8DBZkP2DtISHGSku9sCK6T6cnY0CtXrOCQ=="],
 
     "@swc/types": ["@swc/types@0.1.23", "", { "dependencies": { "@swc/counter": "^0.1.3" } }, "sha512-u1iIVZV9Q0jxY+yM2vw/hZGDNudsN85bBpTqzAQ9rzkxW9D+e3aEM4Han+ow518gSewkXgjmEK0BD79ZcNVgPw=="],
+
+    "@swc/wasm": ["@swc/wasm@1.13.1", "", {}, "sha512-L2qhh+0He6QLPl56vAz3FcMY62OLAmwO/cqM7Z9SRC7O3kYVRBNZPCdAAySB6OFX8MeUESlQEXpE/pgbuxB4cA=="],
 
     "@tailwindcss/typography": ["@tailwindcss/typography@0.5.16", "", { "dependencies": { "lodash.castarray": "^4.4.0", "lodash.isplainobject": "^4.0.6", "lodash.merge": "^4.6.2", "postcss-selector-parser": "6.0.10" }, "peerDependencies": { "tailwindcss": ">=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1" } }, "sha512-0wDLwCVF5V3x3b1SGXPCDcdsbDHMBe+lkFzBRaHeLvNi+nrrnZ1lA18u+OTWO8iSWU2GxUOCvlXtDuqftc1oiA=="],
 
