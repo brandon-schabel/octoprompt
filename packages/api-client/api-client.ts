@@ -143,13 +143,40 @@ import {
 } from '@octoprompt/schemas'
 
 // Git imports
-import type { GitStatusResult, GetProjectGitStatusResponse, GitOperationResponse } from '@octoprompt/schemas'
+import type { 
+  GitStatusResult, 
+  GetProjectGitStatusResponse, 
+  GitOperationResponse, 
+  GitDiffResponse,
+  GitBranch,
+  GitLogEntry,
+  GitCommit,
+  GitDiff,
+  GitRemote,
+  GitTag,
+  GitStash,
+  GitBlame
+} from '@octoprompt/schemas'
 
 import {
   getProjectGitStatusResponseSchema,
   stageFilesRequestSchema,
   unstageFilesRequestSchema,
-  gitOperationResponseSchema
+  gitOperationResponseSchema,
+  gitDiffRequestSchema,
+  gitDiffResponseSchema,
+  gitBranchListResponseSchema,
+  gitLogResponseSchema,
+  gitCreateBranchRequestSchema,
+  gitSwitchBranchRequestSchema,
+  gitMergeBranchRequestSchema,
+  gitPushRequestSchema,
+  gitResetRequestSchema,
+  gitCommitSchema,
+  gitRemoteSchema,
+  gitTagSchema,
+  gitStashSchema,
+  gitBlameSchema
 } from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
@@ -1326,18 +1353,18 @@ export class GitService extends BaseApiClient {
   }
 
   async stageFiles(projectId: number, filePaths: string[]) {
+    const validatedData = this.validateBody(stageFilesRequestSchema, { filePaths })
     const result = await this.request('POST', `/projects/${projectId}/git/stage`, {
-      body: { filePaths },
-      bodySchema: stageFilesRequestSchema,
+      body: validatedData,
       responseSchema: gitOperationResponseSchema
     })
     return result as GitOperationResponse
   }
 
   async unstageFiles(projectId: number, filePaths: string[]) {
+    const validatedData = this.validateBody(unstageFilesRequestSchema, { filePaths })
     const result = await this.request('POST', `/projects/${projectId}/git/unstage`, {
-      body: { filePaths },
-      bodySchema: unstageFilesRequestSchema,
+      body: validatedData,
       responseSchema: gitOperationResponseSchema
     })
     return result as GitOperationResponse
@@ -1358,9 +1385,161 @@ export class GitService extends BaseApiClient {
   }
 
   async commitChanges(projectId: number, message: string) {
+    const validatedData = this.validateBody(z.object({ message: z.string().min(1) }), { message })
     const result = await this.request('POST', `/projects/${projectId}/git/commit`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async getFileDiff(projectId: number, filePath: string, options?: { staged?: boolean; commit?: string }) {
+    const queryParams = new URLSearchParams({ filePath })
+    if (options?.staged) queryParams.append('staged', 'true')
+    if (options?.commit) queryParams.append('commit', options.commit)
+    
+    const result = await this.request('GET', `/projects/${projectId}/git/diff?${queryParams}`, {
+      responseSchema: gitDiffResponseSchema
+    })
+    return result as GitDiffResponse
+  }
+
+  // Branch Management
+  async getBranches(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/branches`, {
+      responseSchema: gitBranchListResponseSchema
+    })
+    return result as DataResponseSchema<GitBranch[]>
+  }
+
+  async createBranch(projectId: number, name: string, startPoint?: string) {
+    const validatedData = this.validateBody(gitCreateBranchRequestSchema, { name, startPoint })
+    const result = await this.request('POST', `/projects/${projectId}/git/branches`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async switchBranch(projectId: number, name: string) {
+    const validatedData = this.validateBody(gitSwitchBranchRequestSchema, { name })
+    const result = await this.request('POST', `/projects/${projectId}/git/branches/switch`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Commit History
+  async getCommitLog(projectId: number, options?: { limit?: number; skip?: number; branch?: string; file?: string }) {
+    const params: Record<string, any> = {}
+    if (options?.limit) params.limit = options.limit
+    if (options?.skip) params.skip = options.skip
+    if (options?.branch) params.branch = options.branch
+    if (options?.file) params.file = options.file
+
+    const result = await this.request('GET', `/projects/${projectId}/git/log`, {
+      params,
+      responseSchema: gitLogResponseSchema
+    })
+    return result as DataResponseSchema<GitLogEntry[]> & { hasMore?: boolean }
+  }
+
+  // Remote Operations
+  async getRemotes(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/remotes`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(gitRemoteSchema).optional(),
+        message: z.string().optional()
+      })
+    })
+    return result as DataResponseSchema<GitRemote[]>
+  }
+
+  async push(projectId: number, remote?: string, branch?: string, options?: { force?: boolean; setUpstream?: boolean }) {
+    const validatedData = this.validateBody(gitPushRequestSchema, { 
+      remote: remote || 'origin', 
+      branch, 
+      force: options?.force, 
+      setUpstream: options?.setUpstream 
+    })
+    const result = await this.request('POST', `/projects/${projectId}/git/push`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async fetch(projectId: number, remote?: string, prune?: boolean) {
+    const result = await this.request('POST', `/projects/${projectId}/git/fetch`, {
+      body: { remote: remote || 'origin', prune },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async pull(projectId: number, remote?: string, branch?: string, rebase?: boolean) {
+    const result = await this.request('POST', `/projects/${projectId}/git/pull`, {
+      body: { remote: remote || 'origin', branch, rebase },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Tag Management
+  async getTags(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/tags`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(gitTagSchema).optional(),
+        message: z.string().optional()
+      })
+    })
+    return result as DataResponseSchema<GitTag[]>
+  }
+
+  async createTag(projectId: number, name: string, options?: { message?: string; ref?: string }) {
+    const result = await this.request('POST', `/projects/${projectId}/git/tags`, {
+      body: { name, message: options?.message, ref: options?.ref },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Stash Management
+  async stash(projectId: number, message?: string) {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash`, {
       body: { message },
-      bodySchema: z.object({ message: z.string().min(1) }),
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async getStashList(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/stash`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(gitStashSchema).optional(),
+        message: z.string().optional()
+      })
+    })
+    return result as DataResponseSchema<GitStash[]>
+  }
+
+  async stashApply(projectId: number, ref?: string) {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash/apply`, {
+      body: { ref: ref || 'stash@{0}' },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Reset
+  async reset(projectId: number, ref: string, mode?: 'soft' | 'mixed' | 'hard') {
+    const validatedData = this.validateBody(gitResetRequestSchema, { ref, mode: mode || 'mixed' })
+    const result = await this.request('POST', `/projects/${projectId}/git/reset`, {
+      body: validatedData,
       responseSchema: gitOperationResponseSchema
     })
     return result as GitOperationResponse

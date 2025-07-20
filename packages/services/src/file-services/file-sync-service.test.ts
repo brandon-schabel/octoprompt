@@ -638,7 +638,8 @@ describe('File Content Truncation', () => {
   })
 
   test('should truncate large file content for summarization', async () => {
-    const largeContent = 'x'.repeat(150000) // 150k characters
+    // Use valid JavaScript content to avoid parsing errors
+    const largeContent = '// Large file content\n' + 'const x = "test";\n'.repeat(10000) // Creates ~170k characters of valid JS
     const fileName = 'large-file.ts'
 
     readdirSyncSpy.mockReturnValue([
@@ -674,8 +675,12 @@ describe('File Content Truncation', () => {
     expect(createdFiles).toHaveLength(1)
 
     const fileData = createdFiles[0]
+    // Content should be truncated to 100k chars + truncation suffix
     expect(fileData.content.length).toBeLessThan(largeContent.length)
     expect(fileData.content).toContain('[File truncated for summarization...]')
+    // Checksum should be computed from full content
+    expect(fileData.checksum).not.toBe('FILE_TOO_LARGE')
+    expect(fileData.checksum).toMatch(/^[a-f0-9]{64}$/i) // Valid SHA256 checksum
   })
 
   test('should not truncate small file content', async () => {
@@ -717,6 +722,8 @@ describe('File Content Truncation', () => {
     const fileData = createdFiles[0]
     expect(fileData.content).toBe(smallContent)
     expect(fileData.content).not.toContain('[File truncated for summarization...]')
+    // Checksum should be computed correctly
+    expect(fileData.checksum).toMatch(/^[a-f0-9]{64}$/i) // Valid SHA256 checksum
   })
 })
 

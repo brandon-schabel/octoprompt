@@ -8,24 +8,7 @@ import type {
   ExportDefaultDeclaration,
   ModuleItem
 } from '@swc/core'
-
-export interface ImportInfo {
-  source: string
-  specifiers: Array<{
-    type: 'default' | 'named' | 'namespace'
-    imported?: string
-    local: string
-  }>
-}
-
-export interface ExportInfo {
-  type: 'default' | 'named' | 'all'
-  source?: string
-  specifiers?: Array<{
-    exported: string
-    local?: string
-  }>
-}
+import type { ImportInfo, ExportInfo } from '@octoprompt/schemas'
 
 export interface CodeAnalysisResult {
   imports: ImportInfo[]
@@ -103,6 +86,11 @@ export function analyzeCodeImportsExports(content: string, filename: string): Co
 
     if (!isTypeScript && !isJavaScript && !isPython) {
       return null
+    }
+
+    // Return empty result for empty content
+    if (!content.trim()) {
+      return { imports: [], exports: [] }
     }
 
     if (isPython) {

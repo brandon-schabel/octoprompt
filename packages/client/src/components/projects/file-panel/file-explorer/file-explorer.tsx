@@ -7,8 +7,7 @@ import { Skeleton } from '@ui'
 import { OctoTooltip } from '@/components/octo/octo-tooltip'
 import { ShortcutDisplay } from '@/components/app-shortcut-display'
 import { formatShortcut } from '@/lib/shortcuts'
-import { X } from 'lucide-react'
-import { ResizablePanel } from '@ui'
+import { X, ChevronDown, Files } from 'lucide-react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useActiveProjectTab, useProjectTabField } from '@/hooks/use-kv-local-storage'
 import { useProjectFileMap, useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
@@ -16,10 +15,8 @@ import { useClickAway } from '@/hooks/utility-hooks/use-click-away'
 import { SelectedFilesListRef } from '../../selected-files-list'
 import { buildFileTree } from '@octoprompt/shared'
 import { FileTreeRef, FileTree } from '../file-tree/file-tree'
-import { TabbedSidebarPanel } from './tabbed-sidebar-panel'
 import { NoResultsScreen } from './no-results-screen'
 import { EmptyProjectScreen } from './empty-project-screen'
-import { SelectedFilesDrawer } from '../../selected-files-drawer'
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject, useUpdateFileContent } from '@/hooks/api/use-projects-api'
@@ -27,6 +24,14 @@ import { ProjectFile } from '@octoprompt/schemas'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useProjectGitStatus } from '@/hooks/api/use-git-api'
 import { GitPullRequest, GitBranch } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>
@@ -57,9 +62,12 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
 
   const [viewedFile, setViewedFile] = useState<ProjectFile | null>(null)
   const [openInEditMode, setOpenInEditMode] = useState(false)
+  const [startInDiffMode, setStartInDiffMode] = useState(false)
+
   const closeFileViewer = () => {
     setViewedFile(null)
     setOpenInEditMode(false)
+    setStartInDiffMode(false)
   }
 
   const updateFileContentMutation = useUpdateFileContent()
@@ -77,16 +85,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteIndex, setAutocompleteIndex] = useState(-1)
 
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
-
-  useHotkeys(
-    'mod+b',
-    (e) => {
-      e.preventDefault()
-      setIsPanelCollapsed((prev) => !prev)
-    },
-    { enableOnFormTags: true }
-  )
 
   const handleSearchChange = useCallback(
     (val: string) => {
@@ -98,7 +96,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     [debouncedSetFileSearch]
   )
   const { selectedFiles, selectFiles } = useSelectedFiles()
-  const projectFileMap = useProjectFileMap(selectedProjectId ?? -1)
 
   // Get git status for the project
   const { data: gitStatus } = useProjectGitStatus(selectedProjectId)
@@ -140,30 +137,14 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
     setAutocompleteIndex(-1)
   })
 
-  const renderMobileSelectedFilesDrawerButton = () => {
-    const trigger = (
-      <Button variant='outline' className='relative' size='sm'>
-        Files
-        <Badge variant='secondary' className='ml-2'>
-          {selectedFiles.length}
-        </Badge>
-      </Button>
-    )
-    return (
-      <SelectedFilesDrawer
-        selectedFiles={selectedFiles}
-        fileMap={projectFileMap}
-        onRemoveFile={() => {}}
-        trigger={trigger}
-        projectTabId={activeProjectTabId ?? -1}
-      />
-    )
-  }
-
-  const handleViewFile = useCallback((file: ProjectFile, editMode: boolean = false) => {
-    setOpenInEditMode(editMode)
-    setViewedFile(file)
-  }, [])
+  const handleViewFile = useCallback(
+    (file: ProjectFile, editMode: boolean = false, showDiff: boolean = false) => {
+      setOpenInEditMode(editMode)
+      setStartInDiffMode(showDiff)
+      setViewedFile(file)
+    },
+    []
+  )
 
   const handleSaveFileContent = useCallback(
     async (content: string) => {
@@ -259,43 +240,136 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           {searchByContent ? 'Search Content' : 'Search Names'}
         </Button>
 
-        {/* Git changes selector button */}
-        {gitStatus?.success &&
-          gitStatus.data.files.length > 0 &&
-          (() => {
-            const changedFilesCount = gitStatus.data.files.filter(
-              (file) => file.status !== 'unchanged' && file.status !== 'ignored'
-            ).length
+        {/* File selection dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant='outline' size='sm' className='min-w-[140px]'>
+              <Files className='h-4 w-4 mr-1' />
+              Select Files
+              <ChevronDown className='h-3 w-3 ml-auto' />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='start' className='w-56'>
+            <DropdownMenuLabel>File Selection</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            {/* Select All Files */}
+            <DropdownMenuItem
+              onClick={() => {
+                const allFileIds = projectFiles.map(file => file.id)
+                selectFiles(allFileIds)
+              }}
+            >
+              <Files className='h-4 w-4 mr-2' />
+              <span>Select All Files</span>
+              <Badge variant='secondary' className='ml-auto'>
+                {projectFiles.length}
+              </Badge>
+            </DropdownMenuItem>
 
-            if (changedFilesCount === 0) return null
+            {/* Git options - only show if git is available */}
+            {gitStatus?.success && gitStatus.data.files.length > 0 && (() => {
+              const changedFiles = gitStatus.data.files.filter(
+                (file) => file.status !== 'unchanged' && file.status !== 'ignored'
+              )
+              const stagedFiles = changedFiles.filter((file) => file.staged)
+              const unstagedFiles = changedFiles.filter((file) => !file.staged)
 
-            return (
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => {
-                  const filesWithChanges = gitStatus.data.files
-                    .filter((file) => file.status !== 'unchanged' && file.status !== 'ignored')
-                    .map((file) => {
-                      // Find the file ID from projectFiles by matching the path
-                      const projectFile = projectFiles.find((pf) => pf.path === file.path)
-                      return projectFile?.id
-                    })
-                    .filter((id): id is number => id !== undefined)
+              if (changedFiles.length === 0) return null
 
-                  if (filesWithChanges.length > 0) {
-                    selectFiles([...new Set([...selectedFiles, ...filesWithChanges])])
-                  }
-                }}
-              >
-                <GitPullRequest className='h-4 w-4 mr-1' />
-                Select Git Files
-                <Badge variant='secondary' className='ml-2'>
-                  {changedFilesCount}
-                </Badge>
-              </Button>
-            )
-          })()}
+              return (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className='text-xs'>Git Changes</DropdownMenuLabel>
+                  
+                  {/* Select All Git Files */}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const filesWithChanges = changedFiles
+                        .map((file) => {
+                          const projectFile = projectFiles.find((pf) => pf.path === file.path)
+                          return projectFile?.id
+                        })
+                        .filter((id): id is number => id !== undefined)
+
+                      if (filesWithChanges.length > 0) {
+                        selectFiles([...new Set([...selectedFiles, ...filesWithChanges])])
+                      }
+                    }}
+                  >
+                    <GitPullRequest className='h-4 w-4 mr-2' />
+                    <span>All Changed Files</span>
+                    <Badge variant='secondary' className='ml-auto'>
+                      {changedFiles.length}
+                    </Badge>
+                  </DropdownMenuItem>
+
+                  {/* Select Staged Files */}
+                  {stagedFiles.length > 0 && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const stagedFileIds = stagedFiles
+                          .map((file) => {
+                            const projectFile = projectFiles.find((pf) => pf.path === file.path)
+                            return projectFile?.id
+                          })
+                          .filter((id): id is number => id !== undefined)
+
+                        if (stagedFileIds.length > 0) {
+                          selectFiles([...new Set([...selectedFiles, ...stagedFileIds])])
+                        }
+                      }}
+                    >
+                      <GitBranch className='h-4 w-4 mr-2' />
+                      <span>Staged Files</span>
+                      <Badge variant='secondary' className='ml-auto'>
+                        {stagedFiles.length}
+                      </Badge>
+                    </DropdownMenuItem>
+                  )}
+
+                  {/* Select Unstaged Files */}
+                  {unstagedFiles.length > 0 && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const unstagedFileIds = unstagedFiles
+                          .map((file) => {
+                            const projectFile = projectFiles.find((pf) => pf.path === file.path)
+                            return projectFile?.id
+                          })
+                          .filter((id): id is number => id !== undefined)
+
+                        if (unstagedFileIds.length > 0) {
+                          selectFiles([...new Set([...selectedFiles, ...unstagedFileIds])])
+                        }
+                      }}
+                    >
+                      <GitPullRequest className='h-4 w-4 mr-2' />
+                      <span>Unstaged Files</span>
+                      <Badge variant='secondary' className='ml-auto'>
+                        {unstagedFiles.length}
+                      </Badge>
+                    </DropdownMenuItem>
+                  )}
+                </>
+              )
+            })()}
+
+            {/* Clear selection */}
+            {selectedFiles.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => selectFiles([])}
+                  className='text-destructive focus:text-destructive'
+                >
+                  <X className='h-4 w-4 mr-2' />
+                  <span>Clear Selection</span>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <OctoTooltip>
           <div className='space-y-2'>
@@ -324,7 +398,6 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           </div>
         </OctoTooltip>
 
-        <div className='flex lg:hidden items-center justify-between'>{renderMobileSelectedFilesDrawerButton()}</div>
         {showAutocomplete && (localFileSearch || '').trim() && suggestions.length > 0 && (
           <ul className='absolute top-11 left-0 z-10 w-full bg-background border border-border rounded-md shadow-md max-h-56 overflow-auto'>
             <li className='px-2 py-1.5 text-sm text-muted-foreground bg-muted border-b border-border'>
@@ -375,54 +448,30 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         />
       ) : (
         <div className='flex-1 min-h-0 flex flex-col'>
-          <div className='flex lg:hidden items-center justify-between mb-2'>
-            {renderMobileSelectedFilesDrawerButton()}
-          </div>
-
           <div className='hidden lg:flex flex-1 min-h-0'>
-            <ResizablePanel
-              leftPanel={
-                <div className='h-full w-full'>
-                  <ScrollArea className='h-full min-h-0 border rounded-md'>
-                    <FileTree
-                      ref={ref.fileTreeRef}
-                      root={fileTree}
-                      onViewFile={(file) => handleViewFile(file as ProjectFile, false)}
-                      onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
-                      projectRoot={project?.path || ''}
-                      resolveImports={resolveImports}
-                      preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
-                      onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
-                      onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
-                    />
-                  </ScrollArea>
-                </div>
-              }
-              rightPanel={
-                <div className='h-full w-full'>
-                  <TabbedSidebarPanel
-                    allFilesMap={projectFileMap}
-                    selectedFilesListRef={ref.selectedFilesListRef}
-                    onNavigateToFileTree={() => ref.fileTreeRef.current?.focusTree()}
-                  />
-                </div>
-              }
-              initialLeftPanelWidth={70}
-              minLeftPanelWidth={200}
-              collapseThreshold={100}
-              storageKey='file-explorer-panel-width'
-              className='h-full w-full'
-              resizerClassName='mx-1'
-              badgeContent={
-                selectedFiles.length > 0 && (
-                  <Badge variant='secondary' className='absolute -top-1 -right-1 text-xs'>
-                    {selectedFiles.length}
-                  </Badge>
-                )
-              }
-              onCollapseChange={setIsPanelCollapsed}
-              isCollapsedExternal={isPanelCollapsed}
-            />
+            <div className='h-full w-full'>
+              <ScrollArea className='h-full min-h-0 border rounded-md'>
+                <FileTree
+                  ref={ref.fileTreeRef}
+                  root={fileTree}
+                  onViewFile={(file) => {
+                    // Check if file has git changes and show diff by default
+                    const gitFileStatus =
+                      gitStatus?.success && gitStatus.data
+                        ? gitStatus.data.files.find((f) => f.path === file?.path)
+                        : null
+                    const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged'
+                    handleViewFile(file as ProjectFile, false, hasChanges)
+                  }}
+                  onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
+                  projectRoot={project?.path || ''}
+                  resolveImports={resolveImports}
+                  preferredEditor={preferredEditor as 'vscode' | 'cursor' | 'webstorm'}
+                  onNavigateRight={() => ref.selectedFilesListRef.current?.focusList()}
+                  onNavigateToSearch={() => ref.searchInputRef.current?.focus()}
+                />
+              </ScrollArea>
+            </div>
           </div>
 
           <div className='flex flex-col flex-1 min-h-0 lg:hidden'>
@@ -430,7 +479,15 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
               <FileTree
                 ref={ref.fileTreeRef}
                 root={fileTree}
-                onViewFile={(file) => handleViewFile(file as ProjectFile, false)}
+                onViewFile={(file) => {
+                  // Check if file has git changes and show diff by default
+                  const gitFileStatus =
+                    gitStatus?.success && gitStatus.data
+                      ? gitStatus.data.files.find((f) => f.path === file?.path)
+                      : null
+                  const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged'
+                  handleViewFile(file as ProjectFile, false, hasChanges)
+                }}
                 onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
                 projectRoot={project?.path || ''}
                 resolveImports={resolveImports}
@@ -451,6 +508,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
           onClose={closeFileViewer}
           projectId={selectedProjectId || undefined}
           startInEditMode={openInEditMode}
+          startInDiffMode={startInDiffMode}
         />
       )}
     </div>

@@ -111,7 +111,9 @@ function FileChangePreview({ file, projectFileMap }: { file: UpdatedFileData; pr
     summary: fileData.summary || '',
     meta: fileData.meta || '',
     checksum: fileData.checksum || '',
-    summaryLastUpdated: fileData.summaryLastUpdated ?? 0
+    summaryLastUpdated: fileData.summaryLastUpdated ?? 0,
+    imports: fileData.imports || null,
+    exports: fileData.exports || null
   })
 
   // Calculate line changes

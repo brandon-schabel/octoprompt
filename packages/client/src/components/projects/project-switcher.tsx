@@ -15,7 +15,7 @@ import { Input } from '@ui'
 import { cn } from '@/lib/utils'
 import { Project } from '@octoprompt/schemas'
 import { useGetProjects } from '@/hooks/api/use-projects-api'
-import { useActiveProjectTab, useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
+import { useUpdateActiveProjectTab } from '@/hooks/use-kv-local-storage'
 import { useRecentProjects } from '@/hooks/use-recent-projects'
 
 interface ProjectSwitcherProps {

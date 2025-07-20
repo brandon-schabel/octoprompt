@@ -5,6 +5,7 @@ import { Input } from '@ui'
 import { Switch } from '@ui'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@ui'
 import { Checkbox } from '@ui'
+import { Badge } from '@ui'
 import { Info, FileText } from 'lucide-react'
 import {
   useGetProjectFiles,
@@ -16,9 +17,11 @@ import { buildCombinedFileSummariesXml } from '@octoprompt/shared'
 
 import { FileViewerDialog } from '@/components/navigation/file-viewer-dialog'
 import { SummaryDialog } from '@/components/projects/summary-dialog'
+import { SummarizationStatsCard } from '@/components/projects/summarization-stats-card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui'
 import { FormatTokenCount } from '@/components/format-token-count'
 import { estimateTokenCount } from '@octoprompt/shared'
+import { categorizeFile } from '@/lib/file-categorization'
 
 import { toast } from 'sonner'
 import { ProjectFile } from '@octoprompt/schemas'
@@ -85,6 +88,7 @@ export function ProjectSummarizationSettingsPage() {
   const [minTokensFilter, setMinTokensFilter] = useState<number | null>(null)
   const [maxTokensFilter, setMaxTokensFilter] = useState<number | null>(null)
   const [combinedSummaryDialogOpen, setCombinedSummaryDialogOpen] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   // TODO: Remove if not needed
   // const {
   //   data: summaryData,
@@ -144,9 +148,16 @@ export function ProjectSummarizationSettingsPage() {
         const tokenCount = tokensMap.get(file.id) ?? 0
         if (minTokensFilter !== null && tokenCount < minTokensFilter) return false
         if (maxTokensFilter !== null && tokenCount > maxTokensFilter) return false
+        
+        // Category filter
+        if (categoryFilter !== 'all') {
+          const fileCategory = categorizeFile(file)
+          if (fileCategory.category !== categoryFilter) return false
+        }
+        
         return true
       }),
-    [projectFiles, tokensMap, minTokensFilter, maxTokensFilter]
+    [projectFiles, tokensMap, minTokensFilter, maxTokensFilter, categoryFilter]
   )
 
   // Memoize sorted project files to prevent re-sorting on every render
@@ -339,15 +350,22 @@ export function ProjectSummarizationSettingsPage() {
   // Memoize unsummarized file selection to prevent recalculation
   const handleSelectUnsummarized = useMemo(() => {
     return () => {
-      const unsummarizedIds = sortedProjectFiles.filter((file) => !summariesMap.has(file.id)).map((file) => file.id)
-      setSelectedFileIds(unsummarizedIds)
-      if (unsummarizedIds.length > 0) {
-        toast.info(`Selected ${unsummarizedIds.length} unsummarized files.`)
+      // Only select files that are pending summarization (not binary, too large, or empty)
+      const pendingIds = sortedProjectFiles
+        .filter((file) => {
+          const category = categorizeFile(file)
+          return category.category === 'pending'
+        })
+        .map((file) => file.id)
+        
+      setSelectedFileIds(pendingIds)
+      if (pendingIds.length > 0) {
+        toast.info(`Selected ${pendingIds.length} files pending summarization.`)
       } else {
-        toast.info('No unsummarized files found to select.')
+        toast.info('No files pending summarization found.')
       }
     }
-  }, [sortedProjectFiles, summariesMap])
+  }, [sortedProjectFiles])
 
   if (isLoading) {
     return <div className='p-4'>Loading files...</div>
@@ -358,6 +376,12 @@ export function ProjectSummarizationSettingsPage() {
 
   return (
     <div className='p-4 space-y-6'>
+      {/* Summarization Coverage Stats */}
+      <SummarizationStatsCard 
+        projectFiles={projectFiles} 
+        isEnabled={isProjectSummarizationEnabled} 
+      />
+
       <Card>
         <CardHeader>
           <CardTitle className='flex justify-between items-center'>
@@ -452,6 +476,25 @@ export function ProjectSummarizationSettingsPage() {
               </SelectContent>
             </Select>
 
+            {/* Category Filter */}
+            <Select
+              value={categoryFilter}
+              onValueChange={(value) => setCategoryFilter(value)}
+              disabled={!isProjectSummarizationEnabled || projectFiles.length === 0}
+            >
+              <SelectTrigger className='w-[180px]'>
+                <SelectValue placeholder='Filter by category...' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Files</SelectItem>
+                <SelectItem value='summarized'>Summarized</SelectItem>
+                <SelectItem value='pending'>Pending Summarization</SelectItem>
+                <SelectItem value='binary'>Binary Files</SelectItem>
+                <SelectItem value='too-large'>Too Large</SelectItem>
+                <SelectItem value='empty'>Empty Files</SelectItem>
+              </SelectContent>
+            </Select>
+
             {/* Optional: Filter by token range */}
             <div className='flex items-center gap-2'>
               <label htmlFor='minTokens' className='text-sm font-medium'>
@@ -507,7 +550,7 @@ export function ProjectSummarizationSettingsPage() {
                   onClick={handleSelectUnsummarized}
                   disabled={!isProjectSummarizationEnabled || sortedProjectFiles.length === 0}
                 >
-                  Select Unsummarized
+                  Select Pending
                 </Button>
                 {selectedFileIds.length > 0 && (
                   <span className='text-xs text-muted-foreground ml-auto'>({selectedFileIds.length} selected)</span>
@@ -530,6 +573,7 @@ export function ProjectSummarizationSettingsPage() {
                     : null
                   const tokenCount = tokensMap.get(file.id) ?? 0
                   const summaryTokenCount = summaryTokensMap.get(file.id) ?? 0 // From summaryTokensMap
+                  const fileCategory = categorizeFile(file)
 
                   return (
                     <li
@@ -548,10 +592,23 @@ export function ProjectSummarizationSettingsPage() {
                         />
                         <label
                           htmlFor={`check-${file.id}`}
-                          className={`flex-1 cursor-pointer truncate ${hasSummary ? 'font-medium' : ''}`}
+                          className={`flex-1 cursor-pointer truncate flex items-center gap-2 ${hasSummary ? 'font-medium' : ''}`}
                           title={file.path}
                         >
-                          {file.path}
+                          <span className='truncate'>{file.path}</span>
+                          {/* Category Badge */}
+                          {fileCategory.category !== 'summarized' && fileCategory.category !== 'pending' && (
+                            <Badge 
+                              variant='outline' 
+                              className='text-[10px] px-1 py-0 h-4'
+                              title={fileCategory.reason}
+                            >
+                              {fileCategory.category === 'binary' && 'Binary'}
+                              {fileCategory.category === 'too-large' && 'Too Large'}
+                              {fileCategory.category === 'empty' && 'Empty'}
+                              {fileCategory.category === 'error' && 'Error'}
+                            </Badge>
+                          )}
                         </label>
 
                         {/* File/Summary Token counts */}

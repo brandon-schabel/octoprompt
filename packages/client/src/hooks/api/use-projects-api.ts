@@ -9,7 +9,6 @@ export {
   useUpdateProject,
   useDeleteProject,
   useSyncProject,
-  useRefreshProject,
   useSuggestFiles,
   useOptimizeUserInput,
   useInvalidateProjects,

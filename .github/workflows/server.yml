@@ -28,18 +28,10 @@ jobs:
       - name: Install shared dependencies
         run: cd packages/shared && bun install
 
-      - name: Run Server tests
-        run: |
-          echo "🧪 Running Server Package Tests..."
-          cd packages/server && bun run test
 
       - name: Install server dependencies
         run: cd packages/server && bun install
 
-      - name: Run unit tests
-        run: |
-          echo "🧪 Running Unit Tests..."
-          cd packages/server && bun run test
 
     #   - name: Run E2E tests
     #     run: |

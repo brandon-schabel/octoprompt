@@ -1,35 +1,24 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import {
-  getProjectGitStatusResponseSchema,
-  gitStatusResultSchema,
-  stageFilesRequestSchema,
-  unstageFilesRequestSchema,
   gitOperationResponseSchema,
-  gitDiffRequestSchema,
-  gitDiffResponseSchema,
-  gitBranchListResponseSchema,
-  gitLogResponseSchema,
-  gitCreateBranchRequestSchema,
-  gitSwitchBranchRequestSchema,
-  gitMergeBranchRequestSchema,
-  gitPushRequestSchema,
-  gitResetRequestSchema,
-  gitBranchSchema,
-  gitLogEntrySchema,
-  gitCommitSchema,
-  gitDiffSchema,
   gitRemoteSchema,
   gitTagSchema,
   gitStashSchema,
-  gitBlameSchema
+  gitPushRequestSchema,
+  gitResetRequestSchema
 } from '@octoprompt/schemas'
 import * as gitService from '@octoprompt/services'
 
-export const gitRoutes = new OpenAPIHono()
+export const gitAdvancedRoutes = new OpenAPIHono()
 
-const getProjectGitStatusRoute = createRoute({
+// ============================================
+// Remote Management Routes
+// ============================================
+
+// Get remotes route
+const getRemotesRoute = createRoute({
   method: 'get',
-  path: '/api/projects/{projectId}/git/status',
+  path: '/api/projects/{projectId}/git/remotes',
   request: {
     params: z.object({
       projectId: z.string().transform((val) => parseInt(val, 10))
@@ -37,102 +26,358 @@ const getProjectGitStatusRoute = createRoute({
   },
   responses: {
     200: {
-      content: {
-        'application/json': {
-          schema: getProjectGitStatusResponseSchema
-        }
-      },
-      description: 'Git status for the project'
-    },
-    404: {
       content: {
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            message: z.string()
+            data: z.array(gitRemoteSchema).optional(),
+            message: z.string().optional()
           })
+        }
+      },
+      description: 'List of remotes retrieved successfully'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
         }
       },
       description: 'Project not found'
     },
     500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Get all configured remotes for a git repository'
+})
+
+gitAdvancedRoutes.openapi(getRemotesRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const remotes = await gitService.getRemotes(projectId)
+
+    return c.json({
+      success: true,
+      data: remotes
+    })
+  } catch (error) {
+    console.error('[GetRemotes] Error:', error)
+    if (error instanceof Error) {
+      return c.json(
+        {
+          success: false,
+          message: error.message
+        },
+        500
+      )
+    }
+    return c.json(
+      {
+        success: false,
+        message: 'Failed to get remotes'
+      },
+      500
+    )
+  }
+})
+
+// Push route
+const pushRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/push',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: gitPushRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Changes pushed successfully'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Bad request'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Push changes to a remote repository'
+})
+
+gitAdvancedRoutes.openapi(pushRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { remote, branch, force, setUpstream } = c.req.valid('json')
+
+    await gitService.push(projectId, remote || 'origin', branch, { force, setUpstream })
+
+    return c.json({
+      success: true,
+      message: `Successfully pushed to ${remote || 'origin'}${branch ? `/${branch}` : ''}`
+    })
+  } catch (error) {
+    console.error('[Push] Error:', error)
+    if (error instanceof Error) {
+      return c.json(
+        {
+          success: false,
+          message: error.message
+        },
+        500
+      )
+    }
+    return c.json(
+      {
+        success: false,
+        message: 'Failed to push changes'
+      },
+      500
+    )
+  }
+})
+
+// Fetch route
+const fetchRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/fetch',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            remote: z.string().optional().default('origin'),
+            prune: z.boolean().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Fetched successfully'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Bad request'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Fetch updates from a remote repository'
+})
+
+gitAdvancedRoutes.openapi(fetchRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { remote, prune } = c.req.valid('json')
+
+    await gitService.fetch(projectId, remote || 'origin', { prune })
+
+    return c.json({
+      success: true,
+      message: `Successfully fetched from ${remote || 'origin'}`
+    })
+  } catch (error) {
+    console.error('[Fetch] Error:', error)
+    if (error instanceof Error) {
+      return c.json(
+        {
+          success: false,
+          message: error.message
+        },
+        500
+      )
+    }
+    return c.json(
+      {
+        success: false,
+        message: 'Failed to fetch from remote'
+      },
+      500
+    )
+  }
+})
+
+// Pull route
+const pullRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/pull',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            remote: z.string().optional().default('origin'),
+            branch: z.string().optional(),
+            rebase: z.boolean().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Pulled successfully'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Bad request'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Pull changes from a remote repository'
+})
+
+gitAdvancedRoutes.openapi(pullRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { remote, branch, rebase } = c.req.valid('json')
+
+    await gitService.pull(projectId, remote || 'origin', branch, { rebase })
+
+    return c.json({
+      success: true,
+      message: `Successfully pulled from ${remote || 'origin'}${branch ? `/${branch}` : ''}`
+    })
+  } catch (error) {
+    console.error('[Pull] Error:', error)
+    if (error instanceof Error) {
+      return c.json(
+        {
+          success: false,
+          message: error.message
+        },
+        500
+      )
+    }
+    return c.json(
+      {
+        success: false,
+        message: 'Failed to pull changes'
+      },
+      500
+    )
+  }
+})
+
+// ============================================
+// Tag Management Routes
+// ============================================
+
+// Get tags route
+const getTagsRoute = createRoute({
+  method: 'get',
+  path: '/api/projects/{projectId}/git/tags',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    })
+  },
+  responses: {
+    200: {
       content: {
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            message: z.string()
+            data: z.array(gitTagSchema).optional(),
+            message: z.string().optional()
           })
         }
       },
-      description: 'Internal server error'
-    }
-  },
-  tags: ['Git'],
-  description: 'Get the git status for a project including file changes, branch info, and staging status'
-})
-
-gitRoutes.openapi(getProjectGitStatusRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const result = await gitService.getProjectGitStatus(projectId)
-
-    return c.json({
-      success: true,
-      data: result
-    })
-  } catch (error) {
-    console.error('[GitStatus] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'An unexpected error occurred'
-      },
-      500
-    )
-  }
-})
-
-// Stage files route
-const stageFilesRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/git/stage',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    }),
-    body: {
-      content: {
-        'application/json': {
-          schema: stageFilesRequestSchema
-        }
-      }
-    }
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Files staged successfully'
-    },
-    400: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Bad request'
+      description: 'List of tags retrieved successfully'
     },
     404: {
       content: {
@@ -152,22 +397,20 @@ const stageFilesRoute = createRoute({
     }
   },
   tags: ['Git'],
-  description: 'Stage files for commit in a git repository'
+  description: 'Get all tags for a git repository'
 })
 
-gitRoutes.openapi(stageFilesRoute, async (c) => {
+gitAdvancedRoutes.openapi(getTagsRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
-    const { filePaths } = c.req.valid('json')
-
-    await gitService.stageFiles(projectId, filePaths)
+    const tags = await gitService.getTags(projectId)
 
     return c.json({
       success: true,
-      message: `Successfully staged ${filePaths.length} file(s)`
+      data: tags
     })
   } catch (error) {
-    console.error('[StageFiles] Error:', error)
+    console.error('[GetTags] Error:', error)
     if (error instanceof Error) {
       return c.json(
         {
@@ -180,243 +423,17 @@ gitRoutes.openapi(stageFilesRoute, async (c) => {
     return c.json(
       {
         success: false,
-        message: 'Failed to stage files'
+        message: 'Failed to get tags'
       },
       500
     )
   }
 })
 
-// Unstage files route
-const unstageFilesRoute = createRoute({
+// Create tag route
+const createTagRoute = createRoute({
   method: 'post',
-  path: '/api/projects/{projectId}/git/unstage',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    }),
-    body: {
-      content: {
-        'application/json': {
-          schema: unstageFilesRequestSchema
-        }
-      }
-    }
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Files unstaged successfully'
-    },
-    400: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Bad request'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
-  tags: ['Git'],
-  description: 'Unstage files from the git staging area'
-})
-
-gitRoutes.openapi(unstageFilesRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const { filePaths } = c.req.valid('json')
-
-    await gitService.unstageFiles(projectId, filePaths)
-
-    return c.json({
-      success: true,
-      message: `Successfully unstaged ${filePaths.length} file(s)`
-    })
-  } catch (error) {
-    console.error('[UnstageFiles] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to unstage files'
-      },
-      500
-    )
-  }
-})
-
-// Stage all files route
-const stageAllRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/git/stage-all',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    })
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'All files staged successfully'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
-  tags: ['Git'],
-  description: 'Stage all modified files in the git repository'
-})
-
-gitRoutes.openapi(stageAllRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-
-    await gitService.stageAll(projectId)
-
-    return c.json({
-      success: true,
-      message: 'Successfully staged all files'
-    })
-  } catch (error) {
-    console.error('[StageAll] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to stage all files'
-      },
-      500
-    )
-  }
-})
-
-// Unstage all files route
-const unstageAllRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/git/unstage-all',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    })
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'All files unstaged successfully'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
-  tags: ['Git'],
-  description: 'Unstage all files from the git staging area'
-})
-
-gitRoutes.openapi(unstageAllRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-
-    await gitService.unstageAll(projectId)
-
-    return c.json({
-      success: true,
-      message: 'Successfully unstaged all files'
-    })
-  } catch (error) {
-    console.error('[UnstageAll] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to unstage all files'
-      },
-      500
-    )
-  }
-})
-
-// Commit changes route
-const commitRoute = createRoute({
-  method: 'post',
-  path: '/api/projects/{projectId}/git/commit',
+  path: '/api/projects/{projectId}/git/tags',
   request: {
     params: z.object({
       projectId: z.string().transform((val) => parseInt(val, 10))
@@ -425,7 +442,9 @@ const commitRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            message: z.string().min(1, 'Commit message is required')
+            name: z.string(),
+            message: z.string().optional(),
+            ref: z.string().optional()
           })
         }
       }
@@ -438,7 +457,7 @@ const commitRoute = createRoute({
           schema: gitOperationResponseSchema
         }
       },
-      description: 'Changes committed successfully'
+      description: 'Tag created successfully'
     },
     400: {
       content: {
@@ -466,22 +485,114 @@ const commitRoute = createRoute({
     }
   },
   tags: ['Git'],
-  description: 'Commit staged changes to the git repository'
+  description: 'Create a new tag in the git repository'
 })
 
-gitRoutes.openapi(commitRoute, async (c) => {
+gitAdvancedRoutes.openapi(createTagRoute, async (c) => {
+  try {
+    const { projectId } = c.req.valid('param')
+    const { name, message, ref } = c.req.valid('json')
+
+    await gitService.createTag(projectId, name, { message, ref })
+
+    return c.json({
+      success: true,
+      message: `Tag '${name}' created successfully`
+    })
+  } catch (error) {
+    console.error('[CreateTag] Error:', error)
+    if (error instanceof Error) {
+      return c.json(
+        {
+          success: false,
+          message: error.message
+        },
+        500
+      )
+    }
+    return c.json(
+      {
+        success: false,
+        message: 'Failed to create tag'
+      },
+      500
+    )
+  }
+})
+
+// ============================================
+// Stash Management Routes
+// ============================================
+
+// Stash changes route
+const stashRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/git/stash',
+  request: {
+    params: z.object({
+      projectId: z.string().transform((val) => parseInt(val, 10))
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            message: z.string().optional()
+          })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Changes stashed successfully'
+    },
+    400: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Bad request'
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Project not found'
+    },
+    500: {
+      content: {
+        'application/json': {
+          schema: gitOperationResponseSchema
+        }
+      },
+      description: 'Internal server error'
+    }
+  },
+  tags: ['Git'],
+  description: 'Stash current changes'
+})
+
+gitAdvancedRoutes.openapi(stashRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
     const { message } = c.req.valid('json')
 
-    await gitService.commitChanges(projectId, message)
+    await gitService.stash(projectId, message)
 
     return c.json({
       success: true,
-      message: 'Successfully committed changes'
+      message: `Changes stashed successfully${message ? `: ${message}` : ''}`
     })
   } catch (error) {
-    console.error('[Commit] Error:', error)
+    console.error('[Stash] Error:', error)
     if (error instanceof Error) {
       return c.json(
         {
@@ -494,106 +605,17 @@ gitRoutes.openapi(commitRoute, async (c) => {
     return c.json(
       {
         success: false,
-        message: 'Failed to commit changes'
+        message: 'Failed to stash changes'
       },
       500
     )
   }
 })
 
-// Get file diff route
-const getFileDiffRoute = createRoute({
+// Get stash list route
+const getStashListRoute = createRoute({
   method: 'get',
-  path: '/api/projects/{projectId}/git/diff',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    }),
-    query: gitDiffRequestSchema
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: gitDiffResponseSchema
-        }
-      },
-      description: 'File diff retrieved successfully'
-    },
-    400: {
-      content: {
-        'application/json': {
-          schema: gitDiffResponseSchema
-        }
-      },
-      description: 'Bad request'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitDiffResponseSchema
-        }
-      },
-      description: 'Project or file not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitDiffResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
-  tags: ['Git'],
-  description: 'Get the diff for a specific file in the git repository'
-})
-
-gitRoutes.openapi(getFileDiffRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const { filePath, staged, commit } = c.req.valid('query')
-
-    const diff = await gitService.getFileDiff(projectId, filePath, { staged, commit })
-
-    return c.json({
-      success: true,
-      data: {
-        filePath,
-        diff,
-        staged: staged || false,
-        commit
-      }
-    })
-  } catch (error) {
-    console.error('[GetFileDiff] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to get file diff'
-      },
-      500
-    )
-  }
-})
-
-// ============================================
-// Branch Management Routes
-// ============================================
-
-// Get branches route
-const getBranchesRoute = createRoute({
-  method: 'get',
-  path: '/api/projects/{projectId}/git/branches',
+  path: '/api/projects/{projectId}/git/stash',
   request: {
     params: z.object({
       projectId: z.string().transform((val) => parseInt(val, 10))
@@ -603,10 +625,14 @@ const getBranchesRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: gitBranchListResponseSchema
+          schema: z.object({
+            success: z.boolean(),
+            data: z.array(gitStashSchema).optional(),
+            message: z.string().optional()
+          })
         }
       },
-      description: 'List of branches retrieved successfully'
+      description: 'Stash list retrieved successfully'
     },
     404: {
       content: {
@@ -626,20 +652,20 @@ const getBranchesRoute = createRoute({
     }
   },
   tags: ['Git'],
-  description: 'Get all branches (local and remote) for a git repository'
+  description: 'Get list of all stashes'
 })
 
-gitRoutes.openapi(getBranchesRoute, async (c) => {
+gitAdvancedRoutes.openapi(getStashListRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
-    const branches = await gitService.getBranches(projectId)
+    const stashes = await gitService.stashList(projectId)
 
     return c.json({
       success: true,
-      data: branches
+      data: stashes
     })
   } catch (error) {
-    console.error('[GetBranches] Error:', error)
+    console.error('[GetStashList] Error:', error)
     if (error instanceof Error) {
       return c.json(
         {
@@ -652,17 +678,17 @@ gitRoutes.openapi(getBranchesRoute, async (c) => {
     return c.json(
       {
         success: false,
-        message: 'Failed to get branches'
+        message: 'Failed to get stash list'
       },
       500
     )
   }
 })
 
-// Create branch route
-const createBranchRoute = createRoute({
+// Apply stash route
+const applyStashRoute = createRoute({
   method: 'post',
-  path: '/api/projects/{projectId}/git/branches',
+  path: '/api/projects/{projectId}/git/stash/apply',
   request: {
     params: z.object({
       projectId: z.string().transform((val) => parseInt(val, 10))
@@ -670,7 +696,9 @@ const createBranchRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: gitCreateBranchRequestSchema
+          schema: z.object({
+            ref: z.string().optional().default('stash@{0}')
+          })
         }
       }
     }
@@ -682,7 +710,7 @@ const createBranchRoute = createRoute({
           schema: gitOperationResponseSchema
         }
       },
-      description: 'Branch created successfully'
+      description: 'Stash applied successfully'
     },
     400: {
       content: {
@@ -710,22 +738,22 @@ const createBranchRoute = createRoute({
     }
   },
   tags: ['Git'],
-  description: 'Create a new branch in the git repository'
+  description: 'Apply a stash without removing it from the stash list'
 })
 
-gitRoutes.openapi(createBranchRoute, async (c) => {
+gitAdvancedRoutes.openapi(applyStashRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
-    const { name, startPoint } = c.req.valid('json')
+    const { ref } = c.req.valid('json')
 
-    await gitService.createBranch(projectId, name, startPoint)
+    await gitService.stashApply(projectId, ref || 'stash@{0}')
 
     return c.json({
       success: true,
-      message: `Branch '${name}' created successfully`
+      message: `Applied stash: ${ref || 'stash@{0}'}`
     })
   } catch (error) {
-    console.error('[CreateBranch] Error:', error)
+    console.error('[ApplyStash] Error:', error)
     if (error instanceof Error) {
       return c.json(
         {
@@ -738,17 +766,21 @@ gitRoutes.openapi(createBranchRoute, async (c) => {
     return c.json(
       {
         success: false,
-        message: 'Failed to create branch'
+        message: 'Failed to apply stash'
       },
       500
     )
   }
 })
 
-// Switch branch route
-const switchBranchRoute = createRoute({
+// ============================================
+// Reset & Revert Routes
+// ============================================
+
+// Reset route
+const resetRoute = createRoute({
   method: 'post',
-  path: '/api/projects/{projectId}/git/branches/switch',
+  path: '/api/projects/{projectId}/git/reset',
   request: {
     params: z.object({
       projectId: z.string().transform((val) => parseInt(val, 10))
@@ -756,7 +788,7 @@ const switchBranchRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: gitSwitchBranchRequestSchema
+          schema: gitResetRequestSchema
         }
       }
     }
@@ -768,7 +800,7 @@ const switchBranchRoute = createRoute({
           schema: gitOperationResponseSchema
         }
       },
-      description: 'Branch switched successfully'
+      description: 'Reset successfully'
     },
     400: {
       content: {
@@ -777,87 +809,6 @@ const switchBranchRoute = createRoute({
         }
       },
       description: 'Bad request'
-    },
-    404: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Project or branch not found'
-    },
-    500: {
-      content: {
-        'application/json': {
-          schema: gitOperationResponseSchema
-        }
-      },
-      description: 'Internal server error'
-    }
-  },
-  tags: ['Git'],
-  description: 'Switch to a different branch'
-})
-
-gitRoutes.openapi(switchBranchRoute, async (c) => {
-  try {
-    const { projectId } = c.req.valid('param')
-    const { name } = c.req.valid('json')
-
-    await gitService.switchBranch(projectId, name)
-
-    return c.json({
-      success: true,
-      message: `Switched to branch '${name}'`
-    })
-  } catch (error) {
-    console.error('[SwitchBranch] Error:', error)
-    if (error instanceof Error) {
-      return c.json(
-        {
-          success: false,
-          message: error.message
-        },
-        500
-      )
-    }
-    return c.json(
-      {
-        success: false,
-        message: 'Failed to switch branch'
-      },
-      500
-    )
-  }
-})
-
-// ============================================
-// Commit History Routes
-// ============================================
-
-// Get commit log route
-const getCommitLogRoute = createRoute({
-  method: 'get',
-  path: '/api/projects/{projectId}/git/log',
-  request: {
-    params: z.object({
-      projectId: z.string().transform((val) => parseInt(val, 10))
-    }),
-    query: z.object({
-      limit: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
-      skip: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
-      branch: z.string().optional(),
-      file: z.string().optional()
-    })
-  },
-  responses: {
-    200: {
-      content: {
-        'application/json': {
-          schema: gitLogResponseSchema
-        }
-      },
-      description: 'Commit log retrieved successfully'
     },
     404: {
       content: {
@@ -877,23 +828,22 @@ const getCommitLogRoute = createRoute({
     }
   },
   tags: ['Git'],
-  description: 'Get the commit log for a project with optional filters'
+  description: 'Reset current HEAD to a specified state'
 })
 
-gitRoutes.openapi(getCommitLogRoute, async (c) => {
+gitAdvancedRoutes.openapi(resetRoute, async (c) => {
   try {
     const { projectId } = c.req.valid('param')
-    const { limit, skip, branch, file } = c.req.valid('query')
+    const { ref, mode } = c.req.valid('json')
 
-    const logs = await gitService.getCommitLog(projectId, { limit, skip, branch, file })
+    await gitService.reset(projectId, ref, mode || 'mixed')
 
     return c.json({
       success: true,
-      data: logs,
-      hasMore: limit !== undefined && logs.length === limit
+      message: `Reset to ${ref} (${mode || 'mixed'} mode)`
     })
   } catch (error) {
-    console.error('[GetCommitLog] Error:', error)
+    console.error('[Reset] Error:', error)
     if (error instanceof Error) {
       return c.json(
         {
@@ -906,7 +856,7 @@ gitRoutes.openapi(getCommitLogRoute, async (c) => {
     return c.json(
       {
         success: false,
-        message: 'Failed to get commit log'
+        message: 'Failed to reset'
       },
       500
     )

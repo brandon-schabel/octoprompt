@@ -42,7 +42,6 @@ export type SelectedFilesListRef = {
   focusList: () => void
 }
 
-
 export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesListProps>(
   ({ onRemoveFile, onNavigateLeft, className = '', projectTabId }, ref) => {
     const { undo, redo, canUndo, canRedo, clearSelectedFiles, selectedFiles } = useSelectedFiles({
@@ -238,6 +237,10 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 <li>
                   Press <kbd className='px-1 rounded bg-muted'>Enter</kbd> or{' '}
                   <kbd className='px-1 rounded bg-muted'>Space</kbd> to select
+                </li>
+                <li>
+                  Undo with <kbd className='px-1 rounded bg-muted'>{formatShortcut('mod+z')}</kbd>, Redo with{' '}
+                  <kbd className='px-1 rounded bg-muted'>{formatShortcut('mod+shift+z')}</kbd>
                 </li>
               </ul>
             </div>
@@ -502,9 +505,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                       {showShortcut && (
                         <span className='text-xs text-muted-foreground mr-2 whitespace-nowrap'>{shortcutNumber}</span>
                       )}
-                      <span className='text-sm truncate'>
-                        {file.name}
-                      </span>
+                      <span className='text-sm truncate'>{file.name}</span>
                       {file.content && (
                         <div className='ml-auto'>
                           <Badge className='ml-2'>

@@ -1,6 +1,6 @@
 import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle, useMemo } from 'react'
 import { Button } from '@ui'
-import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy } from 'lucide-react'
+import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy, ChevronRight } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -17,6 +17,7 @@ import { ScrollArea } from '@ui'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
 import { useGetProjectPrompts, useDeletePrompt } from '@/hooks/api/use-prompts-api'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -60,6 +61,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   const selectedPrompts = projectTab?.selectedPrompts || []
   const selectedProjectId = projectTab?.selectedProjectId || -1
   const { copyToClipboard } = useCopyClipboard()
+  
+  // Collapsible state - default to true (collapsed) to save space
+  const isCollapsed = projectTab?.promptsPanelCollapsed ?? true
 
   const { data: promptData } = useGetProjectPrompts(selectedProjectId)
 
@@ -107,6 +111,13 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       successMessage: 'Copied all selected prompts.',
       errorMessage: 'Failed to copy prompts'
     })
+  }
+  
+  const toggleCollapsed = () => {
+    updateProjectTabState((prev) => ({
+      ...prev,
+      promptsPanelCollapsed: !isCollapsed
+    }))
   }
 
   /** NEW: state for opening the all-prompts dialog */
@@ -189,7 +200,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       meta: null,
       summary: null,
       summaryLastUpdated: null,
-      checksum: null
+      checksum: null,
+      imports: null,
+      exports: null
     })
   }
 
@@ -220,46 +233,55 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         onClose={() => setAllPromptsDialogOpen(false)}
         selectedProjectId={selectedProjectId}
       />
-      <div className={`border rounded-lg h-full flex flex-col ${className}`}>
-        <div className='flex-shrink-0 flex flex-row items-center justify-between p-2 border-b'>
-          <div>
-            <div className='text-md font-medium flex items-center gap-2'>
-              <span>
-                <Badge>{selectedPrompts.length}</Badge> Project Prompts
-              </span>
-              <OctoTooltip>
-                <div className=''>
-                  <p>
-                    Prompts are reusable instructions that will be included with your chat. Each selected prompt will be
-                    added to the final prompt sent to the AI.
-                  </p>
-                  <p>You can:</p>
-                  <ul>
-                    <li>- Create custom prompts for specific tasks</li>
-                    <li>- Import prompts from other projects</li>
-                    <li>- Select multiple prompts to combine instructions</li>
-                  </ul>
-                  <p className='font-medium mt-2'>Keyboard Shortcuts:</p>
-                  <ul>
-                    <li>
-                      - <ShortcutDisplay shortcut={['up', 'down']} /> Navigate through prompts
-                    </li>
-                    <li>
-                      - <ShortcutDisplay shortcut={['space']} /> Select/deselect prompt
-                    </li>
-                    <li>
-                      - <ShortcutDisplay shortcut={['enter']} /> View prompt content
-                    </li>
-                    <li>
-                      - <ShortcutDisplay shortcut={['mod', 'p']} /> Focus prompts list
-                    </li>
-                  </ul>
+      <div className={cn('border rounded-lg flex flex-col', isCollapsed ? '' : 'h-full', className)}>
+        <Collapsible open={!isCollapsed} onOpenChange={() => toggleCollapsed()}>
+          <CollapsibleTrigger asChild>
+            <div className='flex-shrink-0 flex flex-row items-center justify-between p-2 border-b hover:bg-muted/50 cursor-pointer transition-colors'>
+              <div className='flex items-center gap-2'>
+                <ChevronRight className={cn('h-4 w-4 transition-transform', !isCollapsed && 'rotate-90')} />
+                <div className='text-md font-medium flex items-center gap-2'>
+                  <span>
+                    <Badge variant={selectedPrompts.length > 0 && isCollapsed ? 'default' : 'secondary'}>
+                      {selectedPrompts.length}
+                    </Badge> Project Prompts
+                  </span>
+                  {isCollapsed && selectedPrompts.length > 0 && (
+                    <span className='text-xs text-muted-foreground'>
+                      ({selectedPrompts.length} selected)
+                    </span>
+                  )}
+                  <OctoTooltip>
+                    <div className=''>
+                      <p>
+                        Prompts are reusable instructions that will be included with your chat. Each selected prompt will be
+                        added to the final prompt sent to the AI.
+                      </p>
+                      <p>You can:</p>
+                      <ul>
+                        <li>- Create custom prompts for specific tasks</li>
+                        <li>- Import prompts from other projects</li>
+                        <li>- Select multiple prompts to combine instructions</li>
+                      </ul>
+                      <p className='font-medium mt-2'>Keyboard Shortcuts:</p>
+                      <ul>
+                        <li>
+                          - <ShortcutDisplay shortcut={['up', 'down']} /> Navigate through prompts
+                        </li>
+                        <li>
+                          - <ShortcutDisplay shortcut={['space']} /> Select/deselect prompt
+                        </li>
+                        <li>
+                          - <ShortcutDisplay shortcut={['enter']} /> View prompt content
+                        </li>
+                        <li>
+                          - <ShortcutDisplay shortcut={['mod', 'p']} /> Focus prompts list
+                        </li>
+                      </ul>
+                    </div>
+                  </OctoTooltip>
                 </div>
-              </OctoTooltip>
-            </div>
-            <div className='hidden lg:text-xs text-muted-foreground'>Press Space to select, Enter to view</div>
-          </div>
-          <div className='flex space-x-2'>
+              </div>
+              <div className='flex space-x-2' onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant='ghost' size='icon' className='h-8 w-8'>
@@ -333,10 +355,12 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
                 </DropdownMenuSub>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </div>
+              </div>
+            </div>
+          </CollapsibleTrigger>
 
-        <div className='flex-1 relative min-h-0 '>
+          <CollapsibleContent className='flex-1 flex flex-col overflow-hidden'>
+            <div className='flex-1 relative overflow-hidden'>
           {sortedPrompts.length > 0 ? (
             <ScrollArea className='h-full'>
               <div className='space-y-2 p-2 w-72 md:w-80 lg:w-full'>
@@ -456,7 +480,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
           ) : (
             <p className='text-sm text-muted-foreground p-4'>No prompts yet. Create one above.</p>
           )}
-        </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* A "viewer" dialog for prompts, if needed */}

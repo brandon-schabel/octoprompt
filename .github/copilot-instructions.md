@@ -42,14 +42,14 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 - **Test-Driven Mindset**: Add/update tests when introducing new logic. Keep functions small and unit-testable.
 - **Inline Documentation**: Provide concise docstrings or inline comments for complex logic. Keep them accurate.
 
-* **Readability and Simplicity (KISS)**: Write clear, concise code.
-* **Modularity**: Organize code into logical modules/packages. Avoid circular dependencies.
-* **Error Handling**: Handle exceptions gracefully. Use specific exception types.
-* **Docstrings**: Write clear docstrings for modules, functions, and Pydantic models (e.g., Google style).
-* **Consistent Formatting**: Use a formatter like Black or Ruff. Adhere to PEP 8.
-* **Avoid Global Variables**: Minimize their use.
-* **Configuration Over Hardcoding**: Use Pydantic `BaseSettings` for configs.
-* **Regularly Refactor**.
+- **Readability and Simplicity (KISS)**: Write clear, concise code.
+- **Modularity**: Organize code into logical modules/packages. Avoid circular dependencies.
+- **Error Handling**: Handle exceptions gracefully. Use specific exception types.
+- **Docstrings**: Write clear docstrings for modules, functions, and Pydantic models (e.g., Google style).
+- **Consistent Formatting**: Use a formatter like Black or Ruff. Adhere to PEP 8.
+- **Avoid Global Variables**: Minimize their use.
+- **Configuration Over Hardcoding**: Use Pydantic `BaseSettings` for configs.
+- **Regularly Refactor**.
 
 ---
 
@@ -93,55 +93,55 @@ Apply these to all TypeScript files for a consistent, high-quality codebase.
 
 ```
 OctoPrompt
-	packages
+ packages
 
-		api-client
-			index.ts // contains the entire octoprompt client
-			src
-				tests // contains a test suite that tests the client against the server endpoints
+  api-client
+   index.ts // contains the entire octoprompt client
+   src
+    tests // contains a test suite that tests the client against the server endpoints
 
-		client
-			src
-				constants
-				utils
-				routes
-					chat.tsx
-					projects.tsx
-					prompts.tsx
-				components
-				hooks
-					api // api hooks directly importing shared schema types
-		schemas
-			src
-					project.schema.ts
-					chat.schema.ts
-					prompt.schema.ts
+  client
+   src
+    constants
+    utils
+    routes
+     chat.tsx
+     projects.tsx
+     prompts.tsx
+    components
+    hooks
+     api // api hooks directly importing shared schema types
+  schemas
+   src
+     project.schema.ts
+     chat.schema.ts
+     prompt.schema.ts
 
-	    shared
-			src
-				constants
-					model-default.ts // contains llm model default configs like temp, max tokens, etc, 3 configs, low, med, high
+     shared
+   src
+    constants
+     model-default.ts // contains llm model default configs like temp, max tokens, etc, 3 configs, low, med, high
 schemas using z.infer<>
 
-    	server
-			server.ts // main serverentry
-        	src
-				app.ts // where hono router is defined, all routes are imported and mapped here, middleware, and global server error handling live here
-				routes
-					chat-routes.ts
-					prompt-routes.ts
-					project-routes.ts
+     server
+   server.ts // main serverentry
+         src
+    app.ts // where hono router is defined, all routes are imported and mapped here, middleware, and global server error handling live here
+    routes
+     chat-routes.ts
+     prompt-routes.ts
+     project-routes.ts
 
 
-		services
-			src
-				chat-service.ts
-				prompt-service.ts
-				project-service.ts
-		storage
-			chat-storage.ts
-			prompt-storage.ts
-			project-storage.ts
+  services
+   src
+    chat-service.ts
+    prompt-service.ts
+    project-service.ts
+  storage
+   chat-storage.ts
+   prompt-storage.ts
+   project-storage.ts
 ```
 
 ````
@@ -152,13 +152,12 @@ schemas using z.infer<>
 **Root `package.json`:**
 ```json
 {
-	"dev": "bun run scripts/start-dev.ts",
+ "dev": "bun run scripts/start-dev.ts",
     "dev:client": "bun run scripts/start-client-dev.ts",
     "dev:server": "bun run scripts/start-server-dev.ts",
     "stop": "bun run scripts/stop.ts",
     "build-binaries": "bun run scripts/build-binaries.ts",
     "format": "prettier --write .",
-    "test:server": "cd packages/server && bun run test",
     "test:shared": "cd packages/shared && bun run test",
     "test:schemas": "cd packages/schemas && bun run test"Ï
 }
@@ -471,10 +470,12 @@ describe('TodoService (Mocked Storage)', () => {
 ## Key Backend Patterns
 
 - **Error Handling**: Custom `ApiError` class for consistent API error responses. Global error handler in `app.ts` catches `ApiError` instances.
+
   ```typescript
   // if (!project) throw new ApiError(404, 'Project not found', 'PROJECT_NOT_FOUND');
   // app.onError((err, c) => { /* handle ApiError */ });
   ```
+
 - **Validation**: Zod schemas for data validation at storage and API layers. `c.req.valid('json')` for auto-validated request bodies in Hono.
 - **ID Generation**: `storage.generateId()` (typically `normalizeToUnixMs(new Date())` or `Date.now()`). Handles collisions by incrementing ID if already exists in the storage record.
 
@@ -519,12 +520,12 @@ Different HTTP verbs on the _same_ path are fine but subject to ordering if path
 
 ### 2. Ordering Strategy: High → Low Specificity
 
-1.  Exact literals (e.g., `/api/health`)
-2.  Literal segments + param (e.g., `/api/users/me`)
-3.  Specific literal actions (e.g., `/api/projects/{pId}/files/bulk`) before more general params.
-4.  Single-param (e.g., `/api/users/{uId}`)
-5.  Multi-param (e.g., `/api/projects/{pId}/files/{fId}`)
-6.  Catch-alls (e.g., `/api/{resource}`, `*`)
+1. Exact literals (e.g., `/api/health`)
+2. Literal segments + param (e.g., `/api/users/me`)
+3. Specific literal actions (e.g., `/api/projects/{pId}/files/bulk`) before more general params.
+4. Single-param (e.g., `/api/users/{uId}`)
+5. Multi-param (e.g., `/api/projects/{pId}/files/{fId}`)
+6. Catch-alls (e.g., `/api/{resource}`, `*`)
 
 ### 3. Typical Conflict Patterns & Fixes
 

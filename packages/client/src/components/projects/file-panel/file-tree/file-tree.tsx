@@ -11,7 +11,7 @@ import React, {
 } from 'react'
 import { Button } from '@ui'
 import { Checkbox } from '@ui'
-import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy, RefreshCw, ClipboardList } from 'lucide-react'
+import { Folder, File as FileIcon, ChevronRight, Eye, Code, Copy, ClipboardList } from 'lucide-react'
 import clsx from 'clsx'
 import { toast } from 'sonner'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@ui'
@@ -34,13 +34,12 @@ import { buildNodeContent, buildNodeSummaries } from '@octoprompt/shared'
 
 import { getEditorUrl } from '@/utils/editor-urls'
 import { useSelectedFiles } from '@/hooks/utility-hooks/use-selected-files'
-import { useRefreshProject } from '@/hooks/api/use-projects-api'
 import { EditorType, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
-import { useProjectGitStatus, useStageFiles, useUnstageFiles } from '@/hooks/api/use-git-api'
-import type { GitFileStatus } from '@octoprompt/schemas'
-import { GitBranch, Plus, Minus } from 'lucide-react'
+import { useProjectGitStatus, useStageFiles, useUnstageFiles, useFileDiff } from '@/hooks/api/use-git-api'
+import type { GitFileStatus, GitStatus } from '@octoprompt/schemas'
+import { GitBranch, Plus, Minus, History, GitCompare } from 'lucide-react'
 
 export type VisibleItem = {
   path: string
@@ -88,6 +87,87 @@ export function buildTreeStructure(node: FileNode, indent = ''): string {
   return lines.join('\n')
 }
 
+/**
+ * Utility to collect all git files in a folder recursively
+ */
+export function collectGitFilesInFolder(
+  folderPath: string,
+  gitStatus: GitStatus | null
+): { staged: string[], unstaged: string[], all: string[] } {
+  const staged: string[] = []
+  const unstaged: string[] = []
+  const all: string[] = []
+
+  if (!gitStatus) {
+    return { staged, unstaged, all }
+  }
+
+  // Iterate through all git files
+  for (const file of gitStatus.files) {
+    // Skip unchanged and ignored files
+    if (file.status === 'unchanged' || file.status === 'ignored') {
+      continue
+    }
+
+    // Check if the file is in this folder or a subfolder
+    if (file.path === folderPath || file.path.startsWith(folderPath + '/')) {
+      all.push(file.path)
+      
+      if (file.staged) {
+        staged.push(file.path)
+      } else {
+        unstaged.push(file.path)
+      }
+    }
+  }
+
+  return { staged, unstaged, all }
+}
+
+/**
+ * Utility to collect contents of files from a folder based on git status
+ */
+export function collectGitFileContents(
+  folderPath: string,
+  gitStatus: GitStatus | null,
+  root: Record<string, FileNode>,
+  filter: 'all' | 'staged' | 'unstaged' = 'all'
+): string {
+  const gitFiles = collectGitFilesInFolder(folderPath, gitStatus)
+  const filePaths = filter === 'staged' ? gitFiles.staged : 
+                    filter === 'unstaged' ? gitFiles.unstaged : 
+                    gitFiles.all
+  
+  const contents: string[] = []
+  
+  // Helper to find a file node by path
+  function findFileNode(path: string): FileNode | null {
+    const parts = path.split('/')
+    let current = root
+    
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i]
+      if (!current[part] || !current[part]._folder || !current[part].children) {
+        return null
+      }
+      current = current[part].children!
+    }
+    
+    const fileName = parts[parts.length - 1]
+    return current[fileName] || null
+  }
+  
+  // Collect contents for each file
+  for (const filePath of filePaths) {
+    const node = findFileNode(filePath)
+    if (node && node.file && node.file.content) {
+      contents.push(`// File: ${filePath}\n${node.file.content}`)
+    }
+  }
+  
+  return contents.join('\n\n')
+}
+
 interface FileTreeNodeRowProps {
   item: VisibleItem
   isOpen: boolean
@@ -98,6 +178,8 @@ interface FileTreeNodeRowProps {
   onViewFileInEditMode?: (file: ProjectFile) => void
   projectRoot: string
   gitFileStatus?: GitFileStatus
+  gitStatus?: GitStatus | null
+  root: Record<string, FileNode>
 }
 
 /**
@@ -132,7 +214,7 @@ const getGitStatusColor = (gitFileStatus: GitFileStatus | undefined) => {
 }
 
 const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(function FileTreeNodeRow(
-  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, onViewFileInEditMode, projectRoot, gitFileStatus },
+  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, onViewFileInEditMode, projectRoot, gitFileStatus, gitStatus, root },
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
@@ -142,9 +224,12 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const { copyToClipboard } = useCopyClipboard()
   const projectId = projectTabState?.selectedProjectId ?? -1
 
-  const { mutate: refreshProject } = useRefreshProject()
   const { mutate: stageFiles } = useStageFiles(projectId)
   const { mutate: unstageFiles } = useUnstageFiles(projectId)
+  
+  // State for loading diff data
+  const [loadingDiff, setLoadingDiff] = useState(false)
+  const [loadingOriginal, setLoadingOriginal] = useState(false)
 
   const isFolder = item.node._folder === true
 
@@ -213,6 +298,38 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
   const contents = useMemo(() => buildNodeContent(item.node, isFolder), [item.node, isFolder])
   const tree = useMemo(() => buildTreeStructure(item.node), [item.node])
   const hasSummary = item.node.file?.summary
+  
+  // Function to parse diff and extract original content
+  const parseDiff = useCallback((diff: string) => {
+    const lines = diff.split('\n')
+    const original: string[] = []
+    const modified: string[] = []
+    
+    let inDiffSection = false
+    
+    for (const line of lines) {
+      if (line.startsWith('@@')) {
+        inDiffSection = true
+        continue
+      }
+      
+      if (!inDiffSection) continue
+      
+      if (line.startsWith('-') && !line.startsWith('---')) {
+        original.push(line.substring(1))
+      } else if (line.startsWith('+') && !line.startsWith('+++')) {
+        modified.push(line.substring(1))
+      } else if (line.startsWith(' ')) {
+        original.push(line.substring(1))
+        modified.push(line.substring(1))
+      }
+    }
+    
+    return {
+      original: original.join('\n'),
+      modified: modified.join('\n')
+    }
+  }, [])
 
   return (
     <ContextMenu>
@@ -271,6 +388,11 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
             <span
               className={cn('font-mono text-sm truncate', getGitStatusColor(gitFileStatus))}
               title={
+                isFolder && gitStatus ? (() => {
+                  const folderGitFiles = collectGitFilesInFolder(item.path, gitStatus)
+                  if (folderGitFiles.all.length === 0) return undefined
+                  return `Git: ${folderGitFiles.staged.length} staged, ${folderGitFiles.unstaged.length} unstaged`
+                })() :
                 gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored'
                   ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})`
                   : undefined
@@ -326,21 +448,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                     <Eye className='h-4 w-4' />
                   </Button>
                 )}
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='opacity-0 group-hover:opacity-100 transition-opacity'
-                  asChild
-                >
-                  <a
-                    href={getEditorUrl(preferredEditor, `${projectRoot}/${item.node.file.path}`)}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Code className='h-4 w-4' />
-                  </a>
-                </Button>
                 <Button
                   variant='ghost'
                   size='icon'
@@ -442,6 +549,18 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
             >
               Copy Absolute Path
             </ContextMenuItem>
+            <ContextMenuItem
+              asChild
+            >
+              <a
+                href={getEditorUrl(preferredEditor, `${projectRoot}/${item.node.file!.path}`)}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                <Code className='h-4 w-4 mr-2' />
+                Open in Editor
+              </a>
+            </ContextMenuItem>
           </>
         )}
 
@@ -520,23 +639,166 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 Unstage File
               </ContextMenuItem>
             )}
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={async () => {
+                if (!item.node.file?.path) return
+                setLoadingOriginal(true)
+                try {
+                  // Use the API client directly to fetch the diff
+                  const { apiClient } = await import('@/hooks/octo-client')
+                  const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
+                  
+                  if (response.success && response.data?.diff) {
+                    const { original } = parseDiff(response.data.diff)
+                    await copyToClipboard(original, {
+                      successMessage: 'Previous version copied to clipboard',
+                      errorMessage: 'Failed to copy previous version'
+                    })
+                  } else {
+                    toast.error('Failed to fetch file diff')
+                  }
+                } catch (error) {
+                  console.error('Failed to copy previous version:', error)
+                  toast.error('Failed to copy previous version')
+                } finally {
+                  setLoadingOriginal(false)
+                }
+              }}
+              disabled={loadingOriginal}
+            >
+              <History className='h-4 w-4 mr-2' />
+              {loadingOriginal ? 'Loading...' : 'Copy Previous Version'}
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={async () => {
+                if (!item.node.file?.path) return
+                setLoadingDiff(true)
+                try {
+                  // Use the API client directly to fetch the diff
+                  const { apiClient } = await import('@/hooks/octo-client')
+                  const response = await apiClient.git.getFileDiff(projectId, item.node.file.path, { staged: false })
+                  
+                  if (response.success && response.data?.diff) {
+                    await copyToClipboard(response.data.diff, {
+                      successMessage: 'Diff copied to clipboard',
+                      errorMessage: 'Failed to copy diff'
+                    })
+                  } else {
+                    toast.error('Failed to fetch file diff')
+                  }
+                } catch (error) {
+                  console.error('Failed to copy diff:', error)
+                  toast.error('Failed to copy diff')
+                } finally {
+                  setLoadingDiff(false)
+                }
+              }}
+              disabled={loadingDiff}
+            >
+              <GitCompare className='h-4 w-4 mr-2' />
+              {loadingDiff ? 'Loading...' : 'Copy Diff'}
+            </ContextMenuItem>
           </>
         )}
 
-        {/* Refresh options for folders */}
-        {isFolder && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => refreshProject({ folder: item.path, projectId })}>
-              <RefreshCw className='h-4 w-4 mr-2' />
-              Refresh This Folder
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => refreshProject({ projectId })}>
-              <RefreshCw className='h-4 w-4 mr-2' />
-              Refresh Entire Project
-            </ContextMenuItem>
-          </>
-        )}
+        {/* Git operations for folders */}
+        {isFolder && gitStatus && (() => {
+          const folderGitFiles = collectGitFilesInFolder(item.path, gitStatus)
+          const hasGitFiles = folderGitFiles.all.length > 0
+          const hasUnstagedFiles = folderGitFiles.unstaged.length > 0
+          const hasStagedFiles = folderGitFiles.staged.length > 0
+          
+          // Debug logging
+          if (item.path === 'packages') {
+            console.log('Folder git files for packages:', folderGitFiles)
+            console.log('gitStatus:', gitStatus)
+          }
+
+          if (!hasGitFiles) return null
+
+          return (
+            <>
+              <ContextMenuSeparator />
+              {hasUnstagedFiles && (
+                <ContextMenuItem
+                  onClick={() => {
+                    stageFiles(folderGitFiles.unstaged)
+                  }}
+                >
+                  <Plus className='h-4 w-4 mr-2 text-green-600' />
+                  Stage All Files in Folder ({folderGitFiles.unstaged.length})
+                </ContextMenuItem>
+              )}
+              {hasStagedFiles && (
+                <ContextMenuItem
+                  onClick={() => {
+                    unstageFiles(folderGitFiles.staged)
+                  }}
+                >
+                  <Minus className='h-4 w-4 mr-2 text-red-600' />
+                  Unstage All Files in Folder ({folderGitFiles.staged.length})
+                </ContextMenuItem>
+              )}
+              <ContextMenuSeparator />
+              {/* Copy git file contents options */}
+              {hasGitFiles && (
+                <ContextMenuItem
+                  onClick={async () => {
+                    const contents = collectGitFileContents(item.path, gitStatus, root, 'all')
+                    if (contents) {
+                      await copyToClipboard(contents, {
+                        successMessage: `Git files contents copied (${folderGitFiles.all.length} files)`,
+                        errorMessage: 'Failed to copy git files contents'
+                      })
+                    } else {
+                      toast.info('No git file contents found in this folder')
+                    }
+                  }}
+                >
+                  <Copy className='h-4 w-4 mr-2' />
+                  Copy All Git Files ({folderGitFiles.all.length})
+                </ContextMenuItem>
+              )}
+              {hasStagedFiles && (
+                <ContextMenuItem
+                  onClick={async () => {
+                    const contents = collectGitFileContents(item.path, gitStatus, root, 'staged')
+                    if (contents) {
+                      await copyToClipboard(contents, {
+                        successMessage: `Staged files contents copied (${folderGitFiles.staged.length} files)`,
+                        errorMessage: 'Failed to copy staged files contents'
+                      })
+                    } else {
+                      toast.info('No staged file contents found in this folder')
+                    }
+                  }}
+                >
+                  <Copy className='h-4 w-4 mr-2 text-green-600' />
+                  Copy Staged Files ({folderGitFiles.staged.length})
+                </ContextMenuItem>
+              )}
+              {hasUnstagedFiles && (
+                <ContextMenuItem
+                  onClick={async () => {
+                    const contents = collectGitFileContents(item.path, gitStatus, root, 'unstaged')
+                    if (contents) {
+                      await copyToClipboard(contents, {
+                        successMessage: `Unstaged files contents copied (${folderGitFiles.unstaged.length} files)`,
+                        errorMessage: 'Failed to copy unstaged files contents'
+                      })
+                    } else {
+                      toast.info('No unstaged file contents found in this folder')
+                    }
+                  }}
+                >
+                  <Copy className='h-4 w-4 mr-2 text-yellow-600' />
+                  Copy Unstaged Files ({folderGitFiles.unstaged.length})
+                </ContextMenuItem>
+              )}
+            </>
+          )
+        })()}
       </ContextMenuContent>
     </ContextMenu>
   )
@@ -588,7 +850,8 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
       if (!gitStatus?.success) return null
 
       // Priority order for git statuses (most important first)
-      const statusPriority = ['deleted', 'added', 'modified', 'renamed', 'copied', 'untracked']
+      // Added/untracked have highest priority (green), then modified (yellow), then deleted (red)
+      const statusPriority = ['added', 'untracked', 'modified', 'renamed', 'copied', 'deleted']
       let bestStatus: GitFileStatus | null = null
 
       // Check if any git file starts with this folder path
@@ -851,9 +1114,11 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
                 item.node.file
                   ? gitStatusMap.get(item.node.file.path)
                   : item.node._folder
-                    ? folderContainsGitChanges(item.path)
+                    ? folderContainsGitChanges(item.path) ?? undefined
                     : undefined
               }
+              gitStatus={gitStatus?.success ? gitStatus.data : null}
+              root={root}
             />
           ))}
         </div>

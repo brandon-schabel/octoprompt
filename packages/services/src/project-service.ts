@@ -10,7 +10,9 @@ import {
   FileSuggestionsZodSchema,
   MAX_FILE_SIZE_FOR_SUMMARY,
   MAX_TOKENS_FOR_SUMMARY,
-  CHARS_PER_TOKEN_ESTIMATE
+  CHARS_PER_TOKEN_ESTIMATE,
+  type ImportInfo,
+  type ExportInfo
 } from '@octoprompt/schemas'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@octoprompt/shared'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'

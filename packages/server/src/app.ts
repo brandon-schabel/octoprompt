@@ -11,6 +11,7 @@ import { agentCoderRoutes } from './routes/agent-coder-routes'
 import { browseDirectoryRoutes } from './routes/browse-directory-routes'
 import { mcpRoutes } from './routes/mcp-routes'
 import { gitRoutes } from './routes/git-routes'
+import { gitAdvancedRoutes } from './routes/git-advanced-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
 import { corsConfig } from '@octoprompt/services/src/constants/server-config'
@@ -61,6 +62,7 @@ app.route('/', agentCoderRoutes)
 app.route('/', browseDirectoryRoutes)
 app.route('/', mcpRoutes)
 app.route('/', gitRoutes)
+app.route('/', gitAdvancedRoutes)
 
 // Global error handler
 app.onError((err, c) => {

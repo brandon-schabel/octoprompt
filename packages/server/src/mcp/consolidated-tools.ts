@@ -32,7 +32,45 @@ import {
   suggestTasksForTicket,
   autoGenerateTasksFromOverview,
   suggestFilesForTicket,
-  listTicketsWithTaskCount
+  listTicketsWithTaskCount,
+  // Git operations
+  getProjectGitStatus,
+  stageFiles,
+  unstageFiles,
+  stageAll,
+  unstageAll,
+  commitChanges,
+  getBranches,
+  getCurrentBranch,
+  createBranch,
+  switchBranch,
+  deleteBranch,
+  mergeBranch,
+  getCommitLog,
+  getCommitDetails,
+  getFileDiff,
+  getCommitDiff,
+  cherryPick,
+  getRemotes,
+  addRemote,
+  removeRemote,
+  fetch,
+  pull,
+  push,
+  getTags,
+  createTag,
+  deleteTag,
+  stash,
+  stashList,
+  stashApply,
+  stashPop,
+  stashDrop,
+  reset,
+  revert,
+  blame,
+  clean,
+  getConfig,
+  setConfig
 } from '@octoprompt/services'
 import type {
   CreateProjectBody,
@@ -94,6 +132,46 @@ export enum TaskManagerAction {
 export enum AIAssistantAction {
   OPTIMIZE_PROMPT = 'optimize_prompt',
   GET_COMPACT_SUMMARY = 'get_compact_summary'
+}
+
+export enum GitManagerAction {
+  STATUS = 'status',
+  STAGE_FILES = 'stage_files',
+  UNSTAGE_FILES = 'unstage_files',
+  STAGE_ALL = 'stage_all',
+  UNSTAGE_ALL = 'unstage_all',
+  COMMIT = 'commit',
+  BRANCHES = 'branches',
+  CURRENT_BRANCH = 'current_branch',
+  CREATE_BRANCH = 'create_branch',
+  SWITCH_BRANCH = 'switch_branch',
+  DELETE_BRANCH = 'delete_branch',
+  MERGE_BRANCH = 'merge_branch',
+  LOG = 'log',
+  COMMIT_DETAILS = 'commit_details',
+  FILE_DIFF = 'file_diff',
+  COMMIT_DIFF = 'commit_diff',
+  CHERRY_PICK = 'cherry_pick',
+  REMOTES = 'remotes',
+  ADD_REMOTE = 'add_remote',
+  REMOVE_REMOTE = 'remove_remote',
+  FETCH = 'fetch',
+  PULL = 'pull',
+  PUSH = 'push',
+  TAGS = 'tags',
+  CREATE_TAG = 'create_tag',
+  DELETE_TAG = 'delete_tag',
+  STASH = 'stash',
+  STASH_LIST = 'stash_list',
+  STASH_APPLY = 'stash_apply',
+  STASH_POP = 'stash_pop',
+  STASH_DROP = 'stash_drop',
+  RESET = 'reset',
+  REVERT = 'revert',
+  BLAME = 'blame',
+  CLEAN = 'clean',
+  CONFIG_GET = 'config_get',
+  CONFIG_SET = 'config_set'
 }
 
 // Consolidated tool schemas
@@ -159,6 +237,50 @@ const TaskManagerSchema = z.object({
 
 const AIAssistantSchema = z.object({
   action: z.enum([AIAssistantAction.OPTIMIZE_PROMPT, AIAssistantAction.GET_COMPACT_SUMMARY]),
+  projectId: z.number(),
+  data: z.any().optional()
+})
+
+const GitManagerSchema = z.object({
+  action: z.enum([
+    GitManagerAction.STATUS,
+    GitManagerAction.STAGE_FILES,
+    GitManagerAction.UNSTAGE_FILES,
+    GitManagerAction.STAGE_ALL,
+    GitManagerAction.UNSTAGE_ALL,
+    GitManagerAction.COMMIT,
+    GitManagerAction.BRANCHES,
+    GitManagerAction.CURRENT_BRANCH,
+    GitManagerAction.CREATE_BRANCH,
+    GitManagerAction.SWITCH_BRANCH,
+    GitManagerAction.DELETE_BRANCH,
+    GitManagerAction.MERGE_BRANCH,
+    GitManagerAction.LOG,
+    GitManagerAction.COMMIT_DETAILS,
+    GitManagerAction.FILE_DIFF,
+    GitManagerAction.COMMIT_DIFF,
+    GitManagerAction.CHERRY_PICK,
+    GitManagerAction.REMOTES,
+    GitManagerAction.ADD_REMOTE,
+    GitManagerAction.REMOVE_REMOTE,
+    GitManagerAction.FETCH,
+    GitManagerAction.PULL,
+    GitManagerAction.PUSH,
+    GitManagerAction.TAGS,
+    GitManagerAction.CREATE_TAG,
+    GitManagerAction.DELETE_TAG,
+    GitManagerAction.STASH,
+    GitManagerAction.STASH_LIST,
+    GitManagerAction.STASH_APPLY,
+    GitManagerAction.STASH_POP,
+    GitManagerAction.STASH_DROP,
+    GitManagerAction.RESET,
+    GitManagerAction.REVERT,
+    GitManagerAction.BLAME,
+    GitManagerAction.CLEAN,
+    GitManagerAction.CONFIG_GET,
+    GitManagerAction.CONFIG_SET
+  ]),
   projectId: z.number(),
   data: z.any().optional()
 })
@@ -823,6 +945,348 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             return {
               content: [{ type: 'text', text: summary }]
             }
+          }
+
+          default:
+            throw new Error(`Unknown action: ${action}`)
+        }
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            }
+          ],
+          isError: true
+        }
+      }
+    }
+  },
+
+  {
+    name: 'git_manager',
+    description: 'Comprehensive Git operations including status, commits, branches, tags, stash, and more',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'The Git action to perform',
+          enum: Object.values(GitManagerAction)
+        },
+        projectId: {
+          type: 'number',
+          description: 'The project ID (required)'
+        },
+        data: {
+          type: 'object',
+          description: 'Action-specific data'
+        }
+      },
+      required: ['action', 'projectId']
+    },
+    handler: async (args: z.infer<typeof GitManagerSchema>): Promise<MCPToolResponse> => {
+      try {
+        const { action, projectId, data } = args
+
+        switch (action) {
+          case GitManagerAction.STATUS: {
+            const result = await getProjectGitStatus(projectId)
+            if (!result.success) {
+              return {
+                content: [{ type: 'text', text: `Git error: ${result.error?.message}` }],
+                isError: true
+              }
+            }
+            const status = result.data
+            let text = `Branch: ${status.current || 'none'}\n`
+            if (status.tracking) text += `Tracking: ${status.tracking}\n`
+            text += `Ahead: ${status.ahead}, Behind: ${status.behind}\n\n`
+            text += `Files (${status.files.length}):\n`
+            status.files.forEach(file => {
+              text += `  ${file.staged ? '[staged]' : '[unstaged]'} ${file.status}: ${file.path}\n`
+            })
+            return { content: [{ type: 'text', text }] }
+          }
+
+          case GitManagerAction.STAGE_FILES: {
+            const filePaths = data?.filePaths as string[]
+            if (!filePaths || !Array.isArray(filePaths)) throw new Error('filePaths array is required')
+            await stageFiles(projectId, filePaths)
+            return { content: [{ type: 'text', text: `Staged ${filePaths.length} files` }] }
+          }
+
+          case GitManagerAction.UNSTAGE_FILES: {
+            const filePaths = data?.filePaths as string[]
+            if (!filePaths || !Array.isArray(filePaths)) throw new Error('filePaths array is required')
+            await unstageFiles(projectId, filePaths)
+            return { content: [{ type: 'text', text: `Unstaged ${filePaths.length} files` }] }
+          }
+
+          case GitManagerAction.STAGE_ALL: {
+            await stageAll(projectId)
+            return { content: [{ type: 'text', text: 'Staged all changes' }] }
+          }
+
+          case GitManagerAction.UNSTAGE_ALL: {
+            await unstageAll(projectId)
+            return { content: [{ type: 'text', text: 'Unstaged all changes' }] }
+          }
+
+          case GitManagerAction.COMMIT: {
+            const message = data?.message as string
+            if (!message) throw new Error('Commit message is required')
+            await commitChanges(projectId, message)
+            return { content: [{ type: 'text', text: `Committed changes: ${message}` }] }
+          }
+
+          case GitManagerAction.BRANCHES: {
+            const branches = await getBranches(projectId)
+            const text = branches.map(b => {
+              const marker = b.current ? '* ' : '  '
+              const info = b.isRemote ? '[remote]' : `[local${b.tracking ? `, tracking ${b.tracking}` : ''}]`
+              return `${marker}${b.name} ${info} (${b.commit.substring(0, 7)})`
+            }).join('\n')
+            return { content: [{ type: 'text', text: text || 'No branches found' }] }
+          }
+
+          case GitManagerAction.CURRENT_BRANCH: {
+            const branch = await getCurrentBranch(projectId)
+            return { content: [{ type: 'text', text: branch || 'No current branch' }] }
+          }
+
+          case GitManagerAction.CREATE_BRANCH: {
+            const name = data?.name as string
+            const startPoint = data?.startPoint as string | undefined
+            if (!name) throw new Error('Branch name is required')
+            await createBranch(projectId, name, startPoint)
+            return { content: [{ type: 'text', text: `Created branch: ${name}` }] }
+          }
+
+          case GitManagerAction.SWITCH_BRANCH: {
+            const name = data?.name as string
+            if (!name) throw new Error('Branch name is required')
+            await switchBranch(projectId, name)
+            return { content: [{ type: 'text', text: `Switched to branch: ${name}` }] }
+          }
+
+          case GitManagerAction.DELETE_BRANCH: {
+            const name = data?.name as string
+            const force = data?.force as boolean | undefined
+            if (!name) throw new Error('Branch name is required')
+            await deleteBranch(projectId, name, force)
+            return { content: [{ type: 'text', text: `Deleted branch: ${name}` }] }
+          }
+
+          case GitManagerAction.MERGE_BRANCH: {
+            const branch = data?.branch as string
+            const options = data?.options as { noFastForward?: boolean; message?: string } | undefined
+            if (!branch) throw new Error('Branch name is required')
+            await mergeBranch(projectId, branch, options)
+            return { content: [{ type: 'text', text: `Merged branch: ${branch}` }] }
+          }
+
+          case GitManagerAction.LOG: {
+            const options = data?.options as { limit?: number; skip?: number; branch?: string; file?: string } | undefined
+            const logs = await getCommitLog(projectId, options)
+            const text = logs.map(log => {
+              const date = new Date(log.date).toLocaleDateString()
+              return `${log.abbreviatedHash} - ${log.message} (${log.author.name}, ${date})`
+            }).join('\n')
+            return { content: [{ type: 'text', text: text || 'No commits found' }] }
+          }
+
+          case GitManagerAction.COMMIT_DETAILS: {
+            const hash = data?.hash as string
+            if (!hash) throw new Error('Commit hash is required')
+            const commit = await getCommitDetails(projectId, hash)
+            const text = `Commit: ${commit.hash}\n` +
+              `Author: ${commit.author.name} <${commit.author.email}>\n` +
+              `Date: ${commit.author.date}\n` +
+              `Message: ${commit.message}\n` +
+              `Files: ${commit.files?.join(', ') || 'none'}`
+            return { content: [{ type: 'text', text }] }
+          }
+
+          case GitManagerAction.FILE_DIFF: {
+            const filePath = data?.filePath as string
+            const options = data?.options as { commit?: string; staged?: boolean } | undefined
+            if (!filePath) throw new Error('File path is required')
+            const diff = await getFileDiff(projectId, filePath, options)
+            return { content: [{ type: 'text', text: diff || 'No differences' }] }
+          }
+
+          case GitManagerAction.COMMIT_DIFF: {
+            const hash = data?.hash as string
+            if (!hash) throw new Error('Commit hash is required')
+            const diff = await getCommitDiff(projectId, hash)
+            const text = `Files changed: ${diff.files.length}\n` +
+              `Additions: +${diff.additions}, Deletions: -${diff.deletions}\n\n` +
+              diff.content
+            return { content: [{ type: 'text', text }] }
+          }
+
+          case GitManagerAction.CHERRY_PICK: {
+            const hash = data?.hash as string
+            if (!hash) throw new Error('Commit hash is required')
+            await cherryPick(projectId, hash)
+            return { content: [{ type: 'text', text: `Cherry-picked commit: ${hash}` }] }
+          }
+
+          case GitManagerAction.REMOTES: {
+            const remotes = await getRemotes(projectId)
+            const text = remotes.map(r => `${r.name}: ${r.fetch} (fetch), ${r.push} (push)`).join('\n')
+            return { content: [{ type: 'text', text: text || 'No remotes configured' }] }
+          }
+
+          case GitManagerAction.ADD_REMOTE: {
+            const name = data?.name as string
+            const url = data?.url as string
+            if (!name || !url) throw new Error('Remote name and URL are required')
+            await addRemote(projectId, name, url)
+            return { content: [{ type: 'text', text: `Added remote: ${name} -> ${url}` }] }
+          }
+
+          case GitManagerAction.REMOVE_REMOTE: {
+            const name = data?.name as string
+            if (!name) throw new Error('Remote name is required')
+            await removeRemote(projectId, name)
+            return { content: [{ type: 'text', text: `Removed remote: ${name}` }] }
+          }
+
+          case GitManagerAction.FETCH: {
+            const remote = data?.remote as string | undefined
+            const options = data?.options as { prune?: boolean } | undefined
+            await fetch(projectId, remote || 'origin', options)
+            return { content: [{ type: 'text', text: `Fetched from ${remote || 'origin'}` }] }
+          }
+
+          case GitManagerAction.PULL: {
+            const remote = data?.remote as string | undefined
+            const branch = data?.branch as string | undefined
+            const options = data?.options as { rebase?: boolean } | undefined
+            await pull(projectId, remote || 'origin', branch, options)
+            return { content: [{ type: 'text', text: `Pulled from ${remote || 'origin'}${branch ? `/${branch}` : ''}` }] }
+          }
+
+          case GitManagerAction.PUSH: {
+            const remote = data?.remote as string | undefined
+            const branch = data?.branch as string | undefined
+            const options = data?.options as { force?: boolean; setUpstream?: boolean } | undefined
+            await push(projectId, remote || 'origin', branch, options)
+            return { content: [{ type: 'text', text: `Pushed to ${remote || 'origin'}${branch ? `/${branch}` : ''}` }] }
+          }
+
+          case GitManagerAction.TAGS: {
+            const tags = await getTags(projectId)
+            const text = tags.map(t => {
+              let line = `${t.name} -> ${t.commit.substring(0, 7)}`
+              if (t.annotation) line += ` "${t.annotation}"`
+              return line
+            }).join('\n')
+            return { content: [{ type: 'text', text: text || 'No tags found' }] }
+          }
+
+          case GitManagerAction.CREATE_TAG: {
+            const name = data?.name as string
+            const options = data?.options as { message?: string; ref?: string } | undefined
+            if (!name) throw new Error('Tag name is required')
+            await createTag(projectId, name, options)
+            return { content: [{ type: 'text', text: `Created tag: ${name}` }] }
+          }
+
+          case GitManagerAction.DELETE_TAG: {
+            const name = data?.name as string
+            if (!name) throw new Error('Tag name is required')
+            await deleteTag(projectId, name)
+            return { content: [{ type: 'text', text: `Deleted tag: ${name}` }] }
+          }
+
+          case GitManagerAction.STASH: {
+            const message = data?.message as string | undefined
+            await stash(projectId, message)
+            return { content: [{ type: 'text', text: `Stashed changes${message ? `: ${message}` : ''}` }] }
+          }
+
+          case GitManagerAction.STASH_LIST: {
+            const stashes = await stashList(projectId)
+            const text = stashes.map(s => `stash@{${s.index}}: ${s.message} (on ${s.branch})`).join('\n')
+            return { content: [{ type: 'text', text: text || 'No stashes found' }] }
+          }
+
+          case GitManagerAction.STASH_APPLY: {
+            const ref = data?.ref as string | undefined
+            await stashApply(projectId, ref || 'stash@{0}')
+            return { content: [{ type: 'text', text: `Applied stash: ${ref || 'stash@{0}'}` }] }
+          }
+
+          case GitManagerAction.STASH_POP: {
+            const ref = data?.ref as string | undefined
+            await stashPop(projectId, ref || 'stash@{0}')
+            return { content: [{ type: 'text', text: `Popped stash: ${ref || 'stash@{0}'}` }] }
+          }
+
+          case GitManagerAction.STASH_DROP: {
+            const ref = data?.ref as string | undefined
+            await stashDrop(projectId, ref || 'stash@{0}')
+            return { content: [{ type: 'text', text: `Dropped stash: ${ref || 'stash@{0}'}` }] }
+          }
+
+          case GitManagerAction.RESET: {
+            const ref = data?.ref as string
+            const mode = data?.mode as 'soft' | 'mixed' | 'hard' | undefined
+            if (!ref) throw new Error('Commit reference is required')
+            await reset(projectId, ref, mode || 'mixed')
+            return { content: [{ type: 'text', text: `Reset to ${ref} (${mode || 'mixed'} mode)` }] }
+          }
+
+          case GitManagerAction.REVERT: {
+            const hash = data?.hash as string
+            const options = data?.options as { noCommit?: boolean } | undefined
+            if (!hash) throw new Error('Commit hash is required')
+            await revert(projectId, hash, options)
+            return { content: [{ type: 'text', text: `Reverted commit: ${hash}` }] }
+          }
+
+          case GitManagerAction.BLAME: {
+            const filePath = data?.filePath as string
+            if (!filePath) throw new Error('File path is required')
+            const blame = await blame(projectId, filePath)
+            const text = `Blame for ${blame.path}:\n` +
+              blame.lines.slice(0, 20).map(line => 
+                `${line.line}: ${line.commit.substring(0, 7)} ${line.author} - ${line.content}`
+              ).join('\n') +
+              (blame.lines.length > 20 ? `\n... and ${blame.lines.length - 20} more lines` : '')
+            return { content: [{ type: 'text', text }] }
+          }
+
+          case GitManagerAction.CLEAN: {
+            const options = data?.options as { directories?: boolean; force?: boolean; dryRun?: boolean } | undefined
+            const cleaned = await clean(projectId, options)
+            const text = options?.dryRun ? 
+              `Would remove:\n${cleaned.join('\n')}` :
+              `Removed:\n${cleaned.join('\n')}`
+            return { content: [{ type: 'text', text: text || 'Nothing to clean' }] }
+          }
+
+          case GitManagerAction.CONFIG_GET: {
+            const key = data?.key as string | undefined
+            const options = data?.options as { global?: boolean } | undefined
+            const config = await getConfig(projectId, key, options)
+            const text = typeof config === 'string' ? 
+              `${key}: ${config}` :
+              Object.entries(config).map(([k, v]) => `${k}: ${v}`).join('\n')
+            return { content: [{ type: 'text', text }] }
+          }
+
+          case GitManagerAction.CONFIG_SET: {
+            const key = data?.key as string
+            const value = data?.value as string
+            const options = data?.options as { global?: boolean } | undefined
+            if (!key || !value) throw new Error('Config key and value are required')
+            await setConfig(projectId, key, value, options)
+            return { content: [{ type: 'text', text: `Set config: ${key} = ${value}` }] }
           }
 
           default:

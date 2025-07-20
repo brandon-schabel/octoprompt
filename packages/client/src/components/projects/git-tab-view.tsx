@@ -18,8 +18,9 @@ import {
   Minus
 } from 'lucide-react'
 import { useProjectGitStatus, useStageFiles, useUnstageFiles, useCommitChanges } from '@/hooks/api/use-git-api'
-import type { GitFileStatus } from '@octoprompt/schemas/git'
+import type { GitFileStatus } from '@octoprompt/schemas'
 import { getFileName } from '@/lib/git-utils'
+import { GitDiffDialog } from './git-diff-dialog'
 
 interface GitTabViewProps {
   projectId: number
@@ -44,11 +45,25 @@ const getGitStatusColor = (status: string, isStaged: boolean = false) => {
 }
 
 export function GitTabView({ projectId }: GitTabViewProps) {
+  // Guard against invalid projectId
+  if (!projectId || projectId === -1) {
+    return (
+      <div className='flex items-center justify-center h-full p-8'>
+        <div className='text-center space-y-2'>
+          <AlertCircle className='h-8 w-8 mx-auto text-muted-foreground' />
+          <p className='text-muted-foreground'>Please select a project first</p>
+        </div>
+      </div>
+    )
+  }
+
   const { data: gitStatus, isLoading } = useProjectGitStatus(projectId)
   const stageFiles = useStageFiles(projectId)
   const unstageFiles = useUnstageFiles(projectId)
   const commitChanges = useCommitChanges(projectId)
   const [commitMessage, setCommitMessage] = useState('')
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [showDiffDialog, setShowDiffDialog] = useState(false)
 
   if (isLoading) {
     return (
@@ -150,13 +165,23 @@ export function GitTabView({ projectId }: GitTabViewProps) {
               ) : (
                 <div className='space-y-1'>
                   {unstagedFiles.map((file) => (
-                    <div key={file.path} className='flex items-center gap-2 p-2 hover:bg-accent rounded-md group'>
+                    <div 
+                      key={file.path} 
+                      className='flex items-center gap-2 p-2 hover:bg-accent rounded-md group cursor-pointer'
+                      onClick={() => {
+                        setSelectedFile(file.path)
+                        setShowDiffDialog(true)
+                      }}
+                    >
                       <FileText className={cn('h-3.5 w-3.5 flex-shrink-0', getGitStatusColor(file.status, false))} />
                       <Button
                         size='sm'
                         variant='ghost'
                         className='h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity'
-                        onClick={() => stageFiles.mutate([file.path])}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          stageFiles.mutate([file.path])
+                        }}
                         disabled={stageFiles.isPending}
                         title='Stage file'
                       >
@@ -210,13 +235,23 @@ export function GitTabView({ projectId }: GitTabViewProps) {
               ) : (
                 <div className='space-y-1'>
                   {stagedFiles.map((file) => (
-                    <div key={file.path} className='flex items-center gap-2 p-2 hover:bg-accent rounded-md group'>
+                    <div 
+                      key={file.path} 
+                      className='flex items-center gap-2 p-2 hover:bg-accent rounded-md group cursor-pointer'
+                      onClick={() => {
+                        setSelectedFile(file.path)
+                        setShowDiffDialog(true)
+                      }}
+                    >
                       <FileText className={cn('h-3.5 w-3.5 flex-shrink-0', getGitStatusColor(file.status, true))} />
                       <Button
                         size='sm'
                         variant='ghost'
                         className='h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity'
-                        onClick={() => unstageFiles.mutate([file.path])}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unstageFiles.mutate([file.path])
+                        }}
                         disabled={unstageFiles.isPending}
                         title='Unstage file'
                       >
@@ -279,6 +314,21 @@ export function GitTabView({ projectId }: GitTabViewProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Git Diff Dialog */}
+      {selectedFile && (
+        <GitDiffDialog
+          open={showDiffDialog}
+          onOpenChange={(open) => {
+            setShowDiffDialog(open)
+            if (!open) setSelectedFile(null)
+          }}
+          projectId={projectId}
+          filePath={selectedFile}
+          hasStaged={stagedFiles.some(f => f.path === selectedFile)}
+          hasUnstaged={unstagedFiles.some(f => f.path === selectedFile)}
+        />
+      )}
     </div>
   )
 }

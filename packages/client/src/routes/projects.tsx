@@ -6,8 +6,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useGetProjects, useDeleteProject, useGetProject } from '@/hooks/api/use-projects-api'
 import { PromptOverviewPanel, type PromptOverviewPanelRef } from '@/components/projects/prompt-overview-panel'
 import { FilePanel, type FilePanelRef } from '@/components/projects/file-panel/file-panel'
+import { UserInputPanel, type UserInputPanelRef } from '@/components/projects/user-input-panel'
 import { ProjectsTabManager } from '@/components/projects-tab-manager'
-import { ResizablePanel } from '@ui'
+import { ThreeColumnResizablePanel } from '@/components/ui/three-column-resizable-panel'
 import { ProjectResponse } from '@octoprompt/schemas'
 import {
   useActiveProjectTab,
@@ -176,34 +177,34 @@ export function ProjectsPage() {
           <ProjectsTabManager />
         </div>
         <Tabs defaultValue='context' className='flex-1 flex flex-col min-h-0'>
-          <div className='flex-none px-4 py-2 border-b dark:border-slate-700 flex items-center'>
+          <div className='flex-none px-4 py-2 border-b dark:border-slate-700 flex items-center justify-between'>
             <ProjectSwitcher
-              currentProject={projectData}
-              className='mr-4'
+              currentProject={projectData ?? null}
+              className='flex-shrink-0'
               onManageProjects={() => setProjectModalOpen(true)}
             />
-            <TabsList>
-              <TabsTrigger value='context'>Context</TabsTrigger>
-              <TabsTrigger value='stats'>Statistics</TabsTrigger>
-              <TabsTrigger value='tickets' className='flex items-center gap-1'>
-                <Bot className='h-3.5 w-3.5' />
-                Tickets
-              </TabsTrigger>
-              <TabsTrigger value='summarization'>Summarization</TabsTrigger>
-              {/* <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
-                <Code2 className='h-3.5 w-3.5' />
-                Agent Coder
-              </TabsTrigger> */}
-              <TabsTrigger value='assets' className='flex items-center gap-1'>
-                <Sparkles className='h-3.5 w-3.5' />
-                Assets
-              </TabsTrigger>
-              <TabsTrigger value='git' className='flex items-center gap-1'>
-                <GitBranch className='h-3.5 w-3.5' />
-                Git
-              </TabsTrigger>
-            </TabsList>
-            <div className='ml-auto'>
+            <div className='flex-1 flex justify-center'>
+              <TabsList>
+                <TabsTrigger value='context'>Context</TabsTrigger>
+                <TabsTrigger value='stats'>Statistics</TabsTrigger>
+                <TabsTrigger value='tickets' className='flex items-center gap-1'>
+                  Tickets
+                </TabsTrigger>
+                <TabsTrigger value='summarization'>Summarization</TabsTrigger>
+                {/* <TabsTrigger value='agent-coder' className='flex items-center gap-1'>
+                  <Code2 className='h-3.5 w-3.5' />
+                  Agent Coder
+                </TabsTrigger> */}
+                <TabsTrigger value='assets' className='flex items-center gap-1'>
+                  Assets
+                </TabsTrigger>
+                <TabsTrigger value='git' className='flex items-center gap-1'>
+                  <GitBranch className='h-3.5 w-3.5' />
+                  Git
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <div className='flex-shrink-0'>
               <ProjectSettingsDialog />
             </div>
           </div>
@@ -309,15 +310,21 @@ type MainProjectsLayoutProps = {
 }
 
 function MainProjectsLayout({ filePanelRef, promptPanelRef }: MainProjectsLayoutProps) {
+  const userInputRef = useRef<UserInputPanelRef>(null)
+  
   return (
     <ErrorBoundary>
       <div className='flex-1 min-h-0 overflow-hidden h-full flex flex-col'>
-        <ResizablePanel
+        <ThreeColumnResizablePanel
           leftPanel={<FilePanel ref={filePanelRef} className='h-full w-full' />}
+          middlePanel={<UserInputPanel ref={userInputRef} className='h-full w-full' />}
           rightPanel={<PromptOverviewPanel ref={promptPanelRef} className='h-full w-full' />}
-          initialLeftPanelWidth={40}
-          minLeftPanelWidth={100}
-          storageKey='projects-panel-width'
+          initialLeftPanelWidth={25}
+          initialRightPanelWidth={35}
+          minLeftPanelWidth={200}
+          minMiddlePanelWidth={300}
+          minRightPanelWidth={250}
+          storageKey='projects-three-column'
           className='flex-1 h-full w-full'
         />
       </div>
