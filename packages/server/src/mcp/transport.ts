@@ -249,7 +249,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'octoprompt-mcp',
-        version: '0.6.0'
+        version: '0.7.0'
       },
       _meta: { sessionId } // Include session ID for client reference
     }
@@ -377,11 +377,11 @@ async function handleToolsCall(
       const content = Array.isArray(result)
         ? result
         : [
-            {
-              type: 'text',
-              text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
-            }
-          ]
+          {
+            type: 'text',
+            text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+          }
+        ]
 
       return {
         jsonrpc: '2.0',
@@ -580,12 +580,12 @@ async function handleResourcesRead(
           contents: Array.isArray(content)
             ? content
             : [
-                {
-                  uri,
-                  mimeType: resource.mimeType || 'text/plain',
-                  text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
-                }
-              ]
+              {
+                uri,
+                mimeType: resource.mimeType || 'text/plain',
+                text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+              }
+            ]
         }
       }
     }
