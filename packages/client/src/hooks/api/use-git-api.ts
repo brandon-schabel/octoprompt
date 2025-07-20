@@ -169,7 +169,7 @@ export function useGitBranches(projectId: number | undefined, enabled = true) {
       }
       const response = await octoClient.git.getBranches(projectId)
       if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch branches')
+        throw new Error('Failed to fetch branches')
       }
       return response.data
     },
@@ -238,7 +238,7 @@ export function useGitLog(
       }
       const response = await octoClient.git.getCommitLog(projectId, options)
       if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch commit log')
+        throw new Error('Failed to fetch commit log')
       }
       return response
     },
@@ -260,7 +260,7 @@ export function useGitRemotes(projectId: number | undefined, enabled = true) {
       }
       const response = await octoClient.git.getRemotes(projectId)
       if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch remotes')
+        throw new Error('Failed to fetch remotes')
       }
       return response.data
     },
@@ -354,7 +354,7 @@ export function useGitTags(projectId: number | undefined, enabled = true) {
       }
       const response = await octoClient.git.getTags(projectId)
       if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch tags')
+        throw new Error('Failed to fetch tags')
       }
       return response.data
     },
@@ -396,7 +396,7 @@ export function useGitStashList(projectId: number | undefined, enabled = true) {
       }
       const response = await octoClient.git.getStashList(projectId)
       if (!response.success || !response.data) {
-        throw new Error(response.message || 'Failed to fetch stash list')
+        throw new Error('Failed to fetch stash list')
       }
       return response.data
     },

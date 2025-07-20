@@ -48,10 +48,7 @@ export function useSelectedFilesSync(projectTabId: string | undefined) {
     },
     onSuccess: () => {
       // Show a subtle save indicator
-      toast.success('Selection saved', {
-        duration: 1000,
-        position: 'bottom-right'
-      })
+
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['selectedFiles', projectId, tabId] })
     },

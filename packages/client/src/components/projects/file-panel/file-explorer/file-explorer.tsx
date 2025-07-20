@@ -455,7 +455,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                       gitStatus?.success && gitStatus.data
                         ? gitStatus.data.files.find((f) => f.path === file?.path)
                         : null
-                    const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged'
+                    const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged' ? true : false
                     handleViewFile(file as ProjectFile, false, hasChanges)
                   }}
                   onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}
@@ -480,7 +480,7 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
                     gitStatus?.success && gitStatus.data
                       ? gitStatus.data.files.find((f) => f.path === file?.path)
                       : null
-                  const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged'
+                  const hasChanges = gitFileStatus && gitFileStatus.status !== 'unchanged' ? true : false
                   handleViewFile(file as ProjectFile, false, hasChanges)
                 }}
                 onViewFileInEditMode={(file) => handleViewFile(file as ProjectFile, true)}

@@ -385,7 +385,9 @@ export const createSafeGlobalState = (): GlobalState => ({
       sortOrder: 0,
       ticketSearch: '',
       ticketSort: 'created_desc' as const,
-      ticketStatusFilter: 'all' as const
+      ticketStatusFilter: 'all' as const,
+      promptsPanelCollapsed: true,
+      selectedFilesCollapsed: false
     }
   },
   projectActiveTabId: 1,

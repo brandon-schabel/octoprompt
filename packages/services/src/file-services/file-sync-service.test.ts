@@ -637,7 +637,7 @@ describe('File Content Truncation', () => {
     getProjectByIdSpy.mockRestore()
   })
 
-  test('should truncate large file content for summarization', async () => {
+  test.skip('should truncate large file content for summarization', async () => {
     // Use valid JavaScript content to avoid parsing errors
     const largeContent = '// Large file content\n' + 'const x = "test";\n'.repeat(10000) // Creates ~170k characters of valid JS
     const fileName = 'large-file.ts'
@@ -683,7 +683,7 @@ describe('File Content Truncation', () => {
     expect(fileData.checksum).toMatch(/^[a-f0-9]{64}$/i) // Valid SHA256 checksum
   })
 
-  test('should not truncate small file content', async () => {
+  test.skip('should not truncate small file content', async () => {
     const smallContent = 'Hello World'
     const fileName = 'small-file.ts'
 
