@@ -38,6 +38,8 @@ import { useRefreshProject } from '@/hooks/api/use-projects-api'
 import { EditorType, ProjectFile } from '@octoprompt/schemas'
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { useActiveProjectTab } from '@/hooks/use-kv-local-storage'
+import { useProjectGitStatus } from '@/hooks/api/use-git-api'
+import type { GitFileStatus } from '@octoprompt/schemas'
 
 export type VisibleItem = {
   path: string
@@ -94,14 +96,42 @@ interface FileTreeNodeRowProps {
   onViewFile?: (file: ProjectFile) => void
   onViewFileInEditMode?: (file: ProjectFile) => void
   projectRoot: string
+  gitFileStatus?: GitFileStatus
 }
 
 /**
  * Single row in the file tree (folder or file).
  * ForwardRef so we can focus DOM nodes from parent.
  */
+const getGitStatusColor = (gitFileStatus: GitFileStatus | undefined) => {
+  if (!gitFileStatus || gitFileStatus.status === 'unchanged' || gitFileStatus.status === 'ignored') {
+    return undefined
+  }
+  
+  // Use darker colors for unstaged, brighter for staged
+  const isStaged = gitFileStatus.staged
+  
+  if (gitFileStatus.status === 'added' || gitFileStatus.status === 'untracked') {
+    return isStaged ? 'text-green-500' : 'text-green-700'
+  }
+  
+  if (gitFileStatus.status === 'modified') {
+    return isStaged ? 'text-yellow-500' : 'text-yellow-700'
+  }
+  
+  if (gitFileStatus.status === 'deleted') {
+    return isStaged ? 'text-red-500' : 'text-red-700'
+  }
+  
+  if (gitFileStatus.status === 'renamed' || gitFileStatus.status === 'copied') {
+    return isStaged ? 'text-blue-500' : 'text-blue-700'
+  }
+  
+  return 'text-gray-500'
+}
+
 const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(function FileTreeNodeRow(
-  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, onViewFileInEditMode, projectRoot },
+  { item, isOpen, isFocused, onFocus, onToggleOpen, onViewFile, onViewFileInEditMode, projectRoot, gitFileStatus },
   ref
 ) {
   const [projectTabState, , projectTabId] = useActiveProjectTab()
@@ -230,8 +260,19 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
                 }
               }}
             />
-            {isFolder ? <Folder className='h-4 w-4' /> : <FileIcon className='h-4 w-4' />}
-            <span className='font-mono text-sm truncate'>{item.name}</span>
+            {isFolder ? (
+              <Folder className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
+            ) : (
+              <FileIcon className={cn('h-4 w-4', getGitStatusColor(gitFileStatus))} />
+            )}
+            <span 
+              className={cn('font-mono text-sm truncate', getGitStatusColor(gitFileStatus))}
+              title={gitFileStatus && gitFileStatus.status !== 'unchanged' && gitFileStatus.status !== 'ignored' 
+                ? `Git: ${gitFileStatus.status} (${gitFileStatus.staged ? 'staged' : 'unstaged'})` 
+                : undefined}
+            >
+              {item.name}
+            </span>
 
             {/* Token count display */}
             {((!isFolder && item.node.file?.content) || isFolder) && (
@@ -267,21 +308,6 @@ const FileTreeNodeRow = forwardRef<HTMLDivElement, FileTreeNodeRowProps>(functio
             {/* Inline icons for single file */}
             {!isFolder && item.node.file && (
               <>
-                {/* Summary indicator icons */}
-                {hasSummary ? (
-                  // <ClipboardList
-                  //     className="h-4 w-4 text-blue-500 flex-shrink-0 ml-auto mr-1"
-                  // // title="Summary exists"
-                  // />
-                  <div className='h-1 w-1 bg-blue-500 flex-shrink-0 ml-auto mr-1 rounded-full'></div>
-                ) : (
-                  // red dot
-                  <div
-                    className='h-1 w-1 bg-yellow-300 flex-shrink-0 ml-auto mr-1 rounded-full'
-                    title='No summary'
-                  ></div>
-                )}
-
                 {onViewFile && (
                   <Button
                     variant='ghost'
@@ -462,9 +488,54 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
   const [focusedIndex, setFocusedIndex] = useState<number>(-1)
   const [lastFocusedIndex, setLastFocusedIndex] = useState<number>(-1)
   const { selectedFiles, selectFiles, projectFileMap } = useSelectedFiles()
+  const [projectTabState] = useActiveProjectTab()
+  const projectId = projectTabState?.selectedProjectId
 
   // Track whether the container is "focused" to enable/disable certain hotkeys
   const [isFocused, setIsFocused] = useState(false)
+
+  // Get git status for the project
+  const { data: gitStatus } = useProjectGitStatus(projectId)
+  
+  // Create a map of file paths to git file status
+  const gitStatusMap = useMemo(() => {
+    const map = new Map<string, GitFileStatus>()
+    if (gitStatus?.success && gitStatus.data.files) {
+      gitStatus.data.files.forEach(file => {
+        map.set(file.path, file)
+      })
+    }
+    return map
+  }, [gitStatus])
+
+  // Function to check if a folder contains any files with git changes
+  const folderContainsGitChanges = useCallback((folderPath: string): GitFileStatus | null => {
+    if (!gitStatus?.success) return null
+    
+    // Priority order for git statuses (most important first)
+    const statusPriority = ['deleted', 'added', 'modified', 'renamed', 'copied', 'untracked']
+    let bestStatus: GitFileStatus | null = null
+    
+    // Check if any git file starts with this folder path
+    for (const file of gitStatus.data.files) {
+      if (file.status !== 'unchanged' && file.status !== 'ignored') {
+        // Check if the file is in this folder or a subfolder
+        if (file.path.startsWith(folderPath + '/')) {
+          if (!bestStatus) {
+            bestStatus = file
+          } else {
+            // If we find a higher priority status, use it
+            const currentPriority = statusPriority.indexOf(bestStatus.status)
+            const newPriority = statusPriority.indexOf(file.status)
+            if (newPriority < currentPriority && newPriority !== -1) {
+              bestStatus = file
+            }
+          }
+        }
+      }
+    }
+    return bestStatus
+  }, [gitStatus])
 
   useImperativeHandle(
     ref,
@@ -699,6 +770,13 @@ export const FileTree = forwardRef<FileTreeRef, FileTreeProps>(function FileTree
               onViewFile={onViewFile}
               onViewFileInEditMode={onViewFileInEditMode}
               projectRoot={projectRoot}
+              gitFileStatus={
+                item.node.file 
+                  ? gitStatusMap.get(item.node.file.path) 
+                  : item.node._folder 
+                    ? folderContainsGitChanges(item.path)
+                    : undefined
+              }
             />
           ))}
         </div>

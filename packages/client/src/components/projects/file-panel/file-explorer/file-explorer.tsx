@@ -25,6 +25,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useGetProjectFiles, useGetProject, useUpdateFileContent } from '@/hooks/api/use-projects-api'
 import { ProjectFile } from '@octoprompt/schemas'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useProjectGitStatus } from '@/hooks/api/use-git-api'
+import { GitPullRequest } from 'lucide-react'
 
 type ExplorerRefs = {
   searchInputRef: React.RefObject<HTMLInputElement>
@@ -97,6 +99,9 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
   )
   const { selectedFiles, selectFiles } = useSelectedFiles()
   const projectFileMap = useProjectFileMap(selectedProjectId ?? -1)
+  
+  // Get git status for the project
+  const { data: gitStatus } = useProjectGitStatus(selectedProjectId)
 
   const filteredFiles = useMemo(() => {
     if (!projectFiles) return []
@@ -253,6 +258,42 @@ export function FileExplorer({ ref, allowSpacebarToSelect }: FileExplorerProps) 
         <Button variant='outline' size='sm' onClick={() => setSearchByContent((prev) => !prev)}>
           {searchByContent ? 'Search Content' : 'Search Names'}
         </Button>
+
+        {/* Git changes selector button */}
+        {gitStatus?.success && gitStatus.data.files.length > 0 && (() => {
+          const changedFilesCount = gitStatus.data.files.filter(
+            file => file.status !== 'unchanged' && file.status !== 'ignored'
+          ).length
+          
+          if (changedFilesCount === 0) return null
+          
+          return (
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => {
+                const filesWithChanges = gitStatus.data.files
+                  .filter(file => file.status !== 'unchanged' && file.status !== 'ignored')
+                  .map(file => {
+                    // Find the file ID from projectFiles by matching the path
+                    const projectFile = projectFiles.find(pf => pf.path === file.path)
+                    return projectFile?.id
+                  })
+                  .filter((id): id is number => id !== undefined)
+                
+                if (filesWithChanges.length > 0) {
+                  selectFiles([...new Set([...selectedFiles, ...filesWithChanges])])
+                }
+              }}
+            >
+              <GitPullRequest className='h-4 w-4 mr-1' />
+              Select Git Changes
+              <Badge variant='secondary' className='ml-2'>
+                {changedFilesCount}
+              </Badge>
+            </Button>
+          )
+        })()}
 
         <OctoTooltip>
           <div className='space-y-2'>

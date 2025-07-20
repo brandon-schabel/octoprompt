@@ -63,6 +63,7 @@
     "ollama-ai-provider": "^1.2.0",
     "openai": "^4.104.0",
     "picomatch": "^4.0.2",
+    "simple-git": "^3.28.0",
     "zod": "^3.25.56",
     "zod-validation-error": "^3.4.1"
   },

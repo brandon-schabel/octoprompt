@@ -142,6 +142,16 @@ import {
   SuggestFilesBodySchema
 } from '@octoprompt/schemas'
 
+// Git imports
+import type {
+  GitStatusResult,
+  GetProjectGitStatusResponse
+} from '@octoprompt/schemas'
+
+import {
+  getProjectGitStatusResponseSchema
+} from '@octoprompt/schemas'
+
 export type DataResponseSchema<T> = {
   success: boolean
   data: T
@@ -1306,6 +1316,16 @@ export class TicketService extends BaseApiClient {
   }
 }
 
+// Git Service
+export class GitService extends BaseApiClient {
+  async getProjectGitStatus(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/status`, {
+      responseSchema: getProjectGitStatusResponseSchema
+    })
+    return result as GetProjectGitStatusResponse
+  }
+}
+
 // Main OctoPrompt Client
 export class OctoPromptClient {
   public readonly chats: ChatService
@@ -1317,6 +1337,7 @@ export class OctoPromptClient {
   public readonly system: SystemService
   public readonly mcp: MCPService
   public readonly tickets: TicketService
+  public readonly git: GitService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -1328,6 +1349,7 @@ export class OctoPromptClient {
     this.system = new SystemService(config)
     this.mcp = new MCPService(config)
     this.tickets = new TicketService(config)
+    this.git = new GitService(config)
   }
 }
 
