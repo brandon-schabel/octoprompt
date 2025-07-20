@@ -37,20 +37,101 @@ The Linear MCP (Model Context Protocol) integration is built into Claude Code an
 
 ### OctoPrompt MCP Usage
 
+The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system through 5 consolidated tools:
 
-Use the OctoPrompt MCP for the following
-
-- Creating Tickets and Tasks when planning
-- Save and retrieve relevant prompts for later used (retrieve when it would help the context)
-- Get suggested files based on relevant context, the project is indexed and sumarized and uses that when providing suggestions
-- Retrieve compact project summary to gain quick insights into the architecture of the project.
-- Optimize a prompt using the context of the project, for example it can be helpful to upgrade a project by adding project specific context
-
-The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system, allowing you to manage projects, files, prompts, and AI-powered workflows directly from Claude.
+**Use OctoPrompt MCP for:**
+- Managing projects and browsing/reading files
+- Creating and managing tickets and tasks for planning
+- Saving and retrieving prompts for context management
+- Getting AI-suggested files based on task context
+- Retrieving compact project summaries for quick architectural insights
+- Optimizing prompts using project-specific context
 
 **OctoPrompt Project Details:**
-
 - **Project ID**: `1750564533014`
+
+### OctoPrompt MCP Tools
+
+OctoPrompt now provides 5 consolidated MCP tools that group related functionality:
+
+#### 1. **project_manager** - Project and file operations
+Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files
+
+Example usage:
+```json
+// List all projects
+{ "action": "list" }
+
+// Get project summary
+{ "action": "get_summary", "projectId": 1750564533014 }
+
+// Browse project files
+{ "action": "browse_files", "projectId": 1750564533014, "data": { "path": "src/" } }
+
+// Get file content
+{ "action": "get_file_content", "projectId": 1750564533014, "data": { "path": "README.md" } }
+
+// Suggest relevant files
+{ "action": "suggest_files", "projectId": 1750564533014, "data": { "prompt": "authentication flow", "limit": 5 } }
+```
+
+#### 2. **prompt_manager** - Prompt operations
+Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project
+
+Example usage:
+```json
+// Create a new prompt
+{ "action": "create", "data": { "name": "Code Review", "content": "Review this code for..." } }
+
+// List prompts for a project
+{ "action": "list_by_project", "projectId": 1750564533014 }
+
+// Add prompt to project
+{ "action": "add_to_project", "projectId": 1750564533014, "data": { "promptId": 123 } }
+```
+
+#### 3. **ticket_manager** - Ticket operations
+Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files
+
+Example usage:
+```json
+// Create a ticket
+{ "action": "create", "projectId": 1750564533014, "data": { "title": "Fix login bug", "overview": "Users can't login", "priority": "high" } }
+
+// List tickets with task counts
+{ "action": "list_with_task_count", "projectId": 1750564533014, "data": { "status": "open" } }
+
+// Generate tasks automatically
+{ "action": "auto_generate_tasks", "data": { "ticketId": 456 } }
+```
+
+#### 4. **task_manager** - Task operations
+Actions: list, create, update, delete, reorder
+
+Example usage:
+```json
+// Create a task
+{ "action": "create", "ticketId": 456, "data": { "content": "Debug login function" } }
+
+// Update task status
+{ "action": "update", "ticketId": 456, "data": { "taskId": 789, "done": true } }
+
+// Reorder tasks
+{ "action": "reorder", "ticketId": 456, "data": { "tasks": [{ "taskId": 789, "orderIndex": 0 }, { "taskId": 790, "orderIndex": 1 }] } }
+```
+
+#### 5. **ai_assistant** - AI utilities
+Actions: optimize_prompt, get_compact_summary
+
+Example usage:
+```json
+// Optimize a prompt with project context
+{ "action": "optimize_prompt", "projectId": 1750564533014, "data": { "prompt": "help me fix the authentication" } }
+
+// Get AI-generated compact project summary
+{ "action": "get_compact_summary", "projectId": 1750564533014 }
+```
+
 
 ## Creating New MCP Tools
 
