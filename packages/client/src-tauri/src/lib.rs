@@ -1,4 +1,4 @@
-use tauri::{Manager, Emitter};
+use tauri::Emitter;
 use tauri_plugin_shell::{ShellExt, process::CommandEvent};
 use std::sync::Mutex;
 
@@ -18,22 +18,33 @@ async fn start_octoprompt_server(
     app: tauri::AppHandle,
     state: tauri::State<'_, Mutex<ServerState>>
 ) -> Result<String, String> {
+    println!("[Tauri] start_octoprompt_server called");
     let shell = app.shell();
     
     // Check if server is already running
     {
         let state_guard = state.lock().unwrap();
         if state_guard.child.is_some() {
+            println!("[Tauri] Server already running");
             return Ok("OctoPrompt server is already running".to_string());
         }
     }
     
+    println!("[Tauri] Spawning server sidecar...");
     let (mut rx, child) = shell
         .sidecar("octoprompt-server")
-        .map_err(|e| e.to_string())?
+        .map_err(|e| {
+            eprintln!("[Tauri] Failed to spawn sidecar: {}", e);
+            e.to_string()
+        })?
         .args(["--port", "3147"])
         .spawn()
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            eprintln!("[Tauri] Failed to spawn process: {}", e);
+            e.to_string()
+        })?;
+    
+    println!("[Tauri] Sidecar spawned successfully");
 
     // Store the child process
     {
@@ -51,10 +62,15 @@ async fn start_octoprompt_server(
             match event {
                 CommandEvent::Stdout(line) => {
                     let line_str = String::from_utf8_lossy(&line);
-                    println!("Server: {}", line_str);
+                    println!("[Tauri] Server stdout: {}", line_str);
                     
-                    // Check if server is ready
-                    if !server_ready && (line_str.contains("Server running") || line_str.contains("Listening on")) {
+                    // Check if server is ready - look for multiple patterns
+                    if !server_ready && (
+                        line_str.contains("Server running") || 
+                        line_str.contains("Listening on") ||
+                        line_str.contains("[Server] Server running at")
+                    ) {
+                        println!("[Tauri] Server ready detected!");
                         server_ready = true;
                         // Emit event to frontend
                         app_handle.emit("octoprompt-server-ready", ()).unwrap();
@@ -62,10 +78,10 @@ async fn start_octoprompt_server(
                 }
                 CommandEvent::Stderr(line) => {
                     let line_str = String::from_utf8_lossy(&line);
-                    eprintln!("Server error: {}", line_str);
+                    eprintln!("[Tauri] Server stderr: {}", line_str);
                 }
                 CommandEvent::Terminated(payload) => {
-                    println!("Server terminated with code: {:?}", payload.code);
+                    println!("[Tauri] Server terminated with code: {:?}", payload.code);
                     // Emit event to frontend
                     app_handle.emit("octoprompt-server-terminated", payload.code).unwrap();
                     break;
@@ -94,10 +110,18 @@ async fn stop_octoprompt_server(
 
 #[tauri::command]
 async fn check_server_status() -> Result<bool, String> {
+    println!("[Tauri] Checking server status...");
     // Simple health check by trying to connect to the server
     match reqwest::get("http://localhost:3147/api/health").await {
-        Ok(response) => Ok(response.status().is_success()),
-        Err(_) => Ok(false),
+        Ok(response) => {
+            let status = response.status().is_success();
+            println!("[Tauri] Server health check: {}", if status { "OK" } else { "Failed" });
+            Ok(status)
+        },
+        Err(e) => {
+            println!("[Tauri] Server health check error: {}", e);
+            Ok(false)
+        },
     }
 }
 

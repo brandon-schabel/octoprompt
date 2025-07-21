@@ -29,8 +29,8 @@ export default defineConfig({
   },
   plugins: [
     // TanStackRouterVite automatically generates routeTree.gen.ts during dev and build
-    TanStackRouterVite(), 
-    react({}), 
+    TanStackRouterVite(),
+    react({}),
     tsconfigPaths()
   ],
   resolve: {

@@ -2,8 +2,9 @@ import { watch as fsWatch, type FSWatcher, existsSync as fsLibExistsSync } from 
 import { join, extname, resolve as pathResolve, relative, basename } from 'node:path'
 import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs'
 import { type Project, type ProjectFile } from '@octoprompt/schemas'
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
+import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS, MAX_FILE_SIZE_FOR_SUMMARY } from '@octoprompt/schemas'
 import ignorePackage, { type Ignore } from 'ignore'
+import { truncateForSummarization } from '@octoprompt/shared'
 import {
   getProjectFiles,
   bulkCreateProjectFiles,
@@ -14,6 +15,7 @@ import {
 } from '@octoprompt/services' // Adjusted path assuming this file is in services/file-services/
 import { resolvePath, normalizePathForDb as normalizePathForDbUtil } from '../utils/path-utils'
 import { summarizeSingleFile } from '@octoprompt/services'
+import { analyzeCodeImportsExports } from '../utils/code-analysis'
 
 // -------------------------------------------------------------------------------- //
 // -------------------------------- TYPE DEFINITIONS ------------------------------ //
@@ -378,13 +380,42 @@ export async function syncFileSet(
     const normalizedRelativePath = normalizePathForDbUtil(relativePath)
 
     try {
-      const content = readFileSync(absFilePath, 'utf-8')
       const stats = statSync(absFilePath)
-      const checksum = computeChecksum(content)
+
+      // Read file content and compute checksum
+      let content: string
+      let checksum: string
+      const rawContent = readFileSync(absFilePath, 'utf-8')
+
+      // Always compute checksum from the full content for change detection
+      checksum = computeChecksum(rawContent)
+
+      // Truncate content for storage and summarization to control AI costs
+      const truncationResult = truncateForSummarization(rawContent)
+      content = truncationResult.content
+
+      if (truncationResult.wasTruncated) {
+        console.log(
+          `[FileSync] File truncated for summarization:\n` +
+            `  Path: ${normalizedRelativePath}\n` +
+            `  Project: ${project.name} (ID: ${project.id})\n` +
+            `  File size: ${stats.size.toLocaleString()} bytes\n` +
+            `  Original length: ${truncationResult.originalLength.toLocaleString()} chars\n` +
+            `  Truncated to: ${content.length.toLocaleString()} chars\n` +
+            `  Reduction: ${Math.round((1 - content.length / truncationResult.originalLength) * 100)}%`
+        )
+      }
+
       const fileName = basename(normalizedRelativePath)
       let extension = extname(fileName).toLowerCase()
       if (!extension && fileName.startsWith('.')) {
         extension = fileName // e.g., '.env'
+      }
+
+      // Analyze imports/exports for supported file types
+      let codeAnalysis = null
+      if (['.js', '.jsx', '.ts', '.tsx', '.py'].includes(extension)) {
+        codeAnalysis = analyzeCodeImportsExports(content, fileName)
       }
 
       const fileData: FileSyncData = {
@@ -393,7 +424,9 @@ export async function syncFileSet(
         extension: extension,
         content: content,
         size: stats.size,
-        checksum: checksum
+        checksum: checksum,
+        imports: codeAnalysis?.imports || null,
+        exports: codeAnalysis?.exports || null
       }
 
       const existingDbFile = dbFileMap.get(normalizedRelativePath)
@@ -594,7 +627,7 @@ export function createFileChangePlugin() {
 
       // Re-summarize the (created or modified) file
       // console.log(`[FileChangePlugin] Summarizing ${updatedFile.path}...`);
-      await summarizeSingleFile(updatedFile) // From summarize-files-agent
+      await summarizeSingleFile(updatedFile, true) // From summarize-files-agent - force=true for new/updated files
       // console.log(`[FileChangePlugin] Finished processing ${event} for ${changedFilePath}`);
     } catch (err) {
       console.error('[FileChangePlugin] Error handling file change:', err)

@@ -92,6 +92,54 @@ export function buildCombinedFileSummariesXml(files: ProjectFile[], options: Sum
     const summaryTextToInclude = summaryContent || emptySummaryText
     output += `    <summary>${escapeXml(summaryTextToInclude)}</summary>\n`
 
+    // Add imports if available
+    if (file.imports && file.imports.length > 0) {
+      output += '    <imports>\n'
+      for (const imp of file.imports) {
+        output += '      <import>\n'
+        output += `        <source>${escapeXml(imp.source)}</source>\n`
+        if (imp.specifiers.length > 0) {
+          output += '        <specifiers>\n'
+          for (const spec of imp.specifiers) {
+            output += `          <specifier type="${spec.type}">`
+            if (spec.imported) {
+              output += `<imported>${escapeXml(spec.imported)}</imported>`
+            }
+            output += `<local>${escapeXml(spec.local)}</local>`
+            output += '</specifier>\n'
+          }
+          output += '        </specifiers>\n'
+        }
+        output += '      </import>\n'
+      }
+      output += '    </imports>\n'
+    }
+
+    // Add exports if available
+    if (file.exports && file.exports.length > 0) {
+      output += '    <exports>\n'
+      for (const exp of file.exports) {
+        output += `      <export type="${exp.type}">`
+        if (exp.source) {
+          output += `<source>${escapeXml(exp.source)}</source>`
+        }
+        if (exp.specifiers && exp.specifiers.length > 0) {
+          output += '<specifiers>'
+          for (const spec of exp.specifiers) {
+            output += '<specifier>'
+            output += `<exported>${escapeXml(spec.exported)}</exported>`
+            if (spec.local) {
+              output += `<local>${escapeXml(spec.local)}</local>`
+            }
+            output += '</specifier>'
+          }
+          output += '</specifiers>'
+        }
+        output += '</export>\n'
+      }
+      output += '    </exports>\n'
+    }
+
     // Close the <file> element
     output += '  </file>\n'
   }

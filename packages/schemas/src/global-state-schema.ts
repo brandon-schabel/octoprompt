@@ -98,7 +98,17 @@ export const projectTabStateSchema = z
       .enum(['all', 'open', 'in_progress', 'closed'])
       .optional()
       .default('all')
-      .openapi({ description: 'Status filter for tickets display.' })
+      .openapi({ description: 'Status filter for tickets display.' }),
+    promptsPanelCollapsed: z
+      .boolean()
+      .optional()
+      .default(true)
+      .openapi({ description: 'Whether the prompts panel is collapsed to save space.' }),
+    selectedFilesCollapsed: z
+      .boolean()
+      .optional()
+      .default(true)
+      .openapi({ description: 'Whether the selected files panel is collapsed to save space.' })
   })
   .openapi('ProjectTabState', {
     description:
@@ -375,7 +385,9 @@ export const createSafeGlobalState = (): GlobalState => ({
       sortOrder: 0,
       ticketSearch: '',
       ticketSort: 'created_desc' as const,
-      ticketStatusFilter: 'all' as const
+      ticketStatusFilter: 'all' as const,
+      promptsPanelCollapsed: true,
+      selectedFilesCollapsed: false
     }
   },
   projectActiveTabId: 1,

@@ -88,6 +88,11 @@ export const ALLOWED_FILE_CONFIGS = [
   '.gitattributes'
 ]
 
+// File size limits for summarization
+export const MAX_FILE_SIZE_FOR_SUMMARY = 1024 * 1024 // 1MB in bytes
+export const MAX_TOKENS_FOR_SUMMARY = 8000 // Safe limit for most models
+export const CHARS_PER_TOKEN_ESTIMATE = 4 // Rough estimate for token counting
+
 // Example content for shared/src/constants/file-sync-options.ts
 export const DEFAULT_FILE_EXCLUSIONS = [
   // --- Directories ---

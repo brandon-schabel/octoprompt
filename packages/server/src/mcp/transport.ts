@@ -10,7 +10,7 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import type { Context } from 'hono'
 import { ApiError } from '@octoprompt/shared'
 import { getMCPClientManager, getProjectFiles, getProjectById, suggestFiles } from '@octoprompt/services'
-import { BUILTIN_TOOLS, getToolByName } from './tools-registry'
+import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './tools-registry'
 
 // JSON-RPC 2.0 message types
 interface JSONRPCRequest {
@@ -249,7 +249,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'octoprompt-mcp',
-        version: '0.6.0'
+        version: '0.7.0'
       },
       _meta: { sessionId } // Include session ID for client reference
     }
@@ -264,8 +264,8 @@ async function handleToolsList(
   sessionId?: string
 ): Promise<JSONRPCResponse> {
   try {
-    // Return OctoPrompt's built-in MCP tools from shared registry
-    const mcpTools = BUILTIN_TOOLS.map((tool) => ({
+    // Return OctoPrompt's consolidated MCP tools
+    const mcpTools = CONSOLIDATED_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema
@@ -391,7 +391,7 @@ async function handleToolsCall(
     }
 
     // Handle built-in tools using shared registry
-    const tool = getToolByName(name)
+    const tool = getConsolidatedToolByName(name)
 
     if (!tool) {
       return {

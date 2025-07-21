@@ -1,5 +1,4 @@
-import { createOctoPromptClient, DataResponseSchema } from '@octoprompt/api-client'
-import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
+import { DataResponseSchema } from '@octoprompt/api-client'
 import type { CreateProjectBody, UpdateProjectBody, Project, ProjectFile } from '@octoprompt/schemas'
 
 import type { CreateChatBody, UpdateChatBody, Chat, ChatMessage, AiChatStreamRequest } from '@octoprompt/schemas'
@@ -12,12 +11,7 @@ import type { CreateProviderKeyBody, UpdateProviderKeyBody, ProviderKey } from '
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
-
-// Create a singleton client instance
-export const octoClient = createOctoPromptClient({
-  baseUrl: SERVER_HTTP_ENDPOINT,
-  timeout: 30000
-})
+import { octoClient } from './octo-client'
 
 // Query Keys - simplified
 const CHAT_KEYS = {
@@ -570,6 +564,18 @@ export function useOptimizeUserInput() {
     mutationFn: (data: OptimizePromptRequest) => octoClient.prompts.optimizeUserInput(data),
     onError: (error) => {
       toast.error(error.message || 'Failed to optimize user input')
+    }
+  })
+}
+
+export function useSuggestPrompts() {
+  return useMutation({
+    mutationFn: async ({ projectId, userInput, limit = 5 }: { projectId: number; userInput: string; limit?: number }) => {
+      const response = await octoClient.prompts.suggestPrompts(projectId, { userInput, limit })
+      return response.data.prompts
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to suggest prompts')
     }
   })
 }

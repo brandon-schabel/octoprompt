@@ -13,13 +13,13 @@ import {
   ReadResourceRequestSchema
 } from '@modelcontextprotocol/sdk/types.js'
 import { getProjectFiles, getProjectById, suggestFiles, listProjects } from '@octoprompt/services'
-import { BUILTIN_TOOLS, getToolByName } from './mcp/tools-registry'
+import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './mcp/tools-registry'
 
 // Create MCP server
 const server = new Server(
   {
     name: 'octoprompt-mcp',
-    version: '0.6.0'
+    version: '0.7.0'
   },
   {
     capabilities: {
@@ -67,7 +67,7 @@ async function ensureProject(): Promise<number> {
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: BUILTIN_TOOLS.map((tool) => ({
+    tools: CONSOLIDATED_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema
@@ -81,7 +81,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     const projectId = await ensureProject()
-    const tool = getToolByName(name)
+    const tool = getConsolidatedToolByName(name)
 
     if (!tool) {
       throw new Error(`Unknown tool: ${name}`)

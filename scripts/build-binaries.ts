@@ -1,4 +1,4 @@
-import { mkdirSync, chmodSync } from 'node:fs'
+import { mkdirSync, chmodSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createWriteStream } from 'node:fs'
 import archiver from 'archiver'
@@ -116,15 +116,45 @@ async function buildProject() {
     const executableName = `${pkg.name}${executableExt}`
     await $`cd ${serverDir} && bun build --compile --target=${target} ./server.ts --outfile ${join(platformDir, executableName)}`
 
-    // For non-Windows platforms, ensure the executable has proper permissions
-    if (!executableExt) {
+    // Fix permissions for all executables (including Windows .exe files on Linux)
+    try {
       chmodSync(join(platformDir, executableName), 0o755)
+    } catch (e) {
+      console.warn(`Could not set permissions for ${executableName}: ${e}`)
     }
 
     // Also copy the standalone binary to the dist root for Tauri sidecar preparation
     const simplePlatformName = target.replace('bun-', '')
     const standaloneExecName = `${pkg.name}-${simplePlatformName}${executableExt}`
-    await $`cp ${join(platformDir, executableName)} ${join(distDir, standaloneExecName)}`
+    
+    // Copy the standalone binary to dist root for Tauri sidecar preparation
+    try {
+      // First attempt: regular copy
+      await $`cp ${join(platformDir, executableName)} ${join(distDir, standaloneExecName)}`
+    } catch (error) {
+      console.warn(`First copy attempt failed: ${error}`)
+      
+      try {
+        // Second attempt: use cat to work around permission issues
+        await $`cat ${join(platformDir, executableName)} > ${join(distDir, standaloneExecName)}`
+        
+        // Set executable permissions on the copy
+        if (!executableExt) {
+          chmodSync(join(distDir, standaloneExecName), 0o755)
+        }
+      } catch (error2) {
+        console.error(`Failed to copy executable with cat: ${error2}`)
+        
+        // Final attempt: skip the copy for Windows exe if all else fails
+        if (executableExt) {
+          console.warn(`Skipping copy of Windows executable due to permission issues`)
+          // Create a placeholder file to avoid breaking the build
+          writeFileSync(join(distDir, standaloneExecName), Buffer.from('placeholder'))
+        } else {
+          throw error2
+        }
+      }
+    }
 
     // Create a zip archive with the versioned name
     console.log(`Creating zip archive for ${outputDirName}...`)

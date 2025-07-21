@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ProjectList } from '@/components/projects/project-list'
 import { ProjectDialog } from '@/components/projects/project-dialog'
 import { useGetProjects, useDeleteProject } from '@/hooks/api/use-projects-api'
+import { useRecentProjects } from '@/hooks/use-recent-projects'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
   FolderIcon,
@@ -65,6 +66,7 @@ export function AppSidebar() {
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectData, isLoading: projectsLoading } = useGetProjects()
   const { mutate: deleteProject } = useDeleteProject()
+  const { recentProjects, addRecentProject } = useRecentProjects()
 
   const globalTheme = theme || 'dark'
 
@@ -112,8 +114,7 @@ export function AppSidebar() {
   }
 
   // The sidebar state (open/collapsed) is managed by SidebarProvider
-  // const { state: sidebarState } = useSidebar(); // To get 'expanded' or 'collapsed'
-  const sidebarOpen = useSidebar()
+  const { open } = useSidebar()
 
   return (
     <ErrorBoundary>
@@ -142,6 +143,41 @@ export function AppSidebar() {
                 )
               })}
             </SidebarMenu>
+
+            {/* Recent Projects Section */}
+            {open && recentProjects.length > 0 && projectData && (
+              <>
+                <div className='px-3 py-2 mt-4'>
+                  <p className='text-xs font-medium text-muted-foreground'>Recent Projects</p>
+                </div>
+                <SidebarMenu>
+                  {recentProjects
+                    .map((id) => projectData.data.find((p) => p.id === id))
+                    .filter(Boolean)
+                    .slice(0, 3)
+                    .map((project) => {
+                      const isActive = selectedProjectId === project?.id
+                      return (
+                        <SidebarMenuItem key={project!.id} className='flex items-center w-full justify-center gap-2'>
+                          <SidebarMenuButton asChild isActive={isActive} tooltip={project!.name}>
+                            <a
+                              className='flex items-center gap-2 cursor-pointer'
+                              onClick={() => {
+                                if (project) {
+                                  handleSelectProjectInDialog(project.id)
+                                }
+                              }}
+                            >
+                              <FolderIcon className='h-4 w-4 flex-shrink-0' />
+                              <span className='truncate'>{project!.name}</span>
+                            </a>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )
+                    })}
+                </SidebarMenu>
+              </>
+            )}
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
@@ -164,7 +200,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className='flex items-center w-full justify-center gap-2 text-xs text-muted-foreground'>
-                <span className='px-3'>v0.6.0</span>
+                <span className='px-3'>v0.7.0</span>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

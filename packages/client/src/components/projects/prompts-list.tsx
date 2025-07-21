@@ -1,6 +1,6 @@
 import { forwardRef, useState, useRef, useEffect, KeyboardEvent, useImperativeHandle, useMemo } from 'react'
 import { Button } from '@ui'
-import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy } from 'lucide-react'
+import { Eye, Pencil, Trash, Plus, ArrowUpDown, ArrowDownAZ, Copy, ChevronRight } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -17,6 +17,7 @@ import { ScrollArea } from '@ui'
 import { FormatTokenCount } from '../format-token-count'
 import { cn } from '@/lib/utils'
 import { useGetProjectPrompts, useDeletePrompt } from '@/hooks/api/use-prompts-api'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui'
 import { PromptDialog } from '@/components/projects/prompt-dialog'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -60,6 +61,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
   const selectedPrompts = projectTab?.selectedPrompts || []
   const selectedProjectId = projectTab?.selectedProjectId || -1
   const { copyToClipboard } = useCopyClipboard()
+
+  // Collapsible state - default to true (collapsed) to save space
+  const isCollapsed = projectTab?.promptsPanelCollapsed ?? true
 
   const { data: promptData } = useGetProjectPrompts(selectedProjectId)
 
@@ -107,6 +111,13 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       successMessage: 'Copied all selected prompts.',
       errorMessage: 'Failed to copy prompts'
     })
+  }
+
+  const toggleCollapsed = () => {
+    updateProjectTabState((prev) => ({
+      ...prev,
+      promptsPanelCollapsed: !isCollapsed
+    }))
   }
 
   /** NEW: state for opening the all-prompts dialog */
@@ -189,7 +200,9 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
       meta: null,
       summary: null,
       summaryLastUpdated: null,
-      checksum: null
+      checksum: null,
+      imports: null,
+      exports: null
     })
   }
 
@@ -220,243 +233,255 @@ export const PromptsList = forwardRef<PromptsListRef, PromptsListProps>(({ proje
         onClose={() => setAllPromptsDialogOpen(false)}
         selectedProjectId={selectedProjectId}
       />
-      <div className={`border rounded-lg h-full flex flex-col ${className}`}>
-        <div className='flex-shrink-0 flex flex-row items-center justify-between p-2 border-b'>
-          <div>
-            <div className='text-md font-medium flex items-center gap-2'>
-              <span>
-                <Badge>{selectedPrompts.length}</Badge> Project Prompts
-              </span>
-              <OctoTooltip>
-                <div className=''>
-                  <p>
-                    Prompts are reusable instructions that will be included with your chat. Each selected prompt will be
-                    added to the final prompt sent to the AI.
-                  </p>
-                  <p>You can:</p>
-                  <ul>
-                    <li>- Create custom prompts for specific tasks</li>
-                    <li>- Import prompts from other projects</li>
-                    <li>- Select multiple prompts to combine instructions</li>
-                  </ul>
-                  <p className='font-medium mt-2'>Keyboard Shortcuts:</p>
-                  <ul>
-                    <li>
-                      - <ShortcutDisplay shortcut={['up', 'down']} /> Navigate through prompts
-                    </li>
-                    <li>
-                      - <ShortcutDisplay shortcut={['space']} /> Select/deselect prompt
-                    </li>
-                    <li>
-                      - <ShortcutDisplay shortcut={['enter']} /> View prompt content
-                    </li>
-                    <li>
-                      - <ShortcutDisplay shortcut={['mod', 'p']} /> Focus prompts list
-                    </li>
-                  </ul>
+      <div className={cn('border rounded-lg flex flex-col', isCollapsed ? '' : 'h-full', className)}>
+        <Collapsible open={!isCollapsed} onOpenChange={() => toggleCollapsed()}>
+          <CollapsibleTrigger asChild>
+            <div className='flex-shrink-0 flex flex-row items-center justify-between p-2 border-b hover:bg-muted/50 cursor-pointer transition-colors'>
+              <div className='flex items-center gap-2'>
+                <ChevronRight className={cn('h-4 w-4 transition-transform', !isCollapsed && 'rotate-90')} />
+                <div className='text-md font-medium flex items-center gap-2'>
+                  <span>
+                    <Badge variant={selectedPrompts.length > 0 && isCollapsed ? 'default' : 'secondary'}>
+                      {selectedPrompts.length}
+                    </Badge>{' '}
+                    Project Prompts
+                  </span>
+                  {isCollapsed && selectedPrompts.length > 0 && (
+                    <span className='text-xs text-muted-foreground'>({selectedPrompts.length} selected)</span>
+                  )}
+                  <OctoTooltip>
+                    <div className=''>
+                      <p>
+                        Prompts are reusable instructions that will be included with your chat. Each selected prompt
+                        will be added to the final prompt sent to the AI.
+                      </p>
+                      <p>You can:</p>
+                      <ul>
+                        <li>- Create custom prompts for specific tasks</li>
+                        <li>- Import prompts from other projects</li>
+                        <li>- Select multiple prompts to combine instructions</li>
+                      </ul>
+                      <p className='font-medium mt-2'>Keyboard Shortcuts:</p>
+                      <ul>
+                        <li>
+                          - <ShortcutDisplay shortcut={['up', 'down']} /> Navigate through prompts
+                        </li>
+                        <li>
+                          - <ShortcutDisplay shortcut={['space']} /> Select/deselect prompt
+                        </li>
+                        <li>
+                          - <ShortcutDisplay shortcut={['enter']} /> View prompt content
+                        </li>
+                        <li>
+                          - <ShortcutDisplay shortcut={['mod', 'p']} /> Focus prompts list
+                        </li>
+                      </ul>
+                    </div>
+                  </OctoTooltip>
                 </div>
-              </OctoTooltip>
-            </div>
-            <div className='hidden lg:text-xs text-muted-foreground'>Press Space to select, Enter to view</div>
-          </div>
-          <div className='flex space-x-2'>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant='ghost' size='icon' className='h-8 w-8'>
-                  <DotsHorizontalIcon className='h-4 w-4' />
-                  <span className='sr-only'>Actions</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end' className='w-48'>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEditPromptId(null)
-                    promptForm.reset()
-                    setPromptDialogOpen(true)
-                  }}
-                >
-                  <Plus className='mr-2 h-4 w-4' />
-                  <span>New Prompt</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setAllPromptsDialogOpen(true)}>
-                  <Eye className='mr-2 h-4 w-4' />
-                  <span>Import Prompts</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={copySelectedPrompts}>
-                  <Pencil className='mr-2 h-4 w-4' />
-                  <span>Copy Selected Prompts</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    updateProjectTabState((prev) => ({
-                      ...prev,
-                      selectedPrompts: []
-                    }))
-                    toast.success('Cleared all selected prompts')
-                  }}
-                  disabled={!selectedPrompts.length}
-                >
-                  <Trash className='mr-2 h-4 w-4' />
-                  <span>Clear Selected</span>
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <ArrowUpDown className='mr-2 h-4 w-4' />
-                    <span>Sort By</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuRadioGroup
-                      value={sortOrder}
-                      onValueChange={(value) => {
-                        setSortOrder(value as 'alphabetical' | 'default' | 'size_asc' | 'size_desc')
+              </div>
+              <div className='flex space-x-2' onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant='ghost' size='icon' className='h-8 w-8'>
+                      <DotsHorizontalIcon className='h-4 w-4' />
+                      <span className='sr-only'>Actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end' className='w-48'>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditPromptId(null)
+                        promptForm.reset()
+                        setPromptDialogOpen(true)
                       }}
                     >
-                      <DropdownMenuRadioItem value='default'>
+                      <Plus className='mr-2 h-4 w-4' />
+                      <span>New Prompt</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAllPromptsDialogOpen(true)}>
+                      <Eye className='mr-2 h-4 w-4' />
+                      <span>Import Prompts</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={copySelectedPrompts}>
+                      <Pencil className='mr-2 h-4 w-4' />
+                      <span>Copy Selected Prompts</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        updateProjectTabState((prev) => ({
+                          ...prev,
+                          selectedPrompts: []
+                        }))
+                        toast.success('Cleared all selected prompts')
+                      }}
+                      disabled={!selectedPrompts.length}
+                    >
+                      <Trash className='mr-2 h-4 w-4' />
+                      <span>Clear Selected</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
                         <ArrowUpDown className='mr-2 h-4 w-4' />
-                        <span>Default</span>
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value='alphabetical'>
-                        <ArrowDownAZ className='mr-2 h-4 w-4' />
-                        <span>Alphabetical</span>
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value='size_desc'>
-                        <ArrowDownAZ className='mr-2 h-4 w-4' />
-                        <span>Size (Largest First)</span>
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value='size_asc'>
-                        <ArrowDownAZ className='mr-2 h-4 w-4' />
-                        <span>Size (Smallest First)</span>
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+                        <span>Sort By</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuRadioGroup
+                          value={sortOrder}
+                          onValueChange={(value) => {
+                            setSortOrder(value as 'alphabetical' | 'default' | 'size_asc' | 'size_desc')
+                          }}
+                        >
+                          <DropdownMenuRadioItem value='default'>
+                            <ArrowUpDown className='mr-2 h-4 w-4' />
+                            <span>Default</span>
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value='alphabetical'>
+                            <ArrowDownAZ className='mr-2 h-4 w-4' />
+                            <span>Alphabetical</span>
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value='size_desc'>
+                            <ArrowDownAZ className='mr-2 h-4 w-4' />
+                            <span>Size (Largest First)</span>
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value='size_asc'>
+                            <ArrowDownAZ className='mr-2 h-4 w-4' />
+                            <span>Size (Smallest First)</span>
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </CollapsibleTrigger>
 
-        <div className='flex-1 relative min-h-0 '>
-          {sortedPrompts.length > 0 ? (
-            <ScrollArea className='h-full'>
-              <div className='space-y-2 p-2 w-72 md:w-80 lg:w-full'>
-                {sortedPrompts.map((prompt, index) => (
-                  <div
-                    key={prompt.id}
-                    // @ts-ignore
-                    ref={(el) => (promptRefs.current[index] = el)}
-                    className={cn(
-                      'flex items-center justify-between rounded-md p-1 hover:bg-muted/50 group',
-                      focusedIndex === index && 'bg-accent'
-                    )}
-                    tabIndex={0}
-                    onFocus={() => setFocusedIndex(index)}
-                    onKeyDown={(e) => handleKeyDown(e, index, prompt.id)}
-                  >
-                    <div className='flex items-center min-w-0'>
-                      <Checkbox
-                        className='mr-2'
-                        checked={selectedPrompts.includes(prompt.id)}
-                        onCheckedChange={(checked) => {
-                          updateProjectTabState((prev) => {
-                            const isSelected = prev.selectedPrompts.includes(prompt.id)
-                            const newSelected = isSelected
-                              ? prev.selectedPrompts.filter((p) => p !== prompt.id)
-                              : [...prev.selectedPrompts, prompt.id]
-                            return { selectedPrompts: newSelected }
-                          })
-                        }}
-                      />
-                      <div className='flex items-center space-x-2 min-w-0'>
-                        <span className='font-medium truncate'>{prompt.name}</span>
-                        <FormatTokenCount tokenContent={prompt.content ?? ''} />
-                      </div>
-                    </div>
-                    <div className='flex items-center space-x-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity'>
-                      {/* Add Copy button */}
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='h-8 w-8'
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          await copyToClipboard(prompt.content || '', {
-                            successMessage: 'Prompt content copied to clipboard',
-                            errorMessage: 'Failed to copy prompt content'
-                          })
-                        }}
+          <CollapsibleContent className='flex-1 flex flex-col overflow-hidden'>
+            <div className='flex-1 relative overflow-hidden'>
+              {sortedPrompts.length > 0 ? (
+                <ScrollArea className='h-full'>
+                  <div className='space-y-2 p-2 w-72 md:w-80 lg:w-full'>
+                    {sortedPrompts.map((prompt, index) => (
+                      <div
+                        key={prompt.id}
+                        // @ts-ignore
+                        ref={(el) => (promptRefs.current[index] = el)}
+                        className={cn(
+                          'flex items-center justify-between rounded-md p-1 hover:bg-muted/50 group',
+                          focusedIndex === index && 'bg-accent'
+                        )}
+                        tabIndex={0}
+                        onFocus={() => setFocusedIndex(index)}
+                        onKeyDown={(e) => handleKeyDown(e, index, prompt.id)}
                       >
-                        <Copy className='h-4 w-4' />
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant='ghost' size='icon' className='h-8 w-8'>
-                            <DotsHorizontalIcon className='h-4 w-4' />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align='end' className='w-48'>
-                          <DropdownMenuItem onClick={() => handleOpenPromptViewer(prompt)}>
-                            <Eye className='mr-2 h-4 w-4' />
-                            <span>View Prompt</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditPromptId(prompt.id)
-                              setPromptDialogOpen(true)
+                        <div className='flex items-center min-w-0'>
+                          <Checkbox
+                            className='mr-2'
+                            checked={selectedPrompts.includes(prompt.id)}
+                            onCheckedChange={(checked) => {
+                              updateProjectTabState((prev) => {
+                                const isSelected = prev.selectedPrompts.includes(prompt.id)
+                                const newSelected = isSelected
+                                  ? prev.selectedPrompts.filter((p) => p !== prompt.id)
+                                  : [...prev.selectedPrompts, prompt.id]
+                                return { selectedPrompts: newSelected }
+                              })
                             }}
-                          >
-                            <Pencil className='mr-2 h-4 w-4' />
-                            <span>Edit Prompt</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={async () => {
+                          />
+                          <div className='flex items-center space-x-2 min-w-0'>
+                            <span className='font-medium truncate'>{prompt.name}</span>
+                            <FormatTokenCount tokenContent={prompt.content ?? ''} />
+                          </div>
+                        </div>
+                        <div className='flex items-center space-x-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity'>
+                          {/* Add Copy button */}
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8'
+                            onClick={async (e) => {
+                              e.stopPropagation()
                               await copyToClipboard(prompt.content || '', {
                                 successMessage: 'Prompt content copied to clipboard',
                                 errorMessage: 'Failed to copy prompt content'
                               })
                             }}
                           >
-                            <Copy className='mr-2 h-4 w-4' />
-                            <span>Copy Content</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem
-                                onSelect={(e) => e.preventDefault()}
-                                className='text-destructive focus:text-destructive'
-                              >
-                                <Trash className='mr-2 h-4 w-4' />
-                                <span>Delete Prompt</span>
+                            <Copy className='h-4 w-4' />
+                          </Button>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant='ghost' size='icon' className='h-8 w-8'>
+                                <DotsHorizontalIcon className='h-4 w-4' />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align='end' className='w-48'>
+                              <DropdownMenuItem onClick={() => handleOpenPromptViewer(prompt)}>
+                                <Eye className='mr-2 h-4 w-4' />
+                                <span>View Prompt</span>
                               </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Prompt</AlertDialogTitle>
-                              </AlertDialogHeader>
-                              <p className='text-sm text-muted-foreground'>
-                                Are you sure you want to delete the prompt "{prompt.name}"?
-                              </p>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeletePrompt(prompt.id)}>
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditPromptId(prompt.id)
+                                  setPromptDialogOpen(true)
+                                }}
+                              >
+                                <Pencil className='mr-2 h-4 w-4' />
+                                <span>Edit Prompt</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  await copyToClipboard(prompt.content || '', {
+                                    successMessage: 'Prompt content copied to clipboard',
+                                    errorMessage: 'Failed to copy prompt content'
+                                  })
+                                }}
+                              >
+                                <Copy className='mr-2 h-4 w-4' />
+                                <span>Copy Content</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    onSelect={(e) => e.preventDefault()}
+                                    className='text-destructive focus:text-destructive'
+                                  >
+                                    <Trash className='mr-2 h-4 w-4' />
+                                    <span>Delete Prompt</span>
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Prompt</AlertDialogTitle>
+                                  </AlertDialogHeader>
+                                  <p className='text-sm text-muted-foreground'>
+                                    Are you sure you want to delete the prompt "{prompt.name}"?
+                                  </p>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeletePrompt(prompt.id)}>
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <p className='text-sm text-muted-foreground p-4'>No prompts yet. Create one above.</p>
-          )}
-        </div>
+                </ScrollArea>
+              ) : (
+                <p className='text-sm text-muted-foreground p-4'>No prompts yet. Create one above.</p>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* A "viewer" dialog for prompts, if needed */}

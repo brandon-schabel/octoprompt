@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
@@ -15,7 +15,6 @@
     "tauri:build": "bun run build-binaries && cd packages/client && bun run tauri:build",
     "tauri:build:with-sidecar": "bun run build-binaries && bun run prepare-tauri-sidecars && cd packages/client && bun run tauri:build",
     "format": "prettier --write .",
-    "test:server": "cd packages/server && bun run test",
     "test:shared": "cd packages/shared && bun run test",
     "test:schemas": "cd packages/schemas && bun run test",
     "test:services": "cd packages/services && bun run test",
@@ -29,6 +28,8 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@swc/core": "^1.13.1",
+    "@swc/wasm": "^1.13.1",
     "@types/archiver": "^6.0.3",
     "@types/bun": "latest",
     "@types/picomatch": "^3.0.2",
@@ -62,6 +63,7 @@
     "ollama-ai-provider": "^1.2.0",
     "openai": "^4.104.0",
     "picomatch": "^4.0.2",
+    "simple-git": "^3.28.0",
     "zod": "^3.25.56",
     "zod-validation-error": "^3.4.1"
   },

@@ -55,7 +55,7 @@ export class MCPClient {
       this.client = new Client(
         {
           name: `octoprompt-${this.config.id}`,
-          version: '0.6.0'
+          version: '0.7.0'
         },
         {
           capabilities: {
@@ -97,7 +97,7 @@ export class MCPClient {
             capabilities: {},
             clientInfo: {
               name: `octoprompt-client-${this.config.id}`,
-              version: '0.6.0'
+              version: '0.7.0'
             }
           }
         })
@@ -211,85 +211,181 @@ export class MCPClient {
   private getMockTools(): MCPTool[] {
     return [
       {
-        id: 'file_read',
-        name: 'file_read',
-        description: 'Read the contents of a file',
+        id: 'project_manager',
+        name: 'project_manager',
+        description: 'Manage projects, files, and project-related operations',
         serverId: this.config.id,
         parameters: [
           {
-            name: 'path',
+            name: 'action',
             type: 'string',
-            description: 'Path to the file to read',
-            required: true
-          }
-        ],
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'Path to the file to read'
-            }
+            description: 'The action to perform',
+            required: true,
+            enum: [
+              'list',
+              'get',
+              'create',
+              'update',
+              'delete',
+              'get_summary',
+              'browse_files',
+              'get_file_content',
+              'update_file_content',
+              'suggest_files'
+            ]
           },
-          required: ['path']
-        }
-      },
-      {
-        id: 'file_write',
-        name: 'file_write',
-        description: 'Write content to a file',
-        serverId: this.config.id,
-        parameters: [
-          {
-            name: 'path',
-            type: 'string',
-            description: 'Path to the file to write',
-            required: true
-          },
-          {
-            name: 'content',
-            type: 'string',
-            description: 'Content to write to the file',
-            required: true
-          }
-        ],
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'Path to the file to write'
-            },
-            content: {
-              type: 'string',
-              description: 'Content to write to the file'
-            }
-          },
-          required: ['path', 'content']
-        }
-      },
-      {
-        id: 'get_project_compact_summary',
-        name: 'get_project_compact_summary',
-        description: 'Get a compact, AI-generated architectural overview of the project',
-        serverId: this.config.id,
-        parameters: [
           {
             name: 'projectId',
             type: 'number',
-            description: 'The ID of the project to summarize',
-            required: true
+            description: 'The project ID (required for most actions)',
+            required: false
+          },
+          {
+            name: 'data',
+            type: 'object',
+            description: 'Action-specific data',
+            required: false
           }
         ],
         inputSchema: {
           type: 'object',
           properties: {
+            action: {
+              type: 'string',
+              description: 'The action to perform',
+              enum: [
+                'list',
+                'get',
+                'create',
+                'update',
+                'delete',
+                'get_summary',
+                'browse_files',
+                'get_file_content',
+                'update_file_content',
+                'suggest_files'
+              ]
+            },
             projectId: {
               type: 'number',
-              description: 'The ID of the project to summarize'
+              description: 'The project ID (required for most actions)'
+            },
+            data: {
+              type: 'object',
+              description: 'Action-specific data'
             }
           },
-          required: ['projectId']
+          required: ['action']
+        }
+      },
+      {
+        id: 'prompt_manager',
+        name: 'prompt_manager',
+        description: 'Manage prompts and prompt-project associations',
+        serverId: this.config.id,
+        parameters: [
+          {
+            name: 'action',
+            type: 'string',
+            description: 'The action to perform',
+            required: true,
+            enum: [
+              'list',
+              'get',
+              'create',
+              'update',
+              'delete',
+              'list_by_project',
+              'add_to_project',
+              'remove_from_project'
+            ]
+          },
+          {
+            name: 'projectId',
+            type: 'number',
+            description: 'The project ID (required for project-specific actions)',
+            required: false
+          },
+          {
+            name: 'data',
+            type: 'object',
+            description: 'Action-specific data',
+            required: false
+          }
+        ],
+        inputSchema: {
+          type: 'object',
+          properties: {
+            action: {
+              type: 'string',
+              description: 'The action to perform',
+              enum: [
+                'list',
+                'get',
+                'create',
+                'update',
+                'delete',
+                'list_by_project',
+                'add_to_project',
+                'remove_from_project'
+              ]
+            },
+            projectId: {
+              type: 'number',
+              description: 'The project ID (required for project-specific actions)'
+            },
+            data: {
+              type: 'object',
+              description: 'Action-specific data'
+            }
+          },
+          required: ['action']
+        }
+      },
+      {
+        id: 'ai_assistant',
+        name: 'ai_assistant',
+        description: 'AI-powered utilities for prompt optimization and project insights',
+        serverId: this.config.id,
+        parameters: [
+          {
+            name: 'action',
+            type: 'string',
+            description: 'The action to perform',
+            required: true,
+            enum: ['optimize_prompt', 'get_compact_summary']
+          },
+          {
+            name: 'projectId',
+            type: 'number',
+            description: 'The project ID (required)',
+            required: true
+          },
+          {
+            name: 'data',
+            type: 'object',
+            description: 'Action-specific data',
+            required: false
+          }
+        ],
+        inputSchema: {
+          type: 'object',
+          properties: {
+            action: {
+              type: 'string',
+              description: 'The action to perform',
+              enum: ['optimize_prompt', 'get_compact_summary']
+            },
+            projectId: {
+              type: 'number',
+              description: 'The project ID (required)'
+            },
+            data: {
+              type: 'object',
+              description: 'Action-specific data'
+            }
+          },
+          required: ['action', 'projectId']
         }
       }
     ]
@@ -381,12 +477,14 @@ export class MCPClient {
   }
 
   private getMockToolExecution(toolId: string, parameters: Record<string, any>): any {
-    // Special handling for project compact summary
-    if (toolId === 'get_project_compact_summary') {
-      return [
-        {
-          type: 'text',
-          text: `## Project Architecture Summary (Mock)
+    // Handle consolidated tools
+    if (toolId === 'project_manager') {
+      const action = parameters.action
+      if (action === 'get_summary' || action === 'get_compact_summary') {
+        return [
+          {
+            type: 'text',
+            text: `## Project Architecture Summary (Mock)
 
 **Stack**: TypeScript, React, Bun, Hono
 **Pattern**: Monorepo with layered architecture
@@ -404,6 +502,41 @@ export class MCPClient {
 **Testing**: Bun test with functional API tests
 
 This is a mock response from MCP server '${this.config.name}' (ID: ${this.config.id}) for project ${parameters.projectId}.`
+          }
+        ]
+      } else if (action === 'list') {
+        return [
+          {
+            type: 'text',
+            text: 'Mock: Project list\n1: Project One\n2: Project Two'
+          }
+        ]
+      } else if (action === 'get_file_content') {
+        return [
+          {
+            type: 'text',
+            text: `Mock file content for: ${parameters.data?.path}`
+          }
+        ]
+      }
+      return [
+        {
+          type: 'text',
+          text: `Mock: Executed project_manager action: ${action}`
+        }
+      ]
+    } else if (toolId === 'prompt_manager') {
+      return [
+        {
+          type: 'text',
+          text: `Mock: Executed prompt_manager action: ${parameters.action}`
+        }
+      ]
+    } else if (toolId === 'ai_assistant') {
+      return [
+        {
+          type: 'text',
+          text: `Mock: Executed ai_assistant action: ${parameters.action}`
         }
       ]
     }

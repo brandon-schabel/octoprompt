@@ -20,24 +20,30 @@ export class OctoPromptSidecarManager {
 
   private async performStart(): Promise<void> {
     try {
+      console.log('[SidecarManager] Setting up event listeners...')
+      
       // Set up event listeners before starting
       this.unsubscribeReady = await listen('octoprompt-server-ready', () => {
-        console.log('OctoPrompt server is ready')
+        console.log('[SidecarManager] Server ready event received')
         this.isReady = true
       })
 
       this.unsubscribeTerminated = await listen<number | null>('octoprompt-server-terminated', (event) => {
-        console.log('OctoPrompt server terminated with code:', event.payload)
+        console.error('[SidecarManager] Server terminated with code:', event.payload)
         this.isReady = false
       })
 
       // Start the server via Rust command
+      console.log('[SidecarManager] Invoking start_octoprompt_server...')
       const result = await invoke<string>('start_octoprompt_server')
-      console.log(result)
+      console.log('[SidecarManager] Start command result:', result)
 
       // Wait for server to be ready or timeout
+      console.log('[SidecarManager] Waiting for server to be ready...')
       await this.waitForReady()
+      console.log('[SidecarManager] Server is ready!')
     } catch (error) {
+      console.error('[SidecarManager] Failed to start server:', error)
       this.startupPromise = null
       throw error
     }
@@ -45,21 +51,33 @@ export class OctoPromptSidecarManager {
 
   private async waitForReady(timeout = 30000): Promise<void> {
     const start = Date.now()
+    let checkCount = 0
+
+    console.log(`[SidecarManager] Waiting for server (timeout: ${timeout}ms)...`)
 
     // First check if server is already running
     const initialCheck = await this.checkHealth()
     if (initialCheck) {
+      console.log('[SidecarManager] Server already running (initial check)')
       this.isReady = true
       return
     }
 
     // Wait for ready event or health check
     while (!this.isReady && Date.now() - start < timeout) {
+      checkCount++
+      
       // Try health check
       const healthy = await this.checkHealth()
       if (healthy) {
+        console.log(`[SidecarManager] Server ready after ${checkCount} health checks`)
         this.isReady = true
         return
+      }
+
+      // Log progress every 5 checks
+      if (checkCount % 5 === 0) {
+        console.log(`[SidecarManager] Still waiting... (${Date.now() - start}ms elapsed, ${checkCount} checks)`)
       }
 
       // Wait a bit before next check
@@ -67,7 +85,9 @@ export class OctoPromptSidecarManager {
     }
 
     if (!this.isReady) {
-      throw new Error('Server failed to start within timeout')
+      const error = `Server failed to start within ${timeout}ms timeout (${checkCount} health checks attempted)`
+      console.error(`[SidecarManager] ${error}`)
+      throw new Error(error)
     }
   }
 
@@ -94,9 +114,13 @@ export class OctoPromptSidecarManager {
 
   async checkHealth(): Promise<boolean> {
     try {
-      return await invoke<boolean>('check_server_status')
+      const result = await invoke<boolean>('check_server_status')
+      if (result) {
+        console.log('[SidecarManager] Health check passed')
+      }
+      return result
     } catch (error) {
-      console.error('Health check failed:', error)
+      console.error('[SidecarManager] Health check failed:', error)
       return false
     }
   }
@@ -107,7 +131,7 @@ export class OctoPromptSidecarManager {
 
   // Alternative method using Command directly (if needed)
   async startWithCommand(): Promise<Child> {
-    const command = Command.sidecar('binaries/octoprompt-server', ['--port', '3147'])
+    const command = Command.sidecar('octoprompt-server', ['--port', '3147'])
 
     const child = await command.spawn()
 

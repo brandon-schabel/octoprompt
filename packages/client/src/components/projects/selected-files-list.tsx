@@ -49,7 +49,7 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
     })
     const projectTab = useProjectTabById(projectTabId)
 
-    const { selectedProjectId } = projectTab
+    const { selectedProjectId = -1 } = projectTab || {}
 
     const projectFileMap = useProjectFileMap(selectedProjectId)
 
@@ -237,6 +237,10 @@ export const SelectedFilesList = forwardRef<SelectedFilesListRef, SelectedFilesL
                 <li>
                   Press <kbd className='px-1 rounded bg-muted'>Enter</kbd> or{' '}
                   <kbd className='px-1 rounded bg-muted'>Space</kbd> to select
+                </li>
+                <li>
+                  Undo with <kbd className='px-1 rounded bg-muted'>{formatShortcut('mod+z')}</kbd>, Redo with{' '}
+                  <kbd className='px-1 rounded bg-muted'>{formatShortcut('mod+shift+z')}</kbd>
                 </li>
               </ul>
             </div>

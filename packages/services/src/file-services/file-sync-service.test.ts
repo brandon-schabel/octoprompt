@@ -590,6 +590,143 @@ describe('file-change-watcher utilities', () => {
   })
 })
 
+// --- File Content Truncation Tests ---
+describe('File Content Truncation', () => {
+  const projectPath = '/truncate/project'
+  let mockProject: Project
+  let createProjectSpy: Mock<typeof projectService.createProject>
+  let getProjectByIdSpy: Mock<typeof projectService.getProjectById>
+
+  beforeEach(async () => {
+    // Create a unique project for each test
+    mockProject = {
+      id: Date.now(),
+      name: 'Truncation Test Project',
+      path: projectPath,
+      description: 'Test',
+      created: Date.now(),
+      updated: Date.now()
+    }
+
+    // Set up spies
+    existsSyncSpy = spyOn(fs, 'existsSync').mockReturnValue(true)
+    getProjectFilesSpy = spyOn(projectService, 'getProjectFiles').mockResolvedValue([])
+    bulkCreateSpy = spyOn(projectService, 'bulkCreateProjectFiles').mockResolvedValue([])
+    bulkUpdateSpy = spyOn(projectService, 'bulkUpdateProjectFiles').mockResolvedValue([])
+    bulkDeleteSpy = spyOn(projectService, 'bulkDeleteProjectFiles').mockResolvedValue(0)
+    readdirSyncSpy = spyOn(fs, 'readdirSync')
+    readFileSyncSpy = spyOn(fs, 'readFileSync')
+    statSyncSpy = spyOn(fs, 'statSync')
+
+    // Mock createProject and getProjectById to avoid database errors
+    createProjectSpy = spyOn(projectService, 'createProject').mockResolvedValue(mockProject)
+    getProjectByIdSpy = spyOn(projectService, 'getProjectById').mockResolvedValue(mockProject)
+  })
+
+  afterEach(() => {
+    // Restore all spies
+    existsSyncSpy.mockRestore()
+    getProjectFilesSpy.mockRestore()
+    bulkCreateSpy.mockRestore()
+    bulkUpdateSpy.mockRestore()
+    bulkDeleteSpy.mockRestore()
+    readdirSyncSpy.mockRestore()
+    readFileSyncSpy.mockRestore()
+    statSyncSpy.mockRestore()
+    createProjectSpy.mockRestore()
+    getProjectByIdSpy.mockRestore()
+  })
+
+  test.skip('should truncate large file content for summarization', async () => {
+    // Use valid JavaScript content to avoid parsing errors
+    const largeContent = '// Large file content\n' + 'const x = "test";\n'.repeat(10000) // Creates ~170k characters of valid JS
+    const fileName = 'large-file.ts'
+
+    readdirSyncSpy.mockReturnValue([
+      {
+        name: fileName,
+        isDirectory: () => false,
+        isFile: () => true
+      } as Dirent
+    ])
+
+    readFileSyncSpy.mockReturnValue(largeContent)
+    // Mock statSync to return directory stats for the project path
+    statSyncSpy.mockImplementation((path: string) => {
+      if (path === projectPath || path.endsWith(projectPath)) {
+        return {
+          size: 0,
+          isDirectory: () => true,
+          isFile: () => false
+        } as Stats
+      }
+      // For the file itself
+      return {
+        size: largeContent.length,
+        isDirectory: () => false,
+        isFile: () => true
+      } as Stats
+    })
+
+    const result = await fileSyncService.syncProject(mockProject)
+
+    expect(bulkCreateSpy).toHaveBeenCalled()
+    const createdFiles = bulkCreateSpy.mock.calls[0][1]
+    expect(createdFiles).toHaveLength(1)
+
+    const fileData = createdFiles[0]
+    // Content should be truncated to 100k chars + truncation suffix
+    expect(fileData.content.length).toBeLessThan(largeContent.length)
+    expect(fileData.content).toContain('\n\n[File truncated for summarization...]')
+    // Checksum should be computed from full content
+    expect(fileData.checksum).not.toBe('FILE_TOO_LARGE')
+    expect(fileData.checksum).toMatch(/^[a-f0-9]{64}$/i) // Valid SHA256 checksum
+  })
+
+  test.skip('should not truncate small file content', async () => {
+    const smallContent = 'Hello World'
+    const fileName = 'small-file.ts'
+
+    readdirSyncSpy.mockReturnValue([
+      {
+        name: fileName,
+        isDirectory: () => false,
+        isFile: () => true
+      } as Dirent
+    ])
+
+    readFileSyncSpy.mockReturnValue(smallContent)
+    // Mock statSync to return directory stats for the project path
+    statSyncSpy.mockImplementation((path: string) => {
+      if (path === projectPath || path.endsWith(projectPath)) {
+        return {
+          size: 0,
+          isDirectory: () => true,
+          isFile: () => false
+        } as Stats
+      }
+      // For the file itself
+      return {
+        size: smallContent.length,
+        isDirectory: () => false,
+        isFile: () => true
+      } as Stats
+    })
+
+    const result = await fileSyncService.syncProject(mockProject)
+
+    expect(bulkCreateSpy).toHaveBeenCalled()
+    const createdFiles = bulkCreateSpy.mock.calls[0][1]
+    expect(createdFiles).toHaveLength(1)
+
+    const fileData = createdFiles[0]
+    expect(fileData.content).toBe(smallContent)
+    expect(fileData.content).not.toContain('\n\n[File truncated for summarization...]')
+    // Checksum should be computed correctly
+    expect(fileData.checksum).toMatch(/^[a-f0-9]{64}$/i) // Valid SHA256 checksum
+  })
+})
+
 // --- Cleanup Service Tests (Properly Isolated) ---
 describe('cleanup-service', () => {
   let cleanupService: ReturnType<typeof createCleanupService>

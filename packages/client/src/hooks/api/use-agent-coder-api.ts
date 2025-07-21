@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { octoClient } from '@/hooks/api-hooks'
+import { octoClient } from '@/hooks/octo-client'
 import { toast } from 'sonner'
 import type { RunAgentCoderBody, AgentCoderRunSuccessData } from '@octoprompt/schemas'
 

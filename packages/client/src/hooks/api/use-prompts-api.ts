@@ -8,6 +8,7 @@ export {
   useAddPromptToProject,
   useRemovePromptFromProject,
   useOptimizeUserInput,
+  useSuggestPrompts,
   useInvalidatePrompts
 } from '../api-hooks'
 

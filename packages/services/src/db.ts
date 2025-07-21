@@ -10,8 +10,8 @@ export const db: Database = dbManager.getDatabase()
 
 // Reset database function for tests
 export async function resetDatabase(): Promise<void> {
-    await dbManager.clearAllTables()
+  await dbManager.clearAllTables()
 }
 
 // Export database manager for advanced operations
-export { dbManager } 
+export { dbManager }

@@ -7,9 +7,14 @@ import {
   ProjectFileSchema,
   LOW_MODEL_CONFIG,
   type APIProviders,
-  FileSuggestionsZodSchema
+  FileSuggestionsZodSchema,
+  MAX_FILE_SIZE_FOR_SUMMARY,
+  MAX_TOKENS_FOR_SUMMARY,
+  CHARS_PER_TOKEN_ESTIMATE,
+  type ImportInfo,
+  type ExportInfo
 } from '@octoprompt/schemas'
-import { ApiError, promptsMap } from '@octoprompt/shared'
+import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@octoprompt/shared'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
@@ -360,6 +365,8 @@ export async function createProjectFileRecord(
       summaryLastUpdated: null,
       meta: '{}',
       checksum: null,
+      imports: null,
+      exports: null,
       created: now,
       updated: now
     }
@@ -400,6 +407,8 @@ export interface FileSyncData {
   content: string
   size: number
   checksum: string
+  imports?: ImportInfo[] | null
+  exports?: ExportInfo[] | null
 }
 
 /** Creates multiple file records in the project's JSON file. */
@@ -447,6 +456,8 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
         summaryLastUpdated: null,
         meta: '{}',
         checksum: fileData.checksum,
+        imports: fileData.imports || null,
+        exports: fileData.exports || null,
         created: now,
         updated: now
       }
@@ -519,6 +530,8 @@ export async function bulkUpdateProjectFiles(
         extension: data.extension,
         size: data.size,
         checksum: data.checksum,
+        imports: data.imports !== undefined ? data.imports : existingFile.imports,
+        exports: data.exports !== undefined ? data.exports : existingFile.exports,
         updated: now
       }
 
@@ -639,7 +652,19 @@ export async function getProjectFilesByIds(projectId: number, fileIds: number[])
 }
 
 /** Summarizes a single file if it meets conditions and updates the project's file storage. */
-export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFile | null> {
+export async function summarizeSingleFile(file: ProjectFile, force: boolean = false): Promise<ProjectFile | null> {
+  // Check if file needs summarization based on timestamp
+  const summarizationCheck = needsResummarization(file.summaryLastUpdated, force)
+
+  if (!summarizationCheck.needsSummarization) {
+    console.log(
+      `[SummarizeSingleFile] Skipping file ${file.path} (ID: ${file.id}) in project ${file.projectId}: ${summarizationCheck.reason}`
+    )
+    return null
+  }
+
+  console.log(`[SummarizeSingleFile] Processing file ${file.path} (ID: ${file.id}): ${summarizationCheck.reason}`)
+
   const fileContent = file.content || ''
 
   if (!fileContent.trim()) {
@@ -649,11 +674,51 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
     return null
   }
 
+  // Check if file size exceeds limit
+  if (file.size > MAX_FILE_SIZE_FOR_SUMMARY) {
+    console.warn(
+      `[SummarizeSingleFile] File ${file.path} (ID: ${file.id}) in project ${file.projectId} is too large (${file.size} bytes), skipping summarization.`
+    )
+    return null
+  }
+
+  // Estimate token count and check if content is too long
+  const estimatedTokens = Math.ceil(fileContent.length / CHARS_PER_TOKEN_ESTIMATE)
+  if (estimatedTokens > MAX_TOKENS_FOR_SUMMARY) {
+    console.warn(
+      `[SummarizeSingleFile] File ${file.path} (ID: ${file.id}) content is too long (estimated ${estimatedTokens} tokens), truncating for summarization.`
+    )
+    // Truncate content to fit within token limit
+    const maxChars = MAX_TOKENS_FOR_SUMMARY * CHARS_PER_TOKEN_ESTIMATE
+    const truncatedContent = fileContent.substring(0, maxChars) + '\n\n[... content truncated for summarization ...]'
+    return summarizeTruncatedFile(file, truncatedContent)
+  }
+
+  // Check if content was already truncated during file sync
+  const wasTruncatedDuringSync = fileContent.includes(FILE_SUMMARIZATION_LIMITS.TRUNCATION_SUFFIX)
+
+  const importsContext = file.imports?.length
+    ? `The file imports from: ${[...new Set(file.imports.map((i) => i.source))].join(', ')}`
+    : ''
+
+  const exportsContext = file.exports?.length
+    ? `The file exports: ${file.exports
+        .map((e) => {
+          if (e.type === 'default') return 'default export'
+          if (e.type === 'all') return `all from ${e.source}`
+          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+        })
+        .join(', ')}`
+    : ''
+
   const systemPrompt = `
   ## You are a coding assistant specializing in concise code summaries.
   1. Provide a short overview of what the file does.
   2. Outline main exports (functions/classes).
   3. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
+  ${importsContext ? `4. ${importsContext}` : ''}
+  ${exportsContext ? `5. ${exportsContext}` : ''}
+  ${wasTruncatedDuringSync ? '6. Note: This file was truncated for summarization, so the summary may be incomplete.' : ''}
   `
 
   const cfg = LOW_MODEL_CONFIG
@@ -703,11 +768,74 @@ export async function summarizeSingleFile(file: ProjectFile): Promise<ProjectFil
   }
 }
 
+/** Helper function to summarize files with truncated content */
+async function summarizeTruncatedFile(file: ProjectFile, truncatedContent: string): Promise<ProjectFile | null> {
+  const systemPrompt = `
+  ## You are a coding assistant specializing in concise code summaries.
+  1. Provide a short overview of what the file does.
+  2. Outline main exports (functions/classes).
+  3. Note that this file has been truncated for summarization due to its large size.
+  4. Respond with only the textual summary, minimal fluff, no suggestions or code blocks.
+  `
+
+  const cfg = LOW_MODEL_CONFIG
+  const provider = (cfg.provider as APIProviders) || 'openrouter'
+  const modelId = cfg.model
+
+  if (!modelId) {
+    console.error(`[SummarizeTruncatedFile] Model not configured for summarize-file task for file ${file.path}.`)
+    throw new ApiError(
+      500,
+      `AI Model not configured for summarize-file task (file ${file.path}).`,
+      'AI_MODEL_NOT_CONFIGURED',
+      { projectId: file.projectId, fileId: file.id }
+    )
+  }
+
+  try {
+    const result = await generateStructuredData({
+      prompt: truncatedContent,
+      options: cfg,
+      schema: z.object({
+        summary: z.string()
+      }),
+      systemMessage: systemPrompt
+    })
+
+    const summary = result.object.summary
+    const trimmedSummary = summary.trim() + ' [Note: File was truncated for summarization due to size]'
+
+    const updatedFile = await projectStorage.updateProjectFile(file.projectId, file.id, {
+      summary: trimmedSummary,
+      summaryLastUpdated: Date.now()
+    })
+
+    console.log(
+      `[SummarizeTruncatedFile] Successfully summarized truncated file: ${file.path} in project ${file.projectId}`
+    )
+    return updatedFile
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      `Failed to summarize truncated file ${file.path} in project ${file.projectId}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+      'FILE_SUMMARIZE_FAILED',
+      { originalError: error, projectId: file.projectId, fileId: file.id }
+    )
+  }
+}
+
 /** Summarize multiple files, respecting summarization rules. Processes files sequentially to avoid storage write conflicts. */
 export async function summarizeFiles(
   projectId: number,
-  fileIdsToSummarize: number[]
-): Promise<{ included: number; skipped: number; updatedFiles: ProjectFile[] }> {
+  fileIdsToSummarize: number[],
+  force: boolean = false
+): Promise<{
+  included: number
+  skipped: number
+  updatedFiles: ProjectFile[]
+  skippedReasons?: { [reason: string]: number }
+}> {
   const allProjectFiles = await getProjectFiles(projectId)
 
   if (!allProjectFiles) {
@@ -720,11 +848,19 @@ export async function summarizeFiles(
   const updatedFilesResult: ProjectFile[] = []
   let summarizedCount = 0
   let skippedByEmptyCount = 0
+  let skippedBySizeCount = 0
   let errorCount = 0
 
   for (const file of filesToProcess) {
     try {
-      const summarizedFile = await summarizeSingleFile(file)
+      // Check size before attempting summarization
+      if (file.size > MAX_FILE_SIZE_FOR_SUMMARY) {
+        skippedBySizeCount++
+        console.log(`[BatchSummarize] Skipping file ${file.path} due to size (${file.size} bytes)`)
+        continue
+      }
+
+      const summarizedFile = await summarizeSingleFile(file, force)
       if (summarizedFile) {
         updatedFilesResult.push(summarizedFile)
         summarizedCount++
@@ -741,13 +877,14 @@ export async function summarizeFiles(
   }
 
   const totalProcessed = filesToProcess.length
-  const finalSkippedCount = skippedByEmptyCount + errorCount
+  const finalSkippedCount = skippedByEmptyCount + skippedBySizeCount + errorCount
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
       `Total to process: ${totalProcessed}, ` +
       `Successfully summarized: ${summarizedCount}, ` +
       `Skipped (empty): ${skippedByEmptyCount}, ` +
+      `Skipped (too large): ${skippedBySizeCount}, ` +
       `Skipped (errors): ${errorCount}, ` +
       `Total not summarized: ${finalSkippedCount}`
   )
@@ -755,7 +892,12 @@ export async function summarizeFiles(
   return {
     included: summarizedCount,
     skipped: finalSkippedCount,
-    updatedFiles: updatedFilesResult
+    updatedFiles: updatedFilesResult,
+    skippedReasons: {
+      empty: skippedByEmptyCount,
+      tooLarge: skippedBySizeCount,
+      errors: errorCount
+    }
   }
 }
 

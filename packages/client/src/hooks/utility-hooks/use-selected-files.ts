@@ -23,30 +23,37 @@ const undoRedoKeys = {
 }
 
 export const useProjectFileMapWithoutContent = (projectId: number) => {
+  // Add validation to prevent calling with invalid project IDs
+  const isValidProjectId = projectId && projectId !== -1 && projectId > 0
+
+  // useGetProjectFilesWithoutContent already has built-in validation for projectId
   const { data: fileData } = useGetProjectFilesWithoutContent(projectId)
-  return useMemo(() => buildProjectFileMapWithoutContent(fileData?.data ?? []), [fileData?.data])
+
+  return useMemo(() => {
+    if (!isValidProjectId) {
+      return new Map()
+    }
+    return buildProjectFileMapWithoutContent(fileData?.data ?? [])
+  }, [fileData?.data, isValidProjectId])
 }
 
 export const useProjectFileMap = (projectId: number) => {
   // Add validation to prevent calling with invalid project IDs
   const isValidProjectId = projectId && projectId !== -1 && projectId > 0
 
-  if (!isValidProjectId) {
-    console.warn(`useProjectFileMap: Invalid projectId ${projectId}, returning empty map`)
-    console.trace('Stack trace for invalid projectId call:')
-    return useMemo(() => new Map(), [projectId])
-  }
-
+  // useGetProjectFiles already has built-in validation for projectId
+  // It won't fetch if projectId is invalid
   const { data: fileData } = useGetProjectFiles(projectId)
 
   return useMemo(() => {
+    if (!isValidProjectId) {
+      return new Map()
+    }
+
     const files = fileData?.data ?? []
-
-
     const map = buildProjectFileMap(files)
-    console.log('Generated project file map size:', map.size)
     return map
-  }, [fileData?.data])
+  }, [fileData?.data, isValidProjectId])
 }
 
 // Hook for managing file selection with undo/redo support
@@ -69,11 +76,6 @@ export function useSelectedFiles({
 
   // Get all project files and build the file map
   const projectId = activeProjectTabState?.selectedProjectId ?? -1
-  console.log('useSelectedFiles debug:', {
-    projectId,
-    activeProjectTabState: activeProjectTabState?.selectedProjectId,
-    effectiveTabId
-  })
   const projectFileMap = useProjectFileMap(projectId)
 
   // Query for getting the undo/redo state

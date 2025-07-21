@@ -38,6 +38,8 @@ import {
   PromptResponseSchema as PromptResponseSchemaZ,
   PromptListResponseSchema as PromptListResponseSchemaZ,
   OptimizePromptResponseSchema as OptimizePromptResponseSchemaZ,
+  SuggestPromptsRequestSchema,
+  SuggestPromptsResponseSchema as SuggestPromptsResponseSchemaZ,
   CreatePromptBodySchema,
   UpdatePromptBodySchema,
   OptimizeUserInputRequestSchema
@@ -140,6 +142,43 @@ import {
   SuggestTasksBodySchema,
   TicketSuggestFilesBodySchema,
   SuggestFilesBodySchema
+} from '@octoprompt/schemas'
+
+// Git imports
+import type {
+  GitStatusResult,
+  GetProjectGitStatusResponse,
+  GitOperationResponse,
+  GitDiffResponse,
+  GitBranch,
+  GitLogEntry,
+  GitCommit,
+  GitDiff,
+  GitRemote,
+  GitTag,
+  GitStash,
+  GitBlame
+} from '@octoprompt/schemas'
+
+import {
+  getProjectGitStatusResponseSchema,
+  stageFilesRequestSchema,
+  unstageFilesRequestSchema,
+  gitOperationResponseSchema,
+  gitDiffRequestSchema,
+  gitDiffResponseSchema,
+  gitBranchListResponseSchema,
+  gitLogResponseSchema,
+  gitCreateBranchRequestSchema,
+  gitSwitchBranchRequestSchema,
+  gitMergeBranchRequestSchema,
+  gitPushRequestSchema,
+  gitResetRequestSchema,
+  gitCommitSchema,
+  gitRemoteSchema,
+  gitTagSchema,
+  gitStashSchema,
+  gitBlameSchema
 } from '@octoprompt/schemas'
 
 export type DataResponseSchema<T> = {
@@ -612,6 +651,71 @@ export class ProjectService extends BaseApiClient {
     })
     return result as DataResponseSchema<ProjectStatistics>
   }
+
+  // Selected Files methods
+  async getSelectedFiles(projectId: number, tabId?: number) {
+    const result = await this.request('GET', `/projects/${projectId}/selected-files`, {
+      params: tabId ? { tabId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.any().nullable()
+      })
+    })
+    return result
+  }
+
+  async getAllSelectedFiles(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/selected-files/all`, {
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.array(z.any())
+      })
+    })
+    return result
+  }
+
+  async updateSelectedFiles(projectId: number, data: {
+    tabId: number
+    fileIds: number[]
+    promptIds?: number[]
+    userPrompt?: string
+  }) {
+    const result = await this.request('PUT', `/projects/${projectId}/selected-files`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.any()
+      })
+    })
+    return result
+  }
+
+  async clearSelectedFiles(projectId: number, tabId?: number) {
+    const result = await this.request('DELETE', `/projects/${projectId}/selected-files`, {
+      params: tabId ? { tabId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        message: z.string()
+      })
+    })
+    return result.success
+  }
+
+  async getSelectionContext(projectId: number, tabId?: number) {
+    const result = await this.request('GET', `/projects/${projectId}/selection-context`, {
+      params: tabId ? { tabId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          fileIds: z.array(z.number()),
+          promptIds: z.array(z.number()),
+          userPrompt: z.string(),
+          lastUpdated: z.number()
+        }).nullable()
+      })
+    })
+    return result
+  }
 }
 
 // Prompt Service
@@ -683,6 +787,15 @@ export class PromptService extends BaseApiClient {
       responseSchema: OptimizePromptResponseSchemaZ
     })
     return result as DataResponseSchema<{ optimizedPrompt: string }>
+  }
+
+  async suggestPrompts(projectId: number, data: { userInput: string; limit?: number }) {
+    const validatedData = this.validateBody(SuggestPromptsRequestSchema, data)
+    const result = await this.request('POST', `/projects/${projectId}/suggest-prompts`, {
+      body: validatedData,
+      responseSchema: SuggestPromptsResponseSchemaZ
+    })
+    return result as DataResponseSchema<{ prompts: Prompt[] }>
   }
 }
 
@@ -1306,6 +1419,214 @@ export class TicketService extends BaseApiClient {
   }
 }
 
+// Git Service
+export class GitService extends BaseApiClient {
+  async getProjectGitStatus(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/status`, {
+      responseSchema: getProjectGitStatusResponseSchema
+    })
+    return result as GetProjectGitStatusResponse
+  }
+
+  async stageFiles(projectId: number, filePaths: string[]) {
+    const validatedData = this.validateBody(stageFilesRequestSchema, { filePaths })
+    const result = await this.request('POST', `/projects/${projectId}/git/stage`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async unstageFiles(projectId: number, filePaths: string[]) {
+    const validatedData = this.validateBody(unstageFilesRequestSchema, { filePaths })
+    const result = await this.request('POST', `/projects/${projectId}/git/unstage`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async stageAll(projectId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/git/stage-all`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async unstageAll(projectId: number) {
+    const result = await this.request('POST', `/projects/${projectId}/git/unstage-all`, {
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async commitChanges(projectId: number, message: string) {
+    const validatedData = this.validateBody(z.object({ message: z.string().min(1) }), { message })
+    const result = await this.request('POST', `/projects/${projectId}/git/commit`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async getFileDiff(projectId: number, filePath: string, options?: { staged?: boolean; commit?: string }) {
+    const queryParams = new URLSearchParams({ filePath })
+    if (options?.staged) queryParams.append('staged', 'true')
+    if (options?.commit) queryParams.append('commit', options.commit)
+
+    const result = await this.request('GET', `/projects/${projectId}/git/diff?${queryParams}`, {
+      responseSchema: gitDiffResponseSchema
+    })
+    return result as GitDiffResponse
+  }
+
+  // Branch Management
+  async getBranches(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/branches`, {
+      responseSchema: gitBranchListResponseSchema
+    })
+    return result as DataResponseSchema<GitBranch[]>
+  }
+
+  async createBranch(projectId: number, name: string, startPoint?: string) {
+    const validatedData = this.validateBody(gitCreateBranchRequestSchema, { name, startPoint })
+    const result = await this.request('POST', `/projects/${projectId}/git/branches`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async switchBranch(projectId: number, name: string) {
+    const validatedData = this.validateBody(gitSwitchBranchRequestSchema, { name })
+    const result = await this.request('POST', `/projects/${projectId}/git/branches/switch`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Commit History
+  async getCommitLog(projectId: number, options?: { limit?: number; skip?: number; branch?: string; file?: string }) {
+    const params: Record<string, any> = {}
+    if (options?.limit) params.limit = options.limit
+    if (options?.skip) params.skip = options.skip
+    if (options?.branch) params.branch = options.branch
+    if (options?.file) params.file = options.file
+
+    const result = await this.request('GET', `/projects/${projectId}/git/log`, {
+      params,
+      responseSchema: gitLogResponseSchema
+    })
+    return result as DataResponseSchema<GitLogEntry[]> & { hasMore?: boolean }
+  }
+
+  // Remote Operations
+  async getRemotes(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/remotes`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(gitRemoteSchema).optional(),
+        message: z.string().optional()
+      })
+    })
+    return result as DataResponseSchema<GitRemote[]>
+  }
+
+  async push(
+    projectId: number,
+    remote?: string,
+    branch?: string,
+    options?: { force?: boolean; setUpstream?: boolean }
+  ) {
+    const validatedData = this.validateBody(gitPushRequestSchema, {
+      remote: remote || 'origin',
+      branch,
+      force: options?.force,
+      setUpstream: options?.setUpstream
+    })
+    const result = await this.request('POST', `/projects/${projectId}/git/push`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async fetch(projectId: number, remote?: string, prune?: boolean) {
+    const result = await this.request('POST', `/projects/${projectId}/git/fetch`, {
+      body: { remote: remote || 'origin', prune },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async pull(projectId: number, remote?: string, branch?: string, rebase?: boolean) {
+    const result = await this.request('POST', `/projects/${projectId}/git/pull`, {
+      body: { remote: remote || 'origin', branch, rebase },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Tag Management
+  async getTags(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/tags`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(gitTagSchema).optional(),
+        message: z.string().optional()
+      })
+    })
+    return result as DataResponseSchema<GitTag[]>
+  }
+
+  async createTag(projectId: number, name: string, options?: { message?: string; ref?: string }) {
+    const result = await this.request('POST', `/projects/${projectId}/git/tags`, {
+      body: { name, message: options?.message, ref: options?.ref },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Stash Management
+  async stash(projectId: number, message?: string) {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash`, {
+      body: { message },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  async getStashList(projectId: number) {
+    const result = await this.request('GET', `/projects/${projectId}/git/stash`, {
+      responseSchema: z.object({
+        success: z.boolean(),
+        data: z.array(gitStashSchema).optional(),
+        message: z.string().optional()
+      })
+    })
+    return result as DataResponseSchema<GitStash[]>
+  }
+
+  async stashApply(projectId: number, ref?: string) {
+    const result = await this.request('POST', `/projects/${projectId}/git/stash/apply`, {
+      body: { ref: ref || 'stash@{0}' },
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+
+  // Reset
+  async reset(projectId: number, ref: string, mode?: 'soft' | 'mixed' | 'hard') {
+    const validatedData = this.validateBody(gitResetRequestSchema, { ref, mode: mode || 'mixed' })
+    const result = await this.request('POST', `/projects/${projectId}/git/reset`, {
+      body: validatedData,
+      responseSchema: gitOperationResponseSchema
+    })
+    return result as GitOperationResponse
+  }
+}
+
 // Main OctoPrompt Client
 export class OctoPromptClient {
   public readonly chats: ChatService
@@ -1317,6 +1638,7 @@ export class OctoPromptClient {
   public readonly system: SystemService
   public readonly mcp: MCPService
   public readonly tickets: TicketService
+  public readonly git: GitService
 
   constructor(config: ApiConfig) {
     this.chats = new ChatService(config)
@@ -1328,6 +1650,7 @@ export class OctoPromptClient {
     this.system = new SystemService(config)
     this.mcp = new MCPService(config)
     this.tickets = new TicketService(config)
+    this.git = new GitService(config)
   }
 }
 

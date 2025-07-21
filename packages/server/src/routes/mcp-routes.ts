@@ -30,7 +30,7 @@ import {
 import { handleHTTPTransport, getActiveSessions, closeSession } from '../mcp/transport'
 import * as projectService from '@octoprompt/services'
 import { ApiError } from '@octoprompt/shared'
-import { BUILTIN_TOOLS, getAllToolNames } from '../mcp/tools-registry'
+import { CONSOLIDATED_TOOLS, getAllConsolidatedToolNames } from '../mcp/tools-registry'
 
 export const mcpRoutes = new OpenAPIHono()
 
@@ -625,13 +625,13 @@ const getBuiltinToolsRoute = createRoute({
 
 mcpRoutes.openapi(getBuiltinToolsRoute, async (c) => {
   try {
-    const tools = BUILTIN_TOOLS.map((tool) => ({
+    const tools = CONSOLIDATED_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema
     }))
 
-    const toolNames = getAllToolNames()
+    const toolNames = getAllConsolidatedToolNames()
 
     return c.json({
       success: true,
@@ -1223,7 +1223,7 @@ mcpRoutes.openapi(testMCPInitializeRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.6.0'
+              version: '0.7.0'
             }
           }
         }),
@@ -1467,7 +1467,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             },
             clientInfo: {
               name: 'octoprompt-tester',
-              version: '0.6.0'
+              version: '0.7.0'
             }
           },
           example: {
@@ -1477,7 +1477,7 @@ mcpRoutes.openapi(getMCPTestDataRoute, async (c) => {
             params: {
               protocolVersion: '2024-11-05',
               capabilities: { tools: true, resources: true },
-              clientInfo: { name: 'octoprompt-tester', version: '0.6.0' }
+              clientInfo: { name: 'octoprompt-tester', version: '0.7.0' }
             }
           }
         },

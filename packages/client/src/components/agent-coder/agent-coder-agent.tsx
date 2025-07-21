@@ -29,9 +29,9 @@ interface AgentCoderAgentProps {
   userInput?: string
 }
 
-export function AgentCoderAgent({ 
-  project, 
-  projectId, 
+export function AgentCoderAgent({
+  project,
+  projectId,
   allProjects,
   selectedFileIds = [],
   selectedPromptIds = [],
@@ -54,15 +54,15 @@ export function AgentCoderAgent({
       toast.error('Please provide instructions for the Agent Coder')
       return
     }
-    
+
     try {
-      const result = await runAgentCoder.mutateAsync({ 
+      const result = await runAgentCoder.mutateAsync({
         projectId,
         userInput,
         selectedFileIds,
         selectedPromptIds
       })
-      
+
       if (result.success && result.data?.agentJobId) {
         setSelectedRunId(result.data.agentJobId)
         setActiveTab('logs')
@@ -237,15 +237,11 @@ export function AgentCoderAgent({
                 <div className='space-y-4'>
                   <Card className='p-4'>
                     <h4 className='font-medium mb-2'>Updated Files</h4>
-                    <p className='text-sm text-muted-foreground'>
-                      {runData.updatedFiles.length} file(s) were modified
-                    </p>
+                    <p className='text-sm text-muted-foreground'>{runData.updatedFiles.length} file(s) were modified</p>
                     {runData.taskPlan && (
                       <div className='mt-4'>
                         <h5 className='font-medium mb-2'>Task Plan</h5>
-                        <pre className='text-xs whitespace-pre-wrap'>
-                          {JSON.stringify(runData.taskPlan, null, 2)}
-                        </pre>
+                        <pre className='text-xs whitespace-pre-wrap'>{JSON.stringify(runData.taskPlan, null, 2)}</pre>
                       </div>
                     )}
                   </Card>

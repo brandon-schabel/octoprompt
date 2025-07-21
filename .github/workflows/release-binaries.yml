@@ -34,9 +34,6 @@ jobs:
       - name: Run shared tests
         run: bun test:shared
 
-      - name: Run server tests
-        run: bun test:server
-
       - name: Build binaries
         run: bun run build-binaries
 

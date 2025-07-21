@@ -6,7 +6,9 @@ import {
   PromptIdParamsSchema,
   ProjectAndPromptIdParamsSchema,
   PromptResponseSchema,
-  PromptListResponseSchema
+  PromptListResponseSchema,
+  SuggestPromptsRequestSchema,
+  SuggestPromptsResponseSchema
 } from '@octoprompt/schemas'
 import {
   addPromptToProject,
@@ -16,7 +18,8 @@ import {
   listAllPrompts,
   listPromptsByProject,
   removePromptFromProject,
-  updatePrompt
+  updatePrompt,
+  suggestPrompts
 } from '@octoprompt/services'
 import { ProjectIdParamsSchema } from '@octoprompt/schemas'
 
@@ -82,6 +85,39 @@ const listProjectPromptsRoute = createRoute({
     200: {
       content: { 'application/json': { schema: PromptListResponseSchema } },
       description: 'Successfully retrieved project prompts'
+    },
+    404: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Project not found'
+    },
+    422: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Validation Error'
+    },
+    500: {
+      content: { 'application/json': { schema: ApiErrorResponseSchema } },
+      description: 'Internal Server Error'
+    }
+  }
+})
+
+const suggestPromptsRoute = createRoute({
+  method: 'post',
+  path: '/api/projects/{projectId}/suggest-prompts',
+  tags: ['Projects', 'Prompts', 'AI'],
+  summary: 'Get AI-suggested prompts based on user input',
+  description: 'Uses AI to analyze user input and suggest the most relevant prompts from the project',
+  request: {
+    params: ProjectIdParamsSchema,
+    body: {
+      content: { 'application/json': { schema: SuggestPromptsRequestSchema } },
+      required: true
+    }
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: SuggestPromptsResponseSchema } },
+      description: 'Successfully retrieved suggested prompts'
     },
     404: {
       content: { 'application/json': { schema: ApiErrorResponseSchema } },
@@ -263,6 +299,15 @@ export const promptRoutes = new OpenAPIHono()
     const { projectId } = c.req.valid('param')
     const projectPrompts = await listPromptsByProject(projectId)
     return c.json({ success: true, data: projectPrompts } satisfies z.infer<typeof PromptListResponseSchema>, 200)
+  })
+  .openapi(suggestPromptsRoute, async (c) => {
+    const { projectId } = c.req.valid('param')
+    const { userInput, limit } = c.req.valid('json')
+    const suggestedPrompts = await suggestPrompts(projectId, userInput, limit)
+    return c.json(
+      { success: true, data: { prompts: suggestedPrompts } } satisfies z.infer<typeof SuggestPromptsResponseSchema>,
+      200
+    )
   })
 
   .openapi(addPromptToProjectRoute, async (c) => {
