@@ -13,7 +13,7 @@ export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
   topP: 0,
   topK: 0,
   provider: 'openrouter',
-  model: 'mistralai/devstral-small'
+  model: 'google/gemini-2.5-flash'
   // model: "qwen/qwen3-235b-a22b",
 }
 
@@ -36,11 +36,11 @@ export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
   topP: 0,
   topK: 0,
   provider: 'openrouter',
-  model: 'moonshotai/kimi-k2'
+  model: 'google/gemini-2.5-flash'
 }
 
 export const PLANNING_MODEL_CONFIG: ModelOptionsWithProvider = {
   ...HIGH_MODEL_CONFIG,
   // model: 'anthropic/claude-3.7-sonnet'
-  model: 'moonshotai/kimi-k2'
+  model: 'google/gemini-2.5-flash'
 }

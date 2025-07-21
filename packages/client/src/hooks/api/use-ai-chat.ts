@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useChat, Message } from '@ai-sdk/react'
 import type { AiChatStreamRequest } from '@octoprompt/schemas'
 import type { AiSdkOptions } from '@octoprompt/schemas'
@@ -6,6 +6,8 @@ import { useGetMessages } from './use-chat-api'
 import { APIProviders } from '@octoprompt/schemas'
 import { nanoid } from 'nanoid'
 import { SERVER_HTTP_ENDPOINT } from '@/constants/server-constants'
+import { toast } from 'sonner'
+import { parseAIError, extractProviderName } from '@/components/errors'
 
 interface UseAIChatProps {
   chatId: number
@@ -17,6 +19,9 @@ interface UseAIChatProps {
 export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatProps) {
   // Track if initial messages have been loaded to prevent infinite loops
   const initialMessagesLoadedRef = useRef(false)
+
+  // Track parsed error for UI display
+  const [parsedError, setParsedError] = useState<ReturnType<typeof parseAIError> | null>(null)
 
   // Initialize Vercel AI SDK's useChat hook
   const {
@@ -37,8 +42,35 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
     id: chatId.toString(), // Primarily for SDK internal state management
     initialMessages: [], // Load messages via useEffect
     onError: (err) => {
-      // Optionally add more user-friendly error handling (e.g., toast notifications)
       console.error('[useAIChat] API Error:', err)
+
+      // Parse the error
+      const providerName = extractProviderName(err) || provider
+      const parsed = parseAIError(err, providerName)
+      setParsedError(parsed)
+
+      // Show toast notification with appropriate styling
+      if (parsed.type === 'MISSING_API_KEY') {
+        toast.error('API Key Missing', {
+          description: parsed.message,
+          action: {
+            label: 'Settings',
+            onClick: () => (window.location.href = '/settings')
+          }
+        })
+      } else if (parsed.type === 'RATE_LIMIT') {
+        toast.warning('Rate Limit Exceeded', {
+          description: parsed.message
+        })
+      } else if (parsed.type === 'CONTEXT_LENGTH_EXCEEDED') {
+        toast.error('Message Too Long', {
+          description: parsed.message
+        })
+      } else {
+        toast.error(`${parsed.provider || 'AI'} Error`, {
+          description: parsed.message
+        })
+      }
     }
   })
 
@@ -80,6 +112,9 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
   const sendMessage = useCallback(
     async (messageContent: string, modelSettings?: AiSdkOptions) => {
       if (!messageContent.trim()) return
+
+      // Clear any previous errors when sending a new message
+      setParsedError(null)
 
       // unix timestamp in milliseconds
       const userMessageId = Date.now()
@@ -128,7 +163,7 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
       await append(messageForSdkState, { body: requestBody })
     },
     // Dependencies: Ensure all values used inside useCallback are listed
-    [append, chatId, provider, model, systemMessage, setInput]
+    [append, chatId, provider, model, systemMessage, setInput, setParsedError]
   )
 
   // Create a form handler that uses our enhanced `sendMessage`
@@ -142,6 +177,11 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
     [sendMessage, input]
   )
 
+  // Clear error function
+  const clearError = useCallback(() => {
+    setParsedError(null)
+  }, [])
+
   // Return values needed by the UI
   return {
     messages,
@@ -150,6 +190,8 @@ export function useAIChat({ chatId, provider, model, systemMessage }: UseAIChatP
     handleSubmit: handleFormSubmit, // Use the custom submit handler
     isLoading,
     error,
+    parsedError, // Expose parsed error for UI display
+    clearError, // Function to clear the error
     setInput,
     reload, // Useful for retrying the last exchange
     stop, // Useful for stopping the stream

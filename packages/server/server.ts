@@ -102,12 +102,12 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
   console.log(`[Server] Server running at http://localhost:${server.port}`)
   console.log(`[Server] Server swagger at http://localhost:${server.port}/swagger`)
   console.log(`[Server] Server docs at http://localhost:${server.port}/doc`)
-  
+
   // Flush stdout to ensure Tauri can read the output
   if (process.stdout.isTTY) {
     process.stdout.write('')
   }
-  
+
   return server
 }
 
@@ -153,13 +153,13 @@ if (import.meta.main) {
     try {
       const server = await instantiateServer({ port })
       console.log('[Server] Server instantiated successfully')
-      
+
       function handleShutdown() {
-      console.log('Received kill signal. Shutting down gracefully...')
-      watchersManager.stopAllWatchers?.()
-      server.stop()
-      process.exit(0)
-    }
+        console.log('Received kill signal. Shutting down gracefully...')
+        watchersManager.stopAllWatchers?.()
+        server.stop()
+        process.exit(0)
+      }
       process.on('SIGINT', handleShutdown)
       process.on('SIGTERM', handleShutdown)
     } catch (error) {

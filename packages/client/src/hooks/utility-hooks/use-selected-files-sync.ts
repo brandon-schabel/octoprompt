@@ -32,9 +32,13 @@ export function useSelectedFilesSync(projectTabId: string | undefined) {
 
   // Mutation to sync selected files to backend
   const syncMutation = useMutation({
-    mutationFn: async ({ fileIds, promptIds, userPrompt }: {
-      fileIds: number[],
-      promptIds: number[],
+    mutationFn: async ({
+      fileIds,
+      promptIds,
+      userPrompt
+    }: {
+      fileIds: number[]
+      promptIds: number[]
       userPrompt: string
     }) => {
       if (!projectId || projectId === -1 || !tabId) return
@@ -69,12 +73,9 @@ export function useSelectedFilesSync(projectTabId: string | undefined) {
     debouncedSync(selectedFilesIds, selectedPrompts, userPrompt)
   }, [selectedFilesIds, selectedPrompts, userPrompt, projectId, tabId, debouncedSync])
 
-
   // Function to manually trigger sync
   const syncNow = useCallback(() => {
     if (!projectId || projectId === -1 || !tabId) return
-
-
 
     syncMutation.mutate({ fileIds: selectedFilesIds, promptIds: selectedPrompts, userPrompt })
   }, [selectedFilesIds, selectedPrompts, userPrompt, projectId, tabId, syncMutation])

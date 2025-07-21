@@ -435,6 +435,7 @@ OctoPrompt now includes a native desktop app built with Tauri for better perform
 ### Build Types
 
 1. **Development Build** - Quick builds for testing
+
    - No code signing required
    - Runs immediately on your machine
    - Output: `tauri-builds/` directory
@@ -455,8 +456,9 @@ OctoPrompt now includes a native desktop app built with Tauri for better perform
 ### Output Files
 
 After building, find your installers in `release-bundles/`:
+
 - **macOS**: `.dmg` files
-- **Windows**: `.exe` installer  
+- **Windows**: `.exe` installer
 - **Linux**: `.deb`, `.AppImage`, and `.rpm` packages
 
 For detailed setup instructions, see [docs/TAURI_BUILD_GUIDE.md](./docs/TAURI_BUILD_GUIDE.md).

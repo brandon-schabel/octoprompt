@@ -20,7 +20,7 @@ export const CollapsibleSelectedFilesList = forwardRef<SelectedFilesListRef, Col
     const updateProjectTabState = useUpdateProjectTabState(projectTabId)
     const [projectTab] = useGetProjectTabById(projectTabId)
     const { selectedFiles, removeSelectedFile } = useSelectedFiles()
-    
+
     // Enable sync to backend
     useSelectedFilesSync(projectTabId?.toString())
 

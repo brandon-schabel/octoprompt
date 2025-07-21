@@ -377,11 +377,11 @@ async function handleToolsCall(
       const content = Array.isArray(result)
         ? result
         : [
-          {
-            type: 'text',
-            text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
-          }
-        ]
+            {
+              type: 'text',
+              text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+            }
+          ]
 
       return {
         jsonrpc: '2.0',
@@ -580,12 +580,12 @@ async function handleResourcesRead(
           contents: Array.isArray(content)
             ? content
             : [
-              {
-                uri,
-                mimeType: resource.mimeType || 'text/plain',
-                text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
-              }
-            ]
+                {
+                  uri,
+                  mimeType: resource.mimeType || 'text/plain',
+                  text: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+                }
+              ]
         }
       }
     }

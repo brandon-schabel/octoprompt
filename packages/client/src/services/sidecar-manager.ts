@@ -21,7 +21,7 @@ export class OctoPromptSidecarManager {
   private async performStart(): Promise<void> {
     try {
       console.log('[SidecarManager] Setting up event listeners...')
-      
+
       // Set up event listeners before starting
       this.unsubscribeReady = await listen('octoprompt-server-ready', () => {
         console.log('[SidecarManager] Server ready event received')
@@ -66,7 +66,7 @@ export class OctoPromptSidecarManager {
     // Wait for ready event or health check
     while (!this.isReady && Date.now() - start < timeout) {
       checkCount++
-      
+
       // Try health check
       const healthy = await this.checkHealth()
       if (healthy) {

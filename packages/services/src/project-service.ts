@@ -12,7 +12,8 @@ import {
   MAX_TOKENS_FOR_SUMMARY,
   CHARS_PER_TOKEN_ESTIMATE,
   type ImportInfo,
-  type ExportInfo
+  type ExportInfo,
+  HIGH_MODEL_CONFIG
 } from '@octoprompt/schemas'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@octoprompt/shared'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
@@ -995,7 +996,8 @@ ${prompt}
     const result = await generateStructuredData({
       prompt: userPrompt,
       schema: FileSuggestionsZodSchema,
-      systemMessage: systemPrompt
+      systemMessage: systemPrompt,
+      options: HIGH_MODEL_CONFIG
     })
 
     // Fetch the actual file objects based on the recommended file IDs

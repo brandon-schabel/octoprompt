@@ -5,11 +5,13 @@ This guide explains how to build and release OctoPrompt's Tauri desktop applicat
 ## Quick Start
 
 ### Local Development Build (No Code Signing)
+
 ```bash
 ./scripts/release-tauri.sh --skip-signing
 ```
 
 ### Production Build (with Code Signing)
+
 ```bash
 # macOS Universal Binary with Notarization
 ./scripts/release-tauri.sh --universal --notarize
@@ -18,7 +20,9 @@ This guide explains how to build and release OctoPrompt's Tauri desktop applicat
 ## Build Scripts Overview
 
 ### 1. `build-tauri-app.sh`
+
 Main build script that handles:
+
 - Environment verification
 - Dependency installation
 - Server binary building
@@ -27,6 +31,7 @@ Main build script that handles:
 - Notarization (optional)
 
 **Usage:**
+
 ```bash
 ./scripts/build-tauri-app.sh [options]
 
@@ -39,7 +44,9 @@ Options:
 ```
 
 ### 2. `create-release-bundles.sh`
+
 Packages built artifacts into distribution-ready bundles:
+
 - Renames files with consistent naming
 - Creates platform-specific folders
 - Generates README files
@@ -47,6 +54,7 @@ Packages built artifacts into distribution-ready bundles:
 - Builds release archive
 
 **Output Structure:**
+
 ```
 release-bundles/
 ├── macOS/
@@ -68,6 +76,7 @@ release-bundles/
 ```
 
 ### 3. `release-tauri.sh`
+
 Convenience wrapper that runs both build and bundle scripts.
 
 ## Platform-Specific Builds
@@ -75,21 +84,25 @@ Convenience wrapper that runs both build and bundle scripts.
 ### macOS
 
 #### Intel Only
+
 ```bash
 ./scripts/build-tauri-app.sh --target x86_64-apple-darwin
 ```
 
 #### Apple Silicon Only
+
 ```bash
 ./scripts/build-tauri-app.sh --target aarch64-apple-darwin
 ```
 
 #### Universal (Recommended for Distribution)
+
 ```bash
 ./scripts/build-tauri-app.sh --universal
 ```
 
 ### Windows (Cross-compile from macOS/Linux)
+
 ```bash
 # Install Windows target first
 rustup target add x86_64-pc-windows-msvc
@@ -99,6 +112,7 @@ rustup target add x86_64-pc-windows-msvc
 ```
 
 ### Linux
+
 ```bash
 # Default build
 ./scripts/build-tauri-app.sh
@@ -107,11 +121,13 @@ rustup target add x86_64-pc-windows-msvc
 ## Code Signing Setup (macOS)
 
 ### Prerequisites
+
 1. Apple Developer Account ($99/year)
 2. Developer ID Application certificate
 3. App-specific password for notarization
 
 ### Environment Variables
+
 ```bash
 export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)"
 export APPLE_ID="your@email.com"
@@ -120,6 +136,7 @@ export APPLE_TEAM_ID="YOURTEAMID"
 ```
 
 ### Test Your Setup
+
 ```bash
 ./scripts/check-signing-setup.sh
 ```
@@ -127,25 +144,33 @@ export APPLE_TEAM_ID="YOURTEAMID"
 ## Build Workflow
 
 ### 1. Development Build
+
 For local testing without code signing:
+
 ```bash
 ./scripts/release-tauri.sh --skip-signing
 ```
 
 ### 2. Test Release Build
+
 Build with signing but without notarization:
+
 ```bash
 ./scripts/release-tauri.sh
 ```
 
 ### 3. Production Release
+
 Full build with notarization:
+
 ```bash
 ./scripts/release-tauri.sh --universal --notarize
 ```
 
 ### 4. GitHub Release
+
 After building:
+
 ```bash
 # Create GitHub release with all artifacts
 cd release-bundles
@@ -161,9 +186,11 @@ gh release create v1.0.0 \
 ## Troubleshooting
 
 ### Build Fails with "Server binary build failed"
+
 The script will automatically create a dummy binary for testing. This is fine for UI development.
 
 ### Code Signing Issues
+
 ```bash
 # Verify certificate is installed
 security find-identity -v -p codesigning
@@ -173,6 +200,7 @@ echo $APPLE_SIGNING_IDENTITY
 ```
 
 ### Notarization Fails
+
 ```bash
 # Check notarization log
 xcrun notarytool log <submission-id> \
@@ -182,7 +210,9 @@ xcrun notarytool log <submission-id> \
 ```
 
 ### Universal Binary Issues
+
 Ensure you have both targets installed:
+
 ```bash
 rustup target add x86_64-apple-darwin
 rustup target add aarch64-apple-darwin
@@ -191,12 +221,14 @@ rustup target add aarch64-apple-darwin
 ## CI/CD Integration
 
 For GitHub Actions, use the workflow at `.github/workflows/tauri-release.yml`. It automatically:
+
 1. Builds for all platforms
 2. Signs and notarizes macOS builds
 3. Creates GitHub releases
 4. Uploads all artifacts
 
 Trigger with:
+
 ```bash
 git tag app-v1.0.0
 git push origin app-v1.0.0

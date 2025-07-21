@@ -63,6 +63,7 @@ import {
   ProviderModelSelector,
   ModelSettingsPopover as ReusableModelSettingsPopover
 } from '@/components/model-selection'
+import { AIErrorDisplay } from '@/components/errors'
 
 export function ModelSettingsPopover() {
   const {
@@ -934,8 +935,11 @@ function ChatPage() {
     input,
     isLoading: isAiLoading,
     error,
+    parsedError,
+    clearError,
     setInput,
-    sendMessage
+    sendMessage,
+    reload
   } = useAIChat({
     // ai sdk uses strings for chatId
     chatId: activeChatId ?? -1,
@@ -968,14 +972,16 @@ function ChatPage() {
         return
       }
       try {
+        // Clear any previous errors before sending
+        clearError()
         await sendMessage(input, { ...modelSettings })
-        setInput('') // Clear input after sending
+        // Input is cleared by the hook after successful send
       } catch (err) {
         console.error('Error sending message:', err)
-        toast.error('Failed to send message.')
+        // Error is now handled by the useAIChat hook and displayed via parsedError
       }
     },
-    [input, isAiLoading, sendMessage, modelSettings, setInput, activeChatId]
+    [input, isAiLoading, sendMessage, modelSettings, activeChatId, clearError]
   )
 
   const hasActiveChat = !!activeChatId
@@ -1064,10 +1070,17 @@ function ChatPage() {
                   {isAiLoading ? '...' : <SendIcon className='h-4 w-4' />}
                 </Button>
               </div>
-              {error && (
-                <p className='mx-auto mb-3 w-full max-w-[72rem] px-4 text-xs text-destructive'>
-                  Error: {error.message}
-                </p>
+              {parsedError && (
+                <div className='mx-auto mb-3 w-full max-w-[72rem] px-4'>
+                  <AIErrorDisplay
+                    error={parsedError}
+                    onRetry={() => {
+                      clearError()
+                      reload()
+                    }}
+                    onDismiss={clearError}
+                  />
+                </div>
               )}
             </form>
           </>

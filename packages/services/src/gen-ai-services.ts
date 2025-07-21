@@ -13,6 +13,7 @@ import type { AiSdkOptions } from '@octoprompt/schemas'
 import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
 
 import { ApiError } from '@octoprompt/shared'
+import { mapProviderErrorToApiError } from './error-mappers'
 
 const DEFAULT_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
 const DEFAULT_LMSTUDIO_BASE_URL = process.env.LMSTUDIO_BASE_URL || 'http://localhost:1234/v1'
@@ -101,20 +102,27 @@ export async function handleChatMessage({
     },
     onError: (error) => {
       console.error(`[UnifiedProviderService] Error during stream for ${provider}/${modelInstance.modelId}:`, error)
-      // Optionally, update the placeholder message with an error here too
+
+      // Map the error to get better details
+      const mappedError = mapProviderErrorToApiError(error, provider, 'streamChat')
+
+      // Update the placeholder message with a user-friendly error message
       if (finalAssistantMessageId) {
-        chatService
-          .updateMessageContent(
-            chatId,
-            finalAssistantMessageId,
-            `Error: Streaming failed. ${error instanceof Error ? error.message : String(error)}`
+        const errorMessage =
+          mappedError.code === 'CONTEXT_LENGTH_EXCEEDED'
+            ? 'Error: Message too long. Please reduce the length and try again.'
+            : mappedError.code === 'RATE_LIMIT_EXCEEDED'
+              ? 'Error: Rate limit exceeded. Please wait a moment and try again.'
+              : mappedError.code === 'PROVIDER_UNAVAILABLE'
+                ? 'Error: Service temporarily unavailable. Please try again.'
+                : `Error: ${mappedError.message}`
+
+        chatService.updateMessageContent(chatId, finalAssistantMessageId, errorMessage).catch((dbError) => {
+          console.error(
+            `[UnifiedProviderService] Failed to update message content with stream error in DB for ID ${finalAssistantMessageId}:`,
+            dbError
           )
-          .catch((dbError) => {
-            console.error(
-              `[UnifiedProviderService] Failed to update message content with stream error in DB for ID ${finalAssistantMessageId}:`,
-              dbError
-            )
-          })
+        })
       }
     }
   })
@@ -296,12 +304,7 @@ export async function generateSingleText({
     if (error instanceof ApiError) throw error
     // Catch errors from getProviderLanguageModelInterface or generateText
     console.error(`[UnifiedProviderService - generateSingleText] Error for ${provider}:`, error)
-    throw new ApiError(
-      500,
-      `Failed to generate single text for provider ${provider}: ${error.message}`,
-      'GENERATE_SINGLE_TEXT_FAILED',
-      { originalError: error.message }
-    )
+    throw mapProviderErrorToApiError(error, provider, 'generateSingleText')
   }
 }
 
@@ -365,12 +368,7 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
   } catch (error: any) {
     if (error instanceof ApiError) throw error
     console.error(`[UnifiedProviderService - generateStructuredData] Error for ${provider}:`, error)
-    throw new ApiError(
-      500,
-      `Failed to generate structured data for provider ${provider}: ${error.message}`,
-      'GENERATE_STRUCTURED_DATA_FAILED',
-      { originalError: error.message }
-    )
+    throw mapProviderErrorToApiError(error, provider, 'generateStructuredData')
   }
 }
 
@@ -456,8 +454,6 @@ export async function genTextStream({
   } catch (error: any) {
     if (error instanceof ApiError) throw error
     console.error(`[UnifiedProviderService - genTextStream] Error setting up stream for ${provider}:`, error)
-    throw new ApiError(500, `Error setting up stream for ${provider}: ${error.message}`, 'STREAM_SETUP_FAILED', {
-      originalError: error.message
-    })
+    throw mapProviderErrorToApiError(error, provider, 'genTextStream')
   }
 }
