@@ -1,4 +1,3 @@
-// packages/server/src/services/project-service.test.ts
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test'
 import {
   createProject,
@@ -20,11 +19,8 @@ import {
   type FileSyncData
 } from './project-service'
 import type { Project, ProjectFile, CreateProjectBody, UpdateProjectBody } from '@octoprompt/schemas'
-import type { ProjectsStorage, ProjectFilesStorage } from '@octoprompt/storage'
-import { ProjectFilesStorageSchema } from '@octoprompt/storage'
-import { ApiError, LOW_MODEL_CONFIG, MEDIUM_MODEL_CONFIG } from '@octoprompt/shared'
+import { ApiError } from '@octoprompt/shared'
 import { z } from 'zod'
-import { normalizeToUnixMs } from '@octoprompt/shared'
 
 // Set test environment to use in-memory database
 process.env.NODE_ENV = 'test'

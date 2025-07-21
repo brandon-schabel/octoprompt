@@ -126,25 +126,25 @@ async function buildProject() {
     // Also copy the standalone binary to the dist root for Tauri sidecar preparation
     const simplePlatformName = target.replace('bun-', '')
     const standaloneExecName = `${pkg.name}-${simplePlatformName}${executableExt}`
-    
+
     // Copy the standalone binary to dist root for Tauri sidecar preparation
     try {
       // First attempt: regular copy
       await $`cp ${join(platformDir, executableName)} ${join(distDir, standaloneExecName)}`
     } catch (error) {
       console.warn(`First copy attempt failed: ${error}`)
-      
+
       try {
         // Second attempt: use cat to work around permission issues
         await $`cat ${join(platformDir, executableName)} > ${join(distDir, standaloneExecName)}`
-        
+
         // Set executable permissions on the copy
         if (!executableExt) {
           chmodSync(join(distDir, standaloneExecName), 0o755)
         }
       } catch (error2) {
         console.error(`Failed to copy executable with cat: ${error2}`)
-        
+
         // Final attempt: skip the copy for Windows exe if all else fails
         if (executableExt) {
           console.warn(`Skipping copy of Windows executable due to permission issues`)

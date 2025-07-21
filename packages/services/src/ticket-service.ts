@@ -9,7 +9,8 @@ import type {
   TicketTask,
   TaskSuggestions
 } from '@octoprompt/schemas'
-import { TaskSuggestionsSchema, MEDIUM_MODEL_CONFIG } from '@octoprompt/schemas'
+import { TaskSuggestionsSchema, } from '@octoprompt/schemas'
+import { MEDIUM_MODEL_CONFIG } from '@octoprompt/config'
 import { ticketStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
 import { getFullProjectSummary } from '@octoprompt/services'

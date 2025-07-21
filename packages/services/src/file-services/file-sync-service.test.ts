@@ -4,8 +4,10 @@ import * as projectService from '@octoprompt/services'
 import * as fs from 'node:fs'
 import { join } from 'node:path'
 import ignore, { type Ignore } from 'ignore'
-import { DEFAULT_FILE_EXCLUSIONS } from '@octoprompt/schemas'
+import { getFilesConfig } from '@octoprompt/config'
 import type { Project } from '@octoprompt/schemas'
+
+const { defaultExclusions: DEFAULT_FILE_EXCLUSIONS } = getFilesConfig()
 import type { PathLike, Dirent, Stats } from 'node:fs'
 import { isIgnored, inferChangeType } from './file-sync-service-unified'
 import { createCleanupService } from './file-sync-service-unified'

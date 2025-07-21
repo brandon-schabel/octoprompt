@@ -1,7 +1,7 @@
 {
   "name": "octoprompt",
   "module": "index.ts",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/start-dev.ts",
@@ -20,7 +20,8 @@
     "test:services": "cd packages/services && bun run test",
     "test:storage": "cd packages/storage && bun run test",
     "test:api-client": "cd packages/api-client && bun run test",
-    "test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client",
+    "test:config": "cd packages/config && bun run test",
+    "test:all": "bun run test:server && bun run test:shared && bun run test:schemas && bun run test:services && bun run test:storage && bun run test:api-client && bun run test:config",
     "migrate:sqlite": "bun run scripts/migrate-to-sqlite.ts",
     "migrate:sqlite:dry": "bun run scripts/migrate-to-sqlite.ts --dry-run"
   },

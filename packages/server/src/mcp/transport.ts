@@ -249,7 +249,7 @@ async function handleInitialize(id: string | number, params: any, projectId?: st
       capabilities: serverCapabilities,
       serverInfo: {
         name: 'octoprompt-mcp',
-        version: '0.7.0'
+        version: '0.7.1'
       },
       _meta: { sessionId } // Include session ID for client reference
     }

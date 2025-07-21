@@ -1,18 +1,13 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { ApiError } from '@octoprompt/shared'
-import { 
-  getSelectedFiles, 
-  getAllSelectedFilesForProject, 
-  updateSelectedFiles, 
+import {
+  getSelectedFiles,
+  getAllSelectedFilesForProject,
+  updateSelectedFiles,
   clearSelectedFiles,
-  getSelectionContext 
+  getSelectionContext
 } from '@octoprompt/services'
-import { 
-  selectedFilesSchema, 
-  type SelectedFiles,
-  ApiErrorResponseSchema 
-} from '@octoprompt/schemas'
-
+import { selectedFilesSchema, type SelectedFiles, ApiErrorResponseSchema } from '@octoprompt/schemas'
 
 // Get selected files for a project
 const getSelectedFilesRoute = createRoute({
@@ -23,7 +18,10 @@ const getSelectedFilesRoute = createRoute({
       projectId: z.string().transform((val) => parseInt(val, 10))
     }),
     query: z.object({
-      tabId: z.string().transform((val) => parseInt(val, 10)).optional()
+      tabId: z
+        .string()
+        .transform((val) => parseInt(val, 10))
+        .optional()
     })
   },
   responses: {
@@ -152,7 +150,10 @@ const clearSelectedFilesRoute = createRoute({
       projectId: z.string().transform((val) => parseInt(val, 10))
     }),
     query: z.object({
-      tabId: z.string().transform((val) => parseInt(val, 10)).optional()
+      tabId: z
+        .string()
+        .transform((val) => parseInt(val, 10))
+        .optional()
     })
   },
   responses: {
@@ -189,7 +190,10 @@ const getSelectionContextRoute = createRoute({
       projectId: z.string().transform((val) => parseInt(val, 10))
     }),
     query: z.object({
-      tabId: z.string().transform((val) => parseInt(val, 10)).optional()
+      tabId: z
+        .string()
+        .transform((val) => parseInt(val, 10))
+        .optional()
     })
   },
   responses: {
@@ -198,12 +202,14 @@ const getSelectionContextRoute = createRoute({
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            data: z.object({
-              fileIds: z.array(z.number()),
-              promptIds: z.array(z.number()),
-              userPrompt: z.string(),
-              lastUpdated: z.number()
-            }).nullable()
+            data: z
+              .object({
+                fileIds: z.array(z.number()),
+                promptIds: z.array(z.number()),
+                userPrompt: z.string(),
+                lastUpdated: z.number()
+              })
+              .nullable()
           })
         }
       },
@@ -245,12 +251,15 @@ export const selectedFilesRoutes = new OpenAPIHono()
     const { projectId } = c.req.valid('param')
     const { tabId } = c.req.valid('query')
     await clearSelectedFiles(projectId, tabId)
-    return c.json({ 
-      success: true, 
-      message: tabId 
-        ? `Selected files cleared for project ${projectId} tab ${tabId}` 
-        : `All selected files cleared for project ${projectId}`
-    }, 200)
+    return c.json(
+      {
+        success: true,
+        message: tabId
+          ? `Selected files cleared for project ${projectId} tab ${tabId}`
+          : `All selected files cleared for project ${projectId}`
+      },
+      200
+    )
   })
   .openapi(getSelectionContextRoute, async (c) => {
     const { projectId } = c.req.valid('param')

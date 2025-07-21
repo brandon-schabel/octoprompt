@@ -70,52 +70,44 @@ export function SuggestedPromptsDialog({ open, onClose, suggestedPrompts }: Sugg
             {suggestedPrompts.map((prompt) => {
               const isSelected = localSelectedPrompts.has(prompt.id)
               return (
-                <div 
-                  key={prompt.id} 
+                <div
+                  key={prompt.id}
                   className={cn(
                     'p-3 rounded-md border cursor-pointer transition-colors',
-                    isSelected 
-                      ? 'bg-primary/10 border-primary' 
-                      : 'hover:bg-muted/50'
+                    isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
                   )}
                   onClick={() => toggleLocalPrompt(prompt.id)}
                 >
                   <div className='flex items-start gap-3'>
-                    <input 
-                      type='checkbox' 
-                      checked={isSelected} 
+                    <input
+                      type='checkbox'
+                      checked={isSelected}
                       onChange={() => toggleLocalPrompt(prompt.id)}
                       onClick={(e) => e.stopPropagation()}
                       className='mt-1'
                     />
                     <div className='flex-1 space-y-1'>
                       <div className='font-medium text-sm'>{prompt.name}</div>
-                      <div className='text-xs text-muted-foreground line-clamp-3'>
-                        {prompt.content}
-                      </div>
+                      <div className='text-xs text-muted-foreground line-clamp-3'>{prompt.content}</div>
                     </div>
                   </div>
                 </div>
               )
             })}
             {suggestedPrompts.length === 0 && (
-              <div className='text-center py-8 text-muted-foreground'>
-                No prompts found matching your input
-              </div>
+              <div className='text-center py-8 text-muted-foreground'>No prompts found matching your input</div>
             )}
           </div>
 
           <DialogFooter>
             {suggestedPrompts.length > 0 && (
               <Button onClick={handleSelectAll} variant='outline'>
-                {suggestedPrompts.every((prompt) => localSelectedPrompts.has(prompt.id)) 
-                  ? 'Deselect All' 
+                {suggestedPrompts.every((prompt) => localSelectedPrompts.has(prompt.id))
+                  ? 'Deselect All'
                   : 'Select All'}
               </Button>
             )}
-            <Button onClick={handleDialogClose}>
-              {suggestedPrompts.length > 0 ? 'Confirm' : 'Close'}
-            </Button>
+            <Button onClick={handleDialogClose}>{suggestedPrompts.length > 0 ? 'Confirm' : 'Close'}</Button>
           </DialogFooter>
         </ErrorBoundary>
       </DialogContent>

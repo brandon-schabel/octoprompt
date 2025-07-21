@@ -15,7 +15,9 @@ import { gitAdvancedRoutes } from './routes/git-advanced-routes'
 import { selectedFilesRoutes } from './routes/selected-files-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
-import { corsConfig } from '@octoprompt/services/src/constants/server-config'
+import { getServerConfig } from '@octoprompt/config'
+
+const serverConfig = getServerConfig()
 import { swaggerUI } from '@hono/swagger-ui'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 
@@ -45,10 +47,23 @@ export const app = new OpenAPIHono({
 })
 
 // Add CORS middleware
-app.use('*', cors(corsConfig))
+app.use('*', cors(serverConfig.corsConfig))
 
 // Add logger middleware
 app.use('*', logger())
+
+// Add specific MCP route debugging
+app.use('/api/mcp*', async (c, next) => {
+  console.log(`[MCP Debug] ${c.req.method} ${c.req.path}`)
+  await next()
+  console.log(`[MCP Debug] Response status: ${c.res.status}`)
+})
+
+app.use('/api/projects/*/mcp*', async (c, next) => {
+  console.log(`[MCP Debug] ${c.req.method} ${c.req.path}`)
+  await next()
+  console.log(`[MCP Debug] Response status: ${c.res.status}`)
+})
 
 app.get('/api/health', (c) => c.json({ success: true }))
 

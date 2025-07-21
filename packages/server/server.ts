@@ -4,8 +4,10 @@ import { statSync } from 'node:fs'
 import { app } from './src/app'
 
 import { listProjects } from '@octoprompt/services'
-import { isDevEnv, SERVER_PORT } from '@octoprompt/services'
+import { getServerConfig } from '@octoprompt/config'
 import { watchersManager, createCleanupService } from '@octoprompt/services'
+
+const serverConfig = getServerConfig()
 
 // Use the imported watchersManager, remove the local creation
 // export const watchersManager = createWatchersManager();
@@ -15,7 +17,7 @@ const cleanupService = createCleanupService({
 
 // in dev client dist is relative to the server file so it would be server/client-dist
 // in build it is relative to the root so it would be dist/client-dist
-const CLIENT_PATH = isDevEnv ? join(import.meta.dir, 'client-dist') : './client-dist'
+const CLIENT_PATH = serverConfig.isDevEnv ? join(import.meta.dir, 'client-dist') : './client-dist'
 
 type ServerConfig = {
   port?: number
@@ -23,7 +25,7 @@ type ServerConfig = {
 
 type Server = ReturnType<typeof serve>
 
-export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {}): Promise<Server> {
+export async function instantiateServer({ port = serverConfig.serverPort }: ServerConfig = {}): Promise<Server> {
   console.log(`[Server] Starting server initialization on port ${port}...`)
   const server = serve({
     idleTimeout: 255,
@@ -43,7 +45,10 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
 
       // FIXED: Always return API responses for API routes, regardless of status code
       if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')) {
-        return await app.fetch(req)
+        console.log(`[Server] Routing ${req.method} ${url.pathname} to Hono app`)
+        const response = await app.fetch(req)
+        console.log(`[Server] Hono response status: ${response.status}`)
+        return response
       }
 
       const isStaticFile = /\.(js|css|html|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(url.pathname)
@@ -102,12 +107,12 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
   console.log(`[Server] Server running at http://localhost:${server.port}`)
   console.log(`[Server] Server swagger at http://localhost:${server.port}/swagger`)
   console.log(`[Server] Server docs at http://localhost:${server.port}/doc`)
-  
+
   // Flush stdout to ensure Tauri can read the output
   if (process.stdout.isTTY) {
     process.stdout.write('')
   }
-  
+
   return server
 }
 
@@ -137,7 +142,7 @@ if (import.meta.main) {
       return
     }
 
-    let port = SERVER_PORT
+    let port = serverConfig.serverPort
 
     // Look for --port argument
     const portIndex = args.indexOf('--port')
@@ -153,13 +158,13 @@ if (import.meta.main) {
     try {
       const server = await instantiateServer({ port })
       console.log('[Server] Server instantiated successfully')
-      
+
       function handleShutdown() {
-      console.log('Received kill signal. Shutting down gracefully...')
-      watchersManager.stopAllWatchers?.()
-      server.stop()
-      process.exit(0)
-    }
+        console.log('Received kill signal. Shutting down gracefully...')
+        watchersManager.stopAllWatchers?.()
+        server.stop()
+        process.exit(0)
+      }
       process.on('SIGINT', handleShutdown)
       process.on('SIGTERM', handleShutdown)
     } catch (error) {

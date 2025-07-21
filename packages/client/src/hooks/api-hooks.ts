@@ -570,7 +570,15 @@ export function useOptimizeUserInput() {
 
 export function useSuggestPrompts() {
   return useMutation({
-    mutationFn: async ({ projectId, userInput, limit = 5 }: { projectId: number; userInput: string; limit?: number }) => {
+    mutationFn: async ({
+      projectId,
+      userInput,
+      limit = 5
+    }: {
+      projectId: number
+      userInput: string
+      limit?: number
+    }) => {
       const response = await octoClient.prompts.suggestPrompts(projectId, { userInput, limit })
       return response.data.prompts
     },

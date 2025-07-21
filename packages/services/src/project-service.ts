@@ -5,15 +5,17 @@ import {
   type UpdateProjectBody,
   type ProjectFile,
   ProjectFileSchema,
-  LOW_MODEL_CONFIG,
   type APIProviders,
   FileSuggestionsZodSchema,
-  MAX_FILE_SIZE_FOR_SUMMARY,
-  MAX_TOKENS_FOR_SUMMARY,
-  CHARS_PER_TOKEN_ESTIMATE,
   type ImportInfo,
   type ExportInfo
 } from '@octoprompt/schemas'
+import {
+  MAX_FILE_SIZE_FOR_SUMMARY,
+  MAX_TOKENS_FOR_SUMMARY,
+  CHARS_PER_TOKEN_ESTIMATE
+} from '@octoprompt/config'
+import { LOW_MODEL_CONFIG, HIGH_MODEL_CONFIG, } from '@octoprompt/config'
 import { ApiError, promptsMap, FILE_SUMMARIZATION_LIMITS, needsResummarization } from '@octoprompt/shared'
 import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } from '@octoprompt/storage'
 import z, { ZodError } from 'zod'
@@ -703,12 +705,12 @@ export async function summarizeSingleFile(file: ProjectFile, force: boolean = fa
 
   const exportsContext = file.exports?.length
     ? `The file exports: ${file.exports
-        .map((e) => {
-          if (e.type === 'default') return 'default export'
-          if (e.type === 'all') return `all from ${e.source}`
-          return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
-        })
-        .join(', ')}`
+      .map((e) => {
+        if (e.type === 'default') return 'default export'
+        if (e.type === 'all') return `all from ${e.source}`
+        return e.specifiers?.map((s) => s.exported).join(', ') || 'named exports'
+      })
+      .join(', ')}`
     : ''
 
   const systemPrompt = `
@@ -881,12 +883,12 @@ export async function summarizeFiles(
 
   console.log(
     `[BatchSummarize] File summarization batch complete for project ${projectId}. ` +
-      `Total to process: ${totalProcessed}, ` +
-      `Successfully summarized: ${summarizedCount}, ` +
-      `Skipped (empty): ${skippedByEmptyCount}, ` +
-      `Skipped (too large): ${skippedBySizeCount}, ` +
-      `Skipped (errors): ${errorCount}, ` +
-      `Total not summarized: ${finalSkippedCount}`
+    `Total to process: ${totalProcessed}, ` +
+    `Successfully summarized: ${summarizedCount}, ` +
+    `Skipped (empty): ${skippedByEmptyCount}, ` +
+    `Skipped (too large): ${skippedBySizeCount}, ` +
+    `Skipped (errors): ${errorCount}, ` +
+    `Total not summarized: ${finalSkippedCount}`
   )
 
   return {
@@ -995,7 +997,8 @@ ${prompt}
     const result = await generateStructuredData({
       prompt: userPrompt,
       schema: FileSuggestionsZodSchema,
-      systemMessage: systemPrompt
+      systemMessage: systemPrompt,
+      options: HIGH_MODEL_CONFIG
     })
 
     // Fetch the actual file objects based on the recommended file IDs

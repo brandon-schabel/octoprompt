@@ -674,12 +674,15 @@ export class ProjectService extends BaseApiClient {
     return result
   }
 
-  async updateSelectedFiles(projectId: number, data: {
-    tabId: number
-    fileIds: number[]
-    promptIds?: number[]
-    userPrompt?: string
-  }) {
+  async updateSelectedFiles(
+    projectId: number,
+    data: {
+      tabId: number
+      fileIds: number[]
+      promptIds?: number[]
+      userPrompt?: string
+    }
+  ) {
     const result = await this.request('PUT', `/projects/${projectId}/selected-files`, {
       body: data,
       responseSchema: z.object({
@@ -706,12 +709,14 @@ export class ProjectService extends BaseApiClient {
       params: tabId ? { tabId } : undefined,
       responseSchema: z.object({
         success: z.literal(true),
-        data: z.object({
-          fileIds: z.array(z.number()),
-          promptIds: z.array(z.number()),
-          userPrompt: z.string(),
-          lastUpdated: z.number()
-        }).nullable()
+        data: z
+          .object({
+            fileIds: z.array(z.number()),
+            promptIds: z.array(z.number()),
+            userPrompt: z.string(),
+            lastUpdated: z.number()
+          })
+          .nullable()
       })
     })
     return result

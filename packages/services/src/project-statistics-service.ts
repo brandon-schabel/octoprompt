@@ -2,7 +2,8 @@ import { ApiError } from '@octoprompt/shared'
 import { getProjectById, getProjectFiles } from './project-service'
 import { listTicketsByProject, getTasks } from './ticket-service'
 import { listPromptsByProject } from './prompt-service'
-import { type Ticket, MAX_FILE_SIZE_FOR_SUMMARY } from '@octoprompt/schemas'
+import { type Ticket } from '@octoprompt/schemas'
+import { MAX_FILE_SIZE_FOR_SUMMARY } from '@octoprompt/config'
 
 export interface ProjectStatistics {
   // File Statistics

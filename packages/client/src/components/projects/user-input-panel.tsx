@@ -334,7 +334,11 @@ export const UserInputPanel = forwardRef<UserInputPanelRef, UserInputPanelProps>
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={handleFindPromptSuggestions} disabled={findSuggestedPromptsMutation.isPending} size='sm'>
+                    <Button
+                      onClick={handleFindPromptSuggestions}
+                      disabled={findSuggestedPromptsMutation.isPending}
+                      size='sm'
+                    >
                       {findSuggestedPromptsMutation.isPending ? (
                         <>
                           <Lightbulb className='h-3.5 w-3.5 mr-1 animate-pulse' />

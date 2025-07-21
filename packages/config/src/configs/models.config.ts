@@ -1,20 +1,14 @@
-import type { ModelOptions, APIProviders } from '@octoprompt/schemas'
-
-export type ModelOptionsWithProvider = ModelOptions & {
-  provider: APIProviders
-}
+import type { ModelConfig, ModelOptionsWithProvider } from '../types'
 
 export const LOW_MODEL_CONFIG: ModelOptionsWithProvider = {
   frequencyPenalty: 0,
   presencePenalty: 0,
-  // max output tokens
   maxTokens: 10000,
   temperature: 0.7,
   topP: 0,
   topK: 0,
   provider: 'openrouter',
-  model: 'google/gemini-2.5-flash-preview'
-  // model: "qwen/qwen3-235b-a22b",
+  model: 'google/gemini-2.5-flash'
 }
 
 export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
@@ -25,7 +19,7 @@ export const MEDIUM_MODEL_CONFIG: ModelOptionsWithProvider = {
   topP: 0,
   topK: 0,
   provider: 'openrouter',
-  model: 'google/gemini-2.5-flash-preview'
+  model: 'google/gemini-2.5-flash'
 }
 
 export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
@@ -36,11 +30,17 @@ export const HIGH_MODEL_CONFIG: ModelOptionsWithProvider = {
   topP: 0,
   topK: 0,
   provider: 'openrouter',
-  model: 'google/gemini-2.5-flash-preview'
+  model: 'google/gemini-2.5-flash'
 }
 
 export const PLANNING_MODEL_CONFIG: ModelOptionsWithProvider = {
   ...HIGH_MODEL_CONFIG,
-  // model: 'anthropic/claude-3.7-sonnet'
-  model: 'google/gemini-2.5-pro-preview'
+  model: 'google/gemini-2.5-flash'
+}
+
+export const modelsConfig: ModelConfig = {
+  low: LOW_MODEL_CONFIG,
+  medium: MEDIUM_MODEL_CONFIG,
+  high: HIGH_MODEL_CONFIG,
+  planning: PLANNING_MODEL_CONFIG
 }

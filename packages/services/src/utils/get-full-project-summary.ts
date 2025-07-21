@@ -1,7 +1,7 @@
 import { ApiError, buildProjectSummary, promptsMap, truncateForSummarization } from '@octoprompt/shared'
-import { getProjectFiles } from '@octoprompt/services'
+import { getProjectFiles } from '../project-service'
 import { generateSingleText } from '../gen-ai-services'
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
+import { LOW_MODEL_CONFIG } from '@octoprompt/config'
 
 export const getSafeAllProjectFiles = async (projectId: number) => {
   const allFiles = await getProjectFiles(projectId)
@@ -50,14 +50,14 @@ export const getCompactProjectSummary = async (projectId: number) => {
   } catch (error) {
     // If AI service fails, provide a truncated version of the full summary as fallback
     console.error(`[CompactProjectSummary] AI service failed for project ${projectId}:`, error)
-    
+
     // Return a manually truncated version with key information
     const lines = truncationResult.content.split('\n')
-    const fallbackSummary = lines
-      .slice(0, Math.min(50, lines.length)) // Take first 50 lines
-      .join('\n') + 
-      '\n\n[Note: AI summary service temporarily unavailable. Showing truncated file listing.]'
-    
+    const fallbackSummary =
+      lines
+        .slice(0, Math.min(50, lines.length)) // Take first 50 lines
+        .join('\n') + '\n\n[Note: AI summary service temporarily unavailable. Showing truncated file listing.]'
+
     return fallbackSummary
   }
 }

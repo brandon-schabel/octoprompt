@@ -10,10 +10,10 @@ export async function getSelectedFiles(projectId: number, tabId?: number): Promi
     // Ensure IDs are numbers for comparison
     const numericProjectId = Number(projectId)
     const numericTabId = tabId !== undefined ? Number(tabId) : undefined
-    
+
     // Get all selected files and find the matching one
     const allSelectedFiles = await selectedFilesStorage.getAll()
-    
+
     for (const selectedFile of allSelectedFiles) {
       // Compare with type conversion to handle string/number mismatches
       if (Number(selectedFile.data.projectId) === numericProjectId) {
@@ -27,7 +27,7 @@ export async function getSelectedFiles(projectId: number, tabId?: number): Promi
         }
       }
     }
-    
+
     return null
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -78,9 +78,9 @@ export async function updateSelectedFiles(
     // Ensure all IDs are numbers
     const numericProjectId = Number(projectId)
     const numericTabId = Number(tabId)
-    const numericFileIds = fileIds.map(id => Number(id))
-    const numericPromptIds = promptIds.map(id => Number(id))
-    
+    const numericFileIds = fileIds.map((id) => Number(id))
+    const numericPromptIds = promptIds.map((id) => Number(id))
+
     const existing = await getSelectedFiles(numericProjectId, numericTabId)
     const now = Date.now()
 
@@ -128,7 +128,7 @@ export async function clearSelectedFiles(projectId: number, tabId?: number): Pro
   try {
     const numericProjectId = Number(projectId)
     const numericTabId = tabId !== undefined ? Number(tabId) : undefined
-    
+
     const allSelectedFiles = await selectedFilesStorage.getAll()
     const idsToDelete: (string | number)[] = []
 

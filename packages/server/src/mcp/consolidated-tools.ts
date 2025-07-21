@@ -117,30 +117,24 @@ function validateRequiredParam<T>(
 ): T {
   if (value === undefined || value === null) {
     const exampleText = example ? `\nExample: { "${paramName}": ${example} }` : ''
-    throw createMCPError(
-      MCPErrorCode.MISSING_REQUIRED_PARAM,
-      `${paramName} is required${exampleText}`,
-      { parameter: paramName, type: paramType }
-    )
+    throw createMCPError(MCPErrorCode.MISSING_REQUIRED_PARAM, `${paramName} is required${exampleText}`, {
+      parameter: paramName,
+      type: paramType
+    })
   }
   return value
 }
 
 // Helper function to validate required fields in data object
-function validateDataField<T>(
-  data: any,
-  fieldName: string,
-  fieldType: string = 'field',
-  example?: string
-): T {
+function validateDataField<T>(data: any, fieldName: string, fieldType: string = 'field', example?: string): T {
   const value = data?.[fieldName]
   if (value === undefined || value === null) {
     const exampleText = example ? `\nExample: { "data": { "${fieldName}": ${example} } }` : ''
-    throw createMCPError(
-      MCPErrorCode.MISSING_REQUIRED_PARAM,
-      `${fieldName} is required in data${exampleText}`,
-      { field: fieldName, type: fieldType, providedData: data }
-    )
+    throw createMCPError(MCPErrorCode.MISSING_REQUIRED_PARAM, `${fieldName} is required in data${exampleText}`, {
+      field: fieldName,
+      type: fieldType,
+      providedData: data
+    })
   }
   return value as T
 }
@@ -360,7 +354,8 @@ const GitManagerSchema = z.object({
 export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'project_manager',
-    description: 'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files',
+    description:
+      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files',
     inputSchema: {
       type: 'object',
       properties: {
@@ -375,7 +370,8 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }'
+          description:
+            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }'
         }
       },
       required: ['action']
@@ -417,7 +413,9 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const updateData = data as UpdateProjectBody
             const project = await updateProject(validProjectId, updateData)
             return {
-              content: [{ type: 'text', text: `Project updated successfully: ${project?.name} (ID: ${validProjectId})` }]
+              content: [
+                { type: 'text', text: `Project updated successfully: ${project?.name} (ID: ${validProjectId})` }
+              ]
             }
           }
 
@@ -428,7 +426,9 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
               content: [
                 {
                   type: 'text',
-                  text: success ? `Project ${validProjectId} deleted successfully` : `Failed to delete project ${validProjectId}`
+                  text: success
+                    ? `Project ${validProjectId} deleted successfully`
+                    : `Failed to delete project ${validProjectId}`
                 }
               ]
             }
@@ -447,11 +447,9 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const project = await getProjectById(validProjectId)
             const files = await getProjectFiles(validProjectId)
             if (!files) {
-              throw createMCPError(
-                MCPErrorCode.SERVICE_ERROR,
-                'Failed to retrieve project files',
-                { projectId: validProjectId }
-              )
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to retrieve project files', {
+                projectId: validProjectId
+              })
             }
 
             const browsePath = data?.path as string | undefined
@@ -509,27 +507,21 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const project = await getProjectById(validProjectId)
             const files = await getProjectFiles(validProjectId)
             if (!files) {
-              throw createMCPError(
-                MCPErrorCode.SERVICE_ERROR,
-                'Failed to retrieve project files',
-                { projectId: validProjectId }
-              )
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to retrieve project files', {
+                projectId: validProjectId
+              })
             }
 
             const file = files.find((f) => f.path === filePath)
             if (!file) {
               // Provide helpful error with available files hint
-              const availablePaths = files.slice(0, 5).map(f => f.path)
-              throw createMCPError(
-                MCPErrorCode.FILE_NOT_FOUND,
-                `File not found: ${filePath}`,
-                { 
-                  requestedPath: filePath, 
-                  availableFiles: availablePaths,
-                  totalFiles: files.length,
-                  hint: 'Use browse_files action to explore available files'
-                }
-              )
+              const availablePaths = files.slice(0, 5).map((f) => f.path)
+              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, {
+                requestedPath: filePath,
+                availableFiles: availablePaths,
+                totalFiles: files.length,
+                hint: 'Use browse_files action to explore available files'
+              })
             }
 
             // Check if it's an image file
@@ -567,25 +559,19 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
             const files = await getProjectFiles(validProjectId)
             if (!files) {
-              throw createMCPError(
-                MCPErrorCode.SERVICE_ERROR,
-                'Failed to retrieve project files',
-                { projectId: validProjectId }
-              )
+              throw createMCPError(MCPErrorCode.SERVICE_ERROR, 'Failed to retrieve project files', {
+                projectId: validProjectId
+              })
             }
-            
+
             const file = files.find((f) => f.path === filePath)
             if (!file) {
-              const availablePaths = files.slice(0, 5).map(f => f.path)
-              throw createMCPError(
-                MCPErrorCode.FILE_NOT_FOUND,
-                `File not found: ${filePath}`,
-                { 
-                  requestedPath: filePath, 
-                  availableFiles: availablePaths,
-                  totalFiles: files.length
-                }
-              )
+              const availablePaths = files.slice(0, 5).map((f) => f.path)
+              throw createMCPError(MCPErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, {
+                requestedPath: filePath,
+                availableFiles: availablePaths,
+                totalFiles: files.length
+              })
             }
 
             await updateFileContent(validProjectId, file.id, content)
@@ -616,14 +602,17 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
               }
             }
             return {
-              content: [{ 
-                type: 'text', 
-                text: `Selected files for project ${validProjectId}${tabId ? ` tab ${tabId}` : ''}:\n` +
-                      `File IDs: ${selectedFiles.data.fileIds.join(', ') || 'none'}\n` +
-                      `Prompt IDs: ${selectedFiles.data.promptIds.join(', ') || 'none'}\n` +
-                      `User prompt: ${selectedFiles.data.userPrompt || 'empty'}\n` +
-                      `Last updated: ${new Date(selectedFiles.data.updatedAt).toISOString()}`
-              }]
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    `Selected files for project ${validProjectId}${tabId ? ` tab ${tabId}` : ''}:\n` +
+                    `File IDs: ${selectedFiles.data.fileIds.join(', ') || 'none'}\n` +
+                    `Prompt IDs: ${selectedFiles.data.promptIds.join(', ') || 'none'}\n` +
+                    `User prompt: ${selectedFiles.data.userPrompt || 'empty'}\n` +
+                    `Last updated: ${new Date(selectedFiles.data.updatedAt).toISOString()}`
+                }
+              ]
             }
           }
 
@@ -633,13 +622,15 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const fileIds = validateDataField<number[]>(data, 'fileIds', 'array', '[123, 456]')
             const promptIds = data?.promptIds as number[] | undefined
             const userPrompt = data?.userPrompt as string | undefined
-            
+
             const updated = await updateSelectedFiles(validProjectId, tabId, fileIds, promptIds || [], userPrompt || '')
             return {
-              content: [{ 
-                type: 'text', 
-                text: `Successfully updated selected files for project ${validProjectId} tab ${tabId}`
-              }]
+              content: [
+                {
+                  type: 'text',
+                  text: `Successfully updated selected files for project ${validProjectId} tab ${tabId}`
+                }
+              ]
             }
           }
 
@@ -648,10 +639,12 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const tabId = data?.tabId as number | undefined
             await clearSelectedFiles(validProjectId, tabId)
             return {
-              content: [{ 
-                type: 'text', 
-                text: `Cleared selected files for project ${validProjectId}${tabId ? ` tab ${tabId}` : ' (all tabs)'}`
-              }]
+              content: [
+                {
+                  type: 'text',
+                  text: `Cleared selected files for project ${validProjectId}${tabId ? ` tab ${tabId}` : ' (all tabs)'}`
+                }
+              ]
             }
           }
 
@@ -664,32 +657,32 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
                 content: [{ type: 'text', text: 'No selection context found' }]
               }
             }
-            
+
             // Get file details for better context
             const files = await getProjectFiles(validProjectId)
-            const selectedFileDetails = files?.filter(f => context.fileIds.includes(f.id)) || []
-            const fileList = selectedFileDetails
-              .map(f => `  - ${f.path} (${f.size} bytes)`)
-              .join('\n')
-            
+            const selectedFileDetails = files?.filter((f) => context.fileIds.includes(f.id)) || []
+            const fileList = selectedFileDetails.map((f) => `  - ${f.path} (${f.size} bytes)`).join('\n')
+
             return {
-              content: [{ 
-                type: 'text', 
-                text: `Selection context for project ${validProjectId}${tabId ? ` tab ${tabId}` : ''}:\n` +
-                      `\nSelected files (${context.fileIds.length}):\n${fileList || '  None'}\n` +
-                      `\nPrompt IDs: ${context.promptIds.join(', ') || 'none'}\n` +
-                      `User prompt: ${context.userPrompt || 'empty'}\n` +
-                      `Last updated: ${new Date(context.lastUpdated).toISOString()}`
-              }]
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    `Selection context for project ${validProjectId}${tabId ? ` tab ${tabId}` : ''}:\n` +
+                    `\nSelected files (${context.fileIds.length}):\n${fileList || '  None'}\n` +
+                    `\nPrompt IDs: ${context.promptIds.join(', ') || 'none'}\n` +
+                    `User prompt: ${context.userPrompt || 'empty'}\n` +
+                    `Last updated: ${new Date(context.lastUpdated).toISOString()}`
+                }
+              ]
             }
           }
 
           default:
-            throw createMCPError(
-              MCPErrorCode.UNKNOWN_ACTION,
-              `Unknown action: ${action}`,
-              { action, validActions: Object.values(ProjectManagerAction) }
-            )
+            throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
+              action,
+              validActions: Object.values(ProjectManagerAction)
+            })
         }
       } catch (error) {
         // Check if it's our custom MCP error with details
@@ -699,13 +692,14 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             content: [
               {
                 type: 'text',
-                text: error.message + (mcpError.details ? `\nDetails: ${JSON.stringify(mcpError.details, null, 2)}` : '')
+                text:
+                  error.message + (mcpError.details ? `\nDetails: ${JSON.stringify(mcpError.details, null, 2)}` : '')
               }
             ],
             isError: true
           }
         }
-        
+
         // Generic error handling
         return {
           content: [
@@ -722,7 +716,8 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
   {
     name: 'prompt_manager',
-    description: 'Manage prompts and prompt-project associations. Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project, suggest_prompts',
+    description:
+      'Manage prompts and prompt-project associations. Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project, suggest_prompts',
     inputSchema: {
       type: 'object',
       properties: {
@@ -733,11 +728,13 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         },
         projectId: {
           type: 'number',
-          description: 'The project ID (required for: list_by_project, add_to_project, remove_from_project, suggest_prompts). Example: 1750564533014'
+          description:
+            'The project ID (required for: list_by_project, add_to_project, remove_from_project, suggest_prompts). Example: 1750564533014'
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For get/update/delete: { promptId: 123 }. For create: { name: "My Prompt", content: "Prompt text" }. For add_to_project: { promptId: 123 }'
+          description:
+            'Action-specific data. For get/update/delete: { promptId: 123 }. For create: { name: "My Prompt", content: "Prompt text" }. For add_to_project: { promptId: 123 }'
         }
       },
       required: ['action']
@@ -769,7 +766,12 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
           case PromptManagerAction.CREATE: {
             const createData = data as CreatePromptBody
             const name = validateDataField<string>(createData, 'name', 'string', '"Code Review Prompt"')
-            const content = validateDataField<string>(createData, 'content', 'string', '"Review this code for best practices..."')
+            const content = validateDataField<string>(
+              createData,
+              'content',
+              'string',
+              '"Review this code for best practices..."'
+            )
             const prompt = await createPrompt(createData)
             return {
               content: [{ type: 'text', text: `Prompt created successfully: ${prompt.name} (ID: ${prompt.id})` }]
@@ -816,7 +818,9 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const promptId = validateDataField<number>(data, 'promptId', 'number', '123')
             await addPromptToProject(promptId, validProjectId)
             return {
-              content: [{ type: 'text', text: `Prompt ${promptId} successfully associated with project ${validProjectId}` }]
+              content: [
+                { type: 'text', text: `Prompt ${promptId} successfully associated with project ${validProjectId}` }
+              ]
             }
           }
 
@@ -825,7 +829,9 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
             const promptId = validateDataField<number>(data, 'promptId', 'number', '123')
             await removePromptFromProject(promptId, validProjectId)
             return {
-              content: [{ type: 'text', text: `Prompt ${promptId} successfully removed from project ${validProjectId}` }]
+              content: [
+                { type: 'text', text: `Prompt ${promptId} successfully removed from project ${validProjectId}` }
+              ]
             }
           }
 
@@ -871,7 +877,8 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
 
   {
     name: 'ticket_manager',
-    description: 'Manage tickets and ticket-related operations. Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files',
+    description:
+      'Manage tickets and ticket-related operations. Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files',
     inputSchema: {
       type: 'object',
       properties: {
@@ -886,7 +893,8 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For get/update/delete: { ticketId: 456 }. For create: { title: "Fix bug", overview: "Description", priority: "high", status: "open" }'
+          description:
+            'Action-specific data. For get/update/delete: { ticketId: 456 }. For create: { title: "Fix bug", overview: "Description", priority: "high", status: "open" }'
         }
       },
       required: ['action']
@@ -1047,7 +1055,8 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         },
         data: {
           type: 'object',
-          description: 'Action-specific data. For create: { content: "Task description" }. For update: { taskId: 789, done: true, content: "Updated text" }. For reorder: { tasks: [{ taskId: 789, orderIndex: 0 }] }'
+          description:
+            'Action-specific data. For create: { content: "Task description" }. For update: { taskId: 789, done: true, content: "Updated text" }. For reorder: { tasks: [{ taskId: 789, orderIndex: 0 }] }'
         }
       },
       required: ['action', 'ticketId']
@@ -1096,7 +1105,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
           }
 
           case TaskManagerAction.REORDER: {
-            const tasks = validateDataField<Array<{ taskId: number; orderIndex: number }>>(data, 'tasks', 'array', '[{"taskId": 789, "orderIndex": 0}]')
+            const tasks = validateDataField<Array<{ taskId: number; orderIndex: number }>>(
+              data,
+              'tasks',
+              'array',
+              '[{"taskId": 789, "orderIndex": 0}]'
+            )
             const reorderedTasks = await reorderTasks(validTicketId, tasks)
             const taskList = reorderedTasks.map((t) => `${t.id}: ${t.content} (order: ${t.orderIndex})`).join('\n')
             return {
@@ -1123,7 +1137,8 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
   {
     name: 'ai_assistant',
-    description: 'AI-powered utilities for prompt optimization and project insights. Actions: optimize_prompt, get_compact_summary',
+    description:
+      'AI-powered utilities for prompt optimization and project insights. Actions: optimize_prompt, get_compact_summary',
     inputSchema: {
       type: 'object',
       properties: {

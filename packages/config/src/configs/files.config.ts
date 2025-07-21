@@ -1,4 +1,5 @@
-// --- Constants (ALLOWED_EXTENSIONS, DEFAULT_EXCLUSIONS) remain the same ---
+import type { FilesConfig } from '../types'
+
 export const ALLOWED_FILE_CONFIGS = [
   // Documentation & Config
   '.md',
@@ -33,7 +34,7 @@ export const ALLOWED_FILE_CONFIGS = [
   '.svelte',
   '.svg',
 
-  // Backend Developmentœ
+  // Backend Development
   '.py',
   '.rb',
   '.php',
@@ -88,16 +89,10 @@ export const ALLOWED_FILE_CONFIGS = [
   '.gitattributes'
 ]
 
-// File size limits for summarization
-export const MAX_FILE_SIZE_FOR_SUMMARY = 1024 * 1024 // 1MB in bytes
-export const MAX_TOKENS_FOR_SUMMARY = 8000 // Safe limit for most models
-export const CHARS_PER_TOKEN_ESTIMATE = 4 // Rough estimate for token counting
-
-// Example content for shared/src/constants/file-sync-options.ts
 export const DEFAULT_FILE_EXCLUSIONS = [
   // --- Directories ---
-  'node_modules/', // Crucial!
-  '.git/', // Crucial!
+  'node_modules/',
+  '.git/',
   'dist/',
   'build/',
   'out/',
@@ -106,21 +101,28 @@ export const DEFAULT_FILE_EXCLUSIONS = [
   '.vscode/',
   '.idea/',
   '__pycache__/',
-  '.env', // Specific common file
+  '.env',
   '.DS_Store',
   'venv/',
 
   // --- File Patterns ---
   '*.log',
-  '*.lock', // e.g., package-lock.json, yarn.lock (handle potential need for these)
+  '*.lock',
   '*.pyc',
   '*.swp',
   '*.bak',
   '*.tmp'
 ]
 
-const testFileChange = {
-  fileId: '123',
-  content: 'Hello, world!',
-  updatedAt: new Date()
+// Export individual constants for backward compatibility
+export const MAX_FILE_SIZE_FOR_SUMMARY = 1024 * 1024 // 1MB in bytes
+export const MAX_TOKENS_FOR_SUMMARY = 8000
+export const CHARS_PER_TOKEN_ESTIMATE = 4
+
+export const filesConfig: FilesConfig = {
+  allowedExtensions: ALLOWED_FILE_CONFIGS,
+  defaultExclusions: DEFAULT_FILE_EXCLUSIONS,
+  maxFileSizeForSummary: MAX_FILE_SIZE_FOR_SUMMARY,
+  maxTokensForSummary: MAX_TOKENS_FOR_SUMMARY,
+  charsPerTokenEstimate: CHARS_PER_TOKEN_ESTIMATE
 }
