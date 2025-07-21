@@ -640,6 +640,56 @@ Order routes from most to least specific:
 - Path aliases
 - ES2022 target
 
+## Global Configuration Management
+
+OctoPrompt uses a centralized configuration system via the `@octoprompt/config` package.
+
+### Configuration Structure
+
+All global settings are organized by domain:
+
+- **App Config**: Application metadata (name, version, description)
+- **Server Config**: Server ports, CORS, API URLs
+- **Models Config**: AI model configurations (LOW, MEDIUM, HIGH, PLANNING)
+- **Providers Config**: AI provider base URLs
+- **Files Config**: File sync options, allowed extensions, exclusions
+
+### Usage
+
+```typescript
+import { getGlobalConfig, getModelsConfig, LOW_MODEL_CONFIG } from '@octoprompt/config'
+
+// Get entire config
+const config = getGlobalConfig()
+
+// Get specific domain
+const models = getModelsConfig()
+
+// Use specific config
+const lowModel = LOW_MODEL_CONFIG
+```
+
+### Environment Overrides
+
+Some settings can be overridden via environment variables:
+- `DEFAULT_MODEL_PROVIDER` - Override the AI provider for all models
+- `CORS_ORIGIN` - CORS origin setting
+- `SERVER_HOST` - Server host
+- `SERVER_PORT` - Server port
+- `CLIENT_URL` - Client URL
+- `API_URL` - API URL
+
+### Configuration Files
+
+All configuration is located in `packages/config/src/configs/`:
+- `app.config.ts` - Application metadata
+- `server.config.ts` - Server settings
+- `models.config.ts` - AI model configurations
+- `providers.config.ts` - Provider URLs
+- `files.config.ts` - File handling settings
+
+The configuration is validated using Zod schemas to ensure type safety and correctness.
+
 ## Important Reminders
 
 - NEVER create files unless necessary
