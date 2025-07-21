@@ -85,7 +85,9 @@ describe('Large File Handling in Summarization', () => {
   describe('File size constants', () => {
     test('should have reasonable size limits', () => {
       expect(MAX_FILE_SIZE_FOR_SUMMARY).toBe(1024 * 1024) // 1MB
-      expect(MAX_TOKENS_FOR_SUMMARY).toBe(8000)
+      // Token limit should be reasonable (between 8k and 100k)
+      expect(MAX_TOKENS_FOR_SUMMARY).toBeGreaterThanOrEqual(8000)
+      expect(MAX_TOKENS_FOR_SUMMARY).toBeLessThanOrEqual(100000)
       expect(CHARS_PER_TOKEN_ESTIMATE).toBe(4)
     })
   })

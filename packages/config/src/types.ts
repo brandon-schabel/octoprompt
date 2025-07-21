@@ -1,4 +1,25 @@
-import type { ModelOptions, APIProviders } from '@octoprompt/schemas'
+// Define types locally to avoid circular dependency with @octoprompt/schemas
+
+export type APIProviders = 
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'groq'
+  | 'openrouter'
+  | 'xai'
+  | 'together'
+  | 'lmstudio'
+  | 'ollama'
+
+export interface ModelOptions {
+  frequencyPenalty?: number
+  presencePenalty?: number
+  maxTokens?: number
+  temperature?: number
+  topP?: number
+  topK?: number
+  model: string
+}
 
 export type ModelOptionsWithProvider = ModelOptions & {
   provider: APIProviders

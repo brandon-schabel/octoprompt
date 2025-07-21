@@ -116,7 +116,7 @@ export const DEFAULT_FILE_EXCLUSIONS = [
 
 // Export individual constants for backward compatibility
 export const MAX_FILE_SIZE_FOR_SUMMARY = 1024 * 1024 // 1MB in bytes
-export const MAX_TOKENS_FOR_SUMMARY = 100000
+export const MAX_TOKENS_FOR_SUMMARY = 8000
 export const CHARS_PER_TOKEN_ESTIMATE = 4
 
 export const filesConfig: FilesConfig = {

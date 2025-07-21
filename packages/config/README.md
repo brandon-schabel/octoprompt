@@ -76,6 +76,10 @@ The configuration package is designed to work in both Node.js and browser enviro
 - The `loadEnvironmentOverrides()` function becomes a no-op
 - All configurations use their default values unless explicitly overridden via `setConfigOverrides()`
 
+## Package Independence
+
+This package is designed to be independent and does not depend on other @octoprompt packages. All necessary types are defined locally to avoid circular dependencies. This allows the config package to be the foundation that other packages can depend on.
+
 ## Future Enhancements
 
 This configuration system is designed to grow with the application. Future features may include:
