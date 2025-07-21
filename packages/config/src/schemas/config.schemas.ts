@@ -1,5 +1,17 @@
 import { z } from 'zod'
-import { providerSchema } from '@octoprompt/schemas'
+
+// Define provider schema locally to avoid circular dependency
+const providerSchema = z.enum([
+  'openai',
+  'anthropic',
+  'google',
+  'groq',
+  'openrouter',
+  'xai',
+  'together',
+  'lmstudio',
+  'ollama'
+])
 
 export const modelOptionsWithProviderSchema = z.object({
   frequencyPenalty: z.number().optional(),
@@ -28,7 +40,9 @@ export const providerConfigSchema = z.object({
   anthropic: providerUrlSchema,
   google: providerUrlSchema,
   openrouter: providerUrlSchema,
-  groq: providerUrlSchema
+  groq: providerUrlSchema,
+  ollama: providerUrlSchema,
+  lmstudio: providerUrlSchema
 })
 
 export const filesConfigSchema = z.object({
@@ -39,12 +53,26 @@ export const filesConfigSchema = z.object({
   charsPerTokenEstimate: z.number().positive()
 })
 
+export const corsConfigSchema = z.object({
+  origin: z.union([z.string(), z.array(z.string())]),
+  allowMethods: z.array(z.string()),
+  credentials: z.boolean(),
+  allowHeaders: z.array(z.string())
+})
+
 export const serverConfigSchema = z.object({
   corsOrigin: z.string(),
+  corsConfig: corsConfigSchema,
   serverHost: z.string(),
   serverPort: z.union([z.string(), z.number()]),
+  devPort: z.number(),
+  prodPort: z.number(),
+  clientPort: z.number(),
   clientUrl: z.string().url(),
-  apiUrl: z.string().url()
+  apiUrl: z.string().url(),
+  isDevEnv: z.boolean(),
+  isTestEnv: z.boolean(),
+  isProdEnv: z.boolean()
 })
 
 export const appConfigSchema = z.object({

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test'
-import { 
-  getGlobalConfig, 
+import {
+  getGlobalConfig,
   getAppConfig,
   getModelsConfig,
   LOW_MODEL_CONFIG,
@@ -24,7 +24,7 @@ describe('Config Package', () => {
   it('should export app config', () => {
     const app = getAppConfig()
     expect(app.name).toBe('OctoPrompt')
-    expect(app.version).toBe('0.7.0')
+    expect(app.version).toBe('0.7.1')
   })
 
   it('should export model configs', () => {

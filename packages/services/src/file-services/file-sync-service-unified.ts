@@ -2,8 +2,13 @@ import { watch as fsWatch, type FSWatcher, existsSync as fsLibExistsSync } from 
 import { join, extname, resolve as pathResolve, relative, basename } from 'node:path'
 import { readdirSync, readFileSync, statSync, Dirent, existsSync as nodeFsExistsSync } from 'node:fs'
 import { type Project, type ProjectFile } from '@octoprompt/schemas'
-import { ALLOWED_FILE_CONFIGS, DEFAULT_FILE_EXCLUSIONS, MAX_FILE_SIZE_FOR_SUMMARY } from '@octoprompt/schemas'
+import { getFilesConfig } from '@octoprompt/config'
 import ignorePackage, { type Ignore } from 'ignore'
+
+const filesConfig = getFilesConfig()
+const ALLOWED_FILE_CONFIGS = filesConfig.allowedExtensions
+const DEFAULT_FILE_EXCLUSIONS = filesConfig.defaultExclusions
+const MAX_FILE_SIZE_FOR_SUMMARY = filesConfig.maxFileSizeForSummary
 import { truncateForSummarization } from '@octoprompt/shared'
 import {
   getProjectFiles,

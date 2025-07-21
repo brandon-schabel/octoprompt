@@ -27,6 +27,12 @@ export interface ProviderConfig {
   groq: {
     baseURL: string
   }
+  ollama: {
+    baseURL: string
+  }
+  lmstudio: {
+    baseURL: string
+  }
 }
 
 export interface FilesConfig {
@@ -37,12 +43,26 @@ export interface FilesConfig {
   charsPerTokenEstimate: number
 }
 
+export interface CorsConfig {
+  origin: string | string[]
+  allowMethods: string[]
+  credentials: boolean
+  allowHeaders: string[]
+}
+
 export interface ServerConfig {
   corsOrigin: string
+  corsConfig: CorsConfig
   serverHost: string
   serverPort: string | number
+  devPort: number
+  prodPort: number
+  clientPort: number
   clientUrl: string
   apiUrl: string
+  isDevEnv: boolean
+  isTestEnv: boolean
+  isProdEnv: boolean
 }
 
 export interface AppConfig {

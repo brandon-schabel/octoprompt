@@ -10,13 +10,12 @@ import { createChatService, createProviderKeyService } from '@octoprompt/service
 import type { APIProviders, ProviderKey } from '@octoprompt/schemas'
 import type { AiChatStreamRequest } from '@octoprompt/schemas'
 import type { AiSdkOptions } from '@octoprompt/schemas'
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
+import { LOW_MODEL_CONFIG, getProvidersConfig } from '@octoprompt/config'
 
 import { ApiError } from '@octoprompt/shared'
 import { mapProviderErrorToApiError } from './error-mappers'
 
-const DEFAULT_OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-const DEFAULT_LMSTUDIO_BASE_URL = process.env.LMSTUDIO_BASE_URL || 'http://localhost:1234/v1'
+const providersConfig = getProvidersConfig()
 
 let providerKeysCache: ProviderKey[] | null = null
 
@@ -203,7 +202,7 @@ async function getProviderLanguageModelInterface(
     }
     // --- OpenAI Compatible Providers ---
     case 'lmstudio': {
-      const lmStudioUrl = DEFAULT_LMSTUDIO_BASE_URL
+      const lmStudioUrl = providersConfig.lmstudio.baseURL
       if (!lmStudioUrl) throw new ApiError(500, 'LMStudio Base URL not configured.', 'LMSTUDIO_URL_MISSING')
       return createOpenAI({
         baseURL: lmStudioUrl,
@@ -222,7 +221,7 @@ async function getProviderLanguageModelInterface(
     }
     // --- Local Providers ---
     case 'ollama': {
-      const ollamaUrl = DEFAULT_OLLAMA_BASE_URL
+      const ollamaUrl = providersConfig.ollama.baseURL
       if (!ollamaUrl) throw new ApiError(500, 'Ollama Base URL not configured.', 'OLLAMA_URL_MISSING')
       return createOllama({ baseURL: ollamaUrl })(modelId)
     }

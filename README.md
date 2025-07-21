@@ -10,13 +10,13 @@ If you've worked with LLMs and code you know how much quality drops off with mor
 
 If you have [Bun](https://bun.sh/) installed then I'd recommend downloading the prebuilt Server/UI Bundle.
 
-[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.0/octoprompt-0.7.0-bun-bundle.zip)
+[Download OctoPrompt's Latest Prebuilt Bun Server and UI Bundle](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.1/octoprompt-0.7.1-bun-bundle.zip)
 
-[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.0/octoprompt-0.7.0-macos-arm64.zip)
+[Download OctoPrompt For MacOS arm64 Binary - M1 and Newer](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.1/octoprompt-0.7.1-macos-arm64.zip)
 
-[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.0/octoprompt-0.7.0-windows-x64.zip)
+[Download OctoPrompt For Windows x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.1/octoprompt-0.7.1-windows-x64.zip)
 
-[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.0/octoprompt-0.7.0-linux-x64.zip)
+[Download OctoPrompt For Linux x64 Binary](https://github.com/brandon-schabel/octoprompt/releases/download/v0.7.1/octoprompt-0.7.1-linux-x64.zip)
 
 > Once you have downloaded OctoPrompt for your platform please read "Running Binaries", especially for MacOS
 
@@ -29,7 +29,7 @@ Don't have NPM or Bun? Install Bun with curl on Mac/Linux `curl -fsSL https://bu
 Extract the zip file and cd into the extracted zip file and run the OctoPrompt server.
 
 ```bash
-cd octoprompt-0.7.0-bun-bundle && bun run start
+cd octoprompt-0.7.1-bun-bundle && bun run start
 ```
 
 [View Your Local OctoPrompt UI](http://localhost:3579/)
@@ -127,7 +127,7 @@ View the [Dev UI here](http://localhost:1420)
 On Linux you should be able to just navigate to the octoprompt binary file in the terminal and run it for example:
 
 ```bash
-cd ~/Downloads/octoprompt-v0.7.0
+cd ~/Downloads/octoprompt-v0.7.1
 ```
 
 Run the linux binary file:
@@ -141,7 +141,7 @@ Run the linux binary file:
 Currently I don't have MacOS code signing, so it just says the binary is damaged, but really it is quarntined. In order to run the binary on Mac you would have to do the following
 
 ```bash
-cd ~/Downloads/octoprompt-v0.7.0
+cd ~/Downloads/octoprompt-v0.7.1
 ```
 
 Then run to remove the quarantine:
@@ -158,18 +158,18 @@ Finally you can run the Octoprompt app by running the binary file as you normall
 
 ### Running on Windows
 
-After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.7.0-windows-x64.zip`), open Command Prompt or PowerShell.
+After downloading and extracting the appropriate zip file (e.g., `octoprompt-v0.7.1-windows-x64.zip`), open Command Prompt or PowerShell.
 
 Navigate to the extracted folder. For example, if you extracted it to your Downloads folder:
 
 ```batch
-cd %USERPROFILE%\Downloads\octoprompt-v0.7.0-windows-x64
+cd %USERPROFILE%\Downloads\octoprompt-v0.7.1-windows-x64
 ```
 
 Or using PowerShell:
 
 ```powershell
-cd $env:USERPROFILE\Downloads\octoprompt-v0.7.0-windows-x64
+cd $env:USERPROFILE\Downloads\octoprompt-v0.7.1-windows-x64
 ```
 
 Then, run the executable:
@@ -241,6 +241,37 @@ Save your favorite prompts directly into OctoPrompt and import them into any pro
 ### **⌨️ Key Bindings**
 
 Quickly navigate through the navigation using keyboard commands, use the help button in the top right corner to view the available hotkeys.
+
+## Configuration Options
+
+OctoPrompt uses a centralized configuration system that allows customization through environment variables.
+
+### Environment Variables
+
+Configure OctoPrompt behavior by setting these environment variables:
+
+- `NODE_ENV` - Set to `development`, `test`, or `production` (affects server port and behavior)
+- `SERVER_PORT` - Override the default server port (default: 3147 for dev, 3579 for production)
+- `CLIENT_URL` - Override the client URL (default: <http://localhost:1420>)
+- `API_URL` - Override the API URL (default: <http://localhost:3147>)
+- `CORS_ORIGIN` - Set custom CORS origin (default: allows localhost and tauri origins)
+- `DOMAIN` - Set your domain for CORS configuration
+
+### AI Provider Configuration
+
+- `DEFAULT_MODEL_PROVIDER` - Set the default AI provider for all models (openai, anthropic, google, groq, openrouter, etc.)
+- `OLLAMA_BASE_URL` - Override Ollama base URL (default: <http://localhost:11434>)
+- `LMSTUDIO_BASE_URL` - Override LMStudio base URL (default: <http://localhost:1234/v1>)
+
+### Default Model Configurations
+
+OctoPrompt provides three preset model configurations:
+
+- **LOW**: Fast, cost-effective model (10k max tokens)
+- **MEDIUM**: Balanced performance (25k max tokens)
+- **HIGH**: Maximum capability (50k max tokens)
+
+All models default to using Google's Gemini 2.5 Flash via OpenRouter. You can change the provider and model through the UI or by setting environment variables.
 
 ## Features For Nerds
 
@@ -496,7 +527,7 @@ bun run build-binaries
 then navigate to the built binaries in `/dist` - in this case for MacOS arm64
 
 ```bash
-cd dist/octoprompt-0.7.0-macos
+cd dist/octoprompt-0.7.1-macos
 ```
 
 then run the binary file for your platforms directory:

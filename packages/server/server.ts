@@ -4,8 +4,10 @@ import { statSync } from 'node:fs'
 import { app } from './src/app'
 
 import { listProjects } from '@octoprompt/services'
-import { isDevEnv, SERVER_PORT } from '@octoprompt/services'
+import { getServerConfig } from '@octoprompt/config'
 import { watchersManager, createCleanupService } from '@octoprompt/services'
+
+const serverConfig = getServerConfig()
 
 // Use the imported watchersManager, remove the local creation
 // export const watchersManager = createWatchersManager();
@@ -15,7 +17,7 @@ const cleanupService = createCleanupService({
 
 // in dev client dist is relative to the server file so it would be server/client-dist
 // in build it is relative to the root so it would be dist/client-dist
-const CLIENT_PATH = isDevEnv ? join(import.meta.dir, 'client-dist') : './client-dist'
+const CLIENT_PATH = serverConfig.isDevEnv ? join(import.meta.dir, 'client-dist') : './client-dist'
 
 type ServerConfig = {
   port?: number
@@ -23,7 +25,7 @@ type ServerConfig = {
 
 type Server = ReturnType<typeof serve>
 
-export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {}): Promise<Server> {
+export async function instantiateServer({ port = serverConfig.serverPort }: ServerConfig = {}): Promise<Server> {
   console.log(`[Server] Starting server initialization on port ${port}...`)
   const server = serve({
     idleTimeout: 255,

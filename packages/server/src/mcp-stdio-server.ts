@@ -19,7 +19,7 @@ import { CONSOLIDATED_TOOLS, getConsolidatedToolByName } from './mcp/tools-regis
 const server = new Server(
   {
     name: 'octoprompt-mcp',
-    version: '0.7.0'
+    version: '0.7.1'
   },
   {
     capabilities: {

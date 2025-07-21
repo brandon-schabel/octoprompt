@@ -16,6 +16,4 @@ export * from './src/git.schemas'
 export * from './src/selected-files.schemas'
 
 // export constants
-export * from './src/constants/file-sync-options'
 export * from './src/constants/models-temp-not-allowed'
-export * from './src/constants/model-default-configs'

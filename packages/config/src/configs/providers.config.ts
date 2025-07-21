@@ -15,5 +15,11 @@ export const providersConfig: ProviderConfig = {
   },
   groq: {
     baseURL: 'https://api.groq.com/openai/v1'
+  },
+  ollama: {
+    baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+  },
+  lmstudio: {
+    baseURL: process.env.LMSTUDIO_BASE_URL || 'http://localhost:1234/v1'
   }
 }
