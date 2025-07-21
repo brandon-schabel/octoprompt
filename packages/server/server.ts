@@ -24,6 +24,7 @@ type ServerConfig = {
 type Server = ReturnType<typeof serve>
 
 export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {}): Promise<Server> {
+  console.log(`[Server] Starting server initialization on port ${port}...`)
   const server = serve({
     idleTimeout: 255,
     port,
@@ -82,18 +83,31 @@ export async function instantiateServer({ port = SERVER_PORT }: ServerConfig = {
 
   // Start watchers for existing projects
   ;(async () => {
-    const allProjects = await listProjects()
-    for (const project of allProjects) {
-      // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
-      watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+    console.log('[Server] Starting project watchers...')
+    try {
+      const allProjects = await listProjects()
+      console.log(`[Server] Found ${allProjects.length} projects to watch`)
+      for (const project of allProjects) {
+        // TODO: this seems to slow down server startup sometimes, so this this should be done async/in a different process
+        watchersManager.startWatchingProject(project, ['node_modules', 'dist', '.git', '*.tmp', '*.db-journal'])
+      }
+      console.log('[Server] Project watchers started')
+    } catch (error) {
+      console.error('[Server] Error starting project watchers:', error)
     }
 
     cleanupService.start()
   })()
 
-  console.log(`Server running at http://localhost:${server.port}`)
-  console.log(`Server swagger at http://localhost:${server.port}/swagger`)
-  console.log(`Server docs at http://localhost:${server.port}/doc`)
+  console.log(`[Server] Server running at http://localhost:${server.port}`)
+  console.log(`[Server] Server swagger at http://localhost:${server.port}/swagger`)
+  console.log(`[Server] Server docs at http://localhost:${server.port}/doc`)
+  
+  // Flush stdout to ensure Tauri can read the output
+  if (process.stdout.isTTY) {
+    process.stdout.write('')
+  }
+  
   return server
 }
 
@@ -135,15 +149,22 @@ if (import.meta.main) {
     }
 
     // Start normal HTTP server
-    console.log('Starting server...')
-    const server = await instantiateServer({ port })
-    function handleShutdown() {
+    console.log('[Server] Starting server...')
+    try {
+      const server = await instantiateServer({ port })
+      console.log('[Server] Server instantiated successfully')
+      
+      function handleShutdown() {
       console.log('Received kill signal. Shutting down gracefully...')
       watchersManager.stopAllWatchers?.()
       server.stop()
       process.exit(0)
     }
-    process.on('SIGINT', handleShutdown)
-    process.on('SIGTERM', handleShutdown)
+      process.on('SIGINT', handleShutdown)
+      process.on('SIGTERM', handleShutdown)
+    } catch (error) {
+      console.error('[Server] Failed to start server:', error)
+      process.exit(1)
+    }
   })()
 }
