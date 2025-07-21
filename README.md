@@ -418,7 +418,50 @@ The default AI model configurations for various services are maintained in the f
 
 ---
 
-## Production Build
+## Tauri Desktop App Builds
+
+OctoPrompt now includes a native desktop app built with Tauri for better performance and OS integration.
+
+### Quick Build Commands
+
+```bash
+# Development build (no code signing, local testing only)
+./scripts/release-tauri.sh --skip-signing
+
+# Production build (signed & notarized for distribution)
+./scripts/release-tauri.sh --universal --notarize
+```
+
+### Build Types
+
+1. **Development Build** - Quick builds for testing
+   - No code signing required
+   - Runs immediately on your machine
+   - Output: `tauri-builds/` directory
+
+2. **Production Build** - For distribution
+   - Requires Apple Developer certificate (macOS)
+   - Creates universal binary (Intel + Apple Silicon)
+   - Automatically notarized by Apple
+   - Output: `release-bundles/` with platform-specific installers
+
+### Requirements
+
+- **All Platforms**: Rust toolchain (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
+- **macOS**: Apple Developer account for signing ($99/year)
+- **Windows**: Visual Studio Build Tools
+- **Linux**: Various system libraries (see Tauri docs)
+
+### Output Files
+
+After building, find your installers in `release-bundles/`:
+- **macOS**: `.dmg` files
+- **Windows**: `.exe` installer  
+- **Linux**: `.deb`, `.AppImage`, and `.rpm` packages
+
+For detailed setup instructions, see [docs/TAURI_BUILD_GUIDE.md](./docs/TAURI_BUILD_GUIDE.md).
+
+## Production Build (Server Binaries)
 
 OctoPrompt is designed with a streamlined production build process where the client is bundled and served directly from the server.
 
