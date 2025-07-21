@@ -1,4 +1,4 @@
-import { mkdirSync, chmodSync } from 'node:fs'
+import { mkdirSync, chmodSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createWriteStream } from 'node:fs'
 import archiver from 'archiver'
@@ -124,7 +124,22 @@ async function buildProject() {
     // Also copy the standalone binary to the dist root for Tauri sidecar preparation
     const simplePlatformName = target.replace('bun-', '')
     const standaloneExecName = `${pkg.name}-${simplePlatformName}${executableExt}`
-    await $`cp ${join(platformDir, executableName)} ${join(distDir, standaloneExecName)}`
+    
+    // Use Node.js fs.copyFileSync for Windows executables to avoid permission issues
+    try {
+      if (executableExt) {
+        // For Windows executables, use Node's copyFileSync which handles permissions better
+        copyFileSync(join(platformDir, executableName), join(distDir, standaloneExecName))
+      } else {
+        // For Unix executables, we can use shell cp
+        await $`cp ${join(platformDir, executableName)} ${join(distDir, standaloneExecName)}`
+      }
+    } catch (error) {
+      console.error(`Failed to copy executable: ${error}`)
+      // Try alternative copy method
+      const sourceFile = readFileSync(join(platformDir, executableName))
+      writeFileSync(join(distDir, standaloneExecName), sourceFile)
+    }
 
     // Create a zip archive with the versioned name
     console.log(`Creating zip archive for ${outputDirName}...`)
