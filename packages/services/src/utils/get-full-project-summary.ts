@@ -1,7 +1,7 @@
 import { ApiError, buildProjectSummary, promptsMap, truncateForSummarization } from '@octoprompt/shared'
-import { getProjectFiles } from '@octoprompt/services'
+import { getProjectFiles } from '../project-service'
 import { generateSingleText } from '../gen-ai-services'
-import { LOW_MODEL_CONFIG } from '@octoprompt/schemas'
+import { LOW_MODEL_CONFIG } from '@octoprompt/config'
 
 export const getSafeAllProjectFiles = async (projectId: number) => {
   const allFiles = await getProjectFiles(projectId)

@@ -1,5 +1,16 @@
 import type { ProviderConfig } from '../types'
 
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined'
+
+// Safe environment variable access
+const getEnvVar = (key: string, defaultValue: string): string => {
+  if (isBrowser) {
+    return defaultValue
+  }
+  return process?.env?.[key] || defaultValue
+}
+
 export const providersConfig: ProviderConfig = {
   openai: {
     baseURL: 'https://api.openai.com/v1'
@@ -17,9 +28,9 @@ export const providersConfig: ProviderConfig = {
     baseURL: 'https://api.groq.com/openai/v1'
   },
   ollama: {
-    baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+    baseURL: getEnvVar('OLLAMA_BASE_URL', 'http://localhost:11434')
   },
   lmstudio: {
-    baseURL: process.env.LMSTUDIO_BASE_URL || 'http://localhost:1234/v1'
+    baseURL: getEnvVar('LMSTUDIO_BASE_URL', 'http://localhost:1234/v1')
   }
 }

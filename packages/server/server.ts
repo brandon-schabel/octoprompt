@@ -45,7 +45,10 @@ export async function instantiateServer({ port = serverConfig.serverPort }: Serv
 
       // FIXED: Always return API responses for API routes, regardless of status code
       if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth')) {
-        return await app.fetch(req)
+        console.log(`[Server] Routing ${req.method} ${url.pathname} to Hono app`)
+        const response = await app.fetch(req)
+        console.log(`[Server] Hono response status: ${response.status}`)
+        return response
       }
 
       const isStaticFile = /\.(js|css|html|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i.test(url.pathname)
@@ -139,7 +142,7 @@ if (import.meta.main) {
       return
     }
 
-    let port = SERVER_PORT
+    let port = serverConfig.serverPort
 
     // Look for --port argument
     const portIndex = args.indexOf('--port')

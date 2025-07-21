@@ -1,7 +1,19 @@
 import type { ServerConfig } from '../types'
 
-const isDevEnv = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined
-const isTestEnv = process.env.NODE_ENV === 'test'
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined'
+
+// Safe environment variable access
+const getEnvVar = (key: string, defaultValue?: string): string | undefined => {
+  if (isBrowser) {
+    return defaultValue
+  }
+  return process?.env?.[key] || defaultValue
+}
+
+const nodeEnv = getEnvVar('NODE_ENV', 'development')
+const isDevEnv = nodeEnv === 'development' || nodeEnv === undefined
+const isTestEnv = nodeEnv === 'test'
 const isProdEnv = !isDevEnv && !isTestEnv
 
 const DEV_PORT = 3147
@@ -9,11 +21,11 @@ const PROD_PORT = 3579
 const CLIENT_PORT = 1420
 
 export const serverConfig: ServerConfig = {
-  corsOrigin: process.env.CORS_ORIGIN || '*',
+  corsOrigin: getEnvVar('CORS_ORIGIN', '*') || '*',
   corsConfig: {
-    origin: process.env.CORS_ORIGIN || [
+    origin: getEnvVar('CORS_ORIGIN') || [
       `http://localhost:${CLIENT_PORT}`,
-      `https://${process.env.DOMAIN || 'localhost'}`,
+      `https://${getEnvVar('DOMAIN', 'localhost')}`,
       'tauri://localhost',
       'https://tauri.localhost'
     ],
@@ -21,13 +33,13 @@ export const serverConfig: ServerConfig = {
     credentials: true,
     allowHeaders: ['Content-Type', 'Authorization', 'Cookie']
   },
-  serverHost: process.env.SERVER_HOST || 'localhost',
-  serverPort: process.env.SERVER_PORT || (isDevEnv ? DEV_PORT : PROD_PORT),
+  serverHost: getEnvVar('SERVER_HOST', 'localhost') || 'localhost',
+  serverPort: getEnvVar('SERVER_PORT') || (isDevEnv ? DEV_PORT : PROD_PORT),
   devPort: DEV_PORT,
   prodPort: PROD_PORT,
   clientPort: CLIENT_PORT,
-  clientUrl: process.env.CLIENT_URL || `http://localhost:${CLIENT_PORT}`,
-  apiUrl: process.env.API_URL || `http://localhost:${isDevEnv ? DEV_PORT : PROD_PORT}`,
+  clientUrl: getEnvVar('CLIENT_URL', `http://localhost:${CLIENT_PORT}`) || `http://localhost:${CLIENT_PORT}`,
+  apiUrl: getEnvVar('API_URL', `http://localhost:${isDevEnv ? DEV_PORT : PROD_PORT}`) || `http://localhost:${isDevEnv ? DEV_PORT : PROD_PORT}`,
   isDevEnv,
   isTestEnv,
   isProdEnv

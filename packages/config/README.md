@@ -69,6 +69,13 @@ The following environment variables can override default settings:
 
 All configurations are validated using Zod schemas to ensure type safety and runtime correctness. Invalid configurations will throw an error at startup.
 
+## Browser Compatibility
+
+The configuration package is designed to work in both Node.js and browser environments. When used in the browser:
+- Environment variables are not available, so default values are used
+- The `loadEnvironmentOverrides()` function becomes a no-op
+- All configurations use their default values unless explicitly overridden via `setConfigOverrides()`
+
 ## Future Enhancements
 
 This configuration system is designed to grow with the application. Future features may include:

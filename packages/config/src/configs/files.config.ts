@@ -114,10 +114,15 @@ export const DEFAULT_FILE_EXCLUSIONS = [
   '*.tmp'
 ]
 
+// Export individual constants for backward compatibility
+export const MAX_FILE_SIZE_FOR_SUMMARY = 1024 * 1024 // 1MB in bytes
+export const MAX_TOKENS_FOR_SUMMARY = 100000
+export const CHARS_PER_TOKEN_ESTIMATE = 4
+
 export const filesConfig: FilesConfig = {
   allowedExtensions: ALLOWED_FILE_CONFIGS,
   defaultExclusions: DEFAULT_FILE_EXCLUSIONS,
-  maxFileSizeForSummary: 1024 * 1024, // 1MB in bytes
-  maxTokensForSummary: 8000,
-  charsPerTokenEstimate: 4
+  maxFileSizeForSummary: MAX_FILE_SIZE_FOR_SUMMARY,
+  maxTokensForSummary: MAX_TOKENS_FOR_SUMMARY,
+  charsPerTokenEstimate: CHARS_PER_TOKEN_ESTIMATE
 }

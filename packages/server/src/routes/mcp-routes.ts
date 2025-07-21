@@ -34,6 +34,74 @@ import { CONSOLIDATED_TOOLS, getAllConsolidatedToolNames } from '../mcp/tools-re
 
 export const mcpRoutes = new OpenAPIHono()
 
+// Debug middleware for all MCP routes
+mcpRoutes.use('*', async (c, next) => {
+  const start = Date.now()
+  console.log('[MCP Debug] Request:', {
+    method: c.req.method,
+    path: c.req.path,
+    url: c.req.url,
+    params: c.req.param(),
+    query: c.req.query()
+  })
+  
+  await next()
+  
+  const duration = Date.now() - start
+  console.log('[MCP Debug] Response:', {
+    status: c.res.status,
+    duration: `${duration}ms`,
+    path: c.req.path
+  })
+})
+
+// ====================
+// MCP PROTOCOL ENDPOINTS (Streamable HTTP Transport)
+// ====================
+// IMPORTANT: These wildcard routes MUST be defined first to avoid conflicts
+
+/**
+ * Main MCP endpoint implementing Streamable HTTP transport
+ * This is the primary endpoint that Claude Code and other MCP clients connect to
+ */
+mcpRoutes.all('/api/mcp', async (c) => {
+  console.log('[MCP Route] Handling request to /api/mcp', {
+    method: c.req.method,
+    url: c.req.url,
+    headers: c.req.header()
+  })
+  try {
+    const response = await handleHTTPTransport(c)
+    console.log('[MCP Route] Response status:', response.status)
+    return response
+  } catch (error) {
+    console.error('[MCP Route] Error handling request:', error)
+    throw error
+  }
+})
+
+/**
+ * Project-specific MCP endpoint
+ * Provides MCP access with project context
+ */
+mcpRoutes.all('/api/projects/:projectId/mcp', async (c) => {
+  const projectId = c.req.param('projectId')
+  console.log('[MCP Route] Handling request to /api/projects/:projectId/mcp', {
+    method: c.req.method,
+    projectId,
+    url: c.req.url,
+    headers: c.req.header()
+  })
+  try {
+    const response = await handleHTTPTransport(c)
+    console.log('[MCP Route] Response status:', response.status)
+    return response
+  } catch (error) {
+    console.error('[MCP Route] Error handling request:', error)
+    throw error
+  }
+})
+
 // Helper function to handle ApiError responses consistently
 const handleApiError = (error: unknown, c: any) => {
   if (error instanceof ApiError) {
@@ -646,25 +714,7 @@ mcpRoutes.openapi(getBuiltinToolsRoute, async (c) => {
   }
 })
 
-// ====================
-// MCP PROTOCOL ENDPOINTS (Streamable HTTP Transport)
-// ====================
-
-/**
- * Main MCP endpoint implementing Streamable HTTP transport
- * This is the primary endpoint that Claude Code and other MCP clients connect to
- */
-mcpRoutes.all('/api/mcp', async (c) => {
-  return await handleHTTPTransport(c)
-})
-
-/**
- * Project-specific MCP endpoint
- * Provides MCP access with project context
- */
-mcpRoutes.all('/api/projects/:projectId/mcp', async (c) => {
-  return await handleHTTPTransport(c)
-})
+// (MCP protocol endpoints moved to top of file to ensure proper route priority)
 
 // ====================
 // MCP SESSION MANAGEMENT

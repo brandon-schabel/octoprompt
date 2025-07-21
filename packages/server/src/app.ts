@@ -52,6 +52,19 @@ app.use('*', cors(serverConfig.corsConfig))
 // Add logger middleware
 app.use('*', logger())
 
+// Add specific MCP route debugging
+app.use('/api/mcp*', async (c, next) => {
+  console.log(`[MCP Debug] ${c.req.method} ${c.req.path}`)
+  await next()
+  console.log(`[MCP Debug] Response status: ${c.res.status}`)
+})
+
+app.use('/api/projects/*/mcp*', async (c, next) => {
+  console.log(`[MCP Debug] ${c.req.method} ${c.req.path}`)
+  await next()
+  console.log(`[MCP Debug] Response status: ${c.res.status}`)
+})
+
 app.get('/api/health', (c) => c.json({ success: true }))
 
 // register all hono routes

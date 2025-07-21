@@ -51,8 +51,13 @@ class ConfigLoader {
   }
 
   public loadEnvironmentOverrides(): void {
+    // Skip environment overrides in browser
+    if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+      return
+    }
+
     // Model overrides from environment
-    if (process.env.DEFAULT_MODEL_PROVIDER) {
+    if (process?.env?.DEFAULT_MODEL_PROVIDER) {
       this.overrides.models = {
         ...this.overrides.models,
         low: { ...this.config.models.low, provider: process.env.DEFAULT_MODEL_PROVIDER as any },
