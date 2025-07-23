@@ -98,6 +98,31 @@ Example usage:
 { "action": "get_selected_files", "projectId": 1750564533014 }
 ```
 
+##### Fast File Search (Prioritize This!)
+
+The `fast_search_files` action provides sub-millisecond file searching without AI latency. **Always use this first** before falling back to AI-powered `suggest_files`:
+
+**Best practices for fast search:**
+- **Exact search**: Use for finding specific function names, variables, or exact terms
+  - Example: Search for "useState" to find all React component files
+- **Regex search**: Use for finding code patterns
+  - Example: `"import.*from.*react"` to find React imports
+  - Example: `"async.*function"` to find async functions
+- **Fuzzy search**: Use for typo tolerance (currently limited)
+- **Semantic search**: Use for concept-based searches (currently limited)
+
+**Why use fast search first:**
+- ⚡ Sub-millisecond performance (vs seconds for AI search)
+- 📊 Results include relevance scores and snippets
+- 💾 Automatic caching for repeated searches
+- 🔍 No AI token limits or rate limiting
+- 🎯 More predictable results for exact terms
+
+Only use `suggest_files` (AI search) when:
+- You need conceptual understanding beyond keyword matching
+- Fast search returns no results and you need AI interpretation
+- You're looking for files based on high-level descriptions
+
 #### 2. **prompt_manager** - Prompt operations
 
 Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project, suggest_prompts
