@@ -158,7 +158,7 @@ export function buildCombinedFileSummariesXml(files: ProjectFile[], options: Sum
       const fileTypeDesc = getFileTypeDescription(fileExt)
       summaryTextToInclude = `${fileTypeDesc} file (${file.size ? `${file.size} bytes` : 'size unknown'}). No AI summary available yet.`
     }
-    output += `    <summary>${escapeXml(summaryTextToInclude)}</summary>\n`
+    output += `    <summary>${escapeXml(summaryTextToInclude || '')}</summary>\n`
 
     // Add imports if available
     if (file.imports && file.imports.length > 0) {

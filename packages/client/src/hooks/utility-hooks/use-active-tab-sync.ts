@@ -45,8 +45,8 @@ export function useActiveTabSync(projectId: number | undefined) {
   useEffect(() => {
     if (!projectId || projectId === -1 || !activeTabId) return
 
-    // Convert string timestamp to number
-    const tabIdNumber = parseInt(activeTabId)
+    // Convert activeTabId to number if it's a string
+    const tabIdNumber = typeof activeTabId === 'string' ? parseInt(activeTabId) : activeTabId
     if (isNaN(tabIdNumber)) return
 
     debouncedSync(projectId, tabIdNumber)
@@ -56,7 +56,7 @@ export function useActiveTabSync(projectId: number | undefined) {
   const syncNow = useCallback(() => {
     if (!projectId || projectId === -1 || !activeTabId) return
 
-    const tabIdNumber = parseInt(activeTabId)
+    const tabIdNumber = typeof activeTabId === 'string' ? parseInt(activeTabId) : activeTabId
     if (isNaN(tabIdNumber)) return
 
     syncMutation.mutate({ projectId, tabId: tabIdNumber })

@@ -62,7 +62,7 @@ test('includes files with empty/undefined summary when includeEmptySummaries is 
   const options: SummaryXmlOptions = { includeEmptySummaries: true }
   const result = buildCombinedFileSummariesXml(files as ProjectFile[], options)
 
-  // File2 and File3 should be included with the default placeholder
+  // File2 and File3 should be included with dynamic placeholder based on file type
   const expected = `<summary_memory>
   <file>
     <file_id>id_a</file_id>
@@ -72,32 +72,32 @@ test('includes files with empty/undefined summary when includeEmptySummaries is 
   <file>
     <file_id>id_b</file_id>
     <name>File2.ts</name>
-    <summary>(No summary provided)</summary>
+    <summary>TypeScript file (size unknown). No AI summary available yet.</summary>
   </file>
   <file>
     <file_id>id_c</file_id>
     <name>File3.ts</name>
-    <summary>(No summary provided)</summary>
+    <summary>TypeScript file (size unknown). No AI summary available yet.</summary>
   </file>
 </summary_memory>`
   expect(result).toBe(expected)
 })
 
-test('uses custom emptySummaryText when includeEmptySummaries is true (XML)', () => {
+test('uses dynamic file type description when includeEmptySummaries is true (XML)', () => {
   const files: TestProjectFile[] = [
     { id: 'needs-id', name: 'NeedsSummary.ts', summary: '' } // <--- ADD ID
   ]
-  // Test the custom placeholder text option
+  // Test that empty summaries get dynamic file type descriptions
   const options: SummaryXmlOptions = {
     includeEmptySummaries: true,
-    emptySummaryText: '[Summary Missing]'
+    emptySummaryText: '[Summary Missing]' // This option is no longer used by the implementation
   }
   const result = buildCombinedFileSummariesXml(files as ProjectFile[], options)
   const expected = `<summary_memory>
   <file>
     <file_id>needs-id</file_id>
     <name>NeedsSummary.ts</name>
-    <summary>[Summary Missing]</summary>
+    <summary>TypeScript file (size unknown). No AI summary available yet.</summary>
   </file>
 </summary_memory>`
   expect(result).toBe(expected)
