@@ -37,7 +37,20 @@ export enum MCPErrorCode {
   
   // State errors
   INVALID_STATE = 'INVALID_STATE',
-  CONCURRENT_MODIFICATION = 'CONCURRENT_MODIFICATION'
+  CONCURRENT_MODIFICATION = 'CONCURRENT_MODIFICATION',
+  
+  // Search and filter errors
+  SEARCH_FAILED = 'SEARCH_FAILED',
+  INVALID_SEARCH_QUERY = 'INVALID_SEARCH_QUERY',
+  NO_SEARCH_RESULTS = 'NO_SEARCH_RESULTS',
+  
+  // Batch operation errors
+  BATCH_OPERATION_FAILED = 'BATCH_OPERATION_FAILED',
+  BATCH_OPERATION_PARTIAL_FAILURE = 'BATCH_OPERATION_PARTIAL_FAILURE',
+  BATCH_SIZE_EXCEEDED = 'BATCH_SIZE_EXCEEDED',
+  
+  // Rate limiting
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED'
 }
 
 /**
@@ -70,7 +83,17 @@ const ERROR_RECOVERY_SUGGESTIONS: Record<MCPErrorCode, string> = {
   [MCPErrorCode.PATH_TRAVERSAL_DENIED]: 'Path traversal detected. Use relative paths within the project directory.',
   
   [MCPErrorCode.INVALID_STATE]: 'The resource is in an invalid state for this operation. Check current state and try again.',
-  [MCPErrorCode.CONCURRENT_MODIFICATION]: 'The resource was modified by another operation. Refresh and retry.'
+  [MCPErrorCode.CONCURRENT_MODIFICATION]: 'The resource was modified by another operation. Refresh and retry.',
+  
+  [MCPErrorCode.SEARCH_FAILED]: 'Search operation failed. Check your search syntax and try again.',
+  [MCPErrorCode.INVALID_SEARCH_QUERY]: 'Invalid search query. Use format: { query: "text", filters: { status: "open", tags: ["frontend"] } }',
+  [MCPErrorCode.NO_SEARCH_RESULTS]: 'No results found. Try broadening your search criteria or check if resources exist.',
+  
+  [MCPErrorCode.BATCH_OPERATION_FAILED]: 'All items in the batch operation failed. Check individual error details.',
+  [MCPErrorCode.BATCH_OPERATION_PARTIAL_FAILURE]: 'Some items failed. Check the response for succeeded and failed items.',
+  [MCPErrorCode.BATCH_SIZE_EXCEEDED]: 'Too many items in batch. Maximum batch size is 100 items. Split into smaller batches.',
+  
+  [MCPErrorCode.RATE_LIMIT_EXCEEDED]: 'Too many requests. Please wait before retrying. Current limit: 100 requests per minute.'
 }
 
 /**

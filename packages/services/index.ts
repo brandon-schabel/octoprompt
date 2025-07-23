@@ -26,3 +26,5 @@ export * from './src/utils/json-scribe'
 export * from './src/utils/path-utils'
 
 export * from './src/utils/storage-maintenance'
+export * from './src/file-search-service'
+export * from './src/file-indexing-service'

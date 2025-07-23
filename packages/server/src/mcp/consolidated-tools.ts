@@ -41,6 +41,15 @@ import {
   autoGenerateTasksFromOverview,
   suggestFilesForTicket,
   listTicketsWithTaskCount,
+  searchTickets,
+  filterTasks,
+  batchCreateTickets,
+  batchUpdateTickets,
+  batchDeleteTickets,
+  batchCreateTasks,
+  batchUpdateTasks,
+  batchDeleteTasks,
+  batchMoveTasks,
   syncProject,
   // Git operations
   getProjectGitStatus,
@@ -85,7 +94,8 @@ import {
   getOrCreateDefaultActiveTab,
   getActiveTab,
   setActiveTab,
-  clearActiveTab
+  clearActiveTab,
+  fileSearchService
 } from '@octoprompt/services'
 import type {
   CreateProjectBody,
@@ -160,6 +170,7 @@ export enum ProjectManagerAction {
   CLEAR_SELECTED_FILES = 'clear_selected_files',
   GET_SELECTION_CONTEXT = 'get_selection_context',
   SEARCH = 'search',
+  FAST_SEARCH_FILES = 'fast_search_files',
   CREATE_FILE = 'create_file',
   GET_FILE_CONTENT_PARTIAL = 'get_file_content_partial',
   DELETE_FILE = 'delete_file'
@@ -186,7 +197,11 @@ export enum TicketManagerAction {
   LIST_WITH_TASK_COUNT = 'list_with_task_count',
   SUGGEST_TASKS = 'suggest_tasks',
   AUTO_GENERATE_TASKS = 'auto_generate_tasks',
-  SUGGEST_FILES = 'suggest_files'
+  SUGGEST_FILES = 'suggest_files',
+  SEARCH = 'search',
+  BATCH_CREATE = 'batch_create',
+  BATCH_UPDATE = 'batch_update',
+  BATCH_DELETE = 'batch_delete'
 }
 
 export enum TaskManagerAction {
@@ -194,7 +209,16 @@ export enum TaskManagerAction {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
-  REORDER = 'reorder'
+  REORDER = 'reorder',
+  SUGGEST_FILES = 'suggest_files',
+  UPDATE_CONTEXT = 'update_context',
+  GET_WITH_CONTEXT = 'get_with_context',
+  ANALYZE_COMPLEXITY = 'analyze_complexity',
+  FILTER = 'filter',
+  BATCH_CREATE = 'batch_create',
+  BATCH_UPDATE = 'batch_update',
+  BATCH_DELETE = 'batch_delete',
+  BATCH_MOVE = 'batch_move'
 }
 
 export enum AIAssistantAction {
@@ -300,7 +324,11 @@ const TicketManagerSchema = z.object({
     TicketManagerAction.LIST_WITH_TASK_COUNT,
     TicketManagerAction.SUGGEST_TASKS,
     TicketManagerAction.AUTO_GENERATE_TASKS,
-    TicketManagerAction.SUGGEST_FILES
+    TicketManagerAction.SUGGEST_FILES,
+    TicketManagerAction.SEARCH,
+    TicketManagerAction.BATCH_CREATE,
+    TicketManagerAction.BATCH_UPDATE,
+    TicketManagerAction.BATCH_DELETE
   ]),
   projectId: z.number().optional(),
   data: z.any().optional()
@@ -312,7 +340,16 @@ const TaskManagerSchema = z.object({
     TaskManagerAction.CREATE,
     TaskManagerAction.UPDATE,
     TaskManagerAction.DELETE,
-    TaskManagerAction.REORDER
+    TaskManagerAction.REORDER,
+    TaskManagerAction.SUGGEST_FILES,
+    TaskManagerAction.UPDATE_CONTEXT,
+    TaskManagerAction.GET_WITH_CONTEXT,
+    TaskManagerAction.ANALYZE_COMPLEXITY,
+    TaskManagerAction.FILTER,
+    TaskManagerAction.BATCH_CREATE,
+    TaskManagerAction.BATCH_UPDATE,
+    TaskManagerAction.BATCH_DELETE,
+    TaskManagerAction.BATCH_MOVE
   ]),
   ticketId: z.number().optional(),
   data: z.any().optional()
@@ -383,7 +420,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'project_manager',
     description:
-      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, search, create_file, get_file_content_partial',
+      'Manage projects, files, and project-related operations. Actions: list, get, create, update, delete (⚠️ DELETES ENTIRE PROJECT - requires confirmDelete:true), delete_file (delete single file), get_summary, browse_files, get_file_content, update_file_content, suggest_files, search, fast_search_files (fast semantic search without AI), create_file, get_file_content_partial',
     inputSchema: {
       type: 'object',
       properties: {
@@ -399,7 +436,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For update_selected_files: { fileIds: [123, 456], tabId: 1 (optional, defaults to 0), promptIds: [789] (optional), userPrompt: "text" (optional) }. For delete_file: { path: "src/file.ts" }'
+            'Action-specific data. For get_file_content: { path: "src/index.ts" }. For browse_files: { path: "src/" }. For create: { name: "My Project", path: "/path/to/project" }. For update_selected_files: { fileIds: [123, 456], tabId: 1 (optional, defaults to 0), promptIds: [789] (optional), userPrompt: "text" (optional) }. For delete_file: { path: "src/file.ts" }. For fast_search_files: { query: "search term", searchType: "semantic" | "exact" | "fuzzy" | "regex" (default: "semantic"), fileTypes: ["ts", "js"], limit: 20, includeContext: false, scoringMethod: "relevance" | "recency" | "frequency" }'
         }
       },
       required: ['action']
@@ -818,6 +855,71 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
               }
             }
 
+            return {
+              content: [{ type: 'text', text: resultText }]
+            }
+          }
+
+          case ProjectManagerAction.FAST_SEARCH_FILES: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const query = validateDataField<string>(data, 'query', 'string', '"authentication" or "login"')
+            
+            // Optional parameters with defaults
+            const searchType = (data?.searchType as 'exact' | 'fuzzy' | 'semantic' | 'regex') || 'semantic'
+            const fileTypes = data?.fileTypes as string[] | undefined
+            const limit = (data?.limit as number) || 20
+            const includeContext = (data?.includeContext as boolean) || false
+            const scoringMethod = (data?.scoringMethod as 'relevance' | 'recency' | 'frequency') || 'relevance'
+            
+            // Perform fast search
+            const searchResults = await fileSearchService.search(validProjectId, {
+              query,
+              searchType,
+              fileTypes,
+              limit,
+              includeContext,
+              scoringMethod
+            })
+            
+            // Format results
+            let resultText = `🔍 Fast ${searchType} search for "${query}" in project ${validProjectId}\n`
+            resultText += `Found ${searchResults.stats.totalResults} results in ${searchResults.stats.searchTime}ms`
+            resultText += searchResults.stats.cached ? ' (cached)\n\n' : '\n\n'
+            
+            if (searchResults.results.length === 0) {
+              resultText += 'No matches found.'
+            } else {
+              for (const result of searchResults.results) {
+                resultText += `📄 ${result.file.path} (score: ${result.score.toFixed(2)})\n`
+                
+                if (result.snippet) {
+                  resultText += `  Preview: ${result.snippet}\n`
+                }
+                
+                if (result.keywords && result.keywords.length > 0) {
+                  resultText += `  Keywords: ${result.keywords.join(', ')}\n`
+                }
+                
+                if (result.matches.length > 0) {
+                  resultText += `  Matches:\n`
+                  for (const match of result.matches.slice(0, 3)) {
+                    resultText += `    Line ${match.line}: ${match.text}\n`
+                  }
+                  if (result.matches.length > 3) {
+                    resultText += `    ... and ${result.matches.length - 3} more matches\n`
+                  }
+                }
+                
+                resultText += '\n'
+              }
+              
+              if (searchResults.stats.totalResults > limit) {
+                resultText += `Showing top ${limit} of ${searchResults.stats.totalResults} total results.\n`
+              }
+              
+              resultText += `\nIndex coverage: ${searchResults.stats.indexCoverage}%`
+            }
+            
             return {
               content: [{ type: 'text', text: resultText }]
             }
@@ -1313,7 +1415,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
   {
     name: 'ticket_manager',
     description:
-      'Manage tickets and ticket-related operations. Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files',
+      'Manage tickets and ticket-related operations. Actions: list, get, create, update, delete, list_with_task_count, suggest_tasks, auto_generate_tasks, suggest_files, search, batch_create, batch_update, batch_delete',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1329,7 +1431,7 @@ export const CONSOLIDATED_TOOLS: readonly MCPToolDefinition[] = [
         data: {
           type: 'object',
           description:
-            'Action-specific data. For get/update/delete: { ticketId: 456 }. For create: { title: "Fix bug", overview: "Description", priority: "high", status: "open" }'
+            'Action-specific data. For get/update/delete: { ticketId: 456 }. For create: { title: "Fix bug", overview: "Description", priority: "high", status: "open" }. For search: { query: "login", status: "open", priority: ["high", "normal"], limit: 10 }. For batch_create: { tickets: [{title: "Task 1"}, {title: "Task 2"}] }. For batch_update: { updates: [{ticketId: 456, data: {status: "closed"}}] }. For batch_delete: { ticketIds: [456, 789] }'
         }
       },
       required: ['action']
@@ -1460,6 +1562,111 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
               ]
             }
           }
+          
+          case TicketManagerAction.SEARCH: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const searchOptions = data || {}
+            
+            try {
+              const result = await searchTickets(validProjectId, searchOptions)
+              
+              if (result.tickets.length === 0) {
+                throw createMCPError(MCPErrorCode.NO_SEARCH_RESULTS, 'No tickets found matching your search criteria', {
+                  searchOptions
+                })
+              }
+              
+              const ticketList = result.tickets
+                .map((t) => `${t.id}: [${t.status}/${t.priority}] ${t.title}`)
+                .join('\n')
+              
+              return {
+                content: [{
+                  type: 'text',
+                  text: `Found ${result.total} tickets (showing ${result.tickets.length}):\n${ticketList}`
+                }]
+              }
+            } catch (error) {
+              if (error instanceof MCPError) throw error
+              throw createMCPError(MCPErrorCode.SEARCH_FAILED, 'Search operation failed', {
+                searchOptions,
+                originalError: error
+              })
+            }
+          }
+          
+          case TicketManagerAction.BATCH_CREATE: {
+            const validProjectId = validateRequiredParam(projectId, 'projectId', 'number', '1750564533014')
+            const tickets = validateDataField<any[]>(data, 'tickets', 'array', '[{title: "Task 1"}, {title: "Task 2"}]')
+            
+            if (tickets.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${tickets.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchCreateTickets(validProjectId, tickets)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch create completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- ${JSON.stringify(f.item)}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TicketManagerAction.BATCH_UPDATE: {
+            const updates = validateDataField<any[]>(data, 'updates', 'array', '[{ticketId: 456, data: {status: "closed"}}]')
+            
+            if (updates.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${updates.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchUpdateTickets(updates)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch update completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- Ticket ${f.item.ticketId}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TicketManagerAction.BATCH_DELETE: {
+            const ticketIds = validateDataField<number[]>(data, 'ticketIds', 'array', '[456, 789]')
+            
+            if (ticketIds.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${ticketIds.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchDeleteTickets(ticketIds)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch delete completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failed IDs: ${result.failed.map(f => f.item).join(', ')}` : '')
+              }]
+            }
+          }
 
           default:
             throw createMCPError(MCPErrorCode.UNKNOWN_ACTION, `Unknown action: ${action}`, {
@@ -1482,7 +1689,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
   {
     name: 'task_manager',
-    description: 'Manage tasks within tickets. Actions: list, create, update, delete, reorder',
+    description: 'Manage tasks within tickets. Actions: list, create, update, delete, reorder, suggest_files, update_context, get_with_context, analyze_complexity, filter, batch_create, batch_update, batch_delete, batch_move',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1498,7 +1705,7 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
         data: {
           type: 'object',
           description:
-            'Action-specific data. For create: { content: "Task description" }. For update: { taskId: 789, done: true, content: "Updated text" }. For reorder: { tasks: [{ taskId: 789, orderIndex: 0 }] }'
+            'Action-specific data. For create: { content: "Task description", description: "Detailed steps", suggestedFileIds: ["123"], estimatedHours: 4, tags: ["frontend"] }. For update: { taskId: 789, done: true, content: "Updated text", description: "New description" }. For filter: { projectId: 1750564533014, status: "pending", tags: ["backend"], query: "auth" }. For batch_create: { tasks: [{content: "Task 1"}, {content: "Task 2"}] }. For batch_update: { updates: [{ticketId: 456, taskId: 789, data: {done: true}}] }. For batch_delete: { deletes: [{ticketId: 456, taskId: 789}] }. For batch_move: { moves: [{taskId: 789, fromTicketId: 456, toTicketId: 123}] }'
         }
       },
       required: ['action', 'ticketId']
@@ -1521,7 +1728,16 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
 
           case TaskManagerAction.CREATE: {
             const content = validateDataField<string>(data, 'content', 'string', '"Implement login validation"')
-            const task = await createTask(validTicketId, content)
+            // Support enhanced task creation
+            const taskData = {
+              content,
+              description: data.description,
+              suggestedFileIds: data.suggestedFileIds,
+              estimatedHours: data.estimatedHours,
+              dependencies: data.dependencies,
+              tags: data.tags
+            }
+            const task = await createTask(validTicketId, taskData)
             return {
               content: [{ type: 'text', text: `Task created successfully: ${task.content} (ID: ${task.id})` }]
             }
@@ -1531,7 +1747,12 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
             const updateData: UpdateTaskBody = {}
             if (data.content !== undefined) updateData.content = data.content
+            if (data.description !== undefined) updateData.description = data.description
+            if (data.suggestedFileIds !== undefined) updateData.suggestedFileIds = data.suggestedFileIds
             if (data.done !== undefined) updateData.done = data.done
+            if (data.estimatedHours !== undefined) updateData.estimatedHours = data.estimatedHours
+            if (data.dependencies !== undefined) updateData.dependencies = data.dependencies
+            if (data.tags !== undefined) updateData.tags = data.tags
             const task = await updateTask(validTicketId, taskId, updateData)
             return {
               content: [{ type: 'text', text: `Task updated successfully: ${task.content} (ID: ${taskId})` }]
@@ -1557,6 +1778,195 @@ Updated: ${new Date(ticket.updated).toLocaleString()}`
             const taskList = reorderedTasks.map((t) => `${t.id}: ${t.content} (order: ${t.orderIndex})`).join('\n')
             return {
               content: [{ type: 'text', text: `Tasks reordered successfully:\n${taskList}` }]
+            }
+          }
+          
+          case TaskManagerAction.SUGGEST_FILES: {
+            const { suggestFilesForTask } = await import('@octoprompt/services')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const context = data.context as string | undefined
+            const suggestedFiles = await suggestFilesForTask(taskId, context)
+            return {
+              content: [{
+                type: 'text',
+                text: suggestedFiles.length > 0 
+                  ? `Suggested files for task: ${suggestedFiles.join(', ')}`
+                  : 'No files suggested for this task'
+              }]
+            }
+          }
+          
+          case TaskManagerAction.UPDATE_CONTEXT: {
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const updateData: UpdateTaskBody = {
+              description: data.description,
+              suggestedFileIds: data.suggestedFileIds,
+              estimatedHours: data.estimatedHours,
+              tags: data.tags
+            }
+            const task = await updateTask(validTicketId, taskId, updateData)
+            return {
+              content: [{
+                type: 'text',
+                text: `Task context updated: ${task.content} (Est: ${task.estimatedHours || 'N/A'} hours)`
+              }]
+            }
+          }
+          
+          case TaskManagerAction.GET_WITH_CONTEXT: {
+            const { getTaskWithContext } = await import('@octoprompt/services')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const taskWithContext = await getTaskWithContext(taskId)
+            const contextInfo = {
+              task: taskWithContext.content,
+              description: taskWithContext.description,
+              estimatedHours: taskWithContext.estimatedHours,
+              tags: taskWithContext.tags,
+              fileCount: taskWithContext.suggestedFileIds?.length || 0,
+              files: taskWithContext.files
+            }
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify(contextInfo, null, 2)
+              }]
+            }
+          }
+          
+          case TaskManagerAction.ANALYZE_COMPLEXITY: {
+            const { analyzeTaskComplexity } = await import('@octoprompt/services')
+            const taskId = validateDataField<number>(data, 'taskId', 'number', '789')
+            const analysis = await analyzeTaskComplexity(taskId)
+            return {
+              content: [{
+                type: 'text',
+                text: `Task Complexity Analysis:
+- Complexity: ${analysis.complexity}
+- Estimated Hours: ${analysis.estimatedHours}
+- Required Skills: ${analysis.requiredSkills.join(', ')}
+- Suggested Approach: ${analysis.suggestedApproach}`
+              }]
+            }
+          }
+          
+          case TaskManagerAction.FILTER: {
+            const projectId = validateRequiredParam(data?.projectId, 'projectId', 'number', '1750564533014')
+            const filterOptions = data || {}
+            
+            const result = await filterTasks(projectId, filterOptions)
+            
+            if (result.tasks.length === 0) {
+              throw createMCPError(MCPErrorCode.NO_SEARCH_RESULTS, 'No tasks found matching your filter criteria', {
+                filterOptions
+              })
+            }
+            
+            const taskList = result.tasks
+              .map((t) => `${t.id}: [${t.done ? 'x' : ' '}] ${t.content} (${t.ticketTitle}) ${t.estimatedHours ? `- ${t.estimatedHours}h` : ''}`)
+              .join('\n')
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Found ${result.total} tasks (showing ${result.tasks.length}):\n${taskList}`
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_CREATE: {
+            const validTicketId = validateRequiredParam(ticketId, 'ticketId', 'number', '456')
+            const tasks = validateDataField<any[]>(data, 'tasks', 'array', '[{content: "Task 1"}, {content: "Task 2"}]')
+            
+            if (tasks.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${tasks.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchCreateTasks(validTicketId, tasks)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch create completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- ${f.item.content}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_UPDATE: {
+            const updates = validateDataField<any[]>(data, 'updates', 'array', '[{ticketId: 456, taskId: 789, data: {done: true}}]')
+            
+            if (updates.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${updates.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchUpdateTasks(updates)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch update completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- Task ${f.item.taskId}: ${f.error}`).join('\n')}` : '')
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_DELETE: {
+            const deletes = validateDataField<any[]>(data, 'deletes', 'array', '[{ticketId: 456, taskId: 789}]')
+            
+            if (deletes.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${deletes.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchDeleteTasks(deletes)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch delete completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failed task IDs: ${result.failed.map(f => f.item.taskId).join(', ')}` : '')
+              }]
+            }
+          }
+          
+          case TaskManagerAction.BATCH_MOVE: {
+            const moves = validateDataField<any[]>(data, 'moves', 'array', '[{taskId: 789, fromTicketId: 456, toTicketId: 123}]')
+            
+            if (moves.length > 100) {
+              throw createMCPError(MCPErrorCode.BATCH_SIZE_EXCEEDED, `Batch size ${moves.length} exceeds maximum of 100`)
+            }
+            
+            const result = await batchMoveTasks(moves)
+            
+            if (result.failureCount > 0 && result.successCount === 0) {
+              throw createMCPError(MCPErrorCode.BATCH_OPERATION_FAILED, 'All items in batch operation failed', {
+                failures: result.failed
+              })
+            }
+            
+            return {
+              content: [{
+                type: 'text',
+                text: `Batch move completed: ${result.successCount} succeeded, ${result.failureCount} failed\n` +
+                      (result.failed.length > 0 ? `Failures:\n${result.failed.map(f => `- Task ${f.item.taskId}: ${f.error}`).join('\n')}` : '')
+              }]
             }
           }
 
