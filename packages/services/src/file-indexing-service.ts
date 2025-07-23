@@ -26,7 +26,120 @@ export class FileIndexingService {
 
   constructor() {
     this.db = DatabaseManager.getInstance().getDatabase()
+    this.ensureTables()
     this.initializeStatements()
+  }
+
+  private ensureTables() {
+    // Create tables if they don't exist (in case migrations haven't run yet)
+    try {
+      // Check if tables exist by trying to query them
+      this.db.prepare('SELECT 1 FROM file_search_fts LIMIT 0').get()
+    } catch (error) {
+      // Tables don't exist, create them
+      console.log('[FileIndexingService] Creating search tables...')
+      
+      // Create FTS5 virtual table
+      this.db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS file_search_fts USING fts5(
+          file_id UNINDEXED,
+          project_id UNINDEXED,
+          path,
+          name,
+          extension UNINDEXED,
+          content,
+          summary,
+          keywords,
+          tokenize = 'porter unicode61 remove_diacritics 2'
+        )
+      `)
+
+      // Create metadata table
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS file_search_metadata (
+          file_id TEXT PRIMARY KEY,
+          project_id INTEGER NOT NULL,
+          tf_idf_vector BLOB,
+          keyword_vector TEXT,
+          last_indexed INTEGER NOT NULL,
+          file_size INTEGER,
+          token_count INTEGER,
+          language TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      `)
+
+      // Create indexes
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_file_search_metadata_project 
+        ON file_search_metadata(project_id)
+      `)
+      
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_file_search_metadata_indexed 
+        ON file_search_metadata(last_indexed)
+      `)
+
+      // Create keyword table
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS file_keywords (
+          file_id TEXT NOT NULL,
+          keyword TEXT NOT NULL,
+          frequency INTEGER NOT NULL,
+          tf_score REAL NOT NULL,
+          idf_score REAL,
+          PRIMARY KEY (file_id, keyword)
+        )
+      `)
+
+      // Create keyword indexes
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_file_keywords_keyword 
+        ON file_keywords(keyword)
+      `)
+      
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_file_keywords_file 
+        ON file_keywords(file_id)
+      `)
+
+      // Create trigram table
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS file_trigrams (
+          trigram TEXT NOT NULL,
+          file_id TEXT NOT NULL,
+          position INTEGER NOT NULL,
+          PRIMARY KEY (trigram, file_id, position)
+        )
+      `)
+
+      // Create trigram index
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_file_trigrams_file 
+        ON file_trigrams(file_id)
+      `)
+
+      // Create search cache table
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS search_cache (
+          cache_key TEXT PRIMARY KEY,
+          query TEXT NOT NULL,
+          project_id INTEGER NOT NULL,
+          results TEXT NOT NULL,
+          score_data TEXT,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          hit_count INTEGER DEFAULT 0
+        )
+      `)
+
+      // Create cache index
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_search_cache_expires 
+        ON search_cache(expires_at)
+      `)
+    }
   }
 
   private initializeStatements() {
