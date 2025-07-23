@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useCopyClipboard } from '@/hooks/utility-hooks/use-copy-clipboard'
 import { toast } from 'sonner'
 import type { TicketTask } from '@octoprompt/schemas'
+import { TaskEmptyState } from './task-empty-state'
 
 interface TicketTasksPanelProps {
   ticketId: string
@@ -49,6 +50,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
 
   const [newTaskContent, setNewTaskContent] = useState('')
   const { copyToClipboard } = useCopyClipboard()
+  const inputRef = React.useRef<HTMLInputElement>(null)
 
   const tasks = data ?? []
 
@@ -156,6 +158,7 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
       {/* New Task Input */}
       <div className='flex items-center space-x-2'>
         <Input
+          ref={inputRef}
           placeholder='Add a new task...'
           value={newTaskContent}
           onChange={(e) => setNewTaskContent(e.target.value)}
@@ -175,7 +178,12 @@ export function TicketTasksPanel({ ticketId, overview }: TicketTasksPanelProps) 
       <div className='space-y-2 max-h-64 overflow-auto'>
         {isLoading && <p className='text-sm text-muted-foreground'>Loading tasks...</p>}
         {!isLoading && tasks.length === 0 && (
-          <p className='text-sm text-muted-foreground'>No tasks yet. Add some above.</p>
+          <TaskEmptyState
+            onAddTask={() => inputRef.current?.focus()}
+            onAutoGenerate={handleAutoGenerateTasks}
+            hasOverview={!!overview}
+            isGenerating={autoGenMut.isPending}
+          />
         )}
         {tasks.map((task, idx) => (
           <div key={task.id}>

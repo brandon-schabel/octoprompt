@@ -721,6 +721,47 @@ export class ProjectService extends BaseApiClient {
     })
     return result
   }
+
+  // Active Tab methods
+  async getActiveTab(projectId: number, clientId?: string) {
+    const result = await this.request('GET', `/projects/${projectId}/active-tab`, {
+      params: clientId ? { clientId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          activeTabId: z.number(),
+          lastUpdated: z.number(),
+          clientId: z.string().optional()
+        }).nullable()
+      })
+    })
+    return result
+  }
+
+  async setActiveTab(projectId: number, data: { tabId: number; clientId?: string }) {
+    const result = await this.request('POST', `/projects/${projectId}/active-tab`, {
+      body: data,
+      responseSchema: z.object({
+        success: z.literal(true),
+        data: z.object({
+          activeTabId: z.number(),
+          lastUpdated: z.number()
+        })
+      })
+    })
+    return result
+  }
+
+  async clearActiveTab(projectId: number, clientId?: string) {
+    const result = await this.request('DELETE', `/projects/${projectId}/active-tab`, {
+      params: clientId ? { clientId } : undefined,
+      responseSchema: z.object({
+        success: z.literal(true),
+        message: z.string()
+      })
+    })
+    return result
+  }
 }
 
 // Prompt Service

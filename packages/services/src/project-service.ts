@@ -21,9 +21,27 @@ import { projectStorage, ProjectFilesStorageSchema, type ProjectFilesStorage } f
 import z, { ZodError } from 'zod'
 import { syncProject } from './file-services/file-sync-service-unified'
 import { generateStructuredData, generateSingleText } from './gen-ai-services'
-import { getFullProjectSummary } from './utils/get-full-project-summary'
+import { getFullProjectSummary, invalidateProjectSummaryCache } from './utils/get-full-project-summary'
 import { resolvePath } from './utils/path-utils'
 import path from 'node:path'
+import { removeDeletedFileIdsFromTickets } from './ticket-service'
+import { removeDeletedFileIdsFromSelectedFiles } from './selected-files-sync-service'
+import { retryOperation } from './utils/retry-operation'
+
+// Helper function to retry file system operations
+async function retryFileOperation<T>(operation: () => Promise<T>): Promise<T> {
+  return retryOperation(operation, {
+    maxAttempts: 3,
+    shouldRetry: (error) => {
+      // Retry on common file system errors
+      return error.code === 'EBUSY' || 
+             error.code === 'EAGAIN' || 
+             error.code === 'EACCES' ||
+             error.code === 'EMFILE' || // Too many open files
+             error.code === 'ENFILE'    // File table overflow
+    }
+  })
+}
 
 export async function createProject(data: CreateProjectBody): Promise<Project> {
   const now = Date.now()
@@ -49,8 +67,8 @@ export async function createProject(data: CreateProjectBody): Promise<Project> {
 
     projectsMap.set(validatedProject.id, validatedProject)
 
-    await projectStorage.writeProjects(Object.fromEntries(projectsMap))
-    await projectStorage.writeProjectFiles(validatedProject.id, {})
+    await retryFileOperation(() => projectStorage.writeProjects(Object.fromEntries(projectsMap)))
+    await retryFileOperation(() => projectStorage.writeProjectFiles(validatedProject.id, {}))
 
     return validatedProject
   } catch (error) {
@@ -176,11 +194,23 @@ export async function deleteProject(projectId: number): Promise<boolean> {
   }
 }
 
-export async function getProjectFiles(projectId: number): Promise<ProjectFile[] | null> {
+export async function getProjectFiles(
+  projectId: number,
+  options?: { limit?: number; offset?: number }
+): Promise<ProjectFile[] | null> {
   try {
     await getProjectById(projectId) // Throws 404 if project not found
     const files = await projectStorage.readProjectFiles(projectId)
-    return Object.values(files)
+    const allFiles = Object.values(files)
+    
+    // Apply pagination if specified
+    if (options?.limit !== undefined || options?.offset !== undefined) {
+      const offset = options.offset || 0
+      const limit = options.limit || allFiles.length
+      return allFiles.slice(offset, offset + limit)
+    }
+    
+    return allFiles
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return null // Maintain original behavior of returning null for not found project
@@ -225,7 +255,10 @@ export async function updateFileContent(
     const validatedFile = ProjectFileSchema.parse(updatedFileData)
 
     files[fileId] = validatedFile
-    await projectStorage.writeProjectFiles(projectId, files)
+    await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, files))
+
+    // Invalidate cache when file content is updated
+    invalidateProjectSummaryCache(projectId)
 
     return validatedFile
   } catch (error) {
@@ -308,7 +341,7 @@ export async function removeSummariesFromFiles(
 
     if (changesMade) {
       const validatedMap = ProjectFilesStorageSchema.parse(files)
-      await projectStorage.writeProjectFiles(projectId, validatedMap)
+      await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
     }
 
     return {
@@ -380,7 +413,10 @@ export async function createProjectFileRecord(
 
     // even though the keys are numbers, they are saved as string because that is default javascript behavior
     const validatedMap = ProjectFilesStorageSchema.parse(files)
-    await projectStorage.writeProjectFiles(projectId, validatedMap)
+    await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
+
+    // Invalidate cache when a new file is created
+    invalidateProjectSummaryCache(projectId)
 
     return validatedFile
   } catch (error) {
@@ -480,7 +516,10 @@ export async function bulkCreateProjectFiles(projectId: number, filesToCreate: F
 
     if (createdFiles.length > 0) {
       const validatedMap = ProjectFilesStorageSchema.parse(filesMap)
-      await projectStorage.writeProjectFiles(projectId, validatedMap)
+      await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
+      
+      // Invalidate cache when files are created
+      invalidateProjectSummaryCache(projectId)
     }
 
     return createdFiles
@@ -553,7 +592,10 @@ export async function bulkUpdateProjectFiles(
 
     if (changesMade) {
       const validatedMap = ProjectFilesStorageSchema.parse(files)
-      await projectStorage.writeProjectFiles(projectId, validatedMap)
+      await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
+      
+      // Invalidate cache when files are updated
+      invalidateProjectSummaryCache(projectId)
     }
 
     return updatedFilesResult
@@ -603,7 +645,22 @@ export async function bulkDeleteProjectFiles(
 
     if (changesMade) {
       const validatedMap = ProjectFilesStorageSchema.parse(files)
-      await projectStorage.writeProjectFiles(projectId, validatedMap)
+      await retryFileOperation(() => projectStorage.writeProjectFiles(projectId, validatedMap))
+      
+      // Invalidate cache when files are deleted
+      invalidateProjectSummaryCache(projectId)
+      
+      // Clean up file references in tickets
+      const ticketCleanupResult = await removeDeletedFileIdsFromTickets(projectId, fileIdsToDelete)
+      if (ticketCleanupResult.updatedTickets > 0) {
+        console.log(`[ProjectService] Cleaned up file references in ${ticketCleanupResult.updatedTickets} tickets for project ${projectId}`)
+      }
+      
+      // Clean up file references in selected files
+      const selectedFilesCleanupResult = await removeDeletedFileIdsFromSelectedFiles(projectId, fileIdsToDelete)
+      if (selectedFilesCleanupResult.updatedEntries > 0) {
+        console.log(`[ProjectService] Cleaned up file references in ${selectedFilesCleanupResult.updatedEntries} selected files entries for project ${projectId}`)
+      }
     }
 
     return { deletedCount }

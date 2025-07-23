@@ -9,11 +9,11 @@ import type {
   TicketTask,
   TaskSuggestions
 } from '@octoprompt/schemas'
-import { TaskSuggestionsSchema, } from '@octoprompt/schemas'
-import { MEDIUM_MODEL_CONFIG } from '@octoprompt/config'
+import { TaskSuggestionsSchema, FileSuggestionsZodSchema } from '@octoprompt/schemas'
+import { MEDIUM_MODEL_CONFIG, HIGH_MODEL_CONFIG } from '@octoprompt/config'
 import { ticketStorage } from '@octoprompt/storage'
 import { ApiError } from '@octoprompt/shared'
-import { getFullProjectSummary } from '@octoprompt/services'
+import { getFullProjectSummary, getCompactProjectSummary } from './utils/get-full-project-summary'
 import { generateStructuredData } from './gen-ai-services'
 
 const validTaskFormatPrompt = `IMPORTANT: Return ONLY valid JSON matching this schema:
@@ -332,19 +332,64 @@ export async function autoGenerateTasksFromOverview(ticketId: number): Promise<T
 
 export async function suggestFilesForTicket(
   ticketId: number,
-  options: { extraUserInput?: string }
+  options: { extraUserInput?: string } = {}
 ): Promise<{ recommendedFileIds: string[]; combinedSummaries?: string; message?: string }> {
   const ticket = await getTicketById(ticketId)
 
   try {
-    // This is a simplified implementation - in a real scenario you'd want to use
-    // AI to analyze the ticket content and suggest relevant files from the project
-    // For now, return the existing suggested files or an empty array
+    // Get full project summary for context (includes file IDs needed for suggestion)
+    const projectSummary = await getFullProjectSummary(ticket.projectId)
+
+    // Prepare system prompt for file suggestion
+    const systemPrompt = `You are a code assistant that recommends relevant files from a project based on a ticket's content.
+
+Analyze the ticket information and project structure to suggest the most relevant files that would need to be modified or reviewed to complete the ticket.
+
+Focus on:
+- Files directly related to the functionality mentioned in the ticket
+- Configuration files that might need updates
+- Test files that should be created or modified
+- Related components or modules that interact with the main functionality
+
+Return file IDs as numbers only.`
+
+    // Prepare user prompt with ticket details and project context
+    const userPrompt = `Ticket Title: ${ticket.title}
+
+Ticket Overview: ${ticket.overview || 'No overview provided'}
+
+${options.extraUserInput ? `Additional Context: ${options.extraUserInput}\n\n` : ''}Project Summary:
+${projectSummary}
+
+Based on this ticket and project structure, suggest the most relevant file IDs that would need to be examined or modified to complete this ticket. Focus on files that are directly related to the functionality described.`
+
+    // Use AI to suggest relevant files
+    const result = await generateStructuredData({
+      prompt: userPrompt,
+      schema: FileSuggestionsZodSchema,
+      systemMessage: systemPrompt,
+      options: HIGH_MODEL_CONFIG
+    })
+
+    // Get the suggested file IDs and convert to strings
+    const suggestedFileIds = result.object.fileIds.map(id => id.toString())
+
+    // Merge with existing suggestions to preserve any manually added files
+    const allFileIds = [...new Set([...ticket.suggestedFileIds, ...suggestedFileIds])]
+
+    // Update the ticket with the new suggestions if there are new ones
+    if (suggestedFileIds.length > 0 && suggestedFileIds.some(id => !ticket.suggestedFileIds.includes(id))) {
+      await updateTicket(ticketId, {
+        suggestedFileIds: allFileIds
+      })
+    }
 
     return {
-      recommendedFileIds: ticket.suggestedFileIds || [],
-      combinedSummaries: `Combined summary for ticket: ${ticket.title}`,
-      message: 'Files suggested based on ticket content'
+      recommendedFileIds: allFileIds,
+      combinedSummaries: `AI-suggested ${suggestedFileIds.length} relevant files based on ticket: "${ticket.title}"`,
+      message: suggestedFileIds.length > 0 
+        ? `Found ${suggestedFileIds.length} relevant files for this ticket`
+        : 'No additional files suggested beyond existing selections'
     }
   } catch (error) {
     console.error('[TicketService] Error suggesting files:', error)
@@ -476,5 +521,42 @@ export async function getTicketWithSuggestedFiles(
   return {
     ...ticket,
     parsedSuggestedFileIds: ticket.suggestedFileIds || []
+  }
+}
+
+/**
+ * Removes deleted file IDs from all tickets in a project.
+ * This should be called after files are deleted from a project to maintain referential integrity.
+ */
+export async function removeDeletedFileIdsFromTickets(
+  projectId: number,
+  deletedFileIds: number[]
+): Promise<{ updatedTickets: number }> {
+  try {
+    const tickets = await listTicketsByProject(projectId)
+    let updatedCount = 0
+
+    for (const ticket of tickets) {
+      if (ticket.suggestedFileIds && ticket.suggestedFileIds.length > 0) {
+        const originalLength = ticket.suggestedFileIds.length
+        const updatedFileIds = ticket.suggestedFileIds.filter(
+          (fileId) => !deletedFileIds.includes(fileId)
+        )
+
+        if (updatedFileIds.length < originalLength) {
+          await updateTicket(ticket.id, { suggestedFileIds: updatedFileIds })
+          updatedCount++
+        }
+      }
+    }
+
+    return { updatedTickets: updatedCount }
+  } catch (error) {
+    console.error(
+      `Failed to remove deleted file IDs from tickets in project ${projectId}:`,
+      error
+    )
+    // Don't throw - this is a cleanup operation that shouldn't fail the main operation
+    return { updatedTickets: 0 }
   }
 }

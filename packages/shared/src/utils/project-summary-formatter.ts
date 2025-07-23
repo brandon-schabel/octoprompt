@@ -40,6 +40,68 @@ const defaultXmlOptions: Required<SummaryXmlOptions> = {
 }
 
 /**
+ * Helper function to get a human-readable description of a file type based on its extension
+ */
+function getFileTypeDescription(extension: string): string {
+  const fileTypeMap: Record<string, string> = {
+    // Programming languages
+    'ts': 'TypeScript',
+    'tsx': 'TypeScript React',
+    'js': 'JavaScript',
+    'jsx': 'JavaScript React',
+    'py': 'Python',
+    'java': 'Java',
+    'cpp': 'C++',
+    'c': 'C',
+    'cs': 'C#',
+    'go': 'Go',
+    'rs': 'Rust',
+    'php': 'PHP',
+    'rb': 'Ruby',
+    'swift': 'Swift',
+    'kt': 'Kotlin',
+    
+    // Web files
+    'html': 'HTML',
+    'css': 'CSS',
+    'scss': 'SCSS',
+    'sass': 'Sass',
+    'less': 'Less',
+    'vue': 'Vue',
+    'svelte': 'Svelte',
+    
+    // Data/Config files
+    'json': 'JSON',
+    'yaml': 'YAML',
+    'yml': 'YAML',
+    'xml': 'XML',
+    'toml': 'TOML',
+    'ini': 'INI config',
+    'env': 'Environment config',
+    
+    // Documentation
+    'md': 'Markdown',
+    'mdx': 'MDX',
+    'rst': 'reStructuredText',
+    'txt': 'Text',
+    
+    // Other
+    'sql': 'SQL',
+    'sh': 'Shell script',
+    'bash': 'Bash script',
+    'ps1': 'PowerShell',
+    'dockerfile': 'Dockerfile',
+    'gitignore': 'Git ignore',
+    'lock': 'Lock file',
+    'log': 'Log',
+    'test': 'Test',
+    'spec': 'Test specification'
+  }
+  
+  return fileTypeMap[extension] || 'Unknown type'
+}
+
+/**
  * Combines all file summaries into a single XML string.
  * Each file is represented by a <file> element containing <name> and <summary>.
  *
@@ -88,8 +150,14 @@ export function buildCombinedFileSummariesXml(files: ProjectFile[], options: Sum
     output += `    <name>${escapeXml(file.name)}</name>\n`
 
     // Add the <summary> element, escaping the content
-    // Use placeholder text if summary is empty but included
-    const summaryTextToInclude = summaryContent || emptySummaryText
+    // Use enhanced placeholder text if summary is empty but included
+    let summaryTextToInclude = summaryContent
+    if (!summaryContent) {
+      // Provide more context for files without summaries
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'unknown'
+      const fileTypeDesc = getFileTypeDescription(fileExt)
+      summaryTextToInclude = `${fileTypeDesc} file (${file.size ? `${file.size} bytes` : 'size unknown'}). No AI summary available yet.`
+    }
     output += `    <summary>${escapeXml(summaryTextToInclude)}</summary>\n`
 
     // Add imports if available

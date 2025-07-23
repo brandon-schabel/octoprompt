@@ -71,6 +71,14 @@ export interface CorsConfig {
   allowHeaders: string[]
 }
 
+export interface RateLimitConfig {
+  enabled: boolean
+  windowMs: number
+  maxRequests: number
+  aiWindowMs: number
+  aiMaxRequests: number
+}
+
 export interface ServerConfig {
   corsOrigin: string
   corsConfig: CorsConfig
@@ -98,4 +106,5 @@ export interface GlobalConfig {
   models: ModelConfig
   providers: ProviderConfig
   files: FilesConfig
+  rateLimit: RateLimitConfig
 }

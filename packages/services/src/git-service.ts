@@ -24,6 +24,7 @@ import type {
 import { getProjectById } from './project-service'
 import { ApiError } from '@octoprompt/shared'
 import path from 'path'
+import { retryOperation } from './utils/retry-operation'
 
 interface GitStatusCache {
   status: GitStatus
@@ -97,7 +98,17 @@ export async function getProjectGitStatus(projectId: number): Promise<GitStatusR
 
     try {
       // Check if it's a git repository
-      const isRepo = await git.checkIsRepo()
+      const isRepo = await retryOperation(
+        () => git.checkIsRepo(),
+        {
+          maxAttempts: 2,
+          shouldRetry: (error) => {
+            // Retry on network errors or temporary issues
+            return error.message?.includes('ENOENT') === false && 
+                   (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT')
+          }
+        }
+      )
       if (!isRepo) {
         return {
           success: false,
@@ -108,8 +119,19 @@ export async function getProjectGitStatus(projectId: number): Promise<GitStatusR
         }
       }
 
-      // Get the status
-      const status = await git.status()
+      // Get the status with retry for network issues
+      const status = await retryOperation(
+        () => git.status(),
+        {
+          maxAttempts: 3,
+          shouldRetry: (error) => {
+            // Retry on network errors (for remote tracking)
+            return error.code === 'ENOTFOUND' || 
+                   error.code === 'ETIMEDOUT' ||
+                   error.message?.includes('Could not read from remote repository')
+          }
+        }
+      )
       const gitStatus = mapGitStatusToSchema(status, projectPath)
 
       // Cache the result
@@ -522,6 +544,7 @@ export async function getCommitLog(
   options?: {
     limit?: number
     skip?: number
+    offset?: number  // Support both skip and offset for compatibility
     branch?: string
     file?: string
   }
@@ -535,6 +558,7 @@ export async function getCommitLog(
     const projectPath = path.resolve(project.path)
     const git: SimpleGit = simpleGit(projectPath)
 
+    // Use simple-git's built-in format object
     const logOptions: any = {
       format: {
         hash: '%H',
@@ -542,39 +566,45 @@ export async function getCommitLog(
         message: '%s',
         authorName: '%an',
         authorEmail: '%ae',
-        date: '%ai',
+        date: '%ai', // ISO 8601 format
         refs: '%D'
       }
     }
 
-    if (options?.limit) {
-      logOptions.maxCount = options.limit
+    // Handle pagination - skip/offset are treated the same
+    const skipCount = options?.skip ?? options?.offset ?? 0
+    
+    // When using skip, we need to fetch skip + limit items, then slice
+    if (options?.limit || skipCount > 0) {
+      logOptions.maxCount = (options?.limit || 100) + skipCount
     }
 
-    const args: string[] = []
-    if (options?.skip) {
-      args.push(`--skip=${options.skip}`)
-    }
-    if (options?.branch) {
-      args.push(options.branch)
-    }
     if (options?.file) {
-      args.push('--', options.file)
+      logOptions.file = path.join(projectPath, options.file)
     }
 
-    const log = await git.log([...args, '--format=' + JSON.stringify(logOptions.format)])
+    // Use simple-git's log method with built-in options
+    const logResult = await git.log(logOptions)
 
-    return log.all.map((commit) => ({
+    // Map the results to our schema
+    const allEntries = logResult.all.map((commit: any) => ({
       hash: commit.hash,
-      abbreviatedHash: (commit as any).abbreviatedHash || commit.hash.substring(0, 7),
+      abbreviatedHash: commit.abbreviatedHash || commit.hash.substring(0, 7),
       message: commit.message,
       author: {
-        name: (commit as any).authorName || '',
-        email: (commit as any).authorEmail || ''
+        name: commit.authorName || '',
+        email: commit.authorEmail || ''
       },
-      date: commit.date || '',
-      refs: (commit as any).refs || undefined
+      date: commit.date || new Date().toISOString(),
+      refs: commit.refs || ''
     }))
+    
+    // Apply offset/skip by slicing the results
+    if (skipCount > 0) {
+      return allEntries.slice(skipCount, skipCount + (options?.limit || allEntries.length))
+    }
+    
+    return allEntries
   } catch (error) {
     if (error instanceof ApiError) throw error
     throw new ApiError(

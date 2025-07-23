@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-OctoPrompt guidance for Claude Code (claude.ai/code).
+OctoPrompt guidance. Prioritize making use of the OctoPrompt MCP to make things faster and more efficient.
 
 ## Commands
 
@@ -25,40 +25,30 @@ OctoPrompt guidance for Claude Code (claude.ai/code).
 - **If uncertain about a file deletion, ASK THE USER FIRST**
 - **Verify file paths** - ensure all operations are within the project scope
 
-### Linear Workspace Configuration
+### HARD RULES
 
-- **Workspace**: BS Projects (Team ID: `2868a346-2a0d-4953-af4e-4b695aa5a981`)
-- **Projects**:
-  - **OctoPrompt** (Project ID: `9e96fe84-c58e-47d3-8402-3552cdf0bf3b`)
+- Never ever use dynamic or lazy imports, unless it is absolutely required
 
-### Linear MCP Integration
+## Use OctoPrompt MCP As Much as Possible
 
-The Linear MCP (Model Context Protocol) integration is built into Claude Code and provides direct access to Linear's API for project management. No additional setup or configuration is required - the MCP commands are available out of the box.
+- **Project ID**: `1752976842771`
 
-### OctoPrompt MCP Usage
+OctaPrompt is a prompt upgrade tool. It takes something that is a very basic prompt and then it allows you to augment that prompt with either selected files, upgrading the prompt, or selecting relevant prompts from the prompts library. It also can serve as a ticket and task manager to create and plan high-level features.
 
-The OctoPrompt MCP provides seamless integration with the OctoPrompt project management system through 5 consolidated tools:
+- I highly recommend using the Get Summary project tool which will give you context into what the project is, how it works at a high level, which will be a great starting point for building a new feature.
+- There is a tool to retrieve the selected files that the user has selected, use that so the user guides you, you can also update and clear the selection.
+- If you need additional context or the user didn't select anything, use the OctoPrompt MCP AI to search for suggested files when gathering context, this if faster than manually searching.
+- There is a prompts feature the user will save important information in these prompts, you can retrieve and use relevant prompts. You can list, get, create, update, list by project, add to projct, remove from project.
+- There is a suggest prompts which like suggest files based on the input/project suggest prompt will recommend the most relevant prompts based on the context.
+- Use OctoPrompt MCP for ticket and tasks planning, this is helpful to use as a way to keep track of everything
+- There is prompt optimization whcih will take an input relevant to the project and then it will upgrade it with helpful context from the project
+- the project manager, can list, get create, update, delete project from OctoPrompt, delting a file from OctoPrompt does not permanently delete files.
 
-**Use OctoPrompt MCP for:**
-
-- Managing projects and browsing/reading files
-- Creating and managing tickets and tasks for planning
-- Saving and retrieving prompts for context management
-- Getting AI-suggested files based on task context
-- Retrieving compact project summaries for quick architectural insights
-- Optimizing prompts using project-specific context
-
-**OctoPrompt Project Details:**
-
-- **Project ID**: `1750564533014`
-
-### OctoPrompt MCP Tools
-
-OctoPrompt now provides 5 consolidated MCP tools that group related functionality:
+Below is a detailed breakdown of each tool and its capabilities.
 
 #### 1. **project_manager** - Project and file operations
 
-Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files
+Actions: list, get, create, update, delete, get_summary, browse_files, get_file_content, update_file_content, suggest_files, get_selected_files, update_selected_files, clear_selected_files, get_selection_context, search, create_file, get_file_content_partial
 
 Example usage:
 
@@ -81,7 +71,7 @@ Example usage:
 
 #### 2. **prompt_manager** - Prompt operations
 
-Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project
+Actions: list, get, create, update, delete, list_by_project, add_to_project, remove_from_project, suggest_prompts
 
 Example usage:
 
@@ -142,6 +132,23 @@ Example usage:
 
 // Get AI-generated compact project summary
 { "action": "get_compact_summary", "projectId": 1750564533014 }
+```
+
+#### 6. **git_manager** - Git operations
+
+Actions: status, stage_files, unstage_files, stage_all, unstage_all, commit, branches, current_branch, create_branch, switch_branch, delete_branch, merge_branch, log, commit_details, file_diff, commit_diff, cherry_pick, remotes, add_remote, remove_remote, fetch, pull, push, tags, create_tag, delete_tag, stash, stash_list, stash_apply, stash_pop, stash_drop, reset, revert, blame, clean, config_get, config_set
+
+Example usage:
+
+```json
+// Get git status
+{ "tool_name": "mcp_octoprompt_git_manager", "tool_input": { "action": "status", "projectId": 1750564533014 } }
+
+// Stage a file
+{ "tool_name": "mcp_octoprompt_git_manager", "tool_input": { "action": "stage_files", "projectId": 1750564533014, "data": { "filePaths": ["src/index.ts"] } } }
+
+// Commit changes
+{ "tool_name": "mcp_octoprompt_git_manager", "tool_input": { "action": "commit", "projectId": 1750564533014, "data": { "message": "feat: new feature" } } }
 ```
 
 ## Creating New MCP Tools
@@ -538,25 +545,107 @@ export const migrations = [
 ]
 ```
 
-### Troubleshooting
+## Reference ID Management & Cascading Deletes
 
-- **Database Locked**: Check for multiple server instances
-- **Migration Errors**: Run `bun run migrate:sqlite` manually
-- **Performance**: Enable WAL mode (enabled by default)
-- **Disk Space**: Database in `data/` directory
-- **Testing**: Uses `:memory:` automatically, no cleanup needed
+### Overview
 
-## Frontend Stack
+OctoPrompt maintains referential integrity by automatically cleaning up file references when files are deleted from a project. This prevents stale IDs from accumulating in tickets and selected files.
 
-- React 19 with Compiler
-- TanStack Router/Query
-- ShadCN UI (Radix)
-- Monaco Editor
-- Tailwind CSS
+### How It Works
 
-### Key Hooks Pattern
+When files are deleted via `bulkDeleteProjectFiles()`:
+
+1. **File Deletion**: Files are removed from the project's file storage
+2. **Ticket Cleanup**: `removeDeletedFileIdsFromTickets()` removes file IDs from all tickets' `suggestedFileIds` arrays
+3. **Selected Files Cleanup**: `removeDeletedFileIdsFromSelectedFiles()` removes file IDs from all selected files entries
+
+### Implementation Details
 
 ```typescript
+// In project-service.ts during file deletion:
+if (changesMade) {
+  // ... save file changes ...
+  
+  // Clean up file references in tickets
+  const ticketCleanupResult = await removeDeletedFileIdsFromTickets(projectId, fileIdsToDelete)
+  
+  // Clean up file references in selected files
+  const selectedFilesCleanupResult = await removeDeletedFileIdsFromSelectedFiles(projectId, fileIdsToDelete)
+}
+```
+
+### Key Features
+
+- **Non-blocking**: Cleanup operations log errors but don't fail the main deletion
+- **Automatic**: No manual intervention required
+- **Comprehensive**: Covers all known file reference locations
+- **Logged**: Cleanup operations log the number of updated entities
+
+### Adding New Reference Types
+
+If you add a new feature that stores file IDs:
+
+1. Create a cleanup function in the appropriate service:
+
+   ```typescript
+   export async function removeDeletedFileIdsFromYourFeature(
+     projectId: number,
+     deletedFileIds: number[]
+   ): Promise<{ updatedCount: number }>
+   ```
+
+2. Add the cleanup call to `bulkDeleteProjectFiles()` in `project-service.ts`
+
+3. Follow the pattern: filter out deleted IDs, update only if changes were made, handle errors gracefully
+
+
+
+
+```typescript
+import { getGlobalConfig, getModelsConfig, LOW_MODEL_CONFIG } from '@octoprompt/config'
+
+// Get entire config
+const config = getGlobalConfig()
+
+// Get specific domain
+const models = getModelsConfig()
+
+// Use specific config
+const lowModel = LOW_MODEL_CONFIG
+```
+
+### Environment Overrides
+
+Some settings can be overridden via environment variables:
+- `DEFAULT_MODEL_PROVIDER` - Override the AI provider for all models
+- `CORS_ORIGIN` - CORS origin setting
+- `SERVER_HOST` - Server host
+- `SERVER_PORT` - Server port
+- `CLIENT_URL` - Client URL
+- `API_URL` - API URL
+
+### Configuration Files
+
+All configuration is located in `packages/config/src/configs/`:
+- `app.config.ts` - Application metadata
+- `server.config.ts` - Server settings
+- `models.config.ts` - AI model configurations
+- `providers.config.ts` - Provider URLs
+- `files.config.ts` - File handling settings
+
+The configuration is validated using Zod schemas to ensure type safety and correctness.
+
+## Important Reminders
+
+- NEVER create files unless necessary
+- ALWAYS prefer editing existing files
+- Use appropriate AI model configs
+- Write tests for new functionality
+- Use Storage V2 features for performance
+- Validate route ordering
+- Handle errors consistently
+
+
 export function useCreateChat() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -655,47 +744,3 @@ All global settings are organized by domain:
 - **Files Config**: File sync options, allowed extensions, exclusions
 
 ### Usage
-
-```typescript
-import { getGlobalConfig, getModelsConfig, LOW_MODEL_CONFIG } from '@octoprompt/config'
-
-// Get entire config
-const config = getGlobalConfig()
-
-// Get specific domain
-const models = getModelsConfig()
-
-// Use specific config
-const lowModel = LOW_MODEL_CONFIG
-```
-
-### Environment Overrides
-
-Some settings can be overridden via environment variables:
-- `DEFAULT_MODEL_PROVIDER` - Override the AI provider for all models
-- `CORS_ORIGIN` - CORS origin setting
-- `SERVER_HOST` - Server host
-- `SERVER_PORT` - Server port
-- `CLIENT_URL` - Client URL
-- `API_URL` - API URL
-
-### Configuration Files
-
-All configuration is located in `packages/config/src/configs/`:
-- `app.config.ts` - Application metadata
-- `server.config.ts` - Server settings
-- `models.config.ts` - AI model configurations
-- `providers.config.ts` - Provider URLs
-- `files.config.ts` - File handling settings
-
-The configuration is validated using Zod schemas to ensure type safety and correctness.
-
-## Important Reminders
-
-- NEVER create files unless necessary
-- ALWAYS prefer editing existing files
-- Use appropriate AI model configs
-- Write tests for new functionality
-- Use Storage V2 features for performance
-- Validate route ordering
-- Handle errors consistently

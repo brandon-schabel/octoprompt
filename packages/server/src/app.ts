@@ -13,11 +13,21 @@ import { mcpRoutes } from './routes/mcp-routes'
 import { gitRoutes } from './routes/git-routes'
 import { gitAdvancedRoutes } from './routes/git-advanced-routes'
 import { selectedFilesRoutes } from './routes/selected-files-routes'
+import { activeTabRoutes } from './routes/active-tab-routes'
 import { OpenAPIHono, z } from '@hono/zod-openapi'
 import packageJson from '../package.json'
-import { getServerConfig } from '@octoprompt/config'
+import { getServerConfig, getRateLimitConfig } from '@octoprompt/config'
+import { rateLimiter } from 'hono-rate-limiter'
 
 const serverConfig = getServerConfig()
+const rateLimitConfig = getRateLimitConfig()
+
+// Rate limit configuration
+const RATE_LIMIT_ENABLED = rateLimitConfig.enabled
+const RATE_LIMIT_WINDOW_MS = rateLimitConfig.windowMs
+const RATE_LIMIT_MAX_REQUESTS = rateLimitConfig.maxRequests
+const AI_RATE_LIMIT_WINDOW_MS = rateLimitConfig.aiWindowMs
+const AI_RATE_LIMIT_MAX_REQUESTS = rateLimitConfig.aiMaxRequests
 import { swaggerUI } from '@hono/swagger-ui'
 import { ApiErrorResponseSchema } from '@octoprompt/schemas'
 
@@ -52,6 +62,96 @@ app.use('*', cors(serverConfig.corsConfig))
 // Add logger middleware
 app.use('*', logger())
 
+// Helper function to get client IP with better localhost detection
+const getClientIP = (c: any) => {
+  // Check for forwarded headers first (production)
+  const forwarded = c.req.header('x-forwarded-for') || c.req.header('x-real-ip')
+  if (forwarded) return forwarded
+  
+  // For local development, try to get the actual connection IP
+  const connection = c.env?.incoming?.socket || c.req.raw?.connection || c.req.raw?.socket
+  const remoteAddress = connection?.remoteAddress
+  
+  // Check if it's a localhost IP
+  if (remoteAddress === '::1' || remoteAddress === '127.0.0.1' || remoteAddress === 'localhost') {
+    return 'localhost'
+  }
+  
+  return remoteAddress || 'unknown'
+}
+
+// General rate limiter - 500 requests per 15 minutes per IP
+const generalLimiter = rateLimiter({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_MAX_REQUESTS,
+  standardHeaders: 'draft-6', // Return rate limit info in headers
+  keyGenerator: getClientIP,
+  handler: (c, key, rateLimitInfo) => {
+    return c.json(
+      {
+        success: false,
+        error: {
+          message: 'Too many requests. Please try again later.',
+          code: 'RATE_LIMIT_EXCEEDED',
+          details: {
+            limit: rateLimitInfo.limit,
+            used: rateLimitInfo.used,
+            resetAt: rateLimitInfo.resetTime || Date.now() + 15 * 60 * 1000
+          }
+        }
+      } satisfies z.infer<typeof ApiErrorResponseSchema>,
+      429
+    )
+  }
+})
+
+// Stricter AI rate limiter - 100 requests per 10 minutes per IP
+const aiLimiter = rateLimiter({
+  windowMs: AI_RATE_LIMIT_WINDOW_MS,
+  limit: AI_RATE_LIMIT_MAX_REQUESTS,
+  standardHeaders: 'draft-6',
+  keyGenerator: getClientIP,
+  handler: (c, key, rateLimitInfo) => {
+    return c.json(
+      {
+        success: false,
+        error: {
+          message: 'AI endpoint rate limit exceeded. Please try again later.',
+          code: 'AI_RATE_LIMIT_EXCEEDED',
+          details: {
+            limit: rateLimitInfo.limit,
+            used: rateLimitInfo.used,
+            resetAt: rateLimitInfo.resetTime || Date.now() + 10 * 60 * 1000
+          }
+        }
+      } satisfies z.infer<typeof ApiErrorResponseSchema>,
+      429
+    )
+  }
+})
+
+// Apply rate limiters only if enabled
+if (RATE_LIMIT_ENABLED) {
+  console.log(`[Server] Rate limiting enabled - General: ${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_MS}ms, AI: ${AI_RATE_LIMIT_MAX_REQUESTS}/${AI_RATE_LIMIT_WINDOW_MS}ms`)
+  
+  // Apply general rate limiter to all routes
+  app.use('*', generalLimiter)
+
+  // Apply stricter AI rate limiter to AI-intensive endpoints
+  app.use('/api/gen-ai/*', aiLimiter)
+  app.use('/api/chats/*', aiLimiter)
+  app.use('/api/projects/*/suggest-files', aiLimiter)
+  app.use('/api/projects/*/optimize-input', aiLimiter)
+  app.use('/api/projects/*/mcp/suggest-files', aiLimiter)
+  app.use('/api/projects/*/mcp/compact-summary', aiLimiter)
+  app.use('/api/projects/*/files/*/summarize', aiLimiter)
+  app.use('/api/tickets/*/suggest-tasks', aiLimiter)
+  app.use('/api/tickets/*/suggest-files', aiLimiter)
+  app.use('/api/tickets/*/auto-generate-tasks', aiLimiter)
+} else {
+  console.log('[Server] Rate limiting disabled in development mode')
+}
+
 // Add specific MCP route debugging
 app.use('/api/mcp*', async (c, next) => {
   console.log(`[MCP Debug] ${c.req.method} ${c.req.path}`)
@@ -80,6 +180,7 @@ app.route('/', mcpRoutes)
 app.route('/', gitRoutes)
 app.route('/', gitAdvancedRoutes)
 app.route('/', selectedFilesRoutes)
+app.route('/', activeTabRoutes)
 
 // Global error handler
 app.onError((err, c) => {

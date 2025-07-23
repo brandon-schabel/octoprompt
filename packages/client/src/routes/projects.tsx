@@ -32,6 +32,7 @@ import { Bot, Code2, Sparkles, GitBranch } from 'lucide-react'
 import { ProjectSwitcher } from '@/components/projects/project-switcher'
 import { TicketsTabView } from '@/components/tickets/tickets-tab-view'
 import { GitTabView } from '@/components/projects/git-tab-view'
+import { useActiveTabSync } from '@/hooks/utility-hooks/use-active-tab-sync'
 
 export function ProjectsPage() {
   const filePanelRef = useRef<FilePanelRef>(null)
@@ -41,6 +42,9 @@ export function ProjectsPage() {
   const selectedProjectId = activeProjectTabState?.selectedProjectId
   const { data: projectResponse } = useGetProject(selectedProjectId!)
   const projectData = projectResponse?.data
+  
+  // Sync active tab with backend
+  useActiveTabSync(selectedProjectId)
 
   const { data: allProjectsData, isLoading: projectsLoading } = useGetProjects()
   const [tabs] = useGetProjectTabs()

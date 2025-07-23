@@ -14,6 +14,7 @@ import { LOW_MODEL_CONFIG, getProvidersConfig } from '@octoprompt/config'
 
 import { ApiError } from '@octoprompt/shared'
 import { mapProviderErrorToApiError } from './error-mappers'
+import { retryOperation } from './utils/bulk-operations'
 
 const providersConfig = getProvidersConfig()
 
@@ -281,24 +282,41 @@ export async function generateSingleText({
       messagesToProcess.push({ role: 'user', content: prompt })
     }
 
-    const { text, usage, finishReason } = await generateText({
-      model: modelInstance,
-      messages: messagesToProcess,
-      temperature: finalOptions.temperature,
-      maxTokens: finalOptions.maxTokens,
-      topP: finalOptions.topP,
-      frequencyPenalty: finalOptions.frequencyPenalty,
-      presencePenalty: finalOptions.presencePenalty,
-      topK: finalOptions.topK
-    })
+    // Wrap the AI call in retry logic
+    const result = await retryOperation(
+      async () => {
+        const { text, usage, finishReason } = await generateText({
+          model: modelInstance,
+          messages: messagesToProcess,
+          temperature: finalOptions.temperature,
+          maxTokens: finalOptions.maxTokens,
+          topP: finalOptions.topP,
+          frequencyPenalty: finalOptions.frequencyPenalty,
+          presencePenalty: finalOptions.presencePenalty,
+          topK: finalOptions.topK
+        })
 
-    if (debug) {
-      console.log(
-        `[UnifiedProviderService] generateText finished for ${provider}/${modelInstance.modelId}. Reason: ${finishReason}. Usage: ${JSON.stringify(usage)}`
-      )
-    }
+        if (debug) {
+          console.log(
+            `[UnifiedProviderService] generateText finished for ${provider}/${modelInstance.modelId}. Reason: ${finishReason}. Usage: ${JSON.stringify(usage)}`
+          )
+        }
 
-    return text
+        return text
+      },
+      {
+        maxRetries: 3,
+        shouldRetry: (error: any) => {
+          // Map the error to check if it's retryable
+          const mappedError = mapProviderErrorToApiError(error, provider, 'generateSingleText')
+          return mappedError.code === 'RATE_LIMIT_EXCEEDED' || 
+                 mappedError.code === 'PROVIDER_UNAVAILABLE' ||
+                 mappedError.statusCode >= 500
+        }
+      }
+    )
+
+    return result
   } catch (error: any) {
     if (error instanceof ApiError) throw error
     // Catch errors from getProviderLanguageModelInterface or generateText
@@ -344,24 +362,41 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
   }
 
   try {
-    const result = await generateObject({
-      model: modelInstance,
-      schema: schema,
-      prompt: prompt,
-      system: systemMessage,
-      temperature: finalOptions.temperature,
-      maxTokens: finalOptions.maxTokens,
-      topP: finalOptions.topP,
-      frequencyPenalty: finalOptions.frequencyPenalty,
-      presencePenalty: finalOptions.presencePenalty,
-      topK: finalOptions.topK
-    })
+    // Wrap the AI call in retry logic
+    const result = await retryOperation(
+      async () => {
+        const result = await generateObject({
+          model: modelInstance,
+          schema: schema,
+          prompt: prompt,
+          system: systemMessage,
+          temperature: finalOptions.temperature,
+          maxTokens: finalOptions.maxTokens,
+          topP: finalOptions.topP,
+          frequencyPenalty: finalOptions.frequencyPenalty,
+          presencePenalty: finalOptions.presencePenalty,
+          topK: finalOptions.topK
+        })
 
-    if (debug) {
-      console.log(
-        `[UnifiedProviderService] generateObject finished. Reason: ${result.finishReason}. Usage: ${JSON.stringify(result.usage)}`
-      )
-    }
+        if (debug) {
+          console.log(
+            `[UnifiedProviderService] generateObject finished. Reason: ${result.finishReason}. Usage: ${JSON.stringify(result.usage)}`
+          )
+        }
+
+        return result
+      },
+      {
+        maxRetries: 3,
+        shouldRetry: (error: any) => {
+          // Map the error to check if it's retryable
+          const mappedError = mapProviderErrorToApiError(error, provider, 'generateStructuredData')
+          return mappedError.code === 'RATE_LIMIT_EXCEEDED' || 
+                 mappedError.code === 'PROVIDER_UNAVAILABLE' ||
+                 mappedError.statusCode >= 500
+        }
+      }
+    )
 
     return result
   } catch (error: any) {
