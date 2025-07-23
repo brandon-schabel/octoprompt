@@ -1029,7 +1029,7 @@ export async function removeDeletedFileIdsFromTickets(
       if (ticket.suggestedFileIds && ticket.suggestedFileIds.length > 0) {
         const originalLength = ticket.suggestedFileIds.length
         const updatedFileIds = ticket.suggestedFileIds.filter(
-          (fileId) => !deletedFileIds.includes(fileId)
+          (fileId) => !deletedFileIds.includes(parseInt(fileId, 10))
         )
 
         if (updatedFileIds.length < originalLength) {
@@ -1045,7 +1045,7 @@ export async function removeDeletedFileIdsFromTickets(
         if (task.suggestedFileIds && task.suggestedFileIds.length > 0) {
           const originalLength = task.suggestedFileIds.length
           const updatedFileIds = task.suggestedFileIds.filter(
-            (fileId) => !deletedFileIds.includes(fileId.toString())
+            (fileId) => !deletedFileIds.includes(parseInt(fileId, 10))
           )
           
           if (updatedFileIds.length < originalLength) {

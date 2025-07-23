@@ -305,13 +305,13 @@ export async function generateSingleText({
         return text
       },
       {
-        maxRetries: 3,
+        maxAttempts: 3,
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateSingleText')
           return mappedError.code === 'RATE_LIMIT_EXCEEDED' || 
                  mappedError.code === 'PROVIDER_UNAVAILABLE' ||
-                 mappedError.statusCode >= 500
+                 mappedError.status >= 500
         }
       }
     )
@@ -387,13 +387,13 @@ export async function generateStructuredData<T extends z.ZodType<any, z.ZodTypeD
         return result
       },
       {
-        maxRetries: 3,
+        maxAttempts: 3,
         shouldRetry: (error: any) => {
           // Map the error to check if it's retryable
           const mappedError = mapProviderErrorToApiError(error, provider, 'generateStructuredData')
           return mappedError.code === 'RATE_LIMIT_EXCEEDED' || 
                  mappedError.code === 'PROVIDER_UNAVAILABLE' ||
-                 mappedError.statusCode >= 500
+                 mappedError.status >= 500
         }
       }
     )
